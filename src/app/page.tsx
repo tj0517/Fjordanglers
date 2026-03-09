@@ -60,7 +60,6 @@ export default async function HomePage() {
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="relative px-4 md:px-6 pt-4 pb-4" style={{ background: '#F3EDE4' }}>
-        <div className="max-w-[1440px] mx-auto">
           <div
             className="relative overflow-hidden"
             style={{ borderRadius: '28px', minHeight: '96vh' }}
@@ -69,7 +68,7 @@ export default async function HomePage() {
               autoPlay muted loop playsInline
               className="absolute inset-0 w-full h-full object-cover"
             >
-              <source src="/brand/hero_bg.mov" type="video/mp4" />
+              <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/hero_bg.mp4" type="video/mp4" />
             </video>
             <div
               className="absolute inset-0"
@@ -230,7 +229,6 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
-        </div>
       </section>
 
       {/* ─── FEATURED EXPERIENCES ────────────────────────────────────── */}
@@ -518,7 +516,7 @@ export default async function HomePage() {
       {/* ─── GUIDE CTA ───────────────────────────────────────────────── */}
       <section className="relative overflow-hidden" style={{ minHeight: '540px' }}>
         <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover object-center">
-          <source src="/cta.mp4" type="video/mp4" />
+          <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/cta.mp4" type="video/mp4" />
         </video>
         <div
           className="absolute inset-0"
@@ -576,7 +574,7 @@ export default async function HomePage() {
             {/* Brand column */}
             <div className="lg:col-span-1">
               <Image
-                src="/vanern.jpgd"
+                src="/brand/white-logo.png"
                 alt="FjordAnglers"
                 width={140}
                 height={36}
