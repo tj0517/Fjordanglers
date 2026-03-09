@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ExperienceGallery } from '@/components/experiences/experience-gallery'
 import { SpeciesCard } from '@/components/experiences/species-card'
 import type { SpeciesInfo, FishVariant } from '@/components/experiences/species-card'
@@ -166,13 +166,28 @@ export default async function ExperienceDetailPage({
   //
   // This means guides can visit /experiences/[id] to preview their draft BEFORE publishing.
   // Anon visitors hitting a draft URL still get 404 (RLS returns null).
-  const supabase = await createClient()
+  const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
 
-  const { data: rawExp } = await supabase
+  // Try with auth client first (respects RLS — guides see own drafts)
+  const supabase = await createClient()
+  let { data: rawExp } = await supabase
     .from('experiences')
-    .select('*, guide:guides(id, full_name, avatar_url, country, city, average_rating), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)')
+    .select(EXP_SELECT)
     .eq('id', id)
     .single()
+
+  // If not found, check if admin — admins can preview any draft via service client
+  if (rawExp == null) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user != null) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      if (profile?.role === 'admin') {
+        const svc = createServiceClient()
+        const { data } = await svc.from('experiences').select(EXP_SELECT).eq('id', id).single()
+        rawExp = data
+      }
+    }
+  }
 
   if (rawExp == null) notFound()
 

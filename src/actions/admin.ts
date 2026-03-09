@@ -149,7 +149,7 @@ export async function deleteGuide(
 ): Promise<AdminDeleteResult> {
   try {
     await requireAdmin()
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     // 1. Fetch the guide's user_id and all their experience IDs before deletion
     const [{ data: guide }, { data: exps }] = await Promise.all([
@@ -219,7 +219,7 @@ export async function deleteExperience(
 ): Promise<AdminDeleteResult> {
   try {
     await requireAdmin()
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     // 1. Payments for bookings of this experience
     const { data: bookings } = await supabase
@@ -264,7 +264,7 @@ export async function deleteExperience(
 export async function deleteLead(leadId: string): Promise<AdminDeleteResult> {
   try {
     await requireAdmin()
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     // Nullify the FK reference on any guide that was created from this lead
     await supabase

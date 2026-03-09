@@ -14,7 +14,7 @@
  *   /dashboard/experiences/[id]/edit    (guide edits own)
  */
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +42,8 @@ export type ExperiencePayload = {
   location_country?: string | null
   location_city?: string | null
   meeting_point?: string | null
+  location_lat?: number | null
+  location_lng?: number | null
   what_included: string[]
   what_excluded: string[]
   published: boolean
@@ -125,29 +127,33 @@ export async function createExperience(
     const perm = await assertCanManageGuide(guideId)
     if (!perm.ok) return { success: false, error: perm.error, code: perm.code }
 
-    const supabase = await createClient()
+    // Admins bypass RLS via service client; guides use their own session
+    const ctx = await getAuthContext()
+    const supabase = ctx?.isAdmin ? createServiceClient() : await createClient()
 
     // ── 1. Insert experience ────────────────────────────────────────────────
     const { data: exp, error: expError } = await supabase
       .from('experiences')
       .insert({
-        guide_id:            guideId,
-        title:               payload.title.trim(),
-        description:         payload.description.trim(),
-        fish_types:          payload.fish_types,
-        technique:           payload.technique?.trim() || null,
-        difficulty:          payload.difficulty ?? null,
-        catch_and_release:   payload.catch_and_release,
-        duration_hours:      payload.duration_hours ?? null,
-        duration_days:       payload.duration_days ?? null,
-        max_guests:          payload.max_guests,
+        guide_id:             guideId,
+        title:                payload.title.trim(),
+        description:          payload.description.trim(),
+        fish_types:           payload.fish_types,
+        technique:            payload.technique?.trim() || null,
+        difficulty:           payload.difficulty ?? null,
+        catch_and_release:    payload.catch_and_release,
+        duration_hours:       payload.duration_hours ?? null,
+        duration_days:        payload.duration_days ?? null,
+        max_guests:           payload.max_guests,
         price_per_person_eur: payload.price_per_person_eur,
-        location_country:    payload.location_country?.trim() || null,
-        location_city:       payload.location_city?.trim() || null,
-        meeting_point:       payload.meeting_point?.trim() || null,
-        what_included:       payload.what_included.filter(s => s.trim() !== ''),
-        what_excluded:       payload.what_excluded.filter(s => s.trim() !== ''),
-        published:           payload.published,
+        location_country:     payload.location_country?.trim() || null,
+        location_city:        payload.location_city?.trim() || null,
+        meeting_point:        payload.meeting_point?.trim() || null,
+        location_lat:         payload.location_lat ?? null,
+        location_lng:         payload.location_lng ?? null,
+        what_included:        payload.what_included.filter(s => s.trim() !== ''),
+        what_excluded:        payload.what_excluded.filter(s => s.trim() !== ''),
+        published:            payload.published,
       })
       .select('id')
       .single()
@@ -193,7 +199,8 @@ export async function updateExperience(
     const perm = await assertCanManageExperience(expId)
     if (!perm.ok) return { success: false, error: perm.error, code: perm.code }
 
-    const supabase = await createClient()
+    const ctx = await getAuthContext()
+    const supabase = ctx?.isAdmin ? createServiceClient() : await createClient()
 
     // Build update object — only include provided fields
     const update: Record<string, unknown> = {}
@@ -210,6 +217,8 @@ export async function updateExperience(
     if (payload.location_country !== undefined) update.location_country = payload.location_country?.trim() || null
     if (payload.location_city !== undefined) update.location_city       = payload.location_city?.trim() || null
     if (payload.meeting_point !== undefined) update.meeting_point       = payload.meeting_point?.trim() || null
+    if (payload.location_lat !== undefined)  update.location_lat        = payload.location_lat ?? null
+    if (payload.location_lng !== undefined)  update.location_lng        = payload.location_lng ?? null
     if (payload.what_included != null)       update.what_included       = payload.what_included.filter(s => s.trim() !== '')
     if (payload.what_excluded != null)       update.what_excluded       = payload.what_excluded.filter(s => s.trim() !== '')
     if (payload.published != null)           update.published           = payload.published
@@ -258,7 +267,8 @@ export async function togglePublishExperience(
     const perm = await assertCanManageExperience(expId)
     if (!perm.ok) return { success: false, error: perm.error, code: perm.code }
 
-    const supabase = await createClient()
+    const ctx = await getAuthContext()
+    const supabase = ctx?.isAdmin ? createServiceClient() : await createClient()
     const { error } = await supabase
       .from('experiences')
       .update({ published })
@@ -279,7 +289,8 @@ export async function deleteExperience(expId: string): Promise<ActionResult> {
     const perm = await assertCanManageExperience(expId)
     if (!perm.ok) return { success: false, error: perm.error, code: perm.code }
 
-    const supabase = await createClient()
+    const ctx = await getAuthContext()
+    const supabase = ctx?.isAdmin ? createServiceClient() : await createClient()
 
     // Images are FK-cascaded on delete in the DB schema
     const { error } = await supabase

@@ -13,6 +13,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+import { cn } from '@/lib/utils'
 import ImageUpload from '@/components/admin/image-upload'
 import {
   createExperience,
@@ -20,6 +22,20 @@ import {
   type ExperiencePayload,
   type ImageInput,
 } from '@/actions/experiences'
+
+// ─── Dynamic map (Leaflet — client only, no SSR) ──────────────────────────────
+const LocationPickerMap = dynamic(
+  () => import('@/components/experiences/location-picker-map'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="w-full animate-pulse"
+        style={{ height: '280px', background: 'rgba(10,46,77,0.06)', borderRadius: '14px' }}
+      />
+    ),
+  }
+)
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,6 +72,8 @@ export type ExperienceFormDefaults = {
   location_country?: string
   location_city?: string
   meeting_point?: string
+  location_lat?: number | null
+  location_lng?: number | null
   what_included?: string[]
   what_excluded?: string[]
   published?: boolean
@@ -94,11 +112,15 @@ function Field({ label, required, children }: { label: string; required?: boolea
   )
 }
 
+// Bug #2 fix: merge className via cn() so callers can add utility classes (e.g. mt-2)
 function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className="w-full px-4 py-3 rounded-2xl text-sm f-body outline-none transition-all"
+      className={cn(
+        'w-full px-4 py-3 rounded-2xl text-sm f-body outline-none transition-all',
+        props.className,
+      )}
       style={{ ...inputBase, ...(props.style ?? {}) }}
       onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
       onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
@@ -235,6 +257,32 @@ function TagList({
   )
 }
 
+// ─── Nominatim geocoding helper ───────────────────────────────────────────────
+
+async function geocodeLocation(city: string, country: string): Promise<{ lat: number; lng: number } | 'not_found' | 'error'> {
+  const parts = [city.trim(), country.trim()].filter(Boolean)
+  if (parts.length === 0) return 'not_found'
+
+  try {
+    const q = encodeURIComponent(parts.join(', '))
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+      { headers: { 'Accept-Language': 'en' } }
+    )
+    if (!res.ok) return 'error'
+
+    const data = await res.json() as Array<{ lat: string; lon: string }>
+    if (data.length === 0) return 'not_found'
+
+    return {
+      lat: parseFloat(parseFloat(data[0].lat).toFixed(6)),
+      lng: parseFloat(parseFloat(data[0].lon).toFixed(6)),
+    }
+  } catch {
+    return 'error'
+  }
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ExperienceForm({
@@ -255,7 +303,14 @@ export default function ExperienceForm({
 
   // ── Fishing ─────────────────────────────────────────────────────────────
   const [fishTypes,       setFishTypes]       = useState<string[]>(dv.fish_types ?? [])
-  const [technique,       setTechnique]       = useState(dv.technique ?? '')
+
+  // Bug #1 fix: separate state for "Other" technique so the text input stays visible while typing.
+  // If the saved technique isn't in TECHNIQUES list → show "__other" + pre-fill the custom input.
+  const initTechValue = dv.technique ?? ''
+  const isCustomTech  = initTechValue !== '' && !TECHNIQUES.includes(initTechValue)
+  const [technique,       setTechnique]       = useState(isCustomTech ? '__other' : initTechValue)
+  const [customTechnique, setCustomTechnique] = useState(isCustomTech ? initTechValue : '')
+
   const [difficulty,      setDifficulty]      = useState<'beginner' | 'intermediate' | 'expert' | null>(dv.difficulty ?? null)
   const [catchAndRelease, setCatchAndRelease] = useState(dv.catch_and_release ?? false)
 
@@ -269,6 +324,10 @@ export default function ExperienceForm({
   const [locationCountry, setLocationCountry] = useState(dv.location_country ?? '')
   const [locationCity,    setLocationCity]    = useState(dv.location_city ?? '')
   const [meetingPoint,    setMeetingPoint]    = useState(dv.meeting_point ?? '')
+  const [locationLat,     setLocationLat]     = useState<number | null>(dv.location_lat ?? null)
+  const [locationLng,     setLocationLng]     = useState<number | null>(dv.location_lng ?? null)
+  const [isGeocoding,     setIsGeocoding]     = useState(false)
+  const [geocodeError,    setGeocodeError]    = useState<string | null>(null)
 
   // ── Inclusions ───────────────────────────────────────────────────────────
   const [included, setIncluded] = useState<string[]>(dv.what_included ?? [])
@@ -276,8 +335,8 @@ export default function ExperienceForm({
 
   // ── Images ───────────────────────────────────────────────────────────────
   const existingImages = dv.images ?? []
-  const [coverUrl,    setCoverUrl]    = useState<string | null>(existingImages.find(i => i.is_cover)?.url ?? null)
-  const [gallery,     setGallery]     = useState<Array<string | null>>([
+  const [coverUrl, setCoverUrl] = useState<string | null>(existingImages.find(i => i.is_cover)?.url ?? null)
+  const [gallery,  setGallery]  = useState<Array<string | null>>([
     existingImages.find(i => !i.is_cover && i.sort_order === 1)?.url ?? null,
     existingImages.find(i => !i.is_cover && i.sort_order === 2)?.url ?? null,
     existingImages.find(i => !i.is_cover && i.sort_order === 3)?.url ?? null,
@@ -288,12 +347,12 @@ export default function ExperienceForm({
   const [published, setPublished] = useState(dv.published ?? false)
 
   // ── Error / success ──────────────────────────────────────────────────────
-  const [error,   setError]   = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [error,     setError]     = useState<string | null>(null)
+  const [success,   setSuccess]   = useState(false)
   const [createdId, setCreatedId] = useState<string | null>(null)
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-  const toggleFish  = (f: string) =>
+  const toggleFish = (f: string) =>
     setFishTypes(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])
 
   // Build images array for payload
@@ -306,37 +365,67 @@ export default function ExperienceForm({
     return result
   }
 
+  // Geocode city/country via Nominatim → set map pin
+  const handleGeocode = async () => {
+    if (locationCity.trim() === '' && locationCountry.trim() === '') {
+      setGeocodeError('Enter a city or country first.')
+      return
+    }
+    setIsGeocoding(true)
+    setGeocodeError(null)
+
+    const result = await geocodeLocation(locationCity, locationCountry)
+
+    if (result === 'not_found') {
+      setGeocodeError('Location not found. Try a more specific city name.')
+    } else if (result === 'error') {
+      setGeocodeError('Geocoding failed. Check your connection and try again.')
+    } else {
+      setLocationLat(result.lat)
+      setLocationLng(result.lng)
+    }
+
+    setIsGeocoding(false)
+  }
+
   // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
     // Validation
-    if (title.trim() === '')    { setError('Title is required.'); return }
+    if (title.trim() === '')       { setError('Title is required.'); return }
     if (description.trim() === '') { setError('Description is required.'); return }
-    if (fishTypes.length === 0) { setError('Select at least one target species.'); return }
-    if (durationValue === '')   { setError('Duration is required.'); return }
-    if (maxGuests === '')       { setError('Maximum guests is required.'); return }
-    if (price === '')           { setError('Price per person is required.'); return }
+    if (fishTypes.length === 0)    { setError('Select at least one target species.'); return }
+    if (durationValue === '')      { setError('Duration is required.'); return }
+    if (maxGuests === '')          { setError('Maximum guests is required.'); return }
+    if (price === '')              { setError('Price per person is required.'); return }
+
+    // Resolve technique: "__other" → use the custom text input value
+    const resolvedTechnique = technique === '__other'
+      ? (customTechnique.trim() || null)
+      : (technique.trim() || null)
 
     const payload: ExperiencePayload = {
-      title: title.trim(),
-      description: description.trim(),
-      fish_types: fishTypes,
-      technique: technique.trim() || null,
+      title:                title.trim(),
+      description:          description.trim(),
+      fish_types:           fishTypes,
+      technique:            resolvedTechnique,
       difficulty,
-      catch_and_release: catchAndRelease,
-      duration_hours: durationType === 'hours' ? parseInt(durationValue, 10) : null,
-      duration_days:  durationType === 'days'  ? parseInt(durationValue, 10) : null,
-      max_guests:          parseInt(maxGuests, 10),
+      catch_and_release:    catchAndRelease,
+      duration_hours:       durationType === 'hours' ? parseInt(durationValue, 10) : null,
+      duration_days:        durationType === 'days'  ? parseInt(durationValue, 10) : null,
+      max_guests:           parseInt(maxGuests, 10),
       price_per_person_eur: parseFloat(price),
-      location_country: locationCountry.trim() || null,
-      location_city:    locationCity.trim() || null,
-      meeting_point:    meetingPoint.trim() || null,
-      what_included: included,
-      what_excluded: excluded,
+      location_country:     locationCountry.trim() || null,
+      location_city:        locationCity.trim() || null,
+      meeting_point:        meetingPoint.trim() || null,
+      location_lat:         locationLat,
+      location_lng:         locationLng,
+      what_included:        included,
+      what_excluded:        excluded,
       published,
-      images: buildImages(),
+      images:               buildImages(),
     }
 
     startTransition(async () => {
@@ -499,12 +588,18 @@ export default function ExperienceForm({
             </div>
           </div>
 
-          {/* Technique */}
+          {/* Technique + Difficulty */}
           <div className="grid grid-cols-2 gap-4">
+
+            {/* Technique — Bug #1 fix: separate customTechnique state */}
             <Field label="Technique">
               <select
                 value={technique}
-                onChange={e => setTechnique(e.target.value)}
+                onChange={e => {
+                  setTechnique(e.target.value)
+                  // Clear custom text when switching away from "Other"
+                  if (e.target.value !== '__other') setCustomTechnique('')
+                }}
                 className="w-full px-4 py-3 rounded-2xl text-sm f-body outline-none transition-all appearance-none cursor-pointer"
                 style={inputBase}
                 onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
@@ -512,15 +607,16 @@ export default function ExperienceForm({
               >
                 <option value="">Select technique</option>
                 {TECHNIQUES.map(t => <option key={t} value={t}>{t}</option>)}
-                <option value="__other">Other</option>
+                <option value="__other">Other…</option>
               </select>
+              {/* Visible only when "Other…" is selected; uses own state so typing doesn't hide it */}
               {technique === '__other' && (
                 <TextInput
                   type="text"
                   className="mt-2"
                   placeholder="Describe the technique"
-                  value={technique === '__other' ? '' : technique}
-                  onChange={e => setTechnique(e.target.value)}
+                  value={customTechnique}
+                  onChange={e => setCustomTechnique(e.target.value)}
                 />
               )}
             </Field>
@@ -642,33 +738,139 @@ export default function ExperienceForm({
       </SectionCard>
 
       {/* ── Section 4: Location ──────────────────────────────────────── */}
-      <SectionCard title="Location">
-        <div className="grid grid-cols-2 gap-5">
-          <Field label="Country">
-            <TextInput
-              type="text"
-              value={locationCountry}
-              onChange={e => setLocationCountry(e.target.value)}
-              placeholder="Norway"
-            />
-          </Field>
-          <Field label="City / Region">
-            <TextInput
-              type="text"
-              value={locationCity}
-              onChange={e => setLocationCity(e.target.value)}
-              placeholder="Hardangerfjord"
-            />
-          </Field>
-          <div className="col-span-2">
-            <Field label="Meeting point">
+      <SectionCard
+        title="Location"
+        subtitle="Fill in the text fields, then pin the exact spot on the map."
+      >
+        <div className="flex flex-col gap-5">
+
+          {/* Country + City */}
+          <div className="grid grid-cols-2 gap-5">
+            <Field label="Country">
               <TextInput
                 type="text"
-                value={meetingPoint}
-                onChange={e => setMeetingPoint(e.target.value)}
-                placeholder="e.g. Bergen Harbor, Bryggen — exact address or description"
+                value={locationCountry}
+                onChange={e => setLocationCountry(e.target.value)}
+                placeholder="Norway"
               />
             </Field>
+            <Field label="City / Region">
+              <TextInput
+                type="text"
+                value={locationCity}
+                onChange={e => setLocationCity(e.target.value)}
+                placeholder="Hardangerfjord"
+              />
+            </Field>
+          </div>
+
+          {/* Meeting point */}
+          <Field label="Meeting point">
+            <TextInput
+              type="text"
+              value={meetingPoint}
+              onChange={e => setMeetingPoint(e.target.value)}
+              placeholder="e.g. Bergen Harbor, Bryggen — exact address or description"
+            />
+          </Field>
+
+          {/* ── Map pin ─────────────────────────────────────────────── */}
+          <div>
+
+            {/* Row: label + coordinates + buttons */}
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <label className="text-xs font-semibold uppercase tracking-[0.16em] f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                Map pin
+              </label>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Coordinates badge — shown when pin is placed */}
+                {locationLat != null && locationLng != null && (
+                  <span
+                    className="text-xs f-body font-mono px-2.5 py-1 rounded-full"
+                    style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)' }}
+                  >
+                    {locationLat.toFixed(4)}, {locationLng.toFixed(4)}
+                  </span>
+                )}
+
+                {/* Clear pin */}
+                {locationLat != null && (
+                  <button
+                    type="button"
+                    onClick={() => { setLocationLat(null); setLocationLng(null); setGeocodeError(null) }}
+                    className="text-xs px-2.5 py-1 rounded-full f-body font-medium transition-all hover:brightness-95"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
+                  >
+                    × Clear pin
+                  </button>
+                )}
+
+                {/* Auto-locate button → Nominatim geocoding */}
+                <button
+                  type="button"
+                  onClick={() => { void handleGeocode() }}
+                  disabled={isGeocoding}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full f-body font-semibold transition-all hover:brightness-105 disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}
+                >
+                  {isGeocoding ? (
+                    <>
+                      <svg className="animate-spin" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <circle cx="5.5" cy="5.5" r="4" strokeOpacity="0.25" />
+                        <path d="M5.5 1.5a4 4 0 014 4" strokeLinecap="round" />
+                      </svg>
+                      Locating…
+                    </>
+                  ) : (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <circle cx="5.5" cy="5.5" r="4" />
+                        <circle cx="5.5" cy="5.5" r="1.5" fill="currentColor" />
+                        <line x1="5.5" y1="1" x2="5.5" y2="0" />
+                        <line x1="5.5" y1="11" x2="5.5" y2="10" />
+                        <line x1="1" y1="5.5" x2="0" y2="5.5" />
+                        <line x1="11" y1="5.5" x2="10" y2="5.5" />
+                      </svg>
+                      Auto-locate
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Geocode error */}
+            {geocodeError != null && (
+              <p className="text-xs f-body mb-3" style={{ color: '#DC2626' }}>
+                {geocodeError}
+              </p>
+            )}
+
+            {/* Map — always rendered; click to place pin, drag to fine-tune */}
+            <div
+              style={{
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: '1.5px solid rgba(10,46,77,0.1)',
+              }}
+            >
+              <LocationPickerMap
+                lat={locationLat}
+                lng={locationLng}
+                onChange={(lat, lng) => {
+                  setLocationLat(lat)
+                  setLocationLng(lng)
+                  setGeocodeError(null)
+                }}
+              />
+            </div>
+
+            {/* Hint text */}
+            <p className="text-xs f-body mt-2" style={{ color: 'rgba(10,46,77,0.35)' }}>
+              {locationLat != null
+                ? 'Drag the pin to fine-tune · Click anywhere on the map to move it'
+                : 'Click "Auto-locate" to geocode the city/country · Or click directly on the map'}
+            </p>
           </div>
         </div>
       </SectionCard>
@@ -702,7 +904,8 @@ export default function ExperienceForm({
       </SectionCard>
 
       {/* ── Section 6: Photos ────────────────────────────────────────── */}
-      <SectionCard title="Photos" subtitle="Cover photo is required. Up to 4 gallery images. JPEG, PNG, WebP · max 5 MB each.">
+      {/* Bug #3 fix: corrected subtitle — ImageUpload auto-compresses any size to ~400-600 KB */}
+      <SectionCard title="Photos" subtitle="Cover photo is required. Up to 4 gallery images. JPEG · PNG · WebP — any size, auto-compressed.">
         <div className="flex flex-col gap-5">
           {/* Cover */}
           <ImageUpload

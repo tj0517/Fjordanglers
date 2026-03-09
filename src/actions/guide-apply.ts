@@ -38,7 +38,7 @@ export async function submitGuideApplication(
   payload: GuideApplicationPayload,
 ): Promise<ActionResult<{ id: string }>> {
   try {
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     const { data: lead, error } = await supabase
       .from('leads')
