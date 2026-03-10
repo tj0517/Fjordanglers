@@ -145,8 +145,8 @@ export default async function GuidesPage({
             {/* Live stats */}
             <div className="hidden md:flex items-stretch gap-0 pb-1 flex-shrink-0">
               {[
-                { n: stats.guideCount.toString(),    label: 'Guides' },
-                { n: stats.countryCount.toString(),  label: 'Countries' },
+                { n: stats.guideCount.toString(), label: 'Guides' },
+                { n: stats.countryCount.toString(), label: 'Countries' },
                 { n: stats.languageCount.toString(), label: 'Languages' },
               ].map((stat, i) => (
                 <div key={stat.label} className="flex items-stretch">
@@ -419,7 +419,7 @@ export default async function GuidesPage({
             </div>
             <div className="flex items-center gap-8 md:gap-12">
               {[
-                { label: 'All Guides',   href: '/guides' },
+                { label: 'All Guides', href: '/guides' },
                 { label: 'Join as Guide', href: '/guides/apply' },
               ].map(item => (
                 <Link key={item.label} href={item.href} className="text-sm transition-colors f-body hover:text-white/60" style={{ color: 'rgba(255,255,255,0.28)' }}>

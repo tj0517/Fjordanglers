@@ -35,20 +35,21 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
   const solid = pinned || pastHero || open
 
   return (
-    <nav className="fixed inset-x-0 z-50 px-4 md:px-6 pt-5" style={{ top: `${topOffset}px` }}>
-      <div
-        className="max-w-[1440px] mx-auto overflow-hidden transition-all duration-500"
-        style={{
-          background: solid ? 'rgba(248,244,238,0.88)' : 'transparent',
-          backdropFilter: solid ? 'blur(20px) saturate(1.6)' : 'none',
-          WebkitBackdropFilter: solid ? 'blur(20px) saturate(1.6)' : 'none',
-          border: solid ? '1px solid rgba(10,46,77,0.08)' : '1px solid transparent',
-          borderRadius: '18px',
-          boxShadow: solid ? '0 4px 28px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.6)' : 'none',
-        }}
-      >
+    <nav
+      className="fixed inset-x-0 z-50"
+      style={{
+        top: `${topOffset}px`,
+        background: solid ? 'rgba(248,244,238,0.88)' : 'transparent',
+        backdropFilter: solid ? 'blur(20px) saturate(1.6)' : 'none',
+        WebkitBackdropFilter: solid ? 'blur(20px) saturate(1.6)' : 'none',
+        borderBottom: solid ? '1px solid rgba(10,46,77,0.08)' : '1px solid transparent',
+        boxShadow: solid ? '0 4px 28px rgba(0,0,0,0.08)' : 'none',
+        transition: 'background 0.5s ease, backdrop-filter 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease',
+      }}
+    >
+      <div className="overflow-hidden">
         {/* Top bar */}
-        <div className="h-[60px] flex items-center justify-between px-5">
+        <div className="h-[60px] flex items-center justify-between px-6 md:px-10">
 
           <Link href="/" className="flex-shrink-0">
             <Image

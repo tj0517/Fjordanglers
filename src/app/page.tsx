@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getFeaturedExperiences, getPlatformStats, getSpeciesCounts } from '@/lib/supabase/queries'
 import { HomeNav } from '@/components/home/home-nav'
+import { BLOG_POSTS } from '@/lib/blog-data'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,12 +19,12 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 }
 
 const SPECIES_CONFIG = [
-  { name: 'Atlantic Salmon', slug: 'Salmon', img: '/fish_catalog/salmon.jpg' },
-  { name: 'Trout', slug: 'Trout', img: '/fish_catalog/trout.jpg' },
-  { name: 'Pike', slug: 'Pike', img: '/fish_catalog/pike.jpg' },
-  { name: 'Zander', slug: 'Zander', img: '/fish_catalog/zander.jpg' },
-  { name: 'Grayling', slug: 'Grayling', img: '/fish_catalog/graling.jpeg' },
-  { name: 'Cod', slug: 'Cod', img: '/fish_catalog/cod.jpg' },
+  { name: 'Atlantic Salmon', slug: 'Salmon', pageSlug: 'salmon', img: '/fish_catalog/salmon.jpg' },
+  { name: 'Trout', slug: 'Trout', pageSlug: 'trout', img: '/fish_catalog/trout.jpg' },
+  { name: 'Pike', slug: 'Pike', pageSlug: 'pike', img: '/fish_catalog/pike.jpg' },
+  { name: 'Zander', slug: 'Zander', pageSlug: 'zander', img: '/fish_catalog/zander.jpg' },
+  { name: 'Grayling', slug: 'Grayling', pageSlug: 'grayling', img: '/fish_catalog/graling.jpeg' },
+  { name: 'Cod', slug: 'Cod', pageSlug: 'cod', img: '/fish_catalog/cod.jpg' },
 ]
 
 // ─── MICRO-COMPONENTS ─────────────────────────────────────────────────────────
@@ -59,176 +60,176 @@ export default async function HomePage() {
       <HomeNav />
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
-      <section className="relative px-4 md:px-6 pt-4 pb-4" style={{ background: '#F3EDE4' }}>
-          <div
-            className="relative overflow-hidden"
-            style={{ borderRadius: '28px', minHeight: '96vh' }}
+      <section className="relative" style={{ minHeight: '96vh' }}>
+        <div
+          className="relative overflow-hidden"
+          style={{ minHeight: '96vh' }}
+        >
+          <video
+            autoPlay muted loop playsInline
+            className="absolute inset-0 w-full h-full object-cover"
           >
-            <video
-              autoPlay muted loop playsInline
-              className="absolute inset-0 w-full h-full object-cover"
-            >
-              <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/hero_bg.mp4" type="video/mp4" />
-            </video>
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  'linear-gradient(170deg, rgba(5,12,24,0.72) 0%, rgba(5,12,24,0.3) 40%, rgba(5,12,24,0.86) 100%)',
-              }}
-            />
-            <GrainOverlay />
+            <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/hero_bg.mp4" type="video/mp4" />
+          </video>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                'linear-gradient(170deg, rgba(5,12,24,0.72) 0%, rgba(5,12,24,0.3) 40%, rgba(5,12,24,0.86) 100%)',
+            }}
+          />
+          <GrainOverlay />
 
-            <div
-              className="relative flex flex-col justify-between px-8 md:px-14 pt-24 pb-12 md:pb-16"
-              style={{ zIndex: 3, minHeight: '96vh' }}
-            >
-              {/* Top: destination chips + live badge */}
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {['🇳🇴 Norway', '🇸🇪 Sweden', '🇫🇮 Finland'].map((label, i) => (
-                    <span
-                      key={label}
-                      className="text-[11px] font-semibold px-3.5 py-1.5 rounded-full f-body"
-                      style={{
-                        background: i === 0 ? 'rgba(230,126,80,0.16)' : 'rgba(255,255,255,0.07)',
-                        color: i === 0 ? '#E67E50' : 'rgba(255,255,255,0.46)',
-                        border: i === 0
-                          ? '1px solid rgba(230,126,80,0.22)'
-                          : '1px solid rgba(255,255,255,0.07)',
-                      }}
-                    >
-                      {label}
-                    </span>
-                  ))}
-                </div>
-                <div
-                  className="hidden sm:flex items-center gap-2 text-[11px] font-medium px-3.5 py-1.5 rounded-full f-body"
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.44)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                  }}
-                >
+          <div
+            className="relative flex flex-col justify-between px-8 md:px-14 pt-24 pb-12 md:pb-16"
+            style={{ zIndex: 3, minHeight: '96vh' }}
+          >
+            {/* Top: destination chips + live badge */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {['🇳🇴 Norway', '🇸🇪 Sweden', '🇫🇮 Finland'].map((label, i) => (
                   <span
-                    className="w-1.5 h-1.5 rounded-full inline-block"
-                    style={{ background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.55)' }}
-                  />
-                  Booking open · 2026
-                </div>
-              </div>
-
-              {/* Bottom: headline + search */}
-              <div>
-                <h1
-                  className="font-bold f-display"
-                  style={{
-                    fontSize: 'clamp(48px, 6vw, 96px)',
-                    lineHeight: 1.0,
-                    maxWidth: '760px',
-                    marginBottom: '22px',
-                  }}
-                >
-                  <span className="text-white block">Fish where</span>
-                  <span className="text-white block">others only</span>
-                  <span className="block" style={{ color: '#E67E50', fontStyle: 'italic' }}>
-                    dream of going.
-                  </span>
-                </h1>
-
-                <p
-                  className="f-body mb-8"
-                  style={{
-                    color: 'rgba(255,255,255,0.42)',
-                    maxWidth: '420px',
-                    fontSize: '16px',
-                    lineHeight: 1.78,
-                  }}
-                >
-                  Day trips and expeditions with hand-picked Scandinavian guides
-                  who know every river, fjord, and lake.
-                </p>
-
-                {/* Search bar */}
-                <form
-                  action="/experiences"
-                  method="GET"
-                  className="flex items-center mb-7 w-full max-w-[540px] overflow-hidden"
-                  style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    borderRadius: '20px',
-                    border: '1px solid rgba(255,255,255,0.14)',
-                  }}
-                >
-                  <div className="flex flex-col px-5 py-3.5 flex-1 min-w-0">
-                    <label
-                      htmlFor="hero-country"
-                      className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1 f-body"
-                      style={{ color: 'rgba(255,255,255,0.36)' }}
-                    >
-                      Destination
-                    </label>
-                    <select
-                      id="hero-country"
-                      name="country"
-                      className="bg-transparent text-sm font-medium outline-none cursor-pointer f-body appearance-none"
-                      style={{ color: 'rgba(255,255,255,0.82)' }}
-                    >
-                      <option value="" style={{ background: '#07111C' }}>Any country</option>
-                      <option value="Norway" style={{ background: '#07111C' }}>🇳🇴 Norway</option>
-                      <option value="Sweden" style={{ background: '#07111C' }}>🇸🇪 Sweden</option>
-                      <option value="Finland" style={{ background: '#07111C' }}>🇫🇮 Finland</option>
-                      <option value="Iceland" style={{ background: '#07111C' }}>🇮🇸 Iceland</option>
-                    </select>
-                  </div>
-
-                  <div className="w-px self-stretch my-3" style={{ background: 'rgba(255,255,255,0.1)' }} />
-
-                  <div className="flex flex-col px-5 py-3.5 flex-1 min-w-0">
-                    <label
-                      htmlFor="hero-fish"
-                      className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1 f-body"
-                      style={{ color: 'rgba(255,255,255,0.36)' }}
-                    >
-                      Species
-                    </label>
-                    <select
-                      id="hero-fish"
-                      name="fish"
-                      className="bg-transparent text-sm font-medium outline-none cursor-pointer f-body appearance-none"
-                      style={{ color: 'rgba(255,255,255,0.82)' }}
-                    >
-                      <option value="" style={{ background: '#07111C' }}>Any fish</option>
-                      <option value="Salmon" style={{ background: '#07111C' }}>Atlantic Salmon</option>
-                      <option value="Trout" style={{ background: '#07111C' }}>Trout</option>
-                      <option value="Pike" style={{ background: '#07111C' }}>Pike</option>
-                      <option value="Zander" style={{ background: '#07111C' }}>Zander</option>
-                      <option value="Grayling" style={{ background: '#07111C' }}>Grayling</option>
-                      <option value="Cod" style={{ background: '#07111C' }}>Cod</option>
-                    </select>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="m-2 shrink-0 text-white font-semibold text-sm px-7 py-3 rounded-[14px] transition-all hover:brightness-110 f-body whitespace-nowrap"
-                    style={{ background: '#E67E50' }}
+                    key={label}
+                    className="text-[11px] font-semibold px-3.5 py-1.5 rounded-full f-body"
+                    style={{
+                      background: i === 0 ? 'rgba(230,126,80,0.16)' : 'rgba(255,255,255,0.07)',
+                      color: i === 0 ? '#E67E50' : 'rgba(255,255,255,0.46)',
+                      border: i === 0
+                        ? '1px solid rgba(230,126,80,0.22)'
+                        : '1px solid rgba(255,255,255,0.07)',
+                    }}
                   >
-                    Search
-                  </button>
-                </form>
-
-                <Link
-                  href="/guides"
-                  className="inline-flex items-center gap-2 text-sm font-medium f-body"
-                  style={{ color: 'rgba(255,255,255,0.36)' }}
-                >
-                  Meet the guides →
-                </Link>
+                    {label}
+                  </span>
+                ))}
+              </div>
+              <div
+                className="hidden sm:flex items-center gap-2 text-[11px] font-medium px-3.5 py-1.5 rounded-full f-body"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'rgba(255,255,255,0.44)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                }}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full inline-block"
+                  style={{ background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.55)' }}
+                />
+                Booking open · 2026
               </div>
             </div>
+
+            {/* Bottom: headline + search */}
+            <div>
+              <h1
+                className="font-bold f-display"
+                style={{
+                  fontSize: 'clamp(48px, 6vw, 96px)',
+                  lineHeight: 1.0,
+                  maxWidth: '760px',
+                  marginBottom: '22px',
+                }}
+              >
+                <span className="text-white block">Fish where</span>
+                <span className="text-white block">others only</span>
+                <span className="block" style={{ color: '#E67E50', fontStyle: 'italic' }}>
+                  dream of going.
+                </span>
+              </h1>
+
+              <p
+                className="f-body mb-8"
+                style={{
+                  color: 'rgba(255,255,255,0.42)',
+                  maxWidth: '420px',
+                  fontSize: '16px',
+                  lineHeight: 1.78,
+                }}
+              >
+                Day trips and expeditions with hand-picked Scandinavian guides
+                who know every river, fjord, and lake.
+              </p>
+
+              {/* Search bar */}
+              <form
+                action="/experiences"
+                method="GET"
+                className="flex items-center mb-7 w-full max-w-[540px] overflow-hidden"
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255,255,255,0.14)',
+                }}
+              >
+                <div className="flex flex-col px-5 py-3.5 flex-1 min-w-0">
+                  <label
+                    htmlFor="hero-country"
+                    className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1 f-body"
+                    style={{ color: 'rgba(255,255,255,0.36)' }}
+                  >
+                    Destination
+                  </label>
+                  <select
+                    id="hero-country"
+                    name="country"
+                    className="bg-transparent text-sm font-medium outline-none cursor-pointer f-body appearance-none"
+                    style={{ color: 'rgba(255,255,255,0.82)' }}
+                  >
+                    <option value="" style={{ background: '#07111C' }}>Any country</option>
+                    <option value="Norway" style={{ background: '#07111C' }}>🇳🇴 Norway</option>
+                    <option value="Sweden" style={{ background: '#07111C' }}>🇸🇪 Sweden</option>
+                    <option value="Finland" style={{ background: '#07111C' }}>🇫🇮 Finland</option>
+                    <option value="Iceland" style={{ background: '#07111C' }}>🇮🇸 Iceland</option>
+                  </select>
+                </div>
+
+                <div className="w-px self-stretch my-3" style={{ background: 'rgba(255,255,255,0.1)' }} />
+
+                <div className="flex flex-col px-5 py-3.5 flex-1 min-w-0">
+                  <label
+                    htmlFor="hero-fish"
+                    className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1 f-body"
+                    style={{ color: 'rgba(255,255,255,0.36)' }}
+                  >
+                    Species
+                  </label>
+                  <select
+                    id="hero-fish"
+                    name="fish"
+                    className="bg-transparent text-sm font-medium outline-none cursor-pointer f-body appearance-none"
+                    style={{ color: 'rgba(255,255,255,0.82)' }}
+                  >
+                    <option value="" style={{ background: '#07111C' }}>Any fish</option>
+                    <option value="Salmon" style={{ background: '#07111C' }}>Atlantic Salmon</option>
+                    <option value="Trout" style={{ background: '#07111C' }}>Trout</option>
+                    <option value="Pike" style={{ background: '#07111C' }}>Pike</option>
+                    <option value="Zander" style={{ background: '#07111C' }}>Zander</option>
+                    <option value="Grayling" style={{ background: '#07111C' }}>Grayling</option>
+                    <option value="Cod" style={{ background: '#07111C' }}>Cod</option>
+                  </select>
+                </div>
+
+                <button
+                  type="submit"
+                  className="m-2 shrink-0 text-white font-semibold text-sm px-7 py-3 rounded-[14px] transition-all hover:brightness-110 f-body whitespace-nowrap"
+                  style={{ background: '#E67E50' }}
+                >
+                  Search
+                </button>
+              </form>
+
+              <Link
+                href="/guides"
+                className="inline-flex items-center gap-2 text-sm font-medium f-body"
+                style={{ color: 'rgba(255,255,255,0.36)' }}
+              >
+                Meet the guides →
+              </Link>
+            </div>
           </div>
+        </div>
       </section>
 
       {/* ─── FEATURED EXPERIENCES ────────────────────────────────────── */}
@@ -421,7 +422,7 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
             {species.map(s => (
-              <Link key={s.name} href={`/experiences?fish=${encodeURIComponent(s.slug)}`} className="group block">
+              <Link key={s.name} href={`/species/${s.pageSlug}`} className="group block">
                 <div className="relative overflow-hidden" style={{ borderRadius: '22px', height: '210px' }}>
                   <Image
                     src={s.img}
@@ -456,109 +457,288 @@ export default async function HomePage() {
       </section>
 
       {/* ─── HOW IT WORKS ────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-24 px-4 md:px-6" style={{ background: '#07111C' }}>
-        <GrainOverlay />
-        <div className="relative max-w-[1440px] mx-auto" style={{ zIndex: 3 }}>
-          <div className="mb-16">
-            <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
-            <p
-              className="text-xs font-semibold uppercase tracking-[0.25em] mb-3 f-body"
-              style={{ color: '#E67E50' }}
-            >
-              Simple as that
-            </p>
-            <h2 className="text-white text-4xl font-bold f-display">How it works</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3">
-            {[
-              { step: '01', title: 'Find your experience', desc: 'Filter by country, species, and dates. Real prices, no hidden fees.' },
-              { step: '02', title: 'Book with the guide', desc: 'Send a message. Confirm in 24 hours. Pay securely through the platform.' },
-              { step: '03', title: 'Show up and fish', desc: 'Your guide handles the rest. You just need to show up ready to cast.' },
-            ].map((item, i) => (
-              <div
-                key={item.step}
-                className="relative py-12 overflow-hidden"
-                style={{
-                  paddingRight: i < 2 ? '3.5rem' : 0,
-                  paddingLeft: i > 0 ? '3.5rem' : 0,
-                  borderRight: i < 2 ? '1px solid rgba(255,255,255,0.06)' : undefined,
-                }}
-              >
-                <span
-                  className="absolute font-bold select-none pointer-events-none f-display"
-                  style={{
-                    top: '-8px',
-                    right: i < 2 ? '2rem' : '-0.5rem',
-                    fontSize: '120px',
-                    lineHeight: 1,
-                    color: 'rgba(255,255,255,0.028)',
-                    fontStyle: 'italic',
-                  }}
-                >
-                  {item.step}
-                </span>
-                <div className="relative" style={{ zIndex: 1 }}>
-                  <span className="text-[11px] font-bold tracking-[0.22em] uppercase f-body" style={{ color: '#E67E50' }}>
-                    {item.step}
-                  </span>
-                  <div className="w-8 h-px mt-3 mb-6" style={{ background: '#E67E50', opacity: 0.35 }} />
-                  <h3 className="text-white text-xl font-bold mb-3 f-display">{item.title}</h3>
-                  <p className="text-sm leading-relaxed f-body" style={{ color: 'rgba(255,255,255,0.42)' }}>
-                    {item.desc}
+      <section className=" pb-4" style={{ background: '#F3EDE4' }}>
+        <div
+          className="relative overflow-hidden"
+          style={{ background: '#07111C' }}
+        >
+          <GrainOverlay />
+          <div className="relative px-8 md:px-14 py-20 md:py-24" style={{ zIndex: 3 }}>
+
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-16">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-6 h-px" style={{ background: '#E67E50' }} />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] f-body" style={{ color: '#E67E50' }}>
+                    Simple as that
                   </p>
                 </div>
+                <h2 className="text-white font-bold f-display" style={{ fontSize: 'clamp(32px, 4vw, 52px)', lineHeight: 1.08 }}>
+                  How it works
+                </h2>
               </div>
-            ))}
+              <p className="text-sm f-body md:text-right md:max-w-[260px]" style={{ color: 'rgba(255,255,255,0.28)', lineHeight: 1.7 }}>
+                From browsing to bankside in three steps.
+              </p>
+            </div>
+
+            {/* Steps */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { step: '01', title: 'Find your experience', desc: 'Filter by country, species, and duration. Real prices, no hidden fees.' },
+                { step: '02', title: 'Book with the guide', desc: 'Send a message. Confirm within 24 hours. Pay securely through the platform.' },
+                { step: '03', title: 'Show up and fish', desc: 'Your guide handles everything. You just need to show up ready to cast.' },
+              ].map((item) => (
+                <div
+                  key={item.step}
+                  className="relative overflow-hidden flex flex-col justify-between"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: '20px',
+                    padding: '2rem',
+                    minHeight: '220px',
+                  }}
+                >
+                  {/* Giant ghost number */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute bottom-0 right-4 font-bold select-none pointer-events-none f-display"
+                    style={{
+                      fontSize: '108px',
+                      lineHeight: 0.85,
+                      color: 'rgba(230,126,80,0.10)',
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    {item.step}
+                  </span>
+
+                  {/* Step badge */}
+                  <span
+                    className="inline-flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold f-body flex-shrink-0 self-start"
+                    style={{ background: 'rgba(230,126,80,0.15)', color: '#E67E50' }}
+                  >
+                    {item.step}
+                  </span>
+
+                  {/* Text */}
+                  <div className="relative mt-6" style={{ zIndex: 1 }}>
+                    <h3 className="text-white font-bold mb-2 f-display" style={{ fontSize: '18px' }}>{item.title}</h3>
+                    <p className="text-sm leading-relaxed f-body" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {item.desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── BLOG PREVIEW ────────────────────────────────────────────── */}
+      <section className="px-4 md:px-6 py-20" style={{ background: '#F3EDE4' }}>
+        <div className="max-w-[1440px] mx-auto">
+
+          {/* Header */}
+          <div className="flex items-end justify-between mb-12">
+            <div>
+              <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-3 f-body" style={{ color: '#E67E50' }}>
+                From the journal
+              </p>
+              <h2 className="text-[#0A2E4D] text-4xl font-bold f-display">
+                Stories from<span style={{ fontStyle: 'italic' }}> the water.</span>
+              </h2>
+            </div>
+            <Link
+              href="/blog"
+              className="hidden md:block text-sm font-medium transition-colors hover:text-[#E67E50] f-body"
+              style={{ color: 'rgba(10,46,77,0.38)' }}
+            >
+              View all articles →
+            </Link>
+          </div>
+
+          {/* 1 featured + 4 cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+            {/* Featured */}
+            <Link href={`/blog/${BLOG_POSTS[0].slug}`} className="group block">
+              <article
+                className="relative overflow-hidden"
+                style={{ borderRadius: '24px', height: '100%', minHeight: '400px' }}
+              >
+                <Image
+                  src={BLOG_POSTS[0].img}
+                  alt={BLOG_POSTS[0].title}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                />
+                <div
+                  className="absolute inset-0"
+                  style={{ background: 'linear-gradient(to top, rgba(5,10,20,0.9) 0%, rgba(5,10,20,0.2) 60%, transparent 100%)' }}
+                />
+                <div className="absolute bottom-0 left-0 right-0 p-8">
+                  <span
+                    className="inline-block text-[11px] font-semibold px-3 py-1 rounded-full mb-4 f-body"
+                    style={{ background: 'rgba(230,126,80,0.22)', color: '#E67E50', border: '1px solid rgba(230,126,80,0.28)' }}
+                  >
+                    {BLOG_POSTS[0].category}
+                  </span>
+                  <h3 className="text-white font-bold f-display mb-3" style={{ fontSize: 'clamp(20px, 2.2vw, 28px)', lineHeight: 1.2 }}>
+                    {BLOG_POSTS[0].title}
+                  </h3>
+                  <p className="text-sm f-body mb-4 line-clamp-2" style={{ color: 'rgba(255,255,255,0.48)' }}>
+                    {BLOG_POSTS[0].excerpt}
+                  </p>
+                  <span className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.32)' }}>
+                    {BLOG_POSTS[0].date} · {BLOG_POSTS[0].readTime} read
+                  </span>
+                </div>
+              </article>
+            </Link>
+
+            {/* 2×2 grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {BLOG_POSTS.slice(1).map(post => (
+                <Link key={post.slug} href={`/blog/${post.slug}`} className="group block">
+                  <article
+                    className="overflow-hidden flex flex-col h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(10,46,77,0.10)]"
+                    style={{ borderRadius: '20px', background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
+                  >
+                    <div className="relative overflow-hidden flex-shrink-0" style={{ height: '160px' }}>
+                      <Image
+                        src={post.img}
+                        alt={post.title}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                      />
+                      <div className="absolute top-3 left-3">
+                        <span
+                          className="text-[10px] font-semibold px-2.5 py-1 rounded-full f-body"
+                          style={{ background: 'rgba(5,12,22,0.65)', color: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(8px)' }}
+                        >
+                          {post.category}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-5 flex flex-col flex-1">
+                      <h3 className="font-semibold f-display mb-auto line-clamp-2" style={{ fontSize: '14px', color: '#0A2E4D', lineHeight: 1.35 }}>
+                        {post.title}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+                        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{post.date}</span>
+                        <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: '10px' }}>·</span>
+                        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{post.readTime} read</span>
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile view all */}
+          <div className="mt-8 flex justify-center md:hidden">
+            <Link
+              href="/blog"
+              className="text-sm font-medium f-body"
+              style={{ color: 'rgba(10,46,77,0.45)' }}
+            >
+              View all articles →
+            </Link>
           </div>
         </div>
       </section>
 
       {/* ─── GUIDE CTA ───────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ minHeight: '540px' }}>
-        <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover object-center">
-          <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/cta.mp4" type="video/mp4" />
-        </video>
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(108deg, rgba(4,12,22,0.92) 0%, rgba(4,12,22,0.78) 45%, rgba(4,12,22,0.4) 100%)',
-          }}
-        />
-        <GrainOverlay />
-        <div
-          className="relative flex items-center min-h-[540px] px-8 max-w-[1440px] mx-auto"
-          style={{ zIndex: 3 }}
-        >
-          <div style={{ maxWidth: '520px' }}>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-6 h-px" style={{ background: '#E67E50' }} />
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] f-body" style={{ color: '#E67E50' }}>
-                For guides
-              </p>
-            </div>
-            <h2 className="text-white text-5xl font-bold leading-tight mb-5 f-display">
-              Are you a<br />
-              <span style={{ fontStyle: 'italic' }}>fishing guide?</span>
-            </h2>
-            <p className="text-base leading-relaxed mb-3 f-body" style={{ color: 'rgba(255,255,255,0.55)' }}>
-              Join our founding cohort of Scandinavian guides. Reach anglers from Poland, Germany,
-              and across Europe.
-            </p>
-            <p className="text-sm leading-relaxed mb-8 f-body" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              First 50 guides get 3 months free +{' '}
-              <span style={{ color: '#E67E50' }}>8% commission forever</span>.
-            </p>
-            <div className="flex items-center gap-5">
-              <Link
-                href="/guides/apply"
-                className="inline-flex items-center gap-2 text-white font-semibold px-7 py-3.5 rounded-full text-sm tracking-wide transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
-                style={{ background: '#E67E50' }}
+      <section style={{ background: '#F3EDE4' }}>
+        <div className="relative overflow-hidden" style={{ minHeight: '580px' }}>
+
+          <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover object-center">
+            <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/cta.mp4" type="video/mp4" />
+          </video>
+          <div
+            className="absolute inset-0"
+            style={{ background: 'linear-gradient(105deg, rgba(4,12,22,0.94) 0%, rgba(4,12,22,0.82) 50%, rgba(4,12,22,0.55) 100%)' }}
+          />
+          <GrainOverlay />
+
+          <div
+            className="relative grid grid-cols-1 md:grid-cols-2 items-center gap-10 px-8 md:px-14 py-20"
+            style={{ zIndex: 3, minHeight: '580px' }}
+          >
+            {/* Left — headline + CTA */}
+            <div>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-6 h-px" style={{ background: '#E67E50' }} />
+                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] f-body" style={{ color: '#E67E50' }}>
+                  For guides
+                </p>
+              </div>
+              <h2
+                className="text-white font-bold f-display mb-5"
+                style={{ fontSize: 'clamp(36px, 4.5vw, 60px)', lineHeight: 1.06 }}
               >
-                Apply as Founding Guide →
-              </Link>
-              <Link href="/guides" className="text-sm font-medium f-body" style={{ color: 'rgba(255,255,255,0.42)' }}>
-                Meet the guides
-              </Link>
+                Are you a<br />
+                <span style={{ fontStyle: 'italic', color: '#E67E50' }}>fishing guide?</span>
+              </h2>
+              <p className="text-base leading-relaxed mb-10 f-body" style={{ color: 'rgba(255,255,255,0.48)', maxWidth: '380px' }}>
+                Join our founding cohort of Scandinavian guides and reach anglers from across Europe.
+              </p>
+              <div className="flex flex-wrap items-center gap-4">
+                <Link
+                  href="/guides/apply"
+                  className="inline-flex items-center gap-2 text-white font-semibold px-7 py-3.5 rounded-full text-sm transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
+                  style={{ background: '#E67E50' }}
+                >
+                  Apply as Founding Guide →
+                </Link>
+                <Link href="/guides" className="text-sm font-medium f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  Meet the guides
+                </Link>
+              </div>
+            </div>
+
+            {/* Right — founding offer card */}
+            <div className="hidden md:flex justify-end">
+              <div
+                className="w-full"
+                style={{
+                  maxWidth: '340px',
+                  background: 'rgba(255,255,255,0.07)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '24px',
+                  padding: '2rem',
+                }}
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] mb-4 f-body" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                  Founding Guide Offer
+                </p>
+                <p className="f-display font-bold text-white mb-1" style={{ fontSize: '42px', lineHeight: 1 }}>
+                  3 months
+                </p>
+                <p className="f-display font-bold mb-4" style={{ fontSize: '42px', lineHeight: 1, color: '#E67E50', fontStyle: 'italic' }}>
+                  free.
+                </p>
+                <p className="text-sm f-body mb-6" style={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.7 }}>
+                  Then just <span style={{ color: 'rgba(255,255,255,0.75)' }}>8% commission</span> — for life. First 50 guides only.
+                </p>
+                <div className="flex flex-col gap-2">
+                  {['€0 setup fee', '48h verification', 'You set your price', 'Anglers from 20+ countries'].map(t => (
+                    <div key={t} className="flex items-center gap-2.5">
+                      <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(230,126,80,0.18)' }}>
+                        <span style={{ color: '#E67E50', fontSize: '9px' }}>✓</span>
+                      </span>
+                      <span className="text-[13px] f-body" style={{ color: 'rgba(255,255,255,0.55)' }}>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -614,8 +794,8 @@ export default async function HomePage() {
                   { label: 'All Experiences', href: '/experiences' },
                   { label: 'Find Guides', href: '/guides' },
                   { label: 'License Map', href: '/license-map' },
-                  { label: 'Atlantic Salmon', href: '/experiences?fish=Salmon' },
-                  { label: 'Trout Fishing', href: '/experiences?fish=Trout' },
+                  { label: 'Atlantic Salmon', href: '/species/salmon' },
+                  { label: 'Trout Fishing', href: '/species/trout' },
                 ].map(item => (
                   <li key={item.label}>
                     <Link
