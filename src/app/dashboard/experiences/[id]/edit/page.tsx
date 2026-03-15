@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ExperienceForm, { type ExperienceFormDefaults } from '@/components/experiences/experience-form'
+import type { DurationOptionPayload, InclusionsPayload, GroupPricingPayload } from '@/actions/experiences'
+import type * as GeoJSON from 'geojson'
 
 /**
  * /dashboard/experiences/[id]/edit — Guide edits their own experience.
@@ -49,8 +51,8 @@ export default async function DashboardEditExperiencePage({
     description:          exp.description,
     fish_types:           exp.fish_types,
     technique:            exp.technique ?? '',
-    difficulty:           exp.difficulty ?? null,
-    catch_and_release:    exp.catch_and_release,
+    difficulty:           (exp.difficulty ?? null) as import('@/types').Difficulty | null,
+    catch_and_release:    exp.catch_and_release ?? false,
     duration_type:        exp.duration_hours != null ? 'hours' : 'days',
     duration_value:       String(exp.duration_hours ?? exp.duration_days ?? ''),
     max_guests:           String(exp.max_guests),
@@ -64,6 +66,17 @@ export default async function DashboardEditExperiencePage({
     what_excluded:        exp.what_excluded,
     published:            exp.published,
     images,
+    landscape_url:        exp.landscape_url ?? null,
+    // ── Structured fields (the ones that were missing — root cause of pricing reset) ──
+    duration_options:     (exp.duration_options as unknown as DurationOptionPayload[]) ?? undefined,
+    season_from:          exp.season_from ?? null,
+    season_to:            exp.season_to ?? null,
+    fishing_methods:      exp.fishing_methods ?? [],
+    inclusions_data:      (exp.inclusions as unknown as InclusionsPayload) ?? null,
+    group_pricing:        (exp.group_pricing as unknown as GroupPricingPayload) ?? null,
+    location_area:        (exp.location_area as unknown as GeoJSON.Polygon) ?? null,
+    location_spots:       (exp.location_spots as unknown as import('@/types').LocationSpot[]) ?? null,
+    booking_type:         (exp.booking_type as 'classic' | 'icelandic') ?? 'classic',
   }
 
   return (

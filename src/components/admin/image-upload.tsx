@@ -4,19 +4,18 @@
  * ImageUpload — drag-and-drop image uploader backed by Supabase Storage.
  *
  * KEY BEHAVIOURS:
- *   1. Auto-compression — before uploading, the image is compressed client-side
- *      using the browser Canvas API.  A 12 MB phone photo is compressed to
- *      ~400–700 KB JPEG at 2000 px max dimension / 85% quality.
- *      Guides never need to resize or think about MB limits.
+ *   1. Quality-aware variants — 'cover' and 'gallery' upload the raw original
+ *      (no canvas compression) so Supabase Image Transformations serve the
+ *      perfect-quality version at any requested size.
+ *      'avatar' and 'thumbnail' still compress client-side for fast uploads.
  *
  *   2. No external library — pure browser APIs (Canvas, Blob, FileReader).
  *
  *   3. Two-phase progress bar: "Compressing…" (0→30%) then "Uploading…" (30→100%).
+ *      Cover/gallery skip phase 1 and go straight to uploading.
  *
- *   4. Supports: JPEG, PNG, WebP (input).  Output is always JPEG after compression.
- *
- *   5. Soft size cap at 100 MB — only rejects truly absurd inputs (e.g. videos
- *      accidentally dropped on the zone).
+ *   4. Supports: JPEG, PNG, WebP (input).  Compressed output is JPEG.
+ *      Raw uploads preserve the original format.
  *
  * Upload target: Supabase Storage bucket 'guide-photos' (public CDN).
  */
@@ -27,6 +26,15 @@ import { createClient } from '@/lib/supabase/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+/**
+ * cover    — hero/cover photo. Uploads raw original for max quality.
+ *            Supabase Image Transformations resize on serve.
+ * gallery  — gallery slide. Same: raw upload, transform on serve.
+ * avatar   — profile picture. Compressed to 800px / 90% — small & fast.
+ * thumbnail — default. Compressed to 2000px / 85%.
+ */
+type Variant = 'cover' | 'gallery' | 'avatar' | 'thumbnail'
+
 type ImageUploadProps = {
   /** Label shown above the drop zone */
   label: string
@@ -34,6 +42,11 @@ type ImageUploadProps = {
   currentUrl?: string | null
   /** Aspect ratio hint — 'square' for avatars, 'wide' for covers */
   aspect?: 'square' | 'wide'
+  /**
+   * Quality variant — controls whether canvas compression is applied.
+   * Default: 'thumbnail' (2000px / 85% JPEG).
+   */
+  variant?: Variant
   /** Called with the new public URL after a successful upload */
   onUpload: (url: string) => void
   /** Optional extra hint shown below the zone */
@@ -42,29 +55,46 @@ type ImageUploadProps = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BUCKET         = 'guide-photos'
-const MAX_INPUT_BYTES = 100 * 1024 * 1024   // 100 MB — safety net only
-const ALLOWED_TYPES  = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+const BUCKET        = 'guide-photos'
+const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
-/** Max pixel dimension for the longest side after compression. */
-const COMPRESS_MAX_DIM  = 2000
-/** JPEG quality factor (0–1). 0.85 = high quality, ~1/10 of raw size. */
-const COMPRESS_QUALITY  = 0.85
+/**
+ * Per-variant config:
+ *   compress  — false = upload raw original (best quality, Supabase transforms resize on serve)
+ *   maxDim    — longest side cap when compress=true
+ *   quality   — JPEG quality 0–1 when compress=true
+ *   maxMB     — hard cap on input file size
+ */
+const VARIANT_CONFIG: Record<Variant, {
+  compress: boolean
+  maxDim:   number
+  quality:  number
+  maxMB:    number
+}> = {
+  cover:     { compress: false, maxDim: 4000, quality: 0.94, maxMB: 30  },
+  gallery:   { compress: false, maxDim: 3200, quality: 0.92, maxMB: 25  },
+  avatar:    { compress: true,  maxDim:  800, quality: 0.90, maxMB: 10  },
+  thumbnail: { compress: true,  maxDim: 2000, quality: 0.85, maxMB: 100 },
+}
 
 // ─── Compression ─────────────────────────────────────────────────────────────
 
 /**
  * Compresses an image using the browser Canvas API.
  *
- *  • Resizes to COMPRESS_MAX_DIM on the longest side (preserves aspect ratio).
- *  • Outputs JPEG at COMPRESS_QUALITY.
+ *  • Resizes to maxDim on the longest side (preserves aspect ratio).
+ *  • Outputs JPEG at the given quality.
  *  • Falls back to the original file if the browser fails to draw/encode.
  *
  * Runs entirely in the browser — no server round-trip, no external library.
  */
-async function compressImage(file: File): Promise<File> {
+async function compressImage(
+  file: File,
+  maxDim: number,
+  quality: number,
+): Promise<File> {
   return new Promise((resolve) => {
-    const img    = new window.Image()
+    const img     = new window.Image()
     const blobUrl = URL.createObjectURL(file)
 
     img.onload = () => {
@@ -74,13 +104,13 @@ async function compressImage(file: File): Promise<File> {
       let h = img.naturalHeight
 
       // Resize only if the image is larger than the target dimension
-      if (w > COMPRESS_MAX_DIM || h > COMPRESS_MAX_DIM) {
+      if (w > maxDim || h > maxDim) {
         if (w >= h) {
-          h = Math.round(h * COMPRESS_MAX_DIM / w)
-          w = COMPRESS_MAX_DIM
+          h = Math.round(h * maxDim / w)
+          w = maxDim
         } else {
-          w = Math.round(w * COMPRESS_MAX_DIM / h)
-          h = COMPRESS_MAX_DIM
+          w = Math.round(w * maxDim / h)
+          h = maxDim
         }
       }
 
@@ -101,7 +131,7 @@ async function compressImage(file: File): Promise<File> {
           resolve(new File([blob], name, { type: 'image/jpeg' }))
         },
         'image/jpeg',
-        COMPRESS_QUALITY,
+        quality,
       )
     }
 
@@ -116,18 +146,22 @@ async function compressImage(file: File): Promise<File> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Generate a random UUID-based storage path with .jpg extension. */
-function buildStoragePath(): string {
-  return `${crypto.randomUUID()}.jpg`
+/** Generate a random UUID-based storage path preserving the original extension. */
+function buildStoragePath(file: File, compress: boolean): string {
+  const ext = compress
+    ? 'jpg'
+    : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg')
+  return `${crypto.randomUUID()}.${ext}`
 }
 
-/** Validate file type and catch absurdly large inputs (e.g. videos). */
-function validateFile(file: File): string | null {
+/** Validate file type and size against variant config. */
+function validateFile(file: File, maxMB: number): string | null {
   if (!ALLOWED_TYPES.includes(file.type)) {
     return 'Unsupported format. Please upload a JPEG, PNG or WebP image.'
   }
-  if (file.size > MAX_INPUT_BYTES) {
-    return `File is too large (${(file.size / 1024 / 1024).toFixed(0)} MB). Please upload an image under 100 MB.`
+  const maxBytes = maxMB * 1024 * 1024
+  if (file.size > maxBytes) {
+    return `File is too large (${(file.size / 1024 / 1024).toFixed(0)} MB). Max ${maxMB} MB.`
   }
   return null
 }
@@ -138,9 +172,11 @@ export default function ImageUpload({
   label,
   currentUrl,
   aspect = 'wide',
+  variant = 'thumbnail',
   onUpload,
   hint,
 }: ImageUploadProps) {
+  const cfg = VARIANT_CONFIG[variant]
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [preview,    setPreview]    = useState<string | null>(currentUrl ?? null)
@@ -154,8 +190,8 @@ export default function ImageUpload({
   const uploadFile = useCallback(async (file: File) => {
     setError(null)
 
-    // 1. Validate type + sanity-check size
-    const validErr = validateFile(file)
+    // 1. Validate type + size for this variant
+    const validErr = validateFile(file, cfg.maxMB)
     if (validErr != null) { setError(validErr); return }
 
     // 2. Show local blob preview immediately
@@ -163,24 +199,32 @@ export default function ImageUpload({
     setPreview(localPreview)
     setUploading(true)
     setProgress(5)
-    setStatusText('Compressing…')
+
+    let fileToUpload: File
+    if (cfg.compress) {
+      // 3a. Compress in browser (Canvas → JPEG)
+      setStatusText('Compressing…')
+      fileToUpload = await compressImage(file, cfg.maxDim, cfg.quality)
+      setProgress(30)
+    } else {
+      // 3b. Skip compression — upload original for max quality
+      fileToUpload = file
+      setProgress(20)
+    }
+    setStatusText('Uploading…')
 
     try {
-      // 3. Compress in browser (Canvas → JPEG, max 2000 px, 85% quality)
-      const compressed = await compressImage(file)
-      setProgress(30)
-      setStatusText('Uploading…')
-
-      // 4. Upload compressed file to Supabase Storage
-      const supabase = createClient()
-      const path     = buildStoragePath()
+      // 4. Upload to Supabase Storage
+      const supabase   = createClient()
+      const path       = buildStoragePath(file, cfg.compress)
+      const uploadType = cfg.compress ? 'image/jpeg' : file.type
 
       const { error: uploadError } = await supabase.storage
         .from(BUCKET)
-        .upload(path, compressed, {
+        .upload(path, fileToUpload, {
           cacheControl: '31536000',   // 1-year CDN cache — URL is content-addressed (UUID)
           upsert:       false,
-          contentType:  'image/jpeg',
+          contentType:  uploadType,
         })
 
       if (uploadError != null) {
@@ -309,7 +353,9 @@ export default function ImageUpload({
               {' '}or drag & drop
             </p>
             <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>
-              JPEG · PNG · WebP — any size, auto-compressed
+              {cfg.compress
+                ? `JPEG · PNG · WebP — max ${cfg.maxMB} MB, auto-compressed`
+                : `JPEG · PNG · WebP — max ${cfg.maxMB} MB, full quality`}
             </p>
           </div>
         )}
@@ -346,11 +392,11 @@ export default function ImageUpload({
             <p className="text-white text-xs f-body font-medium">
               {statusText}
             </p>
-            {/* Show compressed size hint when compressing */}
             {statusText === 'Compressing…' && (
-              <p className="text-white/50 text-[10px] f-body">
-                Optimising for fast load…
-              </p>
+              <p className="text-white/50 text-[10px] f-body">Optimising for fast load…</p>
+            )}
+            {statusText === 'Uploading…' && !cfg.compress && (
+              <p className="text-white/50 text-[10px] f-body">Full quality — no compression</p>
             )}
           </div>
         )}

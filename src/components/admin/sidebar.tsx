@@ -61,6 +61,12 @@ const IconList = () => (
   </svg>
 )
 
+const IconChat = () => (
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M2 2h11a1 1 0 011 1v7a1 1 0 01-1 1H5l-3 3V3a1 1 0 011-1z" />
+  </svg>
+)
+
 const IconArrowLeft = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4">
     <polyline points="7,2 3,6 7,10" />
@@ -83,6 +89,7 @@ const NAV = [
   { label: 'Guides',           href: '/admin/guides',       icon: <IconUsers />, exact: false },
   { label: 'Experiences',      href: '/admin/experiences',  icon: <IconList />,  exact: false },
   { label: 'Leads',            href: '/admin/leads',        icon: <IconInbox />, exact: false },
+  { label: 'Inquiries',        href: '/admin/inquiries',   icon: <IconChat />,  exact: false },
   { label: 'Add Guide Profile', href: '/admin/guides/new',  icon: <IconPlus />,  exact: false },
 ] as const
 

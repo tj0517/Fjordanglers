@@ -5,6 +5,12 @@
   --font-body: var(--font-dm-sans), system-ui, sans-serif;
 }
 
+/* cmdk highlighted item */
+[cmdk-item][data-selected='true'] {
+  background: rgba(230, 126, 80, 0.12) !important;
+  color: #E67E50 !important;
+}
+
 /* Reset */
 *,
 *::before,

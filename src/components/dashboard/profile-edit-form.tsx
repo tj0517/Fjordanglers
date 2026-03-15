@@ -5,27 +5,57 @@
  *
  * Calls updateGuideProfile() Server Action.
  * Photos uploaded via ImageUpload component → Supabase Storage.
+ *
+ * Sections:
+ *   1. Photos
+ *   2. Basic Info (+ tagline + cancellation_policy)
+ *   3. Expertise
+ *   4. Specialties & Certifications   ← NEW
+ *   5. External Reviews               ← NEW
+ *   6. Social Links
+ *   7. Boat (collapsible)             ← NEW
  */
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import ImageUpload from '@/components/admin/image-upload'
 import { updateGuideProfile } from '@/actions/dashboard'
+import { FISH_ALL } from '@/lib/fish'
+import type { CancellationPolicy, BoatType } from '@/types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Iceland', 'Denmark']
+import { COUNTRIES } from '@/lib/countries'
 
-const FISH_OPTIONS = [
-  'Salmon', 'Sea Trout', 'Brown Trout', 'Arctic Char', 'Rainbow Trout',
-  'Grayling', 'Pike', 'Perch', 'Zander', 'Whitefish',
-  'Cod', 'Halibut', 'Catfish', 'Burbot',
-]
+const FISH_OPTIONS = FISH_ALL
 
 const LANGUAGE_OPTIONS = [
   'English', 'Norwegian', 'Swedish', 'Finnish', 'Danish', 'Icelandic',
   'German', 'Polish', 'French', 'Dutch', 'Russian', 'Spanish',
 ]
+
+const SPECIALTY_OPTIONS = [
+  'Fly fishing', 'Family-friendly', 'Trophy salmon',
+  'Ice fishing', 'Sea fishing', 'Catch & release', 'Beginner-friendly',
+]
+
+type CancellationOption = { value: CancellationPolicy; label: string; days: string }
+const CANCELLATION_OPTIONS: CancellationOption[] = [
+  { value: 'flexible', label: 'Flexible', days: '7 days' },
+  { value: 'moderate', label: 'Moderate', days: '14 days' },
+  { value: 'strict',   label: 'Strict',   days: '30 days' },
+]
+
+type BoatTypeOption = { value: BoatType; label: string }
+const BOAT_TYPE_OPTIONS: BoatTypeOption[] = [
+  { value: 'center_console', label: 'Center console' },
+  { value: 'cabin',          label: 'Cabin boat' },
+  { value: 'rib',            label: 'RIB' },
+  { value: 'drift_boat',     label: 'Drift boat' },
+  { value: 'kayak',          label: 'Kayak' },
+]
+
+const TAGLINE_MAX = 120
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +71,19 @@ export type ProfileDefaults = {
   youtube_url: string | null
   avatar_url: string | null
   cover_url: string | null
+  // ── Optional new fields — available after guide profile expansion ──────────
+  tagline?: string | null
+  cancellation_policy?: CancellationPolicy | null
+  specialties?: string[] | null
+  certifications?: string[] | null
+  google_profile_url?: string | null
+  google_rating?: number | null
+  google_review_count?: number | null
+  boat_name?: string | null
+  boat_type?: BoatType | null
+  boat_length_m?: number | null
+  boat_engine?: string | null
+  boat_capacity?: number | null
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -58,9 +101,15 @@ const inputBase: React.CSSProperties = {
   transition: 'border-color 0.15s',
 }
 
-function Label({ children }: { children: React.ReactNode }) {
+// ─── Shared sub-components ────────────────────────────────────────────────────
+
+function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
   return (
-    <label className="block text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+    <label
+      htmlFor={htmlFor}
+      className="block text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body"
+      style={{ color: 'rgba(10,46,77,0.45)' }}
+    >
       {children}
     </label>
   )
@@ -71,6 +120,7 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className="text-xs font-medium px-3.5 py-1.5 rounded-full transition-all f-body"
       style={
         active
@@ -111,45 +161,106 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
-  // ── Fields ────────────────────────────────────────────────────────────────
-  const [fullName,    setFullName]    = useState(defaults.full_name)
-  const [country,     setCountry]     = useState(defaults.country)
-  const [city,        setCity]        = useState(defaults.city ?? '')
-  const [bio,         setBio]         = useState(defaults.bio ?? '')
-  const [fishList,    setFishList]    = useState<string[]>(defaults.fish_expertise)
-  const [langList,    setLangList]    = useState<string[]>(defaults.languages)
-  const [years,       setYears]       = useState(defaults.years_experience?.toString() ?? '')
-  const [instagram,   setInstagram]   = useState(defaults.instagram_url ?? '')
-  const [youtube,     setYoutube]     = useState(defaults.youtube_url ?? '')
-  const [avatarUrl,   setAvatarUrl]   = useState<string | null>(defaults.avatar_url)
-  const [coverUrl,    setCoverUrl]    = useState<string | null>(defaults.cover_url)
+  // ── Basic info ───────────────────────────────────────────────────────────────
+  const [fullName,   setFullName]   = useState(defaults.full_name)
+  const [country,    setCountry]    = useState(defaults.country)
+  const [city,       setCity]       = useState(defaults.city ?? '')
+  const [tagline,    setTagline]    = useState(defaults.tagline ?? '')
+  const [cancPolicy, setCancPolicy] = useState<CancellationPolicy>(
+    defaults.cancellation_policy ?? 'moderate',
+  )
+  const [bio,        setBio]        = useState(defaults.bio ?? '')
+  const [years,      setYears]      = useState(defaults.years_experience?.toString() ?? '')
 
-  const toggleFish = (f: string) =>
+  // ── Expertise ───────────────────────────────────────────────────────────────
+  const [fishList, setFishList] = useState<string[]>(defaults.fish_expertise)
+  const [langList, setLangList] = useState<string[]>(defaults.languages)
+
+  // ── Specialties & Certifications ────────────────────────────────────────────
+  const [specialties,    setSpecialties]    = useState<string[]>(defaults.specialties ?? [])
+  const [certifications, setCertifications] = useState<string[]>(defaults.certifications ?? [])
+
+  // ── External Reviews ────────────────────────────────────────────────────────
+  const [googleUrl,         setGoogleUrl]         = useState(defaults.google_profile_url ?? '')
+  const [googleRating,      setGoogleRating]      = useState(defaults.google_rating?.toString() ?? '')
+  const [googleReviewCount, setGoogleReviewCount] = useState(defaults.google_review_count?.toString() ?? '')
+
+  // ── Boat ────────────────────────────────────────────────────────────────────
+  const [hasBoat,      setHasBoat]      = useState(defaults.boat_name != null || defaults.boat_type != null)
+  const [boatName,     setBoatName]     = useState(defaults.boat_name ?? '')
+  const [boatType,     setBoatType]     = useState<BoatType | ''>(defaults.boat_type ?? '')
+  const [boatLength,   setBoatLength]   = useState(defaults.boat_length_m?.toString() ?? '')
+  const [boatEngine,   setBoatEngine]   = useState(defaults.boat_engine ?? '')
+  const [boatCapacity, setBoatCapacity] = useState(defaults.boat_capacity?.toString() ?? '')
+
+  // ── Social ──────────────────────────────────────────────────────────────────
+  const [instagram, setInstagram] = useState(defaults.instagram_url ?? '')
+  const [youtube,   setYoutube]   = useState(defaults.youtube_url ?? '')
+
+  // ── Photos ──────────────────────────────────────────────────────────────────
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(defaults.avatar_url)
+  const [coverUrl,  setCoverUrl]  = useState<string | null>(defaults.cover_url)
+
+  // ── Toggle helpers ──────────────────────────────────────────────────────────
+  const toggleFish      = (f: string) =>
     setFishList(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])
-  const toggleLang = (l: string) =>
+  const toggleLang      = (l: string) =>
     setLangList(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l])
+  const toggleSpecialty = (s: string) =>
+    setSpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
 
+  // ── Certification helpers ────────────────────────────────────────────────────
+  const addCertification = () => {
+    if (certifications.length < 5) setCertifications(prev => [...prev, ''])
+  }
+  const updateCertification = (idx: number, value: string) =>
+    setCertifications(prev => prev.map((c, i) => (i === idx ? value : c)))
+  const removeCertification = (idx: number) =>
+    setCertifications(prev => prev.filter((_, i) => i !== idx))
+
+  // ── Submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setSaved(false)
 
-    if (!fullName.trim()) { setError('Full name is required.'); return }
-    if (!country)         { setError('Country is required.'); return }
+    if (!fullName.trim())             { setError('Full name is required.'); return }
+    if (!country)                     { setError('Country is required.'); return }
+    if (tagline.length > TAGLINE_MAX) { setError(`Tagline must be ${TAGLINE_MAX} characters or fewer.`); return }
+
+    if (googleRating !== '') {
+      const r = parseFloat(googleRating)
+      if (isNaN(r) || r < 1 || r > 5) { setError('Google rating must be between 1.0 and 5.0.'); return }
+    }
+
+    const filteredCerts = certifications.filter(c => c.trim() !== '')
 
     startTransition(async () => {
       const result = await updateGuideProfile({
-        full_name:        fullName.trim(),
+        full_name:           fullName.trim(),
         country,
-        city:             city.trim() || null,
-        bio:              bio.trim() || null,
-        fish_expertise:   fishList,
-        languages:        langList,
-        years_experience: years ? parseInt(years, 10) : null,
-        instagram_url:    instagram.trim() || null,
-        youtube_url:      youtube.trim() || null,
-        avatar_url:       avatarUrl,
-        cover_url:        coverUrl,
+        city:                city.trim() || null,
+        tagline:             tagline.trim() || null,
+        cancellation_policy: cancPolicy,
+        bio:                 bio.trim() || null,
+        fish_expertise:      fishList,
+        languages:           langList,
+        years_experience:    years ? parseInt(years, 10) : null,
+        specialties:         specialties.length > 0 ? specialties : null,
+        certifications:      filteredCerts.length > 0 ? filteredCerts : null,
+        google_profile_url:  googleUrl.trim() || null,
+        google_rating:       googleRating !== '' ? parseFloat(googleRating) : null,
+        google_review_count: googleReviewCount !== '' ? parseInt(googleReviewCount, 10) : null,
+        // Boat: clear all fields when toggle is off
+        boat_name:           hasBoat ? boatName.trim() || null : null,
+        boat_type:           hasBoat && boatType !== '' ? boatType : null,
+        boat_length_m:       hasBoat && boatLength !== '' ? parseFloat(boatLength) : null,
+        boat_engine:         hasBoat ? boatEngine.trim() || null : null,
+        boat_capacity:       hasBoat && boatCapacity !== '' ? parseInt(boatCapacity, 10) : null,
+        instagram_url:       instagram.trim() || null,
+        youtube_url:         youtube.trim() || null,
+        avatar_url:          avatarUrl,
+        cover_url:           coverUrl,
       })
 
       if (!result.success) {
@@ -200,6 +311,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
             <ImageUpload
               label="Avatar photo"
               aspect="square"
+              variant="avatar"
               currentUrl={avatarUrl}
               onUpload={url => setAvatarUrl(url)}
               hint="Square, min 400×400px"
@@ -207,9 +319,10 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
             <ImageUpload
               label="Cover photo"
               aspect="wide"
+              variant="cover"
               currentUrl={coverUrl}
               onUpload={url => setCoverUrl(url)}
-              hint="Wide banner, min 1200×400px"
+              hint="Wide banner — uploaded at full quality"
             />
           </div>
         </div>
@@ -218,9 +331,12 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       {/* ── Basic info ─────────────────────────────────────────────── */}
       <SectionCard title="Basic Info">
         <div className="flex flex-col gap-5">
+
+          {/* Full name */}
           <div>
-            <Label>Full name *</Label>
+            <Label htmlFor="full_name">Full name *</Label>
             <input
+              id="full_name"
               type="text"
               value={fullName}
               onChange={e => setFullName(e.target.value)}
@@ -230,10 +346,12 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
             />
           </div>
 
+          {/* Country + City */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Country *</Label>
+              <Label htmlFor="country">Country *</Label>
               <select
+                id="country"
                 value={country}
                 onChange={e => setCountry(e.target.value)}
                 style={{ ...inputBase, appearance: 'none', cursor: 'pointer' }}
@@ -245,8 +363,9 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
               </select>
             </div>
             <div>
-              <Label>City / Region</Label>
+              <Label htmlFor="city">City / Region</Label>
               <input
+                id="city"
                 type="text"
                 value={city}
                 onChange={e => setCity(e.target.value)}
@@ -258,9 +377,76 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
             </div>
           </div>
 
+          {/* Tagline */}
           <div>
-            <Label>Bio</Label>
+            <Label htmlFor="tagline">Tagline</Label>
+            <input
+              id="tagline"
+              type="text"
+              value={tagline}
+              onChange={e => setTagline(e.target.value)}
+              maxLength={TAGLINE_MAX + 10}
+              placeholder="Salmon & trout specialist in Northern Norway since 2008"
+              style={inputBase}
+              onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+            />
+            <p
+              className="text-[11px] mt-1.5 f-body text-right"
+              style={{ color: tagline.length > TAGLINE_MAX ? '#DC2626' : 'rgba(10,46,77,0.35)' }}
+            >
+              {tagline.length} / {TAGLINE_MAX}
+            </p>
+          </div>
+
+          {/* Cancellation policy */}
+          <div>
+            <Label>Cancellation policy</Label>
+            <div className="flex gap-3 flex-wrap" role="group" aria-label="Cancellation policy">
+              {CANCELLATION_OPTIONS.map(opt => {
+                const isActive = cancPolicy === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setCancPolicy(opt.value)}
+                    aria-pressed={isActive}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all f-body"
+                    style={
+                      isActive
+                        ? { background: '#0A2E4D', color: '#fff', border: '1.5px solid #0A2E4D' }
+                        : {
+                            background: 'rgba(10,46,77,0.04)',
+                            color: 'rgba(10,46,77,0.6)',
+                            border: '1.5px solid rgba(10,46,77,0.12)',
+                          }
+                    }
+                  >
+                    {opt.label}
+                    <span
+                      className="text-[11px] px-2 py-0.5 rounded-full"
+                      style={
+                        isActive
+                          ? { background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.75)' }
+                          : { background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.4)' }
+                      }
+                    >
+                      {opt.days}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[11px] mt-2 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+              Minimum notice before trip start required for a full refund.
+            </p>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <Label htmlFor="bio">Bio</Label>
             <textarea
+              id="bio"
               rows={5}
               value={bio}
               onChange={e => setBio(e.target.value)}
@@ -271,9 +457,11 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
             />
           </div>
 
+          {/* Years of experience */}
           <div style={{ maxWidth: '200px' }}>
-            <Label>Years of experience</Label>
+            <Label htmlFor="years_experience">Years of experience</Label>
             <input
+              id="years_experience"
               type="number"
               min="1"
               max="60"
@@ -324,12 +512,153 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         </div>
       </SectionCard>
 
+      {/* ── Specialties & Certifications ───────────────────────────── */}
+      <SectionCard title="Specialties & Certifications" subtitle="Highlight your unique strengths and credentials">
+        <div className="flex flex-col gap-6">
+
+          {/* Specialties pills */}
+          <div>
+            <Label>
+              Specialties
+              {specialties.length > 0 && (
+                <span className="ml-2 normal-case tracking-normal font-normal" style={{ color: '#E67E50' }}>
+                  · {specialties.length} selected
+                </span>
+              )}
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {SPECIALTY_OPTIONS.map(s => (
+                <Pill
+                  key={s}
+                  label={s}
+                  active={specialties.includes(s)}
+                  onClick={() => toggleSpecialty(s)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Certifications dynamic list */}
+          <div>
+            <Label>
+              Certifications
+              <span
+                className="ml-2 normal-case tracking-normal font-normal"
+                style={{ color: 'rgba(10,46,77,0.35)' }}
+              >
+                max 5
+              </span>
+            </Label>
+            <div className="flex flex-col gap-2.5">
+              {certifications.map((cert, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={cert}
+                    onChange={e => updateCertification(idx, e.target.value)}
+                    placeholder="e.g. Wilderness First Aid, Swift Water Rescue"
+                    style={{ ...inputBase, flex: 1 }}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                    onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+                    aria-label={`Certification ${idx + 1}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeCertification(idx)}
+                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-base leading-none transition-all hover:scale-110 active:scale-95"
+                    style={{
+                      background: 'rgba(239,68,68,0.07)',
+                      color: '#DC2626',
+                      border: '1px solid rgba(239,68,68,0.15)',
+                    }}
+                    aria-label={`Remove certification ${idx + 1}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              {certifications.length < 5 && (
+                <button
+                  type="button"
+                  onClick={addCertification}
+                  className="self-start flex items-center gap-2 text-xs font-medium px-4 py-2 rounded-full transition-all hover:brightness-95 active:scale-[0.98] f-body"
+                  style={{
+                    background: 'rgba(10,46,77,0.04)',
+                    color: 'rgba(10,46,77,0.55)',
+                    border: '1.5px dashed rgba(10,46,77,0.18)',
+                  }}
+                >
+                  <span style={{ fontSize: '15px', lineHeight: 1 }}>+</span>
+                  Add certification
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* ── External Reviews ───────────────────────────────────────── */}
+      <SectionCard
+        title="External Reviews"
+        subtitle="Provide your Google Business profile URL so anglers can see your verified reviews."
+      >
+        <div className="flex flex-col gap-4">
+          <div>
+            <Label htmlFor="google_profile_url">Google Business Profile URL</Label>
+            <input
+              id="google_profile_url"
+              type="url"
+              value={googleUrl}
+              onChange={e => setGoogleUrl(e.target.value)}
+              placeholder="https://g.page/your-business"
+              style={inputBase}
+              onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="google_rating">Google rating (1.0 – 5.0)</Label>
+              <input
+                id="google_rating"
+                type="number"
+                min="1"
+                max="5"
+                step="0.1"
+                value={googleRating}
+                onChange={e => setGoogleRating(e.target.value)}
+                placeholder="4.8"
+                style={inputBase}
+                onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+              />
+            </div>
+            <div>
+              <Label htmlFor="google_review_count">Number of reviews</Label>
+              <input
+                id="google_review_count"
+                type="number"
+                min="0"
+                value={googleReviewCount}
+                onChange={e => setGoogleReviewCount(e.target.value)}
+                placeholder="128"
+                style={inputBase}
+                onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+              />
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
       {/* ── Social links ───────────────────────────────────────────── */}
       <SectionCard title="Social Links" subtitle="Optional — helps anglers follow your work">
         <div className="flex flex-col gap-4">
           <div>
-            <Label>Instagram URL</Label>
+            <Label htmlFor="instagram_url">Instagram URL</Label>
             <input
+              id="instagram_url"
               type="url"
               value={instagram}
               onChange={e => setInstagram(e.target.value)}
@@ -340,8 +669,9 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
             />
           </div>
           <div>
-            <Label>YouTube URL</Label>
+            <Label htmlFor="youtube_url">YouTube URL</Label>
             <input
+              id="youtube_url"
               type="url"
               value={youtube}
               onChange={e => setYoutube(e.target.value)}
@@ -353,6 +683,126 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
           </div>
         </div>
       </SectionCard>
+
+      {/* ── Boat (collapsible) ──────────────────────────────────────── */}
+      <div
+        className="p-8 mb-5 rounded-3xl"
+        style={{
+          background: '#FDFAF7',
+          border: '1px solid rgba(10,46,77,0.07)',
+          boxShadow: '0 2px 16px rgba(10,46,77,0.04)',
+        }}
+      >
+        {/* Toggle header */}
+        <label className="flex items-center gap-3.5 cursor-pointer select-none">
+          {/* Custom toggle switch */}
+          <div className="relative flex-shrink-0">
+            <input
+              type="checkbox"
+              checked={hasBoat}
+              onChange={e => setHasBoat(e.target.checked)}
+              className="sr-only"
+              aria-label="I guide from a boat"
+            />
+            <div
+              className="w-11 h-6 rounded-full transition-colors duration-200"
+              style={{ background: hasBoat ? '#0A2E4D' : 'rgba(10,46,77,0.12)' }}
+            />
+            <div
+              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
+              style={{ transform: hasBoat ? 'translateX(22px)' : 'translateX(2px)' }}
+            />
+          </div>
+          <div>
+            <p className="text-[#0A2E4D] text-base font-bold f-display leading-snug">Boat</p>
+            <p className="text-[#0A2E4D]/40 text-xs f-body">I guide from a boat</p>
+          </div>
+        </label>
+
+        {/* Collapsible boat fields */}
+        {hasBoat && (
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="boat_name">Boat name</Label>
+                <input
+                  id="boat_name"
+                  type="text"
+                  value={boatName}
+                  onChange={e => setBoatName(e.target.value)}
+                  placeholder="Northern Star"
+                  style={inputBase}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="boat_type">Boat type</Label>
+                <select
+                  id="boat_type"
+                  value={boatType}
+                  onChange={e => setBoatType(e.target.value as BoatType | '')}
+                  style={{ ...inputBase, appearance: 'none', cursor: 'pointer' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+                >
+                  <option value="">Select type</option>
+                  {BOAT_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="boat_length_m">Length (m)</Label>
+                <input
+                  id="boat_length_m"
+                  type="number"
+                  min="1"
+                  max="30"
+                  step="0.1"
+                  value={boatLength}
+                  onChange={e => setBoatLength(e.target.value)}
+                  placeholder="6.5"
+                  style={inputBase}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="boat_engine">Engine</Label>
+                <input
+                  id="boat_engine"
+                  type="text"
+                  value={boatEngine}
+                  onChange={e => setBoatEngine(e.target.value)}
+                  placeholder="Yamaha 115hp"
+                  style={inputBase}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="boat_capacity">Capacity (anglers)</Label>
+                <input
+                  id="boat_capacity"
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={boatCapacity}
+                  onChange={e => setBoatCapacity(e.target.value)}
+                  placeholder="4"
+                  style={inputBase}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* ── Submit ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4">

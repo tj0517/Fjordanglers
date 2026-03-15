@@ -7,7 +7,7 @@ import ImageUpload from '@/components/admin/image-upload'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Iceland', 'Denmark'] as const
+import { COUNTRIES } from '@/lib/countries'
 
 const ALL_LANGUAGES = [
   'English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic',

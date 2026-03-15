@@ -37,38 +37,95 @@ function sortImages<T extends { sort_order: number }>(images: T[]): T[] {
  * Uses FK-based embedding: guide_id → guides, experience_id → experience_images.
  */
 const EXP_SELECT =
-  '*, guide:guides ( id, full_name, avatar_url, country, city, average_rating ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
+  '*, guide:guides ( id, full_name, avatar_url, country, city, average_rating, cancellation_policy ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
 
 // ─── Experiences ──────────────────────────────────────────────────────────────
 
 export type ExperienceSearchParams = {
-  country?: string
-  fish?: string
+  country?: string      // comma-separated list: 'Norway,Sweden'
+  fish?: string         // comma-separated list: 'Salmon,Pike'
   difficulty?: string
   sort?: string
   minPrice?: string
   maxPrice?: string
+  // ── New filter dimensions ──────────────────────────────────────────────────
+  technique?: string    // e.g. 'Fly fishing' | 'Lure fishing' | …
+  duration?: string     // 'half-day' | 'full-day' | 'overnight' | 'multi-day' | 'expedition'
+  catchRelease?: string // 'true' to filter catch-and-release only
+  guests?: string       // minimum guests the trip must accommodate: '2' | '4' | '6' | '10'
+  dateFrom?: string     // ISO date: '2025-07-01'
+  dateTo?: string       // ISO date: '2025-07-07'
+  // ── Pagination ─────────────────────────────────────────────────────────────
+  page?: string         // current page number as string (default '1')
+  pageSize?: number     // items per page (default 12)
 }
 
+/** Paginated result shape returned by getExperiences(). */
+export type ExperiencesPage = { experiences: ExperienceWithGuide[]; total: number }
+
 /**
- * All published experiences with optional country / species / difficulty filtering
- * and price / duration sorting. Used by the /experiences listing page.
+ * All published experiences with optional filtering and sorting.
+ * Used by the /experiences listing page.
  */
 export async function getExperiences(
   params: ExperienceSearchParams = {},
-): Promise<ExperienceWithGuide[]> {
+): Promise<ExperiencesPage> {
   const db = createPublicClient()
 
   let query = db
     .from('experiences')
-    .select(EXP_SELECT)
+    .select(EXP_SELECT, { count: 'exact' })
     .eq('published', true)
 
-  if (params.country)    query = query.eq('location_country', params.country)
-  if (params.fish)       query = query.contains('fish_types', [params.fish])
+  // ── Existing filters ───────────────────────────────────────────────────────
+  if (params.country) {
+    const countryList = params.country.split(',').filter(Boolean)
+    if (countryList.length === 1) query = query.eq('location_country', countryList[0])
+    else if (countryList.length > 1) query = query.in('location_country', countryList)
+  }
+  if (params.fish) {
+    const fishList = params.fish.split(',').filter(Boolean)
+    if (fishList.length === 1) query = query.contains('fish_types', [fishList[0]])
+    else if (fishList.length > 1) query = query.overlaps('fish_types', fishList)
+  }
   if (params.difficulty) query = query.eq('difficulty', params.difficulty as Difficulty)
   if (params.minPrice)   query = query.gte('price_per_person_eur', Number(params.minPrice))
   if (params.maxPrice)   query = query.lte('price_per_person_eur', Number(params.maxPrice))
+
+  // ── Technique ─────────────────────────────────────────────────────────────
+  if (params.technique)  query = query.eq('technique', params.technique)
+
+  // ── Duration ──────────────────────────────────────────────────────────────
+  if (params.duration) {
+    switch (params.duration) {
+      case 'half-day':
+        // Up to 6 h, no overnight component
+        query = query.not('duration_hours', 'is', null).lte('duration_hours', 6)
+        break
+      case 'full-day':
+        // More than 6 h but still same-day (no duration_days)
+        query = query.not('duration_hours', 'is', null).gt('duration_hours', 6)
+        break
+      case 'overnight':
+        // Exactly 1 day
+        query = query.eq('duration_days', 1)
+        break
+      case 'multi-day':
+        // 2 – 4 days
+        query = query.gte('duration_days', 2).lte('duration_days', 4)
+        break
+      case 'expedition':
+        // 5 days or more
+        query = query.gte('duration_days', 5)
+        break
+    }
+  }
+
+  // ── Catch & Release ───────────────────────────────────────────────────────
+  if (params.catchRelease === 'true') query = query.eq('catch_and_release', true)
+
+  // ── Group size (trip must accommodate at least N guests) ──────────────────
+  if (params.guests) query = query.gte('max_guests', Number(params.guests))
 
   switch (params.sort) {
     case 'price-asc':
@@ -81,45 +138,92 @@ export async function getExperiences(
       // Hours-based sort; multi-day experiences (duration_hours = null) go last
       query = query.order('duration_hours', { ascending: true, nullsFirst: false })
       break
+    case 'duration-desc':
+      query = query.order('duration_days', { ascending: false, nullsFirst: false })
+      break
     default:
       query = query.order('created_at', { ascending: false })
   }
 
-  const { data, error } = await query
+  // ── Pagination ─────────────────────────────────────────────────────────────
+  const pageSize = params.pageSize ?? 12
+  const page = Math.max(1, Number(params.page ?? 1))
+  const offset = (page - 1) * pageSize
+  query = query.range(offset, offset + pageSize - 1)
+
+  const { data, error, count } = await query
 
   if (error) {
     console.error('[getExperiences]', error.message)
-    return []
+    return { experiences: [], total: 0 }
   }
 
-  return (data as unknown as ExperienceWithGuide[]).map(exp => ({
-    ...exp,
-    images: sortImages(exp.images ?? []),
-  }))
+  return {
+    experiences: (data as unknown as ExperienceWithGuide[]).map(exp => ({
+      ...exp,
+      images: sortImages(exp.images ?? []),
+    })),
+    total: count ?? 0,
+  }
 }
 
 /**
- * Latest published experiences — used in the home page "Featured" section.
+ * Random published experiences — used in the home page "Featured" section.
+ * Fetches a larger pool and shuffles server-side for variety on each visit.
  */
-export async function getFeaturedExperiences(limit = 3): Promise<ExperienceWithGuide[]> {
+export async function getFeaturedExperiences(limit = 4): Promise<ExperienceWithGuide[]> {
   const db = createPublicClient()
 
   const { data, error } = await db
     .from('experiences')
     .select(EXP_SELECT)
     .eq('published', true)
-    .order('created_at', { ascending: false })
-    .limit(limit)
+    .limit(20)
 
   if (error) {
     console.error('[getFeaturedExperiences]', error.message)
     return []
   }
 
-  return (data as unknown as ExperienceWithGuide[]).map(exp => ({
+  const all = (data as unknown as ExperienceWithGuide[]).map(exp => ({
     ...exp,
     images: sortImages(exp.images ?? []),
   }))
+
+  // Fisher-Yates shuffle
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]]
+  }
+
+  return all.slice(0, limit)
+}
+
+/**
+ * Random verified guides — used in the home page "Meet the guides" section.
+ */
+export async function getFeaturedGuides(limit = 4): Promise<GuideRow[]> {
+  const db = createPublicClient()
+
+  const { data, error } = await db
+    .from('guides')
+    .select('*')
+    .eq('status', 'active')
+    .not('verified_at', 'is', null)
+    .limit(20)
+
+  if (error) {
+    console.error('[getFeaturedGuides]', error.message)
+    return []
+  }
+
+  const all = data ?? []
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]]
+  }
+
+  return all.slice(0, limit)
 }
 
 /**
@@ -143,6 +247,79 @@ export async function getExperience(id: string): Promise<ExperienceWithGuide | n
     ...exp,
     images: sortImages(exp.images ?? []),
   }
+}
+
+/** Bounding box used for client-side viewport filtering. */
+export type MapBounds = { north: number; south: number; east: number; west: number }
+
+/**
+ * All published experiences that have coordinates, with the same filter params
+ * as getExperiences but WITHOUT pagination. Used by the map viewport filter.
+ */
+export async function getAllExperiencesWithCoords(
+  params: Omit<ExperienceSearchParams, 'page' | 'pageSize'> = {},
+): Promise<ExperienceWithGuide[]> {
+  const db = createPublicClient()
+
+  let query = db
+    .from('experiences')
+    .select(EXP_SELECT)
+    .eq('published', true)
+    // Include experiences that have either a primary pin (lat/lng) OR
+    // multi-spot data (location_spots). Both types appear as map markers.
+    .or('location_lat.not.is.null,location_spots.not.is.null')
+
+  if (params.country) {
+    const countryList = params.country.split(',').filter(Boolean)
+    if (countryList.length === 1) query = query.eq('location_country', countryList[0])
+    else if (countryList.length > 1) query = query.in('location_country', countryList)
+  }
+  if (params.fish) {
+    const fishList = params.fish.split(',').filter(Boolean)
+    if (fishList.length === 1) query = query.contains('fish_types', [fishList[0]])
+    else if (fishList.length > 1) query = query.overlaps('fish_types', fishList)
+  }
+  if (params.difficulty) query = query.eq('difficulty', params.difficulty as Difficulty)
+  if (params.minPrice)   query = query.gte('price_per_person_eur', Number(params.minPrice))
+  if (params.maxPrice)   query = query.lte('price_per_person_eur', Number(params.maxPrice))
+  if (params.technique)  query = query.eq('technique', params.technique)
+
+  if (params.duration) {
+    switch (params.duration) {
+      case 'half-day':
+        query = query.not('duration_hours', 'is', null).lte('duration_hours', 6)
+        break
+      case 'full-day':
+        query = query.not('duration_hours', 'is', null).gt('duration_hours', 6)
+        break
+      case 'overnight':
+        query = query.eq('duration_days', 1)
+        break
+      case 'multi-day':
+        query = query.gte('duration_days', 2).lte('duration_days', 4)
+        break
+      case 'expedition':
+        query = query.gte('duration_days', 5)
+        break
+    }
+  }
+
+  if (params.catchRelease === 'true') query = query.eq('catch_and_release', true)
+  if (params.guests) query = query.gte('max_guests', Number(params.guests))
+
+  query = query.order('created_at', { ascending: false }).limit(1000)
+
+  const { data, error } = await query
+
+  if (error) {
+    console.error('[getAllExperiencesWithCoords]', error.message)
+    return []
+  }
+
+  return (data as unknown as ExperienceWithGuide[]).map(exp => ({
+    ...exp,
+    images: sortImages(exp.images ?? []),
+  }))
 }
 
 /**
@@ -259,6 +436,38 @@ export async function getSpeciesCounts(): Promise<Record<string, number>> {
     }
   }
   return counts
+}
+
+// ─── Locations ────────────────────────────────────────────────────────────────
+
+export type LocationEntry = { city: string; country: string }
+
+/**
+ * All unique (city, country) pairs from published experiences.
+ * Used to power the hero search bar autocomplete.
+ */
+export async function getExperienceLocations(): Promise<LocationEntry[]> {
+  const db = createPublicClient()
+
+  const { data, error } = await db
+    .from('experiences')
+    .select('location_city, location_country')
+    .eq('published', true)
+    .not('location_city', 'is', null)
+    .not('location_country', 'is', null)
+
+  if (error) return []
+
+  const seen = new Set<string>()
+  const result: LocationEntry[] = []
+  for (const row of data ?? []) {
+    const key = `${row.location_city}|${row.location_country}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      result.push({ city: row.location_city!, country: row.location_country! })
+    }
+  }
+  return result.sort((a, b) => a.city.localeCompare(b.city))
 }
 
 // ─── Guides ───────────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
+import LinkGuideButton from '@/components/admin/link-guide-button'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -21,12 +22,23 @@ const COUNTRY_FLAGS: Record<string, string> = {
 export default async function AdminGuidesPage() {
   const supabase = await createClient()
 
-  const { data: guides } = await supabase
-    .from('guides')
-    .select('id, full_name, country, city, status, is_beta_listing, avatar_url, fish_expertise, created_at, verified_at')
-    .order('created_at', { ascending: false })
+  const [{ data: guides }, { data: expCounts }] = await Promise.all([
+    supabase
+      .from('guides')
+      .select('id, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, fish_expertise, created_at, verified_at')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('experiences')
+      .select('guide_id')
+      .eq('published', true),
+  ])
 
   const allGuides = guides ?? []
+
+  const listingCountByGuide = (expCounts ?? []).reduce<Record<string, number>>((acc, { guide_id }) => {
+    acc[guide_id] = (acc[guide_id] ?? 0) + 1
+    return acc
+  }, {})
   const betaCount  = allGuides.filter(g => g.is_beta_listing).length
   const activeCount = allGuides.filter(g => g.status === 'active').length
 
@@ -74,12 +86,12 @@ export default async function AdminGuidesPage() {
         <div
           className="grid px-6 py-3"
           style={{
-            gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
+            gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr',
             borderBottom: '1px solid rgba(10,46,77,0.07)',
             background: 'rgba(10,46,77,0.02)',
           }}
         >
-          {['Guide', 'Location', 'Specialty', 'Status', 'Added'].map(col => (
+          {['Guide', 'Location', 'Specialty', 'Listings', 'Status', 'Added'].map(col => (
             <p key={col} className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
               {col}
             </p>
@@ -112,7 +124,7 @@ export default async function AdminGuidesPage() {
                 <div
                   key={guide.id}
                   className="grid items-center px-6 py-4 hover:bg-[#F8F4EE] transition-colors"
-                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}
+                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr' }}
                 >
                   {/* Guide */}
                   <div className="flex items-center gap-3">
@@ -149,7 +161,7 @@ export default async function AdminGuidesPage() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <Link
                           href={`/admin/guides/${guide.id}`}
                           className="text-[11px] f-body font-medium hover:text-[#E67E50] transition-colors"
@@ -172,6 +184,10 @@ export default async function AdminGuidesPage() {
                         >
                           Public ↗
                         </Link>
+                        {/* Quick-link button — only for unlinked beta listings with invite email */}
+                        {guide.user_id == null && guide.invite_email != null && (
+                          <LinkGuideButton guideId={guide.id} inviteEmail={guide.invite_email} />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -185,6 +201,11 @@ export default async function AdminGuidesPage() {
                   <p className="text-[#0A2E4D]/55 text-xs f-body truncate">
                     {topFish !== '' ? topFish : '—'}
                     {guide.fish_expertise.length > 2 && ` +${guide.fish_expertise.length - 2}`}
+                  </p>
+
+                  {/* Listings */}
+                  <p className="text-[#0A2E4D]/65 text-sm f-body font-medium">
+                    {listingCountByGuide[guide.id] ?? 0}
                   </p>
 
                   {/* Status */}

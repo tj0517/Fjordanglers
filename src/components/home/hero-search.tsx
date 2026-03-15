@@ -4,7 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 const COUNTRIES = ['Norway', 'Sweden', 'Finland']
-const SPECIES   = ['Salmon', 'Trout', 'Pike', 'Zander', 'Grayling', 'Cod']
+import { FISH_FILTER } from '@/lib/fish'
+
+const SPECIES = FISH_FILTER
 const DURATIONS = ['Half day (4h)', 'Full day (8h)', 'Multi-day']
 
 const selectStyle: React.CSSProperties = {

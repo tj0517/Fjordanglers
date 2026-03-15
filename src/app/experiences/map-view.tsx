@@ -1,52 +1,39 @@
 'use client'
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { useEffect, useCallback, useRef, useState } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import type { ExperienceWithGuide } from '@/types'
+import type { ExperienceWithGuide, LocationSpot } from '@/types'
 
-// ─── Approximate fishing locations per country ────────────────────────────────
-const FISHING_LOCS: Record<string, [number, number][]> = {
-  Norway: [
-    [60.39, 5.32],   // Bergen fjords
-    [69.65, 18.96],  // Tromsø Arctic
-    [62.47, 6.15],   // Ålesund
-    [58.97, 5.73],   // Stavanger fjords
-    [63.43, 10.39],  // Trondheim
-    [61.22, 7.10],   // Sognefjord
-    [70.66, 23.68],  // Alta salmon river
-  ],
-  Sweden: [
-    [57.71, 11.97],  // Gothenburg archipelago
-    [65.58, 22.15],  // Luleå
-    [63.18, 14.64],  // Östersund
-    [68.35, 18.82],  // Kiruna
-    [59.33, 18.07],  // Stockholm archipelago
-    [56.89, 14.80],  // Småland lakes
-    [66.83, 20.23],  // Gällivare
-  ],
-  Finland: [
-    [61.50, 24.96],  // Tampere lakes
-    [63.10, 27.68],  // Savonlinna
-    [65.02, 25.47],  // Oulu river
-    [68.90, 27.03],  // Inari salmon
-    [60.17, 24.94],  // Helsinki coast
-    [64.22, 27.73],  // Kainuu wilderness
-    [67.99, 24.57],  // Rovaniemi
-  ],
+export type MapBounds = { north: number; south: number; east: number; west: number }
+
+function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: MapBounds) => void }) {
+  const fire = useCallback(
+    (map: ReturnType<typeof useMap>) => {
+      const b = map.getBounds()
+      onBoundsChange({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() })
+    },
+    [onBoundsChange],
+  )
+
+  const map = useMapEvents({
+    moveend() { fire(map) },
+    zoomend()  { fire(map) },
+  })
+
+  // Fire initial bounds so the card list is immediately in sync with the map
+  // viewport — without this, bounds stays null until the first user interaction.
+  useEffect(() => { fire(map) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null
 }
 
 function getCoords(exp: ExperienceWithGuide): [number, number] | null {
-  const country = exp.location_country
-  if (country == null) return null
-  const locs = FISHING_LOCS[country]
-  if (locs == null) return null
-  const seed = exp.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  const base = locs[seed % locs.length]
-  // deterministic small offset so pins don't stack
-  const dlat = ((seed % 13) - 6) * 0.06
-  const dlng = ((seed % 9) - 4) * 0.10
-  return [base[0] + dlat, base[1] + dlng]
+  if (exp.location_lat != null && exp.location_lng != null) {
+    return [exp.location_lat, exp.location_lng]
+  }
+  return null
 }
 
 function priceIcon(price: number) {
@@ -61,6 +48,29 @@ function priceIcon(price: number) {
       font-size: 13px;
       font-family: 'DM Sans', sans-serif;
       box-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(0,0,0,0.07);
+      white-space: nowrap;
+      cursor: pointer;
+      line-height: 1.2;
+    ">€${price}</div>`,
+    iconSize: [68, 28],
+    iconAnchor: [34, 14],
+    popupAnchor: [0, -18],
+  })
+}
+
+// Area variant — subtle salmon ring signals "this covers a territory"
+function areaPriceIcon(price: number) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background: white;
+      color: #0A2E4D;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.14), 0 0 0 2px rgba(230,126,80,0.35);
       white-space: nowrap;
       cursor: pointer;
       line-height: 1.2;
@@ -93,10 +103,258 @@ function popupIcon(price: number) {
   })
 }
 
-type Props = { experiences: ExperienceWithGuide[] }
 
-export default function MapView({ experiences }: Props) {
-  const pins = experiences
+// ─── Inquiry pill for "price on request" experiences ─────────────────────────
+function inquiryIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background: white;
+      color: rgba(10,46,77,0.55);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(0,0,0,0.07);
+      white-space: nowrap;
+      cursor: pointer;
+      line-height: 1.2;
+    ">Req.</div>`,
+    iconSize: [68, 28],
+    iconAnchor: [34, 14],
+    popupAnchor: [0, -18],
+  })
+}
+
+function inquiryIconHover() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background: #0A2E4D;
+      color: white;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      box-shadow: 0 2px 16px rgba(10,46,77,0.35);
+      white-space: nowrap;
+      cursor: pointer;
+      line-height: 1.2;
+    ">Req.</div>`,
+    iconSize: [68, 28],
+    iconAnchor: [34, 14],
+    popupAnchor: [0, -18],
+  })
+}
+
+// ─── Small dot icon for secondary spots ───────────────────────────────────────
+function dotIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width: 12px; height: 12px;
+      background: #E67E50;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 1px 6px rgba(230,126,80,0.5);
+    "></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+    popupAnchor: [0, -10],
+  })
+}
+
+// ─── Area polygon overlay — hidden by default, shown only on marker hover ─────
+function AreaOverlay({ exp, visible }: { exp: ExperienceWithGuide; visible: boolean }) {
+  const map  = useMap()
+  const layerRef = useRef<L.GeoJSON | null>(null)
+
+  // Create the layer once, initially fully transparent
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const area = exp.location_area as any
+    if (area == null) return
+    const layer = L.geoJSON(area, {
+      style: { color: '#E67E50', fillColor: '#E67E50', fillOpacity: 0, weight: 0, opacity: 0 },
+    })
+    layer.addTo(map)
+    layerRef.current = layer
+    return () => {
+      map.removeLayer(layer)
+      layerRef.current = null
+    }
+  }, [exp.id, map])
+
+  // Toggle visibility whenever `visible` changes — no re-mount needed
+  useEffect(() => {
+    const layer = layerRef.current
+    if (layer == null) return
+    if (visible) {
+      layer.setStyle({ fillOpacity: 0.11, weight: 1.5, opacity: 0.5 })
+    } else {
+      layer.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 })
+    }
+  }, [visible])
+
+  return null
+}
+
+// ─── Hint control — "hover a pin to see fishing area" ─────────────────────────
+function AreaHoverHint() {
+  const map = useMap()
+  useEffect(() => {
+    const container = L.DomUtil.create('div', '')
+    container.innerHTML = `
+      <div style="
+        background: rgba(255,255,255,0.93);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 7px 11px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.10), 0 0 0 1px rgba(10,46,77,0.06);
+        pointer-events: none;
+        user-select: none;
+      ">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7.5 1.5L13 4.75V10.25L7.5 13.5L2 10.25V4.75L7.5 1.5Z"
+            stroke="#E67E50" stroke-width="1.4" stroke-linejoin="round"
+            fill="rgba(230,126,80,0.12)" stroke-dasharray="2.5 1.5"/>
+        </svg>
+        <span style="
+          font-family: 'DM Sans', sans-serif;
+          font-size: 11.5px;
+          font-weight: 500;
+          color: rgba(10,46,77,0.65);
+          white-space: nowrap;
+          line-height: 1;
+        ">Hover a pin · see guide's fishing territory</span>
+      </div>
+    `
+    L.DomEvent.disableClickPropagation(container)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const HintControl = L.Control.extend({ onAdd: () => container }) as any
+    const ctrl = new HintControl({ position: 'bottomleft' })
+    ctrl.addTo(map)
+    return () => { ctrl.remove() }
+  }, [map])
+  return null
+}
+
+// ─── Polyline connecting multiple spots ───────────────────────────────────────
+function SpotsConnector({ spots }: { spots: LocationSpot[] }) {
+  const map = useMap()
+  useEffect(() => {
+    if (spots.length < 2) return
+    const line = L.polyline(
+      spots.map(s => [s.lat, s.lng] as [number, number]),
+      { color: '#E67E50', weight: 1.5, dashArray: '5 5', opacity: 0.55 },
+    )
+    line.addTo(map)
+    return () => { map.removeLayer(line) }
+  }, [spots, map])
+  return null
+}
+
+type Props = {
+  experiences: ExperienceWithGuide[]
+  onBoundsChange?: (bounds: MapBounds) => void
+  /** ID of the experience card being hovered in the listing panel */
+  hoveredExpId?: string | null
+}
+
+// ─── Icon resolver — single source of truth ───────────────────────────────────
+// Both card-hover (hoveredExpId from parent) and map-hover (mapHoveredId local)
+// flow through here so the icon is always consistent.
+function resolveIcon(
+  exp: ExperienceWithGuide,
+  highlighted: boolean,
+  isArea: boolean,
+): L.DivIcon {
+  if (highlighted) {
+    return exp.booking_type === 'icelandic'
+      ? inquiryIconHover()
+      : popupIcon(exp.price_per_person_eur ?? 0)
+  }
+  if (exp.booking_type === 'icelandic') return inquiryIcon()
+  return isArea
+    ? areaPriceIcon(exp.price_per_person_eur ?? 0)
+    : priceIcon(exp.price_per_person_eur ?? 0)
+}
+
+// Shared popup content
+function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
+  return (
+    <div style={{ width: '220px', fontFamily: 'DM Sans, sans-serif' }}>
+      {exp.images[0]?.url != null && (
+        <img
+          src={exp.images[0].url}
+          alt={exp.title}
+          style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px' }}
+        />
+      )}
+      <p style={{ fontWeight: 700, fontSize: '14px', color: '#0A2E4D', margin: '0 0 4px' }}>
+        {exp.title}
+      </p>
+      <p style={{ fontSize: '12px', color: 'rgba(10,46,77,0.5)', margin: '0 0 8px' }}>
+        {exp.location_country} · {exp.fish_types.slice(0, 2).join(', ')}
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {exp.booking_type === 'icelandic' ? (
+          <span style={{ fontSize: '13px', color: 'rgba(10,46,77,0.5)', fontStyle: 'italic' }}>
+            Price on request
+          </span>
+        ) : (
+          <span style={{ fontWeight: 700, fontSize: '15px', color: '#0A2E4D' }}>
+            €{exp.price_per_person_eur}
+            <span style={{ fontWeight: 400, fontSize: '11px', color: 'rgba(10,46,77,0.4)' }}>/pp</span>
+          </span>
+        )}
+        <a
+          href={`/experiences/${exp.id}`}
+          style={{
+            background: '#E67E50', color: 'white',
+            borderRadius: '12px', padding: '5px 12px',
+            fontSize: '12px', fontWeight: 600,
+            textDecoration: 'none',
+          }}
+        >
+          View →
+        </a>
+      </div>
+    </div>
+  )
+}
+
+export default function MapView({ experiences, onBoundsChange, hoveredExpId }: Props) {
+  // mapHoveredId — tracks which pin the mouse is over on the map.
+  // Combined with hoveredExpId (card hover) via isHighlighted() below.
+  // Replaces all previous direct e.target.setIcon() calls — icon is now
+  // fully reactive so both hover sources work through a single code path.
+  const [mapHoveredId, setMapHoveredId] = useState<string | null>(null)
+
+  // An experience pin is visually highlighted if hovered from either source
+  const isHighlighted = (id: string) =>
+    mapHoveredId === id || (hoveredExpId != null && hoveredExpId === id)
+
+  const multiSpot = experiences
+    .map(exp => ({ exp, spots: (exp.location_spots as unknown as LocationSpot[] | null) ?? [] }))
+    .filter(x => x.spots.length > 0)
+
+  const withArea = experiences.filter(exp => {
+    const spots = (exp.location_spots as unknown as LocationSpot[] | null) ?? []
+    return spots.length === 0 && exp.location_area != null
+  })
+
+  const singlePin = experiences
+    .filter(exp => {
+      const spots = (exp.location_spots as unknown as LocationSpot[] | null) ?? []
+      return spots.length === 0 && exp.location_area == null
+    })
     .map(exp => ({ exp, coords: getCoords(exp) }))
     .filter((x): x is { exp: ExperienceWithGuide; coords: [number, number] } => x.coords != null)
 
@@ -108,6 +366,11 @@ export default function MapView({ experiences }: Props) {
       zoomControl={false}
       scrollWheelZoom
     >
+      {onBoundsChange != null && <BoundsTracker onBoundsChange={onBoundsChange} />}
+
+      {/* Hint badge — only rendered when area experiences exist */}
+      {withArea.length > 0 && <AreaHoverHint />}
+
       {/* CartoDB Voyager — free, modern, no API key */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
@@ -115,55 +378,78 @@ export default function MapView({ experiences }: Props) {
         maxZoom={19}
       />
 
-      {pins.map(({ exp, coords }) => (
+      {/* ─── Area experiences — polygon hidden until highlighted ────────── */}
+      {withArea.map(exp => {
+        const coords  = getCoords(exp)
+        const highlighted = isHighlighted(exp.id)
+        return (
+          <span key={exp.id}>
+            {/* Area overlay visible when this experience is highlighted from
+                either the map marker hover OR a card hover in the listing */}
+            <AreaOverlay exp={exp} visible={highlighted} />
+            {coords != null && (
+              <Marker
+                position={coords}
+                icon={resolveIcon(exp, highlighted, true)}
+                eventHandlers={{
+                  mouseover: () => setMapHoveredId(exp.id),
+                  mouseout:  () => setMapHoveredId(null),
+                }}
+              >
+                <Popup closeButton={false} className="fjord-popup">
+                  <ExpPopup exp={exp} />
+                </Popup>
+              </Marker>
+            )}
+          </span>
+        )
+      })}
+
+      {/* ─── Single-pin experiences ─────────────────────────────────────── */}
+      {singlePin.map(({ exp, coords }) => (
         <Marker
           key={exp.id}
           position={coords}
-          icon={priceIcon(exp.price_per_person_eur ?? 0)}
+          icon={resolveIcon(exp, isHighlighted(exp.id), false)}
           eventHandlers={{
-            mouseover: e => { e.target.setIcon(popupIcon(exp.price_per_person_eur ?? 0)) },
-            mouseout:  e => { e.target.setIcon(priceIcon(exp.price_per_person_eur ?? 0)) },
+            mouseover: () => setMapHoveredId(exp.id),
+            mouseout:  () => setMapHoveredId(null),
           }}
         >
-          <Popup
-            closeButton={false}
-            className="fjord-popup"
-          >
-            <div style={{ width: '220px', fontFamily: 'DM Sans, sans-serif' }}>
-              {exp.images[0]?.url != null && (
-                <img
-                  src={exp.images[0].url}
-                  alt={exp.title}
-                  style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '10px', marginBottom: '10px' }}
-                />
-              )}
-              <p style={{ fontWeight: 700, fontSize: '14px', color: '#0A2E4D', margin: '0 0 4px' }}>
-                {exp.title}
-              </p>
-              <p style={{ fontSize: '12px', color: 'rgba(10,46,77,0.5)', margin: '0 0 8px' }}>
-                {exp.location_country} · {exp.fish_types.slice(0, 2).join(', ')}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 700, fontSize: '15px', color: '#0A2E4D' }}>
-                  €{exp.price_per_person_eur}
-                  <span style={{ fontWeight: 400, fontSize: '11px', color: 'rgba(10,46,77,0.4)' }}>/pp</span>
-                </span>
-                <a
-                  href={`/experiences/${exp.id}`}
-                  style={{
-                    background: '#E67E50', color: 'white',
-                    borderRadius: '12px', padding: '5px 12px',
-                    fontSize: '12px', fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  View →
-                </a>
-              </div>
-            </div>
+          <Popup closeButton={false} className="fjord-popup">
+            <ExpPopup exp={exp} />
           </Popup>
         </Marker>
       ))}
+
+      {/* ─── Multi-spot experiences ─────────────────────────────────────── */}
+      {multiSpot.map(({ exp, spots }) => (
+        <span key={exp.id}>
+          <SpotsConnector spots={spots} />
+          {/* Primary spot — price bubble, highlights from both hover sources */}
+          <Marker
+            position={[spots[0].lat, spots[0].lng]}
+            icon={resolveIcon(exp, isHighlighted(exp.id), false)}
+            eventHandlers={{
+              mouseover: () => setMapHoveredId(exp.id),
+              mouseout:  () => setMapHoveredId(null),
+            }}
+          >
+            <Popup closeButton={false} className="fjord-popup">
+              <ExpPopup exp={exp} />
+            </Popup>
+          </Marker>
+          {/* Secondary spots — small dots, no highlight needed */}
+          {spots.slice(1).map((s, i) => (
+            <Marker key={i} position={[s.lat, s.lng]} icon={dotIcon()}>
+              <Popup closeButton={false} className="fjord-popup">
+                <ExpPopup exp={exp} />
+              </Popup>
+            </Marker>
+          ))}
+        </span>
+      ))}
+
     </MapContainer>
   )
 }

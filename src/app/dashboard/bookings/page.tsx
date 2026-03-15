@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
+import BookingActions from '@/components/dashboard/booking-actions'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -13,11 +14,14 @@ type BookingRow = Database['public']['Tables']['bookings']['Row'] & {
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
-  confirmed:  { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Confirmed' },
-  pending:    { bg: 'rgba(230,126,80,0.12)', color: '#E67E50', label: 'Pending' },
-  cancelled:  { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Cancelled' },
-  completed:  { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Completed' },
-  refunded:   { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Refunded' },
+  confirmed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed' },
+  pending:    { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending' },
+  cancelled:  { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled' },
+  completed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed' },
+  refunded:   { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded' },
+  // Added with Wave 4A enum extension
+  accepted:   { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted' },
+  declined:   { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined' },
 }
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -173,12 +177,12 @@ export default async function BookingsPage() {
           <div
             className="grid px-7 py-3"
             style={{
-              gridTemplateColumns: '2fr 1.5fr 100px 70px 90px 90px 110px',
+              gridTemplateColumns: '2fr 1.5fr 100px 70px 90px 90px 110px 130px',
               borderBottom: '1px solid rgba(10,46,77,0.07)',
               gap: '12px',
             }}
           >
-            {['Angler', 'Experience', 'Date', 'Guests', 'Total', 'Payout', 'Status'].map(col => (
+            {['Angler', 'Experience', 'Date', 'Guests', 'Total', 'Payout', 'Status', 'Actions'].map(col => (
               <p
                 key={col}
                 className="text-[10px] uppercase tracking-[0.18em] f-body"
@@ -204,7 +208,7 @@ export default async function BookingsPage() {
                   key={booking.id}
                   className="grid items-center px-7 py-4"
                   style={{
-                    gridTemplateColumns: '2fr 1.5fr 100px 70px 90px 90px 110px',
+                    gridTemplateColumns: '2fr 1.5fr 100px 70px 90px 90px 110px 130px',
                     gap: '12px',
                   }}
                 >
@@ -245,6 +249,17 @@ export default async function BookingsPage() {
                   >
                     {s.label}
                   </span>
+
+                  {/* Actions — accept/decline for pending bookings */}
+                  <div>
+                    {booking.status === 'pending' ? (
+                      <BookingActions bookingId={booking.id} />
+                    ) : (
+                      <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.25)' }}>
+                        —
+                      </span>
+                    )}
+                  </div>
                 </div>
               )
             })}

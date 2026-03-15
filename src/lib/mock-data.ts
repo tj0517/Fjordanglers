@@ -7,6 +7,20 @@ import type { Guide, Experience, ExperienceImage } from '@/types'
 
 type MockGuide = Guide & { experience_count: number }
 
+// Nullable columns present in the real DB that are not used in mock data.
+// Spread into every MOCK_EXPERIENCES entry so the type checker is satisfied.
+const EXP_EXTRA = {
+  boat_included:      null,
+  location_latitude:  null,
+  location_longitude: null,
+  meeting_time:       null,
+  tags:               null,
+  landscape_url:      null,
+  location_area:      null,
+  location_spots:     null,
+  booking_type:       'classic',
+} as const
+
 export const MOCK_GUIDES: MockGuide[] = [
   {
     id: 'guide-1',
@@ -20,7 +34,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     languages: ['English', 'Norwegian', 'German'],
     years_experience: 15,
     fish_expertise: ['Salmon', 'Sea Trout', 'Arctic Char'],
-    certifications: 'Norwegian Fishing Guide License',
+    certifications: ['Norwegian Fishing Guide License', 'First Aid Certified'],
     instagram_url: 'https://instagram.com/erik_fjord_fishing',
     youtube_url: null,
     status: 'active',
@@ -34,6 +48,23 @@ export const MOCK_GUIDES: MockGuide[] = [
     is_beta_listing: false,
     invite_email: null,
     lead_id: null,
+    // ── New profile columns ────────────────────────────────────────────────────
+    slug: 'erik-bjornsson-bergen',
+    tagline: 'Salmon & sea trout specialist in Western Norway since 2009',
+    specialties: ['Fly fishing expert', 'Trophy salmon', 'Family-friendly'],
+    google_rating: 4.9,
+    google_review_count: 47,
+    google_profile_url: 'https://g.page/erik-bjornsson-fishing',
+    external_reviews: [
+      { source: 'FishingBooker', rating: 4.8, count: 31, url: 'https://fishingbooker.com/guides/erik' },
+    ],
+    cancellation_policy: 'moderate',
+    boat_name: 'Fjord Spirit',
+    boat_type: 'cabin',
+    boat_length_m: 7.2,
+    boat_engine: 'Yamaha 150HP',
+    boat_capacity: 4,
+    // ──────────────────────────────────────────────────────────────────────────
     created_at: '2023-01-15T00:00:00Z',
     updated_at: '2023-01-15T00:00:00Z',
     experience_count: 4,
@@ -50,7 +81,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     languages: ['English', 'Swedish', 'Polish'],
     years_experience: 10,
     fish_expertise: ['Brown Trout', 'Grayling', 'Pike'],
-    certifications: 'Swedish Sports Fishing Guide',
+    certifications: ['Swedish Sports Fishing Guide Certificate'],
     instagram_url: 'https://instagram.com/lars_fly_fishing',
     youtube_url: 'https://youtube.com/@LarsFlyFishing',
     status: 'active',
@@ -64,6 +95,19 @@ export const MOCK_GUIDES: MockGuide[] = [
     is_beta_listing: false,
     invite_email: null,
     lead_id: null,
+    slug: 'lars-magnusson-are',
+    tagline: 'Fly fishing guide in the Swedish mountains — chasing wild trout since 2014',
+    specialties: ['Dry fly specialist', 'Beginner-friendly', 'River reading'],
+    google_rating: 4.8,
+    google_review_count: 29,
+    google_profile_url: null,
+    external_reviews: null,
+    cancellation_policy: 'flexible',
+    boat_name: null,
+    boat_type: null,
+    boat_length_m: null,
+    boat_engine: null,
+    boat_capacity: null,
     created_at: '2023-03-20T00:00:00Z',
     updated_at: '2023-03-20T00:00:00Z',
     experience_count: 3,
@@ -94,6 +138,19 @@ export const MOCK_GUIDES: MockGuide[] = [
     is_beta_listing: false,
     invite_email: null,
     lead_id: null,
+    slug: 'matti-virtanen-rovaniemi',
+    tagline: 'Pike & perch guide in Finnish Lapland — midnight sun fishing at its finest',
+    specialties: ['Ice fishing', 'Trophy pike', 'Midnight sun trips'],
+    google_rating: 4.7,
+    google_review_count: 18,
+    google_profile_url: null,
+    external_reviews: null,
+    cancellation_policy: 'moderate',
+    boat_name: 'Lapland Hunter',
+    boat_type: 'rib',
+    boat_length_m: 5.5,
+    boat_engine: 'Mercury 90HP',
+    boat_capacity: 4,
     created_at: '2023-06-10T00:00:00Z',
     updated_at: '2023-06-10T00:00:00Z',
     experience_count: 2,
@@ -102,11 +159,10 @@ export const MOCK_GUIDES: MockGuide[] = [
 
 type MockExperienceImage = ExperienceImage
 
-type MockExperience = Experience & {
+type MockExperience = Omit<Experience, 'images'> & {
   guide: Pick<Guide, 'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating'>
   images: MockExperienceImage[]
 }
-
 const makeImage = (
   id: string,
   experienceId: string,
@@ -133,7 +189,7 @@ const guideSnippet = (g: MockGuide) =>
   }) as Pick<Guide, 'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating'>
 
 export const MOCK_EXPERIENCES: MockExperience[] = [
-  {
+  { ...EXP_EXTRA,
     id: 'exp-1',
     guide_id: 'guide-1',
     guide: guideSnippet(MOCK_GUIDES[0]),
@@ -162,6 +218,26 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
     location_lat: 60.46,
     location_lng: 6.44,
     published: true,
+    // ── New trip columns ───────────────────────────────────────────────────────
+    slug: 'atlantic-salmon-fly-fishing-hardangerfjord',
+    duration_options: [
+      { label: 'Half day', hours: 4, days: null, price_eur: 280, includes_lodging: false },
+      { label: 'Full day', hours: 8, days: null, price_eur: 450, includes_lodging: false },
+    ],
+    group_pricing: { model: 'per_size', prices: { '1': 450, '2': 380 } },
+    fishing_methods: ['Fly fishing'],
+    season_from: 6,
+    season_to: 9,
+    meeting_point_address: 'Bergen Harbor, Bryggen Pier 3',
+    meeting_point_lat: 60.3975,
+    meeting_point_lng: 5.3241,
+    inclusions: {
+      rods: true, tackle: true, bait: false, boat: true, safety: true,
+      license: true, lunch: true, drinks: false, fish_cleaning: true,
+      transport: true, accommodation: false, custom: [],
+    },
+    license_region: 'hardangerfjord',
+    // ──────────────────────────────────────────────────────────────────────────
     created_at: '2023-01-20T00:00:00Z',
     updated_at: '2023-01-20T00:00:00Z',
     images: [
@@ -172,7 +248,7 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
       makeImage('img-1e', 'exp-1', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop', false, 4),
     ],
   },
-  {
+  { ...EXP_EXTRA,
     id: 'exp-2',
     guide_id: 'guide-1',
     guide: guideSnippet(MOCK_GUIDES[0]),
@@ -200,6 +276,23 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
     location_lat: 60.63,
     location_lng: 6.42,
     published: true,
+    slug: 'sea-trout-fishing-fjord-river-voss',
+    duration_options: [
+      { label: 'Full day', hours: 10, days: null, price_eur: 380, includes_lodging: false },
+    ],
+    group_pricing: { model: 'flat', prices: { '1': 380, '2': 380, '3': 380 } },
+    fishing_methods: ['Fly fishing', 'Spinning'],
+    season_from: 5,
+    season_to: 10,
+    meeting_point_address: 'Voss Train Station, main entrance',
+    meeting_point_lat: 60.6284,
+    meeting_point_lng: 6.4187,
+    inclusions: {
+      rods: true, tackle: true, bait: false, boat: false, safety: true,
+      license: true, lunch: false, drinks: true, fish_cleaning: false,
+      transport: false, accommodation: false, custom: ['Waders & boots included'],
+    },
+    license_region: 'voss',
     created_at: '2023-01-25T00:00:00Z',
     updated_at: '2023-01-25T00:00:00Z',
     images: [
@@ -210,7 +303,7 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
       makeImage('img-2e', 'exp-2', 'https://images.unsplash.com/photo-1524422765977-c59e0a2fa4db?w=800&h=600&fit=crop', false, 4),
     ],
   },
-  {
+  { ...EXP_EXTRA,
     id: 'exp-3',
     guide_id: 'guide-2',
     guide: guideSnippet(MOCK_GUIDES[1]),
@@ -238,6 +331,24 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
     location_lat: 63.10,
     location_lng: 14.60,
     published: true,
+    slug: 'wild-brown-trout-fly-fishing-swedish-mountains',
+    duration_options: [
+      { label: 'Half day', hours: 4, days: null, price_eur: 200, includes_lodging: false },
+      { label: 'Full day', hours: 7, days: null, price_eur: 320, includes_lodging: false },
+    ],
+    group_pricing: { model: 'per_size', prices: { '1': 320, '2': 260 } },
+    fishing_methods: ['Fly fishing'],
+    season_from: 5,
+    season_to: 9,
+    meeting_point_address: 'Åre Village Center, by the lake',
+    meeting_point_lat: 63.3988,
+    meeting_point_lng: 13.0807,
+    inclusions: {
+      rods: true, tackle: true, bait: false, boat: false, safety: false,
+      license: true, lunch: true, drinks: true, fish_cleaning: false,
+      transport: false, accommodation: false, custom: [],
+    },
+    license_region: 'jamtland',
     created_at: '2023-04-01T00:00:00Z',
     updated_at: '2023-04-01T00:00:00Z',
     images: [
@@ -248,7 +359,7 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
       makeImage('img-3e', 'exp-3', 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=800&h=600&fit=crop', false, 4),
     ],
   },
-  {
+  { ...EXP_EXTRA,
     id: 'exp-4',
     guide_id: 'guide-2',
     guide: guideSnippet(MOCK_GUIDES[1]),
@@ -277,6 +388,24 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
     location_lat: 63.18,
     location_lng: 14.64,
     published: true,
+    slug: 'epic-pike-fishing-swedish-lake-wilderness',
+    duration_options: [
+      { label: 'Half day', hours: 4, days: null, price_eur: 180, includes_lodging: false },
+      { label: 'Full day', hours: 8, days: null, price_eur: 280, includes_lodging: false },
+    ],
+    group_pricing: { model: 'per_size', prices: { '1': 280, '2': 240, '3': 210 } },
+    fishing_methods: ['Spinning', 'Trolling'],
+    season_from: 4,
+    season_to: 10,
+    meeting_point_address: 'Östersund Marina, dock B',
+    meeting_point_lat: 63.1766,
+    meeting_point_lng: 14.6364,
+    inclusions: {
+      rods: true, tackle: true, bait: true, boat: true, safety: true,
+      license: true, lunch: true, drinks: false, fish_cleaning: true,
+      transport: false, accommodation: false, custom: [],
+    },
+    license_region: 'jamtland',
     created_at: '2023-04-15T00:00:00Z',
     updated_at: '2023-04-15T00:00:00Z',
     images: [
@@ -287,7 +416,7 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
       makeImage('img-4e', 'exp-4', 'https://images.unsplash.com/photo-1465056836041-7f43ac27dcb5?w=800&h=600&fit=crop', false, 4),
     ],
   },
-  {
+  { ...EXP_EXTRA,
     id: 'exp-5',
     guide_id: 'guide-3',
     guide: guideSnippet(MOCK_GUIDES[2]),
@@ -315,6 +444,24 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
     location_lat: 66.71,
     location_lng: 27.43,
     published: true,
+    slug: 'midnight-sun-pike-fishing-finnish-lapland',
+    duration_options: [
+      { label: 'Evening trip', hours: 4, days: null, price_eur: 160, includes_lodging: false },
+      { label: 'Full day',     hours: 6, days: null, price_eur: 240, includes_lodging: false },
+    ],
+    group_pricing: { model: 'per_size', prices: { '1': 240, '2': 200, '3': 180, '4': 160 } },
+    fishing_methods: ['Spinning', 'Trolling'],
+    season_from: 6,
+    season_to: 8,
+    meeting_point_address: 'Rovaniemi Harbor, passenger terminal',
+    meeting_point_lat: 66.4978,
+    meeting_point_lng: 25.7099,
+    inclusions: {
+      rods: true, tackle: true, bait: true, boat: true, safety: true,
+      license: true, lunch: false, drinks: true, fish_cleaning: false,
+      transport: false, accommodation: false, custom: ['Sauna access after the trip'],
+    },
+    license_region: 'finnish-lapland',
     created_at: '2023-07-01T00:00:00Z',
     updated_at: '2023-07-01T00:00:00Z',
     images: [
@@ -325,7 +472,7 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
       makeImage('img-5e', 'exp-5', 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop', false, 4),
     ],
   },
-  {
+  { ...EXP_EXTRA,
     id: 'exp-6',
     guide_id: 'guide-1',
     guide: guideSnippet(MOCK_GUIDES[0]),
@@ -354,6 +501,24 @@ export const MOCK_EXPERIENCES: MockExperience[] = [
     location_lat: 61.22,
     location_lng: 7.00,
     published: true,
+    slug: '2-day-salmon-expedition-remote-norwegian-river',
+    duration_options: [
+      { label: '2-day expedition', hours: null, days: 2, price_eur: 950, includes_lodging: true },
+      { label: '3-day expedition', hours: null, days: 3, price_eur: 1350, includes_lodging: true },
+    ],
+    group_pricing: { model: 'flat', prices: { '1': 950, '2': 950 } },
+    fishing_methods: ['Fly fishing'],
+    season_from: 6,
+    season_to: 8,
+    meeting_point_address: 'Bergen Airport, terminal departures entrance',
+    meeting_point_lat: 60.2934,
+    meeting_point_lng: 5.2181,
+    inclusions: {
+      rods: true, tackle: true, bait: false, boat: false, safety: true,
+      license: true, lunch: true, drinks: true, fish_cleaning: true,
+      transport: true, accommodation: true, custom: ['Helicopter transfer included'],
+    },
+    license_region: 'sognefjord',
     created_at: '2023-02-10T00:00:00Z',
     updated_at: '2023-02-10T00:00:00Z',
     images: [

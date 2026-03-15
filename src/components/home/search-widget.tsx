@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Denmark', 'Iceland']
-const SPECIES = [
-  'Salmon', 'Sea Trout', 'Brown Trout', 'Pike',
-  'Perch', 'Grayling', 'Arctic Char', 'Zander',
-]
+import { FISH_FILTER } from '@/lib/fish'
+import { COUNTRIES } from '@/lib/countries'
+
+const SPECIES = FISH_FILTER
 
 export default function HomeSearchWidget() {
   const router = useRouter()

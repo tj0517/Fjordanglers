@@ -46,16 +46,16 @@ export function SpeciesCard({ fish, info, compact = false }: Props) {
       <div className="flex items-center gap-3">
         {/* Photo thumbnail */}
         <div
-          className="flex-shrink-0 overflow-hidden rounded-xl"
-          style={{ width: compact ? 52 : 72, height: compact ? 36 : 48 }}
+          className="flex-shrink-0 rounded-xl"
+          style={{ width: compact ? 64 : 88, height: compact ? 36 : 48 }}
         >
           {info?.photo != null ? (
             <Image
               src={info.photo}
               alt={fish}
-              width={compact ? 52 : 72}
+              width={compact ? 64 : 88}
               height={compact ? 36 : 48}
-              className="object-cover w-full h-full"
+              className="object-contain w-full h-full"
             />
           ) : (
             <div className="w-full h-full" style={{ background: `${accent}20` }} />

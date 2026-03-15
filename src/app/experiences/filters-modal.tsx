@@ -23,11 +23,41 @@ const DIFFICULTIES = [
   { value: 'expert',       label: 'Expert only'  },
 ]
 
+const DURATION_OPTIONS = [
+  { value: '',           label: 'Any'        },
+  { value: 'half-day',   label: '½ Day',     desc: 'Up to 6 hours'     },
+  { value: 'full-day',   label: 'Full Day',  desc: '7 – 12 hours'      },
+  { value: 'overnight',  label: 'Overnight', desc: '1 night'            },
+  { value: 'multi-day',  label: 'Multi-day', desc: '2 – 4 days'        },
+  { value: 'expedition', label: 'Expedition', desc: '5 or more days'   },
+]
+
+const TECHNIQUE_OPTIONS = [
+  'Fly fishing',
+  'Lure fishing',
+  'Bait fishing',
+  'Ice fishing',
+  'Trolling',
+  'Spin fishing',
+  'Jigging',
+  'Sea fishing',
+]
+
+const GUESTS_OPTIONS = [
+  { value: '',   label: 'Any'         },
+  { value: '1',  label: 'Solo'        },
+  { value: '2',  label: '2 people'    },
+  { value: '4',  label: '4+ people'   },
+  { value: '8',  label: '8+ people'   },
+  { value: '10', label: '10+ people'  },
+]
+
 const SORT_OPTIONS = [
   { value: '',              label: 'Recommended'       },
   { value: 'price-asc',    label: 'Price: Low → High' },
   { value: 'price-desc',   label: 'Price: High → Low' },
   { value: 'duration-asc', label: 'Shortest first'    },
+  { value: 'duration-desc', label: 'Longest first'    },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -40,20 +70,45 @@ function urlToPriceKey(min: string, max: string): PriceKey {
   return ''
 }
 
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <h3
+      className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 f-body"
+      style={{ color: 'rgba(10,46,77,0.38)' }}
+    >
+      {children}
+    </h3>
+  )
+}
+
+function Divider() {
+  return <div style={{ height: '1px', background: 'rgba(10,46,77,0.07)', margin: '24px 0' }} />
+}
+
 function Pill({
-  label, active, onClick, variant = 'blue',
+  label,
+  active,
+  onClick,
+  variant = 'blue',
 }: {
-  label: string; active: boolean; onClick: () => void; variant?: 'blue' | 'orange'
+  label: string
+  active: boolean
+  onClick: () => void
+  variant?: 'blue' | 'orange'
 }) {
   return (
     <button
       onClick={onClick}
       className="text-sm font-semibold px-4 py-2.5 rounded-full transition-all f-body whitespace-nowrap"
       style={{
-        background: active ? (variant === 'orange' ? '#E67E50' : '#0A2E4D') : 'rgba(10,46,77,0.05)',
+        background: active
+          ? variant === 'orange' ? '#E67E50' : '#0A2E4D'
+          : 'rgba(10,46,77,0.05)',
         color: active ? 'white' : 'rgba(10,46,77,0.65)',
         boxShadow: active
-          ? variant === 'orange' ? '0 2px 8px rgba(230,126,80,0.35)' : '0 2px 8px rgba(10,46,77,0.22)'
+          ? variant === 'orange'
+            ? '0 2px 8px rgba(230,126,80,0.35)'
+            : '0 2px 8px rgba(10,46,77,0.22)'
           : 'none',
       }}
     >
@@ -65,33 +120,47 @@ function Pill({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function FiltersModal() {
-  const [open,   setOpen]   = useState(false)
+  const [open,    setOpen]    = useState(false)
   const [mounted, setMounted] = useState(false)
   const router = useRouter()
   const sp     = useSearchParams()
 
-  // Track client mount for portal safety
   useEffect(() => { setMounted(true) }, [])
 
-  // Local filter state — synced from URL when modal opens
-  const [difficulty, setDifficulty] = useState<string>('')
-  const [price,      setPrice]      = useState<PriceKey>('')
-  const [sort,       setSort]       = useState<string>('')
+  // ── Local filter state — synced from URL when modal opens ─────────────────
+  const [difficulty,   setDifficulty]   = useState<string>('')
+  const [price,        setPrice]        = useState<PriceKey>('')
+  const [sort,         setSort]         = useState<string>('')
+  const [technique,    setTechnique]    = useState<string>('')
+  const [duration,     setDuration]     = useState<string>('')
+  const [catchRelease, setCatchRelease] = useState<boolean>(false)
+  const [guests,       setGuests]       = useState<string>('')
 
   function handleOpen() {
-    setDifficulty(sp.get('difficulty') ?? '')
+    setDifficulty(sp.get('difficulty')   ?? '')
     setPrice(urlToPriceKey(sp.get('minPrice') ?? '', sp.get('maxPrice') ?? ''))
-    setSort(sp.get('sort') ?? '')
+    setSort(sp.get('sort')               ?? '')
+    setTechnique(sp.get('technique')     ?? '')
+    setDuration(sp.get('duration')       ?? '')
+    setCatchRelease(sp.get('catchRelease') === 'true')
+    setGuests(sp.get('guests')           ?? '')
     setOpen(true)
   }
 
   function applyFilters() {
     const p      = new URLSearchParams(sp.toString())
     const preset = PRICE_OPTIONS.find(o => o.key === price)
-    if (difficulty)  p.set('difficulty', difficulty); else p.delete('difficulty')
-    if (preset?.min) p.set('minPrice', preset.min);   else p.delete('minPrice')
-    if (preset?.max) p.set('maxPrice', preset.max);   else p.delete('maxPrice')
-    if (sort)        p.set('sort', sort);              else p.delete('sort')
+
+    if (difficulty)    p.set('difficulty', difficulty);   else p.delete('difficulty')
+    if (preset?.min)   p.set('minPrice', preset.min);     else p.delete('minPrice')
+    if (preset?.max)   p.set('maxPrice', preset.max);     else p.delete('maxPrice')
+    if (sort)          p.set('sort', sort);                else p.delete('sort')
+    if (technique)     p.set('technique', technique);      else p.delete('technique')
+    if (duration)      p.set('duration', duration);        else p.delete('duration')
+    if (catchRelease)  p.set('catchRelease', 'true');      else p.delete('catchRelease')
+    if (guests)        p.set('guests', guests);            else p.delete('guests')
+    p.delete('page')
+
     router.push(`/experiences?${p.toString()}`)
     setOpen(false)
   }
@@ -100,6 +169,10 @@ export function FiltersModal() {
     setDifficulty('')
     setPrice('')
     setSort('')
+    setTechnique('')
+    setDuration('')
+    setCatchRelease(false)
+    setGuests('')
   }
 
   // ESC to close
@@ -116,17 +189,22 @@ export function FiltersModal() {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
+  // Count active URL filters (for badge on trigger button)
   const urlActiveCount = [
     sp.get('difficulty'),
     sp.get('minPrice') || sp.get('maxPrice') ? '1' : '',
     sp.get('sort'),
+    sp.get('technique'),
+    sp.get('duration'),
+    sp.get('catchRelease') === 'true' ? '1' : '',
+    sp.get('guests'),
   ].filter(Boolean).length
 
-  const hasLocalChanges = difficulty !== '' || price !== '' || sort !== ''
+  const hasLocalChanges =
+    difficulty !== '' || price !== '' || sort !== '' || technique !== '' ||
+    duration !== '' || catchRelease || guests !== ''
 
-  // ── Modal DOM — rendered via portal directly on document.body ──────────────
-  // This bypasses the nav's backdrop-filter stacking context which would
-  // otherwise trap fixed-position children inside it.
+  // ── Modal DOM ─────────────────────────────────────────────────────────────
   const modal = mounted && open
     ? createPortal(
         <>
@@ -134,9 +212,7 @@ export function FiltersModal() {
           <div
             onClick={() => setOpen(false)}
             style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 9998,
+              position: 'fixed', inset: 0, zIndex: 9998,
               background: 'rgba(0,0,0,0.52)',
               backdropFilter: 'blur(6px)',
               WebkitBackdropFilter: 'blur(6px)',
@@ -149,18 +225,15 @@ export function FiltersModal() {
             aria-modal="true"
             aria-label="Filters"
             style={{
-              position: 'fixed',
-              zIndex: 9999,
-              top: '50%',
-              left: '50%',
+              position: 'fixed', zIndex: 9999,
+              top: '50%', left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '540px',
-              maxHeight: '85vh',
+              width: '560px',
+              maxHeight: '88vh',
               background: '#FDFAF7',
               borderRadius: '28px',
               boxShadow: '0 40px 100px rgba(0,0,0,0.32)',
-              display: 'flex',
-              flexDirection: 'column',
+              display: 'flex', flexDirection: 'column',
               overflow: 'hidden',
             }}
           >
@@ -176,7 +249,7 @@ export function FiltersModal() {
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-center rounded-full transition-colors hover:bg-[rgba(10,46,77,0.07)]"
                 style={{ width: '32px', height: '32px', color: '#0A2E4D' }}
-                aria-label="Close"
+                aria-label="Close filters"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M18 6L6 18M6 6l12 12" />
@@ -189,11 +262,10 @@ export function FiltersModal() {
               className="flex-1 overflow-y-auto px-7 py-7"
               style={{ scrollbarWidth: 'none' } as React.CSSProperties}
             >
-              {/* Sort */}
-              <section className="mb-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                  Sort by
-                </h3>
+
+              {/* ── Sort by ─────────────────────────────────────────────── */}
+              <section>
+                <SectionLabel>Sort by</SectionLabel>
                 <div className="grid grid-cols-2 gap-2">
                   {SORT_OPTIONS.map(o => (
                     <button
@@ -202,7 +274,7 @@ export function FiltersModal() {
                       className="text-sm font-medium px-4 py-3 rounded-2xl text-left transition-all f-body"
                       style={{
                         background: sort === o.value ? '#0A2E4D' : 'rgba(10,46,77,0.05)',
-                        color: sort === o.value ? 'white' : 'rgba(10,46,77,0.65)',
+                        color:      sort === o.value ? 'white'   : 'rgba(10,46,77,0.65)',
                       }}
                     >
                       {o.label}
@@ -211,33 +283,157 @@ export function FiltersModal() {
                 </div>
               </section>
 
-              <div style={{ height: '1px', background: 'rgba(10,46,77,0.07)', marginBottom: '28px' }} />
+              <Divider />
 
-              {/* Price */}
-              <section className="mb-8">
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                  Price per person
-                </h3>
+              {/* ── Duration ────────────────────────────────────────────── */}
+              <section>
+                <SectionLabel>Trip duration</SectionLabel>
+                <div className="grid grid-cols-3 gap-2">
+                  {DURATION_OPTIONS.map(o => (
+                    <button
+                      key={o.value}
+                      onClick={() => setDuration(o.value)}
+                      className="flex flex-col items-start px-4 py-3 rounded-2xl text-left transition-all f-body"
+                      style={{
+                        background: duration === o.value ? '#0A2E4D' : 'rgba(10,46,77,0.05)',
+                        color:      duration === o.value ? 'white'   : 'rgba(10,46,77,0.65)',
+                      }}
+                    >
+                      <span className="text-sm font-semibold leading-tight">{o.label}</span>
+                      {o.desc && (
+                        <span
+                          className="text-[11px] mt-0.5 leading-tight"
+                          style={{ opacity: duration === o.value ? 0.65 : 0.5 }}
+                        >
+                          {o.desc}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <Divider />
+
+              {/* ── Price per person ─────────────────────────────────────── */}
+              <section>
+                <SectionLabel>Price per person</SectionLabel>
                 <div className="flex flex-wrap gap-2">
                   {PRICE_OPTIONS.map(o => (
-                    <Pill key={o.key} label={o.label} active={price === o.key} onClick={() => setPrice(o.key)} variant="orange" />
+                    <Pill
+                      key={o.key}
+                      label={o.label}
+                      active={price === o.key}
+                      onClick={() => setPrice(o.key)}
+                      variant="orange"
+                    />
                   ))}
                 </div>
               </section>
 
-              <div style={{ height: '1px', background: 'rgba(10,46,77,0.07)', marginBottom: '28px' }} />
+              <Divider />
 
-              {/* Difficulty */}
+              {/* ── Technique ────────────────────────────────────────────── */}
               <section>
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                  Skill Level
-                </h3>
+                <SectionLabel>Fishing technique</SectionLabel>
+                <div className="flex flex-wrap gap-2">
+                  {TECHNIQUE_OPTIONS.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setTechnique(technique === t ? '' : t)}
+                      className="text-sm font-medium px-4 py-2 rounded-full transition-all f-body"
+                      style={{
+                        background: technique === t ? 'rgba(230,126,80,0.14)' : 'rgba(10,46,77,0.05)',
+                        color:      technique === t ? '#9E4820'               : 'rgba(10,46,77,0.65)',
+                        border:     `1.5px solid ${technique === t ? 'rgba(230,126,80,0.3)' : 'transparent'}`,
+                      }}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <Divider />
+
+              {/* ── Skill level ──────────────────────────────────────────── */}
+              <section>
+                <SectionLabel>Skill level</SectionLabel>
                 <div className="flex flex-wrap gap-2">
                   {DIFFICULTIES.map(d => (
-                    <Pill key={d.value} label={d.label} active={difficulty === d.value} onClick={() => setDifficulty(d.value)} variant="blue" />
+                    <Pill
+                      key={d.value}
+                      label={d.label}
+                      active={difficulty === d.value}
+                      onClick={() => setDifficulty(d.value)}
+                      variant="blue"
+                    />
                   ))}
                 </div>
               </section>
+
+              <Divider />
+
+              {/* ── Group size ───────────────────────────────────────────── */}
+              <section>
+                <SectionLabel>Group size</SectionLabel>
+                <div className="flex flex-wrap gap-2">
+                  {GUESTS_OPTIONS.map(o => (
+                    <Pill
+                      key={o.value}
+                      label={o.label}
+                      active={guests === o.value}
+                      onClick={() => setGuests(o.value)}
+                      variant="blue"
+                    />
+                  ))}
+                </div>
+              </section>
+
+              <Divider />
+
+              {/* ── Catch & Release toggle ───────────────────────────────── */}
+              <section>
+                <SectionLabel>Conservation</SectionLabel>
+                <button
+                  onClick={() => setCatchRelease(!catchRelease)}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all f-body"
+                  style={{
+                    background: catchRelease ? 'rgba(10,46,77,0.06)' : 'rgba(10,46,77,0.04)',
+                    border: `1.5px solid ${catchRelease ? '#0A2E4D' : 'transparent'}`,
+                  }}
+                >
+                  {/* Toggle pill */}
+                  <div
+                    className="relative flex-shrink-0 transition-all"
+                    style={{
+                      width: '44px', height: '26px',
+                      borderRadius: '13px',
+                      background: catchRelease ? '#0A2E4D' : 'rgba(10,46,77,0.15)',
+                    }}
+                  >
+                    <div
+                      className="absolute top-[3px] transition-all"
+                      style={{
+                        width: '20px', height: '20px',
+                        borderRadius: '50%',
+                        background: 'white',
+                        left: catchRelease ? '21px' : '3px',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                      }}
+                    />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                      Catch &amp; Release only
+                    </p>
+                    <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      Show only eco-friendly, no-kill trips
+                    </p>
+                  </div>
+                </button>
+              </section>
+
             </div>
 
             {/* Footer */}
@@ -272,21 +468,19 @@ export function FiltersModal() {
       {/* Trigger button */}
       <button
         onClick={handleOpen}
-        className="flex items-center gap-2 rounded-full transition-all hover:bg-white/[0.18] active:scale-[0.97] f-body"
+        className="h-9 flex items-center gap-2 px-4 rounded-xl transition-all active:scale-[0.97] f-body"
         style={{
-          height: '44px',
-          padding: '0 18px',
-          background: urlActiveCount > 0 ? 'rgba(230,126,80,0.18)' : 'rgba(255,255,255,0.1)',
-          border: `1.5px solid ${urlActiveCount > 0 ? '#E67E50' : 'rgba(255,255,255,0.22)'}`,
-          color: 'white',
-          fontSize: '13px',
+          background: urlActiveCount > 0 ? 'rgba(230,126,80,0.15)' : 'rgba(10,46,77,0.08)',
+          color:      urlActiveCount > 0 ? '#9E4820' : 'rgba(10,46,77,0.8)',
+          fontSize:   '13px',
           fontWeight: 600,
         }}
       >
+        {/* Sliders icon */}
         <svg width="14" height="13" viewBox="0 0 14 13" fill="none">
-          <path d="M1 2.5h3M8 2.5h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M1 2.5h3M8 2.5h5"   stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           <circle cx="5.5" cy="2.5" r="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M1 6.5h5M10 6.5h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M1 6.5h5M10 6.5h3"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           <circle cx="8.5" cy="6.5" r="1.5" stroke="currentColor" strokeWidth="1.5" />
           <path d="M1 10.5h2M7 10.5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           <circle cx="4.5" cy="10.5" r="1.5" stroke="currentColor" strokeWidth="1.5" />
@@ -302,7 +496,6 @@ export function FiltersModal() {
         )}
       </button>
 
-      {/* Portal renders on document.body — outside nav stacking context */}
       {modal}
     </>
   )

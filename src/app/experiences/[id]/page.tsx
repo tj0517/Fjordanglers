@@ -4,10 +4,17 @@ import { notFound } from 'next/navigation'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ExperienceGallery } from '@/components/experiences/experience-gallery'
+import { ExperienceLocationMap } from '@/components/experiences/experience-location-map-client'
 import { SpeciesCard } from '@/components/experiences/species-card'
+import { BookingWidget, MobileBookingBar } from '@/components/experiences/booking-widget'
+import DurationCardsSelector from '@/components/experiences/duration-cards-selector'
+import type { AvailConfigRow } from '@/components/experiences/booking-widget'
 import type { SpeciesInfo, FishVariant } from '@/components/experiences/species-card'
 import type { ExperienceWithGuide } from '@/types'
-import { HomeNav } from '@/components/home/home-nav'
+import type { InclusionsPayload, DurationOptionPayload } from '@/actions/experiences'
+import { FISH_IMG } from '@/lib/fish'
+import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
+import { getLandscapeUrl } from '@/lib/landscapes'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -21,6 +28,17 @@ const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'All Levels', intermediate: 'Intermediate', expert: 'Expert',
 }
 
+// ─── License guide article URLs per country ───────────────────────────────────
+// Link to a blog post explaining how to get a fishing license in each country.
+// Add the slug once the article is published; null = no link yet.
+
+const LICENSE_ARTICLE: Record<string, string | null> = {
+  Norway:  null, // e.g. '/blog/fishing-license-norway'
+  Sweden:  null,
+  Finland: null,
+  Iceland: null,
+}
+
 // satisfies ensures every entry conforms to SpeciesInfo (with correct variant literal)
 const v = (x: FishVariant) => x
 
@@ -32,7 +50,16 @@ const FISH_INFO: Record<string, SpeciesInfo> = {
     trophy: 'up to 20 kg',
     bg: 'linear-gradient(135deg, rgba(230,126,80,0.14) 0%, rgba(230,126,80,0.06) 100%)',
     accent: '#E67E50',
-    photo: '/fish_catalog/salmon.jpg',
+    photo: FISH_IMG['Salmon'],
+  },
+  'Atlantic Salmon': {
+    variant: v('salmon'),
+    tagline: 'The King of the River',
+    desc: 'Powerful, acrobatic fighters that run from the sea into Nordic rivers each summer. Fresh-run fish are chrome-bright and explosive on the take.',
+    trophy: 'up to 20 kg',
+    bg: 'linear-gradient(135deg, rgba(230,126,80,0.14) 0%, rgba(230,126,80,0.06) 100%)',
+    accent: '#E67E50',
+    photo: FISH_IMG['Salmon'],
   },
   'Sea Trout': {
     variant: v('salmon'),
@@ -41,7 +68,7 @@ const FISH_INFO: Record<string, SpeciesInfo> = {
     trophy: 'up to 10 kg',
     bg: 'linear-gradient(135deg, rgba(100,160,200,0.14) 0%, rgba(100,160,200,0.06) 100%)',
     accent: '#4A9FC0',
-    photo: '/fish_catalog/trout.jpg',
+    photo: FISH_IMG['Sea Trout'],
   },
   'Brown Trout': {
     variant: v('salmon'),
@@ -50,61 +77,16 @@ const FISH_INFO: Record<string, SpeciesInfo> = {
     trophy: 'up to 8 kg',
     bg: 'linear-gradient(135deg, rgba(160,100,50,0.14) 0%, rgba(160,100,50,0.06) 100%)',
     accent: '#A06432',
-    photo: '/fish_catalog/trout.jpg',
+    photo: FISH_IMG['Brown Trout'],
   },
-  'Grayling': {
-    variant: v('perch'),
-    tagline: 'Lady of the Stream',
-    desc: 'Fast-water fish with a striking sail-like dorsal fin. Found in the clearest, coldest Scandinavian rivers — a perfect dry-fly quarry.',
-    trophy: 'up to 3 kg',
-    bg: 'linear-gradient(135deg, rgba(130,100,200,0.14) 0%, rgba(130,100,200,0.06) 100%)',
-    accent: '#8264C8',
-    photo: '/fish_catalog/graling.jpeg',
-  },
-  'Pike': {
-    variant: v('pike'),
-    tagline: 'The Apex Predator',
-    desc: 'Ambush hunters lurking in weed beds and lily pads. Explosive strikers that hit big lures hard — Northern Europe\'s most exciting lure target.',
-    trophy: 'up to 20 kg',
-    bg: 'linear-gradient(135deg, rgba(60,130,80,0.14) 0%, rgba(60,130,80,0.06) 100%)',
-    accent: '#3C8250',
-    photo: '/fish_catalog/pike.jpg',
-  },
-  'Perch': {
-    variant: v('perch'),
-    tagline: 'The Bold Striker',
-    desc: 'Boldly striped schooling predators found throughout Scandinavian lakes. Aggressive biters on small lures — superb on light tackle.',
-    trophy: 'up to 3 kg',
-    bg: 'linear-gradient(135deg, rgba(80,150,60,0.14) 0%, rgba(80,150,60,0.06) 100%)',
-    accent: '#509640',
-    photo: '/fish_catalog/perch.jpg',
-  },
-  'Zander': {
-    variant: v('pike'),
-    tagline: 'The Shadow Predator',
-    desc: 'Elusive deep-water hunters with glassy eyes adapted for low light. Prized for their delicious white flesh and challenging, finesse-focused fishing.',
-    trophy: 'up to 12 kg',
-    bg: 'linear-gradient(135deg, rgba(60,80,120,0.14) 0%, rgba(60,80,120,0.06) 100%)',
-    accent: '#3C5078',
-    photo: '/fish_catalog/zander.jpg',
-  },
-  'Arctic Char': {
+  'Rainbow Trout': {
     variant: v('salmon'),
-    tagline: 'The Glacial Relic',
-    desc: 'A living relic of the Ice Age, found only in the coldest Nordic lakes. Rarely targeted and breathtakingly beautiful — a true bucket-list catch.',
-    trophy: 'up to 6 kg',
-    bg: 'linear-gradient(135deg, rgba(80,180,220,0.14) 0%, rgba(80,180,220,0.06) 100%)',
-    accent: '#50B4DC',
-    photo: '/fish_catalog/arctic-char.jpg',
-  },
-  'Cod': {
-    variant: v('pike'),
-    tagline: 'The Ocean Giant',
-    desc: 'A staple of Nordic coastal fishing, cod are powerful bottom-dwellers found in the cold fjords of Norway. Heavy fighters on light sea gear.',
-    trophy: 'up to 40 kg',
-    bg: 'linear-gradient(135deg, rgba(100,130,100,0.14) 0%, rgba(100,130,100,0.06) 100%)',
-    accent: '#6A8C5A',
-    photo: '/fish_catalog/cod.jpg',
+    tagline: 'The Acrobat',
+    desc: 'Hard-fighting and spectacular jumpers, rainbow trout thrive in fast, cold Nordic streams. Famous for their iridescent lateral stripe and sheer power.',
+    trophy: 'up to 5 kg',
+    bg: 'linear-gradient(135deg, rgba(180,120,200,0.14) 0%, rgba(180,120,200,0.06) 100%)',
+    accent: '#B478C8',
+    photo: FISH_IMG['Rainbow Trout'],
   },
   'Trout': {
     variant: v('salmon'),
@@ -113,7 +95,151 @@ const FISH_INFO: Record<string, SpeciesInfo> = {
     trophy: 'up to 10 kg',
     bg: 'linear-gradient(135deg, rgba(160,100,50,0.14) 0%, rgba(160,100,50,0.06) 100%)',
     accent: '#A06432',
-    photo: '/fish_catalog/trout.jpg',
+    photo: FISH_IMG['Trout'],
+  },
+  'Arctic Char': {
+    variant: v('salmon'),
+    tagline: 'The Glacial Relic',
+    desc: 'A living relic of the Ice Age, found only in the coldest Nordic lakes. Rarely targeted and breathtakingly beautiful — a true bucket-list catch.',
+    trophy: 'up to 6 kg',
+    bg: 'linear-gradient(135deg, rgba(80,180,220,0.14) 0%, rgba(80,180,220,0.06) 100%)',
+    accent: '#50B4DC',
+    photo: FISH_IMG['Arctic Char'],
+  },
+  'Grayling': {
+    variant: v('perch'),
+    tagline: 'Lady of the Stream',
+    desc: 'Fast-water fish with a striking sail-like dorsal fin. Found in the clearest, coldest Scandinavian rivers — a perfect dry-fly quarry.',
+    trophy: 'up to 3 kg',
+    bg: 'linear-gradient(135deg, rgba(130,100,200,0.14) 0%, rgba(130,100,200,0.06) 100%)',
+    accent: '#8264C8',
+    photo: FISH_IMG['Grayling'],
+  },
+  'Whitefish': {
+    variant: v('perch'),
+    tagline: 'The Nordic Table Fish',
+    desc: 'Schooling fish of cold, clear Scandinavian lakes. Delicate on ultra-light tackle and fly — an underrated gem of Nordic freshwater fishing.',
+    trophy: 'up to 2 kg',
+    bg: 'linear-gradient(135deg, rgba(100,160,180,0.14) 0%, rgba(100,160,180,0.06) 100%)',
+    accent: '#64A0B4',
+    photo: FISH_IMG['Arctic Char'],
+  },
+  'Pike': {
+    variant: v('pike'),
+    tagline: 'The Apex Predator',
+    desc: 'Ambush hunters lurking in weed beds and lily pads. Explosive strikers that hit big lures hard — Northern Europe\'s most exciting lure target.',
+    trophy: 'up to 20 kg',
+    bg: 'linear-gradient(135deg, rgba(60,130,80,0.14) 0%, rgba(60,130,80,0.06) 100%)',
+    accent: '#3C8250',
+    photo: FISH_IMG['Pike'],
+  },
+  'Perch': {
+    variant: v('perch'),
+    tagline: 'The Bold Striker',
+    desc: 'Boldly striped schooling predators found throughout Scandinavian lakes. Aggressive biters on small lures — superb on light tackle.',
+    trophy: 'up to 3 kg',
+    bg: 'linear-gradient(135deg, rgba(80,150,60,0.14) 0%, rgba(80,150,60,0.06) 100%)',
+    accent: '#509640',
+    photo: FISH_IMG['Perch'],
+  },
+  'Zander': {
+    variant: v('pike'),
+    tagline: 'The Shadow Predator',
+    desc: 'Elusive deep-water hunters with glassy eyes adapted for low light. Prized for their delicious white flesh and challenging, finesse-focused fishing.',
+    trophy: 'up to 12 kg',
+    bg: 'linear-gradient(135deg, rgba(60,80,120,0.14) 0%, rgba(60,80,120,0.06) 100%)',
+    accent: '#3C5078',
+    photo: FISH_IMG['Zander'],
+  },
+  'Cod': {
+    variant: v('pike'),
+    tagline: 'The Ocean Giant',
+    desc: 'A staple of Nordic coastal fishing, cod are powerful bottom-dwellers found in the cold fjords of Norway. Heavy fighters on light sea gear.',
+    trophy: 'up to 40 kg',
+    bg: 'linear-gradient(135deg, rgba(100,130,100,0.14) 0%, rgba(100,130,100,0.06) 100%)',
+    accent: '#6A8C5A',
+    photo: FISH_IMG['Cod'],
+  },
+  'Pollock': {
+    variant: v('pike'),
+    tagline: 'The Fjord Fighter',
+    desc: 'Fast-moving schooling predators of Norwegian fjords, pollock hit surface lures and jigs with aggression. Excellent eating and a true sport fish.',
+    trophy: 'up to 10 kg',
+    bg: 'linear-gradient(135deg, rgba(90,130,100,0.14) 0%, rgba(90,130,100,0.06) 100%)',
+    accent: '#5A8264',
+    photo: FISH_IMG['Cod'],
+  },
+  'Haddock': {
+    variant: v('pike'),
+    tagline: 'The Fjord Classic',
+    desc: 'Found over rocky and sandy bottoms in Norwegian coastal waters, haddock are reliable targets on bottom rigs and perfect for family fishing trips.',
+    trophy: 'up to 7 kg',
+    bg: 'linear-gradient(135deg, rgba(110,130,90,0.14) 0%, rgba(110,130,90,0.06) 100%)',
+    accent: '#6E825A',
+    photo: FISH_IMG['Cod'],
+  },
+  'Halibut': {
+    variant: v('pike'),
+    tagline: 'The Ocean Floor King',
+    desc: 'The largest flatfish in the sea — halibut can exceed 200 kg and are the ultimate big-game target in Norwegian coastal waters. A bucket-list fish.',
+    trophy: 'up to 200 kg',
+    bg: 'linear-gradient(135deg, rgba(80,100,130,0.14) 0%, rgba(80,100,130,0.06) 100%)',
+    accent: '#506482',
+    photo: FISH_IMG['Halibut'],
+  },
+  'Flounder': {
+    variant: v('perch'),
+    tagline: 'The Coastal Flatfish',
+    desc: 'Small, tasty flatfish found in shallow coastal bays and estuaries. Ideal for light-tackle fishing and a great entry point for sea anglers.',
+    trophy: 'up to 1 kg',
+    bg: 'linear-gradient(135deg, rgba(90,110,140,0.14) 0%, rgba(90,110,140,0.06) 100%)',
+    accent: '#5A6E8C',
+    photo: FISH_IMG['Halibut'],
+  },
+  'Wolffish': {
+    variant: v('pike'),
+    tagline: 'The Deep-Water Dragon',
+    desc: 'Powerful, toothy bottom-dwellers of cold Norwegian waters. Their fierce appearance belies superb eating — one of the most impressive catches on a Nordic sea trip.',
+    trophy: 'up to 20 kg',
+    bg: 'linear-gradient(135deg, rgba(70,70,100,0.14) 0%, rgba(70,70,100,0.06) 100%)',
+    accent: '#464664',
+    photo: FISH_IMG['Wolffish'],
+  },
+  'Norway Redfish': {
+    variant: v('perch'),
+    tagline: 'The Crimson Deep-Diver',
+    desc: 'Brilliantly coloured deep-water fish found in Norwegian fjords. Redfish are reliable biters on jigs and soft plastics — a popular target on sea fishing charters.',
+    trophy: 'up to 5 kg',
+    bg: 'linear-gradient(135deg, rgba(200,60,60,0.14) 0%, rgba(200,60,60,0.06) 100%)',
+    accent: '#C83C3C',
+    photo: FISH_IMG['Norway Redfish'],
+  },
+  'Mackerel': {
+    variant: v('perch'),
+    tagline: 'The Coastal Sprinter',
+    desc: 'Fast, schooling pelagic fish that flood Norwegian coasts every summer. Explosive on light lures and feathers — superb fun for all ages.',
+    trophy: 'up to 1 kg',
+    bg: 'linear-gradient(135deg, rgba(50,130,150,0.14) 0%, rgba(50,130,150,0.06) 100%)',
+    accent: '#328296',
+    photo: FISH_IMG['Mackerel'],
+  },
+  'Garfish': {
+    variant: v('perch'),
+    tagline: 'The Silver Needle',
+    desc: 'Slender, acrobatic pelagic fish that leap clear of the water when hooked. A thrilling summer target on surface lures in Scandinavian coastal waters.',
+    trophy: 'up to 1 kg',
+    bg: 'linear-gradient(135deg, rgba(60,160,130,0.14) 0%, rgba(60,160,130,0.06) 100%)',
+    accent: '#3CA082',
+    photo: FISH_IMG['Mackerel'],
+  },
+  'Ling': {
+    variant: v('pike'),
+    tagline: 'The Deep Serpent',
+    desc: 'Long, powerful members of the cod family found in deep Norwegian waters. Ling are hard fighters on heavy jigs and a prized catch on offshore trips.',
+    trophy: 'up to 30 kg',
+    bg: 'linear-gradient(135deg, rgba(80,110,80,0.14) 0%, rgba(80,110,80,0.06) 100%)',
+    accent: '#506E50',
+    photo: FISH_IMG['Cod'],
   },
 }
 
@@ -136,6 +262,99 @@ const GrainOverlay = () => (
 const SalmonRule = () => (
   <div className="w-10 h-px" style={{ background: '#E67E50' }} />
 )
+
+// ─── CANCELLATION POLICY ───────────────────────────────────────────────────────
+
+const POLICY_CONFIG: Record<string, {
+  label: string
+  days: number
+  detail: string
+  color: string
+  bg: string
+  border: string
+}> = {
+  flexible: {
+    label: 'Flexible',
+    days: 7,
+    detail: 'Cancel up to 7 days before for a full refund.',
+    color: '#16A34A',
+    bg: 'rgba(22,163,74,0.07)',
+    border: 'rgba(22,163,74,0.18)',
+  },
+  moderate: {
+    label: 'Moderate',
+    days: 14,
+    detail: 'Cancel up to 14 days before for a full refund. After that, the deposit is non-refundable.',
+    color: '#D97706',
+    bg: 'rgba(217,119,6,0.07)',
+    border: 'rgba(217,119,6,0.18)',
+  },
+  strict: {
+    label: 'Strict',
+    days: 30,
+    detail: 'Cancel up to 30 days before for a full refund. After that, no refund is given.',
+    color: '#DC2626',
+    bg: 'rgba(220,38,38,0.07)',
+    border: 'rgba(220,38,38,0.18)',
+  },
+}
+
+function CancellationPolicyBanner({ policy }: { policy: string | null }) {
+  const config = policy != null ? (POLICY_CONFIG[policy] ?? null) : null
+  if (config == null) return null
+
+  return (
+    <section className="mb-12">
+      <SalmonRule />
+      <p
+        className="text-xs font-semibold uppercase tracking-[0.25em] mt-4 mb-5 f-body"
+        style={{ color: '#E67E50' }}
+      >
+        Cancellation Policy
+      </p>
+
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ border: `1px solid ${config.border}`, background: config.bg }}
+      >
+        {/* Header row — policy badge + headline */}
+        <div className="flex items-center gap-3 px-6 py-5">
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full f-body flex-shrink-0"
+            style={{ background: config.color, color: 'white' }}
+          >
+            {config.label}
+          </span>
+          <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+            Free cancellation up to {config.days} days before your trip
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: '1px', background: config.border }} />
+
+        {/* Detail text */}
+        <div className="px-6 py-4">
+          <p className="text-sm leading-relaxed f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+            {config.detail}
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: '1px', background: config.border }} />
+
+        {/* Weather clause — always shown regardless of policy */}
+        <div className="flex items-start gap-3 px-6 py-4">
+          <span className="text-base flex-shrink-0 mt-0.5" role="img" aria-label="Weather">🌦️</span>
+          <p className="text-sm leading-relaxed f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+            <span className="font-semibold" style={{ color: '#0A2E4D' }}>Bad weather? </span>
+            Always a full refund or free reschedule — no questions asked.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 // ─── METADATA ─────────────────────────────────────────────────────────────────
 
@@ -166,7 +385,7 @@ export default async function ExperienceDetailPage({
   //
   // This means guides can visit /experiences/[id] to preview their draft BEFORE publishing.
   // Anon visitors hitting a draft URL still get 404 (RLS returns null).
-  const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
+  const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating, cancellation_policy), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
 
   // Try with auth client first (respects RLS — guides see own drafts)
   const supabase = await createClient()
@@ -199,26 +418,107 @@ export default async function ExperienceDetailPage({
 
   const isDraft = !exp.published
 
-  const moreFromGuide = await getMoreFromGuide(exp.guide_id, exp.id, 3)
+  const [moreFromGuide, availConfigRes, blockedDatesRes, bookedDatesRes] = await Promise.all([
+    getMoreFromGuide(exp.guide_id, exp.id, 3),
+    // Availability schedule set by the guide
+    supabase
+      .from('experience_availability_config')
+      .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
+      .eq('experience_id', id)
+      .maybeSingle(),
+    // Specific blocked date ranges
+    supabase
+      .from('experience_blocked_dates')
+      .select('date_start, date_end')
+      .eq('experience_id', id),
+    // Existing pending/confirmed bookings
+    supabase
+      .from('bookings')
+      .select('booking_date')
+      .eq('experience_id', id)
+      .in('status', ['pending', 'confirmed']),
+  ])
 
-  const coverUrl = exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url ?? null
-  const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country] ?? '') : ''
+  const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
+  const blockedDates = blockedDatesRes.data ?? []
+  const bookedDates  = (bookedDatesRes.data ?? []).map(b => b.booking_date)
+
+  const coverUrl = heroFull(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
+  const landscapeUrl = exp.landscape_url ?? getLandscapeUrl(exp.location_country, exp.id)
+const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country] ?? '') : ''
   const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
+
+  // Duration options from JSONB — fall back to legacy scalars
+  const durationOptions = (
+    Array.isArray(exp.duration_options) && exp.duration_options.length > 0
+      ? exp.duration_options
+      : null
+  ) as DurationOptionPayload[] | null
+
+  // Duration string for the quick-facts strip
   const duration =
-    exp.duration_hours != null
+    durationOptions != null
+      ? durationOptions.length === 1
+        ? (() => {
+            const o = durationOptions[0]
+            if (o.label) return o.label
+            if (o.hours != null) return `${o.hours} hours`
+            if (o.days  != null) return `${o.days} ${o.days === 1 ? 'day' : 'days'}`
+            return '—'
+          })()
+        : durationOptions.map(o => o.label || (o.hours != null ? `${o.hours}h` : `${o.days}d`)).join(' · ')
+      : exp.duration_hours != null
       ? `${exp.duration_hours} hours`
       : exp.duration_days != null
       ? `${exp.duration_days} ${exp.duration_days === 1 ? 'day' : 'days'}`
       : null
 
+  // Structured inclusions (JSONB) — cast to typed shape; null = legacy record
+  const inc = exp.inclusions as InclusionsPayload | null
+  const needsLicense = inc != null && !inc.license
+  const licenseArticleUrl =
+    needsLicense && exp.location_country != null
+      ? (LICENSE_ARTICLE[exp.location_country] ?? null)
+      : null
+
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+
+      {/* ─── NAV ─────────────────────────────────────────────────── */}
+      <nav
+        className="fixed top-0 inset-x-0 z-[100] flex items-center px-6 md:px-10"
+        style={{
+          height: '60px',
+          background: 'rgba(248,244,238,0.88)',
+          backdropFilter: 'blur(20px) saturate(1.6)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
+          borderBottom: '1px solid rgba(10,46,77,0.08)',
+          boxShadow: '0 4px 28px rgba(0,0,0,0.08)',
+        }}
+      >
+        <Link
+          href="/experiences"
+          className="flex items-center gap-2 f-body text-sm font-semibold transition-opacity hover:opacity-60"
+          style={{ color: 'rgba(10,46,77,0.65)' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
+        </Link>
+        <div className="flex-1 flex justify-center">
+          <Link href="/">
+            <Image src="/brand/dark-logo.png" alt="FjordAnglers" width={130} height={32} className="h-7 w-auto" />
+          </Link>
+        </div>
+        <div style={{ width: '60px' }} />
+      </nav>
 
       {/* ─── DRAFT PREVIEW BANNER ────────────────────────────────── */}
       {isDraft && (
         <div
-          className="fixed top-0 inset-x-0 z-[60] flex items-center justify-between px-6 py-2.5"
-          style={{ background: '#E67E50' }}
+          className="fixed inset-x-0 z-[60] flex items-center justify-between px-6 py-2.5"
+          style={{ top: '72px', background: '#E67E50' }}
         >
           <div className="flex items-center gap-2.5">
             <span
@@ -249,39 +549,35 @@ export default async function ExperienceDetailPage({
         </div>
       )}
 
-      <HomeNav pinned topOffset={isDraft ? 38 : 0} />
-
       {/* ─── HERO ────────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden"
-        style={{ height: '560px', paddingTop: '80px', background: '#07111C' }}
+        style={{ height: '580px', background: '#07111C' }}
       >
-        {/* Cover image */}
-        {coverUrl != null && (
-          <Image
-            src={coverUrl}
-            alt={exp.title}
-            fill
-            priority
-            className="object-cover"
-            style={{ objectPosition: 'center 40%' }}
-          />
-        )}
+        {/* Landscape background */}
+        <Image
+          src={landscapeUrl}
+          alt=""
+          fill
+          priority
+          className="object-cover"
+          style={{ objectPosition: 'center bottom' }}
+        />
 
-        {/* Gradients */}
+
         <div
-          className="absolute inset-0"
+          className="absolute inset-x-0 bottom-0"
           style={{
-            background:
-              'linear-gradient(to bottom, rgba(4,12,22,0.55) 0%, rgba(4,12,22,0.28) 40%, rgba(4,12,22,0.72) 75%, #07111C 100%)',
+            height: '65%',
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(4,12,22,0.55) 50%, rgba(4,12,22,0.88) 100%)',
+            zIndex: 2,
           }}
         />
 
         <GrainOverlay />
 
-        {/* Bottom content — breadcrumb + title */}
         <div
-          className="absolute bottom-0 inset-x-0 px-8 pb-10"
+          className="absolute bottom-0 inset-x-0 px-8 pb-12"
           style={{ zIndex: 3 }}
         >
           <div className="max-w-7xl mx-auto">
@@ -289,35 +585,44 @@ export default async function ExperienceDetailPage({
             <div className="flex items-center gap-2 mb-5">
               <Link
                 href="/experiences"
-                className="text-white/42 hover:text-white/75 text-xs font-medium transition-colors f-body"
+                className="text-white/55 hover:text-white/85 text-xs font-medium transition-colors f-body"
+                style={{ textShadow: '0 1px 8px rgba(4,12,22,0.7)' }}
               >
                 Experiences
               </Link>
-              <span className="text-white/22 text-xs">›</span>
-              <span className="text-white/42 text-xs f-body">
+              <span className="text-white/30 text-xs">›</span>
+              <span className="text-white/55 text-xs f-body" style={{ textShadow: '0 1px 8px rgba(4,12,22,0.7)' }}>
                 {flag} {exp.location_country}
               </span>
-              <span className="text-white/22 text-xs">›</span>
-              <span className="text-white/60 text-xs f-body line-clamp-1 max-w-xs">
+              <span className="text-white/30 text-xs">›</span>
+              <span className="text-white/70 text-xs f-body line-clamp-1 max-w-xs" style={{ textShadow: '0 1px 8px rgba(4,12,22,0.7)' }}>
                 {exp.title}
               </span>
             </div>
 
             {/* Badges */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <div className="flex items-center gap-1.5 mb-4 flex-wrap">
               {exp.fish_types.map(fish => (
                 <span
                   key={fish}
-                  className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
-                  style={{ background: 'rgba(230,126,80,0.18)', color: '#E67E50', border: '1px solid rgba(230,126,80,0.22)' }}
+                  className="text-[11px] font-semibold px-2.5 py-1 rounded-full f-body"
+                  style={{
+                    background: 'rgba(230,126,80,0.18)',
+                    color: '#FFB899',
+                    border: '1px solid rgba(230,126,80,0.25)',
+                  }}
                 >
                   {fish}
                 </span>
               ))}
               {diffLabel != null && (
                 <span
-                  className="text-xs font-medium px-3 py-1.5 rounded-full f-body"
-                  style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.12)' }}
+                  className="text-[11px] font-medium px-2.5 py-1 rounded-full f-body"
+                  style={{
+                    background: 'rgba(255,255,255,0.10)',
+                    color: 'rgba(255,255,255,0.75)',
+                    border: '1px solid rgba(255,255,255,0.14)',
+                  }}
                 >
                   {diffLabel}
                 </span>
@@ -327,13 +632,24 @@ export default async function ExperienceDetailPage({
             {/* Title */}
             <h1
               className="text-white font-bold f-display"
-              style={{ fontSize: 'clamp(28px, 4vw, 46px)', lineHeight: 1.1, maxWidth: '680px' }}
+              style={{
+                fontSize: 'clamp(28px, 4vw, 48px)',
+                lineHeight: 1.08,
+                maxWidth: '700px',
+                textShadow: '0 2px 24px rgba(4,12,22,0.85), 0 4px 48px rgba(4,12,22,0.6)',
+              }}
             >
               {exp.title}
             </h1>
 
             {/* Location */}
-            <p className="text-white/45 text-sm mt-3 f-body">
+            <p
+              className="text-sm mt-3 f-body"
+              style={{
+                color: 'rgba(255,255,255,0.75)',
+                textShadow: '0 1px 16px rgba(4,12,22,0.8)',
+              }}
+            >
               {flag} {exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
             </p>
           </div>
@@ -341,11 +657,6 @@ export default async function ExperienceDetailPage({
       </section>
 
       {/* ─── MAIN CONTENT ────────────────────────────────────────── */}
-      {/*
-        Hero bottom merges into #07111C then the content area starts with
-        a thin dark-to-cream band so the transition is deliberate, not abrupt.
-      */}
-      <div style={{ background: '#07111C', height: '32px' }} />
 
       <div className="px-8 pb-24" style={{ background: '#F3EDE4' }}>
         <div className="max-w-7xl mx-auto">
@@ -466,6 +777,11 @@ export default async function ExperienceDetailPage({
                 ))}
               </div>
 
+              {/* ── Trip Options (duration + pricing) — hidden for price-on-request ── */}
+              {durationOptions != null && durationOptions.length > 0 && exp.booking_type !== 'icelandic' && (
+                <DurationCardsSelector options={durationOptions} />
+              )}
+
               {/* Included / Excluded */}
               <section className="mb-12">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -534,10 +850,45 @@ export default async function ExperienceDetailPage({
                     </ul>
                   </div>
                 </div>
+
+                {/* License callout — only shown when license is not included */}
+                {needsLicense && (
+                  <div
+                    className="flex items-start gap-4 p-5 rounded-2xl mt-4"
+                    style={{
+                      background: 'rgba(230,126,80,0.06)',
+                      border: '1px solid rgba(230,126,80,0.20)',
+                    }}
+                  >
+                    <span className="text-xl flex-shrink-0 mt-0.5" role="img" aria-label="License">📋</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                        Fishing license required
+                      </p>
+                      <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                        A local fishing license is not included — you&apos;ll need to arrange your own before the trip.
+                        {licenseArticleUrl != null ? (
+                          <>
+                            {' '}
+                            <Link
+                              href={licenseArticleUrl}
+                              className="font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
+                              style={{ color: '#E67E50' }}
+                            >
+                              How to get a license in {exp.location_country} →
+                            </Link>
+                          </>
+                        ) : (
+                          ' Your guide can advise on where to purchase one.'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </section>
 
               {/* Location + Map */}
-              {(exp.location_lat != null || exp.meeting_point != null) && (
+              {(exp.location_lat != null || exp.location_area != null || (exp.location_spots as unknown as import('@/types').LocationSpot[] | null)?.length || exp.meeting_point != null) && (
                 <section className="mb-12">
                   <SalmonRule />
                   <p
@@ -550,19 +901,53 @@ export default async function ExperienceDetailPage({
                     Where you&apos;ll fish
                   </h2>
 
-                  {/* Map embed */}
-                  {exp.location_lat != null && exp.location_lng != null && (
+                  {/* Map — react-leaflet, proper anchored marker */}
+                  {(exp.location_lat != null && exp.location_lng != null) && (
                     <div
-                      className="overflow-hidden mb-4"
-                      style={{ borderRadius: '20px', height: '220px', border: '1px solid rgba(10,46,77,0.08)' }}
+                      className="relative overflow-hidden mb-5"
+                      style={{
+                        borderRadius: '24px',
+                        height: '280px',
+                        border: '1.5px solid rgba(10,46,77,0.1)',
+                        boxShadow: '0 8px 32px rgba(10,46,77,0.12)',
+                        isolation: 'isolate',
+                      }}
                     >
-                      <iframe
-                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${exp.location_lng - 0.9},${exp.location_lat - 0.45},${exp.location_lng + 0.9},${exp.location_lat + 0.45}&layer=mapnik&marker=${exp.location_lat},${exp.location_lng}`}
-                        width="100%"
-                        height="220"
-                        style={{ border: 0, display: 'block' }}
-                        title={`Map of ${exp.location_city ?? exp.location_country ?? 'fishing location'}`}
+                      <ExperienceLocationMap
+                        lat={exp.location_lat}
+                        lng={exp.location_lng}
+                        area={(exp.location_area as unknown as import('geojson').Polygon) ?? null}
+                        spots={(exp.location_spots as unknown as import('@/types').LocationSpot[]) ?? null}
                       />
+
+                      {/* Inset vignette — purely decorative, pointer-events:none */}
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={{
+                          boxShadow: 'inset 0 0 40px rgba(10,46,77,0.07)',
+                          borderRadius: '24px',
+                          zIndex: 500,   // above Leaflet's z-index stack
+                        }}
+                      />
+
+                      {/* Location chip — bottom-left */}
+                      {(exp.location_city ?? exp.location_country) != null && (
+                        <div
+                          className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full"
+                          style={{
+                            background: 'rgba(255,255,255,0.94)',
+                            boxShadow: '0 2px 12px rgba(10,46,77,0.18)',
+                            backdropFilter: 'blur(10px)',
+                            zIndex: 500,
+                            pointerEvents: 'none',
+                          }}
+                        >
+                          <span style={{ fontSize: '13px' }}>{flag}</span>
+                          <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                            {exp.location_city ?? exp.location_country}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -596,6 +981,9 @@ export default async function ExperienceDetailPage({
                   )}
                 </section>
               )}
+
+              {/* Cancellation policy banner */}
+              <CancellationPolicyBanner policy={exp.guide.cancellation_policy} />
 
               {/* Guide card */}
               <section>
@@ -668,184 +1056,30 @@ export default async function ExperienceDetailPage({
               </section>
             </div>
 
-            {/* ─── RIGHT — booking widget (sticky) ─────────────── */}
+            {/* ─── RIGHT — booking widget (sticky) ── */}
             <aside
               className="hidden lg:block flex-shrink-0"
-              style={{ width: '360px', position: 'sticky', top: "81px", alignSelf: 'flex-start' }}
+              style={{
+                width: '380px',
+                position: 'sticky',
+                top: '81px',
+                alignSelf: 'flex-start',
+              }}
             >
-              <div
-                className="p-8"
-                style={{
-                  background: '#FDFAF7',
-                  borderRadius: '28px',
-                  border: '1px solid rgba(10,46,77,0.08)',
-                  boxShadow: '0 8px 40px rgba(10,46,77,0.1)',
-                }}
-              >
-                {/* Price */}
-                <div className="mb-7">
-                  <p
-                    className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1 f-body"
-                    style={{ color: 'rgba(10,46,77,0.38)' }}
-                  >
-                    Price per person
-                  </p>
-                  <div className="flex items-end gap-2">
-                    <span
-                      className="font-bold f-display"
-                      style={{ fontSize: '48px', color: '#0A2E4D', lineHeight: 1 }}
-                    >
-                      €{exp.price_per_person_eur}
-                    </span>
-                    <span className="text-sm pb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                      / person
-                    </span>
-                  </div>
-                </div>
-
-                {/* Meta row */}
-                <div
-                  className="flex gap-4 pb-7 mb-7"
-                  style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
-                >
-                  {duration != null && (
-                    <div>
-                      <p
-                        className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 f-body"
-                        style={{ color: 'rgba(10,46,77,0.35)' }}
-                      >
-                        Duration
-                      </p>
-                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                        {duration}
-                      </p>
-                    </div>
-                  )}
-                  {exp.max_guests != null && (
-                    <div>
-                      <p
-                        className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 f-body"
-                        style={{ color: 'rgba(10,46,77,0.35)' }}
-                      >
-                        Group
-                      </p>
-                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                        Max {exp.max_guests}
-                      </p>
-                    </div>
-                  )}
-                  {diffLabel != null && (
-                    <div>
-                      <p
-                        className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 f-body"
-                        style={{ color: 'rgba(10,46,77,0.35)' }}
-                      >
-                        Level
-                      </p>
-                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                        {diffLabel}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Guests input — hidden for drafts */}
-                {!isDraft && (
-                  <div className="mb-7">
-                    <label
-                      className="block text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 f-body"
-                      style={{ color: 'rgba(10,46,77,0.38)' }}
-                    >
-                      Anglers
-                    </label>
-                    <select
-                      className="w-full px-4 py-3 text-sm rounded-2xl appearance-none f-body"
-                      defaultValue="1"
-                      style={{
-                        background: '#F3EDE4',
-                        border: '1px solid rgba(10,46,77,0.12)',
-                        color: '#0A2E4D',
-                      }}
-                    >
-                      {Array.from(
-                        { length: exp.max_guests ?? 4 },
-                        (_, i) => i + 1
-                      ).map(n => (
-                        <option key={n} value={n}>
-                          {n} {n === 1 ? 'angler' : 'anglers'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* CTA — booking for published, publish prompt for drafts */}
-                {isDraft ? (
-                  <>
-                    <div
-                      className="flex items-start gap-3 px-4 py-4 rounded-2xl mb-5"
-                      style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.18)' }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0 mt-0.5">
-                        <circle cx="8" cy="8" r="6.5" />
-                        <line x1="8" y1="5" x2="8" y2="8.5" />
-                        <circle cx="8" cy="11" r="0.6" fill="#E67E50" />
-                      </svg>
-                      <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                        This experience is a draft. Publish it from your dashboard to accept bookings.
-                      </p>
-                    </div>
-                    <Link
-                      href={`/dashboard/experiences/${exp.id}/edit`}
-                      className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-                      style={{ background: '#E67E50' }}
-                    >
-                      Edit &amp; Publish →
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href={`/book/${exp.id}`}
-                      className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-                      style={{ background: '#E67E50' }}
-                    >
-                      Request to Book →
-                    </Link>
-                    <p className="text-center text-xs mt-4 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-                      No charge yet — confirm with your guide first.
-                    </p>
-                  </>
-                )}
-
-                {/* Divider */}
-                <div
-                  className="my-6"
-                  style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }}
-                />
-
-                {/* Trust micro-signals */}
-                <div className="flex flex-col gap-3">
-                  {[
-                    { icon: '✓', text: 'Guide verified by FjordAnglers' },
-                    { icon: '€', text: 'Price shown — no hidden fees' },
-                    { icon: '⌚', text: 'Confirmed within 24 hours' },
-                    ...(exp.catch_and_release ? [{ icon: '♻', text: 'Catch & Release — fish returned alive' }] : []),
-                  ].map(item => (
-                    <div key={item.text} className="flex items-center gap-3">
-                      <span
-                        className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold"
-                        style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}
-                      >
-                        {item.icon}
-                      </span>
-                      <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {item.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <BookingWidget
+                expId={exp.id}
+                isDraft={isDraft}
+                rawDurationOptions={exp.duration_options}
+                maxGuests={exp.max_guests ?? 4}
+                legacyPricePerPerson={exp.price_per_person_eur}
+                difficulty={exp.difficulty}
+                durationHours={exp.duration_hours}
+                durationDays={exp.duration_days}
+                availabilityConfig={availabilityConfig}
+                blockedDates={blockedDates}
+                bookedDates={bookedDates}
+                bookingType={(exp.booking_type as 'classic' | 'icelandic') ?? 'classic'}
+              />
             </aside>
 
           </div>
@@ -853,28 +1087,16 @@ export default async function ExperienceDetailPage({
       </div>
 
       {/* ─── MOBILE BOOKING BAR (fixed bottom) — hidden for drafts ─ */}
-      <div
-        className={`${isDraft ? 'hidden' : 'lg:hidden'} fixed bottom-0 inset-x-0 z-40 flex items-center justify-between px-6 py-4`}
-        style={{
-          background: '#FDFAF7',
-          borderTop: '1px solid rgba(10,46,77,0.08)',
-          boxShadow: '0 -8px 32px rgba(10,46,77,0.1)',
-        }}
-      >
-        <div>
-          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>per person</p>
-          <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-            €{exp.price_per_person_eur}
-          </p>
-        </div>
-        <Link
-          href={`/book/${exp.id}`}
-          className="text-white font-semibold px-8 py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-          style={{ background: '#E67E50' }}
-        >
-          Request to Book →
-        </Link>
-      </div>
+      <MobileBookingBar
+        expId={exp.id}
+        isDraft={isDraft}
+        rawDurationOptions={exp.duration_options}
+        maxGuests={exp.max_guests ?? 4}
+        legacyPricePerPerson={exp.price_per_person_eur}
+        durationHours={exp.duration_hours}
+        durationDays={exp.duration_days}
+        bookingType={(exp.booking_type as 'classic' | 'icelandic') ?? 'classic'}
+      />
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}
       {moreFromGuide.length > 0 && (
@@ -908,8 +1130,9 @@ export default async function ExperienceDetailPage({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {moreFromGuide.map(related => {
-                const relCover =
-                  related.images.find(i => i.is_cover)?.url ?? related.images[0]?.url ?? null
+                const relCover = cardThumb(
+                  related.images.find(i => i.is_cover)?.url ?? related.images[0]?.url
+                )
                 const relDuration =
                   related.duration_hours != null
                     ? `${related.duration_hours}h`

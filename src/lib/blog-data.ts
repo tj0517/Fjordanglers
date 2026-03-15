@@ -1,3 +1,5 @@
+import { FISH_IMG } from '@/lib/fish'
+
 export interface BlogPost {
   slug: string
   title: string
@@ -16,7 +18,7 @@ export const BLOG_POSTS: BlogPost[] = [
     date: 'March 5, 2026',
     readTime: '8 min',
     category: 'Destinations',
-    img: '/fish_catalog/salmon.jpg',
+    img: FISH_IMG['Salmon'],
   },
   {
     slug: 'best-trout-rivers-sweden',
@@ -25,7 +27,7 @@ export const BLOG_POSTS: BlogPost[] = [
     date: 'February 28, 2026',
     readTime: '6 min',
     category: 'Sweden',
-    img: '/fish_catalog/trout.jpg',
+    img: FISH_IMG['Trout'],
   },
   {
     slug: 'pike-fishing-beginners',
@@ -34,7 +36,7 @@ export const BLOG_POSTS: BlogPost[] = [
     date: 'February 18, 2026',
     readTime: '5 min',
     category: 'Tips & Tactics',
-    img: '/fish_catalog/pike.jpg',
+    img: FISH_IMG['Pike'],
   },
   {
     slug: 'fishing-license-scandinavia',
@@ -43,7 +45,7 @@ export const BLOG_POSTS: BlogPost[] = [
     date: 'February 10, 2026',
     readTime: '4 min',
     category: 'Planning',
-    img: '/fish_catalog/zander.jpg',
+    img: FISH_IMG['Zander'],
   },
   {
     slug: 'grayling-season-2026',
@@ -52,6 +54,6 @@ export const BLOG_POSTS: BlogPost[] = [
     date: 'January 30, 2026',
     readTime: '5 min',
     category: 'Species',
-    img: '/fish_catalog/graling.jpeg',
+    img: FISH_IMG['Grayling'],
   },
 ]

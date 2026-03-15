@@ -19,10 +19,9 @@ Stack: Next.js 16 (App Router), Supabase, Stripe Connect, TypeScript, Tailwind C
 - `src/actions/` — Server Actions (nie REST API dla mutacji)
 
 ## Model biznesowy
-Dwa warianty dla przewodników:
-1. **Listing** — €20/month (profil + formularz kontaktowy)
-2. **Bookable** — 10% komisja (pełny flow rezerwacji + payouty)
-3. **Founding Guide** — 3 miesiące free + 8% dożywotnio (pierwsze 50)
+Jeden model dla przewodników — tylko komisja:
+1. **Standard** — 10% komisja (pełny flow rezerwacji + payouty)
+2. **Founding Guide** — 8% przez pierwszy rok, potem 10% (pierwsze 50)
 
 ## Styl kodu
 - TypeScript strict mode, NO `any`

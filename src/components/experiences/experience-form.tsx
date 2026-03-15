@@ -11,16 +11,23 @@
  * Security is enforced server-side in createExperience / updateExperience actions.
  */
 
-import { useState, useTransition } from 'react'
+import { useCallback, useState, useTransition } from 'react'
+import type * as GeoJSON from 'geojson'
+import type { LocationSpot } from '@/types'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import ImageUpload from '@/components/admin/image-upload'
+import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import {
   createExperience,
   updateExperience,
   type ExperiencePayload,
   type ImageInput,
+  type DurationOptionPayload,
+  type GroupPricingPayload,
+  type InclusionsPayload,
 } from '@/actions/experiences'
 
 // ─── Dynamic map (Leaflet — client only, no SSR) ──────────────────────────────
@@ -37,13 +44,11 @@ const LocationPickerMap = dynamic(
   }
 )
 
+import { FISH_ALL } from '@/lib/fish'
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const FISH_OPTIONS = [
-  'Salmon', 'Sea Trout', 'Brown Trout', 'Arctic Char', 'Rainbow Trout',
-  'Grayling', 'Pike', 'Perch', 'Zander', 'Whitefish',
-  'Cod', 'Halibut', 'Sea Bass', 'Catfish', 'Burbot',
-]
+const FISH_OPTIONS = FISH_ALL
 
 const DIFFICULTY_OPTIONS = [
   { value: 'beginner',     label: 'All levels',    color: '#16A34A', bg: 'rgba(74,222,128,0.12)' },
@@ -51,10 +56,69 @@ const DIFFICULTY_OPTIONS = [
   { value: 'expert',       label: 'Expert only',   color: '#DC2626', bg: 'rgba(239,68,68,0.12)' },
 ] as const
 
-const TECHNIQUES = [
-  'Fly fishing', 'Lure fishing', 'Bait fishing', 'Ice fishing',
-  'Trolling', 'Spin fishing', 'Jigging', 'Sea fishing',
+const FISHING_METHODS = [
+  'Fly fishing', 'Spinning', 'Trolling', 'Jigging',
+  'Ice fishing', 'Baitcasting', 'Shore fishing',
 ]
+
+const MONTHS = [
+  { value: 1,  label: 'Jan' }, { value: 2,  label: 'Feb' },
+  { value: 3,  label: 'Mar' }, { value: 4,  label: 'Apr' },
+  { value: 5,  label: 'May' }, { value: 6,  label: 'Jun' },
+  { value: 7,  label: 'Jul' }, { value: 8,  label: 'Aug' },
+  { value: 9,  label: 'Sep' }, { value: 10, label: 'Oct' },
+  { value: 11, label: 'Nov' }, { value: 12, label: 'Dec' },
+]
+
+const INCLUSION_ITEMS = [
+  { key: 'rods',          label: 'Fishing rods & reels' },
+  { key: 'tackle',        label: 'Tackle & lures' },
+  { key: 'bait',          label: 'Bait' },
+  { key: 'boat',          label: 'Boat & fuel' },
+  { key: 'safety',        label: 'Safety equipment' },
+  { key: 'license',       label: 'Fishing license' },
+  { key: 'lunch',         label: 'Lunch / snacks' },
+  { key: 'drinks',        label: 'Drinks' },
+  { key: 'fish_cleaning', label: 'Fish cleaning & packing' },
+  { key: 'transport',     label: 'Transport to fishing spot' },
+  { key: 'accommodation', label: 'Accommodation' },
+] as const
+
+type InclusionKey = typeof INCLUSION_ITEMS[number]['key']
+type InclusionsState = Record<InclusionKey, boolean>
+
+const DEFAULT_INCLUSIONS: InclusionsState = {
+  rods: false, tackle: false, bait: false, boat: false, safety: false,
+  license: false, lunch: false, drinks: false, fish_cleaning: false,
+  transport: false, accommodation: false,
+}
+
+type PricingType = 'per_person' | 'per_boat' | 'per_group'
+
+const PRICING_TYPE_OPTIONS: { value: PricingType; label: string; hint: string }[] = [
+  { value: 'per_person', label: '€ / person', hint: 'Price per angler' },
+  { value: 'per_boat',   label: 'Flat (boat)', hint: 'One price for the whole group' },
+  { value: 'per_group',  label: 'By group',   hint: 'Different price per group size' },
+]
+
+// Form-local shape (inputs as strings for easier controlled inputs)
+type DurationOptionRow = {
+  label: string
+  hours: string                        // '' = not set
+  days: string                         // '' = not set
+  pricing_type: PricingType
+  price_eur: string                    // for per_person / per_boat; '' = not set
+  group_prices: Record<number, string> // for per_group; key = angler count
+  includes_lodging: boolean
+}
+
+const EMPTY_DURATION_ROW: DurationOptionRow = {
+  label: '', hours: '', days: '',
+  pricing_type: 'per_person',
+  price_eur: '',
+  group_prices: {},
+  includes_lodging: false,
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +129,7 @@ export type ExperienceFormDefaults = {
   technique?: string
   difficulty?: 'beginner' | 'intermediate' | 'expert' | null
   catch_and_release?: boolean
+  // Legacy scalar fields — used to seed a single duration row when duration_options is absent
   duration_type?: 'hours' | 'days'
   duration_value?: string
   max_guests?: string
@@ -74,10 +139,22 @@ export type ExperienceFormDefaults = {
   meeting_point?: string
   location_lat?: number | null
   location_lng?: number | null
+  location_area?: GeoJSON.Polygon | null
+  location_spots?: LocationSpot[] | null
+  booking_type?: 'classic' | 'icelandic'
+  // Legacy arrays (still accepted for old records)
   what_included?: string[]
   what_excluded?: string[]
   published?: boolean
   images?: Array<{ url: string; is_cover: boolean; sort_order: number }>
+  // ── New structured fields ─────────────────────────────────────────────────
+  season_from?: number | null
+  season_to?: number | null
+  fishing_methods?: string[]
+  duration_options?: DurationOptionPayload[]
+  group_pricing?: GroupPricingPayload | null
+  inclusions_data?: InclusionsPayload | null
+  landscape_url?: string | null
 }
 
 type Props = {
@@ -185,75 +262,57 @@ function Pill({
   )
 }
 
-// ─── TagList — for what_included / what_excluded ──────────────────────────────
+// ─── MonthSelect — reusable for Season from/to ───────────────────────────────
 
-function TagList({
-  items,
-  onAdd,
-  onRemove,
+function MonthSelect({
+  value,
+  onChange,
   placeholder,
 }: {
-  items: string[]
-  onAdd: (item: string) => void
-  onRemove: (i: number) => void
+  value: number | null
+  onChange: (v: number | null) => void
   placeholder: string
 }) {
-  const [input, setInput] = useState('')
-
-  const add = () => {
-    const trimmed = input.trim()
-    if (trimmed !== '' && !items.includes(trimmed)) {
-      onAdd(trimmed)
-      setInput('')
-    }
-  }
-
   return (
-    <div>
-      {/* Input row */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
-          placeholder={placeholder}
-          className="flex-1 px-4 py-2.5 rounded-2xl text-sm f-body outline-none transition-all"
-          style={inputBase}
-          onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
-          onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
-        />
-        <button
-          type="button"
-          onClick={add}
-          className="px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all hover:brightness-105 f-body"
-          style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}
-        >
-          Add
-        </button>
-      </div>
-      {/* Tags */}
-      {items.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {items.map((item, i) => (
-            <span
-              key={i}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full f-body"
-              style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
-            >
-              {item}
-              <button
-                type="button"
-                onClick={() => onRemove(i)}
-                className="text-[#0A2E4D]/40 hover:text-[#DC2626] transition-colors leading-none"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
+    <select
+      value={value ?? ''}
+      onChange={e => onChange(e.target.value === '' ? null : Number(e.target.value))}
+      className="w-full px-4 py-3 rounded-2xl text-sm f-body outline-none transition-all appearance-none cursor-pointer"
+      style={inputBase}
+      onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+      onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+    >
+      <option value="">{placeholder}</option>
+      {MONTHS.map(m => (
+        <option key={m.value} value={m.value}>{m.label}</option>
+      ))}
+    </select>
+  )
+}
+
+// ─── Toggle — reusable switch button ─────────────────────────────────────────
+
+function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(!checked)}
+      className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
+      style={{ background: checked ? '#E67E50' : 'rgba(10,46,77,0.15)' }}
+      role="switch"
+      aria-checked={checked}
+    >
+      <span
+        className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all"
+        style={{ left: checked ? '22px' : '4px' }}
+      />
+    </button>
   )
 }
 
@@ -283,6 +342,16 @@ async function geocodeLocation(city: string, country: string): Promise<{ lat: nu
   }
 }
 
+// ─── Polygon centroid helper ──────────────────────────────────────────────────
+
+function polygonCentroid(polygon: GeoJSON.Polygon): { lat: number; lng: number } {
+  const coords = polygon.coordinates[0]
+  const n = coords.length - 1 // closed ring: last === first
+  const avgLng = coords.slice(0, n).reduce((s: number, c: number[]) => s + c[0], 0) / n
+  const avgLat = coords.slice(0, n).reduce((s: number, c: number[]) => s + c[1], 0) / n
+  return { lat: parseFloat(avgLat.toFixed(6)), lng: parseFloat(avgLng.toFixed(6)) }
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ExperienceForm({
@@ -302,23 +371,87 @@ export default function ExperienceForm({
   const [description, setDescription] = useState(dv.description ?? '')
 
   // ── Fishing ─────────────────────────────────────────────────────────────
-  const [fishTypes,       setFishTypes]       = useState<string[]>(dv.fish_types ?? [])
+  const [fishTypes, setFishTypes] = useState<string[]>(dv.fish_types ?? [])
 
-  // Bug #1 fix: separate state for "Other" technique so the text input stays visible while typing.
-  // If the saved technique isn't in TECHNIQUES list → show "__other" + pre-fill the custom input.
-  const initTechValue = dv.technique ?? ''
-  const isCustomTech  = initTechValue !== '' && !TECHNIQUES.includes(initTechValue)
-  const [technique,       setTechnique]       = useState(isCustomTech ? '__other' : initTechValue)
-  const [customTechnique, setCustomTechnique] = useState(isCustomTech ? initTechValue : '')
-
-  const [difficulty,      setDifficulty]      = useState<'beginner' | 'intermediate' | 'expert' | null>(dv.difficulty ?? null)
+  const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'expert' | null>(dv.difficulty ?? null)
   const [catchAndRelease, setCatchAndRelease] = useState(dv.catch_and_release ?? false)
 
-  // ── Pricing & Logistics ──────────────────────────────────────────────────
-  const [durationType,  setDurationType]  = useState<'hours' | 'days'>(dv.duration_type ?? 'hours')
-  const [durationValue, setDurationValue] = useState(dv.duration_value ?? '')
-  const [maxGuests,     setMaxGuests]     = useState(dv.max_guests ?? '4')
-  const [price,         setPrice]         = useState(dv.price_per_person_eur ?? '')
+  // ── Landscape ────────────────────────────────────────────────────────────
+  const [landscapeUrl,    setLandscapeUrl]    = useState<string>(dv.landscape_url ?? '')
+  const [landscapeTab,    setLandscapeTab]    = useState<'library' | 'upload'>(
+    dv.landscape_url ? 'library' : 'library'
+  )
+
+  // ── Fishing methods ──────────────────────────────────────────────────────
+  const [fishingMethods, setFishingMethods] = useState<string[]>(dv.fishing_methods ?? [])
+
+  // ── Season ───────────────────────────────────────────────────────────────
+  const [seasonFrom, setSeasonFrom] = useState<number | null>(dv.season_from ?? null)
+  const [seasonTo,   setSeasonTo]   = useState<number | null>(dv.season_to ?? null)
+
+  // ── Duration options ─────────────────────────────────────────────────────
+  // Seed from structured data if present, otherwise from legacy scalar fields
+  const [durationOptions, setDurationOptions] = useState<DurationOptionRow[]>(() => {
+    if (dv.duration_options != null && dv.duration_options.length > 0) {
+      return dv.duration_options.map(opt => {
+        const pricingType: PricingType =
+          opt.pricing_type === 'per_boat' || opt.pricing_type === 'per_group'
+            ? opt.pricing_type
+            : 'per_person'
+        return {
+          label:            opt.label,
+          hours:            opt.hours != null ? String(opt.hours) : '',
+          days:             opt.days  != null ? String(opt.days)  : '',
+          pricing_type:     pricingType,
+          price_eur:        String(opt.price_eur),
+          group_prices:     opt.group_prices != null
+            ? Object.fromEntries(
+                Object.entries(opt.group_prices).map(([k, v]) => [Number(k), String(v)])
+              )
+            : {},
+          includes_lodging: opt.includes_lodging,
+        }
+      })
+    }
+    // Backward compat — build a single row from legacy scalars
+    const legacyHours = dv.duration_type === 'hours' ? (dv.duration_value ?? '') : ''
+    const legacyDays  = dv.duration_type === 'days'  ? (dv.duration_value ?? '') : ''
+    return [{
+      label:            '',
+      hours:            legacyHours,
+      days:             legacyDays,
+      pricing_type:     'per_person',
+      price_eur:        dv.price_per_person_eur ?? '',
+      group_prices:     {},
+      includes_lodging: false,
+    }]
+  })
+
+  // ── Max guests ───────────────────────────────────────────────────────────
+  const [maxGuests, setMaxGuests] = useState(dv.max_guests ?? '4')
+
+  // ── Inclusions ───────────────────────────────────────────────────────────
+  const [inclusions, setInclusions] = useState<InclusionsState>(() => {
+    if (dv.inclusions_data != null) {
+      return {
+        ...DEFAULT_INCLUSIONS,
+        rods:          dv.inclusions_data.rods          ?? false,
+        tackle:        dv.inclusions_data.tackle        ?? false,
+        bait:          dv.inclusions_data.bait          ?? false,
+        boat:          dv.inclusions_data.boat          ?? false,
+        safety:        dv.inclusions_data.safety        ?? false,
+        license:       dv.inclusions_data.license       ?? false,
+        lunch:         dv.inclusions_data.lunch         ?? false,
+        drinks:        dv.inclusions_data.drinks        ?? false,
+        fish_cleaning: dv.inclusions_data.fish_cleaning ?? false,
+        transport:     dv.inclusions_data.transport     ?? false,
+        accommodation: dv.inclusions_data.accommodation ?? false,
+      }
+    }
+    return { ...DEFAULT_INCLUSIONS }
+  })
+  const [customIncluded, setCustomIncluded] = useState<string[]>(dv.inclusions_data?.custom_included ?? [])
+  const [customExcluded, setCustomExcluded] = useState<string[]>(dv.inclusions_data?.custom_excluded ?? [])
 
   // ── Location ─────────────────────────────────────────────────────────────
   const [locationCountry, setLocationCountry] = useState(dv.location_country ?? '')
@@ -326,12 +459,50 @@ export default function ExperienceForm({
   const [meetingPoint,    setMeetingPoint]    = useState(dv.meeting_point ?? '')
   const [locationLat,     setLocationLat]     = useState<number | null>(dv.location_lat ?? null)
   const [locationLng,     setLocationLng]     = useState<number | null>(dv.location_lng ?? null)
+  const [locationMode,    setLocationMode]    = useState<'pin' | 'area' | 'spots'>(
+    dv.location_spots != null && (dv.location_spots as LocationSpot[]).length > 0
+      ? 'spots'
+      : dv.location_area != null ? 'area' : 'pin'
+  )
+  const [locationArea,    setLocationArea]    = useState<GeoJSON.Polygon | null>(
+    (dv.location_area as unknown as GeoJSON.Polygon) ?? null
+  )
+  const [locationSpots,   setLocationSpots]   = useState<LocationSpot[]>(
+    (dv.location_spots as unknown as LocationSpot[]) ?? []
+  )
   const [isGeocoding,     setIsGeocoding]     = useState(false)
   const [geocodeError,    setGeocodeError]    = useState<string | null>(null)
 
-  // ── Inclusions ───────────────────────────────────────────────────────────
-  const [included, setIncluded] = useState<string[]>(dv.what_included ?? [])
-  const [excluded, setExcluded] = useState<string[]>(dv.what_excluded ?? [])
+  const handleMapChange = useCallback((lat: number, lng: number) => {
+    setLocationLat(lat)
+    setLocationLng(lng)
+    setGeocodeError(null)
+  }, [])
+
+  const handleAreaChange = useCallback((area: GeoJSON.Polygon | null) => {
+    setLocationArea(area)
+    if (area != null) {
+      const { lat, lng } = polygonCentroid(area)
+      setLocationLat(lat)
+      setLocationLng(lng)
+    } else {
+      setLocationLat(null)
+      setLocationLng(null)
+    }
+  }, [])
+
+  const handleSpotsChange = useCallback((spots: LocationSpot[]) => {
+    setLocationSpots(spots)
+    if (spots.length > 0) {
+      const lat = parseFloat((spots.reduce((s, p) => s + p.lat, 0) / spots.length).toFixed(6))
+      const lng = parseFloat((spots.reduce((s, p) => s + p.lng, 0) / spots.length).toFixed(6))
+      setLocationLat(lat)
+      setLocationLng(lng)
+    } else {
+      setLocationLat(null)
+      setLocationLng(null)
+    }
+  }, [])
 
   // ── Images ───────────────────────────────────────────────────────────────
   const existingImages = dv.images ?? []
@@ -343,6 +514,9 @@ export default function ExperienceForm({
     existingImages.find(i => !i.is_cover && i.sort_order === 4)?.url ?? null,
   ])
 
+  // ── Booking type ─────────────────────────────────────────────────────────
+  const [bookingType, setBookingType] = useState<'classic' | 'icelandic'>(dv.booking_type ?? 'classic')
+
   // ── Settings ─────────────────────────────────────────────────────────────
   const [published, setPublished] = useState(dv.published ?? false)
 
@@ -351,9 +525,64 @@ export default function ExperienceForm({
   const [success,   setSuccess]   = useState(false)
   const [createdId, setCreatedId] = useState<string | null>(null)
 
+  // ── Derived ──────────────────────────────────────────────────────────────
+  // Whether any duration option has days > 1 (controls accommodation visibility)
+  const hasDaysOption = durationOptions.some(opt => {
+    const d = parseInt(opt.days, 10)
+    return !isNaN(d) && d > 1
+  })
+
   // ── Helpers ──────────────────────────────────────────────────────────────
   const toggleFish = (f: string) =>
     setFishTypes(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])
+
+  const toggleFishingMethod = (m: string) =>
+    setFishingMethods(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
+
+  const updateDurationOption = (i: number, updates: Partial<DurationOptionRow>) => {
+    setDurationOptions(prev => {
+      const next = [...prev]
+      next[i] = { ...next[i], ...updates }
+      return next
+    })
+  }
+
+  const addDurationOption = () => {
+    if (durationOptions.length >= 4) return
+    setDurationOptions(prev => [...prev, { ...EMPTY_DURATION_ROW }])
+  }
+
+  const removeDurationOption = (i: number) => {
+    setDurationOptions(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+  const syncGroupPricesKeys = (newMax: string) => {
+    const n = parseInt(newMax, 10)
+    if (isNaN(n) || n < 1) return
+    // Sync group_prices keys inside every per_group duration option
+    setDurationOptions(prev => prev.map(opt => {
+      if (opt.pricing_type !== 'per_group') return opt
+      const next: Record<number, string> = {}
+      for (let k = 1; k <= n; k++) next[k] = opt.group_prices[k] ?? ''
+      return { ...opt, group_prices: next }
+    }))
+  }
+
+  const handlePricingTypeChange = (i: number, newType: PricingType) => {
+    setDurationOptions(prev => {
+      const next = [...prev]
+      const opt: DurationOptionRow = { ...next[i], pricing_type: newType }
+      // Auto-init group_prices keys when switching to per_group for the first time
+      if (newType === 'per_group' && Object.keys(opt.group_prices).length === 0) {
+        const n = parseInt(maxGuests, 10) || 0
+        const prices: Record<number, string> = {}
+        for (let k = 1; k <= n; k++) prices[k] = ''
+        opt.group_prices = prices
+      }
+      next[i] = opt
+      return next
+    })
+  }
 
   // Build images array for payload
   const buildImages = (): ImageInput[] => {
@@ -393,39 +622,128 @@ export default function ExperienceForm({
     e.preventDefault()
     setError(null)
 
-    // Validation
+    // ── Validation ────────────────────────────────────────────────────────
     if (title.trim() === '')       { setError('Title is required.'); return }
     if (description.trim() === '') { setError('Description is required.'); return }
     if (fishTypes.length === 0)    { setError('Select at least one target species.'); return }
-    if (durationValue === '')      { setError('Duration is required.'); return }
     if (maxGuests === '')          { setError('Maximum guests is required.'); return }
-    if (price === '')              { setError('Price per person is required.'); return }
 
-    // Resolve technique: "__other" → use the custom text input value
-    const resolvedTechnique = technique === '__other'
-      ? (customTechnique.trim() || null)
-      : (technique.trim() || null)
+    if (durationOptions.length === 0) {
+      setError('Add at least one duration option.')
+      return
+    }
+    for (let i = 0; i < durationOptions.length; i++) {
+      const opt = durationOptions[i]
+      if (opt.label.trim() === '') {
+        setError(`Duration option ${i + 1} needs a label (e.g. "Full day").`)
+        return
+      }
+      if (opt.pricing_type === 'per_group') {
+        const hasAnyPrice = Object.values(opt.group_prices).some(v => v !== '' && parseFloat(v) > 0)
+        if (!hasAnyPrice) {
+          setError(`Option "${opt.label}": set at least one group size price.`)
+          return
+        }
+      } else {
+        const p = parseFloat(opt.price_eur)
+        if (opt.price_eur === '' || isNaN(p) || p <= 0) {
+          setError(`Option "${opt.label || i + 1}" needs a price greater than 0.`)
+          return
+        }
+      }
+    }
+
+    if (seasonFrom != null && seasonTo != null && seasonTo < seasonFrom) {
+      setError('Season "To" month must be equal to or after the "From" month.')
+      return
+    }
+
+    // ── Build duration options payload (pricing now lives per-option) ────────
+    const durationOptionsPayload: DurationOptionPayload[] = durationOptions.map(opt => {
+      const base = {
+        label:            opt.label.trim(),
+        hours:            opt.hours !== '' ? parseInt(opt.hours, 10) : null,
+        days:             opt.days  !== '' ? parseInt(opt.days,  10) : null,
+        pricing_type:     opt.pricing_type,
+        includes_lodging: opt.includes_lodging,
+      }
+      if (opt.pricing_type === 'per_group') {
+        const prices: Record<string, number> = {}
+        Object.entries(opt.group_prices).forEach(([k, v]) => {
+          if (v !== '' && !isNaN(parseFloat(v))) prices[k] = parseFloat(v)
+        })
+        const vals = Object.values(prices)
+        const minPrice = vals.length > 0 ? Math.min(...vals) : 0
+        return { ...base, price_eur: minPrice, group_prices: prices }
+      }
+      return { ...base, price_eur: parseFloat(opt.price_eur) }
+    })
+
+    // ── Derive backward-compat scalars from first duration option ─────────
+    const firstOpt = durationOptions[0]
+    const durationHours  = firstOpt.hours !== '' ? parseInt(firstOpt.hours, 10) : null
+    const durationDays   = firstOpt.days  !== '' ? parseInt(firstOpt.days,  10) : null
+    const pricePerPerson = durationOptionsPayload[0].price_eur
+
+    // ── Build inclusions payload ───────────────────────────────────────────
+    const inclusionsPayload: InclusionsPayload = {
+      ...inclusions,
+      custom_included: customIncluded.filter(s => s.trim() !== ''),
+      custom_excluded: customExcluded.filter(s => s.trim() !== ''),
+    }
+
+    // ── Derive what_included / what_excluded for backward compat ──────────
+    const what_included: string[] = [
+      'Fishing guide',
+      ...INCLUSION_ITEMS
+        .filter(item => {
+          if (item.key === 'accommodation' && !hasDaysOption) return false
+          return inclusions[item.key]
+        })
+        .map(item => item.label),
+      ...customIncluded.filter(s => s.trim() !== ''),
+    ]
+    const what_excluded: string[] = [
+      ...INCLUSION_ITEMS
+        .filter(item => {
+          if (item.key === 'accommodation' && !hasDaysOption) return false
+          return !inclusions[item.key]
+        })
+        .map(item => item.label),
+      ...customExcluded.filter(s => s.trim() !== ''),
+    ]
 
     const payload: ExperiencePayload = {
       title:                title.trim(),
       description:          description.trim(),
       fish_types:           fishTypes,
-      technique:            resolvedTechnique,
+      technique:            null,
       difficulty,
       catch_and_release:    catchAndRelease,
-      duration_hours:       durationType === 'hours' ? parseInt(durationValue, 10) : null,
-      duration_days:        durationType === 'days'  ? parseInt(durationValue, 10) : null,
+      duration_hours:       durationHours,
+      duration_days:        durationDays,
       max_guests:           parseInt(maxGuests, 10),
-      price_per_person_eur: parseFloat(price),
+      price_per_person_eur: pricePerPerson,
       location_country:     locationCountry.trim() || null,
       location_city:        locationCity.trim() || null,
       meeting_point:        meetingPoint.trim() || null,
       location_lat:         locationLat,
       location_lng:         locationLng,
-      what_included:        included,
-      what_excluded:        excluded,
+      location_area:        locationMode === 'area'   ? locationArea  : null,
+      location_spots:       locationMode === 'spots'  ? locationSpots : null,
+      booking_type:         bookingType,
+      what_included,
+      what_excluded,
       published,
       images:               buildImages(),
+      // Structured fields
+      season_from:          seasonFrom,
+      season_to:            seasonTo,
+      fishing_methods:      fishingMethods,
+      duration_options:     durationOptionsPayload,
+      group_pricing:        null, // pricing now lives per duration option
+      inclusions_data:      inclusionsPayload,
+      landscape_url:        landscapeUrl.trim() || null,
     }
 
     startTransition(async () => {
@@ -444,7 +762,6 @@ export default function ExperienceForm({
         result = await updateExperience(expId, payload)
         if (result.success) {
           router.push(successPath)
-          router.refresh()
         } else {
           setError(result.error)
         }
@@ -519,6 +836,19 @@ export default function ExperienceForm({
     )
   }
 
+  // ── Auto-generate "not included" preview list ──────────────────────────────
+  const autoNotIncluded = INCLUSION_ITEMS
+    .filter(item => {
+      if (item.key === 'accommodation' && !hasDaysOption) return false
+      return !inclusions[item.key]
+    })
+    .map(item => item.label)
+
+  const notIncludedPreview = [
+    ...autoNotIncluded,
+    ...customExcluded.filter(s => s.trim() !== ''),
+  ]
+
   // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} className="max-w-[760px]">
@@ -537,6 +867,54 @@ export default function ExperienceForm({
           {error}
         </div>
       )}
+
+      {/* ── Booking Flow ─────────────────────────────────────────────── */}
+      <SectionCard
+        title="Booking Flow"
+        subtitle="Choose how anglers book this experience."
+      >
+        <div className="grid grid-cols-2 gap-3">
+          {([
+            {
+              value: 'classic' as const,
+              label: 'Classic Booking',
+              desc: 'Anglers pay directly via Stripe. You receive the payout after the trip.',
+            },
+            {
+              value: 'icelandic' as const,
+              label: 'Price on request',
+              desc: 'Angler sends an inquiry with preferred dates. You review and send a custom offer with pricing.',
+            },
+          ]).map(({ value, label, desc }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setBookingType(value)}
+              className="flex items-start gap-3 px-5 py-4 rounded-2xl text-left transition-all h-full"
+              style={bookingType === value
+                ? { background: 'rgba(230,126,80,0.08)', border: '1.5px solid rgba(230,126,80,0.45)' }
+                : { background: 'rgba(10,46,77,0.03)', border: '1.5px solid rgba(10,46,77,0.08)' }
+              }
+            >
+              <span
+                className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                style={bookingType === value
+                  ? { borderColor: '#E67E50', background: '#E67E50' }
+                  : { borderColor: 'rgba(10,46,77,0.25)', background: 'transparent' }
+                }
+              >
+                {bookingType === value && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                )}
+              </span>
+              <div>
+                <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{label}</p>
+                <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>{desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </SectionCard>
 
       {/* ── Section 1: Basic Info ────────────────────────────────────── */}
       <SectionCard title="Basic Info">
@@ -561,7 +939,7 @@ export default function ExperienceForm({
       </SectionCard>
 
       {/* ── Section 2: Fishing Details ───────────────────────────────── */}
-      <SectionCard title="Fishing Details" subtitle="Target species, technique and difficulty">
+      <SectionCard title="Fishing Details" subtitle="Target species and difficulty">
         <div className="flex flex-col gap-6">
 
           {/* Target species */}
@@ -588,102 +966,282 @@ export default function ExperienceForm({
             </div>
           </div>
 
-          {/* Technique + Difficulty */}
-          <div className="grid grid-cols-2 gap-4">
-
-            {/* Technique — Bug #1 fix: separate customTechnique state */}
-            <Field label="Technique">
-              <select
-                value={technique}
-                onChange={e => {
-                  setTechnique(e.target.value)
-                  // Clear custom text when switching away from "Other"
-                  if (e.target.value !== '__other') setCustomTechnique('')
-                }}
-                className="w-full px-4 py-3 rounded-2xl text-sm f-body outline-none transition-all appearance-none cursor-pointer"
-                style={inputBase}
-                onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
-                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
-              >
-                <option value="">Select technique</option>
-                {TECHNIQUES.map(t => <option key={t} value={t}>{t}</option>)}
-                <option value="__other">Other…</option>
-              </select>
-              {/* Visible only when "Other…" is selected; uses own state so typing doesn't hide it */}
-              {technique === '__other' && (
-                <TextInput
-                  type="text"
-                  className="mt-2"
-                  placeholder="Describe the technique"
-                  value={customTechnique}
-                  onChange={e => setCustomTechnique(e.target.value)}
-                />
-              )}
-            </Field>
-
-            {/* Difficulty */}
-            <Field label="Difficulty level">
-              <div className="flex gap-2 flex-wrap">
-                {DIFFICULTY_OPTIONS.map(d => (
-                  <button
-                    key={d.value}
-                    type="button"
-                    onClick={() => setDifficulty(difficulty === d.value ? null : d.value)}
-                    className="flex-1 py-3 rounded-2xl text-xs font-semibold transition-all f-body"
-                    style={
-                      difficulty === d.value
-                        ? { background: d.bg, color: d.color, border: `1.5px solid ${d.color}30` }
-                        : { background: 'rgba(10,46,77,0.05)', color: 'rgba(10,46,77,0.5)', border: '1.5px solid rgba(10,46,77,0.1)' }
-                    }
-                  >
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </Field>
-          </div>
+          {/* Difficulty */}
+          <Field label="Difficulty level">
+            <div className="flex gap-2 flex-wrap">
+              {DIFFICULTY_OPTIONS.map(d => (
+                <button
+                  key={d.value}
+                  type="button"
+                  onClick={() => setDifficulty(difficulty === d.value ? null : d.value)}
+                  className="flex-1 py-3 rounded-2xl text-xs font-semibold transition-all f-body"
+                  style={
+                    difficulty === d.value
+                      ? { background: d.bg, color: d.color, border: `1.5px solid ${d.color}30` }
+                      : { background: 'rgba(10,46,77,0.05)', color: 'rgba(10,46,77,0.5)', border: '1.5px solid rgba(10,46,77,0.1)' }
+                  }
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </Field>
 
           {/* Catch & Release */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setCatchAndRelease(v => !v)}
-              className="relative w-11 h-6 rounded-full transition-all flex-shrink-0"
-              style={{ background: catchAndRelease ? '#E67E50' : 'rgba(10,46,77,0.15)' }}
-              role="switch"
-              aria-checked={catchAndRelease}
-            >
-              <span
-                className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all"
-                style={{ left: catchAndRelease ? '22px' : '4px' }}
-              />
-            </button>
+            <Toggle checked={catchAndRelease} onChange={setCatchAndRelease} />
             <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.7)' }}>
-              Catch & Release only
+              Catch &amp; Release only
             </span>
           </div>
         </div>
       </SectionCard>
 
-      {/* ── Section 3: Pricing & Logistics ──────────────────────────── */}
-      <SectionCard title="Pricing & Logistics">
-        <div className="grid grid-cols-2 gap-5">
+      {/* ── Section 3: Pricing & Logistics (hidden for price-on-request) ── */}
+      {bookingType !== 'icelandic' && <SectionCard title="Pricing & Logistics">
+        <div className="flex flex-col gap-7">
 
-          {/* Price */}
-          <Field label="Price per person (€)" required>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>€</span>
-              <TextInput
-                type="number"
-                min="1"
-                step="1"
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-                placeholder="350"
-                style={{ paddingLeft: '28px' }}
-              />
+          {/* A) Season */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-[0.16em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              Season
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[11px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.4)' }}>From</p>
+                <MonthSelect
+                  value={seasonFrom}
+                  onChange={setSeasonFrom}
+                  placeholder="— Month"
+                />
+              </div>
+              <div>
+                <p className="text-[11px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.4)' }}>To</p>
+                <MonthSelect
+                  value={seasonTo}
+                  onChange={setSeasonTo}
+                  placeholder="— Month"
+                />
+              </div>
             </div>
-          </Field>
+          </div>
+
+          {/* B) Fishing methods */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-[0.16em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              Fishing methods
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {FISHING_METHODS.map(m => (
+                <Pill
+                  key={m}
+                  label={m}
+                  active={fishingMethods.includes(m)}
+                  onClick={() => toggleFishingMethod(m)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* C) Duration options */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-[0.16em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              Duration &amp; Pricing <span style={{ color: '#E67E50' }}>*</span>
+            </label>
+            <p className="text-[11px] f-body mb-4" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              Add 1–4 options (e.g. Half day, Full day). Anglers pick one when booking.
+            </p>
+
+            {/* Column headers */}
+            <div className="hidden sm:grid mb-2" style={{ gridTemplateColumns: '1fr 72px 72px 96px auto auto' }}>
+              {['Label', 'Hours', 'Days', 'Price €', 'Lodging', ''].map((h, i) => (
+                <span key={i} className="text-[10px] font-semibold uppercase tracking-[0.14em] px-1 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{h}</span>
+              ))}
+            </div>
+
+            {/* Duration option cards */}
+            <div className="flex flex-col gap-3">
+              {durationOptions.map((opt, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl p-4"
+                  style={{
+                    background: 'rgba(10,46,77,0.03)',
+                    border: '1.5px solid rgba(10,46,77,0.08)',
+                  }}
+                >
+                  {/* ── Row 1: label / duration / lodging / remove ── */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {/* Label */}
+                    <TextInput
+                      type="text"
+                      value={opt.label}
+                      onChange={e => updateDurationOption(i, { label: e.target.value })}
+                      placeholder="e.g. Full day"
+                      style={{ flex: '1 1 130px', minWidth: 0 }}
+                    />
+                    {/* Hours */}
+                    <div className="relative" style={{ width: '68px', flexShrink: 0 }}>
+                      <TextInput
+                        type="number"
+                        min="1"
+                        value={opt.hours}
+                        onChange={e => updateDurationOption(i, { hours: e.target.value })}
+                        placeholder="—"
+                        style={{ paddingRight: '22px' }}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] f-body pointer-events-none" style={{ color: 'rgba(10,46,77,0.35)' }}>h</span>
+                    </div>
+                    {/* Days */}
+                    <div className="relative" style={{ width: '68px', flexShrink: 0 }}>
+                      <TextInput
+                        type="number"
+                        min="1"
+                        value={opt.days}
+                        onChange={e => updateDurationOption(i, { days: e.target.value })}
+                        placeholder="—"
+                        style={{ paddingRight: '22px' }}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] f-body pointer-events-none" style={{ color: 'rgba(10,46,77,0.35)' }}>d</span>
+                    </div>
+                    {/* Lodging — only when days > 1 */}
+                    {parseInt(opt.days, 10) > 1 && (
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none px-3 py-3 rounded-2xl" style={inputBase}>
+                        <input
+                          type="checkbox"
+                          checked={opt.includes_lodging}
+                          onChange={e => updateDurationOption(i, { includes_lodging: e.target.checked })}
+                          className="rounded accent-[#E67E50]"
+                        />
+                        <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>🏠 Lodging</span>
+                      </label>
+                    )}
+                    {/* Remove */}
+                    <button
+                      type="button"
+                      onClick={() => removeDurationOption(i)}
+                      disabled={durationOptions.length === 1}
+                      className="flex-shrink-0 ml-auto w-7 h-7 rounded-full flex items-center justify-center transition-all disabled:opacity-20 disabled:cursor-not-allowed hover:brightness-90"
+                      style={{ background: 'rgba(220,38,38,0.1)', color: '#DC2626' }}
+                      aria-label="Remove option"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* ── Row 2: pricing type selector ── */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.13em] f-body mr-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      Pricing
+                    </span>
+                    <div className="flex rounded-2xl overflow-hidden flex-shrink-0" style={{ border: '1.5px solid rgba(10,46,77,0.12)' }}>
+                      {PRICING_TYPE_OPTIONS.map(pt => (
+                        <button
+                          key={pt.value}
+                          type="button"
+                          onClick={() => handlePricingTypeChange(i, pt.value)}
+                          title={pt.hint}
+                          className="px-3.5 py-2 text-xs font-semibold transition-all f-body"
+                          style={
+                            opt.pricing_type === pt.value
+                              ? { background: '#0A2E4D', color: '#fff' }
+                              : { background: 'transparent', color: 'rgba(10,46,77,0.5)' }
+                          }
+                        >
+                          {pt.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Price input — only for per_person / per_boat */}
+                    {opt.pricing_type !== 'per_group' && (
+                      <div className="flex items-center gap-2">
+                        <div className="relative" style={{ width: '110px' }}>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none" style={{ color: 'rgba(10,46,77,0.4)' }}>€</span>
+                          <TextInput
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={opt.price_eur}
+                            onChange={e => updateDurationOption(i, { price_eur: e.target.value })}
+                            placeholder="400"
+                            style={{ paddingLeft: '22px' }}
+                          />
+                        </div>
+                        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                          {opt.pricing_type === 'per_person' ? 'per person' : 'flat rate'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Row 3: per_group price table ── */}
+                  {opt.pricing_type === 'per_group' && (
+                    <div className="mt-3 flex flex-col gap-1.5 pl-2 border-l-2" style={{ borderColor: 'rgba(10,46,77,0.1)' }}>
+                      {Array.from(
+                        { length: parseInt(maxGuests, 10) || 0 },
+                        (_, idx) => idx + 1,
+                      ).map(n => (
+                        <div key={n} className="flex items-center gap-2">
+                          <span
+                            className="text-xs f-body"
+                            style={{ color: 'rgba(10,46,77,0.5)', minWidth: '72px' }}
+                          >
+                            {n} {n === 1 ? 'angler' : 'anglers'}
+                          </span>
+                          <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>→</span>
+                          <div className="relative" style={{ width: '110px' }}>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none" style={{ color: 'rgba(10,46,77,0.4)' }}>€</span>
+                            <TextInput
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={opt.group_prices[n] ?? ''}
+                              onChange={e => updateDurationOption(i, {
+                                group_prices: { ...opt.group_prices, [n]: e.target.value },
+                              })}
+                              placeholder="—"
+                              style={{ paddingLeft: '22px' }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      {parseInt(maxGuests, 10) < 1 && (
+                        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                          Set &quot;Max guests&quot; first to fill in group prices.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Add option */}
+            {durationOptions.length < 4 && (
+              <button
+                type="button"
+                onClick={addDurationOption}
+                className="mt-2 w-full py-3 rounded-2xl text-sm font-medium f-body transition-all hover:brightness-95 flex items-center justify-center gap-2"
+                style={{
+                  border: '1.5px dashed rgba(10,46,77,0.2)',
+                  color: 'rgba(10,46,77,0.45)',
+                  background: 'transparent',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                  <rect x="5.1" y="1" width="1.8" height="10" rx="0.9" />
+                  <rect x="1" y="5.1" width="10" height="1.8" rx="0.9" />
+                </svg>
+                Add option
+                <span className="text-[11px]" style={{ color: 'rgba(10,46,77,0.3)' }}>
+                  ({durationOptions.length}/4)
+                </span>
+              </button>
+            )}
+          </div>
 
           {/* Max guests */}
           <Field label="Max guests" required>
@@ -692,50 +1250,17 @@ export default function ExperienceForm({
               min="1"
               max="20"
               value={maxGuests}
-              onChange={e => setMaxGuests(e.target.value)}
+              onChange={e => {
+                setMaxGuests(e.target.value)
+                syncGroupPricesKeys(e.target.value)
+              }}
               placeholder="4"
+              style={{ maxWidth: '160px' }}
             />
           </Field>
 
-          {/* Duration */}
-          <div className="col-span-2">
-            <label className="block text-xs font-semibold uppercase tracking-[0.16em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-              Duration <span style={{ color: '#E67E50' }}>*</span>
-            </label>
-            <div className="flex gap-3 items-center">
-              {/* Type toggle */}
-              <div className="flex rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(10,46,77,0.1)' }}>
-                {(['hours', 'days'] as const).map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setDurationType(t)}
-                    className="px-5 py-2.5 text-sm font-semibold transition-all f-body"
-                    style={
-                      durationType === t
-                        ? { background: '#E67E50', color: 'white' }
-                        : { background: 'transparent', color: 'rgba(10,46,77,0.5)' }
-                    }
-                  >
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
-              </div>
-              <TextInput
-                type="number"
-                min="1"
-                value={durationValue}
-                onChange={e => setDurationValue(e.target.value)}
-                placeholder={durationType === 'hours' ? '8' : '2'}
-                style={{ maxWidth: '120px' }}
-              />
-              <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                {durationType}
-              </span>
-            </div>
-          </div>
         </div>
-      </SectionCard>
+      </SectionCard>}
 
       {/* ── Section 4: Location ──────────────────────────────────────── */}
       <SectionCard
@@ -846,7 +1371,29 @@ export default function ExperienceForm({
               </p>
             )}
 
-            {/* Map — always rendered; click to place pin, drag to fine-tune */}
+            {/* Mode toggle */}
+            <div className="flex items-center gap-2 mb-3">
+              {([
+                { value: 'pin',   label: 'Pin' },
+                { value: 'area',  label: 'Draw Area' },
+                { value: 'spots', label: 'Multi-spot' },
+              ] as const).map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setLocationMode(value)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold f-body transition-all"
+                  style={locationMode === value
+                    ? { background: '#0A2E4D', color: '#fff' }
+                    : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Map */}
             <div
               style={{
                 borderRadius: '16px',
@@ -855,65 +1402,298 @@ export default function ExperienceForm({
               }}
             >
               <LocationPickerMap
+                mode={locationMode}
                 lat={locationLat}
                 lng={locationLng}
-                onChange={(lat, lng) => {
-                  setLocationLat(lat)
-                  setLocationLng(lng)
-                  setGeocodeError(null)
-                }}
+                onChange={handleMapChange}
+                area={locationArea}
+                onAreaChange={handleAreaChange}
+                spots={locationSpots}
+                onSpotsChange={handleSpotsChange}
               />
             </div>
 
             {/* Hint text */}
             <p className="text-xs f-body mt-2" style={{ color: 'rgba(10,46,77,0.35)' }}>
-              {locationLat != null
-                ? 'Drag the pin to fine-tune · Click anywhere on the map to move it'
-                : 'Click "Auto-locate" to geocode the city/country · Or click directly on the map'}
+              {locationMode === 'area'
+                ? locationArea != null
+                  ? 'Area saved — use the edit tool to adjust or delete it'
+                  : 'Use the polygon or rectangle tool to draw your trip area'
+                : locationMode === 'spots'
+                  ? 'Click on the map to add fishing spots · Name each one below'
+                  : locationLat != null
+                    ? 'Drag the pin to fine-tune · Click anywhere on the map to move it'
+                    : 'Click "Auto-locate" to geocode the city/country · Or click directly on the map'}
             </p>
           </div>
         </div>
       </SectionCard>
 
-      {/* ── Section 5: Inclusions ────────────────────────────────────── */}
-      <SectionCard title="What&apos;s Included / Excluded" subtitle="Add items one by one and press Enter or Add">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              ✓ Included
-            </p>
-            <TagList
-              items={included}
-              onAdd={item => setIncluded(prev => [...prev, item])}
-              onRemove={i => setIncluded(prev => prev.filter((_, idx) => idx !== i))}
-              placeholder="e.g. Fishing license"
-            />
+      {/* ── Section 5: What's Included ───────────────────────────────── */}
+      <SectionCard
+        title="What's Included"
+        subtitle="Toggle what's included in the price. Untoggled items auto-populate the 'Not included' list."
+      >
+        <div className="flex flex-col gap-3">
+
+          {/* Always-on: Fishing guide */}
+          <div className="flex items-center gap-3 py-1">
+            <div
+              className="relative w-11 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{ background: 'rgba(22,163,74,0.18)' }}
+            >
+              <svg width="11" height="8" viewBox="0 0 11 8" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1,3.5 3.8,6.5 10,1" />
+              </svg>
+            </div>
+            <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              Fishing guide <span className="text-[10px] ml-1" style={{ color: 'rgba(10,46,77,0.3)' }}>(always included)</span>
+            </span>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              ✗ Not included
+
+          {/* Toggleable standard items */}
+          {INCLUSION_ITEMS.map(item => {
+            // Accommodation only visible when at least one option has days > 1
+            if (item.key === 'accommodation' && !hasDaysOption) return null
+
+            const isOn = inclusions[item.key]
+            return (
+              <div key={item.key} className="flex items-center gap-3 py-0.5">
+                <Toggle
+                  checked={isOn}
+                  onChange={v => setInclusions(prev => ({ ...prev, [item.key]: v }))}
+                />
+                <span
+                  className="text-sm f-body transition-colors"
+                  style={{ color: isOn ? '#0A2E4D' : 'rgba(10,46,77,0.4)' }}
+                >
+                  {item.label}
+                </span>
+              </div>
+            )
+          })}
+
+          {/* ── Custom included items ────────────────────────────────── */}
+          {(customIncluded.length > 0 || customIncluded.length < 3) && (
+            <div className="mt-2 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                Custom included items
+              </p>
+              <div className="flex flex-col gap-2">
+                {customIncluded.map((item, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <div
+                      className="w-11 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
+                      style={{ background: 'rgba(230,126,80,0.15)' }}
+                    >
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none" stroke="#E67E50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="1,3.5 3.5,6 9,1" />
+                      </svg>
+                    </div>
+                    <TextInput
+                      type="text"
+                      value={item}
+                      onChange={e => setCustomIncluded(prev => {
+                        const next = [...prev]
+                        next[i] = e.target.value
+                        return next
+                      })}
+                      placeholder="e.g. GPS tracker"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCustomIncluded(prev => prev.filter((_, idx) => idx !== i))}
+                      className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:brightness-95"
+                      style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
+                      aria-label="Remove item"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {customIncluded.length < 3 && (
+                <button
+                  type="button"
+                  onClick={() => setCustomIncluded(prev => [...prev, ''])}
+                  className="mt-3 text-xs font-semibold f-body transition-all hover:brightness-95 px-4 py-2 rounded-full"
+                  style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
+                >
+                  + Add custom item
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Auto-generated "not included" preview ───────────────── */}
+          {notIncludedPreview.length > 0 && (
+            <div
+              className="mt-3 p-4 rounded-2xl"
+              style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.1)' }}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2 f-body" style={{ color: 'rgba(220,38,38,0.65)' }}>
+                ✗ Not included — auto-generated
+              </p>
+              <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                {notIncludedPreview.join(' · ')}
+              </p>
+            </div>
+          )}
+
+          {/* ── Custom "not included" notes ──────────────────────────── */}
+          <div className="mt-2 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              Custom &quot;not included&quot; notes
             </p>
-            <TagList
-              items={excluded}
-              onAdd={item => setExcluded(prev => [...prev, item])}
-              onRemove={i => setExcluded(prev => prev.filter((_, idx) => idx !== i))}
-              placeholder="e.g. Accommodation"
-            />
+            <div className="flex flex-col gap-2">
+              {customExcluded.map((item, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <div
+                    className="w-11 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
+                    style={{ background: 'rgba(220,38,38,0.08)' }}
+                  >
+                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round">
+                      <line x1="1" y1="1" x2="8" y2="8" /><line x1="8" y1="1" x2="1" y2="8" />
+                    </svg>
+                  </div>
+                  <TextInput
+                    type="text"
+                    value={item}
+                    onChange={e => setCustomExcluded(prev => {
+                      const next = [...prev]
+                      next[i] = e.target.value
+                      return next
+                    })}
+                    placeholder="e.g. Fishing license (buy via license map)"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCustomExcluded(prev => prev.filter((_, idx) => idx !== i))}
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:brightness-95"
+                    style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
+                    aria-label="Remove note"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6">
+                      <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+            {customExcluded.length < 3 && (
+              <button
+                type="button"
+                onClick={() => setCustomExcluded(prev => [...prev, ''])}
+                className="mt-3 text-xs font-semibold f-body transition-all hover:brightness-95 px-4 py-2 rounded-full"
+                style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
+              >
+                + Add custom note
+              </button>
+            )}
           </div>
+
         </div>
       </SectionCard>
 
       {/* ── Section 6: Photos ────────────────────────────────────────── */}
-      {/* Bug #3 fix: corrected subtitle — ImageUpload auto-compresses any size to ~400-600 KB */}
+      {/* ── Section: Hero Landscape ──────────────────────────────── */}
+      <SectionCard
+        title="Hero Background"
+        subtitle="Full-width landscape shown behind the experience title. Pick from our library or upload your own."
+      >
+        {/* Tabs */}
+        <div className="flex gap-1 mb-5 p-1 rounded-2xl" style={{ background: 'rgba(10,46,77,0.05)', width: 'fit-content' }}>
+          {(['library', 'upload'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setLandscapeTab(tab)}
+              className="px-5 py-2 rounded-xl text-sm font-semibold f-body transition-all capitalize"
+              style={landscapeTab === tab
+                ? { background: '#fff', color: '#0A2E4D', boxShadow: '0 1px 4px rgba(10,46,77,0.12)' }
+                : { color: 'rgba(10,46,77,0.45)' }
+              }
+            >
+              {tab === 'library' ? 'Pick from library' : 'Upload my own'}
+            </button>
+          ))}
+        </div>
+
+        {landscapeTab === 'library' && (
+          <div className="grid grid-cols-3 gap-3">
+            {LANDSCAPE_LIBRARY.map(url => {
+              const selected = landscapeUrl === url
+              return (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setLandscapeUrl(url)}
+                  className="relative overflow-hidden transition-all"
+                  style={{
+                    height: '100px',
+                    borderRadius: '12px',
+                    border: selected ? '2.5px solid #E67E50' : '2px solid rgba(10,46,77,0.1)',
+                    boxShadow: selected ? '0 0 0 3px rgba(230,126,80,0.2)' : 'none',
+                  }}
+                >
+                  <Image src={url} alt="" fill className="object-cover" />
+                  {selected && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.25)' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" stroke="none" />
+                        <path d="M8 12l3 3 5-5" stroke="white" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+            {/* None option */}
+            <button
+              type="button"
+              onClick={() => setLandscapeUrl('')}
+              className="flex flex-col items-center justify-center gap-1 transition-all"
+              style={{
+                height: '100px',
+                borderRadius: '12px',
+                border: landscapeUrl === '' ? '2.5px solid #E67E50' : '2px dashed rgba(10,46,77,0.15)',
+                background: 'rgba(10,46,77,0.03)',
+              }}
+            >
+              <span className="text-lg">✕</span>
+              <span className="text-[11px] f-body font-medium" style={{ color: 'rgba(10,46,77,0.4)' }}>Auto-assign</span>
+            </button>
+          </div>
+        )}
+
+        {landscapeTab === 'upload' && (
+          <div>
+            <ImageUpload
+              label="Hero landscape"
+              currentUrl={landscapeUrl || null}
+              aspect="wide"
+              variant="cover"
+              onUpload={url => setLandscapeUrl(url)}
+            />
+            <p className="text-[11px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              Landscape orientation recommended · min 2400px wide
+            </p>
+          </div>
+        )}
+      </SectionCard>
+
       <SectionCard title="Photos" subtitle="Cover photo is required. Up to 4 gallery images. JPEG · PNG · WebP — any size, auto-compressed.">
         <div className="flex flex-col gap-5">
           {/* Cover */}
           <ImageUpload
             label="Cover photo *"
             aspect="wide"
+            variant="cover"
             currentUrl={coverUrl}
             onUpload={url => setCoverUrl(url)}
-            hint="Main image shown on the experience card — ideally 1200×800px"
+            hint="Main image — uploaded at full quality, no compression"
           />
           {/* Gallery row */}
           <div className="grid grid-cols-2 gap-4">
@@ -922,6 +1702,7 @@ export default function ExperienceForm({
                 key={i}
                 label={`Gallery ${i + 1}`}
                 aspect="wide"
+                variant="gallery"
                 currentUrl={url}
                 onUpload={newUrl => setGallery(prev => {
                   const next = [...prev]
@@ -934,7 +1715,7 @@ export default function ExperienceForm({
         </div>
       </SectionCard>
 
-      {/* ── Section 7: Settings ──────────────────────────────────────── */}
+      {/* ── Settings ──────────────────────────────────────────────── */}
       <div
         className="px-8 py-6 mb-6 rounded-3xl flex items-center justify-between"
         style={{
@@ -949,19 +1730,7 @@ export default function ExperienceForm({
             Visible to anglers on /experiences. You can change this later.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setPublished(v => !v)}
-          className="relative w-12 h-6 rounded-full transition-all flex-shrink-0"
-          style={{ background: published ? '#E67E50' : 'rgba(10,46,77,0.15)' }}
-          role="switch"
-          aria-checked={published}
-        >
-          <span
-            className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all"
-            style={{ left: published ? '24px' : '4px' }}
-          />
-        </button>
+        <Toggle checked={published} onChange={setPublished} />
       </div>
 
       {/* ── Submit ───────────────────────────────────────────────────── */}

@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { useState, useEffect, useCallback } from 'react'
+import { heroFull, cardThumb, gallerySlide } from '@/lib/image'
 
 interface GalleryImage {
   id: string
@@ -60,7 +61,7 @@ export function ExperienceGallery({ images, title }: Props) {
             onClick={() => setLightboxIndex(0)}
             className="relative w-full h-full block group overflow-hidden rounded-3xl"
           >
-            <Image src={main.url} alt={title} fill className="object-cover" />
+            <Image src={heroFull(main.url) ?? main.url} alt={title} fill className="object-cover" />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
           </button>
         ) : (
@@ -79,7 +80,7 @@ export function ExperienceGallery({ images, title }: Props) {
               style={{ gridRow: '1 / 3' }}
             >
               <Image
-                src={main.url}
+                src={heroFull(main.url) ?? main.url}
                 alt={title}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
@@ -109,7 +110,7 @@ export function ExperienceGallery({ images, title }: Props) {
                   className={`relative overflow-hidden group ${cornerClass}`}
                 >
                   <Image
-                    src={img.url}
+                    src={cardThumb(img.url) ?? img.url}
                     alt={`${title} photo ${i + 2}`}
                     fill
                     className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
@@ -193,7 +194,7 @@ export function ExperienceGallery({ images, title }: Props) {
             onClick={e => e.stopPropagation()}
           >
             <Image
-              src={sorted[lightboxIndex].url.replace(/w=\d+&h=\d+/, 'w=1600&h=1200')}
+              src={gallerySlide(sorted[lightboxIndex].url) ?? sorted[lightboxIndex].url}
               alt={`${title} photo ${lightboxIndex + 1}`}
               fill
               className="object-cover"
@@ -229,7 +230,7 @@ export function ExperienceGallery({ images, title }: Props) {
                     border: i === lightboxIndex ? '2px solid #E67E50' : '2px solid transparent',
                   }}
                 >
-                  <Image src={img.url} alt="" fill className="object-cover" />
+                  <Image src={cardThumb(img.url) ?? img.url} alt="" fill className="object-cover" />
                 </button>
               ))}
             </div>

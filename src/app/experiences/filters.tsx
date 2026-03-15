@@ -1,18 +1,10 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
+import { FISH_FILTER as SPECIES } from '@/lib/fish'
+import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
 
 // ─── Static data ──────────────────────────────────────────────────────────────
-
-const COUNTRIES = [
-  { code: 'Norway',  flag: '🇳🇴' },
-  { code: 'Sweden',  flag: '🇸🇪' },
-  { code: 'Finland', flag: '🇫🇮' },
-  { code: 'Iceland', flag: '🇮🇸' },
-  { code: 'Denmark', flag: '🇩🇰' },
-]
-
-const SPECIES = ['Salmon', 'Trout', 'Pike', 'Zander', 'Grayling', 'Cod']
 
 const DIFFICULTIES = [
   { value: 'beginner',     label: 'All Levels'   },
@@ -21,7 +13,6 @@ const DIFFICULTIES = [
 ]
 
 type PricePreset = { label: string; min: string; max: string }
-
 const PRICE_PRESETS: PricePreset[] = [
   { label: 'Under €150', min: '',    max: '150' },
   { label: '€150–300',   min: '150', max: '300' },
@@ -30,9 +21,31 @@ const PRICE_PRESETS: PricePreset[] = [
 ]
 
 const SORT_OPTIONS = [
-  { value: 'price-asc',    label: 'Price ↑'  },
-  { value: 'price-desc',   label: 'Price ↓'  },
-  { value: 'duration-asc', label: 'Shortest' },
+  { value: 'price-asc',     label: 'Price ↑'     },
+  { value: 'price-desc',    label: 'Price ↓'     },
+  { value: 'duration-asc',  label: 'Shortest'    },
+  { value: 'duration-desc', label: 'Longest'     },
+]
+
+const DURATION_OPTIONS = [
+  { value: 'half-day',   label: '½ Day'      },
+  { value: 'full-day',   label: 'Full Day'   },
+  { value: 'overnight',  label: 'Overnight'  },
+  { value: 'multi-day',  label: 'Multi-day'  },
+  { value: 'expedition', label: 'Expedition' },
+]
+
+const TECHNIQUE_OPTIONS = [
+  'Fly fishing', 'Lure fishing', 'Ice fishing',
+  'Trolling', 'Spin fishing', 'Jigging', 'Sea fishing',
+]
+
+const GUESTS_OPTIONS = [
+  { value: '1',  label: 'Solo'       },
+  { value: '2',  label: '2 people'   },
+  { value: '4',  label: '4+ people'  },
+  { value: '8',  label: '8+ people'  },
+  { value: '10', label: '10+ people' },
 ]
 
 // ─── Chip style helper ────────────────────────────────────────────────────────
@@ -40,7 +53,7 @@ const SORT_OPTIONS = [
 function chip(active: boolean, variant: 'orange' | 'blue' = 'orange') {
   return {
     background: active
-      ? (variant === 'orange' ? '#E67E50' : '#0A2E4D')
+      ? variant === 'orange' ? '#E67E50' : '#0A2E4D'
       : 'rgba(10,46,77,0.06)',
     color: active ? 'white' : 'rgba(10,46,77,0.65)',
     border: '1px solid transparent',
@@ -67,17 +80,21 @@ export default function ExperienceFilters() {
   const router = useRouter()
   const sp     = useSearchParams()
 
-  const country    = sp.get('country')    ?? ''
-  const fish       = sp.get('fish')       ?? ''
-  const difficulty = sp.get('difficulty') ?? ''
-  const sort       = sp.get('sort')       ?? ''
-  const minPrice   = sp.get('minPrice')   ?? ''
-  const maxPrice   = sp.get('maxPrice')   ?? ''
+  const country      = sp.get('country')      ?? ''
+  const fish         = sp.get('fish')         ?? ''
+  const difficulty   = sp.get('difficulty')   ?? ''
+  const sort         = sp.get('sort')         ?? ''
+  const minPrice     = sp.get('minPrice')     ?? ''
+  const maxPrice     = sp.get('maxPrice')     ?? ''
+  const technique    = sp.get('technique')    ?? ''
+  const duration     = sp.get('duration')     ?? ''
+  const catchRelease = sp.get('catchRelease') === 'true'
+  const guests       = sp.get('guests')       ?? ''
 
   function setParam(key: string, value: string) {
     const p = new URLSearchParams(sp.toString())
-    if (value) p.set(key, value)
-    else p.delete(key)
+    if (value) p.set(key, value); else p.delete(key)
+    p.delete('page')
     router.push(`/experiences?${p.toString()}`)
   }
 
@@ -90,18 +107,25 @@ export default function ExperienceFilters() {
     const isActive = (sp.get('minPrice') ?? '') === preset.min
                   && (sp.get('maxPrice') ?? '') === preset.max
     if (isActive) {
-      p.delete('minPrice')
-      p.delete('maxPrice')
+      p.delete('minPrice'); p.delete('maxPrice')
     } else {
       if (preset.min) p.set('minPrice', preset.min); else p.delete('minPrice')
       if (preset.max) p.set('maxPrice', preset.max); else p.delete('maxPrice')
     }
+    p.delete('page')
+    router.push(`/experiences?${p.toString()}`)
+  }
+
+  function toggleCatchRelease() {
+    const p = new URLSearchParams(sp.toString())
+    if (catchRelease) p.delete('catchRelease'); else p.set('catchRelease', 'true')
+    p.delete('page')
     router.push(`/experiences?${p.toString()}`)
   }
 
   const hasPrice   = minPrice !== '' || maxPrice !== ''
-  const hasFilters = country !== '' || fish !== '' || difficulty !== ''
-                  || hasPrice || sort !== ''
+  const hasFilters = country !== '' || fish !== '' || difficulty !== '' || hasPrice
+                  || sort !== '' || technique !== '' || duration !== '' || catchRelease || guests !== ''
 
   return (
     <div
@@ -110,8 +134,8 @@ export default function ExperienceFilters() {
     >
       {/* Country */}
       {COUNTRIES.map(c => (
-        <button key={c.code} onClick={() => toggle('country', c.code, country)} className={CLS} style={chip(country === c.code)}>
-          {c.flag} {c.code}
+        <button key={c.value} onClick={() => toggle('country', c.value, country)} className={CLS} style={chip(country === c.value)}>
+          {c.flag} {c.value}
         </button>
       ))}
 
@@ -121,6 +145,24 @@ export default function ExperienceFilters() {
       {SPECIES.map(s => (
         <button key={s} onClick={() => toggle('fish', s, fish)} className={CLS} style={chip(fish === s)}>
           {s}
+        </button>
+      ))}
+
+      {SEP}
+
+      {/* Duration */}
+      {DURATION_OPTIONS.map(d => (
+        <button key={d.value} onClick={() => toggle('duration', d.value, duration)} className={CLS} style={chip(duration === d.value)}>
+          {d.label}
+        </button>
+      ))}
+
+      {SEP}
+
+      {/* Technique */}
+      {TECHNIQUE_OPTIONS.map(t => (
+        <button key={t} onClick={() => toggle('technique', t, technique)} className={CLS} style={chip(technique === t, 'blue')}>
+          {t}
         </button>
       ))}
 
@@ -148,6 +190,22 @@ export default function ExperienceFilters() {
 
       {SEP}
 
+      {/* Group size */}
+      {GUESTS_OPTIONS.map(o => (
+        <button key={o.value} onClick={() => toggle('guests', o.value, guests)} className={CLS} style={chip(guests === o.value, 'blue')}>
+          {o.label}
+        </button>
+      ))}
+
+      {SEP}
+
+      {/* Catch & Release */}
+      <button onClick={toggleCatchRelease} className={CLS} style={chip(catchRelease, 'blue')}>
+        🎣 C&R only
+      </button>
+
+      {SEP}
+
       {/* Sort */}
       {SORT_OPTIONS.map(o => (
         <button key={o.value} onClick={() => setParam('sort', sort === o.value ? '' : o.value)} className={CLS} style={chip(sort === o.value, 'blue')}>
@@ -155,7 +213,7 @@ export default function ExperienceFilters() {
         </button>
       ))}
 
-      {/* Clear */}
+      {/* Clear all */}
       {hasFilters && (
         <>
           {SEP}

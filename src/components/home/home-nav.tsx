@@ -5,9 +5,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 const NAV_LINKS = [
-  { label: 'Experiences',  href: '/experiences' },
-  { label: 'Guides',       href: '/guides' },
-  { label: 'License Map',  href: '/license-map' },
+  { label: 'Experiences', href: '/experiences' },
+  { label: 'Guides',      href: '/guides' },
+  { label: 'Blog',        href: '/blog' },
 ]
 
 interface HomeNavProps {
@@ -49,7 +49,7 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
     >
       <div className="overflow-hidden">
         {/* Top bar */}
-        <div className="h-[60px] flex items-center justify-between px-6 md:px-10">
+        <div className="h-[72px] flex items-center justify-between px-6 md:px-10">
 
           <Link href="/" className="flex-shrink-0">
             <Image

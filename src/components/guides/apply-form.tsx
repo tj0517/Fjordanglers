@@ -2,18 +2,17 @@
 
 import { useState } from 'react'
 import { submitGuideApplication } from '@/actions/guide-apply'
+import { FISH_ALL } from '@/lib/fish'
+import { COUNTRIES as SCANDI_COUNTRIES } from '@/lib/countries'
 
 const COUNTRIES = [
-  'Norway', 'Sweden', 'Finland', 'Denmark', 'Iceland',
+  ...SCANDI_COUNTRIES,
   'Estonia', 'Latvia', 'Lithuania', 'Germany', 'Poland',
   'Netherlands', 'Belgium', 'France', 'United Kingdom',
   'Austria', 'Switzerland', 'Czech Republic', 'Slovakia',
 ]
 
-const FISH = [
-  'Salmon', 'Sea Trout', 'Brown Trout', 'Grayling',
-  'Pike', 'Perch', 'Zander', 'Cod', 'Halibut', 'Arctic Char',
-]
+const FISH = FISH_ALL
 
 const inputStyle = {
   width: '100%',

@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createGuideProfile } from '@/actions/dashboard'
+import { signOut } from '@/actions/auth'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -235,7 +236,23 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
           ))}
         </div>
 
-        <div className="w-[140px]" /> {/* spacer to center the step indicator */}
+        {/* Sign out — right side, balances the logo width */}
+        <div className="w-[140px] flex justify-end">
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all f-body hover:bg-[rgba(10,46,77,0.06)]"
+              style={{ color: 'rgba(10,46,77,0.4)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M5 2H2.5A1.5 1.5 0 001 3.5v6A1.5 1.5 0 002.5 11H5" />
+                <path d="M8.5 9l3-2.5-3-2.5" strokeLinecap="round" strokeLinejoin="round" />
+                <line x1="5" y1="6.5" x2="11.5" y2="6.5" strokeLinecap="round" />
+              </svg>
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
       {/* ─── Content ─────────────────────────────────────────────────── */}

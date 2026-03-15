@@ -1,8 +1,14 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { getFeaturedExperiences, getPlatformStats, getSpeciesCounts } from '@/lib/supabase/queries'
+import { getFeaturedExperiences, getPlatformStats, getSpeciesCounts, getFeaturedGuides, getExperienceLocations } from '@/lib/supabase/queries'
+import type { GuideRow } from '@/lib/supabase/queries'
+import { FISH_CATALOG } from '@/lib/fish'
+import { getCountryFlag } from '@/lib/countries'
+import { SpeciesSlider } from '@/components/home/species-slider'
 import { HomeNav } from '@/components/home/home-nav'
+import { HeroSearchBar } from '@/components/home/hero-search-bar'
 import { BLOG_POSTS } from '@/lib/blog-data'
+import { Footer } from '@/components/layout/footer'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,22 +16,11 @@ export const dynamic = 'force-dynamic'
 
 const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴', Sweden: '🇸🇪', Finland: '🇫🇮', Denmark: '🇩🇰', Iceland: '🇮🇸',
-}
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'All Levels', intermediate: 'Intermediate', expert: 'Expert',
 }
 
-const SPECIES_CONFIG = [
-  { name: 'Atlantic Salmon', slug: 'Salmon', pageSlug: 'salmon', img: '/fish_catalog/salmon.jpg' },
-  { name: 'Trout', slug: 'Trout', pageSlug: 'trout', img: '/fish_catalog/trout.jpg' },
-  { name: 'Pike', slug: 'Pike', pageSlug: 'pike', img: '/fish_catalog/pike.jpg' },
-  { name: 'Zander', slug: 'Zander', pageSlug: 'zander', img: '/fish_catalog/zander.jpg' },
-  { name: 'Grayling', slug: 'Grayling', pageSlug: 'grayling', img: '/fish_catalog/graling.jpeg' },
-  { name: 'Cod', slug: 'Cod', pageSlug: 'cod', img: '/fish_catalog/cod.jpg' },
-]
 
 // ─── MICRO-COMPONENTS ─────────────────────────────────────────────────────────
 
@@ -46,13 +41,15 @@ const GrainOverlay = () => (
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const [featured, stats, speciesCounts] = await Promise.all([
+  const [featured, stats, speciesCounts, featuredGuides, locations] = await Promise.all([
     getFeaturedExperiences(4),
     getPlatformStats(),
     getSpeciesCounts(),
+    getFeaturedGuides(4),
+    getExperienceLocations(),
   ])
 
-  const species = SPECIES_CONFIG.map(s => ({ ...s, count: speciesCounts[s.slug] ?? 0 }))
+  const species = FISH_CATALOG.map(s => ({ ...s, count: speciesCounts[s.slug] ?? 0 }))
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
@@ -62,7 +59,7 @@ export default async function HomePage() {
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="relative" style={{ minHeight: '96vh' }}>
         <div
-          className="relative overflow-hidden"
+          className="relative"
           style={{ minHeight: '96vh' }}
         >
           <video
@@ -81,28 +78,11 @@ export default async function HomePage() {
           <GrainOverlay />
 
           <div
-            className="relative flex flex-col justify-between px-8 md:px-14 pt-24 pb-12 md:pb-16"
+            className="relative flex flex-col justify-between px-8 md:px-14 pt-36 pb-12 md:pb-16"
             style={{ zIndex: 3, minHeight: '96vh' }}
           >
-            {/* Top: destination chips + live badge */}
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                {['🇳🇴 Norway', '🇸🇪 Sweden', '🇫🇮 Finland'].map((label, i) => (
-                  <span
-                    key={label}
-                    className="text-[11px] font-semibold px-3.5 py-1.5 rounded-full f-body"
-                    style={{
-                      background: i === 0 ? 'rgba(230,126,80,0.16)' : 'rgba(255,255,255,0.07)',
-                      color: i === 0 ? '#E67E50' : 'rgba(255,255,255,0.46)',
-                      border: i === 0
-                        ? '1px solid rgba(230,126,80,0.22)'
-                        : '1px solid rgba(255,255,255,0.07)',
-                    }}
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
+            {/* Top: live badge */}
+            <div className="flex justify-end">
               <div
                 className="hidden sm:flex items-center gap-2 text-[11px] font-medium px-3.5 py-1.5 rounded-full f-body"
                 style={{
@@ -151,74 +131,7 @@ export default async function HomePage() {
               </p>
 
               {/* Search bar */}
-              <form
-                action="/experiences"
-                method="GET"
-                className="flex items-center mb-7 w-full max-w-[540px] overflow-hidden"
-                style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(255,255,255,0.14)',
-                }}
-              >
-                <div className="flex flex-col px-5 py-3.5 flex-1 min-w-0">
-                  <label
-                    htmlFor="hero-country"
-                    className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1 f-body"
-                    style={{ color: 'rgba(255,255,255,0.36)' }}
-                  >
-                    Destination
-                  </label>
-                  <select
-                    id="hero-country"
-                    name="country"
-                    className="bg-transparent text-sm font-medium outline-none cursor-pointer f-body appearance-none"
-                    style={{ color: 'rgba(255,255,255,0.82)' }}
-                  >
-                    <option value="" style={{ background: '#07111C' }}>Any country</option>
-                    <option value="Norway" style={{ background: '#07111C' }}>🇳🇴 Norway</option>
-                    <option value="Sweden" style={{ background: '#07111C' }}>🇸🇪 Sweden</option>
-                    <option value="Finland" style={{ background: '#07111C' }}>🇫🇮 Finland</option>
-                    <option value="Iceland" style={{ background: '#07111C' }}>🇮🇸 Iceland</option>
-                  </select>
-                </div>
-
-                <div className="w-px self-stretch my-3" style={{ background: 'rgba(255,255,255,0.1)' }} />
-
-                <div className="flex flex-col px-5 py-3.5 flex-1 min-w-0">
-                  <label
-                    htmlFor="hero-fish"
-                    className="text-[10px] font-bold uppercase tracking-[0.2em] mb-1 f-body"
-                    style={{ color: 'rgba(255,255,255,0.36)' }}
-                  >
-                    Species
-                  </label>
-                  <select
-                    id="hero-fish"
-                    name="fish"
-                    className="bg-transparent text-sm font-medium outline-none cursor-pointer f-body appearance-none"
-                    style={{ color: 'rgba(255,255,255,0.82)' }}
-                  >
-                    <option value="" style={{ background: '#07111C' }}>Any fish</option>
-                    <option value="Salmon" style={{ background: '#07111C' }}>Atlantic Salmon</option>
-                    <option value="Trout" style={{ background: '#07111C' }}>Trout</option>
-                    <option value="Pike" style={{ background: '#07111C' }}>Pike</option>
-                    <option value="Zander" style={{ background: '#07111C' }}>Zander</option>
-                    <option value="Grayling" style={{ background: '#07111C' }}>Grayling</option>
-                    <option value="Cod" style={{ background: '#07111C' }}>Cod</option>
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="m-2 shrink-0 text-white font-semibold text-sm px-7 py-3 rounded-[14px] transition-all hover:brightness-110 f-body whitespace-nowrap"
-                  style={{ background: '#E67E50' }}
-                >
-                  Search
-                </button>
-              </form>
+              <HeroSearchBar locations={locations} />
 
               <Link
                 href="/guides"
@@ -233,8 +146,7 @@ export default async function HomePage() {
       </section>
 
       {/* ─── FEATURED EXPERIENCES ────────────────────────────────────── */}
-      <section className="px-4 md:px-6 pt-20 pb-20" style={{ background: '#F3EDE4' }}>
-        <div className="max-w-[1440px] mx-auto">
+      <section className="px-8 md:px-14 pt-20 pb-20" style={{ background: '#F3EDE4' }}>
 
           <div className="flex items-end justify-between mb-12">
             <div>
@@ -262,7 +174,7 @@ export default async function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {featured.map(exp => {
                 const coverUrl = exp.images.find(img => img.is_cover)?.url ?? exp.images[0]?.url ?? null
-                const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country] ?? '') : ''
+                const flag = exp.location_country != null ? (getCountryFlag(exp.location_country)) : ''
                 const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
                 const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} days` : null
                 return (
@@ -326,17 +238,15 @@ export default async function HomePage() {
                           <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
                             {flag} {exp.location_country}
                           </span>
-                          {exp.fish_types[0] != null && (
-                            <>
-                              <span className="text-xs" style={{ color: 'rgba(10,46,77,0.2)' }}>·</span>
-                              <span
-                                className="text-xs font-medium px-2 py-0.5 rounded-full f-body"
-                                style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}
-                              >
-                                {exp.fish_types[0]}
-                              </span>
-                            </>
-                          )}
+                          {exp.fish_types.slice(0, 3).map(fish => (
+                            <span
+                              key={fish}
+                              className="text-xs font-medium px-2 py-0.5 rounded-full f-body"
+                              style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}
+                            >
+                              {fish}
+                            </span>
+                          ))}
                         </div>
                         <h3
                           className="font-semibold text-[15px] leading-snug mb-auto f-display line-clamp-2"
@@ -390,12 +300,25 @@ export default async function HomePage() {
               </p>
             </div>
           )}
-        </div>
+
+          {featured.length > 0 && (
+            <div className="flex justify-center mt-10">
+              <Link
+                href="/experiences"
+                className="flex items-center gap-2 text-sm font-semibold px-8 py-3.5 rounded-full transition-all hover:brightness-110 active:scale-[0.97] f-body"
+                style={{ background: '#0A2E4D', color: '#fff' }}
+              >
+                Browse all experiences
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
+          )}
       </section>
 
       {/* ─── SPECIES PICKER ──────────────────────────────────────────── */}
-      <section className="pb-24 px-4 md:px-6" style={{ background: '#F3EDE4' }}>
-        <div className="max-w-[1440px] mx-auto">
+      <section className="pb-24 px-8 md:px-14" style={{ background: '#F3EDE4' }}>
           <div
             className="mb-11 pt-16 flex items-end justify-between"
             style={{ borderTop: '1px solid rgba(10,46,77,0.09)' }}
@@ -420,40 +343,7 @@ export default async function HomePage() {
               View all trips →
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {species.map(s => (
-              <Link key={s.name} href={`/species/${s.pageSlug}`} className="group block">
-                <div className="relative overflow-hidden" style={{ borderRadius: '22px', height: '210px' }}>
-                  <Image
-                    src={s.img}
-                    alt={s.name}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-[1.08]"
-                  />
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background:
-                        'linear-gradient(to top, rgba(5,10,20,0.9) 18%, rgba(5,10,20,0.18) 55%, transparent 100%)',
-                    }}
-                  />
-                  <div
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: 'rgba(230,126,80,0.12)' }}
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <p className="text-white font-bold text-sm leading-tight f-display">{s.name}</p>
-                    {s.count > 0 && (
-                      <p className="text-xs mt-0.5 f-body" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                        {s.count} {s.count === 1 ? 'trip' : 'trips'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+          <SpeciesSlider species={species} />
       </section>
 
       {/* ─── HOW IT WORKS ────────────────────────────────────────────── */}
@@ -487,7 +377,7 @@ export default async function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 { step: '01', title: 'Find your experience', desc: 'Filter by country, species, and duration. Real prices, no hidden fees.' },
-                { step: '02', title: 'Book with the guide', desc: 'Send a message. Confirm within 24 hours. Pay securely through the platform.' },
+                { step: '02', title: 'Book with the guide', desc: 'Pick your date and book instantly. Confirmed within 24 hours. Pay securely through the platform.' },
                 { step: '03', title: 'Show up and fish', desc: 'Your guide handles everything. You just need to show up ready to cast.' },
               ].map((item) => (
                 <div
@@ -538,7 +428,7 @@ export default async function HomePage() {
       </section>
 
       {/* ─── BLOG PREVIEW ────────────────────────────────────────────── */}
-      <section className="px-4 md:px-6 py-20" style={{ background: '#F3EDE4' }}>
+      {false && <section className="px-4 md:px-6 py-20" style={{ background: '#F3EDE4' }}>
         <div className="max-w-[1440px] mx-auto">
 
           {/* Header */}
@@ -651,7 +541,98 @@ export default async function HomePage() {
             </Link>
           </div>
         </div>
-      </section>
+      </section>}
+
+      {/* ─── FEATURED GUIDES ─────────────────────────────────────────── */}
+      {featuredGuides.length > 0 && (
+        <section className="px-8 md:px-14 py-20" style={{ background: '#F3EDE4' }}>
+            <div className="flex items-end justify-between mb-12">
+              <div>
+                <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-3 f-body" style={{ color: '#E67E50' }}>
+                  Hand-picked
+                </p>
+                <h2 className="text-[#0A2E4D] text-4xl font-bold f-display">
+                  Meet the <span style={{ fontStyle: 'italic' }}>guides.</span>
+                </h2>
+              </div>
+              <Link href="/guides" className="hidden md:block text-sm font-medium hover:text-[#E67E50] transition-colors f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                All guides →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+              {featuredGuides.map((guide: GuideRow) => {
+                const flag = getCountryFlag(guide.country ?? '')
+                const fishPills = (guide.fish_expertise as string[]).slice(0, 3)
+                return (
+                  <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
+                    <article
+                      className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
+                      style={{ borderRadius: '28px', background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)', height: '360px', display: 'flex', flexDirection: 'column' }}
+                    >
+                      {/* Cover */}
+                      <div className="relative overflow-hidden" style={{ height: '180px' }}>
+                        {guide.cover_url != null ? (
+                          <Image src={guide.cover_url} alt={guide.full_name} fill className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
+                        ) : (
+                          <div className="w-full h-full" style={{ background: '#0A2E4D' }} />
+                        )}
+                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{ background: 'rgba(7,17,28,0.22)' }} />
+                      </div>
+
+                      {/* Body */}
+                      <div className="px-6 pb-6 flex flex-col flex-1">
+                        <div className="flex items-end justify-between -mt-8 mb-4" style={{ position: 'relative', zIndex: 10 }}>
+                          <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0" style={{ border: '3px solid #FDFAF7', boxShadow: '0 2px 12px rgba(10,46,77,0.12)' }}>
+                            {guide.avatar_url != null ? (
+                              <Image src={guide.avatar_url} alt={guide.full_name} width={64} height={64} className="object-cover w-full h-full" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white text-xl f-display font-bold" style={{ background: '#0A2E4D' }}>
+                                {guide.full_name[0]}
+                              </div>
+                            )}
+                          </div>
+                          {guide.average_rating != null && (
+                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full f-body" style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+                              ★ {guide.average_rating.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="font-bold text-lg leading-tight mb-1 f-display" style={{ color: '#0A2E4D' }}>{guide.full_name}</h3>
+                        <p className="text-xs mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                          {flag} {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
+                          {guide.years_experience != null && <span> · {guide.years_experience} yrs exp</span>}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {fishPills.map(fish => (
+                            <span key={fish} className="text-xs font-medium px-2.5 py-1 rounded-full f-body" style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}>{fish}</span>
+                          ))}
+                          {(guide.fish_expertise as string[]).length > 3 && (
+                            <span className="text-xs font-medium px-2.5 py-1 rounded-full f-body" style={{ background: 'rgba(10,46,77,0.05)', color: 'rgba(10,46,77,0.4)' }}>
+                              +{(guide.fish_expertise as string[]).length - 3} more
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-auto">
+                          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                            {(guide.languages as string[]).slice(0, 2).join(', ')}
+                            {(guide.languages as string[]).length > 2 && ` +${(guide.languages as string[]).length - 2}`}
+                          </p>
+                          <span className="text-xs font-semibold px-4 py-2 rounded-full transition-all group-hover:brightness-110 f-body" style={{ background: '#E67E50', color: '#fff' }}>
+                            View Profile →
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
+                )
+              })}
+            </div>
+        </section>
+      )}
 
       {/* ─── GUIDE CTA ───────────────────────────────────────────────── */}
       <section style={{ background: '#F3EDE4' }}>
@@ -686,19 +667,21 @@ export default async function HomePage() {
                 <span style={{ fontStyle: 'italic', color: '#E67E50' }}>fishing guide?</span>
               </h2>
               <p className="text-base leading-relaxed mb-10 f-body" style={{ color: 'rgba(255,255,255,0.48)', maxWidth: '380px' }}>
-                Join our founding cohort of Scandinavian guides and reach anglers from across Europe.
+                Send us your Instagram or website — we build your listing for you. No forms, no hassle.
               </p>
               <div className="flex flex-wrap items-center gap-4">
-                <Link
-                  href="/guides/apply"
+                <a
+                  href="https://instagram.com/fjordanglers"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-white font-semibold px-7 py-3.5 rounded-full text-sm transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
                   style={{ background: '#E67E50' }}
                 >
-                  Apply as Founding Guide →
-                </Link>
-                <Link href="/guides" className="text-sm font-medium f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  Meet the guides
-                </Link>
+                  Get listed — DM us →
+                </a>
+                <a href="mailto:guides@fjordanglers.com" className="text-sm font-medium f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                  or email us
+                </a>
               </div>
             </div>
 
@@ -717,19 +700,19 @@ export default async function HomePage() {
                 }}
               >
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] mb-4 f-body" style={{ color: 'rgba(255,255,255,0.38)' }}>
-                  Founding Guide Offer
+                  How it works
                 </p>
                 <p className="f-display font-bold text-white mb-1" style={{ fontSize: '42px', lineHeight: 1 }}>
-                  3 months
+                  We set it
                 </p>
                 <p className="f-display font-bold mb-4" style={{ fontSize: '42px', lineHeight: 1, color: '#E67E50', fontStyle: 'italic' }}>
-                  free.
+                  up for you.
                 </p>
                 <p className="text-sm f-body mb-6" style={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.7 }}>
-                  Then just <span style={{ color: 'rgba(255,255,255,0.75)' }}>8% commission</span> — for life. First 50 guides only.
+                  Send us your profile — we handle the listing. You just show up and guide.
                 </p>
                 <div className="flex flex-col gap-2">
-                  {['€0 setup fee', '48h verification', 'You set your price', 'Anglers from 20+ countries'].map(t => (
+                  {['Free to list', 'We write your profile', 'You set your price', 'Anglers from 20+ countries'].map(t => (
                     <div key={t} className="flex items-center gap-2.5">
                       <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(230,126,80,0.18)' }}>
                         <span style={{ color: '#E67E50', fontSize: '9px' }}>✓</span>
@@ -745,143 +728,7 @@ export default async function HomePage() {
       </section>
 
       {/* ─── FOOTER ──────────────────────────────────────────────────── */}
-      <footer style={{ background: '#05101A' }}>
-
-        {/* Main footer content */}
-        <div className="max-w-[1440px] mx-auto px-6 pt-16 pb-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-
-            {/* Brand column */}
-            <div className="lg:col-span-1">
-              <Image
-                src="/brand/white-logo.png"
-                alt="FjordAnglers"
-                width={140}
-                height={36}
-                className="h-7 w-auto mb-4"
-                style={{ opacity: 0.65 }}
-              />
-              <p
-                className="text-sm leading-relaxed mb-6 f-body"
-                style={{ color: 'rgba(255,255,255,0.28)', maxWidth: '200px' }}
-              >
-                Connecting anglers with the best fishing experiences in Scandinavia.
-              </p>
-              <a
-                href="https://instagram.com/fjordanglers"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2.5 text-[13px] f-body transition-colors hover:text-white/55"
-                style={{ color: 'rgba(255,255,255,0.28)' }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
-                </svg>
-                @fjordanglers
-              </a>
-            </div>
-
-            {/* Explore */}
-            <div>
-              <h4
-                className="text-[10px] font-bold uppercase tracking-[0.24em] mb-5 f-body"
-                style={{ color: 'rgba(255,255,255,0.22)' }}
-              >
-                Explore
-              </h4>
-              <ul className="flex flex-col gap-3">
-                {[
-                  { label: 'All Experiences', href: '/experiences' },
-                  { label: 'Find Guides', href: '/guides' },
-                  { label: 'License Map', href: '/license-map' },
-                  { label: 'Atlantic Salmon', href: '/species/salmon' },
-                  { label: 'Trout Fishing', href: '/species/trout' },
-                ].map(item => (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="text-[13px] f-body transition-colors hover:text-white/55"
-                      style={{ color: 'rgba(255,255,255,0.32)' }}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Destinations */}
-            <div>
-              <h4
-                className="text-[10px] font-bold uppercase tracking-[0.24em] mb-5 f-body"
-                style={{ color: 'rgba(255,255,255,0.22)' }}
-              >
-                Destinations
-              </h4>
-              <ul className="flex flex-col gap-3">
-                {[
-                  { label: '🇳🇴 Norway', href: '/experiences?country=Norway' },
-                  { label: '🇸🇪 Sweden', href: '/experiences?country=Sweden' },
-                  { label: '🇫🇮 Finland', href: '/experiences?country=Finland' },
-                  { label: '🇮🇸 Iceland', href: '/experiences?country=Iceland' },
-                  { label: '🇩🇰 Denmark', href: '/experiences?country=Denmark' },
-                ].map(item => (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="text-[13px] f-body transition-colors hover:text-white/55"
-                      style={{ color: 'rgba(255,255,255,0.32)' }}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* For Guides */}
-            <div>
-              <h4
-                className="text-[10px] font-bold uppercase tracking-[0.24em] mb-5 f-body"
-                style={{ color: 'rgba(255,255,255,0.22)' }}
-              >
-                For Guides
-              </h4>
-              <ul className="flex flex-col gap-3">
-                {[
-                  { label: 'Apply as Guide', href: '/guides/apply' },
-                  { label: 'Guide Dashboard', href: '/dashboard' },
-                  { label: 'Sign in', href: '/login' },
-                ].map(item => (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="text-[13px] f-body transition-colors hover:text-white/55"
-                      style={{ color: 'rgba(255,255,255,0.32)' }}
-                    >
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom bar */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-          <div
-            className="max-w-[1440px] mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-4"
-          >
-            <p className="text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.18)' }}>
-              © 2026 FjordAnglers. All rights reserved.
-            </p>
-            <p className="text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.14)' }}>
-              Norway · Sweden · Finland · Iceland · Denmark
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
     </div>
   )

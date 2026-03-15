@@ -16,7 +16,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
@@ -26,9 +26,46 @@ export async function GET(request: NextRequest) {
 
   if (code != null) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error == null) {
+      // ── Auto-link beta guide listing if invite_email matches ─────────────
+      // When a guide registers with the email stored in guides.invite_email,
+      // we immediately pin their auth account to the listing and grant dashboard access.
+      // Non-fatal: on any error the session is still valid, admin can link manually.
+      const userEmail = data.user?.email
+      const userId    = data.user?.id
+
+      if (userEmail != null && userId != null) {
+        try {
+          const service = createServiceClient()
+
+          const { data: guide } = await service
+            .from('guides')
+            .select('id')
+            .eq('invite_email', userEmail)
+            .is('user_id', null)          // only unlinked listings
+            .maybeSingle()
+
+          if (guide != null) {
+            await Promise.all([
+              service
+                .from('guides')
+                .update({ user_id: userId, is_beta_listing: false })
+                .eq('id', guide.id),
+              // Upsert only id + role — preserves full_name / avatar_url on conflict
+              service
+                .from('profiles')
+                .upsert({ id: userId, role: 'guide' }, { onConflict: 'id' }),
+            ])
+          }
+        } catch (linkErr) {
+          // Do NOT block the redirect — admin can link manually from /admin/guides/[id]
+          console.error('[auth/callback] auto-link error:', linkErr)
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       // Session established — send the user to their destination
       return NextResponse.redirect(`${origin}${next}`)
     }
