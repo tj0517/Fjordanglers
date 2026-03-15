@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import ImageUpload from '@/components/admin/image-upload'
+import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import {
   createExperience,
@@ -506,13 +507,13 @@ export default function ExperienceForm({
 
   // ── Images ───────────────────────────────────────────────────────────────
   const existingImages = dv.images ?? []
-  const [coverUrl, setCoverUrl] = useState<string | null>(existingImages.find(i => i.is_cover)?.url ?? null)
-  const [gallery,  setGallery]  = useState<Array<string | null>>([
-    existingImages.find(i => !i.is_cover && i.sort_order === 1)?.url ?? null,
-    existingImages.find(i => !i.is_cover && i.sort_order === 2)?.url ?? null,
-    existingImages.find(i => !i.is_cover && i.sort_order === 3)?.url ?? null,
-    existingImages.find(i => !i.is_cover && i.sort_order === 4)?.url ?? null,
-  ])
+  const [coverUrl,      setCoverUrl]      = useState<string | null>(existingImages.find(i => i.is_cover)?.url ?? null)
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(
+    existingImages
+      .filter(i => !i.is_cover)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((img, i) => ({ url: img.url, is_cover: false, sort_order: i })),
+  )
 
   // ── Booking type ─────────────────────────────────────────────────────────
   const [bookingType, setBookingType] = useState<'classic' | 'icelandic'>(dv.booking_type ?? 'classic')
@@ -588,8 +589,8 @@ export default function ExperienceForm({
   const buildImages = (): ImageInput[] => {
     const result: ImageInput[] = []
     if (coverUrl != null) result.push({ url: coverUrl, is_cover: true, sort_order: 0 })
-    gallery.forEach((url, i) => {
-      if (url != null) result.push({ url, is_cover: false, sort_order: i + 1 })
+    galleryImages.forEach((img, i) => {
+      result.push({ url: img.url, is_cover: false, sort_order: i + 1 })
     })
     return result
   }
@@ -1684,9 +1685,9 @@ export default function ExperienceForm({
         )}
       </SectionCard>
 
-      <SectionCard title="Photos" subtitle="Cover photo is required. Up to 4 gallery images. JPEG · PNG · WebP — any size, auto-compressed.">
-        <div className="flex flex-col gap-5">
-          {/* Cover */}
+      <SectionCard title="Photos" subtitle="Cover photo is required. Gallery: up to 6 photos, select multiple at once.">
+        <div className="flex flex-col gap-6">
+          {/* Cover — single image with 16:9 crop */}
           <ImageUpload
             label="Cover photo *"
             aspect="wide"
@@ -1694,25 +1695,15 @@ export default function ExperienceForm({
             cropAspect={16 / 9}
             currentUrl={coverUrl}
             onUpload={url => setCoverUrl(url)}
-            hint="Main image — crop to 16:9 before upload"
+            hint="Main card image — crop to 16:9 before upload, full quality"
           />
-          {/* Gallery row */}
-          <div className="grid grid-cols-2 gap-4">
-            {gallery.map((url, i) => (
-              <ImageUpload
-                key={i}
-                label={`Gallery ${i + 1}`}
-                aspect="wide"
-                variant="gallery"
-                currentUrl={url}
-                onUpload={newUrl => setGallery(prev => {
-                  const next = [...prev]
-                  next[i] = newUrl
-                  return next
-                })}
-              />
-            ))}
-          </div>
+          {/* Gallery — multi-select, thumbnails + progress */}
+          <MultiImageUpload
+            label="Gallery photos"
+            max={6}
+            initial={galleryImages}
+            onChange={setGalleryImages}
+          />
         </div>
       </SectionCard>
 

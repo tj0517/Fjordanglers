@@ -195,7 +195,11 @@ function CropModal({ file, aspect, onConfirm, onCancel }: CropModalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const dragRef      = useRef<{ sx: number; sy: number; stx: number; sty: number } | null>(null)
 
-  const [blobUrl]             = useState<string>(() => URL.createObjectURL(file))
+  // ⚠️ Do NOT use useState(() => URL.createObjectURL(file)).
+  //    React Strict Mode unmounts → remounts which runs the cleanup effect and
+  //    revokes the URL before the second mount — causing infinite spinner.
+  //    useEffect guarantees a fresh URL on every real mount.
+  const [blobUrl,  setBlobUrl] = useState<string>('')
   const [loaded,  setLoaded]  = useState(false)
   const [scale,   setScale]   = useState(1)
   const [tx,      setTx]      = useState(0)
@@ -203,8 +207,12 @@ function CropModal({ file, aspect, onConfirm, onCancel }: CropModalProps) {
   const [minScale, setMin]    = useState(1)
   const [working, setWorking] = useState(false)
 
-  // Free blob URL on unmount
-  useEffect(() => () => URL.revokeObjectURL(blobUrl), [blobUrl])
+  // Create & revoke the blob URL — safe with React Strict Mode double-mount
+  useEffect(() => {
+    const url = URL.createObjectURL(file)
+    setBlobUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [file])
 
   /** Clamp tx/ty so the image always fully covers the crop window */
   const clampPos = useCallback(
@@ -365,25 +373,28 @@ function CropModal({ file, aspect, onConfirm, onCancel }: CropModalProps) {
             onPointerUp={onPtrUp}
             onPointerLeave={onPtrUp}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              ref={imgRef}
-              src={blobUrl}
-              alt=""
-              onLoad={handleLoad}
-              style={{
-                position:      'absolute',
-                left:          tx,
-                top:           ty,
-                width:         imgDisplayW,
-                height:        'auto',
-                maxWidth:      'none',
-                display:       loaded ? 'block' : 'none',
-                userSelect:    'none',
-                pointerEvents: 'none',
-              }}
-              draggable={false}
-            />
+            {/* Render only when blob URL is ready — avoids src="" loading current page */}
+            {blobUrl !== '' && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                ref={imgRef}
+                src={blobUrl}
+                alt=""
+                onLoad={handleLoad}
+                style={{
+                  position:      'absolute',
+                  left:          tx,
+                  top:           ty,
+                  width:         imgDisplayW,
+                  height:        'auto',
+                  maxWidth:      'none',
+                  display:       loaded ? 'block' : 'none',
+                  userSelect:    'none',
+                  pointerEvents: 'none',
+                }}
+                draggable={false}
+              />
+            )}
 
             {/* Loading spinner */}
             {!loaded && (
