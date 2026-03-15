@@ -20,11 +20,23 @@ export const COUNTRY_CODE: Record<Country, string> = {
   Denmark: 'dk',
 }
 
-/** Returns a flagcdn.com image URL for the given country. */
+/** Extended ISO codes for angler-origin countries (Central/Western Europe + Scandinavia) */
+const EXTENDED_CODES: Record<string, string> = {
+  norway: 'no', sweden: 'se', finland: 'fi', iceland: 'is', denmark: 'dk',
+  poland: 'pl', germany: 'de', austria: 'at', switzerland: 'ch',
+  'czech republic': 'cz', czechia: 'cz', hungary: 'hu', slovakia: 'sk',
+  netherlands: 'nl', belgium: 'be', france: 'fr', italy: 'it', spain: 'es',
+  uk: 'gb', 'united kingdom': 'gb', 'great britain': 'gb',
+  ireland: 'ie', portugal: 'pt', 'united states': 'us', usa: 'us',
+  estonia: 'ee', latvia: 'lv', lithuania: 'lt',
+}
+
+/** Returns a flagcdn.com image URL for the given country name. */
 export function getFlagUrl(country: string): string | null {
-  const canonical = COUNTRIES.find(c => c.toLowerCase() === country.toLowerCase().trim())
-  if (canonical == null) return null
-  return `https://flagcdn.com/w20/${COUNTRY_CODE[canonical]}.png`
+  const key = country.toLowerCase().trim()
+  const code = EXTENDED_CODES[key]
+  if (code == null) return null
+  return `https://flagcdn.com/w20/${code}.png`
 }
 
 /** @deprecated Emoji flags don't render on Windows — use <CountryFlag> component instead */

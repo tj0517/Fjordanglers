@@ -1,17 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
-/** Maps angler country names (stored in bookings.angler_country) to flag emoji. */
-const COUNTRY_FLAGS: Record<string, string> = {
-  Poland: '🇵🇱', Germany: '🇩🇪', 'Czech Republic': '🇨🇿', Austria: '🇦🇹',
-  Hungary: '🇭🇺', Slovakia: '🇸🇰', Switzerland: '🇨🇭', Netherlands: '🇳🇱',
-  Belgium: '🇧🇪', France: '🇫🇷', Italy: '🇮🇹', Spain: '🇪🇸',
-  UK: '🇬🇧', 'United Kingdom': '🇬🇧', Norway: '🇳🇴', Sweden: '🇸🇪',
-  Finland: '🇫🇮', Denmark: '🇩🇰',
-}
 
 const STATUS_STYLES = {
   confirmed:  { bg: 'rgba(74,222,128,0.1)',    color: '#16A34A', label: 'Confirmed' },
@@ -275,7 +268,6 @@ export default async function DashboardPage() {
               {upcomingBookings.map((booking) => {
                 const status = booking.status as keyof typeof STATUS_STYLES
                 const s = STATUS_STYLES[status] ?? STATUS_STYLES.pending
-                const flag = booking.angler_country != null ? (COUNTRY_FLAGS[booking.angler_country] ?? '') : ''
                 const expTitle = (booking.experience as { title: string } | null)?.title ?? '—'
                 const dateFormatted = new Date(booking.booking_date).toLocaleDateString('en-GB', {
                   day: 'numeric', month: 'short', year: 'numeric',
@@ -286,7 +278,7 @@ export default async function DashboardPage() {
                     {/* Angler */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        {flag !== '' && <span className="text-base leading-none">{flag}</span>}
+                        <CountryFlag country={booking.angler_country} />
                         <p className="text-[#0A2E4D] text-sm font-semibold f-body">
                           {booking.angler_full_name ?? 'Guest'}
                         </p>

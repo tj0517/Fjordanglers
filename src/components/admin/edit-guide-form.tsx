@@ -465,16 +465,18 @@ export default function EditGuideForm({ guide }: Props) {
           <ImageUpload
             label="Cover photo"
             aspect="wide"
+            cropAspect={16 / 9}
             currentUrl={coverUrl || null}
             onUpload={url => setCoverUrl(url)}
-            hint="Landscape photo shown at the top of the guide card — 1200×600px recommended"
+            hint="Landscape — crop to 16:9 before upload"
           />
           <ImageUpload
             label="Avatar / Profile photo"
             aspect="square"
+            cropAspect={1}
             currentUrl={avatarUrl || null}
             onUpload={url => setAvatarUrl(url)}
-            hint="Square headshot shown on the guide listing — 400×400px recommended"
+            hint="Square headshot — crop to 1:1 before upload"
           />
         </div>
 

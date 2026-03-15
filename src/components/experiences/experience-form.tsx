@@ -1691,9 +1691,10 @@ export default function ExperienceForm({
             label="Cover photo *"
             aspect="wide"
             variant="cover"
+            cropAspect={16 / 9}
             currentUrl={coverUrl}
             onUpload={url => setCoverUrl(url)}
-            hint="Main image — uploaded at full quality, no compression"
+            hint="Main image — crop to 16:9 before upload"
           />
           {/* Gallery row */}
           <div className="grid grid-cols-2 gap-4">

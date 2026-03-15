@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getFeaturedExperiences, getPlatformStats, getSpeciesCounts, getFeaturedGuides, getExperienceLocations } from '@/lib/supabase/queries'
 import type { GuideRow } from '@/lib/supabase/queries'
 import { FISH_CATALOG } from '@/lib/fish'
-import { getCountryFlag } from '@/lib/countries'
+import { CountryFlag } from '@/components/ui/country-flag'
 import { SpeciesSlider } from '@/components/home/species-slider'
 import { HomeNav } from '@/components/home/home-nav'
 import { HeroSearchBar } from '@/components/home/hero-search-bar'
@@ -175,9 +175,8 @@ export default async function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {featured.map(exp => {
                 const coverUrl = exp.images.find(img => img.is_cover)?.url ?? exp.images[0]?.url ?? null
-                const flag = exp.location_country != null ? (getCountryFlag(exp.location_country)) : ''
                 const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
-                const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} days` : null
+                const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} ${exp.duration_days === 1 ? 'day' : 'days'}` : null
                 return (
                   <Link key={exp.id} href={`/experiences/${exp.id}`} className="group block">
                     <article
@@ -237,7 +236,7 @@ export default async function HomePage() {
                       <div className="p-5 flex flex-col flex-1">
                         <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
                           <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                            {flag} {exp.location_country}
+                            <CountryFlag country={exp.location_country} /> {exp.location_country}
                           </span>
                           {exp.fish_types.slice(0, 3).map(fish => (
                             <span
@@ -569,7 +568,6 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               {featuredGuides.map((guide: GuideRow) => {
-                const flag = getCountryFlag(guide.country ?? '')
                 const fishPills = (guide.fish_expertise as string[]).slice(0, 3)
                 return (
                   <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
@@ -608,7 +606,7 @@ export default async function HomePage() {
 
                         <h3 className="font-bold text-lg leading-tight mb-1 f-display" style={{ color: '#0A2E4D' }}>{guide.full_name}</h3>
                         <p className="text-xs mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                          {flag} {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
+                          <CountryFlag country={guide.country} /> {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
                           {guide.years_experience != null && <span> · {guide.years_experience} yrs exp</span>}
                         </p>
 

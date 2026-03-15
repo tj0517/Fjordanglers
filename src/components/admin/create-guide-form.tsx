@@ -492,9 +492,10 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
             <ImageUpload
               label="Cover photo"
               aspect="wide"
+              cropAspect={16 / 9}
               currentUrl={coverUrl || null}
               onUpload={url => setCoverUrl(url)}
-              hint="Landscape photo shown at the top of the guide card — ideally 1200×600px"
+              hint="Landscape — crop to 16:9 before upload"
             />
           </div>
 
@@ -503,9 +504,10 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
             <ImageUpload
               label="Avatar / Profile photo"
               aspect="square"
+              cropAspect={1}
               currentUrl={avatarUrl || null}
               onUpload={url => setAvatarUrl(url)}
-              hint="Square headshot shown on the guide listing — ideally 400×400px"
+              hint="Square headshot — crop to 1:1 before upload"
             />
           </div>
         </div>

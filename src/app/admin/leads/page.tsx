@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import LeadActions from '@/components/admin/lead-actions'
 import type { LeadStatus } from '@/actions/admin'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 /**
  * /admin/leads — Lead pipeline page.
@@ -62,14 +63,6 @@ const PLAN_LABELS: Record<string, string> = {
   founding: 'Founding 8%',
 }
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴', Sweden: '🇸🇪', Finland: '🇫🇮',
-  Iceland: '🇮🇸', Denmark: '🇩🇰', Germany: '🇩🇪',
-  Poland: '🇵🇱', Netherlands: '🇳🇱', France: '🇫🇷',
-  'United Kingdom': '🇬🇧', Austria: '🇦🇹', Belgium: '🇧🇪',
-  Switzerland: '🇨🇭', Estonia: '🇪🇪', Latvia: '🇱🇻',
-  Lithuania: '🇱🇹', 'Czech Republic': '🇨🇿', Slovakia: '🇸🇰',
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -184,7 +177,6 @@ export default async function AdminLeadsPage() {
               const notes    = parseNotes(lead.notes)
               const status   = (lead.status ?? 'new') as LeadStatus
               const sCfg     = STATUS_CONFIG[status] ?? STATUS_CONFIG.new
-              const flag     = COUNTRY_FLAGS[lead.country ?? ''] ?? ''
               const topFish  = (lead.fish_types ?? []).slice(0, 2).join(', ')
               const moreFish = (lead.fish_types ?? []).length - 2
               const planLabel = PLAN_LABELS[notes.plan ?? ''] ?? notes.plan ?? '—'
@@ -226,7 +218,7 @@ export default async function AdminLeadsPage() {
 
                   {/* Location */}
                   <p className="text-[#0A2E4D]/65 text-sm f-body">
-                    {flag !== '' ? `${flag} ` : ''}{lead.country ?? '—'}
+                    <CountryFlag country={lead.country} /> {lead.country ?? '—'}
                   </p>
 
                   {/* Fish / Plan */}

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 import BookingActions from '@/components/dashboard/booking-actions'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -24,13 +25,6 @@ const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: s
   declined:   { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined' },
 }
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  Poland: '🇵🇱', Germany: '🇩🇪', 'Czech Republic': '🇨🇿', Austria: '🇦🇹',
-  Hungary: '🇭🇺', Slovakia: '🇸🇰', Switzerland: '🇨🇭', Netherlands: '🇳🇱',
-  Belgium: '🇧🇪', France: '🇫🇷', Italy: '🇮🇹', Spain: '🇪🇸',
-  UK: '🇬🇧', 'United Kingdom': '🇬🇧', Norway: '🇳🇴', Sweden: '🇸🇪',
-  Finland: '🇫🇮', Denmark: '🇩🇰', Iceland: '🇮🇸',
-}
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
@@ -197,7 +191,6 @@ export default async function BookingsPage() {
           <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
             {bookings.map((booking) => {
               const s = STATUS_STYLES[booking.status]
-              const flag = booking.angler_country != null ? (COUNTRY_FLAGS[booking.angler_country] ?? '') : ''
               const expTitle = booking.experience?.title ?? '—'
               const dateFormatted = new Date(booking.booking_date).toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short', year: 'numeric',
@@ -215,7 +208,7 @@ export default async function BookingsPage() {
                   {/* Angler */}
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      {flag !== '' && <span className="text-sm leading-none flex-shrink-0">{flag}</span>}
+                      <CountryFlag country={booking.angler_country} size={16} />
                       <p className="text-[#0A2E4D] text-sm font-semibold f-body truncate">
                         {booking.angler_full_name ?? 'Guest'}
                       </p>

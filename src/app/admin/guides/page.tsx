@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import LinkGuideButton from '@/components/admin/link-guide-button'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -11,11 +12,6 @@ const STATUS_STYLES = {
   verified:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Verified' },
   suspended: { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Suspended' },
 } as const
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴', Sweden: '🇸🇪', Finland: '🇫🇮',
-  Iceland: '🇮🇸', Denmark: '🇩🇰',
-}
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -114,7 +110,6 @@ export default async function AdminGuidesPage() {
             {allGuides.map((guide) => {
               const status = guide.status as keyof typeof STATUS_STYLES
               const s = STATUS_STYLES[status] ?? STATUS_STYLES.pending
-              const flag = COUNTRY_FLAGS[guide.country] ?? ''
               const topFish = guide.fish_expertise.slice(0, 2).join(', ')
               const added = new Date(guide.created_at).toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short', year: 'numeric',
@@ -194,7 +189,7 @@ export default async function AdminGuidesPage() {
 
                   {/* Location */}
                   <p className="text-[#0A2E4D]/65 text-sm f-body">
-                    {flag} {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
+                    <CountryFlag country={guide.country} /> {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
                   </p>
 
                   {/* Specialty */}

@@ -312,17 +312,19 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
               label="Avatar photo"
               aspect="square"
               variant="avatar"
+              cropAspect={1}
               currentUrl={avatarUrl}
               onUpload={url => setAvatarUrl(url)}
-              hint="Square, min 400×400px"
+              hint="Square — crop to 1:1 before upload"
             />
             <ImageUpload
               label="Cover photo"
               aspect="wide"
               variant="cover"
+              cropAspect={16 / 9}
               currentUrl={coverUrl}
               onUpload={url => setCoverUrl(url)}
-              hint="Wide banner — uploaded at full quality"
+              hint="Wide banner — crop to 16:9 before upload"
             />
           </div>
         </div>

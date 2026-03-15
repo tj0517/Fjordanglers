@@ -5,6 +5,7 @@ import type { Metadata } from 'next'
 import { getExperiences } from '@/lib/supabase/queries'
 import type { ExperienceWithGuide } from '@/types'
 import { FISH_IMG_BY_PAGE_SLUG } from '@/lib/fish'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 export const revalidate = 3600
 
@@ -531,9 +532,6 @@ export default async function SpeciesPage({ params }: Props) {
 
 // ─── EXPERIENCE CARD ──────────────────────────────────────────────────────────
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴', Sweden: '🇸🇪', Finland: '🇫🇮', Denmark: '🇩🇰', Iceland: '🇮🇸',
-}
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'All Levels', intermediate: 'Intermediate', expert: 'Expert',
@@ -541,7 +539,6 @@ const DIFFICULTY_LABEL: Record<string, string> = {
 
 function ExperienceCard({ exp }: { exp: ExperienceWithGuide }) {
   const coverUrl = exp.images.find(img => img.is_cover)?.url ?? exp.images[0]?.url ?? null
-  const flag      = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country] ?? '') : ''
   const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
   const duration  = exp.duration_hours != null
     ? `${exp.duration_hours}h`
@@ -611,7 +608,7 @@ function ExperienceCard({ exp }: { exp: ExperienceWithGuide }) {
         <div className="p-5 flex flex-col flex-1">
           <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
             <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-              {flag} {exp.location_country}
+              <CountryFlag country={exp.location_country} /> {exp.location_country}
             </span>
             {exp.fish_types[0] != null && (
               <>
