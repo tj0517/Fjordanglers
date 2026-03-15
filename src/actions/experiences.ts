@@ -12,9 +12,9 @@ import type { LocationSpot } from '@/types'
  *     (verified via guides.user_id = auth.uid())
  *
  * Used from:
- *   /admin/guides/[id]/experiences/new  (admin creates for guide)
- *   /dashboard/experiences/new          (guide creates own)
- *   /dashboard/experiences/[id]/edit    (guide edits own)
+ *   /admin/guides/[id]/trips/new  (admin creates for guide)
+ *   /dashboard/trips/new          (guide creates own)
+ *   /dashboard/trips/[id]/edit    (guide edits own)
  */
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
@@ -197,7 +197,9 @@ export async function createExperience(
         duration_hours:       payload.duration_hours ?? null,
         duration_days:        payload.duration_days ?? null,
         max_guests:           payload.max_guests,
-        price_per_person_eur: payload.price_per_person_eur,
+        // 0 = sentinel for "price on request" (icelandic) — column is NOT NULL in DB
+        // until migration 20260315220000 is applied; display checks booking_type, not value
+        price_per_person_eur: payload.price_per_person_eur ?? 0,
         location_country:     payload.location_country?.trim() || null,
         location_city:        payload.location_city?.trim() || null,
         meeting_point:        payload.meeting_point?.trim() || null,
@@ -276,7 +278,7 @@ export async function updateExperience(
     if (payload.duration_hours !== undefined) update.duration_hours     = payload.duration_hours ?? null
     if (payload.duration_days !== undefined)  update.duration_days      = payload.duration_days ?? null
     if (payload.max_guests != null)          update.max_guests          = payload.max_guests
-    if (payload.price_per_person_eur !== undefined) update.price_per_person_eur = payload.price_per_person_eur ?? null
+    if (payload.price_per_person_eur !== undefined) update.price_per_person_eur = payload.price_per_person_eur ?? 0
     if (payload.location_country !== undefined) update.location_country = payload.location_country?.trim() || null
     if (payload.location_city !== undefined) update.location_city       = payload.location_city?.trim() || null
     if (payload.meeting_point !== undefined) update.meeting_point       = payload.meeting_point?.trim() || null
