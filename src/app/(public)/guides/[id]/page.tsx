@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getGuide, getGuideExperiences } from '@/lib/supabase/queries'
 import { ExperienceGallery } from '@/components/experiences/experience-gallery'
+import { CountryFlag } from '@/components/ui/country-flag'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 
@@ -10,13 +11,6 @@ import { getLandscapeUrl } from '@/lib/landscapes'
 
 const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴',
-  Sweden: '🇸🇪',
-  Finland: '🇫🇮',
-  Iceland: '🇮🇸',
-  Denmark: '🇩🇰',
-}
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'All Levels',
@@ -93,7 +87,7 @@ export default async function GuideProfilePage({
 
   if (guide == null) notFound()
 
-  const flag = COUNTRY_FLAGS[guide.country] ?? ''
+  // flag rendered as <CountryFlag> below
   const landscapeUrl = getLandscapeUrl(guide.country, guide.id)
 
   return (
@@ -176,7 +170,7 @@ export default async function GuideProfilePage({
 
             <div className="flex items-center gap-4 mt-2">
               <p className="text-white/45 text-sm f-body">
-                {flag} {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
+                <CountryFlag country={guide.country} /> {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
               </p>
               {guide.average_rating != null && (
                 <p className="text-white/55 text-sm f-body">
@@ -395,7 +389,7 @@ export default async function GuideProfilePage({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {guideExperiences.map(exp => {
                       const coverUrl = cardThumb(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
-                      const expFlag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country] ?? '') : ''
+                      // expFlag rendered as <CountryFlag> below
                       const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
                       const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} days` : null
 
@@ -426,7 +420,7 @@ export default async function GuideProfilePage({
 
                             <div className="p-5">
                               <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-                                <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>{expFlag} {exp.location_country}</span>
+                                <span className="text-xs f-body flex items-center gap-1" style={{ color: 'rgba(10,46,77,0.5)' }}><CountryFlag country={exp.location_country} /> {exp.location_country}</span>
                                 <span className="text-xs" style={{ color: 'rgba(10,46,77,0.2)' }}>·</span>
                                 {exp.fish_types.slice(0, 2).map(fish => (
                                   <span key={fish} className="text-xs font-medium px-2.5 py-1 rounded-full f-body" style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}>
@@ -476,7 +470,7 @@ export default async function GuideProfilePage({
                   <div>
                     <h3 className="font-bold f-display text-base" style={{ color: '#0A2E4D' }}>{guide.full_name}</h3>
                     <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                      {flag} {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
+                      <CountryFlag country={guide.country} /> {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
                     </p>
                   </div>
                 </div>

@@ -5,15 +5,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import type { ExperienceWithGuide, LocationSpot } from '@/types'
 import { cardThumb } from '@/lib/image'
+import { CountryFlag } from '@/components/ui/country-flag'
 import MapWrapper from './map-wrapper'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
 
 const NAV_H = 96
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴', Sweden: '🇸🇪', Finland: '🇫🇮', Iceland: '🇮🇸', Denmark: '🇩🇰',
-}
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'All Levels', intermediate: 'Intermediate', expert: 'Expert',
 }
@@ -139,7 +136,7 @@ export default function MapSection({
               {visibleExperiences.map(exp => {
                 const rawCover = exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url ?? null
                 const coverUrl = cardThumb(rawCover)
-                const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country] ?? '') : ''
+                // flag rendered as <CountryFlag> below
                 const diffLabel =
                   exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
                 const duration =
@@ -236,7 +233,7 @@ export default function MapSection({
                         </div>
 
                         <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
-                          {flag}{exp.location_city != null ? ` ${exp.location_city},` : ''} {exp.location_country}
+                          <CountryFlag country={exp.location_country} />{exp.location_city != null ? ` ${exp.location_city},` : ''} {exp.location_country}
                         </p>
 
                         {/* Guide avatar + name */}

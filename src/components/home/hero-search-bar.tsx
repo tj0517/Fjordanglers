@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Command } from 'cmdk'
 import type { LocationEntry } from '@/lib/supabase/queries'
-import { COUNTRIES, COUNTRY_FLAG, getCountryFlag } from '@/lib/countries'
+import { COUNTRIES, getCountryFlag } from '@/lib/countries'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
@@ -308,6 +309,7 @@ export function HeroSearchBar({ locations }: { locations: LocationEntry[] }) {
         borderRadius: '20px',
         border: '1px solid rgba(255,255,255,0.14)',
         position: 'relative',
+        zIndex: 10,
       }}
     >
       {/* ── Destination ──────────────────────────────────── */}
@@ -362,7 +364,7 @@ export function HeroSearchBar({ locations }: { locations: LocationEntry[] }) {
                       className="flex items-center gap-3 px-3 py-2.5 text-sm f-body cursor-pointer rounded-[10px]"
                       style={{ color: 'rgba(255,255,255,0.72)' }}
                     >
-                      <span className="text-base leading-none">{h.flag}</span>
+                      <CountryFlag country={h.value} />
                       <span>{h.value}</span>
                     </Command.Item>
                   ))}
@@ -382,7 +384,7 @@ export function HeroSearchBar({ locations }: { locations: LocationEntry[] }) {
                     heading={
                       <span className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest f-body"
                         style={{ color: 'rgba(255,255,255,0.28)' }}>
-                        <span>{flag}</span> {country}
+                        <CountryFlag country={country} /> {country}
                       </span>
                     }
                   >
@@ -443,7 +445,7 @@ export function HeroSearchBar({ locations }: { locations: LocationEntry[] }) {
             WebkitBackdropFilter: 'blur(12px)',
           }}
         >
-          <span className="text-base leading-none">{COUNTRY_FLAG[country]}</span>
+          <CountryFlag country={country} />
           <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.75)' }}>{country}</span>
         </button>
       ))}

@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FISH_FILTER as SPECIES } from '@/lib/fish'
 import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export default function ExperienceFilters() {
       {/* Country */}
       {COUNTRIES.map(c => (
         <button key={c.value} onClick={() => toggle('country', c.value, country)} className={CLS} style={chip(country === c.value)}>
-          {c.flag} {c.value}
+          <CountryFlag country={c.value} /> {c.value}
         </button>
       ))}
 

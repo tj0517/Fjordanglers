@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FISH_FILTER as SPECIES } from '@/lib/fish'
 import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
+import { CountryFlag } from '@/components/ui/country-flag'
+
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -199,7 +201,7 @@ export default function FiltersSidebar({ count }: { count: number }) {
               >
                 <Checkbox active={active} />
                 <span className="text-sm f-body transition-colors" style={{ color: active ? '#0A2E4D' : 'rgba(10,46,77,0.6)' }}>
-                  {c.flag} {c.label}
+                  <CountryFlag country={c.value} /> {c.label}
                 </span>
               </button>
             )

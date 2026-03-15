@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { FISH_FILTER, FISH_IMG } from '@/lib/fish'
 import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
@@ -337,7 +338,7 @@ export function SearchBar() {
     router.push(`/experiences?${p.toString()}`)
   }
 
-  const countryOptions = COUNTRIES.map(c => ({ value: c.value, label: c.value, meta: c.flag }))
+  const countryOptions = COUNTRIES.map(c => ({ value: c.value, label: c.value, meta: c.code }))
   const fishOptions    = [...FISH_FILTER].map(s => ({ value: s, label: s }))
 
   return (
@@ -369,7 +370,7 @@ export function SearchBar() {
           emptyLabel="Anywhere"
           renderItem={o => (
             <>
-              <span className="text-base leading-none">{o.meta}</span>
+              <CountryFlag country={o.label} size={18} />
               <span className="text-[14px] font-medium f-body">{o.label}</span>
             </>
           )}

@@ -15,14 +15,11 @@ import type { InclusionsPayload, DurationOptionPayload } from '@/actions/experie
 import { FISH_IMG } from '@/lib/fish'
 import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
 const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴', Sweden: '🇸🇪', Finland: '🇫🇮',
-}
 
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'All Levels', intermediate: 'Intermediate', expert: 'Expert',
@@ -445,7 +442,7 @@ export default async function ExperienceDetailPage({
 
   const coverUrl = heroFull(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
   const landscapeUrl = exp.landscape_url ?? getLandscapeUrl(exp.location_country, exp.id)
-const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country] ?? '') : ''
+// flag rendered as <CountryFlag> below
   const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
 
   // Duration options from JSONB — fall back to legacy scalars
@@ -591,8 +588,8 @@ const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country]
                 Experiences
               </Link>
               <span className="text-white/30 text-xs">›</span>
-              <span className="text-white/55 text-xs f-body" style={{ textShadow: '0 1px 8px rgba(4,12,22,0.7)' }}>
-                {flag} {exp.location_country}
+              <span className="text-white/55 text-xs f-body flex items-center gap-1" style={{ textShadow: '0 1px 8px rgba(4,12,22,0.7)' }}>
+                <CountryFlag country={exp.location_country} /> {exp.location_country}
               </span>
               <span className="text-white/30 text-xs">›</span>
               <span className="text-white/70 text-xs f-body line-clamp-1 max-w-xs" style={{ textShadow: '0 1px 8px rgba(4,12,22,0.7)' }}>
@@ -650,7 +647,7 @@ const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country]
                 textShadow: '0 1px 16px rgba(4,12,22,0.8)',
               }}
             >
-              {flag} {exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
+              <CountryFlag country={exp.location_country} /> {exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
             </p>
           </div>
         </div>
@@ -942,7 +939,7 @@ const flag = exp.location_country != null ? (COUNTRY_FLAGS[exp.location_country]
                             pointerEvents: 'none',
                           }}
                         >
-                          <span style={{ fontSize: '13px' }}>{flag}</span>
+                          <CountryFlag country={exp.location_country} />
                           <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>
                             {exp.location_city ?? exp.location_country}
                           </span>

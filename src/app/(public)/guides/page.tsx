@@ -1,20 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 export const dynamic = 'force-dynamic'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
 const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  Norway: '🇳🇴',
-  Sweden: '🇸🇪',
-  Finland: '🇫🇮',
-  Iceland: '🇮🇸',
-  Denmark: '🇩🇰',
-}
 
 const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Iceland'] as const
 const LANGUAGES = ['English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic', 'German'] as const
@@ -159,7 +152,7 @@ export default async function GuidesPage({
                       : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }
                   }
                 >
-                  <span>{COUNTRY_FLAGS[c]}</span>
+                  <CountryFlag country={c} />
                   <span>{c}</span>
                 </Link>
               )
@@ -220,7 +213,7 @@ export default async function GuidesPage({
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {guides.map(guide => {
-              const flag = COUNTRY_FLAGS[guide.country] ?? ''
+              // flag rendered as <CountryFlag> below
               const fishPills = guide.fish_expertise.slice(0, 3)
 
               return (
@@ -292,7 +285,7 @@ export default async function GuidesPage({
                       </h3>
 
                       <p className="text-xs mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {flag} {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
+                        <CountryFlag country={guide.country} /> {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
                         {guide.years_experience != null && (
                           <span> · {guide.years_experience} yrs exp</span>
                         )}
