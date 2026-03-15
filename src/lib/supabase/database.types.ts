@@ -308,7 +308,7 @@ export type Database = {
           meeting_point_lng: number | null
           meeting_time: string | null
           booking_type: string
-          price_per_person_eur: number
+          price_per_person_eur: number | null
           published: boolean
           season_from: number | null
           season_to: number | null
@@ -353,7 +353,7 @@ export type Database = {
           meeting_point_lng?: number | null
           meeting_time?: string | null
           booking_type?: string
-          price_per_person_eur: number
+          price_per_person_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null
@@ -398,7 +398,7 @@ export type Database = {
           meeting_point_lng?: number | null
           meeting_time?: string | null
           booking_type?: string
-          price_per_person_eur?: number
+          price_per_person_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null

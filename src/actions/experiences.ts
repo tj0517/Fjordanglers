@@ -76,7 +76,8 @@ export type ExperiencePayload = {
   duration_hours?: number | null
   duration_days?: number | null
   max_guests: number
-  price_per_person_eur: number
+  /** null for booking_type='icelandic' (price on request) */
+  price_per_person_eur: number | null
   location_country?: string | null
   location_city?: string | null
   meeting_point?: string | null
@@ -94,7 +95,8 @@ export type ExperiencePayload = {
   season_from?: number | null
   season_to?: number | null
   fishing_methods?: string[]
-  duration_options?: DurationOptionPayload[]
+  /** null for booking_type='icelandic' — clears previous duration data */
+  duration_options?: DurationOptionPayload[] | null
   group_pricing?: GroupPricingPayload | null
   inclusions_data?: InclusionsPayload | null
   landscape_url?: string | null
@@ -274,7 +276,7 @@ export async function updateExperience(
     if (payload.duration_hours !== undefined) update.duration_hours     = payload.duration_hours ?? null
     if (payload.duration_days !== undefined)  update.duration_days      = payload.duration_days ?? null
     if (payload.max_guests != null)          update.max_guests          = payload.max_guests
-    if (payload.price_per_person_eur != null) update.price_per_person_eur = payload.price_per_person_eur
+    if (payload.price_per_person_eur !== undefined) update.price_per_person_eur = payload.price_per_person_eur ?? null
     if (payload.location_country !== undefined) update.location_country = payload.location_country?.trim() || null
     if (payload.location_city !== undefined) update.location_city       = payload.location_city?.trim() || null
     if (payload.meeting_point !== undefined) update.meeting_point       = payload.meeting_point?.trim() || null
@@ -290,7 +292,7 @@ export async function updateExperience(
     if (payload.season_from !== undefined)    update.season_from        = payload.season_from ?? null
     if (payload.season_to !== undefined)      update.season_to          = payload.season_to ?? null
     if (payload.fishing_methods != null)      update.fishing_methods    = payload.fishing_methods
-    if (payload.duration_options != null)     update.duration_options   = payload.duration_options
+    if (payload.duration_options !== undefined) update.duration_options  = payload.duration_options ?? null
     if (payload.group_pricing !== undefined)  update.group_pricing      = payload.group_pricing ?? null
     if (payload.inclusions_data !== undefined) update.inclusions        = payload.inclusions_data ?? null
     if (payload.landscape_url !== undefined)   update.landscape_url     = payload.landscape_url ?? null

@@ -254,8 +254,8 @@ type BookingWidgetProps = {
   /** Parsed duration_options from DB (Json column). Null → fall back to legacyPrice. */
   rawDurationOptions: Json | null
   maxGuests: number
-  /** Backward-compat price used when duration_options is absent. */
-  legacyPricePerPerson: number
+  /** Backward-compat price used when duration_options is absent. Null for icelandic/on-request. */
+  legacyPricePerPerson: number | null
   difficulty?: string | null
   durationHours?: number | null
   durationDays?: number | null
@@ -381,7 +381,7 @@ export function BookingWidget({
         hours:            legacyDurationHours ?? null,
         days:             legacyDurationDays  ?? null,
         pricing_type:     'per_person',
-        price_eur:        legacyPricePerPerson,
+        price_eur:        legacyPricePerPerson ?? 0,
         includes_lodging: false,
       }]
     }
@@ -1061,7 +1061,7 @@ export function MobileBookingBar({
     if (!Array.isArray(rawDurationOptions) || rawDurationOptions.length === 0) {
       return [{
         label: '', hours: durationHours ?? null, days: durationDays ?? null,
-        pricing_type: 'per_person', price_eur: legacyPricePerPerson,
+        pricing_type: 'per_person', price_eur: legacyPricePerPerson ?? 0,
         includes_lodging: false,
       }]
     }

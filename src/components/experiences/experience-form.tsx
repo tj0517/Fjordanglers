@@ -629,27 +629,30 @@ export default function ExperienceForm({
     if (fishTypes.length === 0)    { setError('Select at least one target species.'); return }
     if (maxGuests === '')          { setError('Maximum guests is required.'); return }
 
-    if (durationOptions.length === 0) {
-      setError('Add at least one duration option.')
-      return
-    }
-    for (let i = 0; i < durationOptions.length; i++) {
-      const opt = durationOptions[i]
-      if (opt.label.trim() === '') {
-        setError(`Duration option ${i + 1} needs a label (e.g. "Full day").`)
+    // Duration / pricing validation — skip entirely for "on request" (icelandic) flow
+    if (bookingType !== 'icelandic') {
+      if (durationOptions.length === 0) {
+        setError('Add at least one duration option.')
         return
       }
-      if (opt.pricing_type === 'per_group') {
-        const hasAnyPrice = Object.values(opt.group_prices).some(v => v !== '' && parseFloat(v) > 0)
-        if (!hasAnyPrice) {
-          setError(`Option "${opt.label}": set at least one group size price.`)
+      for (let i = 0; i < durationOptions.length; i++) {
+        const opt = durationOptions[i]
+        if (opt.label.trim() === '') {
+          setError(`Duration option ${i + 1} needs a label (e.g. "Full day").`)
           return
         }
-      } else {
-        const p = parseFloat(opt.price_eur)
-        if (opt.price_eur === '' || isNaN(p) || p <= 0) {
-          setError(`Option "${opt.label || i + 1}" needs a price greater than 0.`)
-          return
+        if (opt.pricing_type === 'per_group') {
+          const hasAnyPrice = Object.values(opt.group_prices).some(v => v !== '' && parseFloat(v) > 0)
+          if (!hasAnyPrice) {
+            setError(`Option "${opt.label}": set at least one group size price.`)
+            return
+          }
+        } else {
+          const p = parseFloat(opt.price_eur)
+          if (opt.price_eur === '' || isNaN(p) || p <= 0) {
+            setError(`Option "${opt.label || i + 1}" needs a price greater than 0.`)
+            return
+          }
         }
       }
     }
@@ -659,32 +662,41 @@ export default function ExperienceForm({
       return
     }
 
-    // ── Build duration options payload (pricing now lives per-option) ────────
-    const durationOptionsPayload: DurationOptionPayload[] = durationOptions.map(opt => {
-      const base = {
-        label:            opt.label.trim(),
-        hours:            opt.hours !== '' ? parseInt(opt.hours, 10) : null,
-        days:             opt.days  !== '' ? parseInt(opt.days,  10) : null,
-        pricing_type:     opt.pricing_type,
-        includes_lodging: opt.includes_lodging,
-      }
-      if (opt.pricing_type === 'per_group') {
-        const prices: Record<string, number> = {}
-        Object.entries(opt.group_prices).forEach(([k, v]) => {
-          if (v !== '' && !isNaN(parseFloat(v))) prices[k] = parseFloat(v)
-        })
-        const vals = Object.values(prices)
-        const minPrice = vals.length > 0 ? Math.min(...vals) : 0
-        return { ...base, price_eur: minPrice, group_prices: prices }
-      }
-      return { ...base, price_eur: parseFloat(opt.price_eur) }
-    })
+    // ── Build duration options + pricing payload ──────────────────────────
+    // For "on request" (icelandic) booking type: price, duration and options
+    // are all null — the guide quotes a price per individual inquiry.
+    let durationOptionsPayload: DurationOptionPayload[] | null = null
+    let durationHours: number | null = null
+    let durationDays:  number | null = null
+    let pricePerPerson: number | null = null
 
-    // ── Derive backward-compat scalars from first duration option ─────────
-    const firstOpt = durationOptions[0]
-    const durationHours  = firstOpt.hours !== '' ? parseInt(firstOpt.hours, 10) : null
-    const durationDays   = firstOpt.days  !== '' ? parseInt(firstOpt.days,  10) : null
-    const pricePerPerson = durationOptionsPayload[0].price_eur
+    if (bookingType !== 'icelandic') {
+      durationOptionsPayload = durationOptions.map(opt => {
+        const base = {
+          label:            opt.label.trim(),
+          hours:            opt.hours !== '' ? parseInt(opt.hours, 10) : null,
+          days:             opt.days  !== '' ? parseInt(opt.days,  10) : null,
+          pricing_type:     opt.pricing_type,
+          includes_lodging: opt.includes_lodging,
+        }
+        if (opt.pricing_type === 'per_group') {
+          const prices: Record<string, number> = {}
+          Object.entries(opt.group_prices).forEach(([k, v]) => {
+            if (v !== '' && !isNaN(parseFloat(v))) prices[k] = parseFloat(v)
+          })
+          const vals = Object.values(prices)
+          const minPrice = vals.length > 0 ? Math.min(...vals) : 0
+          return { ...base, price_eur: minPrice, group_prices: prices }
+        }
+        return { ...base, price_eur: parseFloat(opt.price_eur) }
+      })
+
+      // Derive backward-compat scalars from first duration option
+      const firstOpt = durationOptions[0]
+      durationHours  = firstOpt.hours !== '' ? parseInt(firstOpt.hours, 10) : null
+      durationDays   = firstOpt.days  !== '' ? parseInt(firstOpt.days,  10) : null
+      pricePerPerson = durationOptionsPayload[0].price_eur
+    }
 
     // ── Build inclusions payload ───────────────────────────────────────────
     const inclusionsPayload: InclusionsPayload = {
