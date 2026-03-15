@@ -201,7 +201,7 @@ function AreaOverlay({ exp, visible }: { exp: ExperienceWithGuide; visible: bool
   return null
 }
 
-// ─── Hint control — "hover a pin to see fishing area" ─────────────────────────
+// ─── Hint control — "hover / click a pin to see fishing area" ─────────────────
 function AreaHoverHint() {
   const map = useMap()
   useEffect(() => {
@@ -232,7 +232,7 @@ function AreaHoverHint() {
           color: rgba(10,46,77,0.65);
           white-space: nowrap;
           line-height: 1;
-        ">Hover a pin · see guide's fishing territory</span>
+        ">Hover to preview area · click pin to lock it</span>
       </div>
     `
     L.DomEvent.disableClickPropagation(container)
@@ -242,6 +242,12 @@ function AreaHoverHint() {
     ctrl.addTo(map)
     return () => { ctrl.remove() }
   }, [map])
+  return null
+}
+
+// ─── Clears pinnedAreaId when user clicks the map background ──────────────────
+function MapClickClearer({ onClear }: { onClear: () => void }) {
+  useMapEvents({ click: onClear })
   return null
 }
 
@@ -335,11 +341,20 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
   // Combined with hoveredExpId (card hover) via isHighlighted() below.
   // Replaces all previous direct e.target.setIcon() calls — icon is now
   // fully reactive so both hover sources work through a single code path.
-  const [mapHoveredId, setMapHoveredId] = useState<string | null>(null)
+  const [mapHoveredId,  setMapHoveredId]  = useState<string | null>(null)
+  // pinnedAreaId — ID of the area-type experience whose polygon is "locked"
+  // visible after a click. Stays until the same pin is clicked again or the
+  // user clicks the map background.
+  const [pinnedAreaId,  setPinnedAreaId]  = useState<string | null>(null)
 
-  // An experience pin is visually highlighted if hovered from either source
+  // An experience pin is visually highlighted if:
+  //   • hovered on map, OR
+  //   • its card is hovered in the listing panel, OR
+  //   • its area has been pinned by a click
   const isHighlighted = (id: string) =>
-    mapHoveredId === id || (hoveredExpId != null && hoveredExpId === id)
+    mapHoveredId === id ||
+    (hoveredExpId != null && hoveredExpId === id) ||
+    pinnedAreaId === id
 
   const multiSpot = experiences
     .map(exp => ({ exp, spots: (exp.location_spots as unknown as LocationSpot[] | null) ?? [] }))
@@ -368,6 +383,9 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
     >
       {onBoundsChange != null && <BoundsTracker onBoundsChange={onBoundsChange} />}
 
+      {/* Clears pinned area when user clicks map background */}
+      <MapClickClearer onClear={() => setPinnedAreaId(null)} />
+
       {/* Hint badge — only rendered when area experiences exist */}
       {withArea.length > 0 && <AreaHoverHint />}
 
@@ -394,6 +412,11 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
                 eventHandlers={{
                   mouseover: () => setMapHoveredId(exp.id),
                   mouseout:  () => setMapHoveredId(null),
+                  // Toggle pinned area: click same pin to unpin, click another to switch
+                  click: (e) => {
+                    L.DomEvent.stopPropagation(e.originalEvent)
+                    setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
+                  },
                 }}
               >
                 <Popup closeButton={false} className="fjord-popup">
