@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getGuide, getGuideExperiences } from '@/lib/supabase/queries'
+import { ExperienceGallery } from '@/components/experiences/experience-gallery'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 
@@ -217,6 +218,20 @@ export default async function GuideProfilePage({
                   </p>
                 )}
               </section>
+
+              {/* Gallery */}
+              {guide.images != null && guide.images.length > 0 && (
+                <section className="mb-12">
+                  <SalmonRule />
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] mt-4 mb-4 f-body" style={{ color: '#E67E50' }}>
+                    Photos
+                  </p>
+                  <ExperienceGallery
+                    images={guide.images}
+                    title={guide.full_name}
+                  />
+                </section>
+              )}
 
               {/* Specialties */}
               {guide.specialties != null && guide.specialties.length > 0 && (

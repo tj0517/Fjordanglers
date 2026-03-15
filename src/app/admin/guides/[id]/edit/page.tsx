@@ -35,15 +35,27 @@ export default async function AdminEditGuidePage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: guide } = await supabase
-    .from('guides')
-    .select(
-      'id, full_name, country, city, bio, languages, fish_expertise, years_experience, avatar_url, cover_url, instagram_url, youtube_url, pricing_model, status, is_beta_listing',
-    )
-    .eq('id', id)
-    .single()
+  const [{ data: guide }, { data: guideImages }] = await Promise.all([
+    supabase
+      .from('guides')
+      .select(
+        'id, full_name, country, city, bio, languages, fish_expertise, years_experience, avatar_url, cover_url, instagram_url, youtube_url, pricing_model, status, is_beta_listing',
+      )
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('guide_images')
+      .select('url, is_cover, sort_order')
+      .eq('guide_id', id)
+      .order('sort_order', { ascending: true }),
+  ])
 
   if (guide == null) notFound()
+
+  const guideWithImages = {
+    ...guide,
+    images: (guideImages ?? []) as { url: string; is_cover: boolean; sort_order: number }[],
+  }
 
   return (
     <div className="px-10 py-10 max-w-[840px]">
@@ -100,7 +112,7 @@ export default async function AdminEditGuidePage({
       </div>
 
       {/* ─── Form ─────────────────────────────────────────────────── */}
-      <EditGuideForm guide={guide} />
+      <EditGuideForm guide={guideWithImages} />
     </div>
   )
 }

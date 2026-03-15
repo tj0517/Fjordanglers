@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBetaGuide, type BetaGuidePayload } from '@/actions/admin'
+import { createBetaGuide, type BetaGuidePayload, type GuideGalleryImage } from '@/actions/admin'
 import ImageUpload from '@/components/admin/image-upload'
+import MultiImageUpload from '@/components/admin/multi-image-upload'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -168,6 +169,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
   const [yearsExp, setYearsExp]           = useState(defaultValues?.years_experience ?? '')
   const [avatarUrl, setAvatarUrl]         = useState('')
   const [coverUrl, setCoverUrl]           = useState('')
+  const [galleryImages, setGalleryImages] = useState<GuideGalleryImage[]>([])
   const [instagramUrl, setInstagramUrl]   = useState(defaultValues?.instagram_url ?? '')
   const [youtubeUrl, setYoutubeUrl]       = useState(defaultValues?.youtube_url ?? '')
   const [pricingModel, setPricingModel]   = useState<'flat_fee' | 'commission'>(defaultValues?.pricing_model ?? 'commission')
@@ -194,6 +196,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
     setYearsExp('')
     setAvatarUrl('')
     setCoverUrl('')
+    setGalleryImages([])
     setInstagramUrl('')
     setYoutubeUrl('')
     setPricingModel('commission')
@@ -221,6 +224,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
       years_experience: yearsExp !== '' ? parseInt(yearsExp, 10) : null,
       avatar_url:       avatarUrl || undefined,
       cover_url:        coverUrl || undefined,
+      gallery_images:   galleryImages.length > 0 ? galleryImages : undefined,
       instagram_url:    instagramUrl || undefined,
       youtube_url:      youtubeUrl || undefined,
       pricing_model:    pricingModel,
@@ -482,7 +486,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
           Uploaded to Supabase Storage and served over CDN. JPEG, PNG or WebP · max 5 MB each.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Cover photo — landscape */}
           <div>
             <ImageUpload
@@ -505,6 +509,13 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
             />
           </div>
         </div>
+
+        {/* Gallery — multi-photo */}
+        <MultiImageUpload
+          label="Gallery photos"
+          max={5}
+          onChange={setGalleryImages}
+        />
       </div>
 
       {/* ── SOCIAL LINKS ────────────────────────────────────────── */}

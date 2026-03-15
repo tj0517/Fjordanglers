@@ -48,6 +48,12 @@ async function requireAdmin() {
 
 // ─── Create Beta Guide Listing ────────────────────────────────────────────────
 
+export type GuideGalleryImage = {
+  url: string
+  is_cover: boolean
+  sort_order: number
+}
+
 export type BetaGuidePayload = {
   full_name: string
   country: string
@@ -61,6 +67,8 @@ export type BetaGuidePayload = {
   instagram_url?: string
   youtube_url?: string
   pricing_model: 'flat_fee' | 'commission'
+  /** Gallery photos to save into guide_images table. */
+  gallery_images?: GuideGalleryImage[]
   // ── Lead bridge fields ──────────────────────────────────────────────────────
   // Set when creating a listing from a lead application.
   // invite_email is used in Phase 2 to auto-link when the guide registers.
@@ -107,6 +115,18 @@ export async function createBetaGuide(
     if (error != null) {
       console.error('[admin/createBetaGuide]', error.message)
       return { error: error.message }
+    }
+
+    // Save gallery images
+    if (payload.gallery_images != null && payload.gallery_images.length > 0) {
+      await supabase.from('guide_images').insert(
+        payload.gallery_images.map((img, i) => ({
+          guide_id:   data.id,
+          url:        img.url,
+          is_cover:   i === 0,
+          sort_order: i,
+        })),
+      )
     }
 
     // If this listing was created from a lead, mark the lead as onboarded
@@ -306,6 +326,8 @@ export type UpdateGuidePayload = {
   youtube_url?: string
   pricing_model: 'flat_fee' | 'commission'
   status: 'pending' | 'verified' | 'active' | 'suspended'
+  /** When set, replaces all existing guide_images rows. */
+  gallery_images?: GuideGalleryImage[]
 }
 
 export type AdminUpdateResult =
@@ -358,6 +380,21 @@ export async function updateGuide(
     if (error != null) {
       console.error('[admin/updateGuide]', error.message)
       return { error: error.message }
+    }
+
+    // Replace gallery images when provided
+    if (payload.gallery_images !== undefined) {
+      await supabase.from('guide_images').delete().eq('guide_id', guideId)
+      if (payload.gallery_images.length > 0) {
+        await supabase.from('guide_images').insert(
+          payload.gallery_images.map((img, i) => ({
+            guide_id:   guideId,
+            url:        img.url,
+            is_cover:   i === 0,
+            sort_order: i,
+          })),
+        )
+      }
     }
 
     return { success: true }

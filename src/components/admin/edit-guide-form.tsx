@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { updateGuide, type UpdateGuidePayload } from '@/actions/admin'
+import { updateGuide, type UpdateGuidePayload, type GuideGalleryImage } from '@/actions/admin'
 import ImageUpload from '@/components/admin/image-upload'
+import MultiImageUpload from '@/components/admin/multi-image-upload'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -153,6 +154,7 @@ export type GuideEditData = {
   pricing_model: 'flat_fee' | 'commission'
   status: string
   is_beta_listing: boolean
+  images?: GuideGalleryImage[]
 }
 
 type Props = {
@@ -177,6 +179,7 @@ export default function EditGuideForm({ guide }: Props) {
   const [coverUrl,      setCoverUrl]      = useState(guide.cover_url ?? '')
   const [instagramUrl,  setInstagramUrl]  = useState(guide.instagram_url ?? '')
   const [youtubeUrl,    setYoutubeUrl]    = useState(guide.youtube_url ?? '')
+  const [galleryImages, setGalleryImages] = useState<GuideGalleryImage[]>(guide.images ?? [])
   const [pricingModel,  setPricingModel]  = useState<'flat_fee' | 'commission'>(guide.pricing_model)
   const [status,        setStatus]        = useState<UpdateGuidePayload['status']>(
     (guide.status as UpdateGuidePayload['status']) ?? 'pending',
@@ -210,6 +213,7 @@ export default function EditGuideForm({ guide }: Props) {
       years_experience: yearsExp !== '' ? parseInt(yearsExp, 10) : null,
       avatar_url:       avatarUrl || undefined,
       cover_url:        coverUrl || undefined,
+      gallery_images:   galleryImages,
       instagram_url:    instagramUrl || undefined,
       youtube_url:      youtubeUrl || undefined,
       pricing_model:    pricingModel,
@@ -457,7 +461,7 @@ export default function EditGuideForm({ guide }: Props) {
           JPEG · PNG · WebP — any size, auto-compressed
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <ImageUpload
             label="Cover photo"
             aspect="wide"
@@ -473,6 +477,13 @@ export default function EditGuideForm({ guide }: Props) {
             hint="Square headshot shown on the guide listing — 400×400px recommended"
           />
         </div>
+
+        <MultiImageUpload
+          label="Gallery photos"
+          max={5}
+          initial={galleryImages}
+          onChange={setGalleryImages}
+        />
       </div>
 
       {/* ── SOCIAL LINKS ────────────────────────────────────────── */}

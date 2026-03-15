@@ -474,6 +474,11 @@ export async function getExperienceLocations(): Promise<LocationEntry[]> {
 
 export type GuideRow = Database['public']['Tables']['guides']['Row']
 
+export type GuideImageRow = Database['public']['Tables']['guide_images']['Row']
+
+/** GuideRow extended with embedded gallery images (from guide_images table). */
+export type GuideWithImages = GuideRow & { images: GuideImageRow[] }
+
 export type GuideSearchParams = {
   country?: string
   language?: string
@@ -507,20 +512,26 @@ export async function getGuides(params: GuideSearchParams = {}): Promise<GuideRo
 }
 
 /**
- * Single guide by ID. Returns null if not found or not active.
+ * Single guide by ID with embedded gallery images.
+ * Returns null if not found or not active.
  */
-export async function getGuide(id: string): Promise<GuideRow | null> {
+export async function getGuide(id: string): Promise<GuideWithImages | null> {
   const db = createPublicClient()
 
   const { data, error } = await db
     .from('guides')
-    .select('*')
+    .select('*, images:guide_images ( id, guide_id, url, is_cover, sort_order, created_at )')
     .eq('id', id)
     .eq('status', 'active')
     .single()
 
   if (error) return null
-  return data
+
+  const guide = data as unknown as GuideWithImages
+  return {
+    ...guide,
+    images: sortImages(guide.images ?? []),
+  }
 }
 
 /**

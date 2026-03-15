@@ -239,6 +239,41 @@ export type Database = {
           },
         ]
       }
+      guide_images: {
+        Row: {
+          id: string
+          guide_id: string
+          url: string
+          is_cover: boolean
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          guide_id: string
+          url: string
+          is_cover?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          guide_id?: string
+          url?: string
+          is_cover?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_images_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       experiences: {
         Row: {
           boat_included: boolean | null
