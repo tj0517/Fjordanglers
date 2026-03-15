@@ -147,6 +147,7 @@ export default async function HomePage() {
 
       {/* ─── FEATURED EXPERIENCES ────────────────────────────────────── */}
       <section className="px-8 md:px-14 pt-20 pb-20" style={{ background: '#F3EDE4' }}>
+        <div className="max-w-[1360px] mx-auto">
 
           <div className="flex items-end justify-between mb-12">
             <div>
@@ -315,10 +316,12 @@ export default async function HomePage() {
               </Link>
             </div>
           )}
+        </div>
       </section>
 
       {/* ─── SPECIES PICKER ──────────────────────────────────────────── */}
       <section className="pb-24 px-8 md:px-14" style={{ background: '#F3EDE4' }}>
+        <div className="max-w-[1360px] mx-auto">
           <div
             className="mb-11 pt-16 flex items-end justify-between"
             style={{ borderTop: '1px solid rgba(10,46,77,0.09)' }}
@@ -344,6 +347,7 @@ export default async function HomePage() {
             </Link>
           </div>
           <SpeciesSlider species={species} />
+        </div>
       </section>
 
       {/* ─── HOW IT WORKS ────────────────────────────────────────────── */}
@@ -354,6 +358,7 @@ export default async function HomePage() {
         >
           <GrainOverlay />
           <div className="relative px-8 md:px-14 py-20 md:py-24" style={{ zIndex: 3 }}>
+            <div className="max-w-[1360px] mx-auto">
 
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-16">
@@ -422,6 +427,7 @@ export default async function HomePage() {
                   </div>
                 </div>
               ))}
+            </div>
             </div>
           </div>
         </div>
@@ -546,6 +552,7 @@ export default async function HomePage() {
       {/* ─── FEATURED GUIDES ─────────────────────────────────────────── */}
       {featuredGuides.length > 0 && (
         <section className="px-8 md:px-14 py-20" style={{ background: '#F3EDE4' }}>
+          <div className="max-w-[1360px] mx-auto">
             <div className="flex items-end justify-between mb-12">
               <div>
                 <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
@@ -631,6 +638,7 @@ export default async function HomePage() {
                 )
               })}
             </div>
+          </div>
         </section>
       )}
 

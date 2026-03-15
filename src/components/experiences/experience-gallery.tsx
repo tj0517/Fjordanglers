@@ -187,18 +187,23 @@ export function ExperienceGallery({ images, title }: Props) {
             </button>
           )}
 
-          {/* Image — overflow-hidden + rounded-3xl clips to rounded corners */}
-          <div
-            className="relative overflow-hidden rounded-3xl"
-            style={{ width: 'min(90vw, 1100px)', height: 'min(80vh, 720px)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <Image
+          {/* Image — natural orientation: landscape fills width, portrait fills height.
+               Plain <img> lets the browser pick the constraining axis automatically
+               (max-width → landscape wins width; max-height → portrait wins height). */}
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+          <div onClick={e => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              key={sorted[lightboxIndex].id}
               src={gallerySlide(sorted[lightboxIndex].url) ?? sorted[lightboxIndex].url}
               alt={`${title} photo ${lightboxIndex + 1}`}
-              fill
-              className="object-cover"
-              sizes="(max-width: 1100px) 90vw, 1100px"
+              className="block rounded-3xl"
+              style={{
+                maxWidth:  'min(90vw, 1200px)',
+                maxHeight: '85vh',
+                width:  'auto',
+                height: 'auto',
+              }}
             />
           </div>
 

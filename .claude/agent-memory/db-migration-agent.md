@@ -164,3 +164,51 @@ Kolumna `location_area: Json | null` dodana po `location_country` w trzech bloka
 ### Uwaga
 
 `pnpm supabase db push` NIE bylo uruchamiane w tej sesji — migracja czeka na ręczne zastosowanie.
+
+---
+
+## Sesja 2026-03-15 — db-migration-agent (guide_images table)
+
+### Migracja
+
+| Plik | Tabela | Co robi |
+|---|---|---|
+| `20260315210000_add_guide_images.sql` | guide_images | Nowa tabela one-to-many zdjec galerii dla guide'a; mirror experience_images |
+
+### Schema `guide_images`
+
+```
+id           UUID PK DEFAULT gen_random_uuid()
+guide_id     UUID NOT NULL → guides(id) ON DELETE CASCADE
+url          TEXT NOT NULL
+is_cover     BOOLEAN NOT NULL DEFAULT false
+sort_order   INTEGER NOT NULL DEFAULT 0
+created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+```
+
+### Indeksy
+
+- `idx_guide_images_guide_id ON guide_images(guide_id)`
+
+### RLS guide_images
+
+- SELECT: `USING (true)` — publiczny odczyt dla listingów
+- INSERT: `WITH CHECK (true)` — service role (Server Actions)
+- UPDATE: `USING (true)` — service role
+- DELETE: `USING (true)` — service role
+
+### Zmiany w database.types.ts
+
+Blok `guide_images` (Row / Insert / Update / Relationships) wstawiony po `experience_images` (linia 241), przed `experiences` — 35 nowych linii, plik urósł z 1901 do 1936 linii.
+
+### Historia migracji — naprawa
+
+Orphaned remote entry `20260315` (bez suffixu czasu) naprawiony przez:
+`pnpm supabase migration repair --status reverted 20260315`
+
+Przy okazji zaaplikowana pending migracja `20260315_add_location_spots_to_experiences.sql` (NOTICE o istniejącej kolumnie — bez zmian danych).
+
+### Wynik
+
+- `pnpm supabase db push` — ✅ bez błędów
+- `pnpm typecheck` — ✅ ZERO błędów
