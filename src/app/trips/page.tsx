@@ -129,6 +129,7 @@ export default async function ExperiencesPage({
         allGeoExperiences={allGeoExperiences}
         initialExperiences={experiences}
         initialTotal={total}
+        filterKey={baseParams}
         paginationNode={
           total > PAGE_SIZE
             ? <Pagination page={currentPage} totalPages={totalPages} baseParams={baseParams} />

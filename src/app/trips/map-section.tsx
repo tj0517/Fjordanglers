@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ExperienceWithGuide, LocationSpot } from '@/types'
@@ -48,6 +48,10 @@ type Props = {
   initialExperiences: ExperienceWithGuide[]
   initialTotal: number
   paginationNode: React.ReactNode
+  /** Serialised active filter params (minus page). When this changes the
+   *  map viewport filter is cleared so the new server results are shown
+   *  in full — prevents Iceland trips disappearing when map is zoomed on Norway. */
+  filterKey: string
 }
 
 export default function MapSection({
@@ -55,8 +59,20 @@ export default function MapSection({
   initialExperiences,
   initialTotal,
   paginationNode,
+  filterKey,
 }: Props) {
   const [bounds, setBounds] = useState<MapBounds | null>(null)
+
+  // Reset map viewport filter whenever the user changes filter params.
+  // Without this, e.g. filtering to Iceland while the map is zoomed on Norway
+  // would show 0 cards because all Icelandic trips are outside the viewport.
+  const prevFilterKey = useRef(filterKey)
+  useEffect(() => {
+    if (prevFilterKey.current !== filterKey) {
+      prevFilterKey.current = filterKey
+      setBounds(null)
+    }
+  }, [filterKey])
   // ID of the card the user is hovering — forwarded to MapWrapper so the
   // corresponding pin turns Salmon Orange without any map interaction needed
   const [hoveredExpId, setHoveredExpId] = useState<string | null>(null)

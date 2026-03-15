@@ -470,33 +470,41 @@ export type GuideWithImages = GuideRow & { images: GuideImageRow[] }
 export type GuideSearchParams = {
   country?: string
   language?: string
+  page?: number
 }
 
+const GUIDES_PAGE_SIZE = 12
+
 /**
- * All active (verified) guides with optional country + language filtering.
+ * Active (verified) guides with optional country + language filtering + pagination.
  * Used by the /guides listing page.
  */
-export async function getGuides(params: GuideSearchParams = {}): Promise<GuideRow[]> {
+export async function getGuides(
+  params: GuideSearchParams = {},
+): Promise<{ guides: GuideRow[]; total: number }> {
   const db = createPublicClient()
+  const page = Math.max(1, params.page ?? 1)
+  const from = (page - 1) * GUIDES_PAGE_SIZE
+  const to   = from + GUIDES_PAGE_SIZE - 1
 
   let query = db
     .from('guides')
-    .select('*')
-    .eq('status', 'active')
-    .not('verified_at', 'is', null)
+    .select('*', { count: 'exact' })
+    .or('status.eq.active,verified_at.not.is.null')
     .order('average_rating', { ascending: false, nullsFirst: false })
+    .range(from, to)
 
   if (params.country) query = query.eq('country', params.country)
   if (params.language) query = query.contains('languages', [params.language])
 
-  const { data, error } = await query
+  const { data, error, count } = await query
 
   if (error) {
     console.error('[getGuides]', error.message)
-    return []
+    return { guides: [], total: 0 }
   }
 
-  return data ?? []
+  return { guides: data ?? [], total: count ?? 0 }
 }
 
 /**

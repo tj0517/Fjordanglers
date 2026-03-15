@@ -3,6 +3,73 @@ import Link from 'next/link'
 import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
 import { CountryFlag } from '@/components/ui/country-flag'
 
+const PAGE_SIZE = 12
+
+function Pagination({
+  page,
+  totalPages,
+  baseParams,
+}: {
+  page: number
+  totalPages: number
+  baseParams: string
+}) {
+  function pageHref(p: number) {
+    const sp = new URLSearchParams(baseParams)
+    sp.set('page', p.toString())
+    return `/guides?${sp.toString()}`
+  }
+
+  const items: (number | '…')[] = []
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) items.push(i)
+  } else {
+    items.push(1)
+    if (page > 3) items.push('…')
+    const start = Math.max(2, page - 1)
+    const end   = Math.min(totalPages - 1, page + 1)
+    for (let i = start; i <= end; i++) items.push(i)
+    if (page < totalPages - 2) items.push('…')
+    items.push(totalPages)
+  }
+
+  const pill = 'min-w-[36px] h-9 rounded-full flex items-center justify-center text-sm font-medium f-body transition-all px-3'
+
+  return (
+    <nav aria-label="Pagination" className="flex items-center justify-center gap-1.5 mt-10 pb-2">
+      {page > 1 ? (
+        <Link href={pageHref(page - 1)} className={pill} style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
+          ← Prev
+        </Link>
+      ) : (
+        <span className={pill} style={{ border: '1px solid rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.2)' }}>← Prev</span>
+      )}
+
+      {items.map((item, idx) =>
+        item === '…' ? (
+          <span key={`e-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>…</span>
+        ) : item === page ? (
+          <span key={item} className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold f-body" style={{ background: '#0A2E4D', color: '#fff' }}>
+            {item}
+          </span>
+        ) : (
+          <Link key={item} href={pageHref(item)} className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium f-body transition-colors" style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
+            {item}
+          </Link>
+        )
+      )}
+
+      {page < totalPages ? (
+        <Link href={pageHref(page + 1)} className={pill} style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
+          Next →
+        </Link>
+      ) : (
+        <span className={pill} style={{ border: '1px solid rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.2)' }}>Next →</span>
+      )}
+    </nav>
+  )
+}
+
 export const dynamic = 'force-dynamic'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -17,6 +84,7 @@ const LANGUAGES = ['English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic', 'G
 type SearchParams = {
   country?: string
   language?: string
+  page?: string
 }
 
 // ─── MICRO-COMPONENTS ─────────────────────────────────────────────────────────
@@ -51,11 +119,17 @@ export default async function GuidesPage({
   searchParams: Promise<SearchParams>
 }) {
   const params = await searchParams
+  const currentPage = Math.max(1, Number(params.page ?? '1'))
+  const totalPages  = (total: number) => Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const [guides, stats] = await Promise.all([
-    getGuides({ country: params.country, language: params.language }),
+  const [{ guides, total }, stats] = await Promise.all([
+    getGuides({ country: params.country, language: params.language, page: currentPage }),
     getPlatformStats(),
   ])
+
+  const baseParams = new URLSearchParams(
+    Object.entries(params).filter(([k, v]) => k !== 'page' && v != null) as [string, string][]
+  ).toString()
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
@@ -184,7 +258,7 @@ export default async function GuidesPage({
           </div>
 
           <p className="ml-auto text-xs f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>
-            {guides.length} guide{guides.length !== 1 ? 's' : ''}
+            {total} guide{total !== 1 ? 's' : ''}
           </p>
         </div>
       </div>
@@ -338,6 +412,10 @@ export default async function GuidesPage({
               )
             })}
           </div>
+        )}
+
+        {totalPages(total) > 1 && (
+          <Pagination page={currentPage} totalPages={totalPages(total)} baseParams={baseParams} />
         )}
       </main>
 
