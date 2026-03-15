@@ -197,8 +197,8 @@ export async function createExperience(
         duration_hours:       payload.duration_hours ?? null,
         duration_days:        payload.duration_days ?? null,
         max_guests:           payload.max_guests,
-        // null → 0 sentinel: column is NOT NULL in DB; UI checks booking_type before displaying price
-        price_per_person_eur: payload.price_per_person_eur ?? 0,
+        // null → 1 sentinel: column is NOT NULL + CHECK > 0 in DB; UI checks booking_type before displaying price
+        price_per_person_eur: payload.price_per_person_eur ?? 1,
         location_country:     payload.location_country?.trim() || null,
         location_city:        payload.location_city?.trim() || null,
         meeting_point:        payload.meeting_point?.trim() || null,
@@ -277,7 +277,7 @@ export async function updateExperience(
     if (payload.duration_hours !== undefined) update.duration_hours     = payload.duration_hours ?? null
     if (payload.duration_days !== undefined)  update.duration_days      = payload.duration_days ?? null
     if (payload.max_guests != null)          update.max_guests          = payload.max_guests
-    if (payload.price_per_person_eur !== undefined) update.price_per_person_eur = payload.price_per_person_eur ?? 0
+    if (payload.price_per_person_eur !== undefined) update.price_per_person_eur = payload.price_per_person_eur ?? 1
     if (payload.location_country !== undefined) update.location_country = payload.location_country?.trim() || null
     if (payload.location_city !== undefined) update.location_city       = payload.location_city?.trim() || null
     if (payload.meeting_point !== undefined) update.meeting_point       = payload.meeting_point?.trim() || null
