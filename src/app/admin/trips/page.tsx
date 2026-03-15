@@ -150,7 +150,7 @@ export default async function AdminExperiencesPage({
             className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body"
             style={{ color: 'rgba(10,46,77,0.38)' }}
           >
-            Admin → Experiences
+            Admin → Trips
           </p>
           <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
             All <span style={{ fontStyle: 'italic' }}>Trips</span>
@@ -406,7 +406,7 @@ export default async function AdminExperiencesPage({
 
                     {/* Edit */}
                     <Link
-                      href={`/admin/guides/${exp.guide_id}{/trips/${exp.id}/edit`}
+                      href={`/admin/guides/${exp.guide_id}/trips/${exp.id}/edit`}
                       className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]"
                       style={{ color: 'rgba(10,46,77,0.55)' }}
                     >

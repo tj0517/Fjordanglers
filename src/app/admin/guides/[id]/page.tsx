@@ -205,7 +205,7 @@ export default async function AdminGuideDetailPage({
       {/* ─── Experiences ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-[#0A2E4D] text-lg font-bold f-display">
-          Experiences <span className="text-[#0A2E4D]/35 text-sm font-normal f-body">({exps.length})</span>
+          Trips <span className="text-[#0A2E4D]/35 text-sm font-normal f-body">({exps.length})</span>
         </h2>
         <Link
           href={`/admin/guides/${guide.id}/trips/new`}
@@ -295,7 +295,7 @@ export default async function AdminGuideDetailPage({
                       {exp.published ? 'Live' : 'Draft'}
                     </span>
                     <Link
-                      href={`/admin/guides/${guide.id}{/trips/${exp.id}/edit`}
+                      href={`/admin/guides/${guide.id}/trips/${exp.id}/edit`}
                       className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]"
                       style={{ color: 'rgba(10,46,77,0.38)' }}
                     >

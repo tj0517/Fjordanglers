@@ -23,7 +23,7 @@ export default async function DashboardEditExperiencePage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (user == null) redirect(`/login?next=/dashboard{/trips/${id}/edit`)
+  if (user == null) redirect(`/login?next=/dashboard/trips/${id}/edit`)
 
   // Fetch the guide
   const { data: guide } = await supabase

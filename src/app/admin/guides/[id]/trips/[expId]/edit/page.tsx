@@ -98,7 +98,7 @@ export default async function AdminEditExperiencePage({
         </Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
         <Link href="/admin/trips" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>
-          Experiences
+          Trips
         </Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
         <Link href={`/admin/guides/${guide.id}`} className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>
