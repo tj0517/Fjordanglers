@@ -31,12 +31,21 @@ const EXTENDED_CODES: Record<string, string> = {
   estonia: 'ee', latvia: 'lv', lithuania: 'lt',
 }
 
-/** Returns a flagcdn.com image URL for the given country name. */
+/** Converts an ISO 3166-1 alpha-2 code to a Twemoji SVG path segment.
+ *  e.g. "no" → "1f1f3-1f1f4" */
+function isoToTwemojiPath(code: string): string {
+  return code.toUpperCase().split('').map(c =>
+    (0x1F1E6 + c.charCodeAt(0) - 65).toString(16)
+  ).join('-')
+}
+
+/** Returns a Twemoji SVG URL for the given country name.
+ *  Looks identical to macOS/iOS emoji flags and works on all platforms. */
 export function getFlagUrl(country: string): string | null {
   const key = country.toLowerCase().trim()
   const code = EXTENDED_CODES[key]
   if (code == null) return null
-  return `https://flagcdn.com/w20/${code}.png`
+  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${isoToTwemojiPath(code)}.svg`
 }
 
 /** @deprecated Emoji flags don't render on Windows — use <CountryFlag> component instead */

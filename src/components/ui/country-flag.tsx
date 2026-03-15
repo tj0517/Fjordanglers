@@ -25,7 +25,7 @@ export function CountryFlag({ country, size = 20, className }: Props) {
       src={url}
       alt={country}
       width={size}
-      height={Math.round(size * 0.75)}
+      height={size}
       className={className}
       style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
     />
