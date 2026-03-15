@@ -1024,7 +1024,7 @@ export function OnboardingWizard() {
               label: 'Location',
               value: [values.city, values.country].filter(Boolean).join(', '),
             },
-            { label: 'Experience', value: values.years_experience },
+            { label: 'Trip', value: values.years_experience },
             { label: 'Species', value: values.fish_types.join(', ') },
             { label: 'Languages', value: values.languages.join(', ') },
             { label: 'Certifications', value: values.certifications },

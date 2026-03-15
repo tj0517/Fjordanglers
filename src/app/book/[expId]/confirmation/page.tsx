@@ -101,7 +101,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
           <dl className="flex flex-col gap-2.5">
             {experience?.title && (
-              <Row label="Experience" value={experience.title} />
+              <Row label="Trip" value={experience.title} />
             )}
             <Row label="Date" value={bookingDateFormatted} />
             <Row
@@ -145,7 +145,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
             View My Bookings
           </Link>
           <Link
-            href="/experiences"
+            href="/trips"
             className="block w-full py-3.5 rounded-2xl text-sm font-semibold f-body transition-all hover:opacity-80"
             style={{
               border: '1.5px solid rgba(10,46,77,0.15)',

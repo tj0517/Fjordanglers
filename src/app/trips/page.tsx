@@ -30,7 +30,7 @@ function Pagination({
   function pageHref(p: number) {
     const sp = new URLSearchParams(baseParams)
     sp.set('page', p.toString())
-    return `/experiences?${sp.toString()}`
+    return `/trips?${sp.toString()}`
   }
 
   // Smart page-number list: always show 1 and last, collapse middle with …
@@ -86,7 +86,7 @@ function Pagination({
 
 export const revalidate = 60
 export const metadata = {
-  title: 'Browse Fishing Experiences',
+  title: 'Browse Fishing Trips',
   description: 'Find day trips and multi-day expeditions with verified Scandinavian fishing guides.',
 }
 

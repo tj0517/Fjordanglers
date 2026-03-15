@@ -113,7 +113,7 @@ export default function MapSection({
             </p>
             {!isFiltered && (
               <Link
-                href="/experiences"
+                href="/trips"
                 className="text-white text-sm font-semibold px-6 py-3 rounded-full hover:brightness-110 f-body"
                 style={{ background: '#E67E50' }}
               >
@@ -150,7 +150,7 @@ export default function MapSection({
                 return (
                   <Link
                     key={exp.id}
-                    href={`/experiences/${exp.id}`}
+                    href={`/trips/${exp.id}`}
                     className="group block"
                     onMouseEnter={() => setHoveredExpId(exp.id)}
                     onMouseLeave={() => setHoveredExpId(null)}

@@ -161,11 +161,11 @@ export default async function HomePage() {
                 Handpicked
               </p>
               <h2 className="text-[#0A2E4D] text-4xl font-bold f-display">
-                Featured Experiences
+                Featured Trips
               </h2>
             </div>
             <Link
-              href="/experiences"
+              href="/trips"
               className="hidden md:block text-sm font-medium transition-colors hover:text-[#E67E50] f-body"
               style={{ color: 'rgba(10,46,77,0.38)' }}
             >
@@ -180,7 +180,7 @@ export default async function HomePage() {
                 const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
                 const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} ${exp.duration_days === 1 ? 'day' : 'days'}` : null
                 return (
-                  <Link key={exp.id} href={`/experiences/${exp.id}`} className="group block">
+                  <Link key={exp.id} href={`/trips/${exp.id}`} className="group block">
                     <article
                       className="overflow-hidden transition-all duration-300 hover:shadow-[0_24px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1.5 h-full flex flex-col"
                       style={{
@@ -306,11 +306,11 @@ export default async function HomePage() {
           {featured.length > 0 && (
             <div className="flex justify-center mt-10">
               <Link
-                href="/experiences"
+                href="/trips"
                 className="flex items-center gap-2 text-sm font-semibold px-8 py-3.5 rounded-full transition-all hover:brightness-110 active:scale-[0.97] f-body"
                 style={{ background: '#0A2E4D', color: '#fff' }}
               >
-                Browse all experiences
+                Browse all trips
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
@@ -340,7 +340,7 @@ export default async function HomePage() {
               </h2>
             </div>
             <Link
-              href="/experiences"
+              href="/trips"
               className="hidden md:block text-sm font-medium hover:text-[#E67E50] transition-colors f-body"
               style={{ color: 'rgba(10,46,77,0.38)' }}
             >
@@ -382,7 +382,7 @@ export default async function HomePage() {
             {/* Steps */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { step: '01', title: 'Find your experience', desc: 'Filter by country, species, and duration. Real prices, no hidden fees.' },
+                { step: '01', title: 'Find your trip', desc: 'Filter by country, species, and duration. Real prices, no hidden fees.' },
                 { step: '02', title: 'Book with the guide', desc: 'Pick your date and book instantly. Confirmed within 24 hours. Pay securely through the platform.' },
                 { step: '03', title: 'Show up and fish', desc: 'Your guide handles everything. You just need to show up ready to cast.' },
               ].map((item) => (
@@ -570,7 +570,7 @@ export default async function HomePage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               {featuredGuides.map((guide: GuideRow) => {
-                const fishPills = (guide.fish_expertise as string[]).slice(0, 3)
+                const fishPills = (guide.fish_expertise as string[]).slice(0, 2)
                 return (
                   <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
                     <article
@@ -612,13 +612,13 @@ export default async function HomePage() {
                           {guide.years_experience != null && <span> · {guide.years_experience} yrs exp</span>}
                         </p>
 
-                        <div className="flex flex-wrap gap-1.5 mb-4">
+                        <div className="flex flex-nowrap gap-1.5 mb-4 overflow-hidden">
                           {fishPills.map(fish => (
-                            <span key={fish} className="text-xs font-medium px-2.5 py-1 rounded-full f-body" style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}>{fish}</span>
+                            <span key={fish} className="text-xs font-medium px-2.5 py-1 rounded-full f-body flex-shrink-0" style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}>{fish}</span>
                           ))}
-                          {(guide.fish_expertise as string[]).length > 3 && (
-                            <span className="text-xs font-medium px-2.5 py-1 rounded-full f-body" style={{ background: 'rgba(10,46,77,0.05)', color: 'rgba(10,46,77,0.4)' }}>
-                              +{(guide.fish_expertise as string[]).length - 3} more
+                          {(guide.fish_expertise as string[]).length > 2 && (
+                            <span className="text-xs font-medium px-2.5 py-1 rounded-full f-body flex-shrink-0" style={{ background: 'rgba(10,46,77,0.05)', color: 'rgba(10,46,77,0.4)' }}>
+                              +{(guide.fish_expertise as string[]).length - 2} more
                             </span>
                           )}
                         </div>

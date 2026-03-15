@@ -335,7 +335,7 @@ export function SearchBar() {
     if (dateTo)           p.set('dateTo',   dateTo)               ; else p.delete('dateTo')
     p.delete('duration')
     p.delete('page')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   const countryOptions = COUNTRIES.map(c => ({ value: c.value, label: c.value, meta: c.code }))

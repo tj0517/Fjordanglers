@@ -321,7 +321,7 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
           </span>
         )}
         <a
-          href={`/experiences/${exp.id}`}
+          href={`/trips/${exp.id}`}
           style={{
             background: '#E67E50', color: 'white',
             borderRadius: '12px', padding: '5px 12px',

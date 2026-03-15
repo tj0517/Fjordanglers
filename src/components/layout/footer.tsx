@@ -23,7 +23,7 @@ export function Footer() {
               className="text-sm leading-relaxed mb-6 f-body"
               style={{ color: 'rgba(255,255,255,0.28)', maxWidth: '200px' }}
             >
-              Connecting anglers with the best fishing experiences in Scandinavia.
+              Connecting anglers with the best fishing trips in Scandinavia.
             </p>
             <a
               href="https://instagram.com/fjordanglers"
@@ -49,7 +49,7 @@ export function Footer() {
             </h4>
             <ul className="flex flex-col gap-3">
               {[
-                { label: 'All Experiences', href: '/experiences' },
+                { label: 'All Trips', href: '/trips' },
                 { label: 'Find Guides', href: '/guides' },
                 { label: 'Atlantic Salmon', href: '/species/salmon' },
                 { label: 'Trout Fishing', href: '/species/trout' },
@@ -77,11 +77,11 @@ export function Footer() {
             </h4>
             <ul className="flex flex-col gap-3">
               {[
-                { label: '🇳🇴 Norway', href: '/experiences?country=Norway' },
-                { label: '🇸🇪 Sweden', href: '/experiences?country=Sweden' },
-                { label: '🇫🇮 Finland', href: '/experiences?country=Finland' },
-                { label: '🇮🇸 Iceland', href: '/experiences?country=Iceland' },
-                { label: '🇩🇰 Denmark', href: '/experiences?country=Denmark' },
+                { label: '🇳🇴 Norway', href: '/trips?country=Norway' },
+                { label: '🇸🇪 Sweden', href: '/trips?country=Sweden' },
+                { label: '🇫🇮 Finland', href: '/trips?country=Finland' },
+                { label: '🇮🇸 Iceland', href: '/trips?country=Iceland' },
+                { label: '🇩🇰 Denmark', href: '/trips?country=Denmark' },
               ].map(item => (
                 <li key={item.label}>
                   <Link

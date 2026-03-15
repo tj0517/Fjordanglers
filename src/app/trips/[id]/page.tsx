@@ -3,13 +3,13 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { ExperienceGallery } from '@/components/experiences/experience-gallery'
-import { ExperienceLocationMap } from '@/components/experiences/experience-location-map-client'
-import { SpeciesCard } from '@/components/experiences/species-card'
-import { BookingWidget, MobileBookingBar } from '@/components/experiences/booking-widget'
-import DurationCardsSelector from '@/components/experiences/duration-cards-selector'
-import type { AvailConfigRow } from '@/components/experiences/booking-widget'
-import type { SpeciesInfo, FishVariant } from '@/components/experiences/species-card'
+import { ExperienceGallery } from '@/components/trips/experience-gallery'
+import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
+import { SpeciesCard } from '@/components/trips/species-card'
+import { BookingWidget, MobileBookingBar } from '@/components/trips/booking-widget'
+import DurationCardsSelector from '@/components/trips/duration-cards-selector'
+import type { AvailConfigRow } from '@/components/trips/booking-widget'
+import type { SpeciesInfo, FishVariant } from '@/components/trips/species-card'
 import type { ExperienceWithGuide } from '@/types'
 import type { InclusionsPayload, DurationOptionPayload } from '@/actions/experiences'
 import { FISH_IMG } from '@/lib/fish'
@@ -380,7 +380,7 @@ export default async function ExperienceDetailPage({
   //   • draft → visible only to the guide who owns it (via "Guide reads own experiences" policy)
   //   • admins → can preview via /admin; for public page we show their own drafts too
   //
-  // This means guides can visit /experiences/[id] to preview their draft BEFORE publishing.
+  // This means guides can visit /trips/[id] to preview their draft BEFORE publishing.
   // Anon visitors hitting a draft URL still get 404 (RLS returns null).
   const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating, cancellation_policy), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
 
@@ -494,7 +494,7 @@ export default async function ExperienceDetailPage({
         }}
       >
         <Link
-          href="/experiences"
+          href="/trips"
           className="flex items-center gap-2 f-body text-sm font-semibold transition-opacity hover:opacity-60"
           style={{ color: 'rgba(10,46,77,0.65)' }}
         >
@@ -530,13 +530,13 @@ export default async function ExperienceDetailPage({
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             <Link
-              href="/dashboard/experiences"
+              href="/dashboard/trips"
               className="text-white/80 text-xs f-body hover:text-white transition-colors"
             >
               ← Dashboard
             </Link>
             <Link
-              href={`/dashboard/experiences/${exp.id}/edit`}
+              href={`/dashboard/trips/${exp.id}/edit`}
               className="text-[10px] font-bold uppercase tracking-[0.15em] px-3 py-1.5 rounded-full f-body transition-opacity hover:opacity-80"
               style={{ background: 'rgba(0,0,0,0.2)', color: 'white' }}
             >
@@ -581,7 +581,7 @@ export default async function ExperienceDetailPage({
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 mb-5">
               <Link
-                href="/experiences"
+                href="/trips"
                 className="text-white/55 hover:text-white/85 text-xs font-medium transition-colors f-body"
                 style={{ textShadow: '0 1px 8px rgba(4,12,22,0.7)' }}
               >
@@ -1138,7 +1138,7 @@ export default async function ExperienceDetailPage({
                     : null
 
                 return (
-                  <Link key={related.id} href={`/experiences/${related.id}`} className="group block">
+                  <Link key={related.id} href={`/trips/${related.id}`} className="group block">
                     <article
                       className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
                       style={{
@@ -1220,12 +1220,12 @@ export default async function ExperienceDetailPage({
                 className="text-sm leading-relaxed f-body"
                 style={{ color: 'rgba(255,255,255,0.22)', maxWidth: '240px' }}
               >
-                Connecting anglers with the best fishing experiences in Scandinavia.
+                Connecting anglers with the best fishing trips in Scandinavia.
               </p>
             </div>
             <div className="flex items-center gap-8 md:gap-12">
               {[
-                { label: 'Experiences', href: '/experiences' },
+                { label: 'Trips', href: '/trips' },
                 { label: 'Guides', href: '/guides' },
                 { label: 'License Map', href: '/license-map' },
                 { label: 'Join as Guide', href: '/guides/apply' },

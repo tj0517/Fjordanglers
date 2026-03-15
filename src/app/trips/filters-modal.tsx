@@ -161,7 +161,7 @@ export function FiltersModal() {
     if (guests)        p.set('guests', guests);            else p.delete('guests')
     p.delete('page')
 
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
     setOpen(false)
   }
 

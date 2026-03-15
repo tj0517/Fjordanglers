@@ -15,7 +15,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import type { DurationOptionPayload } from '@/actions/experiences'
 import type { Json } from '@/lib/supabase/database.types'
-import { DURATION_EVENT } from '@/components/experiences/duration-cards-selector'
+import { DURATION_EVENT } from '@/components/trips/duration-cards-selector'
 
 // ─── Availability types ───────────────────────────────────────────────────────
 
@@ -971,7 +971,7 @@ export function BookingWidget({
             </p>
           </div>
           <Link
-            href={`/dashboard/experiences/${expId}/edit`}
+            href={`/dashboard/trips/${expId}/edit`}
             className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
             style={{ background: '#E67E50' }}
           >
@@ -981,7 +981,7 @@ export function BookingWidget({
       ) : bookingType === 'icelandic' ? (
         <>
           <Link
-            href={`/experiences/${expId}/inquire${selectedDates.length > 0 ? `?dates=${selectedDates.join(',')}&group=${groupSize}` : ''}`}
+            href={`/trips/${expId}/inquire${selectedDates.length > 0 ? `?dates=${selectedDates.join(',')}&group=${groupSize}` : ''}`}
             className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
             style={{ background: '#0A2E4D' }}
           >
@@ -1088,7 +1088,7 @@ export function MobileBookingBar({
           <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>On request</p>
         </div>
         <Link
-          href={`/experiences/${expId}/inquire`}
+          href={`/trips/${expId}/inquire`}
           className="text-white font-semibold px-8 py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
           style={{ background: '#0A2E4D' }}
         >

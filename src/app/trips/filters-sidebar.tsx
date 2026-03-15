@@ -92,7 +92,7 @@ export default function FiltersSidebar({ count }: { count: number }) {
     const p = new URLSearchParams(sp.toString())
     if (value) p.set(key, value); else p.delete(key)
     p.delete('page')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   function toggle(key: string, value: string, current: string) {
@@ -109,14 +109,14 @@ export default function FiltersSidebar({ count }: { count: number }) {
       if (preset.max) p.set('maxPrice', preset.max); else p.delete('maxPrice')
     }
     p.delete('page')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   function toggleCatchRelease() {
     const p = new URLSearchParams(sp.toString())
     if (catchRelease) p.delete('catchRelease'); else p.set('catchRelease', 'true')
     p.delete('page')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   // ── Active count ───────────────────────────────────────────────────────────
@@ -172,7 +172,7 @@ export default function FiltersSidebar({ count }: { count: number }) {
         <h2 className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>Filters</h2>
         {activeCount > 0 && (
           <button
-            onClick={() => router.push('/experiences')}
+            onClick={() => router.push('/trips')}
             className="text-xs font-semibold f-body transition-opacity hover:opacity-70"
             style={{ color: '#E67E50' }}
           >

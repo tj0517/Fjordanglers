@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import ExperienceForm, { type ExperienceFormDefaults } from '@/components/experiences/experience-form'
+import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
 import type { DurationOptionPayload, InclusionsPayload, GroupPricingPayload } from '@/actions/experiences'
 import type * as GeoJSON from 'geojson'
 
 /**
- * /dashboard/experiences/[id]/edit — Guide edits their own experience.
+ * /dashboard/trips/[id]/edit — Guide edits their own experience.
  *
  * Fetches the experience from DB, maps to ExperienceFormDefaults,
  * mounts ExperienceForm in 'edit' mode.
@@ -23,7 +23,7 @@ export default async function DashboardEditExperiencePage({
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (user == null) redirect(`/login?next=/dashboard/experiences/${id}/edit`)
+  if (user == null) redirect(`/login?next=/dashboard{/trips/${id}/edit`)
 
   // Fetch the guide
   const { data: guide } = await supabase
@@ -86,7 +86,7 @@ export default async function DashboardEditExperiencePage({
       <div className="flex items-center gap-2 mb-8 flex-wrap">
         <Link href="/dashboard" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>Dashboard</Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
-        <Link href="/dashboard/experiences" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>Experiences</Link>
+        <Link href="/dashboard/trips" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>Trips</Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
         <span className="text-xs f-body truncate max-w-[200px] font-semibold" style={{ color: '#0A2E4D' }}>{exp.title}</span>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
@@ -123,7 +123,7 @@ export default async function DashboardEditExperiencePage({
         defaultValues={defaults}
         guideName={guide.full_name}
         context="guide"
-        successPath="/dashboard/experiences"
+        successPath="/dashboard/trips"
       />
     </div>
   )

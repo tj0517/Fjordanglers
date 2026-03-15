@@ -41,7 +41,7 @@ export default async function ExperiencesPage() {
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
-        <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-4">My Experiences</h1>
+        <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-4">My Trips</h1>
         <p className="text-[#0A2E4D]/55 f-body text-sm">
           Please{' '}
           <Link href="/auth/login" className="text-[#E67E50] underline underline-offset-2">sign in</Link>
@@ -64,7 +64,7 @@ export default async function ExperiencesPage() {
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
-        <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-4">My Experiences</h1>
+        <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-4">My Trips</h1>
         <p className="text-[#0A2E4D]/55 f-body text-sm">
           No guide profile found.{' '}
           <Link href="/guides/apply" className="text-[#E67E50] underline underline-offset-2">Apply to become a guide →</Link>
@@ -117,14 +117,14 @@ export default async function ExperiencesPage() {
           <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
             Guide Dashboard
           </p>
-          <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">My Experiences</h1>
+          <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">My Trips</h1>
           <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
-            Manage your listed fishing experiences.
+            Manage your listed fishing trips.
           </p>
         </div>
 
         <Link
-          href="/dashboard/experiences/new"
+          href="/dashboard/trips/new"
           className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
           style={{ background: '#E67E50' }}
         >
@@ -132,7 +132,7 @@ export default async function ExperiencesPage() {
             <rect x="5.8" y="1" width="1.4" height="11" rx="0.7" />
             <rect x="1" y="5.8" width="11" height="1.4" rx="0.7" />
           </svg>
-          New Experience
+          New Trip
         </Link>
       </div>
 
@@ -142,7 +142,7 @@ export default async function ExperiencesPage() {
           {
             label: 'Total listed',
             value: experiences.length,
-            sub: 'all experiences',
+            sub: 'all trips',
           },
           {
             label: 'Avg price / person',
@@ -310,7 +310,7 @@ export default async function ExperiencesPage() {
                       {/* Actions */}
                       <div className="flex items-center gap-2">
                         <Link
-                          href={`/experiences/${exp.id}`}
+                          href={`/trips/${exp.id}`}
                           className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:bg-[#F3EDE4] f-body"
                           style={{ color: 'rgba(10,46,77,0.55)' }}
                           target="_blank"
@@ -321,7 +321,7 @@ export default async function ExperiencesPage() {
                           Preview
                         </Link>
                         <Link
-                          href={`/dashboard/experiences/${exp.id}/edit`}
+                          href={`/dashboard/trips/${exp.id}/edit`}
                           className="text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-105 f-body"
                           style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
                         >
@@ -355,16 +355,16 @@ export default async function ExperiencesPage() {
               <path d="M13.5 8.5L11 14 8.5 11 14 8.5z" fill="#E67E50" stroke="none" />
             </svg>
           </div>
-          <h3 className="text-[#0A2E4D] text-xl font-bold mb-2 f-display">No experiences yet</h3>
+          <h3 className="text-[#0A2E4D] text-xl font-bold mb-2 f-display">No trips yet</h3>
           <p className="text-[#0A2E4D]/45 text-sm mb-6 f-body">
-            Create your first experience to start receiving bookings.
+            Create your first trip to start receiving bookings.
           </p>
           <Link
-            href="/dashboard/experiences/new"
+            href="/dashboard/trips/new"
             className="text-white text-sm font-semibold px-6 py-3 rounded-full transition-all hover:brightness-110 f-body"
             style={{ background: '#E67E50' }}
           >
-            Create First Experience →
+            Create First Trip →
           </Link>
         </div>
       )}

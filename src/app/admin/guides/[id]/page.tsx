@@ -135,7 +135,7 @@ export default async function AdminGuideDetailPage({
               {/* Link account — shown only when no auth user is linked yet */}
               {guide.user_id == null && <LinkGuidePanel guideId={guide.id} />}
               <Link
-                href={`/admin/guides/${guide.id}/experiences/new`}
+                href={`/admin/guides/${guide.id}/trips/new`}
                 className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
                 style={{ background: '#E67E50' }}
               >
@@ -143,7 +143,7 @@ export default async function AdminGuideDetailPage({
                   <rect x="4.5" y="0.5" width="2" height="10" rx="1" />
                   <rect x="0.5" y="4.5" width="10" height="2" rx="1" />
                 </svg>
-                Add Experience
+                Add Trip
               </Link>
               <DeleteGuideButton
                 guideId={guide.id}
@@ -208,7 +208,7 @@ export default async function AdminGuideDetailPage({
           Experiences <span className="text-[#0A2E4D]/35 text-sm font-normal f-body">({exps.length})</span>
         </h2>
         <Link
-          href={`/admin/guides/${guide.id}/experiences/new`}
+          href={`/admin/guides/${guide.id}/trips/new`}
           className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
           style={{ background: '#E67E50' }}
         >
@@ -216,7 +216,7 @@ export default async function AdminGuideDetailPage({
             <rect x="4.5" y="0.5" width="2" height="10" rx="1" />
             <rect x="0.5" y="4.5" width="10" height="2" rx="1" />
           </svg>
-          Add Experience
+          Add Trip
         </Link>
       </div>
 
@@ -225,13 +225,13 @@ export default async function AdminGuideDetailPage({
           className="flex flex-col items-center justify-center py-16 text-center rounded-3xl"
           style={{ background: '#FDFAF7', border: '2px dashed rgba(10,46,77,0.1)' }}
         >
-          <p className="text-[#0A2E4D]/30 text-sm f-body mb-3">No experiences yet for this guide.</p>
+          <p className="text-[#0A2E4D]/30 text-sm f-body mb-3">No trips yet for this guide.</p>
           <Link
-            href={`/admin/guides/${guide.id}/experiences/new`}
+            href={`/admin/guides/${guide.id}/trips/new`}
             className="text-xs font-semibold f-body transition-colors hover:text-[#C96030]"
             style={{ color: '#E67E50' }}
           >
-            Create the first experience →
+            Create the first trip →
           </Link>
         </div>
       ) : (
@@ -253,7 +253,7 @@ export default async function AdminGuideDetailPage({
               background: 'rgba(10,46,77,0.02)',
             }}
           >
-            {['Experience', 'Location', 'Price', 'Duration', 'Status'].map(col => (
+            {['Trip', 'Location', 'Price', 'Duration', 'Status'].map(col => (
               <p key={col} className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>{col}</p>
             ))}
           </div>
@@ -295,7 +295,7 @@ export default async function AdminGuideDetailPage({
                       {exp.published ? 'Live' : 'Draft'}
                     </span>
                     <Link
-                      href={`/admin/guides/${guide.id}/experiences/${exp.id}/edit`}
+                      href={`/admin/guides/${guide.id}{/trips/${exp.id}/edit`}
                       className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]"
                       style={{ color: 'rgba(10,46,77,0.38)' }}
                     >

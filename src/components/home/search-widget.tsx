@@ -18,7 +18,7 @@ export default function HomeSearchWidget() {
     const params = new URLSearchParams()
     if (country) params.set('country', country)
     if (fish) params.set('fish', fish)
-    router.push(`/experiences?${params.toString()}`)
+    router.push(`/trips?${params.toString()}`)
   }
 
   const fieldStyle: React.CSSProperties = {

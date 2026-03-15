@@ -87,7 +87,7 @@ const IconLogout = () => (
 const NAV = [
   { label: 'Overview',         href: '/admin',              icon: <IconGrid />,  exact: true  },
   { label: 'Guides',           href: '/admin/guides',       icon: <IconUsers />, exact: false },
-  { label: 'Experiences',      href: '/admin/experiences',  icon: <IconList />,  exact: false },
+  { label: 'Trips',      href: '/admin/trips',  icon: <IconList />,  exact: false },
   { label: 'Leads',            href: '/admin/leads',        icon: <IconInbox />, exact: false },
   { label: 'Inquiries',        href: '/admin/inquiries',   icon: <IconChat />,  exact: false },
   { label: 'Add Guide Profile', href: '/admin/guides/new',  icon: <IconPlus />,  exact: false },

@@ -14,7 +14,7 @@ import { RegisterForm } from '@/components/auth/register-form'
 
 export const metadata: Metadata = {
   title: 'Join as a Guide — FjordAnglers',
-  description: 'Create your guide account and start listing your Scandinavian fishing experiences.',
+  description: 'Create your guide account and start listing your Scandinavian fishing trips.',
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────

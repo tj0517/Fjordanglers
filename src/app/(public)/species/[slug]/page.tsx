@@ -229,7 +229,7 @@ export default async function SpeciesPage({ params }: Props) {
         >
           <div className="max-w-[1440px] mx-auto w-full">
             <Link
-              href="/experiences"
+              href="/trips"
               className="inline-flex items-center gap-1.5 text-xs font-medium mb-6 f-body transition-opacity hover:opacity-60"
               style={{ color: 'rgba(255,255,255,0.4)' }}
             >
@@ -457,7 +457,7 @@ export default async function SpeciesPage({ params }: Props) {
             </div>
             {experiences.length > 0 && (
               <Link
-                href={`/experiences?fish=${encodeURIComponent(fish.dbSlug)}`}
+                href={`/trips?fish=${encodeURIComponent(fish.dbSlug)}`}
                 className="hidden md:block text-sm font-medium hover:text-[#E67E50] transition-colors f-body"
                 style={{ color: 'rgba(10,46,77,0.38)' }}
               >
@@ -547,7 +547,7 @@ function ExperienceCard({ exp }: { exp: ExperienceWithGuide }) {
     : null
 
   return (
-    <Link href={`/experiences/${exp.id}`} className="group block">
+    <Link href={`/trips/${exp.id}`} className="group block">
       <article
         className="overflow-hidden transition-all duration-300 hover:shadow-[0_24px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1.5 h-full flex flex-col"
         style={{

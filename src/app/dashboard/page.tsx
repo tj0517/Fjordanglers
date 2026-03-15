@@ -102,7 +102,7 @@ export default async function DashboardPage() {
   const nextStep =
     !hasProfileInfo ? { label: 'Complete your bio and fish expertise', href: '/dashboard/profile/edit' }
     : !hasAvatar    ? { label: 'Add a profile photo', href: '/dashboard/profile/edit' }
-    : !hasExperience ? { label: 'Add your first fishing experience', href: '/dashboard/experiences/new' }
+    : !hasExperience ? { label: 'Add your first fishing trip', href: '/dashboard/trips/new' }
     : null
 
   // ── Derived stats ─────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
       ),
     },
     {
-      label:  'Active experiences',
+      label:  'Active trips',
       value:  (activeExpCount ?? 0).toString(),
       sub:    'published trips',
       trend:  'neutral' as const,
@@ -186,7 +186,7 @@ export default async function DashboardPage() {
         </div>
 
         <Link
-          href="/dashboard/experiences/new"
+          href="/dashboard/trips/new"
           className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
           style={{ background: '#E67E50' }}
         >
@@ -194,7 +194,7 @@ export default async function DashboardPage() {
             <rect x="5.8" y="1" width="1.4" height="11" rx="0.7" />
             <rect x="1" y="5.8" width="11" height="1.4" rx="0.7" />
           </svg>
-          New Experience
+          New Trip
         </Link>
       </div>
 
@@ -328,13 +328,13 @@ export default async function DashboardPage() {
             style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
           >
             <div>
-              <h2 className="text-[#0A2E4D] text-base font-bold f-display">My Experiences</h2>
+              <h2 className="text-[#0A2E4D] text-base font-bold f-display">My Trips</h2>
               <p className="text-[#0A2E4D]/38 text-xs mt-0.5 f-body">
                 {activeExpCount ?? 0} active
               </p>
             </div>
             <Link
-              href="/dashboard/experiences"
+              href="/dashboard/trips"
               className="text-xs font-medium f-body transition-colors hover:text-[#E67E50]"
               style={{ color: 'rgba(10,46,77,0.38)' }}
             >
@@ -344,9 +344,9 @@ export default async function DashboardPage() {
 
           {(guideExperiences == null || guideExperiences.length === 0) ? (
             <div className="p-6 text-center">
-              <p className="text-[#0A2E4D]/30 text-sm f-body">No experiences yet.</p>
+              <p className="text-[#0A2E4D]/30 text-sm f-body">No trips yet.</p>
               <Link
-                href="/dashboard/experiences/new"
+                href="/dashboard/trips/new"
                 className="text-xs font-semibold mt-3 inline-block f-body"
                 style={{ color: '#E67E50' }}
               >

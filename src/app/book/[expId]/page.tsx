@@ -27,7 +27,7 @@ export default async function BookPage({ params, searchParams }: Props) {
     .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
 
   if (dates.length === 0) {
-    redirect(`/experiences/${expId}`)
+    redirect(`/trips/${expId}`)
   }
 
   const guests = Math.max(1, parseInt(sp.guests ?? '1', 10))
@@ -80,7 +80,7 @@ export default async function BookPage({ params, searchParams }: Props) {
           borderBottom: '1px solid rgba(10,46,77,0.06)',
         }}
       >
-        <Link href={`/experiences/${expId}`}>
+        <Link href={`/trips/${expId}`}>
           <svg
             width="20"
             height="20"

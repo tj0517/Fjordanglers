@@ -228,7 +228,7 @@ export async function deleteGuide(
   }
 }
 
-// ─── Delete Experience ────────────────────────────────────────────────────────
+// ─── Delete Trip ────────────────────────────────────────────────────────
 
 /**
  * Permanently deletes a single experience and its related data:

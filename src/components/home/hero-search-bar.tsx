@@ -294,7 +294,7 @@ export function HeroSearchBar({ locations }: { locations: LocationEntry[] }) {
     else if (query.trim()) params.set('country', query.trim())
     if (dateFrom) params.set('dateFrom', dateFrom)
     if (dateTo)   params.set('dateTo',   dateTo)
-    router.push(`/experiences?${params.toString()}`)
+    router.push(`/trips?${params.toString()}`)
   }
 
   return (
@@ -436,7 +436,7 @@ export function HeroSearchBar({ locations }: { locations: LocationEntry[] }) {
         <button
           key={country}
           type="button"
-          onClick={() => router.push(`/experiences?country=${country}`)}
+          onClick={() => router.push(`/trips?country=${country}`)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all hover:opacity-80 f-body"
           style={{
             background: 'rgba(255,255,255,0.1)',

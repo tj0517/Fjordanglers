@@ -1,24 +1,24 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import ExperienceForm from '@/components/experiences/experience-form'
+import ExperienceForm from '@/components/trips/experience-form'
 
 /**
- * /dashboard/experiences/new — Guide creates their own experience.
+ * /dashboard/trips/new — Guide creates their own experience.
  *
  * Server component: fetches guide ID from auth, then mounts ExperienceForm.
  * Redirects to login if not authenticated, to /guides/apply if no guide profile.
  */
 
 export const metadata = {
-  title: 'New Experience — Guide Dashboard',
+  title: 'New Trip — Guide Dashboard',
 }
 
 export default async function DashboardNewExperiencePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (user == null) redirect('/login?next=/dashboard/experiences/new')
+  if (user == null) redirect('/login?next=/dashboard/trips/new')
 
   const { data: guide } = await supabase
     .from('guides')
@@ -35,7 +35,7 @@ export default async function DashboardNewExperiencePage() {
       <div className="flex items-center gap-2 mb-8">
         <Link href="/dashboard" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>Dashboard</Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
-        <Link href="/dashboard/experiences" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>Experiences</Link>
+        <Link href="/dashboard/trips" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>Trips</Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
         <span className="text-xs f-body font-semibold" style={{ color: '#E67E50' }}>New</span>
       </div>
@@ -43,10 +43,10 @@ export default async function DashboardNewExperiencePage() {
       {/* ─── Header ─────────────────────────────────────────────────── */}
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-2 f-body font-semibold" style={{ color: '#E67E50' }}>
-          Create Experience
+          Create Trip
         </p>
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-2">
-          Add a new <span style={{ fontStyle: 'italic' }}>fishing experience</span>
+          Add a new <span style={{ fontStyle: 'italic' }}>fishing trip</span>
         </h1>
         <p className="text-[#0A2E4D]/45 text-sm f-body leading-relaxed" style={{ maxWidth: '520px' }}>
           Describe your trip, set your price, add photos. You can save as a draft
@@ -57,7 +57,7 @@ export default async function DashboardNewExperiencePage() {
           {[
             { icon: '💶', text: 'You set the price' },
             { icon: '📅', text: 'Publish anytime' },
-            { icon: '⚡', text: 'Live immediately on /experiences' },
+            { icon: '⚡', text: 'Live immediately on /trips' },
           ].map(pill => (
             <span
               key={pill.text}
@@ -77,7 +77,7 @@ export default async function DashboardNewExperiencePage() {
         mode="create"
         guideName={guide.full_name}
         context="guide"
-        successPath="/dashboard/experiences"
+        successPath="/dashboard/trips"
       />
     </div>
   )

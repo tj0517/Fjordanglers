@@ -18,7 +18,7 @@ export default function SortSelect() {
     const p = new URLSearchParams(sp.toString())
     if (value) p.set('sort', value)
     else p.delete('sort')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   return (

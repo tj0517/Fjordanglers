@@ -118,7 +118,7 @@ export default async function CalendarPage({
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
           {
-            label: 'Experiences',
+            label: 'Trips',
             value: String(expIds.length),
             sub:   expIds.length === 1 ? 'managed trip' : 'managed trips',
           },

@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import ExperienceForm from '@/components/experiences/experience-form'
+import ExperienceForm from '@/components/trips/experience-form'
 
 /**
- * /admin/guides/[id]/experiences/new
+ * /admin/guides/[id]/trips/new
  *
  * Admin creates an experience for a specific guide.
  * Works for both beta listings (user_id=null) and regular guide accounts.
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const supabase = await createClient()
   const { data: guide } = await supabase.from('guides').select('full_name').eq('id', id).single()
-  return { title: guide != null ? `New Experience for ${guide.full_name} — Admin` : 'New Experience' }
+  return { title: guide != null ? `New Trip for ${guide.full_name} — Admin` : 'New Trip' }
 }
 
 export default async function AdminNewExperiencePage({
@@ -46,7 +46,7 @@ export default async function AdminNewExperiencePage({
           {guide.full_name}
         </Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
-        <span className="text-xs f-body font-semibold" style={{ color: '#E67E50' }}>New Experience</span>
+        <span className="text-xs f-body font-semibold" style={{ color: '#E67E50' }}>New Trip</span>
       </div>
 
       {/* ─── Header ─────────────────────────────────────────────────── */}
@@ -69,13 +69,13 @@ export default async function AdminNewExperiencePage({
         </div>
 
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-2">
-          New experience for{' '}
+          New trip for{' '}
           <span style={{ fontStyle: 'italic' }}>{guide.full_name}</span>
         </h1>
         <p className="text-[#0A2E4D]/45 text-sm f-body leading-relaxed" style={{ maxWidth: '560px' }}>
           {guide.is_beta_listing
-            ? 'This guide is a beta listing — creating experiences on their behalf will make them visible to anglers immediately.'
-            : 'Experience will be associated with this guide and visible based on its publish setting.'
+            ? 'This guide is a beta listing — creating trips on their behalf will make them visible to anglers immediately.'
+            : 'Trip will be associated with this guide and visible based on its publish setting.'
           }
         </p>
 

@@ -106,7 +106,7 @@ export default async function BookingsPage() {
           Guide Dashboard
         </p>
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">Bookings</h1>
-        <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">All booking requests for your experiences.</p>
+        <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">All booking requests for your trips.</p>
       </div>
 
       {/* Stats row */}
@@ -154,7 +154,7 @@ export default async function BookingsPage() {
           </div>
           <h3 className="text-[#0A2E4D] text-xl font-bold mb-2 f-display">No bookings yet</h3>
           <p className="text-[#0A2E4D]/45 text-sm f-body">
-            When anglers book your experiences they&apos;ll appear here.
+            When anglers book your trips they&apos;ll appear here.
           </p>
         </div>
       ) : (
@@ -176,7 +176,7 @@ export default async function BookingsPage() {
               gap: '12px',
             }}
           >
-            {['Angler', 'Experience', 'Date', 'Guests', 'Total', 'Payout', 'Status', 'Actions'].map(col => (
+            {['Angler', 'Trip', 'Date', 'Guests', 'Total', 'Payout', 'Status', 'Actions'].map(col => (
               <p
                 key={col}
                 className="text-[10px] uppercase tracking-[0.18em] f-body"

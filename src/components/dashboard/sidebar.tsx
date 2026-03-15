@@ -90,7 +90,7 @@ const IconLogout = () => (
 
 const NAV = [
   { label: 'Overview',    href: '/dashboard',              icon: <IconOverview /> },
-  { label: 'Experiences', href: '/dashboard/experiences',  icon: <IconCompass /> },
+  { label: 'Trips', href: '/dashboard/trips',  icon: <IconCompass /> },
   { label: 'Bookings',    href: '/dashboard/bookings',     icon: <IconBookings /> },
   { label: 'Calendar',    href: '/dashboard/calendar',     icon: <IconCalendar /> },
   { label: 'Earnings',    href: '/dashboard/earnings',     icon: <IconTrending /> },

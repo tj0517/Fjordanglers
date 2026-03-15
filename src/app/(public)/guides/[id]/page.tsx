@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getGuide, getGuideExperiences } from '@/lib/supabase/queries'
-import { ExperienceGallery } from '@/components/experiences/experience-gallery'
+import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
@@ -319,7 +319,7 @@ export default async function GuideProfilePage({
 
                 <div className="flex flex-wrap gap-6 py-6 px-7 rounded-3xl mt-4" style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)' }}>
                   {[
-                    { label: 'Experience',    value: guide.years_experience != null ? `${guide.years_experience} years` : '—' },
+                    { label: 'Trip',    value: guide.years_experience != null ? `${guide.years_experience} years` : '—' },
                     { label: 'Total reviews', value: guide.total_reviews.toString() },
                     { label: 'Rating',        value: guide.average_rating != null ? `★ ${guide.average_rating.toFixed(1)}` : '—' },
                     { label: 'Location',      value: `${guide.city != null ? `${guide.city}, ` : ''}${guide.country}` },
@@ -394,7 +394,7 @@ export default async function GuideProfilePage({
                       const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} days` : null
 
                       return (
-                        <Link key={exp.id} href={`/experiences/${exp.id}`} className="group block">
+                        <Link key={exp.id} href={`/trips/${exp.id}`} className="group block">
                           <article
                             className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
                             style={{ borderRadius: '28px', background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)' }}

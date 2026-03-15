@@ -169,7 +169,7 @@ async function assertCanManageExperience(expId: string): Promise<
   return { ok: false, error: 'Forbidden', code: 'FORBIDDEN' }
 }
 
-// ─── Create Experience ────────────────────────────────────────────────────────
+// ─── Create Trip ────────────────────────────────────────────────────────
 
 export async function createExperience(
   guideId: string,
@@ -358,7 +358,7 @@ export async function togglePublishExperience(
   }
 }
 
-// ─── Delete Experience ────────────────────────────────────────────────────────
+// ─── Delete Trip ────────────────────────────────────────────────────────
 
 export async function deleteExperience(expId: string): Promise<ActionResult> {
   try {

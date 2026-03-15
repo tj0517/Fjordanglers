@@ -93,7 +93,7 @@ export default async function AnglerBookingsPage() {
           borderBottom: '1px solid rgba(10,46,77,0.06)',
         }}
       >
-        <Link href="/experiences" className="f-body text-sm" style={{ color: 'rgba(10,46,77,0.5)' }}>
+        <Link href="/trips" className="f-body text-sm" style={{ color: 'rgba(10,46,77,0.5)' }}>
           ← Experiences
         </Link>
         <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
@@ -153,7 +153,7 @@ export default async function AnglerBookingsPage() {
               Your fishing adventures will appear here once you book.
             </p>
             <Link
-              href="/experiences"
+              href="/trips"
               className="inline-flex items-center gap-2 text-white text-sm font-semibold px-6 py-3 rounded-full f-body transition-all hover:brightness-110"
               style={{ background: '#E67E50' }}
             >
@@ -189,7 +189,7 @@ export default async function AnglerBookingsPage() {
                     {booking.experience_image != null ? (
                       <Image
                         src={booking.experience_image}
-                        alt={booking.experience?.title ?? 'Experience'}
+                        alt={booking.experience?.title ?? 'Trip'}
                         width={80}
                         height={80}
                         className="object-cover w-full h-full"
@@ -205,7 +205,7 @@ export default async function AnglerBookingsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3 mb-1">
                       <h3 className="text-[#0A2E4D] text-base font-bold f-display leading-snug truncate">
-                        {booking.experience?.title ?? 'Experience'}
+                        {booking.experience?.title ?? 'Trip'}
                       </h3>
                       <span
                         className="flex-shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full f-body"
@@ -259,7 +259,7 @@ export default async function AnglerBookingsPage() {
                     {/* Rebook link */}
                     {booking.experience != null && (
                       <Link
-                        href={`/experiences/${booking.experience.id}`}
+                        href={`/trips/${booking.experience.id}`}
                         className="inline-block mt-3 text-xs font-semibold f-body transition-opacity hover:opacity-70"
                         style={{ color: '#E67E50' }}
                       >

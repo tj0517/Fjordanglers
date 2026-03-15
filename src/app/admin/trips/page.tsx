@@ -5,14 +5,14 @@ import DeleteExperienceButton from '@/components/admin/delete-experience-button'
 /**
  * /admin/experiences — Platform-wide experience management.
  *
- * Shows all experiences across every guide with stats, filter tabs,
+ * Shows all trips across every guide with stats, filter tabs,
  * and per-row actions: view public, edit, delete.
  *
  * Filter: ?filter=live | draft | (none = all)
  */
 
 export const metadata = {
-  title: 'Experiences — FjordAnglers Admin',
+  title: 'Trips — FjordAnglers Admin',
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ export default async function AdminExperiencesPage({
     {
       label: 'Total',
       value: allExps.length.toString(),
-      sub: 'all experiences',
+      sub: 'all trips',
       accent: '#0A2E4D',
       icon: (
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -153,7 +153,7 @@ export default async function AdminExperiencesPage({
             Admin → Experiences
           </p>
           <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
-            All <span style={{ fontStyle: 'italic' }}>Experiences</span>
+            All <span style={{ fontStyle: 'italic' }}>Trips</span>
           </h1>
           <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
             {allExps.length} total
@@ -204,7 +204,7 @@ export default async function AdminExperiencesPage({
           return (
             <Link
               key={tab.key}
-              href={tab.key !== '' ? `/admin/experiences?filter=${tab.key}` : '/admin/experiences'}
+              href={tab.key !== '' ? `/admin/trips?filter=${tab.key}` : '/admin/trips'}
               className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium f-body transition-all"
               style={
                 isActive
@@ -247,7 +247,7 @@ export default async function AdminExperiencesPage({
             background: 'rgba(10,46,77,0.02)',
           }}
         >
-          {['Experience', 'Guide', 'Location', 'Price', 'Duration', 'Status', 'Actions'].map((col) => (
+          {['Trip', 'Guide', 'Location', 'Price', 'Duration', 'Status', 'Actions'].map((col) => (
             <p
               key={col}
               className="text-[10px] uppercase tracking-[0.18em] f-body"
@@ -272,11 +272,11 @@ export default async function AdminExperiencesPage({
               </svg>
             </div>
             <p className="text-[#0A2E4D]/30 text-sm f-body">
-              No {currentFilter === 'live' ? 'live' : currentFilter === 'draft' ? 'draft' : ''} experiences yet.
+              No {currentFilter === 'live' ? 'live' : currentFilter === 'draft' ? 'draft' : ''} trips yet.
             </p>
             {currentFilter !== '' && (
               <Link
-                href="/admin/experiences"
+                href="/admin/trips"
                 className="mt-2 text-xs f-body font-medium transition-colors hover:text-[#C96030]"
                 style={{ color: '#E67E50' }}
               >
@@ -395,7 +395,7 @@ export default async function AdminExperiencesPage({
                   <div className="flex items-center gap-2.5 flex-wrap">
                     {/* View public */}
                     <Link
-                      href={`/experiences/${exp.id}`}
+                      href={`/trips/${exp.id}`}
                       target="_blank"
                       className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]"
                       style={{ color: 'rgba(10,46,77,0.38)' }}
@@ -406,7 +406,7 @@ export default async function AdminExperiencesPage({
 
                     {/* Edit */}
                     <Link
-                      href={`/admin/guides/${exp.guide_id}/experiences/${exp.id}/edit`}
+                      href={`/admin/guides/${exp.guide_id}{/trips/${exp.id}/edit`}
                       className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]"
                       style={{ color: 'rgba(10,46,77,0.55)' }}
                     >
@@ -429,7 +429,7 @@ export default async function AdminExperiencesPage({
       {/* ─── Footer info ────────────────────────────────────────────── */}
       {displayed.length > 0 && (
         <p className="mt-4 text-center text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>
-          Showing {displayed.length} of {allExps.length} experience{allExps.length !== 1 ? 's' : ''}
+          Showing {displayed.length} of {allExps.length} trip{allExps.length !== 1 ? 's' : ''}
         </p>
       )}
     </div>

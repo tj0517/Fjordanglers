@@ -4,9 +4,9 @@
  * ExperienceForm — shared form for creating / editing an experience.
  *
  * Used from:
- *   /admin/guides/[id]/experiences/new  → context='admin', mode='create'
- *   /dashboard/experiences/new          → context='guide', mode='create'
- *   /dashboard/experiences/[id]/edit    → context='guide', mode='edit', expId provided
+ *   /admin/guides/[id]/trips/new  → context='admin', mode='create'
+ *   /dashboard/trips/new          → context='guide', mode='create'
+ *   /dashboard/trips/[id]/edit    → context='guide', mode='edit', expId provided
  *
  * Security is enforced server-side in createExperience / updateExperience actions.
  */
@@ -33,7 +33,7 @@ import {
 
 // ─── Dynamic map (Leaflet — client only, no SSR) ──────────────────────────────
 const LocationPickerMap = dynamic(
-  () => import('@/components/experiences/location-picker-map'),
+  () => import('@/components/trips/location-picker-map'),
   {
     ssr: false,
     loading: () => (
@@ -814,7 +814,7 @@ export default function ExperienceForm({
 
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <a
-            href={`/experiences/${createdId}`}
+            href={`/trips/${createdId}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 f-body"
@@ -1761,7 +1761,7 @@ export default function ExperienceForm({
                     <rect x="5.8" y="1" width="1.4" height="11" rx="0.7" />
                     <rect x="1" y="5.8" width="11" height="1.4" rx="0.7" />
                   </svg>
-                  Create Experience
+                  Create Trip
                 </>
               ) : (
                 'Save Changes →'

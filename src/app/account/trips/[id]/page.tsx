@@ -405,7 +405,7 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
 
         <div className="mt-6 text-center">
           <Link
-            href="/experiences"
+            href="/trips"
             className="text-xs f-body"
             style={{ color: 'rgba(10,46,77,0.4)' }}
           >

@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import ExperienceForm, { type ExperienceFormDefaults } from '@/components/experiences/experience-form'
+import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
 import type { DurationOptionPayload, InclusionsPayload, GroupPricingPayload } from '@/actions/experiences'
 import type * as GeoJSON from 'geojson'
 
 /**
- * /admin/guides/[id]/experiences/[expId]/edit
+ * /admin/guides/[id]/trips/[expId]/edit
  *
  * Admin edits any experience — no ownership check required.
  * After save, redirects back to the parent guide's manage page.
@@ -24,7 +24,7 @@ export async function generateMetadata({
     .select('title')
     .eq('id', expId)
     .single()
-  return { title: exp != null ? `Edit: ${exp.title} — Admin` : 'Edit Experience' }
+  return { title: exp != null ? `Edit: ${exp.title} — Admin` : 'Edit Trip' }
 }
 
 export default async function AdminEditExperiencePage({
@@ -97,7 +97,7 @@ export default async function AdminEditExperiencePage({
           Admin
         </Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
-        <Link href="/admin/experiences" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>
+        <Link href="/admin/trips" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Experiences
         </Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>

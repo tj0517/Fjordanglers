@@ -182,7 +182,7 @@ export default function PlanYourTripPage() {
           )}
           <div className="flex flex-col gap-3">
             <Link
-              href="/experiences"
+              href="/trips"
               className="block w-full py-3.5 rounded-2xl text-white font-semibold text-sm f-body transition-all hover:brightness-110"
               style={{ background: '#E67E50' }}
             >

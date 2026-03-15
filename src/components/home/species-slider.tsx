@@ -65,7 +65,7 @@ export function SpeciesSlider({ species }: { species: SpeciesItem[] }) {
         {items.map((s, i) => (
           <Link
             key={`${s.slug}-${i}`}
-            href={`/experiences?fish=${s.slug}`}
+            href={`/trips?fish=${s.slug}`}
             className="group flex-shrink-0 flex flex-col items-center"
             style={{ width: `${CARD_W - 8}px`, scrollSnapAlign: 'start' }}
           >

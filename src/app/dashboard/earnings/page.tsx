@@ -293,7 +293,7 @@ export default async function EarningsPage() {
           className="px-7 py-5"
           style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
         >
-          <h2 className="text-[#0A2E4D] text-base font-bold f-display">Revenue by Experience</h2>
+          <h2 className="text-[#0A2E4D] text-base font-bold f-display">Revenue by Trip</h2>
           <p className="text-[#0A2E4D]/38 text-xs mt-0.5 f-body">Confirmed + completed bookings only</p>
         </div>
 

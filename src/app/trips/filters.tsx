@@ -96,7 +96,7 @@ export default function ExperienceFilters() {
     const p = new URLSearchParams(sp.toString())
     if (value) p.set(key, value); else p.delete(key)
     p.delete('page')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   function toggle(key: string, value: string, current: string) {
@@ -114,14 +114,14 @@ export default function ExperienceFilters() {
       if (preset.max) p.set('maxPrice', preset.max); else p.delete('maxPrice')
     }
     p.delete('page')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   function toggleCatchRelease() {
     const p = new URLSearchParams(sp.toString())
     if (catchRelease) p.delete('catchRelease'); else p.set('catchRelease', 'true')
     p.delete('page')
-    router.push(`/experiences?${p.toString()}`)
+    router.push(`/trips?${p.toString()}`)
   }
 
   const hasPrice   = minPrice !== '' || maxPrice !== ''
@@ -219,7 +219,7 @@ export default function ExperienceFilters() {
         <>
           {SEP}
           <button
-            onClick={() => router.push('/experiences')}
+            onClick={() => router.push('/trips')}
             className="flex-shrink-0 text-xs font-semibold f-body whitespace-nowrap transition-opacity hover:opacity-60"
             style={{ color: '#E67E50' }}
           >

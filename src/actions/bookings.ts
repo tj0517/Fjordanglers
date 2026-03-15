@@ -168,7 +168,7 @@ export async function createBookingCheckout(
           experienceId,
         },
         success_url: `${env.NEXT_PUBLIC_APP_URL}/book/${experienceId}/confirmation?bookingId=${booking.id}`,
-        cancel_url: `${env.NEXT_PUBLIC_APP_URL}/experiences/${experienceId}`,
+        cancel_url: `${env.NEXT_PUBLIC_APP_URL}{/trips/${experienceId}`,
         payment_intent_data: {
           // Platform fee on the deposit portion
           application_fee_amount: Math.round(platformFeeEur * 0.3 * 100),

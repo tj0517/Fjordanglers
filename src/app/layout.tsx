@@ -19,7 +19,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'FjordAnglers — Epic Fjord Fishing Experiences',
+    default: 'FjordAnglers — Epic Fjord Fishing Trips',
     template: '%s | FjordAnglers',
   },
   description:
@@ -30,12 +30,12 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://fjordanglers.com',
     siteName: 'FjordAnglers',
-    title: 'FjordAnglers — Epic Fjord Fishing Experiences',
+    title: 'FjordAnglers — Epic Fjord Fishing Trips',
     description: 'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FjordAnglers — Epic Fjord Fishing Experiences',
+    title: 'FjordAnglers — Epic Fjord Fishing Trips',
   },
 }
 

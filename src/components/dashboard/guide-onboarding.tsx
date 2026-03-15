@@ -180,7 +180,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
           </h2>
           <p className="text-[#0A2E4D]/45 text-sm f-body leading-relaxed mb-8">
             Your guide profile is set up and pending review. While you wait,
-            add your first fishing experience — it only takes a few minutes.
+            add your first fishing trip — it only takes a few minutes.
           </p>
           <button
             onClick={() => router.refresh()}
@@ -446,7 +446,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
               </h1>
               <p className="text-[#0A2E4D]/45 text-sm f-body leading-relaxed mb-8" style={{ maxWidth: '500px' }}>
                 You can change your plan later. Both options give you a full public profile
-                and the ability to add fishing experiences.
+                and the ability to add fishing trips.
               </p>
 
               {/* Error */}

@@ -269,9 +269,9 @@ export default function CalendarGrid({
             <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
           </svg>
         </div>
-        <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>No experiences yet</p>
+        <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>No trips yet</p>
         <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-          Create your first experience to start managing availability.
+          Create your first trip to start managing availability.
         </p>
       </div>
     )
@@ -579,7 +579,7 @@ export default function CalendarGrid({
                                style={{ background: isConfirmed ? '#1B4F72' : '#D97706' }} />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                              {expById[bk.experience_id]?.title ?? 'Experience'}
+                              {expById[bk.experience_id]?.title ?? 'Trip'}
                             </p>
                             <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
                               {bk.angler_full_name ?? 'Angler'} · {bk.guests} guest{bk.guests !== 1 ? 's' : ''}
@@ -616,7 +616,7 @@ export default function CalendarGrid({
                         <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: '#E67E50' }} />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                            {expById[b.experience_id]?.title ?? 'Experience'}
+                            {expById[b.experience_id]?.title ?? 'Trip'}
                           </p>
                           <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
                             {b.date_start === b.date_end ? b.date_start : `${b.date_start} → ${b.date_end}`}
@@ -698,7 +698,7 @@ export default function CalendarGrid({
                     <button onClick={handleBlock} disabled={isSubmitting || blockExpIds.length === 0}
                       className="flex-1 text-sm font-semibold f-body py-2.5 rounded-xl transition-opacity"
                       style={{ background: '#E67E50', color: 'white', opacity: isSubmitting || blockExpIds.length === 0 ? 0.55 : 1, cursor: isSubmitting || blockExpIds.length === 0 ? 'not-allowed' : 'pointer', border: 'none' }}>
-                      {isSubmitting ? 'Blocking…' : blockExpIds.length === experiences.length ? 'Block all experiences' : `Block ${blockExpIds.length} experience${blockExpIds.length !== 1 ? 's' : ''}`}
+                      {isSubmitting ? 'Blocking…' : blockExpIds.length === experiences.length ? 'Block all trips' : `Block ${blockExpIds.length} experience${blockExpIds.length !== 1 ? 's' : ''}`}
                     </button>
                     <button onClick={() => setShowBlockForm(false)} disabled={isSubmitting}
                       className="px-4 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
@@ -856,7 +856,7 @@ export default function CalendarGrid({
                 }}>
                 {isSubmitting
                   ? 'Blocking…'
-                  : `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for ${multiBlockExpIds.length === experiences.length ? 'all experiences' : `${multiBlockExpIds.length} experience${multiBlockExpIds.length !== 1 ? 's' : ''}`}`}
+                  : `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for ${multiBlockExpIds.length === experiences.length ? 'all trips' : `${multiBlockExpIds.length} experience${multiBlockExpIds.length !== 1 ? 's' : ''}`}`}
               </button>
               <button onClick={() => setShowMultiModal(false)} disabled={isSubmitting}
                 className="px-5 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
