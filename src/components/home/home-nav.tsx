@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -18,6 +18,7 @@ interface HomeNavProps {
 export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
   const [pastHero, setPastHero] = useState(false)
   const [open, setOpen]         = useState(false)
+  const navRef                  = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (pinned) return
@@ -32,10 +33,22 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  useEffect(() => {
+    if (!open) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
   const solid = pinned || pastHero || open
 
   return (
     <nav
+      ref={navRef}
       className="fixed inset-x-0 z-50"
       style={{
         top: `${topOffset}px`,

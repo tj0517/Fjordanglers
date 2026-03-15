@@ -18,9 +18,11 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import ImageUpload from '@/components/admin/image-upload'
 import { updateGuideProfile } from '@/actions/dashboard'
 import { FISH_ALL } from '@/lib/fish'
+import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import type { CancellationPolicy, BoatType } from '@/types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -84,6 +86,7 @@ export type ProfileDefaults = {
   boat_length_m?: number | null
   boat_engine?: string | null
   boat_capacity?: number | null
+  landscape_url?: string | null
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -198,8 +201,10 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
   const [youtube,   setYoutube]   = useState(defaults.youtube_url ?? '')
 
   // ── Photos ──────────────────────────────────────────────────────────────────
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(defaults.avatar_url)
-  const [coverUrl,  setCoverUrl]  = useState<string | null>(defaults.cover_url)
+  const [avatarUrl,     setAvatarUrl]     = useState<string | null>(defaults.avatar_url)
+  const [coverUrl,      setCoverUrl]      = useState<string | null>(defaults.cover_url)
+  const [landscapeUrl,  setLandscapeUrl]  = useState<string>(defaults.landscape_url ?? '')
+  const [landscapeTab,  setLandscapeTab]  = useState<'library' | 'upload'>('library')
 
   // ── Toggle helpers ──────────────────────────────────────────────────────────
   const toggleFish      = (f: string) =>
@@ -261,6 +266,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         youtube_url:         youtube.trim() || null,
         avatar_url:          avatarUrl,
         cover_url:           coverUrl,
+        landscape_url:       landscapeUrl.trim() || null,
       })
 
       if (!result.success) {
@@ -303,6 +309,89 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
           Changes saved successfully.
         </div>
       )}
+
+      {/* ── Hero Landscape ─────────────────────────────────────────── */}
+      <SectionCard title="Hero Background" subtitle="Full-width landscape shown behind your guide profile header. Pick from our library or upload your own.">
+        {/* Tabs */}
+        <div className="flex gap-1 mb-5 p-1 rounded-2xl" style={{ background: 'rgba(10,46,77,0.05)', width: 'fit-content' }}>
+          {(['library', 'upload'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setLandscapeTab(tab)}
+              className="px-5 py-2 rounded-xl text-sm font-semibold f-body transition-all capitalize"
+              style={landscapeTab === tab
+                ? { background: '#fff', color: '#0A2E4D', boxShadow: '0 1px 4px rgba(10,46,77,0.12)' }
+                : { color: 'rgba(10,46,77,0.45)' }
+              }
+            >
+              {tab === 'library' ? 'Pick from library' : 'Upload my own'}
+            </button>
+          ))}
+        </div>
+
+        {landscapeTab === 'library' && (
+          <div className="grid grid-cols-3 gap-3">
+            {LANDSCAPE_LIBRARY.map(url => {
+              const selected = landscapeUrl === url
+              return (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setLandscapeUrl(url)}
+                  className="relative overflow-hidden transition-all"
+                  style={{
+                    height: '100px',
+                    borderRadius: '12px',
+                    border: selected ? '2.5px solid #E67E50' : '2px solid rgba(10,46,77,0.1)',
+                    boxShadow: selected ? '0 0 0 3px rgba(230,126,80,0.2)' : 'none',
+                  }}
+                >
+                  <Image src={url} alt="" fill className="object-cover" />
+                  {selected && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.25)' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
+                        <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+            {/* None / auto-assign */}
+            <button
+              type="button"
+              onClick={() => setLandscapeUrl('')}
+              className="flex flex-col items-center justify-center gap-1 transition-all"
+              style={{
+                height: '100px',
+                borderRadius: '12px',
+                border: landscapeUrl === '' ? '2.5px solid #E67E50' : '2px dashed rgba(10,46,77,0.15)',
+                background: 'rgba(10,46,77,0.03)',
+              }}
+            >
+              <span className="text-lg">✕</span>
+              <span className="text-[11px] f-body font-medium" style={{ color: 'rgba(10,46,77,0.4)' }}>Auto-assign</span>
+            </button>
+          </div>
+        )}
+
+        {landscapeTab === 'upload' && (
+          <div>
+            <ImageUpload
+              label="Hero landscape"
+              currentUrl={landscapeUrl || null}
+              aspect="wide"
+              variant="cover"
+              onUpload={url => setLandscapeUrl(url)}
+            />
+            <p className="text-[11px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              Landscape orientation recommended · min 2400px wide
+            </p>
+          </div>
+        )}
+      </SectionCard>
 
       {/* ── Photos ─────────────────────────────────────────────────── */}
       <SectionCard title="Photos" subtitle="Avatar shown on your profile card · Cover banner on your guide page">

@@ -58,7 +58,30 @@ function priceIcon(price: number) {
   })
 }
 
-// Area variant — subtle salmon ring signals "this covers a territory"
+// Single-pin variant — plain white pill, no orange border
+function singlePriceIcon(price: number) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background: white;
+      color: #0A2E4D;
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: 'DM Sans', sans-serif;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(0,0,0,0.07);
+      white-space: nowrap;
+      cursor: pointer;
+      line-height: 1.2;
+    ">€${price}</div>`,
+    iconSize: [68, 28],
+    iconAnchor: [34, 14],
+    popupAnchor: [0, -18],
+  })
+}
+
+// Area variant — white bg + subtle salmon ring signals "this covers a territory"
 function areaPriceIcon(price: number) {
   return L.divIcon({
     className: '',
@@ -251,18 +274,32 @@ function MapClickClearer({ onClear }: { onClear: () => void }) {
   return null
 }
 
-// ─── Polyline connecting multiple spots ───────────────────────────────────────
-function SpotsConnector({ spots }: { spots: LocationSpot[] }) {
+// ─── Filled polygon overlay for multi-spot experiences ────────────────────────
+function SpotsAreaOverlay({ spots, visible }: { spots: LocationSpot[]; visible: boolean }) {
   const map = useMap()
+  const layerRef = useRef<L.Polygon | null>(null)
+
   useEffect(() => {
     if (spots.length < 2) return
-    const line = L.polyline(
+    const poly = L.polygon(
       spots.map(s => [s.lat, s.lng] as [number, number]),
-      { color: '#E67E50', weight: 1.5, dashArray: '5 5', opacity: 0.55 },
+      { color: '#E67E50', fillColor: '#E67E50', fillOpacity: 0, weight: 0, opacity: 0 },
     )
-    line.addTo(map)
-    return () => { map.removeLayer(line) }
+    poly.addTo(map)
+    layerRef.current = poly
+    return () => { map.removeLayer(poly); layerRef.current = null }
   }, [spots, map])
+
+  useEffect(() => {
+    const p = layerRef.current
+    if (p == null) return
+    if (visible) {
+      p.setStyle({ fillOpacity: 0.10, weight: 1.5, opacity: 0.45 })
+    } else {
+      p.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 })
+    }
+  }, [visible])
+
   return null
 }
 
@@ -276,10 +313,12 @@ type Props = {
 // ─── Icon resolver — single source of truth ───────────────────────────────────
 // Both card-hover (hoveredExpId from parent) and map-hover (mapHoveredId local)
 // flow through here so the icon is always consistent.
+// isSingle = true  → transparent pill with orange border (no background)
+// isSingle = false → white pill with orange ring (area / multi-spot)
 function resolveIcon(
   exp: ExperienceWithGuide,
   highlighted: boolean,
-  isArea: boolean,
+  isSingle: boolean,
 ): L.DivIcon {
   if (highlighted) {
     return exp.booking_type === 'icelandic'
@@ -287,9 +326,9 @@ function resolveIcon(
       : popupIcon(exp.price_per_person_eur ?? 0)
   }
   if (exp.booking_type === 'icelandic') return inquiryIcon()
-  return isArea
-    ? areaPriceIcon(exp.price_per_person_eur ?? 0)
-    : priceIcon(exp.price_per_person_eur ?? 0)
+  return isSingle
+    ? singlePriceIcon(exp.price_per_person_eur ?? 0)
+    : areaPriceIcon(exp.price_per_person_eur ?? 0)
 }
 
 // Shared popup content
@@ -386,8 +425,8 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
       {/* Clears pinned area when user clicks map background */}
       <MapClickClearer onClear={() => setPinnedAreaId(null)} />
 
-      {/* Hint badge — only rendered when area experiences exist */}
-      {withArea.length > 0 && <AreaHoverHint />}
+      {/* Hint badge */}
+      {experiences.length > 0 && <AreaHoverHint />}
 
       {/* CartoDB Voyager — free, modern, no API key */}
       <TileLayer
@@ -408,7 +447,7 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
             {coords != null && (
               <Marker
                 position={coords}
-                icon={resolveIcon(exp, highlighted, true)}
+                icon={resolveIcon(exp, highlighted, false)}
                 eventHandlers={{
                   mouseover: () => setMapHoveredId(exp.id),
                   mouseout:  () => setMapHoveredId(null),
@@ -430,25 +469,30 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
 
       {/* ─── Single-pin experiences ─────────────────────────────────────── */}
       {singlePin.map(({ exp, coords }) => (
-        <Marker
-          key={exp.id}
-          position={coords}
-          icon={resolveIcon(exp, isHighlighted(exp.id), false)}
-          eventHandlers={{
-            mouseover: () => setMapHoveredId(exp.id),
-            mouseout:  () => setMapHoveredId(null),
-          }}
-        >
-          <Popup closeButton={false} className="fjord-popup">
-            <ExpPopup exp={exp} />
-          </Popup>
-        </Marker>
+        <span key={exp.id}>
+          <Marker
+            position={coords}
+            icon={resolveIcon(exp, isHighlighted(exp.id), true)}
+            eventHandlers={{
+              mouseover: () => setMapHoveredId(exp.id),
+              mouseout:  () => setMapHoveredId(null),
+              click: (e) => {
+                L.DomEvent.stopPropagation(e.originalEvent)
+                setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
+              },
+            }}
+          >
+            <Popup closeButton={false} className="fjord-popup">
+              <ExpPopup exp={exp} />
+            </Popup>
+          </Marker>
+        </span>
       ))}
 
       {/* ─── Multi-spot experiences ─────────────────────────────────────── */}
       {multiSpot.map(({ exp, spots }) => (
         <span key={exp.id}>
-          <SpotsConnector spots={spots} />
+          <SpotsAreaOverlay spots={spots} visible={isHighlighted(exp.id)} />
           {/* Primary spot — price bubble, highlights from both hover sources */}
           <Marker
             position={[spots[0].lat, spots[0].lng]}
@@ -456,14 +500,18 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
             eventHandlers={{
               mouseover: () => setMapHoveredId(exp.id),
               mouseout:  () => setMapHoveredId(null),
+              click: (e) => {
+                L.DomEvent.stopPropagation(e.originalEvent)
+                setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
+              },
             }}
           >
             <Popup closeButton={false} className="fjord-popup">
               <ExpPopup exp={exp} />
             </Popup>
           </Marker>
-          {/* Secondary spots — small dots, no highlight needed */}
-          {spots.slice(1).map((s, i) => (
+          {/* Secondary spots — dots visible only when price pin is hovered/highlighted */}
+          {isHighlighted(exp.id) && spots.slice(1).map((s, i) => (
             <Marker key={i} position={[s.lat, s.lng]} icon={dotIcon()}>
               <Popup closeButton={false} className="fjord-popup">
                 <ExpPopup exp={exp} />

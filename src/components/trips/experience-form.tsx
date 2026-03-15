@@ -516,7 +516,7 @@ export default function ExperienceForm({
   )
 
   // ── Booking type ─────────────────────────────────────────────────────────
-  const [bookingType, setBookingType] = useState<'classic' | 'icelandic'>(dv.booking_type ?? 'classic')
+  const [bookingType, setBookingType] = useState<'classic' | 'icelandic' | 'both'>(dv.booking_type ?? 'classic')
 
   // ── Settings ─────────────────────────────────────────────────────────────
   const [published, setPublished] = useState(dv.published ?? false)
@@ -886,7 +886,7 @@ export default function ExperienceForm({
         title="Booking Flow"
         subtitle="Choose how anglers book this experience."
       >
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {([
             {
               value: 'classic' as const,
@@ -897,6 +897,11 @@ export default function ExperienceForm({
               value: 'icelandic' as const,
               label: 'Price on request',
               desc: 'Angler sends an inquiry with preferred dates. You review and send a custom offer with pricing.',
+            },
+            {
+              value: 'both' as const,
+              label: 'Both',
+              desc: 'Angler chooses: pay instantly via Stripe or send a custom inquiry. You set a base price.',
             },
           ]).map(({ value, label, desc }) => (
             <button

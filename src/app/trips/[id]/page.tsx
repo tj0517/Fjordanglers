@@ -549,7 +549,7 @@ export default async function ExperienceDetailPage({
       {/* ─── HERO ────────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden"
-        style={{ height: '580px', background: '#07111C' }}
+        style={{ minHeight: '480px', paddingTop: '80px', background: '#07111C' }}
       >
         {/* Landscape background */}
         <Image
@@ -754,7 +754,7 @@ export default async function ExperienceDetailPage({
                 }}
               >
                 {[
-                  { label: 'Duration', value: duration ?? '—' },
+                  ...(exp.booking_type !== 'icelandic' ? [{ label: 'Duration', value: duration ?? '—' }] : []),
                   { label: 'Group size', value: exp.max_guests != null ? `Max ${exp.max_guests} anglers` : '—' },
                   { label: 'Technique', value: exp.technique ?? '—' },
                   { label: 'Level', value: diffLabel ?? '—' },
@@ -773,6 +773,31 @@ export default async function ExperienceDetailPage({
                   </div>
                 ))}
               </div>
+
+              {/* ── Fishing methods tags ─────────────────────────────────────── */}
+              {Array.isArray(exp.fishing_methods) && exp.fishing_methods.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-[0.18em] f-body"
+                    style={{ color: 'rgba(10,46,77,0.35)' }}
+                  >
+                    Methods
+                  </span>
+                  {(exp.fishing_methods as string[]).map(m => (
+                    <span
+                      key={m}
+                      className="text-xs font-semibold px-3 py-1 rounded-full f-body"
+                      style={{
+                        background: 'rgba(230,126,80,0.10)',
+                        color: '#E67E50',
+                        border: '1px solid rgba(230,126,80,0.20)',
+                      }}
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {/* ── Trip Options (duration + pricing) — hidden for price-on-request ── */}
               {durationOptions != null && durationOptions.length > 0 && exp.booking_type !== 'icelandic' && (
@@ -1075,7 +1100,7 @@ export default async function ExperienceDetailPage({
                 availabilityConfig={availabilityConfig}
                 blockedDates={blockedDates}
                 bookedDates={bookedDates}
-                bookingType={(exp.booking_type as 'classic' | 'icelandic') ?? 'classic'}
+                bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
               />
             </aside>
 
@@ -1092,7 +1117,7 @@ export default async function ExperienceDetailPage({
         legacyPricePerPerson={exp.price_per_person_eur}
         durationHours={exp.duration_hours}
         durationDays={exp.duration_days}
-        bookingType={(exp.booking_type as 'classic' | 'icelandic') ?? 'classic'}
+        bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
       />
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}

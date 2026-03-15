@@ -54,7 +54,8 @@ Gdy `bookingType === 'icelandic'`:
 - DB: `price_per_person_eur ?? 0` jako sentinel (kolumna NOT NULL — migracja czeka)
 
 **MIGRATION APPLIED** ✅: `20260315220000_make_price_nullable_for_icelandic.sql`
-— `price_per_person_eur` jest już nullable w DB i w kodzie (`?? null`, nie `?? 0`).
+— `DROP NOT NULL` + `DROP CONSTRAINT experiences_price_per_person_eur_check`
+— `price_per_person_eur` jest nullable w DB, kod używa `?? null` (brak sentinela).
 
 #### 4. Map area pin lock (`src/app/trips/map-view.tsx`)
 

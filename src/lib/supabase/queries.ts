@@ -366,48 +366,36 @@ export type PlatformStats = {
 export async function getPlatformStats(): Promise<PlatformStats> {
   const db = createPublicClient()
 
-  const [guidesRes, expCountRes, countriesRes, languagesRes] = await Promise.all([
-    // Verified guides only
+  const [guidesRes, expCountRes] = await Promise.all([
+    // Active guides (status = 'active' OR verified_at set)
     db
       .from('guides')
-      .select('id', { count: 'exact', head: true })
-      .not('verified_at', 'is', null),
+      .select('country, languages')
+      .or('status.eq.active,verified_at.not.is.null'),
 
     // Published experiences
     db
       .from('experiences')
       .select('id', { count: 'exact', head: true })
       .eq('published', true),
-
-    // Unique countries from published experiences
-    db
-      .from('experiences')
-      .select('location_country')
-      .eq('published', true)
-      .not('location_country', 'is', null),
-
-    // Unique languages from verified guides
-    db
-      .from('guides')
-      .select('languages')
-      .not('verified_at', 'is', null)
-      .not('languages', 'is', null),
   ])
 
+  const activeGuides = guidesRes.data ?? []
+
   const uniqueCountries = new Set(
-    (countriesRes.data ?? [])
-      .map(r => r.location_country)
-      .filter((c): c is string => c != null),
+    activeGuides
+      .map(g => g.country)
+      .filter((c): c is string => c != null && c !== ''),
   )
 
   const uniqueLanguages = new Set(
-    (languagesRes.data ?? [])
-      .flatMap(r => (r.languages as string[] | null) ?? []),
+    activeGuides
+      .flatMap(g => (g.languages as string[] | null) ?? []),
   )
 
   return {
-    guideCount:      guidesRes.count    ?? 0,
-    experienceCount: expCountRes.count  ?? 0,
+    guideCount:      activeGuides.length,
+    experienceCount: expCountRes.count ?? 0,
     countryCount:    uniqueCountries.size,
     languageCount:   uniqueLanguages.size,
   }

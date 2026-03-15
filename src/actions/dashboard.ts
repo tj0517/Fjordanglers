@@ -53,6 +53,7 @@ export type UpdateGuideProfileData = {
   boat_length_m?: number | null
   boat_engine?: string | null
   boat_capacity?: number | null
+  landscape_url?: string | null
 }
 
 // ── Validation schema for new constrained fields ──────────────────────────────
@@ -183,6 +184,7 @@ export async function updateGuideProfile(
     if (data.boat_length_m !== undefined)     update.boat_length_m      = data.boat_length_m
     if (data.boat_engine !== undefined)       update.boat_engine        = data.boat_engine?.trim() || null
     if (data.boat_capacity !== undefined)     update.boat_capacity      = data.boat_capacity
+    if (data.landscape_url !== undefined)     update.landscape_url      = data.landscape_url
 
     const { error } = await supabase
       .from('guides')

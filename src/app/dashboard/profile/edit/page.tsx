@@ -15,7 +15,7 @@ export default async function ProfileEditPage() {
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, country, city, bio, fish_expertise, languages, years_experience, instagram_url, youtube_url, avatar_url, cover_url')
+    .select('id, full_name, country, city, bio, fish_expertise, languages, years_experience, instagram_url, youtube_url, avatar_url, cover_url, landscape_url')
     .eq('user_id', user.id)
     .single()
 
@@ -33,6 +33,7 @@ export default async function ProfileEditPage() {
     youtube_url:      guide.youtube_url,
     avatar_url:       guide.avatar_url,
     cover_url:        guide.cover_url,
+    landscape_url:    guide.landscape_url,
   }
 
   return (

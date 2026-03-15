@@ -456,6 +456,7 @@ export type Database = {
           stripe_charges_enabled: boolean
           stripe_payouts_enabled: boolean
           tagline: string | null
+          landscape_url: string | null
           total_reviews: number
           updated_at: string
           user_id: string | null
@@ -498,6 +499,7 @@ export type Database = {
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           tagline?: string | null
+          landscape_url?: string | null
           total_reviews?: number
           updated_at?: string
           user_id?: string | null
@@ -540,6 +542,7 @@ export type Database = {
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           tagline?: string | null
+          landscape_url?: string | null
           total_reviews?: number
           updated_at?: string
           user_id?: string | null

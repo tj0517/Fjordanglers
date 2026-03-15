@@ -265,8 +265,8 @@ type BookingWidgetProps = {
   blockedDates?: BlockedRange[]
   /** ISO booking_date strings of pending/confirmed bookings (already taken). */
   bookedDates?: string[]
-  /** 'classic' = instant Stripe checkout; 'icelandic' = inquiry-based, price on request */
-  bookingType?: 'classic' | 'icelandic'
+  /** 'classic' = Stripe checkout; 'icelandic' = inquiry only; 'both' = angler picks either */
+  bookingType?: 'classic' | 'icelandic' | 'both'
 }
 
 // ─── Platform fee ─────────────────────────────────────────────────────────────
@@ -402,6 +402,15 @@ export function BookingWidget({
   const calendarRef = useRef<HTMLDivElement>(null)
   const optionRef   = useRef<HTMLDivElement>(null)
 
+  // ── 'both' mode — angler picks their preferred payment path ──────────────
+  /** Only used when bookingType === 'both'. Defaults to classic (book & pay). */
+  const [subMode, setSubMode] = useState<'book' | 'request'>('book')
+  /** The resolved booking type after applying subMode for 'both'. */
+  const effectiveType: 'classic' | 'icelandic' =
+    bookingType === 'both'
+      ? subMode === 'book' ? 'classic' : 'icelandic'
+      : (bookingType ?? 'classic')
+
   // ── Sync FROM main-content duration cards ────────────────────────────────
   useEffect(() => {
     function onCardSelect(e: Event) {
@@ -504,11 +513,12 @@ export function BookingWidget({
       {!isDraft && (
         <div className="mb-5" ref={calendarRef} style={{ position: 'relative' }}>
 
-          {/* Trigger button */}
+          {/* Trigger row: date picker + quick-book circle */}
+          <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setCalendarOpen(o => !o)}
-            className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all"
+            className="flex-1 flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all"
             style={{
               background: '#F3EDE4',
               border: `1.5px solid ${calendarOpen ? '#E67E50' : 'rgba(10,46,77,0.12)'}`,
@@ -557,6 +567,19 @@ export function BookingWidget({
               </svg>
             </div>
           </button>
+
+          {/* Quick-book circle — scrolls to CTA */}
+          <a
+            href="#widget-cta"
+            className="flex-shrink-0 w-[50px] h-[50px] rounded-2xl flex items-center justify-center transition-all hover:brightness-110 active:scale-[0.95]"
+            style={{ background: '#E67E50' }}
+            title="Check Availability"
+          >
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6.5 2v9M2.5 7.5l4 4 4-4" />
+            </svg>
+          </a>
+          </div>{/* end trigger row */}
 
           {/* Dropdown panel */}
           {calendarOpen && (
@@ -624,15 +647,42 @@ export function BookingWidget({
         <div className="mb-5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
       )}
 
+      {/* ── "Both" mode — two-path selector banner ─────────────────────────── */}
+      {bookingType === 'both' && !isDraft && (
+        <div
+          className="flex gap-2 mb-5 p-1 rounded-2xl"
+          style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.08)' }}
+        >
+          {([
+            { mode: 'book'    as const, label: 'Book & Pay',      icon: '💳' },
+            { mode: 'request' as const, label: 'Request Offer',   icon: '✉️' },
+          ]).map(({ mode, label, icon }) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setSubMode(mode)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold f-body transition-all"
+              style={subMode === mode
+                ? { background: 'white', color: '#0A2E4D', boxShadow: '0 1px 8px rgba(10,46,77,0.10)' }
+                : { background: 'transparent', color: 'rgba(10,46,77,0.45)' }
+              }
+            >
+              <span style={{ fontSize: '13px' }}>{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Price header ───────────────────────────────────────────────────── */}
       <div className="mb-5">
         <p
           className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1 f-body"
           style={{ color: 'rgba(10,46,77,0.38)' }}
         >
-          {bookingType === 'icelandic' ? 'Price' : 'From'}
+          {effectiveType === 'icelandic' ? 'Price' : 'From'}
         </p>
-        {bookingType === 'icelandic' ? (
+        {effectiveType === 'icelandic' ? (
           <>
             <p className="font-bold f-display" style={{ fontSize: '32px', color: '#0A2E4D', lineHeight: 1 }}>
               On request
@@ -657,7 +707,7 @@ export function BookingWidget({
       </div>
 
       {/* ── Duration option dropdown (hidden for icelandic — price is on request) */}
-      {bookingType !== 'icelandic' && <div className="mb-5" ref={optionRef} style={{ position: 'relative' }}>
+      {effectiveType !== 'icelandic' && <div className="mb-5" ref={optionRef} style={{ position: 'relative' }}>
         <label
           className="block text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 f-body"
           style={{ color: 'rgba(10,46,77,0.38)' }}
@@ -891,7 +941,7 @@ export function BookingWidget({
       )}
 
       {/* ── Live price breakdown ────────────────────────────────────────────── */}
-      {!isDraft && bookingType !== 'icelandic' && (
+      {!isDraft && effectiveType !== 'icelandic' && (
         <div
           className="mb-5 px-4 py-4 rounded-2xl"
           style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
@@ -955,6 +1005,7 @@ export function BookingWidget({
       )}
 
       {/* ── CTA ────────────────────────────────────────────────────────────── */}
+      <div id="widget-cta" />
       {isDraft ? (
         <>
           <div
@@ -978,7 +1029,7 @@ export function BookingWidget({
             Edit &amp; Publish →
           </Link>
         </>
-      ) : bookingType === 'icelandic' ? (
+      ) : effectiveType === 'icelandic' ? (
         <>
           <Link
             href={`/trips/${expId}/inquire${selectedDates.length > 0 ? `?dates=${selectedDates.join(',')}&group=${groupSize}` : ''}`}
@@ -1094,6 +1145,45 @@ export function MobileBookingBar({
         >
           Request this trip →
         </Link>
+      </div>
+    )
+  }
+
+  if (bookingType === 'both') {
+    return (
+      <div
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between px-5 py-4 gap-3"
+        style={{
+          background: '#FDFAF7',
+          borderTop: '1px solid rgba(10,46,77,0.08)',
+          boxShadow: '0 -8px 32px rgba(10,46,77,0.1)',
+        }}
+      >
+        <div className="flex-shrink-0">
+          <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>From</p>
+          <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+            €{fromPrice}
+            <span className="text-sm font-normal ml-1" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              {firstOpt.pricing_type === 'per_boat' ? 'flat' : '/pp'}
+            </span>
+          </p>
+        </div>
+        <div className="flex gap-2 flex-1 min-w-0">
+          <Link
+            href={`/book/${expId}`}
+            className="flex-1 text-center text-white font-semibold py-3 rounded-xl text-xs tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+            style={{ background: '#E67E50' }}
+          >
+            Book & Pay
+          </Link>
+          <Link
+            href={`/trips/${expId}/inquire`}
+            className="flex-1 text-center font-semibold py-3 rounded-xl text-xs tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+            style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}
+          >
+            Request
+          </Link>
+        </div>
       </div>
     )
   }

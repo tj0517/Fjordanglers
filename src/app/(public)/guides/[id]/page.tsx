@@ -88,7 +88,7 @@ export default async function GuideProfilePage({
   if (guide == null) notFound()
 
   // flag rendered as <CountryFlag> below
-  const landscapeUrl = getLandscapeUrl(guide.country, guide.id)
+  const landscapeUrl = (guide as { landscape_url?: string | null }).landscape_url ?? getLandscapeUrl(guide.country, guide.id)
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>

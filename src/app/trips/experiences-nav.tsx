@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -12,6 +12,7 @@ const NAV_LINKS = [
 
 export function ExperiencesNav({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
+  const navRef          = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
@@ -19,8 +20,20 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
+  useEffect(() => {
+    if (!open) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
   return (
     <nav
+      ref={navRef}
       className="fixed top-0 inset-x-0 z-[1100]"
       style={{
         background: '#F3EDE4',

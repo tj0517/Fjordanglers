@@ -85,7 +85,7 @@ export type ExperiencePayload = {
   location_lng?: number | null
   location_area?: GeoJSON.Polygon | null
   location_spots?: LocationSpot[] | null
-  booking_type?: 'classic' | 'icelandic'
+  booking_type?: 'classic' | 'icelandic' | 'both'
   // Backward-compat arrays (derived from inclusions toggles)
   what_included: string[]
   what_excluded: string[]
