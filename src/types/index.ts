@@ -57,7 +57,7 @@ export type LocationSpot = { lat: number; lng: number; name: string }
 export type ExperienceWithGuide = Omit<Experience, 'images'> & {
   guide: Pick<
     Guide,
-    'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating' | 'cancellation_policy'
+    'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating' | 'cancellation_policy' | 'languages'
   >
   images: ExperienceImage[]
 }

@@ -63,9 +63,14 @@ export default function MapSection({
 }: Props) {
   const [bounds, setBounds] = useState<MapBounds | null>(null)
 
-  // Reset map viewport filter whenever the user changes filter params.
-  // Without this, e.g. filtering to Iceland while the map is zoomed on Norway
-  // would show 0 cards because all Icelandic trips are outside the viewport.
+  // When server-side filters are active (country, fish, etc.) the map viewport
+  // must NOT restrict the card list — filtered trips may be outside the current
+  // viewport (e.g. Iceland filter while map is centred on Norway → 0 cards).
+  // Viewport filter only activates when there are NO other active filters.
+  const hasServerFilters = filterKey !== ''
+
+  // Reset viewport filter whenever the active filter set changes so the
+  // "X in this area" badge clears automatically on new searches.
   const prevFilterKey = useRef(filterKey)
   useEffect(() => {
     if (prevFilterKey.current !== filterKey) {
@@ -73,17 +78,19 @@ export default function MapSection({
       setBounds(null)
     }
   }, [filterKey])
+
   // ID of the card the user is hovering — forwarded to MapWrapper so the
   // corresponding pin turns Salmon Orange without any map interaction needed
   const [hoveredExpId, setHoveredExpId] = useState<string | null>(null)
 
-  const visibleExperiences =
-    bounds != null
-      ? allGeoExperiences.filter(exp => isInBounds(exp, bounds))
-      : initialExperiences
+  const useViewportFilter = bounds != null && !hasServerFilters
 
-  const visibleCount = bounds != null ? visibleExperiences.length : initialTotal
-  const isFiltered = bounds != null
+  const visibleExperiences = useViewportFilter
+    ? allGeoExperiences.filter(exp => isInBounds(exp, bounds!))
+    : initialExperiences
+
+  const visibleCount = useViewportFilter ? visibleExperiences.length : initialTotal
+  const isFiltered = useViewportFilter
 
   return (
     <div className="flex" style={{ height: `calc(100vh - ${NAV_H}px)` }}>
@@ -288,7 +295,7 @@ export default function MapSection({
 
                         {exp.booking_type === 'icelandic' ? (
                           <p className="text-[12px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)', fontStyle: 'italic' }}>
-                            Guide crafts your dream experience
+                            Custom experience — enquire for price
                           </p>
                         ) : (
                           <p className="text-[13px] f-body mt-1" style={{ color: '#0A2E4D' }}>

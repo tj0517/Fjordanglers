@@ -38,6 +38,8 @@ export type UpdateGuideProfileData = {
   years_experience?: number | null
   instagram_url?: string | null
   youtube_url?: string | null
+  facebook_url?: string | null
+  website_url?: string | null
   avatar_url?: string | null
   cover_url?: string | null
   // ── Added: guide profile expansion ────────────────────────────────────────
@@ -169,6 +171,8 @@ export async function updateGuideProfile(
     if (data.years_experience !== undefined)  update.years_experience   = data.years_experience ?? null
     if (data.instagram_url !== undefined)     update.instagram_url      = data.instagram_url?.trim() || null
     if (data.youtube_url !== undefined)       update.youtube_url        = data.youtube_url?.trim() || null
+    if (data.facebook_url !== undefined)      update.facebook_url       = data.facebook_url?.trim() || null
+    if (data.website_url !== undefined)       update.website_url        = data.website_url?.trim() || null
     if (data.avatar_url !== undefined)        update.avatar_url         = data.avatar_url
     if (data.cover_url !== undefined)         update.cover_url          = data.cover_url
     // ── New fields ────────────────────────────────────────────────────────────

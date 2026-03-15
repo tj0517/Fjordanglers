@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
+import { GuidesFilters } from './guides-filters'
 import { CountryFlag } from '@/components/ui/country-flag'
 
 const PAGE_SIZE = 12
@@ -75,9 +76,6 @@ export const dynamic = 'force-dynamic'
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
 const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
-
-const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Iceland'] as const
-const LANGUAGES = ['English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic', 'German'] as const
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -198,66 +196,9 @@ export default async function GuidesPage({
 
       {/* ─── FILTER BAR ──────────────────────────────────────────── */}
       <div className="px-8 pt-10 pb-6">
-        <div className="max-w-7xl mx-auto flex items-center gap-6 overflow-x-auto">
-          {/* Country filters */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            <Link
-              href="/guides"
-              className="text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors f-body"
-              style={
-                !params.country
-                  ? { background: '#0A2E4D', color: '#fff' }
-                  : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }
-              }
-            >
-              All countries
-            </Link>
-            {COUNTRIES.map(c => {
-              const isActive = params.country === c
-              const searchStr = params.language ? `?country=${c}&language=${params.language}` : `?country=${c}`
-              return (
-                <Link
-                  key={c}
-                  href={isActive ? (params.language ? `?language=${params.language}` : '/guides') : `/guides${searchStr}`}
-                  className="text-xs font-semibold px-3.5 py-1.5 rounded-full transition-colors f-body flex items-center gap-1.5"
-                  style={
-                    isActive
-                      ? { background: '#0A2E4D', color: '#fff' }
-                      : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }
-                  }
-                >
-                  <CountryFlag country={c} />
-                  <span>{c}</span>
-                </Link>
-              )
-            })}
-          </div>
-
-          <div className="w-px self-stretch flex-shrink-0" style={{ background: 'rgba(10,46,77,0.09)' }} />
-
-          {/* Language filters */}
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {LANGUAGES.map(lang => {
-              const isActive = params.language === lang
-              const searchStr = params.country ? `?country=${params.country}&language=${lang}` : `?language=${lang}`
-              return (
-                <Link
-                  key={lang}
-                  href={isActive ? (params.country ? `?country=${params.country}` : '/guides') : `/guides${searchStr}`}
-                  className="text-xs font-medium px-3.5 py-1.5 rounded-full transition-colors f-body"
-                  style={
-                    isActive
-                      ? { background: 'rgba(230,126,80,0.15)', color: '#C96030', border: '1px solid rgba(230,126,80,0.25)' }
-                      : { background: 'rgba(10,46,77,0.05)', color: 'rgba(10,46,77,0.45)' }
-                  }
-                >
-                  {lang}
-                </Link>
-              )
-            })}
-          </div>
-
-          <p className="ml-auto text-xs f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+          <GuidesFilters country={params.country} language={params.language} />
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
             {total} guide{total !== 1 ? 's' : ''}
           </p>
         </div>

@@ -37,7 +37,7 @@ function sortImages<T extends { sort_order: number }>(images: T[]): T[] {
  * Uses FK-based embedding: guide_id → guides, experience_id → experience_images.
  */
 const EXP_SELECT =
-  '*, guide:guides ( id, full_name, avatar_url, country, city, average_rating, cancellation_policy ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
+  '*, guide:guides ( id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
 
 // ─── Experiences ──────────────────────────────────────────────────────────────
 
@@ -79,9 +79,12 @@ export async function getExperiences(
 
   // ── Existing filters ───────────────────────────────────────────────────────
   if (params.country) {
-    const countryList = params.country.split(',').filter(Boolean)
-    if (countryList.length === 1) query = query.eq('location_country', countryList[0])
-    else if (countryList.length > 1) query = query.in('location_country', countryList)
+    const countryList = params.country.split(',').map(c => c.trim()).filter(Boolean)
+    if (countryList.length === 1) {
+      query = query.ilike('location_country', countryList[0])
+    } else if (countryList.length > 1) {
+      query = query.or(countryList.map(c => `location_country.ilike.${c}`).join(','))
+    }
   }
   if (params.fish) {
     const fishList = params.fish.split(',').filter(Boolean)
@@ -93,7 +96,7 @@ export async function getExperiences(
   if (params.maxPrice)   query = query.lte('price_per_person_eur', Number(params.maxPrice))
 
   // ── Technique ─────────────────────────────────────────────────────────────
-  if (params.technique)  query = query.eq('technique', params.technique)
+  if (params.technique)  query = query.ilike('technique', params.technique)
 
   // ── Duration ──────────────────────────────────────────────────────────────
   if (params.duration) {
@@ -270,9 +273,12 @@ export async function getAllExperiencesWithCoords(
     .or('location_lat.not.is.null,location_spots.not.is.null')
 
   if (params.country) {
-    const countryList = params.country.split(',').filter(Boolean)
-    if (countryList.length === 1) query = query.eq('location_country', countryList[0])
-    else if (countryList.length > 1) query = query.in('location_country', countryList)
+    const countryList = params.country.split(',').map(c => c.trim()).filter(Boolean)
+    if (countryList.length === 1) {
+      query = query.ilike('location_country', countryList[0])
+    } else if (countryList.length > 1) {
+      query = query.or(countryList.map(c => `location_country.ilike.${c}`).join(','))
+    }
   }
   if (params.fish) {
     const fishList = params.fish.split(',').filter(Boolean)
@@ -282,7 +288,7 @@ export async function getAllExperiencesWithCoords(
   if (params.difficulty) query = query.eq('difficulty', params.difficulty as Difficulty)
   if (params.minPrice)   query = query.gte('price_per_person_eur', Number(params.minPrice))
   if (params.maxPrice)   query = query.lte('price_per_person_eur', Number(params.maxPrice))
-  if (params.technique)  query = query.eq('technique', params.technique)
+  if (params.technique)  query = query.ilike('technique', params.technique)
 
   if (params.duration) {
     switch (params.duration) {

@@ -774,6 +774,29 @@ export default async function ExperienceDetailPage({
                 ))}
               </div>
 
+              {/* Guide languages banner */}
+              {Array.isArray(exp.guide.languages) && exp.guide.languages.length > 0 && (
+                <div
+                  className="flex items-center gap-3 flex-wrap px-6 py-4 rounded-2xl mb-6"
+                  style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                    Guide speaks
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(exp.guide.languages as string[]).map(lang => (
+                      <span
+                        key={lang}
+                        className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
+                        style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}
+                      >
+                        {lang}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* ── Fishing methods tags ─────────────────────────────────────── */}
               {Array.isArray(exp.fishing_methods) && exp.fishing_methods.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 mb-6">
@@ -1048,22 +1071,40 @@ export default async function ExperienceDetailPage({
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                           <h3 className="text-[#0A2E4D] font-bold text-lg f-display">
                             {exp.guide.full_name}
                           </h3>
-                          <p className="text-sm f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                          <p className="text-sm f-body mt-0.5 mb-3" style={{ color: 'rgba(10,46,77,0.45)' }}>
                             {exp.guide.city != null ? `${exp.guide.city}, ` : ''}
                             {exp.guide.country}
                             {exp.guide.average_rating != null && (
                               <span className="ml-3">★ {exp.guide.average_rating.toFixed(1)}</span>
                             )}
                           </p>
+
+                          {/* Languages */}
+                          {Array.isArray(exp.guide.languages) && exp.guide.languages.length > 0 && (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                                Speaks
+                              </span>
+                              {(exp.guide.languages as string[]).map(lang => (
+                                <span
+                                  key={lang}
+                                  className="text-xs font-semibold px-3 py-1 rounded-full f-body"
+                                  style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
+                                >
+                                  {lang}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <Link
                           href={`/guides/${exp.guide_id}`}
-                          className="text-xs font-semibold px-4 py-2 rounded-full transition-colors f-body"
+                          className="text-xs font-semibold px-4 py-2 rounded-full transition-colors f-body flex-shrink-0"
                           style={{
                             border: '1px solid rgba(10,46,77,0.18)',
                             color: 'rgba(10,46,77,0.6)',
@@ -1210,11 +1251,23 @@ export default async function ExperienceDetailPage({
                         >
                           {related.title}
                         </h3>
-                        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                        <p className="text-xs f-body mb-3" style={{ color: 'rgba(10,46,77,0.38)' }}>
                           {relDuration}
                           {relDuration != null && related.max_guests != null && ' · '}
                           {related.max_guests != null && `max ${related.max_guests}`}
                         </p>
+                        {Array.isArray(exp.guide.languages) && exp.guide.languages.length > 0 && (
+                          <div className="flex items-center gap-1.5 pt-3 flex-wrap" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>Speaks</span>
+                            <div className="flex flex-wrap gap-1">
+                              {(exp.guide.languages as string[]).map(lang => (
+                                <span key={lang} className="text-[10px] font-semibold px-2 py-0.5 rounded-full f-body" style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+                                  {lang}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </article>
                   </Link>

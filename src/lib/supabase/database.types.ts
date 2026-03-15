@@ -444,6 +444,8 @@ export type Database = {
           google_review_count: number | null
           id: string
           instagram_url: string | null
+          facebook_url: string | null
+          website_url: string | null
           invite_email: string | null
           is_beta_listing: boolean
           languages: string[]

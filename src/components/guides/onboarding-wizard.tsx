@@ -15,6 +15,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { submitGuideApplication } from '@/actions/guide-apply'
+import { FISH_ALL } from '@/lib/fish'
 
 // ─── DATA CONSTANTS ────────────────────────────────────────────────────────────
 
@@ -39,20 +40,7 @@ const COUNTRIES = [
   'Slovakia',
 ]
 
-const FISH_TYPES = [
-  'Salmon',
-  'Sea Trout',
-  'Brown Trout',
-  'Arctic Char',
-  'Grayling',
-  'Rainbow Trout',
-  'Pike',
-  'Perch',
-  'Zander',
-  'Cod',
-  'Halibut',
-  'Catfish',
-]
+const FISH_TYPES = [...FISH_ALL]
 
 const LANGUAGES = [
   'English',

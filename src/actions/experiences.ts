@@ -52,7 +52,6 @@ export type GroupPricingPayload = {
 export type InclusionsPayload = {
   rods: boolean
   tackle: boolean
-  bait: boolean
   boat: boolean
   safety: boolean
   license: boolean

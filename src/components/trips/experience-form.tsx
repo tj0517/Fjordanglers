@@ -46,6 +46,7 @@ const LocationPickerMap = dynamic(
 )
 
 import { FISH_ALL } from '@/lib/fish'
+import { COUNTRIES } from '@/lib/countries'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -74,7 +75,6 @@ const MONTHS = [
 const INCLUSION_ITEMS = [
   { key: 'rods',          label: 'Fishing rods & reels' },
   { key: 'tackle',        label: 'Tackle & lures' },
-  { key: 'bait',          label: 'Bait' },
   { key: 'boat',          label: 'Boat & fuel' },
   { key: 'safety',        label: 'Safety equipment' },
   { key: 'license',       label: 'Fishing license' },
@@ -89,7 +89,7 @@ type InclusionKey = typeof INCLUSION_ITEMS[number]['key']
 type InclusionsState = Record<InclusionKey, boolean>
 
 const DEFAULT_INCLUSIONS: InclusionsState = {
-  rods: false, tackle: false, bait: false, boat: false, safety: false,
+  rods: false, tackle: false, boat: false, safety: false,
   license: false, lunch: false, drinks: false, fish_cleaning: false,
   transport: false, accommodation: false,
 }
@@ -438,7 +438,6 @@ export default function ExperienceForm({
         ...DEFAULT_INCLUSIONS,
         rods:          dv.inclusions_data.rods          ?? false,
         tackle:        dv.inclusions_data.tackle        ?? false,
-        bait:          dv.inclusions_data.bait          ?? false,
         boat:          dv.inclusions_data.boat          ?? false,
         safety:        dv.inclusions_data.safety        ?? false,
         license:       dv.inclusions_data.license       ?? false,
@@ -1290,12 +1289,21 @@ export default function ExperienceForm({
           {/* Country + City */}
           <div className="grid grid-cols-2 gap-5">
             <Field label="Country">
-              <TextInput
-                type="text"
+              <select
                 value={locationCountry}
                 onChange={e => setLocationCountry(e.target.value)}
-                placeholder="Norway"
-              />
+                className="w-full px-4 py-3 rounded-2xl text-sm f-body transition-all focus:outline-none"
+                style={{
+                  background: '#F3EDE4',
+                  border: '1.5px solid rgba(10,46,77,0.12)',
+                  color: locationCountry ? '#0A2E4D' : 'rgba(10,46,77,0.38)',
+                }}
+              >
+                <option value="">Select country…</option>
+                {COUNTRIES.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </Field>
             <Field label="City / Region">
               <TextInput
@@ -1337,15 +1345,21 @@ export default function ExperienceForm({
                   </span>
                 )}
 
-                {/* Clear pin */}
-                {locationLat != null && (
+                {/* Clear location — works for pin, drawn area, and multi-spots */}
+                {(locationLat != null || locationArea != null || locationSpots.length > 0) && (
                   <button
                     type="button"
-                    onClick={() => { setLocationLat(null); setLocationLng(null); setGeocodeError(null) }}
+                    onClick={() => {
+                      setLocationLat(null)
+                      setLocationLng(null)
+                      setLocationArea(null)
+                      setLocationSpots([])
+                      setGeocodeError(null)
+                    }}
                     className="text-xs px-2.5 py-1 rounded-full f-body font-medium transition-all hover:brightness-95"
                     style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
                   >
-                    × Clear pin
+                    × Clear location
                   </button>
                 )}
 
@@ -1443,6 +1457,23 @@ export default function ExperienceForm({
                     ? 'Drag the pin to fine-tune · Click anywhere on the map to move it'
                     : 'Click "Auto-locate" to geocode the city/country · Or click directly on the map'}
             </p>
+
+            {/* Area mode — explanation for anglers */}
+            {locationMode === 'area' && (
+              <div
+                className="flex items-start gap-3 mt-3 px-4 py-3 rounded-2xl"
+                style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.08)' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="rgba(10,46,77,0.4)" strokeWidth="1.4" className="flex-shrink-0 mt-0.5">
+                  <circle cx="7" cy="7" r="6" />
+                  <line x1="7" y1="5" x2="7" y2="7.5" />
+                  <circle cx="7" cy="10" r="0.5" fill="rgba(10,46,77,0.4)" stroke="none" />
+                </svg>
+                <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                  This guide operates across the lakes and rivers within this area. The exact fishing spot will be confirmed with you during the booking process.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </SectionCard>

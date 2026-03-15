@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { updateGuide, type UpdateGuidePayload, type GuideGalleryImage } from '@/actions/admin'
 import ImageUpload from '@/components/admin/image-upload'
@@ -9,17 +10,15 @@ import MultiImageUpload from '@/components/admin/multi-image-upload'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import { COUNTRIES } from '@/lib/countries'
+import { FISH_ALL } from '@/lib/fish'
+import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 
 const ALL_LANGUAGES = [
   'English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic',
   'Danish', 'German', 'Polish', 'French',
 ]
 
-const ALL_FISH = [
-  'Salmon', 'Brown Trout', 'Sea Trout', 'Arctic Char', 'Rainbow Trout',
-  'Grayling', 'Pike', 'Perch', 'Zander', 'Whitefish',
-  'Cod', 'Halibut', 'Sea Bass', 'Eel', 'Burbot',
-]
+const ALL_FISH = [...FISH_ALL]
 
 const STATUS_OPTIONS = [
   { value: 'pending',   label: 'Pending — awaiting verification' },
@@ -149,6 +148,7 @@ export type GuideEditData = {
   years_experience: number | null
   avatar_url: string | null
   cover_url: string | null
+  landscape_url?: string | null
   instagram_url: string | null
   youtube_url: string | null
   pricing_model: 'flat_fee' | 'commission'
@@ -179,8 +179,10 @@ export default function EditGuideForm({ guide }: Props) {
   const [coverUrl,      setCoverUrl]      = useState(guide.cover_url ?? '')
   const [instagramUrl,  setInstagramUrl]  = useState(guide.instagram_url ?? '')
   const [youtubeUrl,    setYoutubeUrl]    = useState(guide.youtube_url ?? '')
-  const [galleryImages, setGalleryImages] = useState<GuideGalleryImage[]>(guide.images ?? [])
-  const [pricingModel,  setPricingModel]  = useState<'flat_fee' | 'commission'>(guide.pricing_model)
+  const [galleryImages,  setGalleryImages]  = useState<GuideGalleryImage[]>(guide.images ?? [])
+  const [landscapeUrl,   setLandscapeUrl]   = useState<string>(guide.landscape_url ?? '')
+  const [landscapeTab,   setLandscapeTab]   = useState<'library' | 'upload'>('library')
+  const [pricingModel,   setPricingModel]   = useState<'flat_fee' | 'commission'>(guide.pricing_model)
   const [status,        setStatus]        = useState<UpdateGuidePayload['status']>(
     (guide.status as UpdateGuidePayload['status']) ?? 'pending',
   )
@@ -213,6 +215,7 @@ export default function EditGuideForm({ guide }: Props) {
       years_experience: yearsExp !== '' ? parseInt(yearsExp, 10) : null,
       avatar_url:       avatarUrl || undefined,
       cover_url:        coverUrl || undefined,
+      landscape_url:    landscapeUrl || null,
       gallery_images:   galleryImages,
       instagram_url:    instagramUrl || undefined,
       youtube_url:      youtubeUrl || undefined,
@@ -486,6 +489,99 @@ export default function EditGuideForm({ guide }: Props) {
           initial={galleryImages}
           onChange={setGalleryImages}
         />
+      </div>
+
+      {/* ── HERO LANDSCAPE ──────────────────────────────────────── */}
+      <div
+        className="p-8 mb-5 rounded-3xl"
+        style={{
+          background: '#FDFAF7',
+          border: '1px solid rgba(10,46,77,0.07)',
+          boxShadow: '0 2px 16px rgba(10,46,77,0.04)',
+        }}
+      >
+        <h3 className="text-[#0A2E4D] text-base font-bold f-display mb-1">Hero Background</h3>
+        <p className="text-[#0A2E4D]/40 text-xs f-body mb-5">
+          Full-width landscape shown behind the guide&apos;s profile header. Pick from our library or upload your own.
+        </p>
+
+        {/* Tabs */}
+        <div className="flex gap-1 mb-5 p-1 rounded-2xl" style={{ background: 'rgba(10,46,77,0.05)', width: 'fit-content' }}>
+          {(['library', 'upload'] as const).map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setLandscapeTab(tab)}
+              className="px-5 py-2 rounded-xl text-sm font-semibold f-body transition-all capitalize"
+              style={landscapeTab === tab
+                ? { background: '#fff', color: '#0A2E4D', boxShadow: '0 1px 4px rgba(10,46,77,0.12)' }
+                : { color: 'rgba(10,46,77,0.45)' }
+              }
+            >
+              {tab === 'library' ? 'Pick from library' : 'Upload my own'}
+            </button>
+          ))}
+        </div>
+
+        {landscapeTab === 'library' && (
+          <div className="grid grid-cols-3 gap-3">
+            {LANDSCAPE_LIBRARY.map(url => {
+              const selected = landscapeUrl === url
+              return (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setLandscapeUrl(url)}
+                  className="relative overflow-hidden transition-all"
+                  style={{
+                    height: '100px',
+                    borderRadius: '12px',
+                    border: selected ? '2.5px solid #E67E50' : '2px solid rgba(10,46,77,0.1)',
+                    boxShadow: selected ? '0 0 0 3px rgba(230,126,80,0.2)' : 'none',
+                  }}
+                >
+                  <Image src={url} alt="" fill className="object-cover" />
+                  {selected && (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.25)' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
+                        <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+            {/* None / auto-assign option */}
+            <button
+              type="button"
+              onClick={() => setLandscapeUrl('')}
+              className="flex flex-col items-center justify-center gap-1 transition-all"
+              style={{
+                height: '100px',
+                borderRadius: '12px',
+                border: landscapeUrl === '' ? '2.5px solid #E67E50' : '2px dashed rgba(10,46,77,0.15)',
+                background: 'rgba(10,46,77,0.03)',
+              }}
+            >
+              <span className="text-lg">✕</span>
+              <span className="text-[11px] f-body font-medium" style={{ color: 'rgba(10,46,77,0.4)' }}>Auto-assign</span>
+            </button>
+          </div>
+        )}
+
+        {landscapeTab === 'upload' && (
+          <div>
+            <ImageUpload
+              label="Hero landscape"
+              currentUrl={landscapeUrl || null}
+              aspect="wide"
+              cropAspect={16 / 9}
+              onUpload={url => { setLandscapeUrl(url); setLandscapeTab('library') }}
+              hint="Landscape — crop to 16:9 · min 2400px wide recommended"
+            />
+          </div>
+        )}
       </div>
 
       {/* ── SOCIAL LINKS ────────────────────────────────────────── */}

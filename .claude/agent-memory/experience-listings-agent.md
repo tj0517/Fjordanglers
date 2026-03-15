@@ -1,6 +1,6 @@
 # experience-listings-agent — pamięć
 
-## Sesja 2026-03-15 — UX fixes, crop modal, icelandic flow, map pin, hero
+## Sesja 2026-03-15 — UX fixes, crop modal, icelandic flow, map pin, hero, filtering & both booking type
 
 ### Routing — UWAGA: nazwa katalogu
 
@@ -78,6 +78,84 @@ Hero content wrapper: `pt-24` → `pt-[72px]` — dokładnie równa wysokości f
 | `ExperiencePayload.duration_options` | `DurationOptionPayload[]` → `DurationOptionPayload[] | null` |
 | `database.types.ts` Row/Insert/Update `price_per_person_eur` | `number` → `number | null` |
 | `BookingWidgetProps.legacyPricePerPerson` | `number` → `number | null` |
+
+---
+
+---
+
+### Zmiany w sesji 2026-03-15 (ciąg dalszy)
+
+#### 6. Map pin icons (map-view.tsx)
+
+- **Single pin**: `singlePriceIcon(price)` — biały pill, brak obramowania (plain white)
+- **Area/multi pin**: `areaPriceIcon(price, highlighted)` — biały pill + orange ring border gdy highlighted
+- Secondary dots (multi-spot): widoczne **tylko przy hoveru** — owinięte `isHighlighted(exp.id) &&`
+- `CircleOverlay` komponent usunięty całkowicie (nie potrzebny)
+
+#### 7. Icelandic slug page (`src/app/trips/[id]/page.tsx`)
+
+- "Duration" ukryte w quick facts gdy `booking_type === 'icelandic'`
+- Fishing methods tags zawsze widoczne (dla wszystkich typów rezerwacji)
+
+#### 8. Booking type 'both'
+
+**DB**: `supabase/migrations/20260315230000_add_both_booking_type.sql`
+```sql
+ALTER TABLE experiences DROP CONSTRAINT IF EXISTS experiences_booking_type_check;
+ALTER TABLE experiences ADD CONSTRAINT experiences_booking_type_check CHECK (booking_type IN ('classic', 'icelandic', 'both'));
+```
+⚠️ Run manually in Supabase SQL Editor.
+
+**booking-widget.tsx**:
+- `subMode: 'book' | 'request'` state tylko dla 'both'
+- `effectiveType` = `'both'` ? (subMode → classic/icelandic) : bookingType
+- Two-tab banner: "Book & Pay 💳" / "Request Offer ✉️"
+- MobileBookingBar: 2 side-by-side CTAs gdy 'both'
+
+**experience-form.tsx**:
+- `bookingType` state: `'classic' | 'icelandic' | 'both'`
+- 3 opcje w siatce (grid-cols-3)
+- 'both' shows pricing/duration form (jak classic)
+- Country field: zmieniony z TextInput na `<select>` z `COUNTRIES` lib
+
+#### 9. Map filtering bug — `filterKey` + `hasServerFilters`
+
+**Problem**: `BoundsTracker.useEffect` ustawia viewport bounds od razu po mount Leaflet.
+Przy aktywnych filtrach serwera (kraj, ryba) wyniki mogły być poza widokiem mapy → 0 kart.
+
+**Fix** (`map-section.tsx`):
+- `filterKey: string` prop — serializacja aktywnych params (bez page)
+- `hasServerFilters = filterKey !== ''`
+- `useViewportFilter = bounds != null && !hasServerFilters`
+- Gdy server filters aktywne → `visibleExperiences = initialExperiences` (pominięcie viewport filter)
+- `useEffect` z `useRef(filterKey)` — reset `setBounds(null)` gdy filterKey zmienia się
+
+#### 10. Fish lib consolidation
+
+Wszystkie hardcoded listy ryb zastąpione `FISH_ALL` z `@/lib/fish`:
+- `create-guide-form.tsx`
+- `edit-guide-form.tsx`
+- `guide-onboarding.tsx`
+- `onboarding-wizard.tsx`
+- `experience-form.tsx` (już było)
+
+#### 11. Country filter — ilike fix (`queries.ts`)
+
+**Problem**: `location_country` to free-text — guides wpisywali "sweden", "Sverige" etc.
+`.eq()` case-sensitive → Iceland/Sweden filter nie działał.
+
+**Fix** w obu funkcjach (`getExperiences` + `getAllExperiencesWithCoords`):
+```typescript
+// Pojedynczy kraj:
+query = query.ilike('location_country', countryList[0])
+// Wiele krajów:
+query = query.or(countryList.map(c => `location_country.ilike.${c}`).join(','))
+// Technique:
+query = query.ilike('technique', params.technique)
+// + .trim() przy split(',')
+```
+
+**Companion fix**: experience-form.tsx country → `<select>` z `COUNTRIES` lib (normalizacja nowych danych)
 
 ---
 

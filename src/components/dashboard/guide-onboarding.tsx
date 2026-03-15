@@ -17,16 +17,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { createGuideProfile } from '@/actions/dashboard'
 import { signOut } from '@/actions/auth'
+import { COUNTRIES as COUNTRY_LIST } from '@/lib/countries'
+import { FISH_ALL } from '@/lib/fish'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Iceland', 'Denmark']
+const COUNTRIES = [...COUNTRY_LIST]
 
-const FISH_OPTIONS = [
-  'Salmon', 'Sea Trout', 'Brown Trout', 'Arctic Char', 'Rainbow Trout',
-  'Grayling', 'Pike', 'Perch', 'Zander', 'Whitefish',
-  'Cod', 'Halibut', 'Catfish', 'Burbot',
-]
+const FISH_OPTIONS = [...FISH_ALL]
 
 const LANGUAGE_OPTIONS = [
   'English', 'Norwegian', 'Swedish', 'Finnish', 'Danish', 'Icelandic',

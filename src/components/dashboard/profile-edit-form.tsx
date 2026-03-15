@@ -71,6 +71,8 @@ export type ProfileDefaults = {
   years_experience: number | null
   instagram_url: string | null
   youtube_url: string | null
+  facebook_url?: string | null
+  website_url?: string | null
   avatar_url: string | null
   cover_url: string | null
   // ── Optional new fields — available after guide profile expansion ──────────
@@ -199,6 +201,8 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
   // ── Social ──────────────────────────────────────────────────────────────────
   const [instagram, setInstagram] = useState(defaults.instagram_url ?? '')
   const [youtube,   setYoutube]   = useState(defaults.youtube_url ?? '')
+  const [facebook,  setFacebook]  = useState(defaults.facebook_url ?? '')
+  const [website,   setWebsite]   = useState(defaults.website_url ?? '')
 
   // ── Photos ──────────────────────────────────────────────────────────────────
   const [avatarUrl,     setAvatarUrl]     = useState<string | null>(defaults.avatar_url)
@@ -264,6 +268,8 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         boat_capacity:       hasBoat && boatCapacity !== '' ? parseInt(boatCapacity, 10) : null,
         instagram_url:       instagram.trim() || null,
         youtube_url:         youtube.trim() || null,
+        facebook_url:        facebook.trim() || null,
+        website_url:         website.trim() || null,
         avatar_url:          avatarUrl,
         cover_url:           coverUrl,
         landscape_url:       landscapeUrl.trim() || null,
@@ -767,6 +773,32 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
               value={youtube}
               onChange={e => setYoutube(e.target.value)}
               placeholder="https://youtube.com/@yourchannel"
+              style={inputBase}
+              onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+            />
+          </div>
+          <div>
+            <Label htmlFor="facebook_url">Facebook URL</Label>
+            <input
+              id="facebook_url"
+              type="url"
+              value={facebook}
+              onChange={e => setFacebook(e.target.value)}
+              placeholder="https://facebook.com/yourpage"
+              style={inputBase}
+              onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+            />
+          </div>
+          <div>
+            <Label htmlFor="website_url">Website URL</Label>
+            <input
+              id="website_url"
+              type="url"
+              value={website}
+              onChange={e => setWebsite(e.target.value)}
+              placeholder="https://yourwebsite.com"
               style={inputBase}
               onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
               onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}

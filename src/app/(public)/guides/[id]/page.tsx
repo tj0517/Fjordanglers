@@ -437,9 +437,21 @@ export default async function GuideProfilePage({
                                 {exp.title}
                               </h3>
                               {(duration != null || exp.max_guests != null) && (
-                                <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                                <p className="text-xs f-body mb-3" style={{ color: 'rgba(10,46,77,0.35)' }}>
                                   {duration}{duration != null && exp.max_guests != null && ' · '}{exp.max_guests != null && `max ${exp.max_guests}`}
                                 </p>
+                              )}
+                              {guide.languages.length > 0 && (
+                                <div className="flex items-center gap-1.5 pt-3" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+                                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>Speaks</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {guide.languages.map(lang => (
+                                      <span key={lang} className="text-[10px] font-semibold px-2 py-0.5 rounded-full f-body" style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+                                        {lang}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </article>
@@ -505,7 +517,7 @@ export default async function GuideProfilePage({
                   </button>
                 </div>
 
-                {(guide.instagram_url != null || guide.youtube_url != null) && (
+                {(guide.instagram_url != null || guide.youtube_url != null || guide.facebook_url != null || guide.website_url != null) && (
                   <>
                     <div className="my-5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
                     <div className="flex flex-col gap-2.5">
@@ -525,6 +537,24 @@ export default async function GuideProfilePage({
                         >
                           <span className="w-7 h-7 rounded-xl flex items-center justify-center text-xs flex-shrink-0" style={{ background: 'rgba(10,46,77,0.06)' }}>YT</span>
                           <span className="truncate">YouTube channel</span>
+                        </a>
+                      )}
+                      {guide.facebook_url != null && (
+                        <a href={guide.facebook_url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-3 text-sm f-body transition-opacity hover:opacity-70"
+                          style={{ color: 'rgba(10,46,77,0.5)' }}
+                        >
+                          <span className="w-7 h-7 rounded-xl flex items-center justify-center text-xs flex-shrink-0" style={{ background: 'rgba(10,46,77,0.06)' }}>FB</span>
+                          <span className="truncate">Facebook page</span>
+                        </a>
+                      )}
+                      {guide.website_url != null && (
+                        <a href={guide.website_url} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-3 text-sm f-body transition-opacity hover:opacity-70"
+                          style={{ color: 'rgba(10,46,77,0.5)' }}
+                        >
+                          <span className="w-7 h-7 rounded-xl flex items-center justify-center text-xs flex-shrink-0" style={{ background: 'rgba(10,46,77,0.06)' }}>🌐</span>
+                          <span className="truncate">{guide.website_url.replace(/^https?:\/\//, '')}</span>
                         </a>
                       )}
                     </div>

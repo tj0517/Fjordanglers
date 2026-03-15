@@ -133,7 +133,7 @@ function inquiryIcon() {
     className: '',
     html: `<div style="
       background: white;
-      color: rgba(10,46,77,0.55);
+      color: #0A2E4D;
       border-radius: 20px;
       padding: 5px 12px;
       font-weight: 700;
@@ -143,9 +143,9 @@ function inquiryIcon() {
       white-space: nowrap;
       cursor: pointer;
       line-height: 1.2;
-    ">Req.</div>`,
-    iconSize: [68, 28],
-    iconAnchor: [34, 14],
+    ">Custom</div>`,
+    iconSize: [76, 28],
+    iconAnchor: [38, 14],
     popupAnchor: [0, -18],
   })
 }
@@ -165,9 +165,9 @@ function inquiryIconHover() {
       white-space: nowrap;
       cursor: pointer;
       line-height: 1.2;
-    ">Req.</div>`,
-    iconSize: [68, 28],
-    iconAnchor: [34, 14],
+    ">Custom</div>`,
+    iconSize: [76, 28],
+    iconAnchor: [38, 14],
     popupAnchor: [0, -18],
   })
 }

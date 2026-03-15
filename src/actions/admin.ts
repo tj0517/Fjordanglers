@@ -64,6 +64,8 @@ export type BetaGuidePayload = {
   years_experience?: number | null
   avatar_url?: string
   cover_url?: string
+  /** Full-width hero landscape shown on the guide's profile page. */
+  landscape_url?: string | null
   instagram_url?: string
   youtube_url?: string
   pricing_model: 'flat_fee' | 'commission'
@@ -100,6 +102,7 @@ export async function createBetaGuide(
         years_experience: payload.years_experience ?? null,
         avatar_url:       payload.avatar_url?.trim() || null,
         cover_url:        payload.cover_url?.trim() || null,
+        landscape_url:    payload.landscape_url?.trim() || null,
         instagram_url:    payload.instagram_url?.trim() || null,
         youtube_url:      payload.youtube_url?.trim() || null,
         pricing_model:    payload.pricing_model,
@@ -322,6 +325,8 @@ export type UpdateGuidePayload = {
   years_experience?: number | null
   avatar_url?: string
   cover_url?: string
+  /** Full-width hero landscape shown on the guide's profile page. */
+  landscape_url?: string | null
   instagram_url?: string
   youtube_url?: string
   pricing_model: 'flat_fee' | 'commission'
@@ -369,6 +374,7 @@ export async function updateGuide(
         years_experience: payload.years_experience ?? null,
         avatar_url:       payload.avatar_url?.trim() || null,
         cover_url:        payload.cover_url?.trim() || null,
+        landscape_url:    payload.landscape_url?.trim() || null,
         instagram_url:    payload.instagram_url?.trim() || null,
         youtube_url:      payload.youtube_url?.trim() || null,
         pricing_model:    payload.pricing_model,
