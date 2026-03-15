@@ -100,10 +100,11 @@ export default async function ExperiencesPage() {
   })
 
   const totalBookings = bookingRows?.length ?? 0
+  const pricedExperiences = experiences.filter(e => e.price_per_person_eur != null)
   const avgPrice =
-    experiences.length > 0
+    pricedExperiences.length > 0
       ? Math.round(
-          experiences.reduce((sum, e) => sum + e.price_per_person_eur, 0) / experiences.length
+          pricedExperiences.reduce((sum, e) => sum + (e.price_per_person_eur as number), 0) / pricedExperiences.length
         )
       : 0
 

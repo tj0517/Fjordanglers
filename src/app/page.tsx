@@ -78,9 +78,10 @@ export default async function HomePage() {
           <GrainOverlay />
 
           <div
-            className="relative flex flex-col justify-between px-8 md:px-14 pt-36 pb-12 md:pb-16"
+            className="relative px-8 md:px-14 pt-36 pb-12 md:pb-16"
             style={{ zIndex: 3, minHeight: '96vh' }}
           >
+          <div className="max-w-[1360px] mx-auto flex flex-col justify-between h-full" style={{ minHeight: '96vh' }}>
             {/* Top: live badge */}
             <div className="flex justify-end">
               <div
@@ -141,6 +142,7 @@ export default async function HomePage() {
                 Meet the guides →
               </Link>
             </div>
+          </div>
           </div>
         </div>
       </section>
@@ -654,9 +656,10 @@ export default async function HomePage() {
           <GrainOverlay />
 
           <div
-            className="relative grid grid-cols-1 md:grid-cols-2 items-center gap-10 px-8 md:px-14 py-20"
+            className="relative px-8 md:px-14 py-20"
             style={{ zIndex: 3, minHeight: '580px' }}
           >
+          <div className="max-w-[1360px] mx-auto grid grid-cols-1 md:grid-cols-2 items-center gap-10 h-full" style={{ minHeight: '540px' }}>
             {/* Left — headline + CTA */}
             <div>
               <div className="flex items-center gap-3 mb-5">
@@ -729,6 +732,7 @@ export default async function HomePage() {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </section>
