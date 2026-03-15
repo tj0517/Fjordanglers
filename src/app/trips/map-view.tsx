@@ -414,8 +414,8 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
 
   return (
     <MapContainer
-      center={[63.5, 14.0]}
-      zoom={5}
+      center={[63.5, 2.0]}
+      zoom={4}
       style={{ width: '100%', height: '100%' }}
       zoomControl={false}
       scrollWheelZoom
