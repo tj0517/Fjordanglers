@@ -78,7 +78,7 @@ export default async function HomePage() {
           <GrainOverlay />
 
           <div
-            className="relative px-8 md:px-14 pt-36 pb-12 md:pb-16"
+            className="relative px-8 md:px-14 pt-24 pb-12 md:pb-16"
             style={{ zIndex: 3, minHeight: '96vh' }}
           >
           <div className="max-w-[1360px] mx-auto flex flex-col justify-between h-full" style={{ minHeight: '96vh' }}>
