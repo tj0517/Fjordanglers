@@ -10,7 +10,6 @@ import MapWrapper from './map-wrapper'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
 
-const NAV_H = 96
 const DIFFICULTY_LABEL: Record<string, string> = {
   beginner: 'All Levels', intermediate: 'Intermediate', expert: 'Expert',
 }
@@ -63,6 +62,22 @@ export default function MapSection({
 }: Props) {
   const [bounds, setBounds] = useState<MapBounds | null>(null)
 
+  // Only render the map on desktop (lg+). Using JS instead of CSS hidden so
+  // Leaflet's BoundsTracker never mounts on mobile — it fires onBoundsChange
+  // on mount which would set bounds → filter to 0 results before the clear
+  // effect could run (children effects fire before parent effects in React).
+  const [showMap, setShowMap] = useState(false)
+  useEffect(() => {
+    const check = () => {
+      const desktop = window.innerWidth >= 1024
+      setShowMap(desktop)
+      if (!desktop) setBounds(null)
+    }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   // When server-side filters are active (country, fish, etc.) the map viewport
   // must NOT restrict the card list — filtered trips may be outside the current
   // viewport (e.g. Iceland filter while map is centred on Norway → 0 cards).
@@ -93,11 +108,11 @@ export default function MapSection({
   const isFiltered = useViewportFilter
 
   return (
-    <div className="flex" style={{ height: `calc(100vh - ${NAV_H}px)` }}>
+    <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-72px)]">
 
       <main
-        className="overflow-y-auto"
-        style={{ width: '50%', padding: '28px 56px 32px', scrollbarWidth: 'none' } as React.CSSProperties}
+        className="w-full lg:w-1/2 lg:overflow-y-auto px-4 sm:px-8 lg:px-14 py-7"
+        style={{ scrollbarWidth: 'none' } as React.CSSProperties}
       >
         <div className="flex items-center gap-2 mb-5">
           <p className="text-xs font-medium f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
@@ -107,7 +122,7 @@ export default function MapSection({
           {isFiltered && (
             <button
               onClick={() => setBounds(null)}
-              className="text-[11px] font-semibold f-body px-2.5 py-0.5 rounded-full transition-opacity hover:opacity-70"
+              className="hidden lg:inline-flex text-[11px] font-semibold f-body px-2.5 py-0.5 rounded-full transition-opacity hover:opacity-70"
               style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}
             >
               Clear map filter x
@@ -146,7 +161,7 @@ export default function MapSection({
             {isFiltered && (
               <button
                 onClick={() => setBounds(null)}
-                className="text-white text-sm font-semibold px-6 py-3 rounded-full hover:brightness-110 f-body"
+                className="hidden lg:inline-flex text-white text-sm font-semibold px-6 py-3 rounded-full hover:brightness-110 f-body"
                 style={{ background: '#E67E50' }}
               >
                 Clear map filter
@@ -155,7 +170,7 @@ export default function MapSection({
           </div>
         ) : (
           <>
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               {visibleExperiences.map(exp => {
                 const rawCover = exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url ?? null
                 const coverUrl = cardThumb(rawCover)
@@ -245,14 +260,6 @@ export default function MapSection({
                           >
                             {exp.title}
                           </h3>
-                          {exp.fish_types[0] != null && (
-                            <span
-                              className="text-[11px] f-body flex-shrink-0"
-                              style={{ color: 'rgba(10,46,77,0.7)' }}
-                            >
-                              * {exp.fish_types[0]}
-                            </span>
-                          )}
                         </div>
 
                         <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
@@ -317,15 +324,17 @@ export default function MapSection({
         )}
       </main>
 
-      <aside className="flex-shrink-0 hidden lg:block" style={{ width: '50%', padding: '12px 16px 12px 0' }}>
-        <div className="w-full h-full overflow-hidden" style={{ borderRadius: '20px' }}>
-          <MapWrapper
-            experiences={allGeoExperiences}
-            onBoundsChange={setBounds}
-            hoveredExpId={hoveredExpId}
-          />
-        </div>
-      </aside>
+      {showMap && (
+        <aside className="flex-shrink-0 lg:w-1/2" style={{ padding: '12px 16px 12px 0' }}>
+          <div className="w-full h-full overflow-hidden" style={{ borderRadius: '20px' }}>
+            <MapWrapper
+              experiences={allGeoExperiences}
+              onBoundsChange={setBounds}
+              hoveredExpId={hoveredExpId}
+            />
+          </div>
+        </aside>
+      )}
 
     </div>
   )

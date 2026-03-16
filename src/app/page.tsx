@@ -78,7 +78,7 @@ export default async function HomePage() {
           <GrainOverlay />
 
           <div
-            className="relative px-8 md:px-14 pt-[76px] pb-16"
+            className="relative px-4 md:px-8 lg:px-14 pt-[76px] pb-10 md:pb-16"
             style={{ zIndex: 3, minHeight: '96vh' }}
           >
           <div className="max-w-[1360px] mx-auto flex flex-col justify-between" style={{ minHeight: 'calc(96vh - 76px)' }}>
@@ -148,10 +148,10 @@ export default async function HomePage() {
       </section>
 
       {/* ─── FEATURED EXPERIENCES ────────────────────────────────────── */}
-      <section className="px-8 md:px-14 pt-20 pb-20" style={{ background: '#F3EDE4' }}>
+      <section className="px-4 md:px-8 lg:px-14 pt-12 md:pt-20 pb-12 md:pb-20" style={{ background: '#F3EDE4' }}>
         <div className="max-w-[1360px] mx-auto">
 
-          <div className="flex items-end justify-between mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-12">
             <div>
               <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
               <p
@@ -321,10 +321,10 @@ export default async function HomePage() {
       </section>
 
       {/* ─── SPECIES PICKER ──────────────────────────────────────────── */}
-      <section className="pb-24 px-8 md:px-14" style={{ background: '#F3EDE4' }}>
+      <section className="pb-12 md:pb-24 px-4 md:px-8 lg:px-14" style={{ background: '#F3EDE4' }}>
         <div className="max-w-[1360px] mx-auto">
           <div
-            className="mb-11 pt-16 flex items-end justify-between"
+            className="mb-8 md:mb-11 pt-12 md:pt-16 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
             style={{ borderTop: '1px solid rgba(10,46,77,0.09)' }}
           >
             <div>
@@ -358,7 +358,7 @@ export default async function HomePage() {
           style={{ background: '#07111C' }}
         >
           <GrainOverlay />
-          <div className="relative px-8 md:px-14 py-20 md:py-24" style={{ zIndex: 3 }}>
+          <div className="relative px-4 md:px-8 lg:px-14 py-12 md:py-20 lg:py-24" style={{ zIndex: 3 }}>
             <div className="max-w-[1360px] mx-auto">
 
             {/* Header */}
@@ -552,9 +552,9 @@ export default async function HomePage() {
 
       {/* ─── FEATURED GUIDES ─────────────────────────────────────────── */}
       {featuredGuides.length > 0 && (
-        <section className="px-8 md:px-14 py-20" style={{ background: '#F3EDE4' }}>
+        <section className="px-4 md:px-8 lg:px-14 py-12 md:py-20" style={{ background: '#F3EDE4' }}>
           <div className="max-w-[1360px] mx-auto">
-            <div className="flex items-end justify-between mb-12">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 md:mb-12">
               <div>
                 <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-3 f-body" style={{ color: '#E67E50' }}>
@@ -656,7 +656,7 @@ export default async function HomePage() {
           <GrainOverlay />
 
           <div
-            className="relative px-8 md:px-14 py-20"
+            className="relative px-4 md:px-8 lg:px-14 py-14 md:py-20"
             style={{ zIndex: 3, minHeight: '580px' }}
           >
           <div className="max-w-[1360px] mx-auto grid grid-cols-1 md:grid-cols-2 items-center gap-10 h-full" style={{ minHeight: '540px' }}>

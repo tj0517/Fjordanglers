@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { FISH_FILTER } from '@/lib/fish'
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -120,12 +121,19 @@ function Pill({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function FiltersModal() {
-  const [open,    setOpen]    = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [open,     setOpen]    = useState(false)
+  const [mounted,  setMounted] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const router = useRouter()
   const sp     = useSearchParams()
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   // ── Local filter state — synced from URL when modal opens ─────────────────
   const [difficulty,   setDifficulty]   = useState<string>('')
@@ -135,6 +143,7 @@ export function FiltersModal() {
   const [duration,     setDuration]     = useState<string>('')
   const [catchRelease, setCatchRelease] = useState<boolean>(false)
   const [guests,       setGuests]       = useState<string>('')
+  const [fish,         setFish]         = useState<string[]>([])
 
   function handleOpen() {
     setDifficulty(sp.get('difficulty')   ?? '')
@@ -144,6 +153,7 @@ export function FiltersModal() {
     setDuration(sp.get('duration')       ?? '')
     setCatchRelease(sp.get('catchRelease') === 'true')
     setGuests(sp.get('guests')           ?? '')
+    setFish(sp.get('fish') ? sp.get('fish')!.split(',').filter(Boolean) : [])
     setOpen(true)
   }
 
@@ -159,6 +169,7 @@ export function FiltersModal() {
     if (duration)      p.set('duration', duration);        else p.delete('duration')
     if (catchRelease)  p.set('catchRelease', 'true');      else p.delete('catchRelease')
     if (guests)        p.set('guests', guests);            else p.delete('guests')
+    if (fish.length)   p.set('fish', fish.join(','));      else p.delete('fish')
     p.delete('page')
 
     router.push(`/trips?${p.toString()}`)
@@ -173,6 +184,7 @@ export function FiltersModal() {
     setDuration('')
     setCatchRelease(false)
     setGuests('')
+    setFish([])
   }
 
   // ESC to close
@@ -198,11 +210,12 @@ export function FiltersModal() {
     sp.get('duration'),
     sp.get('catchRelease') === 'true' ? '1' : '',
     sp.get('guests'),
+    sp.get('fish'),
   ].filter(Boolean).length
 
   const hasLocalChanges =
     difficulty !== '' || price !== '' || sort !== '' || technique !== '' ||
-    duration !== '' || catchRelease || guests !== ''
+    duration !== '' || catchRelease || guests !== '' || fish.length > 0
 
   // ── Modal DOM ─────────────────────────────────────────────────────────────
   const modal = mounted && open
@@ -219,12 +232,18 @@ export function FiltersModal() {
             }}
           />
 
-          {/* Dialog */}
+          {/* Dialog — full-screen on mobile, centered sheet on desktop */}
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Filters"
-            style={{
+            style={isMobile ? {
+              position: 'fixed', zIndex: 9999,
+              inset: 0,
+              background: '#FDFAF7',
+              display: 'flex', flexDirection: 'column',
+              overflow: 'hidden',
+            } : {
               position: 'fixed', zIndex: 9999,
               top: '50%', left: '50%',
               transform: 'translate(-50%, -50%)',
@@ -262,6 +281,29 @@ export function FiltersModal() {
               className="flex-1 overflow-y-auto px-7 py-7"
               style={{ scrollbarWidth: 'none' } as React.CSSProperties}
             >
+
+              {/* ── Target species ──────────────────────────────────────── */}
+              <section>
+                <SectionLabel>Target species</SectionLabel>
+                <div className="flex flex-wrap gap-2">
+                  {[...FISH_FILTER].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setFish(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                      className="text-sm font-medium px-4 py-2 rounded-full transition-all f-body"
+                      style={{
+                        background: fish.includes(s) ? 'rgba(230,126,80,0.14)' : 'rgba(10,46,77,0.05)',
+                        color:      fish.includes(s) ? '#9E4820'               : 'rgba(10,46,77,0.65)',
+                        border:     `1.5px solid ${fish.includes(s) ? 'rgba(230,126,80,0.3)' : 'transparent'}`,
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <Divider />
 
               {/* ── Sort by ─────────────────────────────────────────────── */}
               <section>
@@ -468,7 +510,7 @@ export function FiltersModal() {
       {/* Trigger button */}
       <button
         onClick={handleOpen}
-        className="h-9 flex items-center gap-2 px-4 rounded-xl transition-all active:scale-[0.97] f-body"
+        className="flex-shrink-0 h-9 flex items-center gap-2 px-4 rounded-xl transition-all active:scale-[0.97] f-body"
         style={{
           background: urlActiveCount > 0 ? 'rgba(230,126,80,0.15)' : 'rgba(10,46,77,0.08)',
           color:      urlActiveCount > 0 ? '#9E4820' : 'rgba(10,46,77,0.8)',

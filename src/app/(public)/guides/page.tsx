@@ -133,7 +133,7 @@ export default async function GuidesPage({
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
 
       {/* ─── PHOTO HERO ──────────────────────────────────────────── */}
-      <header className="relative overflow-hidden" style={{ height: '580px' }}>
+      <header className="relative overflow-hidden" style={{ minHeight: '380px', height: 'clamp(380px, 55vw, 580px)' }}>
 
         {/* Background photo */}
         <Image
@@ -151,7 +151,7 @@ export default async function GuidesPage({
 
         {/* Content — pinned to bottom */}
         <div
-          className="relative max-w-7xl mx-auto px-8 flex flex-col justify-end h-full pb-16"
+          className="relative max-w-7xl mx-auto px-4 md:px-8 flex flex-col justify-end h-full pb-10 md:pb-16"
           style={{ zIndex: 3 }}
         >
           <div className="flex items-end justify-between gap-8">
@@ -162,7 +162,7 @@ export default async function GuidesPage({
                   Our Guides
                 </p>
               </div>
-              <h1 className="text-white font-bold f-display" style={{ fontSize: '54px', lineHeight: 1.06 }}>
+              <h1 className="text-white font-bold f-display" style={{ fontSize: 'clamp(28px, 5vw, 54px)', lineHeight: 1.06 }}>
                 Meet the guides
                 <br />
                 <span style={{ fontStyle: 'italic', color: '#E67E50' }}>who know every fish.</span>
@@ -195,7 +195,7 @@ export default async function GuidesPage({
       </header>
 
       {/* ─── FILTER BAR ──────────────────────────────────────────── */}
-      <div className="px-8 pt-10 pb-6">
+      <div className="px-4 md:px-8 pt-8 md:pt-10 pb-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
           <GuidesFilters country={params.country} language={params.language} />
           <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
@@ -205,7 +205,7 @@ export default async function GuidesPage({
       </div>
 
       {/* ─── GUIDES GRID ─────────────────────────────────────────── */}
-      <main className="max-w-7xl mx-auto px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 md:px-8 py-8 md:py-12">
         {guides.length === 0 ? (
           <div className="py-36 flex flex-col items-center">
             <p

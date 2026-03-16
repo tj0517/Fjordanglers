@@ -137,7 +137,7 @@ export default async function GuideProfilePage({
         </div>
 
         {/* Bottom-anchored guide identity */}
-        <div className="absolute bottom-0 inset-x-0 px-8 pb-10" style={{ zIndex: 3 }}>
+        <div className="absolute bottom-0 inset-x-0 px-4 md:px-8 pb-8 md:pb-10" style={{ zIndex: 3 }}>
           <div className="max-w-7xl mx-auto">
             <div
               className="w-20 h-20 rounded-full overflow-hidden mb-5"
@@ -190,9 +190,9 @@ export default async function GuideProfilePage({
       </section>
 
       {/* ─── MAIN CONTENT ────────────────────────────────────────── */}
-      <div className="px-8 pb-24" style={{ background: '#F3EDE4' }}>
-        <div className="max-w-7xl mx-auto pt-10">
-          <div className="flex gap-12 items-start">
+      <div className="px-4 md:px-8 pb-12 md:pb-24" style={{ background: '#F3EDE4' }}>
+        <div className="max-w-7xl mx-auto pt-8 md:pt-10">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
 
             {/* ─── LEFT ────────────────────────────────────────── */}
             <div className="flex-1 min-w-0">

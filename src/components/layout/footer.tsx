@@ -6,11 +6,11 @@ export function Footer() {
     <footer style={{ background: '#05101A' }}>
 
       {/* Main footer content */}
-      <div className="max-w-[1440px] mx-auto px-6 pt-16 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+      <div className="max-w-[1440px] mx-auto px-5 pt-10 pb-8 md:px-6 md:pt-16 md:pb-12">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
 
           {/* Brand column */}
-          <div className="lg:col-span-1">
+          <div className="col-span-2 lg:col-span-1">
             <Image
               src="/brand/white-logo.png"
               alt="FjordAnglers"
@@ -20,8 +20,8 @@ export function Footer() {
               style={{ opacity: 0.65 }}
             />
             <p
-              className="text-sm leading-relaxed mb-6 f-body"
-              style={{ color: 'rgba(255,255,255,0.28)', maxWidth: '200px' }}
+              className="text-sm leading-relaxed mb-4 md:mb-6 f-body"
+              style={{ color: 'rgba(255,255,255,0.28)', maxWidth: '260px' }}
             >
               Connecting anglers with the best fishing trips in Scandinavia.
             </p>
@@ -42,12 +42,12 @@ export function Footer() {
           {/* Explore */}
           <div>
             <h4
-              className="text-[10px] font-bold uppercase tracking-[0.24em] mb-5 f-body"
+              className="text-[10px] font-bold uppercase tracking-[0.24em] mb-3 md:mb-5 f-body"
               style={{ color: 'rgba(255,255,255,0.22)' }}
             >
               Explore
             </h4>
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2.5 md:gap-3">
               {[
                 { label: 'All Trips', href: '/trips' },
                 { label: 'Find Guides', href: '/guides' },
@@ -57,7 +57,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-[13px] f-body transition-colors hover:text-white/55"
+                    className="text-[12px] md:text-[13px] f-body transition-colors hover:text-white/55"
                     style={{ color: 'rgba(255,255,255,0.32)' }}
                   >
                     {item.label}
@@ -70,12 +70,12 @@ export function Footer() {
           {/* Destinations */}
           <div>
             <h4
-              className="text-[10px] font-bold uppercase tracking-[0.24em] mb-5 f-body"
+              className="text-[10px] font-bold uppercase tracking-[0.24em] mb-3 md:mb-5 f-body"
               style={{ color: 'rgba(255,255,255,0.22)' }}
             >
               Destinations
             </h4>
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2.5 md:gap-3">
               {[
                 { label: '🇳🇴 Norway', href: '/trips?country=Norway' },
                 { label: '🇸🇪 Sweden', href: '/trips?country=Sweden' },
@@ -86,7 +86,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-[13px] f-body transition-colors hover:text-white/55"
+                    className="text-[12px] md:text-[13px] f-body transition-colors hover:text-white/55"
                     style={{ color: 'rgba(255,255,255,0.32)' }}
                   >
                     {item.label}
@@ -99,12 +99,12 @@ export function Footer() {
           {/* For Guides */}
           <div>
             <h4
-              className="text-[10px] font-bold uppercase tracking-[0.24em] mb-5 f-body"
+              className="text-[10px] font-bold uppercase tracking-[0.24em] mb-3 md:mb-5 f-body"
               style={{ color: 'rgba(255,255,255,0.22)' }}
             >
               For Guides
             </h4>
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-2.5 md:gap-3">
               {[
                 { label: 'Apply as Guide', href: '/guides/apply' },
                 { label: 'Guide Dashboard', href: '/dashboard' },
@@ -113,7 +113,7 @@ export function Footer() {
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-[13px] f-body transition-colors hover:text-white/55"
+                    className="text-[12px] md:text-[13px] f-body transition-colors hover:text-white/55"
                     style={{ color: 'rgba(255,255,255,0.32)' }}
                   >
                     {item.label}
@@ -128,12 +128,12 @@ export function Footer() {
       {/* Bottom bar */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
         <div
-          className="max-w-[1440px] mx-auto px-6 py-5 flex items-center justify-between flex-wrap gap-4"
+          className="max-w-[1440px] mx-auto px-5 py-4 md:px-6 md:py-5 flex items-center justify-between flex-wrap gap-3"
         >
           <p className="text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.18)' }}>
             © 2026 FjordAnglers. All rights reserved.
           </p>
-          <p className="text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.14)' }}>
+          <p className="hidden md:block text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.14)' }}>
             Norway · Sweden · Finland · Iceland · Denmark
           </p>
         </div>

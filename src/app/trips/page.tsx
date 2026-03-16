@@ -6,7 +6,6 @@ import { FiltersModal } from './filters-modal'
 import { ExperiencesNav } from './experiences-nav'
 import MapSection from './map-section'
 
-const NAV_H = 96
 const PAGE_SIZE = 12
 
 type SearchParams = {
@@ -122,7 +121,8 @@ export default async function ExperiencesPage({
         </Suspense>
       </ExperiencesNav>
 
-      <div style={{ height: `${NAV_H}px` }} />
+      {/* Spacer: height matches the fixed nav exactly via --nav-h CSS variable */}
+      <div style={{ height: 'var(--nav-h, 120px)' }} />
 
       {/* ── TWO-COLUMN (viewport-filtered map + list) ── */}
       <MapSection

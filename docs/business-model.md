@@ -100,7 +100,7 @@ All guides on FjordAnglers have bookable trip pages. The guide chooses one of tw
 
 | | |
 |---|---|
-| **Offer** | 3 months free + **8% commission** (instead of 10%) for Option A, or **12% booking fee** (instead of 15%) for Option B |
+| **Offer** |  **8% commission** (instead of 10%) for Option A
 | **Duration** | Reduced rate applies for the **first 24 months** from signup date |
 | **After 24 months** | Standard rates apply automatically |
 | **Goal** | Build supply-side credibility for launch |

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-import { FISH_FILTER, FISH_IMG } from '@/lib/fish'
 import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
 import { CountryFlag } from '@/components/ui/country-flag'
 
@@ -69,7 +68,7 @@ function MultiDropdown({
   const hasValue = values.length > 0
 
   return (
-    <div ref={ref} className="relative flex-1">
+    <div ref={ref} className="relative flex-1 min-w-0">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -89,7 +88,7 @@ function MultiDropdown({
       {open && (
         <div
           className="absolute left-0 top-[calc(100%+8px)] z-[200]"
-          style={{ ...PANEL_STYLE, minWidth: '260px', maxHeight: '360px', overflowY: 'auto' }}
+          style={{ ...PANEL_STYLE, width: 'min(260px, calc(100vw - 32px))', maxHeight: '360px', overflowY: 'auto' }}
         >
           {options.map(o => {
             const sel = values.includes(o.value)
@@ -189,7 +188,7 @@ function CalendarDropdown({
   const offset = firstDayOffset(viewY, viewM)
 
   return (
-    <div ref={ref} className="relative flex-1">
+    <div ref={ref} className="relative flex-1 min-w-0">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -208,8 +207,8 @@ function CalendarDropdown({
 
       {open && (
         <div
-          className="absolute left-0 top-[calc(100%+8px)] z-[200]"
-          style={{ ...PANEL_STYLE, width: '300px', padding: '20px' }}
+          className="absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] z-[200]"
+          style={{ ...PANEL_STYLE, width: 'min(300px, calc(100vw - 32px))', padding: '20px' }}
         >
           {/* Stage hint */}
           <p className="text-[11px] f-body mb-3 text-center" style={{ color: 'rgba(255,255,255,0.35)' }}>
@@ -321,25 +320,20 @@ export function SearchBar() {
   const [countries, setCountries] = useState<string[]>(
     sp.get('country') ? sp.get('country')!.split(',').filter(Boolean) : []
   )
-  const [fish, setFish] = useState<string[]>(
-    sp.get('fish') ? sp.get('fish')!.split(',').filter(Boolean) : []
-  )
   const [dateFrom, setDateFrom] = useState(sp.get('dateFrom') ?? '')
   const [dateTo,   setDateTo]   = useState(sp.get('dateTo')   ?? '')
 
   function handleSearch() {
     const p = new URLSearchParams(sp.toString())
-    if (countries.length) p.set('country', countries.join(','))   ; else p.delete('country')
-    if (fish.length)      p.set('fish',    fish.join(','))        ; else p.delete('fish')
-    if (dateFrom)         p.set('dateFrom', dateFrom)             ; else p.delete('dateFrom')
-    if (dateTo)           p.set('dateTo',   dateTo)               ; else p.delete('dateTo')
+    if (countries.length) p.set('country', countries.join(',')) ; else p.delete('country')
+    if (dateFrom)         p.set('dateFrom', dateFrom)           ; else p.delete('dateFrom')
+    if (dateTo)           p.set('dateTo',   dateTo)             ; else p.delete('dateTo')
     p.delete('duration')
     p.delete('page')
     router.push(`/trips?${p.toString()}`)
   }
 
   const countryOptions = COUNTRIES.map(c => ({ value: c.value, label: c.value, meta: c.code }))
-  const fishOptions    = [...FISH_FILTER].map(s => ({ value: s, label: s }))
 
   return (
     <>
@@ -351,14 +345,13 @@ export function SearchBar() {
       `}</style>
 
       <div
-        className="flex items-center"
+        className="flex items-center flex-1 min-w-0"
         style={{
           background:   'white',
           borderRadius: '9999px',
           border:       '1px solid rgba(255,255,255,0.15)',
           boxShadow:    '0 4px 28px rgba(0,0,0,0.22)',
           height:       '52px',
-          minWidth:     '560px',
         }}
       >
         {/* ── Destination ── */}
@@ -373,27 +366,6 @@ export function SearchBar() {
               <CountryFlag country={o.label} size={18} />
               <span className="text-[14px] font-medium f-body">{o.label}</span>
             </>
-          )}
-        />
-
-        <div className="flex-shrink-0 w-px" style={{ height: '28px', background: 'rgba(0,0,0,0.1)' }} />
-
-        {/* ── Species ── */}
-        <MultiDropdown
-          options={fishOptions}
-          values={fish}
-          onChange={setFish}
-          label="Target species"
-          emptyLabel="Any species"
-          renderItem={o => (
-            <span className="flex items-center gap-2.5">
-              {FISH_IMG[o.label] && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={FISH_IMG[o.label]} alt="" width={28} height={20}
-                  className="object-cover rounded-sm flex-shrink-0" style={{ opacity: 0.85 }} />
-              )}
-              <span className="text-[14px] font-medium f-body">{o.label}</span>
-            </span>
           )}
         />
 

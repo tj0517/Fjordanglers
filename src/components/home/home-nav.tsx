@@ -7,7 +7,6 @@ import Link from 'next/link'
 const NAV_LINKS = [
   { label: 'Trips', href: '/trips' },
   { label: 'Guides',      href: '/guides' },
-  { label: 'Blog',        href: '/blog' },
 ]
 
 interface HomeNavProps {
@@ -78,7 +77,7 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
           <div className="flex items-center gap-3">
             <Link
               href="/guides/apply"
-              className="text-[14px] font-semibold px-5 py-2 rounded-xl text-white f-body transition-all hover:brightness-110 active:scale-[0.97]"
+              className="hidden md:inline-flex text-[14px] font-semibold px-5 py-2 rounded-xl text-white f-body transition-all hover:brightness-110 active:scale-[0.97]"
               style={{ background: '#E67E50' }}
             >
               Join as Guide

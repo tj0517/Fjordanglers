@@ -7,12 +7,24 @@ import Link from 'next/link'
 const NAV_LINKS = [
   { label: 'Trips', href: '/trips' },
   { label: 'Guides',      href: '/guides' },
-  { label: 'Blog',        href: '/blog' },
 ]
 
 export function ExperiencesNav({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const navRef          = useRef<HTMLElement>(null)
+
+  // Keep --nav-h CSS variable in sync with the real nav height so the page
+  // spacer is always accurate (handles Suspense hydration shifts, resize, etc.)
+  useEffect(() => {
+    const nav = navRef.current
+    if (!nav) return
+    const sync = () =>
+      document.documentElement.style.setProperty('--nav-h', `${nav.offsetHeight}px`)
+    sync()
+    const ro = new ResizeObserver(sync)
+    ro.observe(nav)
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
@@ -44,25 +56,25 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
       <div>
 
         {/* Top bar */}
-        <div className="flex items-center px-6" style={{ height: '96px' }}>
+        <div className="flex items-center px-4 md:px-6 h-14 md:h-[72px]">
 
           {/* Logo */}
-          <div className="flex-shrink-0" style={{ width: '160px' }}>
+          <div className="flex-shrink-0 w-32 md:w-40">
             <Link href="/">
-              <Image src="/brand/dark-logo.png" alt="FjordAnglers" width={140} height={36} className="h-8 w-auto" priority />
+              <Image src="/brand/dark-logo.png" alt="FjordAnglers" width={140} height={36} className="h-7 md:h-8 w-auto" priority />
             </Link>
           </div>
 
-          {/* Search + filters */}
-          <div className="flex-1 flex items-center justify-center gap-3">
+          {/* Search + filters — hidden on mobile, shown on md+ */}
+          <div className="hidden md:flex flex-1 items-center justify-center gap-3">
             {children}
           </div>
 
           {/* Join + Hamburger */}
-          <div className="flex-shrink-0 flex items-center justify-end gap-2">
+          <div className="flex-1 md:flex-none flex items-center justify-end gap-2">
             <Link
               href="/guides/apply"
-              className="text-[14px] font-semibold px-5 py-2 rounded-xl text-white f-body transition-all hover:brightness-110 active:scale-[0.97]"
+              className="hidden md:inline-flex text-[14px] font-semibold px-5 py-2 rounded-xl text-white f-body transition-all hover:brightness-110 active:scale-[0.97]"
               style={{ background: '#E67E50' }}
             >
               Join as Guide
@@ -93,6 +105,11 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
               ))}
             </button>
           </div>
+        </div>
+
+        {/* Mobile search row */}
+        <div className="md:hidden px-4 pb-3 flex items-center gap-2">
+          {children}
         </div>
 
         {/* Slide-down menu */}

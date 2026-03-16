@@ -574,7 +574,7 @@ export default async function ExperienceDetailPage({
         <GrainOverlay />
 
         <div
-          className="absolute bottom-0 inset-x-0 px-8 pb-12"
+          className="absolute bottom-0 inset-x-0 px-4 md:px-8 pb-8 md:pb-12"
           style={{ zIndex: 3 }}
         >
           <div className="max-w-7xl mx-auto">
@@ -655,15 +655,15 @@ export default async function ExperienceDetailPage({
 
       {/* ─── MAIN CONTENT ────────────────────────────────────────── */}
 
-      <div className="px-8 pb-24" style={{ background: '#F3EDE4' }}>
+      <div className="px-4 md:px-8 pb-12 md:pb-24" style={{ background: '#F3EDE4' }}>
         <div className="max-w-7xl mx-auto">
 
           {/* Gallery */}
-          <div className="pt-10">
+          <div className="pt-8 md:pt-10">
             <ExperienceGallery images={exp.images} title={exp.title} />
           </div>
 
-          <div className="flex gap-12 items-start">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
 
             {/* ─── LEFT — main content ─────────────────────────── */}
             <div className="flex-1 min-w-0">
@@ -1163,7 +1163,7 @@ export default async function ExperienceDetailPage({
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}
       {moreFromGuide.length > 0 && (
-        <section className="px-8 py-20" style={{ background: '#F3EDE4' }}>
+        <section className="px-4 md:px-8 py-12 md:py-20" style={{ background: '#F3EDE4' }}>
           <div className="max-w-7xl mx-auto">
             <div
               className="mb-12 pb-0 flex items-end justify-between"
