@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { FISH_FILTER } from '@/lib/fish'
 
 const NAV_LINKS = [
   { label: 'Trips', href: '/trips' },
@@ -105,6 +106,23 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
               ))}
             </button>
           </div>
+        </div>
+
+        {/* Species quick-filter — desktop only */}
+        <div
+          className="hidden md:flex items-center gap-1.5 px-4 md:px-6 pb-2 overflow-x-auto"
+          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
+        >
+          {FISH_FILTER.map(fish => (
+            <Link
+              key={fish}
+              href={`/trips?fish=${encodeURIComponent(fish)}`}
+              className="flex-shrink-0 text-[11px] font-medium px-3 py-1.5 rounded-full transition-all f-body hover:opacity-70 whitespace-nowrap"
+              style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.65)' }}
+            >
+              {fish}
+            </Link>
+          ))}
         </div>
 
         {/* Mobile search row */}
