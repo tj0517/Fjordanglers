@@ -9,14 +9,17 @@ type MockGuide = Guide & { experience_count: number }
 
 // Nullable columns present in the real DB that are not used in mock data.
 // Spread into every MOCK_EXPERIENCES entry so the type checker is satisfied.
-// Dropped columns removed: boat_included, location_latitude, location_longitude,
-//   meeting_time, tags (see migration 20260316171516_cleanup_experiences_add_packages)
 const EXP_EXTRA = {
   // ── Existing nullable columns ────────────────────────────────────────────
   landscape_url:             null,
   location_area:             null,
   location_spots:            null,
   booking_type:              'classic' as const,
+  boat_included:             null,
+  location_latitude:         null,
+  location_longitude:        null,
+  meeting_time:              null,
+  tags:                      null,
   // ── New columns added in migration 20260316171516 ────────────────────────
   packages:                  null,
   itinerary:                 null,

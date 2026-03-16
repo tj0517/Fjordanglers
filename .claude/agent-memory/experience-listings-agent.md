@@ -178,3 +178,86 @@ query = query.ilike('technique', params.technique)
 | `src/components/admin/image-upload.tsx` | CropModal (Canvas API), Strict Mode safe |
 | `src/actions/experiences.ts` | Server Actions create/update/delete |
 | `src/lib/supabase/queries.ts` | Query builder z filtrami |
+
+---
+
+## Sesja 2026-03-16 — Trip spec, form redesign, nowe pola DB, visual display
+
+### Zmiany w formularzu (`src/components/trips/experience-form.tsx`)
+
+- **Usunięto**: sekcja "What's Included / Not Included" (toggle-grid z ikonkami)
+- **Dodano**: sekcja **"Trip Plan"** — edytor punktów itinerarium (`ItineraryStep[]`)
+  - każdy krok: czas (opcja) + opis + przycisk usuń
+  - `+ Add step` dashed button na dole
+- **Dodano**: sekcja **"Trip Details"** — 6 opcjonalnych pól tekstowych z ikonami
+  - Boat, Accommodation, Food & Drinks, Fishing Licence, Gear & Equipment, Getting There
+- **Dodano**: pole `location_description` w sekcji Location
+- `max_guests` oznaczony jako opcjonalny (OptionalTag)
+- `SectionCard` obsługuje prop `optional?: boolean` → badge "Optional"
+- `OptionalTag` micro-komponent (szary pill)
+
+### Nowe typy w `src/actions/experiences.ts`
+
+```typescript
+export type ItineraryStep = { time: string; label: string }
+```
+
+Nowe pola w `ExperiencePayload` i `ExperienceFormDefaults`:
+- `itinerary: ItineraryStep[] | null`
+- `location_description: string | null`
+- `boat_description: string | null`
+- `accommodation_description: string | null`
+- `food_description: string | null`
+- `license_description: string | null`
+- `gear_description: string | null`
+- `transport_description: string | null`
+
+### DB migrations
+
+`20260316171516_cleanup_experiences_add_packages.sql`:
+- Dodano kolumny: `itinerary JSONB`, `location_description TEXT`, `boat_description TEXT`, `accommodation_description TEXT`, `food_description TEXT`, `license_description TEXT`, `gear_description TEXT`, `transport_description TEXT`, `packages JSONB`
+- Usunięto: `location_latitude`, `location_longitude`, `boat_included`, `meeting_time`, `tags`
+- Dodano CHECK constraints (NOT VALID) dla publish-gate
+- GIN index na `packages`
+
+`20260316180000_fix_published_has_image_constraint.sql`:
+- DROP CONSTRAINT `experiences_published_has_image` (sprawdzał stary TEXT[] zamiast experience_images)
+
+**UWAGA**: Wszystkie 4 publish-gate constraints zostały ręcznie usunięte przez Tymona przez SQL Editor:
+```sql
+ALTER TABLE public.experiences
+  DROP CONSTRAINT IF EXISTS experiences_published_has_image,
+  DROP CONSTRAINT IF EXISTS experiences_published_has_packages,
+  DROP CONSTRAINT IF EXISTS experiences_published_season,
+  DROP CONSTRAINT IF EXISTS experiences_published_location_country;
+```
+
+### Visual display na `/trips/[id]/page.tsx`
+
+Struktura strony po zmianach:
+1. Description (bez zmian)
+2. **Trip Plan** — `<ol>` z numbered steps, linia łącząca (conditional — tylko gdy `itinerary` wypełniony)
+3. Target Species (bez zmian)
+4. Catch & Release (bez zmian)
+5. Quick Facts strip (bez zmian)
+6. Guide languages / Fishing methods (bez zmian)
+7. Duration Cards (bez zmian)
+8. **Trip Details** — grid 2 kolumny z kartami (icon + label + text), zastępuje stary Included/Excluded
+   - Wyświetlane tylko gdy którekolwiek pole wypełnione
+   - Legacy license callout zachowany gdy `inclusions.license === false` i brak `licenseDesc`
+9. Location + Map + **`location_description`** paragraph (po mapie, przed meeting point)
+10. Cancellation policy (bez zmian)
+11. Guide card (bez zmian)
+
+Dane wyciągane przez `rawExp as Record<string, unknown>` (bo kolumny nie ma w wygenerowanych typach).
+
+### Specyfikacja trips
+
+Stworzono: `docs/trips-spec.md` — główne źródło prawdy dla struktury strony trip
+Usunięto: `docs/booking-flow.md`, `docs/listing-booking-spec.md` (nieaktualne)
+
+### Problemy rozwiązane
+
+- Fish slider na homepage: unified single slider (usunięto `md:hidden` split)
+- `supabase migration repair` — sync historii migracji
+- CHECK constraint blokujące inserty — drops przez SQL Editor
