@@ -37,10 +37,7 @@ export function SpeciesSlider({ species }: { species: SpeciesItem[] }) {
       onClick={() => scroll(dir)}
       aria-label={dir === 'left' ? 'Scroll left' : 'Scroll right'}
       className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-all hover:opacity-80"
-      style={{
-        background: 'transparent',
-        border: '1px solid rgba(10,46,77,0.15)',
-      }}
+      style={{ background: 'transparent', border: '1px solid rgba(10,46,77,0.15)' }}
     >
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
         {dir === 'left'
@@ -51,44 +48,77 @@ export function SpeciesSlider({ species }: { species: SpeciesItem[] }) {
     </button>
   )
 
-  return (
-    <div className="flex items-center gap-3">
-      <ArrowBtn dir="left" />
+  const Card = ({ s, i }: { s: SpeciesItem; i: number }) => (
+    <Link
+      key={`${s.slug}-${i}`}
+      href={`/trips?fish=${s.slug}`}
+      className="group flex flex-col items-center"
+    >
+      <div className="relative w-full transition-transform duration-300 group-hover:-translate-y-1" style={{ height: '140px', width: '160px' }}>
+        <Image
+          src={s.img}
+          alt={s.name}
+          fill
+          className="object-contain transition-transform duration-500 group-hover:scale-[1.1]"
+        />
+      </div>
+      <p className="font-semibold text-xs f-display text-center mt-1.5" style={{ color: '#0A2E4D' }}>
+        {s.name}
+      </p>
+      {s.count > 0 && (
+        <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+          {s.count} {s.count === 1 ? 'trip' : 'trips'}
+        </p>
+      )}
+    </Link>
+  )
 
-      <div
-        ref={onMount}
-        onScroll={onScroll}
-        className="flex gap-3 overflow-x-auto flex-1"
-        style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' } as React.CSSProperties}
-      >
-        {items.map((s, i) => (
-          <Link
-            key={`${s.slug}-${i}`}
-            href={`/trips?fish=${s.slug}`}
-            className="group flex-shrink-0 flex flex-col items-center"
-            style={{ width: `${CARD_W - 8}px`, scrollSnapAlign: 'start' }}
-          >
-            <div className="relative w-full transition-transform duration-300 group-hover:-translate-y-1" style={{ height: '160px' }}>
-              <Image
-                src={s.img}
-                alt={s.name}
-                fill
-                className="object-contain transition-transform duration-500 group-hover:scale-[1.1]"
-              />
-            </div>
-            <p className="font-semibold text-xs f-display text-center mt-1.5" style={{ color: '#0A2E4D' }}>
-              {s.name}
-            </p>
-            {s.count > 0 && (
-              <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                {s.count} {s.count === 1 ? 'trip' : 'trips'}
-              </p>
-            )}
-          </Link>
+  return (
+    <>
+      {/* ─── DESKTOP: static wrap grid ─────────────────────────────── */}
+      <div className="hidden md:flex flex-wrap justify-center gap-x-6 gap-y-4">
+        {species.map((s, i) => (
+          <Card key={s.slug} s={s} i={i} />
         ))}
       </div>
 
-      <ArrowBtn dir="right" />
-    </div>
+      {/* ─── MOBILE: infinite scroll slider ────────────────────────── */}
+      <div className="md:hidden flex items-center gap-3">
+        <ArrowBtn dir="left" />
+        <div
+          ref={onMount}
+          onScroll={onScroll}
+          className="flex gap-3 overflow-x-auto flex-1"
+          style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' } as React.CSSProperties}
+        >
+          {items.map((s, i) => (
+            <Link
+              key={`${s.slug}-${i}`}
+              href={`/trips?fish=${s.slug}`}
+              className="group flex-shrink-0 flex flex-col items-center"
+              style={{ width: `${CARD_W - 8}px`, scrollSnapAlign: 'start' }}
+            >
+              <div className="relative w-full transition-transform duration-300 group-hover:-translate-y-1" style={{ height: '160px' }}>
+                <Image
+                  src={s.img}
+                  alt={s.name}
+                  fill
+                  className="object-contain transition-transform duration-500 group-hover:scale-[1.1]"
+                />
+              </div>
+              <p className="font-semibold text-xs f-display text-center mt-1.5" style={{ color: '#0A2E4D' }}>
+                {s.name}
+              </p>
+              {s.count > 0 && (
+                <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  {s.count} {s.count === 1 ? 'trip' : 'trips'}
+                </p>
+              )}
+            </Link>
+          ))}
+        </div>
+        <ArrowBtn dir="right" />
+      </div>
+    </>
   )
 }

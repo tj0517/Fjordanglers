@@ -35,9 +35,9 @@ export function ExperienceGallery({ images, title }: Props) {
   useEffect(() => {
     if (lightboxIndex == null) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape')       close()
-      if (e.key === 'ArrowLeft')    prev()
-      if (e.key === 'ArrowRight')   next()
+      if (e.key === 'Escape')     close()
+      if (e.key === 'ArrowLeft')  prev()
+      if (e.key === 'ArrowRight') next()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
@@ -45,13 +45,83 @@ export function ExperienceGallery({ images, title }: Props) {
 
   if (sorted.length === 0) return null
 
+  // Bento slots: cover + up to 4 secondary
+  const cover     = sorted[0]
+  const secondary = sorted.slice(1, 5)
+  const hasMore   = sorted.length > 5
+
   return (
     <>
-      {/* ─── CAROUSEL ─────────────────────────────────────────────── */}
-      <div className="mb-8 select-none">
+      {/* ─── DESKTOP BENTO GRID ────────────────────────────────────── */}
+      <div className="hidden md:block mb-8 select-none">
+        <div
+          className="overflow-hidden rounded-3xl"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: secondary.length === 0 ? '1fr' : secondary.length <= 2 ? '2fr 1fr' : '2fr 1fr 1fr',
+            gridTemplateRows: secondary.length <= 1 ? '460px' : '230px 230px',
+            gap: '4px',
+            height: '460px',
+          }}
+        >
+          {/* Cover — always spans both rows */}
+          <button
+            className="relative overflow-hidden group"
+            style={{ gridRow: secondary.length <= 1 ? '1' : '1 / 3' }}
+            onClick={() => setLightboxIndex(0)}
+            aria-label="Open photo"
+          >
+            <Image
+              src={heroFull(cover.url) ?? cover.url}
+              alt={`${title} — cover photo`}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              priority
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+          </button>
+
+          {/* Secondary images */}
+          {secondary.map((img, i) => {
+            const isLast = i === secondary.length - 1 && (hasMore || sorted.length > 5)
+            return (
+              <button
+                key={img.id}
+                className="relative overflow-hidden group"
+                onClick={() => setLightboxIndex(i + 1)}
+                aria-label={`Open photo ${i + 2}`}
+              >
+                <Image
+                  src={cardThumb(img.url) ?? img.url}
+                  alt={`${title} — photo ${i + 2}`}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                {/* "Show all" overlay on last tile */}
+                {isLast && (
+                  <div className="absolute inset-0 flex items-center justify-center"
+                    style={{ background: 'rgba(10,46,77,0.55)', backdropFilter: 'blur(2px)' }}>
+                    <span className="flex items-center gap-2 text-white font-semibold text-[13px] f-body">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                      </svg>
+                      All {sorted.length} photos
+                    </span>
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ─── MOBILE CAROUSEL ───────────────────────────────────────── */}
+      <div className="md:hidden mb-8 select-none">
 
         {/* Main slide */}
-        <div className="relative overflow-hidden rounded-3xl mb-3" style={{ height: '460px' }}>
+        <div className="relative overflow-hidden rounded-3xl mb-3" style={{ height: '300px' }}>
           <button
             className="w-full h-full block group"
             onClick={() => setLightboxIndex(current)}
@@ -62,68 +132,49 @@ export function ExperienceGallery({ images, title }: Props) {
               src={heroFull(sorted[current].url) ?? sorted[current].url}
               alt={`${title} — photo ${current + 1}`}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              className="object-cover"
               priority={current === 0}
             />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-3xl" />
           </button>
 
-          {/* Prev / Next arrows */}
           {sorted.length > 1 && (
             <>
               <button
                 onClick={e => { e.stopPropagation(); slidePrev() }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                style={{ background: 'rgba(255,255,255,0.92)', boxShadow: '0 2px 12px rgba(0,0,0,0.18)', color: '#0A2E4D' }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(255,255,255,0.92)', color: '#0A2E4D' }}
                 aria-label="Previous photo"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
               <button
                 onClick={e => { e.stopPropagation(); slideNext() }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-                style={{ background: 'rgba(255,255,255,0.92)', boxShadow: '0 2px 12px rgba(0,0,0,0.18)', color: '#0A2E4D' }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(255,255,255,0.92)', color: '#0A2E4D' }}
                 aria-label="Next photo"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
             </>
           )}
 
-          {/* Counter badge */}
           <div
             className="absolute bottom-3 left-3 text-xs font-semibold px-3 py-1.5 rounded-full f-body"
             style={{ background: 'rgba(0,0,0,0.52)', color: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(6px)' }}
           >
             {current + 1} / {sorted.length}
           </div>
-
-          {/* Show all button */}
-          {sorted.length > 1 && (
-            <button
-              onClick={() => setLightboxIndex(current)}
-              className="absolute bottom-3 right-3 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all hover:brightness-95 f-body"
-              style={{ background: 'rgba(255,255,255,0.92)', color: '#0A2E4D', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-              </svg>
-              All {sorted.length} photos
-            </button>
-          )}
         </div>
 
-        {/* Thumbnail strip */}
         {sorted.length > 1 && (
           <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
             {sorted.map((img, i) => (
               <button
                 key={img.id}
                 onClick={() => setCurrent(i)}
-                className="relative flex-shrink-0 overflow-hidden rounded-xl transition-all"
+                className="relative flex-shrink-0 overflow-hidden rounded-xl"
                 style={{
-                  width: '80px',
-                  height: '56px',
+                  width: '72px', height: '52px',
                   opacity: i === current ? 1 : 0.55,
                   outline: i === current ? '2px solid #E67E50' : '2px solid transparent',
                   outlineOffset: '2px',
@@ -164,9 +215,7 @@ export function ExperienceGallery({ images, title }: Props) {
               className="absolute left-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
               style={{ color: 'rgba(255,255,255,0.6)' }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
-              </svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
           )}
 
@@ -188,9 +237,7 @@ export function ExperienceGallery({ images, title }: Props) {
               className="absolute right-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
               style={{ color: 'rgba(255,255,255,0.6)' }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           )}
 
