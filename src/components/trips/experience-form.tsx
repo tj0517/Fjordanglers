@@ -29,6 +29,7 @@ import {
   type DurationOptionPayload,
   type GroupPricingPayload,
   type InclusionsPayload,
+  type ItineraryStep,
 } from '@/actions/experiences'
 
 // ─── Dynamic map (Leaflet — client only, no SSR) ──────────────────────────────
@@ -156,6 +157,15 @@ export type ExperienceFormDefaults = {
   group_pricing?: GroupPricingPayload | null
   inclusions_data?: InclusionsPayload | null
   landscape_url?: string | null
+  // ── Trip content fields ───────────────────────────────────────────────────
+  itinerary?: ItineraryStep[] | null
+  location_description?: string | null
+  boat_description?: string | null
+  accommodation_description?: string | null
+  food_description?: string | null
+  license_description?: string | null
+  gear_description?: string | null
+  transport_description?: string | null
 }
 
 type Props = {
@@ -178,10 +188,10 @@ const inputBase = {
   color: '#0A2E4D',
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, children }: { label: React.ReactNode; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-semibold uppercase tracking-[0.16em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+      <label className="flex items-center text-xs font-semibold uppercase tracking-[0.16em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
         {label}
         {required === true && <span className="ml-1" style={{ color: '#E67E50' }}>*</span>}
       </label>
@@ -218,7 +228,7 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   )
 }
 
-function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function SectionCard({ title, subtitle, optional, children }: { title: string; subtitle?: string; optional?: boolean; children: React.ReactNode }) {
   return (
     <div
       className="p-8 mb-5 rounded-3xl"
@@ -228,13 +238,34 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
         boxShadow: '0 2px 16px rgba(10,46,77,0.04)',
       }}
     >
-      <h3 className="text-[#0A2E4D] text-base font-bold f-display mb-1">{title}</h3>
+      <div className="flex items-center gap-2 mb-1">
+        <h3 className="text-[#0A2E4D] text-base font-bold f-display">{title}</h3>
+        {optional === true && (
+          <span
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full f-body"
+            style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.38)' }}
+          >
+            Optional
+          </span>
+        )}
+      </div>
       {subtitle != null && (
         <p className="text-[#0A2E4D]/40 text-xs f-body mb-5">{subtitle}</p>
       )}
       {subtitle == null && <div className="mb-5" />}
       {children}
     </div>
+  )
+}
+
+function OptionalTag() {
+  return (
+    <span
+      className="ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full f-body normal-case tracking-normal"
+      style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.35)' }}
+    >
+      optional
+    </span>
   )
 }
 
@@ -514,6 +545,20 @@ export default function ExperienceForm({
       .map((img, i) => ({ url: img.url, is_cover: false, sort_order: i })),
   )
 
+  // ── Itinerary ────────────────────────────────────────────────────────────
+  const [itinerary, setItinerary] = useState<ItineraryStep[]>(
+    dv.itinerary != null && dv.itinerary.length > 0 ? dv.itinerary : []
+  )
+
+  // ── Trip details (optional text fields) ──────────────────────────────────
+  const [locationDescription,      setLocationDescription]      = useState(dv.location_description ?? '')
+  const [boatDescription,          setBoatDescription]          = useState(dv.boat_description ?? '')
+  const [accommodationDescription, setAccommodationDescription] = useState(dv.accommodation_description ?? '')
+  const [foodDescription,          setFoodDescription]          = useState(dv.food_description ?? '')
+  const [licenseDescription,       setLicenseDescription]       = useState(dv.license_description ?? '')
+  const [gearDescription,          setGearDescription]          = useState(dv.gear_description ?? '')
+  const [transportDescription,     setTransportDescription]     = useState(dv.transport_description ?? '')
+
   // ── Booking type ─────────────────────────────────────────────────────────
   const [bookingType, setBookingType] = useState<'classic' | 'icelandic' | 'both'>(dv.booking_type ?? 'classic')
 
@@ -533,6 +578,21 @@ export default function ExperienceForm({
   })
 
   // ── Helpers ──────────────────────────────────────────────────────────────
+  // ── Itinerary helpers ─────────────────────────────────────────────────────
+  const addItineraryStep = () => {
+    setItinerary(prev => [...prev, { time: '', label: '' }])
+  }
+  const removeItineraryStep = (i: number) => {
+    setItinerary(prev => prev.filter((_, idx) => idx !== i))
+  }
+  const updateItineraryStep = (i: number, updates: Partial<ItineraryStep>) => {
+    setItinerary(prev => {
+      const next = [...prev]
+      next[i] = { ...next[i], ...updates }
+      return next
+    })
+  }
+
   const toggleFish = (f: string) =>
     setFishTypes(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])
 
@@ -626,7 +686,6 @@ export default function ExperienceForm({
     if (title.trim() === '')       { setError('Title is required.'); return }
     if (description.trim() === '') { setError('Description is required.'); return }
     if (fishTypes.length === 0)    { setError('Select at least one target species.'); return }
-    if (maxGuests === '')          { setError('Maximum guests is required.'); return }
 
     // Duration / pricing validation — skip entirely for "on request" (icelandic) flow
     if (bookingType !== 'icelandic') {
@@ -734,7 +793,7 @@ export default function ExperienceForm({
       catch_and_release:    catchAndRelease,
       duration_hours:       durationHours,
       duration_days:        durationDays,
-      max_guests:           parseInt(maxGuests, 10),
+      max_guests:           maxGuests !== '' ? parseInt(maxGuests, 10) : null,
       price_per_person_eur: pricePerPerson,
       location_country:     locationCountry.trim() || null,
       location_city:        locationCity.trim() || null,
@@ -753,9 +812,18 @@ export default function ExperienceForm({
       season_to:            seasonTo,
       fishing_methods:      fishingMethods,
       duration_options:     durationOptionsPayload,
-      group_pricing:        null, // pricing now lives per duration option
+      group_pricing:        null,
       inclusions_data:      inclusionsPayload,
       landscape_url:        landscapeUrl.trim() || null,
+      // Trip content fields
+      itinerary:                    itinerary.length > 0 ? itinerary.filter(s => s.label.trim() !== '') : null,
+      location_description:         locationDescription.trim() || null,
+      boat_description:             boatDescription.trim() || null,
+      accommodation_description:    accommodationDescription.trim() || null,
+      food_description:             foodDescription.trim() || null,
+      license_description:          licenseDescription.trim() || null,
+      gear_description:             gearDescription.trim() || null,
+      transport_description:        transportDescription.trim() || null,
     }
 
     startTransition(async () => {
@@ -1261,7 +1329,7 @@ export default function ExperienceForm({
           </div>
 
           {/* Max guests */}
-          <Field label="Max guests" required>
+          <Field label={<>Max guests <OptionalTag /></>}>
             <TextInput
               type="number"
               min="1"
@@ -1322,6 +1390,16 @@ export default function ExperienceForm({
               value={meetingPoint}
               onChange={e => setMeetingPoint(e.target.value)}
               placeholder="e.g. Bergen Harbor, Bryggen — exact address or description"
+            />
+          </Field>
+
+          {/* Location description */}
+          <Field label={<>About this location <OptionalTag /></>}>
+            <TextArea
+              rows={3}
+              value={locationDescription}
+              onChange={e => setLocationDescription(e.target.value)}
+              placeholder="Describe the fishing spot — the river, lake, fjord, what makes it special…"
             />
           </Field>
 
@@ -1478,7 +1556,184 @@ export default function ExperienceForm({
         </div>
       </SectionCard>
 
-      {/* ── Section 5: What's Included ───────────────────────────────── */}
+      {/* ── Section 5: Trip Plan ─────────────────────────────────────── */}
+      <SectionCard
+        title="Trip Plan"
+        optional
+        subtitle="Describe the day step by step. Only shown on the trip page if filled in."
+      >
+        <div className="flex flex-col gap-2">
+          {itinerary.length > 0 && (
+            <div className="flex flex-col gap-2 mb-2">
+              {itinerary.map((step, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  {/* Step number */}
+                  <span
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold f-body"
+                    style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.4)' }}
+                  >
+                    {i + 1}
+                  </span>
+                  {/* Time */}
+                  <TextInput
+                    type="text"
+                    value={step.time}
+                    onChange={e => updateItineraryStep(i, { time: e.target.value })}
+                    placeholder="09:00"
+                    style={{ width: '76px', flexShrink: 0, fontSize: '13px' }}
+                  />
+                  {/* Label */}
+                  <TextInput
+                    type="text"
+                    value={step.label}
+                    onChange={e => updateItineraryStep(i, { label: e.target.value })}
+                    placeholder="e.g. Depart from harbour"
+                    style={{ flex: 1, minWidth: 0 }}
+                  />
+                  {/* Remove */}
+                  <button
+                    type="button"
+                    onClick={() => removeItineraryStep(i)}
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:brightness-90"
+                    style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
+                    aria-label="Remove step"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8">
+                      <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {itinerary.length === 0 && (
+            <p className="text-xs f-body mb-2" style={{ color: 'rgba(10,46,77,0.35)' }}>
+              No steps added yet. Click below to start building the trip schedule.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={addItineraryStep}
+            className="w-full py-3 rounded-2xl text-sm font-medium f-body transition-all hover:brightness-95 flex items-center justify-center gap-2"
+            style={{
+              border: '1.5px dashed rgba(10,46,77,0.2)',
+              color: 'rgba(10,46,77,0.45)',
+              background: 'transparent',
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+              <rect x="5.1" y="1" width="1.8" height="10" rx="0.9" />
+              <rect x="1" y="5.1" width="10" height="1.8" rx="0.9" />
+            </svg>
+            Add step
+          </button>
+        </div>
+      </SectionCard>
+
+      {/* ── Section 6: Trip Details ───────────────────────────────────── */}
+      <SectionCard
+        title="Trip Details"
+        optional
+        subtitle="Fill in only what's relevant — empty sections won't appear on the trip page."
+      >
+        <div className="flex flex-col gap-5">
+          {([
+            {
+              key: 'boat',
+              label: 'Boat',
+              icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  <path d="M2 20h20M5 20l-1-6h16l-1 6M12 4v10M8 14V9l4-5 4 5v5" />
+                </svg>
+              ),
+              placeholder: 'e.g. 6m aluminium boat, 60HP Yamaha, sonar, capacity 4 anglers',
+              value: boatDescription,
+              setter: setBoatDescription,
+            },
+            {
+              key: 'accommodation',
+              label: 'Accommodation',
+              icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+              ),
+              placeholder: 'e.g. Riverside cabin, 2 bedrooms, kitchen, WiFi included',
+              value: accommodationDescription,
+              setter: setAccommodationDescription,
+            },
+            {
+              key: 'food',
+              label: 'Food & Drinks',
+              icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3" />
+                </svg>
+              ),
+              placeholder: 'e.g. Hot lunch and coffee provided. Bring your own snacks.',
+              value: foodDescription,
+              setter: setFoodDescription,
+            },
+            {
+              key: 'license',
+              label: 'Fishing Licence',
+              icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  <rect x="3" y="4" width="18" height="16" rx="2" /><line x1="7" y1="9" x2="17" y2="9" /><line x1="7" y1="13" x2="14" y2="13" />
+                </svg>
+              ),
+              placeholder: 'e.g. Licence required, ~€15/day. We help you arrange it — just ask.',
+              value: licenseDescription,
+              setter: setLicenseDescription,
+            },
+            {
+              key: 'gear',
+              label: 'Gear & Equipment',
+              icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="4.93" y1="4.93" x2="7.76" y2="7.76" /><line x1="16.24" y1="16.24" x2="19.07" y2="19.07" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" /><line x1="4.93" y1="19.07" x2="7.76" y2="16.24" /><line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+                </svg>
+              ),
+              placeholder: 'e.g. All spinning rods provided. Bring your own waders and polarised glasses.',
+              value: gearDescription,
+              setter: setGearDescription,
+            },
+            {
+              key: 'transport',
+              label: 'Getting There',
+              icon: (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  <circle cx="5.5" cy="17.5" r="2.5" /><circle cx="18.5" cy="17.5" r="2.5" /><path d="M15 6H3L2 12h13V6zM15 6l3 6h2l1-3-3-3h-3z" />
+                </svg>
+              ),
+              placeholder: 'e.g. Meet at Tromsø harbour (free parking). 2h drive from the airport.',
+              value: transportDescription,
+              setter: setTransportDescription,
+            },
+          ] as Array<{ key: string; label: string; icon: React.ReactNode; placeholder: string; value: string; setter: (v: string) => void }>).map(field => (
+            <div key={field.key}>
+              <label
+                className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] mb-2 f-body"
+                style={{ color: 'rgba(10,46,77,0.55)' }}
+              >
+                {field.icon}
+                {field.label}
+                <OptionalTag />
+              </label>
+              <TextArea
+                rows={2}
+                value={field.value}
+                onChange={e => field.setter(e.target.value)}
+                placeholder={field.placeholder}
+              />
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* ── Section 8: What's Included ───────────────────────────────── */}
       <SectionCard
         title="What's Included"
         subtitle="Toggle what's included in the price. Untoggled items auto-populate the 'Not included' list."

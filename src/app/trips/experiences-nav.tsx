@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { FISH_FILTER } from '@/lib/fish'
 
 const NAV_LINKS = [
   { label: 'Trips', href: '/trips' },
@@ -14,8 +13,6 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   const navRef          = useRef<HTMLElement>(null)
 
-  // Keep --nav-h CSS variable in sync with the real nav height so the page
-  // spacer is always accurate (handles Suspense hydration shifts, resize, etc.)
   useEffect(() => {
     const nav = navRef.current
     if (!nav) return
@@ -57,7 +54,7 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
       <div>
 
         {/* Top bar */}
-        <div className="flex items-center px-4 md:px-6 h-14 md:h-[72px]">
+        <div className="flex items-center px-4 md:px-8 h-14 md:h-[88px]">
 
           {/* Logo */}
           <div className="flex-shrink-0 w-32 md:w-40">
@@ -72,7 +69,7 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Join + Hamburger */}
-          <div className="flex-1 md:flex-none flex items-center justify-end gap-2">
+          <div className="flex-1 md:flex-none flex items-center justify-end gap-3">
             <Link
               href="/guides/apply"
               className="hidden md:inline-flex text-[14px] font-semibold px-5 py-2 rounded-xl text-white f-body transition-all hover:brightness-110 active:scale-[0.97]"
@@ -108,22 +105,6 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Species quick-filter — desktop only */}
-        <div
-          className="hidden md:flex items-center gap-1.5 px-4 md:px-6 pb-2 overflow-x-auto"
-          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
-        >
-          {FISH_FILTER.map(fish => (
-            <Link
-              key={fish}
-              href={`/trips?fish=${encodeURIComponent(fish)}`}
-              className="flex-shrink-0 text-[11px] font-medium px-3 py-1.5 rounded-full transition-all f-body hover:opacity-70 whitespace-nowrap"
-              style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.65)' }}
-            >
-              {fish}
-            </Link>
-          ))}
-        </div>
 
         {/* Mobile search row */}
         <div className="md:hidden px-4 pb-3 flex items-center gap-2">

@@ -212,3 +212,102 @@ Przy okazji zaaplikowana pending migracja `20260315_add_location_spots_to_experi
 
 - `pnpm supabase db push` — ✅ bez błędów
 - `pnpm typecheck` — ✅ ZERO błędów
+
+---
+
+## Sesja 2026-03-16 — db-migration-agent (trips-spec.md cleanup + packages)
+
+### Migracja
+
+| Plik | Tabela | Co robi |
+|---|---|---|
+| `20260316171516_cleanup_experiences_add_packages.sql` | experiences | Phase-1 schema cleanup: DROP 5 deprecated columns, ADD 9 new content columns, ADD packages JSONB + data migration, 4 publish-gate CHECK constraints (NOT VALID), GIN index |
+
+### Szczegóły migracji
+
+**Usunięte kolumny (zero użycia w `src/`):**
+
+| Kolumna | Powód |
+|---|---|
+| `location_latitude` | duplikat `location_lat` |
+| `location_longitude` | duplikat `location_lng` |
+| `boat_included` | zastąpione przez `inclusions.boat` JSONB |
+| `meeting_time` | zastąpione przez `packages[].availability.notes` |
+| `tags` | niejasne przeznaczenie |
+
+**Kolumny ZACHOWANE (nadal w użyciu w `src/`) — do usunięcia w późniejszej fazie:**
+
+| Kolumna | Używana w |
+|---|---|
+| `meeting_point` | edit pages, trip detail page, experience-form, actions |
+| `technique` | edit pages, trip detail, filters, actions, queries |
+| `what_included` / `what_excluded` | edit pages, trip detail, experience-form, actions |
+| `duration_hours` / `duration_days` / `duration_options` | cały kod aplikacji |
+| `group_pricing` | edit pages, experience-form, actions |
+| `price_per_person_eur` | cały kod aplikacji (booking widget, admin, dashboard) |
+| `max_guests` | edit pages, dashboard, trip detail, actions |
+| `difficulty` | filters, trip detail, species pages, admin |
+
+**Nowe kolumny dodane:**
+
+| Kolumna | Typ | Cel |
+|---|---|---|
+| `packages` | JSONB | Canonical pricing/duration (trips-spec §5) |
+| `itinerary` | JSONB | Plan wycieczki (tablica kroków time+label) |
+| `location_description` | TEXT | Akapit opisujący miejsce połowu |
+| `boat_description` | TEXT | Opis łodzi per trip |
+| `accommodation_description` | TEXT | Opis noclegu per trip |
+| `food_description` | TEXT | Opis wyżywienia per trip |
+| `license_description` | TEXT | Opis licencji per trip |
+| `gear_description` | TEXT | Opis sprzętu per trip |
+| `transport_description` | TEXT | Opis dojazdu per trip |
+
+**Data migration:**
+- Step 4a: `duration_options → packages` (where packages IS NULL AND duration_options IS NOT NULL)
+- Step 4b: synth Standard package z `price_per_person_eur` (where packages IS NULL AND price_per_person_eur IS NOT NULL)
+
+**Constraints (NOT VALID — istniejące wiersze nie są walidowane przy migracji):**
+
+| Constraint | Warunek |
+|---|---|
+| `experiences_published_location_country` | published = FALSE OR location_country IS NOT NULL |
+| `experiences_published_season` | published = FALSE OR (season_from IS NOT NULL AND season_to IS NOT NULL) |
+| `experiences_published_has_image` | published = FALSE OR landscape_url IS NOT NULL OR cardinality(images) > 0 |
+| `experiences_published_has_packages` | published = FALSE OR (packages IS NOT NULL AND jsonb_array_length(packages) >= 1) |
+
+**Do walidacji po weryfikacji danych:**
+```sql
+ALTER TABLE public.experiences VALIDATE CONSTRAINT experiences_published_location_country;
+ALTER TABLE public.experiences VALIDATE CONSTRAINT experiences_published_season;
+ALTER TABLE public.experiences VALIDATE CONSTRAINT experiences_published_has_image;
+ALTER TABLE public.experiences VALIDATE CONSTRAINT experiences_published_has_packages;
+```
+
+**Indeks:**
+- `idx_experiences_packages` — GIN na `packages` WHERE packages IS NOT NULL AND published = TRUE
+
+### Zmiany w `src/lib/mock-data.ts`
+
+`EXP_EXTRA` zaktualizowane:
+- Usunięte: `boat_included`, `location_latitude`, `location_longitude`, `meeting_time`, `tags`
+- Dodane (null): `packages`, `itinerary`, `location_description`, `boat_description`, `accommodation_description`, `food_description`, `license_description`, `gear_description`, `transport_description`
+
+### Komendy do uruchomienia po sesji
+
+```bash
+pnpm supabase:push          # aplikuje migrację do bazy
+pnpm supabase:types         # regeneruje database.types.ts
+pnpm typecheck              # weryfikacja — powinno być ZERO błędów
+```
+
+### Faza 2 — deferred (po aktualizacji kodu)
+
+Kiedy kod zostanie przepisany aby używać `packages` zamiast legacy pól, można usunąć:
+- `technique` (zastąp `fishing_methods`)
+- `meeting_point` (zastąp `meeting_point_address`)
+- `what_included` / `what_excluded` (zastąp `inclusions` JSONB)
+- `duration_hours` / `duration_days` / `duration_options` (zastąp `packages[].duration_*`)
+- `group_pricing` (zastąp `packages[].group_prices`)
+- `price_per_person_eur` (zastąp `packages[].price_eur`)
+- `max_guests` (zastąp `packages[].max_group`)
+- `difficulty` (zastąp `packages[].level`)

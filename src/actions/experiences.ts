@@ -31,6 +31,10 @@ export type ImageInput = {
   sort_order: number
 }
 
+/**
+ * Per-package duration option sent by ExperienceForm.
+ * The action converts these into the canonical `packages` JSONB structure.
+ */
 export type DurationOptionPayload = {
   label: string
   hours: number | null
@@ -44,6 +48,7 @@ export type DurationOptionPayload = {
   includes_lodging: boolean
 }
 
+/** @deprecated — kept for form backwards-compat; no longer stored as a separate DB column. */
 export type GroupPricingPayload = {
   model: 'per_size'
   prices: Record<string, number>
@@ -64,41 +69,103 @@ export type InclusionsPayload = {
   custom_excluded: string[]
 }
 
+export type ItineraryStep = {
+  time: string   // e.g. "06:00" or "Morning" — optional hint, can be empty
+  label: string  // step description
+}
+
 export type ExperiencePayload = {
   title: string
   description: string
   fish_types: string[]
+  /** @deprecated — kept for form compat; no longer written to DB. Use fishing_methods. */
   technique?: string | null
+  /** @deprecated — kept for form compat; now per-package via packages[].level. */
   difficulty?: 'beginner' | 'intermediate' | 'expert' | null
   catch_and_release: boolean
-  // Backward-compat scalars (derived from first duration option)
+  /** @deprecated — kept for form compat; now per-package via packages[]. */
   duration_hours?: number | null
+  /** @deprecated — kept for form compat; now per-package via packages[]. */
   duration_days?: number | null
-  max_guests: number
-  /** null for booking_type='icelandic' (price on request) */
-  price_per_person_eur: number | null
+  /** @deprecated — kept for form compat; now per-package via packages[]. */
+  max_guests?: number | null
+  /** @deprecated — kept for form compat; now per-package via packages[].price_eur. */
+  price_per_person_eur?: number | null
   location_country?: string | null
   location_city?: string | null
+  /** @deprecated — kept for form compat; value written to meeting_point_address. */
   meeting_point?: string | null
   location_lat?: number | null
   location_lng?: number | null
   location_area?: GeoJSON.Polygon | null
   location_spots?: LocationSpot[] | null
   booking_type?: 'classic' | 'icelandic' | 'both'
-  // Backward-compat arrays (derived from inclusions toggles)
+  /** @deprecated — kept for form compat; no longer stored as separate columns. */
   what_included: string[]
+  /** @deprecated — kept for form compat; no longer stored as separate columns. */
   what_excluded: string[]
   published: boolean
   images: ImageInput[]
-  // ── New structured fields ─────────────────────────────────────────────────
+  // ── Structured fields ─────────────────────────────────────────────────────
   season_from?: number | null
   season_to?: number | null
   fishing_methods?: string[]
-  /** null for booking_type='icelandic' — clears previous duration data */
+  /**
+   * Duration options from the form — converted to canonical `packages` on save.
+   * @deprecated column name; the canonical DB column is now `packages`.
+   */
   duration_options?: DurationOptionPayload[] | null
+  /** @deprecated — no longer stored; pricing model lives in packages[].pricing_model. */
   group_pricing?: GroupPricingPayload | null
   inclusions_data?: InclusionsPayload | null
   landscape_url?: string | null
+  // ── Trip content fields (optional) ───────────────────────────────────────
+  itinerary?: ItineraryStep[] | null
+  location_description?: string | null
+  boat_description?: string | null
+  accommodation_description?: string | null
+  food_description?: string | null
+  license_description?: string | null
+  gear_description?: string | null
+  transport_description?: string | null
+}
+
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+type DbJson = import('@/lib/supabase/database.types').Json
+
+/**
+ * Convert form DurationOptionPayload[] + trip-level scalars into the canonical
+ * packages JSONB structure (trips-spec.md §5).
+ *
+ * For icelandic (on-request) experiences, payload.duration_options will be null
+ * and this function returns null.
+ */
+function buildPackages(payload: ExperiencePayload): DbJson | null {
+  const opts = payload.duration_options
+  if (opts == null || opts.length === 0) return null
+
+  return opts.map((opt, i) => {
+    const id = opt.label.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || `pkg-${i}`
+    return {
+      id,
+      label:          opt.label,
+      duration_hours: opt.hours,
+      duration_days:  opt.days,
+      pricing_model:  opt.pricing_type,
+      price_eur:      opt.price_eur,
+      group_prices:   opt.group_prices ?? null,
+      level:          payload.difficulty ?? 'all',
+      max_group:      payload.max_guests ?? 8,
+      min_group:      1,
+      availability: {
+        season_from:   payload.season_from ?? null,
+        season_to:     payload.season_to ?? null,
+        blocked_dates: [],
+        notes:         null,
+      },
+    }
+  }) as unknown as DbJson
 }
 
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
@@ -190,32 +257,34 @@ export async function createExperience(
         title:                payload.title.trim(),
         description:          payload.description.trim(),
         fish_types:           payload.fish_types,
-        technique:            payload.technique?.trim() || null,
-        difficulty:           payload.difficulty ?? null,
         catch_and_release:    payload.catch_and_release,
-        duration_hours:       payload.duration_hours ?? null,
-        duration_days:        payload.duration_days ?? null,
-        max_guests:           payload.max_guests,
-        price_per_person_eur: payload.price_per_person_eur ?? null,
         location_country:     payload.location_country?.trim() || null,
         location_city:        payload.location_city?.trim() || null,
-        meeting_point:        payload.meeting_point?.trim() || null,
+        // meeting_point → meeting_point_address (old column dropped)
+        meeting_point_address: payload.meeting_point?.trim() || null,
         location_lat:         payload.location_lat ?? null,
         location_lng:         payload.location_lng ?? null,
-        location_area:        (payload.location_area as unknown as import('@/lib/supabase/database.types').Json) ?? null,
-        location_spots:       (payload.location_spots as unknown as import('@/lib/supabase/database.types').Json) ?? null,
+        location_area:        (payload.location_area as unknown as DbJson) ?? null,
+        location_spots:       (payload.location_spots as unknown as DbJson) ?? null,
         booking_type:         payload.booking_type ?? 'classic',
-        what_included:        payload.what_included.filter(s => s.trim() !== ''),
-        what_excluded:        payload.what_excluded.filter(s => s.trim() !== ''),
         published:            payload.published,
-        // New structured fields
+        // Structured fields
         season_from:          payload.season_from ?? null,
         season_to:            payload.season_to ?? null,
         fishing_methods:      payload.fishing_methods ?? [],
-        duration_options:     (payload.duration_options ?? null) as import('@/lib/supabase/database.types').Json | null,
-        group_pricing:        (payload.group_pricing ?? null) as import('@/lib/supabase/database.types').Json | null,
-        inclusions:           (payload.inclusions_data ?? null) as import('@/lib/supabase/database.types').Json | null,
+        // packages = canonical pricing/duration (replaces duration_options etc.)
+        packages:             buildPackages(payload),
+        inclusions:           (payload.inclusions_data ?? null) as DbJson | null,
         landscape_url:        payload.landscape_url ?? null,
+        // Trip content fields
+        itinerary:                    (payload.itinerary ?? null) as DbJson | null,
+        location_description:         payload.location_description?.trim() || null,
+        boat_description:             payload.boat_description?.trim() || null,
+        accommodation_description:    payload.accommodation_description?.trim() || null,
+        food_description:             payload.food_description?.trim() || null,
+        license_description:          payload.license_description?.trim() || null,
+        gear_description:             payload.gear_description?.trim() || null,
+        transport_description:        payload.transport_description?.trim() || null,
       })
       .select('id')
       .single()
@@ -269,32 +338,40 @@ export async function updateExperience(
     if (payload.title != null)               update.title               = payload.title.trim()
     if (payload.description != null)         update.description         = payload.description.trim()
     if (payload.fish_types != null)          update.fish_types          = payload.fish_types
-    if (payload.technique !== undefined)     update.technique           = payload.technique?.trim() || null
-    if (payload.difficulty !== undefined)    update.difficulty          = payload.difficulty ?? null
     if (payload.catch_and_release != null)   update.catch_and_release   = payload.catch_and_release
-    if (payload.duration_hours !== undefined) update.duration_hours     = payload.duration_hours ?? null
-    if (payload.duration_days !== undefined)  update.duration_days      = payload.duration_days ?? null
-    if (payload.max_guests != null)          update.max_guests          = payload.max_guests
-    if (payload.price_per_person_eur !== undefined) update.price_per_person_eur = payload.price_per_person_eur ?? null
     if (payload.location_country !== undefined) update.location_country = payload.location_country?.trim() || null
     if (payload.location_city !== undefined) update.location_city       = payload.location_city?.trim() || null
-    if (payload.meeting_point !== undefined) update.meeting_point       = payload.meeting_point?.trim() || null
+    // meeting_point → meeting_point_address (old column dropped)
+    if (payload.meeting_point !== undefined) update.meeting_point_address = payload.meeting_point?.trim() || null
     if (payload.location_lat !== undefined)  update.location_lat        = payload.location_lat ?? null
     if (payload.location_lng !== undefined)  update.location_lng        = payload.location_lng ?? null
-    if (payload.location_area !== undefined)  update.location_area      = (payload.location_area as unknown as import('@/lib/supabase/database.types').Json) ?? null
-    if (payload.location_spots !== undefined) update.location_spots     = (payload.location_spots as unknown as import('@/lib/supabase/database.types').Json) ?? null
+    if (payload.location_area !== undefined)  update.location_area      = (payload.location_area as unknown as DbJson) ?? null
+    if (payload.location_spots !== undefined) update.location_spots     = (payload.location_spots as unknown as DbJson) ?? null
     if (payload.booking_type != null)         update.booking_type       = payload.booking_type
-    if (payload.what_included != null)       update.what_included       = payload.what_included.filter(s => s.trim() !== '')
-    if (payload.what_excluded != null)       update.what_excluded       = payload.what_excluded.filter(s => s.trim() !== '')
     if (payload.published != null)           update.published           = payload.published
     // New structured fields
     if (payload.season_from !== undefined)    update.season_from        = payload.season_from ?? null
     if (payload.season_to !== undefined)      update.season_to          = payload.season_to ?? null
     if (payload.fishing_methods != null)      update.fishing_methods    = payload.fishing_methods
-    if (payload.duration_options !== undefined) update.duration_options  = payload.duration_options ?? null
-    if (payload.group_pricing !== undefined)  update.group_pricing      = payload.group_pricing ?? null
+    // packages — rebuild whenever duration_options, difficulty, or max_guests changes
+    if (
+      payload.duration_options !== undefined ||
+      payload.difficulty       !== undefined ||
+      payload.max_guests       !== undefined
+    ) {
+      update.packages = buildPackages(payload as ExperiencePayload)
+    }
     if (payload.inclusions_data !== undefined) update.inclusions        = payload.inclusions_data ?? null
     if (payload.landscape_url !== undefined)   update.landscape_url     = payload.landscape_url ?? null
+    // Trip content fields
+    if (payload.itinerary !== undefined)                  update.itinerary                 = payload.itinerary ?? null
+    if (payload.location_description !== undefined)       update.location_description      = payload.location_description?.trim() || null
+    if (payload.boat_description !== undefined)           update.boat_description          = payload.boat_description?.trim() || null
+    if (payload.accommodation_description !== undefined)  update.accommodation_description = payload.accommodation_description?.trim() || null
+    if (payload.food_description !== undefined)           update.food_description          = payload.food_description?.trim() || null
+    if (payload.license_description !== undefined)        update.license_description       = payload.license_description?.trim() || null
+    if (payload.gear_description !== undefined)           update.gear_description          = payload.gear_description?.trim() || null
+    if (payload.transport_description !== undefined)      update.transport_description     = payload.transport_description?.trim() || null
 
     const { error } = await supabase
       .from('experiences')

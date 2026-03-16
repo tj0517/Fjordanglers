@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
-import type { DurationOptionPayload, InclusionsPayload, GroupPricingPayload } from '@/actions/experiences'
+import type { DurationOptionPayload, InclusionsPayload, GroupPricingPayload, ItineraryStep } from '@/actions/experiences'
 import type * as GeoJSON from 'geojson'
 
 /**
@@ -86,6 +86,15 @@ export default async function AdminEditExperiencePage({
     location_area:        (exp.location_area as unknown as GeoJSON.Polygon) ?? null,
     location_spots:       (exp.location_spots as unknown as import('@/types').LocationSpot[]) ?? null,
     booking_type:         (exp.booking_type as 'classic' | 'icelandic') ?? 'classic',
+    // Trip content fields (columns added by DB migration — cast via unknown record)
+    itinerary:                    ((exp as Record<string, unknown>).itinerary as ItineraryStep[] | null) ?? null,
+    location_description:         (exp as Record<string, unknown>).location_description as string ?? null,
+    boat_description:             (exp as Record<string, unknown>).boat_description as string ?? null,
+    accommodation_description:    (exp as Record<string, unknown>).accommodation_description as string ?? null,
+    food_description:             (exp as Record<string, unknown>).food_description as string ?? null,
+    license_description:          (exp as Record<string, unknown>).license_description as string ?? null,
+    gear_description:             (exp as Record<string, unknown>).gear_description as string ?? null,
+    transport_description:        (exp as Record<string, unknown>).transport_description as string ?? null,
   }
 
   return (
