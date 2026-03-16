@@ -11,7 +11,7 @@ import DurationCardsSelector from '@/components/trips/duration-cards-selector'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import type { SpeciesInfo, FishVariant } from '@/components/trips/species-card'
 import type { ExperienceWithGuide } from '@/types'
-import type { InclusionsPayload, DurationOptionPayload } from '@/actions/experiences'
+import type { InclusionsPayload, DurationOptionPayload, ItineraryStep } from '@/actions/experiences'
 import { FISH_IMG } from '@/lib/fish'
 import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
@@ -478,6 +478,26 @@ export default async function ExperienceDetailPage({
       ? (LICENSE_ARTICLE[exp.location_country] ?? null)
       : null
 
+  // ── New content fields (added via DB migration 20260316171516) ───────────────
+  const expRaw = rawExp as unknown as Record<string, unknown>
+  const itinerary        = (expRaw.itinerary as ItineraryStep[] | null) ?? null
+  const locationDesc     = (expRaw.location_description as string | null) ?? null
+  const boatDesc         = (expRaw.boat_description as string | null) ?? null
+  const accommodationDesc = (expRaw.accommodation_description as string | null) ?? null
+  const foodDesc         = (expRaw.food_description as string | null) ?? null
+  const licenseDesc      = (expRaw.license_description as string | null) ?? null
+  const gearDesc         = (expRaw.gear_description as string | null) ?? null
+  const transportDesc    = (expRaw.transport_description as string | null) ?? null
+
+  const tripDetailCards = [
+    { key: 'boat',          label: 'Boat',             icon: '⛵', text: boatDesc },
+    { key: 'accommodation', label: 'Accommodation',    icon: '🏠', text: accommodationDesc },
+    { key: 'food',          label: 'Food & Drinks',    icon: '🍽️', text: foodDesc },
+    { key: 'license',       label: 'Fishing Licence',  icon: '📋', text: licenseDesc },
+    { key: 'gear',          label: 'Gear & Equipment', icon: '🎣', text: gearDesc },
+    { key: 'transport',     label: 'Getting There',    icon: '🚗', text: transportDesc },
+  ].filter(c => c.text != null && c.text.trim() !== '')
+
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
 
@@ -688,6 +708,66 @@ export default async function ExperienceDetailPage({
                 </p>
               </section>
 
+              {/* ─── Trip Plan (itinerary) ─────────────────────────────── */}
+              {itinerary != null && itinerary.length > 0 && (
+                <section className="mb-12">
+                  <SalmonRule />
+                  <p
+                    className="text-xs font-semibold uppercase tracking-[0.25em] mt-4 mb-3 f-body"
+                    style={{ color: '#E67E50' }}
+                  >
+                    Trip plan
+                  </p>
+                  <h2 className="text-[#0A2E4D] text-2xl font-bold mb-6 f-display">
+                    How the day unfolds
+                  </h2>
+
+                  <ol className="flex flex-col">
+                    {itinerary.map((step, i) => (
+                      <li key={i} className="flex gap-4">
+                        {/* Step number + vertical line */}
+                        <div className="flex flex-col items-center flex-shrink-0">
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold f-body flex-shrink-0"
+                            style={{
+                              background: 'rgba(230,126,80,0.11)',
+                              color: '#E67E50',
+                              border: '1.5px solid rgba(230,126,80,0.22)',
+                            }}
+                          >
+                            {i + 1}
+                          </div>
+                          {i < itinerary.length - 1 && (
+                            <div
+                              className="w-px flex-1 my-1.5"
+                              style={{ background: 'rgba(230,126,80,0.15)', minHeight: '20px' }}
+                            />
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className={`flex-1 min-w-0 ${i < itinerary.length - 1 ? 'pb-4' : ''}`}>
+                          {step.time != null && step.time.trim() !== '' && (
+                            <span
+                              className="text-[10px] font-bold uppercase tracking-[0.2em] f-body block mb-0.5"
+                              style={{ color: 'rgba(10,46,77,0.35)' }}
+                            >
+                              {step.time}
+                            </span>
+                          )}
+                          <p
+                            className="text-sm font-medium leading-relaxed f-body"
+                            style={{ color: '#0A2E4D' }}
+                          >
+                            {step.label}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+
               {/* Target Species */}
               <section className="mb-12">
                 <SalmonRule />
@@ -827,110 +907,123 @@ export default async function ExperienceDetailPage({
                 <DurationCardsSelector options={durationOptions} />
               )}
 
-              {/* Included / Excluded */}
-              <section className="mb-12">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-                  {/* Included */}
-                  <div
-                    className="p-7 rounded-3xl"
-                    style={{
-                      background: '#FDFAF7',
-                      border: '1px solid rgba(10,46,77,0.07)',
-                      boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
-                    }}
+              {/* ─── Trip Details ──────────────────────────────────────── */}
+              {tripDetailCards.length > 0 && (
+                <section className="mb-12">
+                  <SalmonRule />
+                  <p
+                    className="text-xs font-semibold uppercase tracking-[0.25em] mt-4 mb-3 f-body"
+                    style={{ color: '#E67E50' }}
                   >
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.22em] mb-5 f-body"
-                      style={{ color: '#E67E50' }}
-                    >
-                      Included
-                    </p>
-                    <ul className="flex flex-col gap-3">
-                      {exp.what_included.map(item => (
-                        <li key={item} className="flex items-start gap-3">
-                          <span
-                            className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-bold"
-                            style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}
+                    Trip details
+                  </p>
+                  <h2 className="text-[#0A2E4D] text-2xl font-bold mb-6 f-display">
+                    What to know
+                  </h2>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {tripDetailCards.map(card => (
+                      <div
+                        key={card.key}
+                        className="p-6 rounded-2xl"
+                        style={{
+                          background: '#FDFAF7',
+                          border: '1px solid rgba(10,46,77,0.07)',
+                          boxShadow: '0 2px 12px rgba(10,46,77,0.04)',
+                        }}
+                      >
+                        <div className="flex items-center gap-2.5 mb-3">
+                          <span className="text-base flex-shrink-0" role="img" aria-label={card.label}>
+                            {card.icon}
+                          </span>
+                          <p
+                            className="text-[10px] font-bold uppercase tracking-[0.22em] f-body"
+                            style={{ color: 'rgba(10,46,77,0.38)' }}
                           >
-                            ✓
-                          </span>
-                          <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.7)' }}>
-                            {item}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                            {card.label}
+                          </p>
+                        </div>
+                        <p
+                          className="text-sm leading-relaxed f-body"
+                          style={{ color: 'rgba(10,46,77,0.72)' }}
+                        >
+                          {card.text}
+                        </p>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Not included */}
-                  <div
-                    className="p-7 rounded-3xl"
-                    style={{
-                      background: '#FDFAF7',
-                      border: '1px solid rgba(10,46,77,0.07)',
-                      boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
-                    }}
-                  >
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-[0.22em] mb-5 f-body"
-                      style={{ color: 'rgba(10,46,77,0.38)' }}
+                  {/* License callout — only shown when license is not included (legacy inclusions) */}
+                  {needsLicense && licenseDesc == null && (
+                    <div
+                      className="flex items-start gap-4 p-5 rounded-2xl mt-4"
+                      style={{
+                        background: 'rgba(230,126,80,0.06)',
+                        border: '1px solid rgba(230,126,80,0.20)',
+                      }}
                     >
-                      Not included
+                      <span className="text-xl flex-shrink-0 mt-0.5" role="img" aria-label="License">📋</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                          Fishing license required
+                        </p>
+                        <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                          A local fishing license is not included — you&apos;ll need to arrange your own before the trip.
+                          {licenseArticleUrl != null ? (
+                            <>
+                              {' '}
+                              <Link
+                                href={licenseArticleUrl}
+                                className="font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
+                                style={{ color: '#E67E50' }}
+                              >
+                                How to get a license in {exp.location_country} →
+                              </Link>
+                            </>
+                          ) : (
+                            ' Your guide can advise on where to purchase one.'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {/* Legacy license callout — shown only when no trip details at all */}
+              {tripDetailCards.length === 0 && needsLicense && (
+                <div
+                  className="flex items-start gap-4 p-5 rounded-2xl mb-12"
+                  style={{
+                    background: 'rgba(230,126,80,0.06)',
+                    border: '1px solid rgba(230,126,80,0.20)',
+                  }}
+                >
+                  <span className="text-xl flex-shrink-0 mt-0.5" role="img" aria-label="License">📋</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                      Fishing license required
                     </p>
-                    <ul className="flex flex-col gap-3">
-                      {exp.what_excluded.map(item => (
-                        <li key={item} className="flex items-start gap-3">
-                          <span
-                            className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px]"
-                            style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.38)' }}
+                    <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                      A local fishing license is not included — you&apos;ll need to arrange your own before the trip.
+                      {licenseArticleUrl != null ? (
+                        <>
+                          {' '}
+                          <Link
+                            href={licenseArticleUrl}
+                            className="font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
+                            style={{ color: '#E67E50' }}
                           >
-                            ✕
-                          </span>
-                          <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                            {item}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
+                            How to get a license in {exp.location_country} →
+                          </Link>
+                        </>
+                      ) : (
+                        ' Your guide can advise on where to purchase one.'
+                      )}
+                    </p>
                   </div>
                 </div>
-
-                {/* License callout — only shown when license is not included */}
-                {needsLicense && (
-                  <div
-                    className="flex items-start gap-4 p-5 rounded-2xl mt-4"
-                    style={{
-                      background: 'rgba(230,126,80,0.06)',
-                      border: '1px solid rgba(230,126,80,0.20)',
-                    }}
-                  >
-                    <span className="text-xl flex-shrink-0 mt-0.5" role="img" aria-label="License">📋</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                        Fishing license required
-                      </p>
-                      <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                        A local fishing license is not included — you&apos;ll need to arrange your own before the trip.
-                        {licenseArticleUrl != null ? (
-                          <>
-                            {' '}
-                            <Link
-                              href={licenseArticleUrl}
-                              className="font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
-                              style={{ color: '#E67E50' }}
-                            >
-                              How to get a license in {exp.location_country} →
-                            </Link>
-                          </>
-                        ) : (
-                          ' Your guide can advise on where to purchase one.'
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </section>
+              )}
 
               {/* Location + Map */}
               {(exp.location_lat != null || exp.location_area != null || (exp.location_spots as unknown as import('@/types').LocationSpot[] | null)?.length || exp.meeting_point != null) && (
@@ -994,6 +1087,16 @@ export default async function ExperienceDetailPage({
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {/* Location description paragraph */}
+                  {locationDesc != null && locationDesc.trim() !== '' && (
+                    <p
+                      className="text-sm leading-[1.8] f-body mb-5"
+                      style={{ color: 'rgba(10,46,77,0.65)', maxWidth: '560px' }}
+                    >
+                      {locationDesc}
+                    </p>
                   )}
 
                   {/* Meeting point row */}
