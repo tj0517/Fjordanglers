@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
 import { GuidesFilters } from './guides-filters'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { HomeNav } from '@/components/home/home-nav'
 
 const PAGE_SIZE = 12
 
@@ -131,6 +132,7 @@ export default async function GuidesPage({
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+      <HomeNav initialVariant="light" />
 
       {/* ─── PHOTO HERO ──────────────────────────────────────────── */}
       <header className="relative overflow-hidden" style={{ minHeight: '380px', height: 'clamp(380px, 55vw, 580px)' }}>

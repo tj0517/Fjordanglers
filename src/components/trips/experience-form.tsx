@@ -20,6 +20,8 @@ import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
+import { ImageCropModal } from '@/components/ui/image-crop'
+import { createClient } from '@/lib/supabase/client'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import {
   createExperience,
@@ -413,6 +415,7 @@ export default function ExperienceForm({
   const [landscapeTab,    setLandscapeTab]    = useState<'library' | 'upload'>(
     dv.landscape_url ? 'library' : 'library'
   )
+  const [heroCropSrc,     setHeroCropSrc]     = useState<string | null>(null)
 
   // ── Fishing methods ──────────────────────────────────────────────────────
   const [fishingMethods, setFishingMethods] = useState<string[]>(dv.fishing_methods ?? [])
@@ -1933,8 +1936,8 @@ export default function ExperienceForm({
                 <button
                   key={url}
                   type="button"
-                  onClick={() => setLandscapeUrl(url)}
-                  className="relative overflow-hidden transition-all"
+                  onClick={() => setHeroCropSrc(url)}
+                  className="relative overflow-hidden transition-all group"
                   style={{
                     height: '100px',
                     borderRadius: '12px',
@@ -1949,6 +1952,11 @@ export default function ExperienceForm({
                         <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" stroke="none" />
                         <path d="M8 12l3 3 5-5" stroke="white" />
                       </svg>
+                    </div>
+                  )}
+                  {!selected && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(7,17,28,0.55)' }}>
+                      <span className="text-[10px] font-semibold f-body" style={{ color: '#fff' }}>Crop &amp; use</span>
                     </div>
                   )}
                 </button>
@@ -1979,6 +1987,7 @@ export default function ExperienceForm({
               currentUrl={landscapeUrl || null}
               aspect="wide"
               variant="cover"
+              cropAspect={16 / 9}
               onUpload={url => setLandscapeUrl(url)}
             />
             <p className="text-[11px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -1987,6 +1996,28 @@ export default function ExperienceForm({
           </div>
         )}
       </SectionCard>
+
+      {/* Hero crop modal */}
+      {heroCropSrc != null && (
+        <ImageCropModal
+          src={heroCropSrc}
+          aspect={16 / 9}
+          onConfirm={async (croppedFile) => {
+            setHeroCropSrc(null)
+            const ext  = 'jpg'
+            const path = `${crypto.randomUUID()}.${ext}`
+            const supabase = createClient()
+            const { error } = await supabase.storage
+              .from('guide-photos')
+              .upload(path, croppedFile, { cacheControl: '31536000', upsert: false, contentType: 'image/jpeg' })
+            if (error == null) {
+              const { data: { publicUrl } } = supabase.storage.from('guide-photos').getPublicUrl(path)
+              setLandscapeUrl(publicUrl)
+            }
+          }}
+          onCancel={() => setHeroCropSrc(null)}
+        />
+      )}
 
       <SectionCard title="Photos" subtitle="Cover photo is required. Gallery: up to 6 photos, select multiple at once.">
         <div className="flex flex-col gap-6">
@@ -1998,6 +2029,7 @@ export default function ExperienceForm({
             cropAspect={16 / 9}
             currentUrl={coverUrl}
             onUpload={url => setCoverUrl(url)}
+            pickFrom={galleryImages.map(g => g.url)}
             hint="Main card image — crop to 16:9 before upload, full quality"
           />
           {/* Gallery — multi-select, thumbnails + progress */}
@@ -2005,6 +2037,7 @@ export default function ExperienceForm({
             label="Gallery photos"
             max={6}
             initial={galleryImages}
+            cropAspect={4 / 3}
             onChange={setGalleryImages}
           />
         </div>

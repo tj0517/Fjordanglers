@@ -42,11 +42,13 @@ type DayData = {
 }
 
 export type CalendarGridProps = {
-  year:        number
-  month:       number
-  experiences: Experience[]
-  blocked:     BlockedEntry[]
-  bookings:    BookingEntry[]
+  year:         number
+  month:        number
+  experiences:  Experience[]
+  blocked:      BlockedEntry[]
+  bookings:     BookingEntry[]
+  /** How this guide manages availability. Defaults to 'per_listing'. */
+  calendarMode: 'per_listing' | 'shared'
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -83,8 +85,9 @@ function formatDayLong(dateStr: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CalendarGrid({
-  year, month, experiences, blocked, bookings,
+  year, month, experiences, blocked, bookings, calendarMode,
 }: CalendarGridProps) {
+  const isShared = calendarMode === 'shared'
   const router = useRouter()
   const [navPending, startNav] = useTransition()
   const modalRef      = useRef<HTMLDivElement>(null)
@@ -206,11 +209,14 @@ export default function CalendarGrid({
 
   // ── Actions ────────────────────────────────────────────────────────────────
   async function handleBlock() {
-    if (selectedDay == null || blockExpIds.length === 0) return
+    if (selectedDay == null) return
+    // In shared mode, always block ALL experiences regardless of checkbox state
+    const expIds = isShared ? experiences.map(e => e.id) : blockExpIds
+    if (expIds.length === 0) return
     setIsSubmitting(true); setActionError(null)
     const end = blockEndDate >= selectedDay ? blockEndDate : selectedDay
     const result = await blockDates({
-      experienceIds: blockExpIds,
+      experienceIds: expIds,
       dateStart:     selectedDay,
       dateEnd:       end,
       reason:        blockReason.trim() || undefined,
@@ -223,10 +229,13 @@ export default function CalendarGrid({
 
   async function handleMultiBlock() {
     const dates = Array.from(selectedDays).sort()
-    if (dates.length === 0 || multiBlockExpIds.length === 0) return
+    if (dates.length === 0) return
+    // In shared mode, always block ALL experiences regardless of checkbox state
+    const expIds = isShared ? experiences.map(e => e.id) : multiBlockExpIds
+    if (expIds.length === 0) return
     setIsSubmitting(true); setActionError(null)
     const result = await blockMultipleDates({
-      experienceIds: multiBlockExpIds,
+      experienceIds: expIds,
       dates,
       reason:        multiBlockReason.trim() || undefined,
     })
@@ -666,25 +675,45 @@ export default function CalendarGrid({
                         style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.15)', color: '#0A2E4D' }} />
                     </div>
                   </div>
-                  <fieldset className="mb-4">
-                    <legend className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
-                            style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</legend>
-                    <div className="flex flex-col gap-1.5">
-                      {experiences.map(exp => {
-                        const checked = blockExpIds.includes(exp.id)
-                        return (
-                          <label key={exp.id} className="flex items-center gap-2.5 cursor-pointer text-sm f-body px-3 py-2 rounded-lg transition-colors"
-                                 style={{ color: checked ? '#0A2E4D' : 'rgba(10,46,77,0.55)', background: checked ? 'rgba(10,46,77,0.05)' : 'transparent' }}>
-                            <input type="checkbox" checked={checked}
-                              onChange={e => setBlockExpIds(prev => e.target.checked ? [...prev, exp.id] : prev.filter(id => id !== exp.id))}
-                              className="rounded" style={{ accentColor: '#E67E50' }} />
-                            <span className="truncate">{exp.title}</span>
-                            {!exp.published && <span className="text-[9px] f-body ml-auto" style={{ color: 'rgba(10,46,77,0.35)' }}>Draft</span>}
-                          </label>
-                        )
-                      })}
+                  {isShared ? (
+                    /* ── Shared mode: always blocks all trips ── */
+                    <div
+                      className="mb-4 flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
+                      style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                           stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0">
+                        <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
+                        <line x1="1.5" y1="6" x2="12.5" y2="6" />
+                        <line x1="4.5" y1="2" x2="4.5" y2="6" />
+                        <line x1="9.5" y1="2" x2="9.5" y2="6" />
+                      </svg>
+                      <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                        Shared calendar — will block <strong>all {experiences.length} trip{experiences.length !== 1 ? 's' : ''}</strong>
+                      </p>
                     </div>
-                  </fieldset>
+                  ) : (
+                    /* ── Per-listing mode: choose which trips ── */
+                    <fieldset className="mb-4">
+                      <legend className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
+                              style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</legend>
+                      <div className="flex flex-col gap-1.5">
+                        {experiences.map(exp => {
+                          const checked = blockExpIds.includes(exp.id)
+                          return (
+                            <label key={exp.id} className="flex items-center gap-2.5 cursor-pointer text-sm f-body px-3 py-2 rounded-lg transition-colors"
+                                   style={{ color: checked ? '#0A2E4D' : 'rgba(10,46,77,0.55)', background: checked ? 'rgba(10,46,77,0.05)' : 'transparent' }}>
+                              <input type="checkbox" checked={checked}
+                                onChange={e => setBlockExpIds(prev => e.target.checked ? [...prev, exp.id] : prev.filter(id => id !== exp.id))}
+                                className="rounded" style={{ accentColor: '#E67E50' }} />
+                              <span className="truncate">{exp.title}</span>
+                              {!exp.published && <span className="text-[9px] f-body ml-auto" style={{ color: 'rgba(10,46,77,0.35)' }}>Draft</span>}
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </fieldset>
+                  )}
                   <div className="mb-4">
                     <label htmlFor="block-reason" className="block text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
                            style={{ color: 'rgba(10,46,77,0.5)' }}>Reason (private)</label>
@@ -695,10 +724,24 @@ export default function CalendarGrid({
                   </div>
                   {actionError != null && <p className="text-xs f-body mb-3" style={{ color: '#DC2626' }}>{actionError}</p>}
                   <div className="flex gap-2">
-                    <button onClick={handleBlock} disabled={isSubmitting || blockExpIds.length === 0}
+                    <button
+                      onClick={handleBlock}
+                      disabled={isSubmitting || (!isShared && blockExpIds.length === 0)}
                       className="flex-1 text-sm font-semibold f-body py-2.5 rounded-xl transition-opacity"
-                      style={{ background: '#E67E50', color: 'white', opacity: isSubmitting || blockExpIds.length === 0 ? 0.55 : 1, cursor: isSubmitting || blockExpIds.length === 0 ? 'not-allowed' : 'pointer', border: 'none' }}>
-                      {isSubmitting ? 'Blocking…' : blockExpIds.length === experiences.length ? 'Block all trips' : `Block ${blockExpIds.length} experience${blockExpIds.length !== 1 ? 's' : ''}`}
+                      style={{
+                        background: '#E67E50',
+                        color:      'white',
+                        opacity:    isSubmitting || (!isShared && blockExpIds.length === 0) ? 0.55 : 1,
+                        cursor:     isSubmitting || (!isShared && blockExpIds.length === 0) ? 'not-allowed' : 'pointer',
+                        border:     'none',
+                      }}>
+                      {isSubmitting
+                        ? 'Blocking…'
+                        : isShared
+                        ? 'Block all trips'
+                        : blockExpIds.length === experiences.length
+                        ? 'Block all trips'
+                        : `Block ${blockExpIds.length} experience${blockExpIds.length !== 1 ? 's' : ''}`}
                     </button>
                     <button onClick={() => setShowBlockForm(false)} disabled={isSubmitting}
                       className="px-4 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
@@ -806,26 +849,44 @@ export default function CalendarGrid({
                 </div>
               </div>
 
-              {/* Experience checkboxes */}
-              <fieldset>
-                <legend className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
-                        style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</legend>
-                <div className="flex flex-col gap-1.5">
-                  {experiences.map(exp => {
-                    const checked = multiBlockExpIds.includes(exp.id)
-                    return (
-                      <label key={exp.id} className="flex items-center gap-2.5 cursor-pointer text-sm f-body px-3 py-2 rounded-lg transition-colors"
-                             style={{ color: checked ? '#0A2E4D' : 'rgba(10,46,77,0.55)', background: checked ? 'rgba(10,46,77,0.05)' : 'transparent' }}>
-                        <input type="checkbox" checked={checked}
-                          onChange={e => setMultiBlockExpIds(prev => e.target.checked ? [...prev, exp.id] : prev.filter(id => id !== exp.id))}
-                          className="rounded" style={{ accentColor: '#E67E50' }} />
-                        <span className="truncate">{exp.title}</span>
-                        {!exp.published && <span className="text-[9px] f-body ml-auto" style={{ color: 'rgba(10,46,77,0.35)' }}>Draft</span>}
-                      </label>
-                    )
-                  })}
+              {/* Experience selector — simplified in shared mode */}
+              {isShared ? (
+                <div
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
+                  style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
+                       stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0">
+                    <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
+                    <line x1="1.5" y1="6" x2="12.5" y2="6" />
+                    <line x1="4.5" y1="2" x2="4.5" y2="6" />
+                    <line x1="9.5" y1="2" x2="9.5" y2="6" />
+                  </svg>
+                  <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    Shared calendar — will block <strong>all {experiences.length} trip{experiences.length !== 1 ? 's' : ''}</strong>
+                  </p>
                 </div>
-              </fieldset>
+              ) : (
+                <fieldset>
+                  <legend className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
+                          style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</legend>
+                  <div className="flex flex-col gap-1.5">
+                    {experiences.map(exp => {
+                      const checked = multiBlockExpIds.includes(exp.id)
+                      return (
+                        <label key={exp.id} className="flex items-center gap-2.5 cursor-pointer text-sm f-body px-3 py-2 rounded-lg transition-colors"
+                               style={{ color: checked ? '#0A2E4D' : 'rgba(10,46,77,0.55)', background: checked ? 'rgba(10,46,77,0.05)' : 'transparent' }}>
+                          <input type="checkbox" checked={checked}
+                            onChange={e => setMultiBlockExpIds(prev => e.target.checked ? [...prev, exp.id] : prev.filter(id => id !== exp.id))}
+                            className="rounded" style={{ accentColor: '#E67E50' }} />
+                          <span className="truncate">{exp.title}</span>
+                          {!exp.published && <span className="text-[9px] f-body ml-auto" style={{ color: 'rgba(10,46,77,0.35)' }}>Draft</span>}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </fieldset>
+              )}
 
               {/* Reason */}
               <div>
@@ -845,17 +906,19 @@ export default function CalendarGrid({
                  style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
               <button
                 onClick={handleMultiBlock}
-                disabled={isSubmitting || multiBlockExpIds.length === 0 || selectedDays.size === 0}
+                disabled={isSubmitting || selectedDays.size === 0 || (!isShared && multiBlockExpIds.length === 0)}
                 className="flex-1 text-sm font-semibold f-body py-3 rounded-xl transition-opacity"
                 style={{
-                  background:  '#E67E50',
-                  color:       'white',
-                  border:      'none',
-                  cursor:      isSubmitting || multiBlockExpIds.length === 0 ? 'not-allowed' : 'pointer',
-                  opacity:     isSubmitting || multiBlockExpIds.length === 0 ? 0.55 : 1,
+                  background: '#E67E50',
+                  color:      'white',
+                  border:     'none',
+                  cursor:     isSubmitting || (!isShared && multiBlockExpIds.length === 0) ? 'not-allowed' : 'pointer',
+                  opacity:    isSubmitting || (!isShared && multiBlockExpIds.length === 0) ? 0.55 : 1,
                 }}>
                 {isSubmitting
                   ? 'Blocking…'
+                  : isShared
+                  ? `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for all trips`
                   : `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for ${multiBlockExpIds.length === experiences.length ? 'all trips' : `${multiBlockExpIds.length} experience${multiBlockExpIds.length !== 1 ? 's' : ''}`}`}
               </button>
               <button onClick={() => setShowMultiModal(false)} disabled={isSubmitting}

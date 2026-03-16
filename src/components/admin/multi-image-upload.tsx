@@ -5,9 +5,11 @@
  *
  * Features:
  *  - Multi-file select: click "Add photos" → browser file picker opens (multiple)
+ *  - Optional cropAspect: shows crop modal for each file before upload, one by one
  *  - Uploads in parallel up to `max` photos total
  *  - Per-photo progress spinner while uploading
- *  - Remove button on each thumbnail (updates sort_order + is_cover on the fly)
+ *  - Remove button on each thumbnail
+ *  - Crop button on committed thumbnails (re-crop already uploaded)
  *  - First photo always gets is_cover=true
  *  - Calls onChange(images) whenever the committed list changes
  */
@@ -15,6 +17,7 @@
 import { useRef, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
+import { ImageCropModal } from '@/components/ui/image-crop'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,6 +39,12 @@ type Props = {
   initial?: GalleryImage[]
   /** Hard cap on total photos. Default: 5. */
   max?: number
+  /**
+   * When set, opens a crop modal for each new photo before uploading,
+   * and shows a "Crop" button on committed thumbnails.
+   * Pass `width / height` ratio, e.g. `4 / 3`, `1`, `16 / 9`.
+   */
+  cropAspect?: number
   /** Called with the current list whenever it changes. */
   onChange: (images: GalleryImage[]) => void
 }
@@ -72,65 +81,82 @@ export default function MultiImageUpload({
   label   = 'Gallery',
   initial = [],
   max     = 5,
+  cropAspect,
   onChange,
 }: Props) {
   const [committed, setCommitted] = useState<GalleryImage[]>(initial)
   const [pending,   setPending]   = useState<PendingItem[]>([])
+  // Queue of raw files waiting to be cropped (one modal shown at a time)
+  const [cropQueue,  setCropQueue]  = useState<File[]>([])
+  // Re-crop an already-committed photo
+  const [recropItem, setRecropItem] = useState<{ idx: number; url: string } | null>(null)
+
   const inputRef = useRef<HTMLInputElement>(null)
 
   const totalCount = committed.length + pending.length
   const canAdd     = totalCount < max
 
-  // ── File handler ───────────────────────────────────────────────────────────
-  const handleFiles = useCallback(async (files: FileList) => {
+  // ── Upload a single cropped/plain file and add to committed ────────────────
+  const uploadAndAdd = useCallback(async (file: File) => {
+    const pendingId   = crypto.randomUUID()
+    const previewBlob = URL.createObjectURL(file)
+
+    setPending(prev => [...prev, { id: pendingId, preview: previewBlob, progress: 15 }])
+
+    setPending(prev => prev.map(p => p.id === pendingId ? { ...p, progress: 45 } : p))
+    const url = await uploadFile(file)
+    URL.revokeObjectURL(previewBlob)
+
+    if (url != null) {
+      setCommitted(prev => {
+        const updated: GalleryImage[] = [
+          ...prev,
+          { url, is_cover: prev.length === 0, sort_order: prev.length },
+        ]
+        onChange(updated)
+        return updated
+      })
+    }
+    setPending(prev => prev.filter(p => p.id !== pendingId))
+  }, [onChange])
+
+  // ── Replace a committed photo with a re-cropped version ───────────────────
+  const replaceCommitted = useCallback(async (idx: number, file: File) => {
+    const pendingId   = crypto.randomUUID()
+    const previewBlob = URL.createObjectURL(file)
+
+    setPending(prev => [...prev, { id: pendingId, preview: previewBlob, progress: 15 }])
+    setPending(prev => prev.map(p => p.id === pendingId ? { ...p, progress: 45 } : p))
+    const url = await uploadFile(file)
+    URL.revokeObjectURL(previewBlob)
+
+    if (url != null) {
+      setCommitted(prev => {
+        const updated = prev.map((img, i) => i === idx ? { ...img, url } : img)
+        onChange(updated)
+        return updated
+      })
+    }
+    setPending(prev => prev.filter(p => p.id !== pendingId))
+  }, [onChange])
+
+  // ── File selection ─────────────────────────────────────────────────────────
+  const handleFiles = useCallback((files: FileList) => {
     const slotsLeft = max - committed.length - pending.length
-    const toUpload  = Array.from(files).slice(0, Math.max(0, slotsLeft))
-    if (toUpload.length === 0) return
+    const toProcess = Array.from(files).slice(0, Math.max(0, slotsLeft))
+    if (toProcess.length === 0) return
 
-    // Create local preview entries immediately
-    const newPending: PendingItem[] = toUpload.map(f => ({
-      id:       crypto.randomUUID(),
-      preview:  URL.createObjectURL(f),
-      progress: 15,
-    }))
-    setPending(prev => [...prev, ...newPending])
-
-    // Upload all in parallel
-    await Promise.all(
-      toUpload.map(async (file, i) => {
-        const item = newPending[i]
-
-        // Bump progress to show activity
-        setPending(prev =>
-          prev.map(p => p.id === item.id ? { ...p, progress: 45 } : p),
-        )
-
-        const url = await uploadFile(file)
-
-        // Clean up blob URL
-        URL.revokeObjectURL(item.preview)
-
-        if (url != null) {
-          setCommitted(prev => {
-            const updated: GalleryImage[] = [
-              ...prev,
-              { url, is_cover: prev.length === 0, sort_order: prev.length },
-            ]
-            onChange(updated)
-            return updated
-          })
-        }
-
-        // Remove from pending regardless of success/fail
-        setPending(prev => prev.filter(p => p.id !== item.id))
-      }),
-    )
-  }, [committed.length, max, onChange, pending.length])
+    if (cropAspect != null) {
+      // Queue for crop modals (shown one by one)
+      setCropQueue(prev => [...prev, ...toProcess])
+    } else {
+      // Upload directly in parallel
+      void Promise.all(toProcess.map(f => uploadAndAdd(f)))
+    }
+  }, [committed.length, max, pending.length, cropAspect, uploadAndAdd])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files != null && e.target.files.length > 0) {
-      void handleFiles(e.target.files)
-    }
+    if (e.target.files != null && e.target.files.length > 0) handleFiles(e.target.files)
     e.target.value = ''
   }
 
@@ -168,7 +194,7 @@ export default function MultiImageUpload({
         {committed.map((img, idx) => (
           <div
             key={img.url}
-            className="relative overflow-hidden rounded-2xl flex-shrink-0"
+            className="relative overflow-hidden rounded-2xl flex-shrink-0 group"
             style={{ width: 96, height: 96 }}
           >
             <Image
@@ -189,19 +215,39 @@ export default function MultiImageUpload({
               </div>
             )}
 
-            {/* Remove button */}
-            <button
-              type="button"
-              onClick={() => removeImage(idx)}
-              className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center transition-opacity hover:opacity-80"
-              style={{ background: 'rgba(0,0,0,0.55)', color: '#fff' }}
-              aria-label="Remove photo"
+            {/* Hover overlay with Crop + Remove */}
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+              style={{ background: 'rgba(7,17,28,0.6)' }}
             >
-              <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <line x1="1.5" y1="1.5" x2="6.5" y2="6.5" />
-                <line x1="6.5" y1="1.5" x2="1.5" y2="6.5" />
-              </svg>
-            </button>
+              {cropAspect != null && (
+                <button
+                  type="button"
+                  onClick={() => setRecropItem({ idx, url: img.url })}
+                  className="flex items-center gap-1 text-[10px] font-semibold f-body px-2 py-1 rounded-full transition-colors hover:bg-white/20"
+                  style={{ color: '#fff' }}
+                  aria-label="Crop photo"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+                  </svg>
+                  Crop
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => removeImage(idx)}
+                className="flex items-center gap-1 text-[10px] font-semibold f-body px-2 py-1 rounded-full transition-colors hover:bg-white/20"
+                style={{ color: 'rgba(255,255,255,0.8)' }}
+                aria-label="Remove photo"
+              >
+                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <line x1="1.5" y1="1.5" x2="6.5" y2="6.5" />
+                  <line x1="6.5" y1="1.5" x2="1.5" y2="6.5" />
+                </svg>
+                Remove
+              </button>
+            </div>
           </div>
         ))}
 
@@ -220,27 +266,16 @@ export default function MultiImageUpload({
               className="object-cover opacity-40"
               unoptimized
             />
-            {/* Upload progress overlay */}
             <div
               className="absolute inset-0 flex flex-col items-center justify-center gap-2"
               style={{ background: 'rgba(7,17,28,0.45)' }}
             >
-              <svg
-                className="animate-spin"
-                width="20" height="20" viewBox="0 0 20 20" fill="none"
-                stroke="#E67E50" strokeWidth="2.2"
-              >
+              <svg className="animate-spin" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#E67E50" strokeWidth="2.2">
                 <circle cx="10" cy="10" r="7" strokeOpacity="0.2" />
                 <path d="M10 3a7 7 0 017 7" strokeLinecap="round" />
               </svg>
-              <div
-                className="rounded-full overflow-hidden"
-                style={{ width: 40, height: 3, background: 'rgba(255,255,255,0.2)' }}
-              >
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${item.progress}%`, background: '#E67E50' }}
-                />
+              <div className="rounded-full overflow-hidden" style={{ width: 40, height: 3, background: 'rgba(255,255,255,0.2)' }}>
+                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${item.progress}%`, background: '#E67E50' }} />
               </div>
             </div>
           </div>
@@ -258,14 +293,8 @@ export default function MultiImageUpload({
               border: '2px dashed rgba(10,46,77,0.15)',
               color:  'rgba(10,46,77,0.4)',
             }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = '#E67E50'
-              e.currentTarget.style.color = '#E67E50'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(10,46,77,0.15)'
-              e.currentTarget.style.color = 'rgba(10,46,77,0.4)'
-            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#E67E50'; e.currentTarget.style.color = '#E67E50' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.15)'; e.currentTarget.style.color = 'rgba(10,46,77,0.4)' }}
             aria-label="Add photos"
           >
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -298,6 +327,33 @@ export default function MultiImageUpload({
           JPEG · PNG · WebP — max {MAX_MB} MB each · up to {max} photos · select multiple at once
         </p>
       ) : null}
+
+      {/* Crop modal — new file from queue */}
+      {cropQueue[0] != null && cropAspect != null && (
+        <ImageCropModal
+          src={cropQueue[0]}
+          aspect={cropAspect}
+          onConfirm={(croppedFile) => {
+            setCropQueue(prev => prev.slice(1))
+            void uploadAndAdd(croppedFile)
+          }}
+          onCancel={() => setCropQueue(prev => prev.slice(1))}
+        />
+      )}
+
+      {/* Crop modal — re-crop already-uploaded photo */}
+      {recropItem != null && cropAspect != null && (
+        <ImageCropModal
+          src={recropItem.url}
+          aspect={cropAspect}
+          onConfirm={(croppedFile) => {
+            const { idx } = recropItem
+            setRecropItem(null)
+            void replaceCommitted(idx, croppedFile)
+          }}
+          onCancel={() => setRecropItem(null)}
+        />
+      )}
     </div>
   )
 }

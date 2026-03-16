@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BLOG_POSTS } from '@/lib/blog-data'
+import { HomeNav } from '@/components/home/home-nav'
 
 export const metadata: Metadata = {
   title: 'Journal — FjordAnglers',
@@ -21,6 +22,7 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+      <HomeNav initialVariant="light" />
 
       {/* ─── HERO ─────────────────────────────────────────────────────── */}
       <section className="pt-32 pb-16 px-4 md:px-6">

@@ -162,6 +162,41 @@ export async function blockMultipleDates(opts: {
   }
 }
 
+// ─── Update calendar mode ─────────────────────────────────────────────────────
+
+/**
+ * Saves the guide's calendar mode preference.
+ *   'per_listing' — each experience has its own availability calendar (default).
+ *   'shared'      — one unified calendar; blocks always apply to ALL experiences.
+ */
+export async function updateCalendarMode(
+  mode: 'per_listing' | 'shared',
+): Promise<CalendarActionResult> {
+  try {
+    const { supabase, guideId } = await requireGuide()
+
+    if (mode !== 'per_listing' && mode !== 'shared') {
+      return { error: 'Invalid calendar mode.' }
+    }
+
+    const { error } = await supabase
+      .from('guides')
+      .update({ calendar_mode: mode })
+      .eq('id', guideId)
+
+    if (error != null) {
+      console.error('[calendar/updateCalendarMode]', error.message)
+      return { error: error.message }
+    }
+
+    return { success: true }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
+    console.error('[calendar/updateCalendarMode] Unexpected error:', err)
+    return { error: 'Failed to update calendar mode. Please try again.' }
+  }
+}
+
 // ─── Unblock dates ────────────────────────────────────────────────────────────
 
 /**

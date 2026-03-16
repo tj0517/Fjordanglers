@@ -6,6 +6,7 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
+import { HomeNav } from '@/components/home/home-nav'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -93,10 +94,13 @@ export default async function GuideProfilePage({
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
 
+      {/* ─── NAV — transparent over dark hero ───────────────────── */}
+      <HomeNav />
+
       {/* ─── HERO ────────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden"
-        style={{ minHeight: '480px', paddingTop: '80px', background: '#07111C' }}
+        style={{ minHeight: '480px', paddingTop: '92px', background: '#07111C' }}
       >
         {/* Landscape background */}
         <Image

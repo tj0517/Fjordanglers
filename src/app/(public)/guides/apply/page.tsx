@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ApplyForm } from '@/components/guides/apply-form'
+import { HomeNav } from '@/components/home/home-nav'
 
 export const metadata: Metadata = {
   title: 'Join as a Guide',
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
 export default function GuideApplyPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
+      <HomeNav />
 
       {/* ─── LEFT — photo hero ───────────────────────────────────── */}
       <div className="relative md:sticky md:top-0 md:h-screen md:w-1/2 flex-shrink-0 overflow-hidden" style={{ minHeight: '420px' }}>

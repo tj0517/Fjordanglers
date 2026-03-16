@@ -16,6 +16,7 @@ import { FISH_IMG } from '@/lib/fish'
 import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { TripDetailNav } from '@/components/trips/trip-detail-nav'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -502,34 +503,7 @@ export default async function ExperienceDetailPage({
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
 
       {/* ─── NAV ─────────────────────────────────────────────────── */}
-      <nav
-        className="fixed top-0 inset-x-0 z-[100] flex items-center px-6 md:px-10"
-        style={{
-          height: '60px',
-          background: 'rgba(248,244,238,0.88)',
-          backdropFilter: 'blur(20px) saturate(1.6)',
-          WebkitBackdropFilter: 'blur(20px) saturate(1.6)',
-          borderBottom: '1px solid rgba(10,46,77,0.08)',
-          boxShadow: '0 4px 28px rgba(0,0,0,0.08)',
-        }}
-      >
-        <Link
-          href="/trips"
-          className="flex items-center gap-2 f-body text-sm font-semibold transition-opacity hover:opacity-60"
-          style={{ color: 'rgba(10,46,77,0.65)' }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Back
-        </Link>
-        <div className="flex-1 flex justify-center">
-          <Link href="/">
-            <Image src="/brand/dark-logo.png" alt="FjordAnglers" width={130} height={32} className="h-7 w-auto" />
-          </Link>
-        </div>
-        <div style={{ width: '60px' }} />
-      </nav>
+      <TripDetailNav backHref="/trips" />
 
       {/* ─── DRAFT PREVIEW BANNER ────────────────────────────────── */}
       {isDraft && (
@@ -569,7 +543,7 @@ export default async function ExperienceDetailPage({
       {/* ─── HERO ────────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden"
-        style={{ minHeight: '480px', paddingTop: '80px', background: '#07111C' }}
+        style={{ minHeight: '480px', paddingTop: '92px', background: '#07111C' }}
       >
         {/* Landscape background */}
         <Image

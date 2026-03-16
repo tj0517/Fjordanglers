@@ -20,6 +20,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import ImageUpload from '@/components/admin/image-upload'
+import { ImageCropModal } from '@/components/ui/image-crop'
+import { createClient } from '@/lib/supabase/client'
 import { updateGuideProfile } from '@/actions/dashboard'
 import { FISH_ALL } from '@/lib/fish'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
@@ -209,6 +211,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
   const [coverUrl,      setCoverUrl]      = useState<string | null>(defaults.cover_url)
   const [landscapeUrl,  setLandscapeUrl]  = useState<string>(defaults.landscape_url ?? '')
   const [landscapeTab,  setLandscapeTab]  = useState<'library' | 'upload'>('library')
+  const [heroCropSrc,   setHeroCropSrc]   = useState<string | null>(null)
 
   // ── Toggle helpers ──────────────────────────────────────────────────────────
   const toggleFish      = (f: string) =>
@@ -344,8 +347,8 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
                 <button
                   key={url}
                   type="button"
-                  onClick={() => setLandscapeUrl(url)}
-                  className="relative overflow-hidden transition-all"
+                  onClick={() => setHeroCropSrc(url)}
+                  className="relative overflow-hidden transition-all group"
                   style={{
                     height: '100px',
                     borderRadius: '12px',
@@ -360,6 +363,11 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
                         <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
                         <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
+                    </div>
+                  )}
+                  {!selected && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(7,17,28,0.45)' }}>
+                      <span className="text-[10px] font-semibold f-body text-white">Crop & use</span>
                     </div>
                   )}
                 </button>
@@ -383,6 +391,27 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
           </div>
         )}
 
+        {/* Crop modal — hero from library or upload */}
+        {heroCropSrc != null && (
+          <ImageCropModal
+            src={heroCropSrc}
+            aspect={16 / 9}
+            onConfirm={(croppedFile) => {
+              setHeroCropSrc(null)
+              void (async () => {
+                const supabase = createClient()
+                const path = `${crypto.randomUUID()}.jpg`
+                await supabase.storage.from('guide-photos').upload(path, croppedFile, {
+                  cacheControl: '31536000', upsert: false, contentType: 'image/jpeg',
+                })
+                const { data: { publicUrl } } = supabase.storage.from('guide-photos').getPublicUrl(path)
+                setLandscapeUrl(publicUrl)
+              })()
+            }}
+            onCancel={() => setHeroCropSrc(null)}
+          />
+        )}
+
         {landscapeTab === 'upload' && (
           <div>
             <ImageUpload
@@ -390,6 +419,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
               currentUrl={landscapeUrl || null}
               aspect="wide"
               variant="cover"
+              cropAspect={16 / 9}
               onUpload={url => setLandscapeUrl(url)}
             />
             <p className="text-[11px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.4)' }}>

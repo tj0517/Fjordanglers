@@ -72,6 +72,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     external_reviews: [
       { source: 'FishingBooker', rating: 4.8, count: 31, url: 'https://fishingbooker.com/guides/erik' },
     ],
+    calendar_mode: 'per_listing',
     cancellation_policy: 'moderate',
     boat_name: 'Fjord Spirit',
     boat_type: 'cabin',
@@ -119,6 +120,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     google_review_count: 29,
     google_profile_url: null,
     external_reviews: null,
+    calendar_mode: 'per_listing',
     cancellation_policy: 'flexible',
     boat_name: null,
     boat_type: null,
@@ -165,6 +167,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     google_review_count: 18,
     google_profile_url: null,
     external_reviews: null,
+    calendar_mode: 'per_listing',
     cancellation_policy: 'moderate',
     boat_name: 'Lapland Hunter',
     boat_type: 'rib',

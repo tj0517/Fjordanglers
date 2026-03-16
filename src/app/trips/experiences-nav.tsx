@@ -10,8 +10,9 @@ const NAV_LINKS = [
 ]
 
 export function ExperiencesNav({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false)
-  const navRef          = useRef<HTMLElement>(null)
+  const [open, setOpen]       = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const navRef                = useRef<HTMLElement>(null)
 
   useEffect(() => {
     const nav = navRef.current
@@ -22,6 +23,12 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
     const ro = new ResizeObserver(sync)
     ro.observe(nav)
     return () => ro.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   useEffect(() => {
@@ -41,14 +48,19 @@ export function ExperiencesNav({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [open])
 
+  const solid = scrolled || open
+
   return (
     <nav
       ref={navRef}
       className="fixed top-0 inset-x-0 z-[1100]"
       style={{
-        background: '#F3EDE4',
-        borderBottom: '1px solid rgba(10,46,77,0.08)',
-        boxShadow: '0 1px 12px rgba(10,46,77,0.04)',
+        background: solid ? 'rgba(243,237,228,0.92)' : 'transparent',
+        backdropFilter: solid ? 'blur(20px) saturate(1.6)' : 'none',
+        WebkitBackdropFilter: solid ? 'blur(20px) saturate(1.6)' : 'none',
+        borderBottom: solid ? '1px solid rgba(10,46,77,0.08)' : '1px solid transparent',
+        boxShadow: solid ? '0 1px 12px rgba(10,46,77,0.04)' : 'none',
+        transition: 'background 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease',
       }}
     >
       <div>

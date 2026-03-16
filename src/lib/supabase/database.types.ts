@@ -430,6 +430,7 @@ export type Database = {
           boat_length_m: number | null
           boat_name: string | null
           boat_type: string | null
+          calendar_mode: string
           cancellation_policy: string
           certifications: string[] | null
           city: string | null
@@ -475,6 +476,7 @@ export type Database = {
           boat_length_m?: number | null
           boat_name?: string | null
           boat_type?: string | null
+          calendar_mode?: string
           cancellation_policy?: string
           certifications?: string[] | null
           city?: string | null
@@ -518,6 +520,7 @@ export type Database = {
           boat_length_m?: number | null
           boat_name?: string | null
           boat_type?: string | null
+          calendar_mode?: string
           cancellation_policy?: string
           certifications?: string[] | null
           city?: string | null

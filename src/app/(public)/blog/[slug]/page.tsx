@@ -3,6 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BLOG_POSTS } from '@/lib/blog-data'
+import { HomeNav } from '@/components/home/home-nav'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -26,6 +27,7 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+      <HomeNav />
 
       {/* Hero image */}
       <div className="relative" style={{ height: 'clamp(280px, 40vh, 500px)' }}>

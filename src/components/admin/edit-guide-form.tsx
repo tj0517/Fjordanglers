@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { updateGuide, type UpdateGuidePayload, type GuideGalleryImage } from '@/actions/admin'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload from '@/components/admin/multi-image-upload'
+import { ImageCropModal } from '@/components/ui/image-crop'
+import { createClient } from '@/lib/supabase/client'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -181,7 +183,8 @@ export default function EditGuideForm({ guide }: Props) {
   const [youtubeUrl,    setYoutubeUrl]    = useState(guide.youtube_url ?? '')
   const [galleryImages,  setGalleryImages]  = useState<GuideGalleryImage[]>(guide.images ?? [])
   const [landscapeUrl,   setLandscapeUrl]   = useState<string>(guide.landscape_url ?? '')
-  const [landscapeTab,   setLandscapeTab]   = useState<'library' | 'upload'>('library')
+  const [landscapeTab,    setLandscapeTab]    = useState<'library' | 'gallery' | 'upload'>('library')
+  const [heroCropSrc,     setHeroCropSrc]     = useState<string | null>(null)
   const [pricingModel,   setPricingModel]   = useState<'flat_fee' | 'commission'>(guide.pricing_model)
   const [status,        setStatus]        = useState<UpdateGuidePayload['status']>(
     (guide.status as UpdateGuidePayload['status']) ?? 'pending',
@@ -471,6 +474,7 @@ export default function EditGuideForm({ guide }: Props) {
             cropAspect={16 / 9}
             currentUrl={coverUrl || null}
             onUpload={url => setCoverUrl(url)}
+            pickFrom={galleryImages.map((g: { url: string }) => g.url)}
             hint="Landscape — crop to 16:9 before upload"
           />
           <ImageUpload
@@ -487,6 +491,7 @@ export default function EditGuideForm({ guide }: Props) {
           label="Gallery photos"
           max={5}
           initial={galleryImages}
+          cropAspect={4 / 3}
           onChange={setGalleryImages}
         />
       </div>
@@ -507,7 +512,7 @@ export default function EditGuideForm({ guide }: Props) {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-5 p-1 rounded-2xl" style={{ background: 'rgba(10,46,77,0.05)', width: 'fit-content' }}>
-          {(['library', 'upload'] as const).map(tab => (
+          {(['library', 'gallery', 'upload'] as const).map(tab => (
             <button
               key={tab}
               type="button"
@@ -518,7 +523,7 @@ export default function EditGuideForm({ guide }: Props) {
                 : { color: 'rgba(10,46,77,0.45)' }
               }
             >
-              {tab === 'library' ? 'Pick from library' : 'Upload my own'}
+              {tab === 'library' ? 'Pick from library' : tab === 'gallery' ? 'From my gallery' : 'Upload my own'}
             </button>
           ))}
         </div>
@@ -531,8 +536,8 @@ export default function EditGuideForm({ guide }: Props) {
                 <button
                   key={url}
                   type="button"
-                  onClick={() => setLandscapeUrl(url)}
-                  className="relative overflow-hidden transition-all"
+                  onClick={() => setHeroCropSrc(url)}
+                  className="relative overflow-hidden transition-all group"
                   style={{
                     height: '100px',
                     borderRadius: '12px',
@@ -547,6 +552,11 @@ export default function EditGuideForm({ guide }: Props) {
                         <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
                         <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
+                    </div>
+                  )}
+                  {!selected && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(7,17,28,0.45)' }}>
+                      <span className="text-[10px] font-semibold f-body text-white">Crop & use</span>
                     </div>
                   )}
                 </button>
@@ -568,6 +578,72 @@ export default function EditGuideForm({ guide }: Props) {
               <span className="text-[11px] f-body font-medium" style={{ color: 'rgba(10,46,77,0.4)' }}>Auto-assign</span>
             </button>
           </div>
+        )}
+
+        {landscapeTab === 'gallery' && (
+          galleryImages.length === 0
+            ? (
+              <p className="text-xs f-body py-6 text-center" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                No gallery photos yet — upload some in the Gallery section above.
+              </p>
+            )
+            : (
+              <div className="grid grid-cols-3 gap-3">
+                {galleryImages.map((img: { url: string }) => {
+                  const selected = landscapeUrl === img.url
+                  return (
+                    <button
+                      key={img.url}
+                      type="button"
+                      onClick={() => setHeroCropSrc(img.url)}
+                      className="relative overflow-hidden transition-all group"
+                      style={{
+                        height: '100px',
+                        borderRadius: '12px',
+                        border: selected ? '2.5px solid #E67E50' : '2px solid rgba(10,46,77,0.1)',
+                        boxShadow: selected ? '0 0 0 3px rgba(230,126,80,0.2)' : 'none',
+                      }}
+                    >
+                      <Image src={img.url} alt="" fill className="object-cover" />
+                      {selected && (
+                        <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.25)' }}>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                            <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
+                            <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
+                      )}
+                      {!selected && (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'rgba(7,17,28,0.45)' }}>
+                          <span className="text-[10px] font-semibold f-body text-white">Crop & use</span>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )
+        )}
+
+        {/* Crop modal — hero from gallery */}
+        {heroCropSrc != null && (
+          <ImageCropModal
+            src={heroCropSrc}
+            aspect={16 / 9}
+            onConfirm={(croppedFile) => {
+              setHeroCropSrc(null)
+              void (async () => {
+                const supabase = createClient()
+                const path = `${crypto.randomUUID()}.jpg`
+                await supabase.storage.from('guide-photos').upload(path, croppedFile, {
+                  cacheControl: '31536000', upsert: false, contentType: 'image/jpeg',
+                })
+                const { data: { publicUrl } } = supabase.storage.from('guide-photos').getPublicUrl(path)
+                setLandscapeUrl(publicUrl)
+              })()
+            }}
+            onCancel={() => setHeroCropSrc(null)}
+          />
         )}
 
         {landscapeTab === 'upload' && (

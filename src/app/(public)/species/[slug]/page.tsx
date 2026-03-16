@@ -6,6 +6,7 @@ import { getExperiences } from '@/lib/supabase/queries'
 import type { ExperienceWithGuide } from '@/types'
 import { FISH_IMG_BY_PAGE_SLUG } from '@/lib/fish'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { HomeNav } from '@/components/home/home-nav'
 
 export const revalidate = 3600
 
@@ -205,6 +206,7 @@ export default async function SpeciesPage({ params }: Props) {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+      <HomeNav />
 
       {/* ─── HERO ──────────────────────────────────────────────────────── */}
       <section className="relative" style={{ height: '72vh', minHeight: '520px' }}>

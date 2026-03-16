@@ -12,9 +12,14 @@ const NAV_LINKS = [
 interface HomeNavProps {
   pinned?: boolean
   topOffset?: number
+  /** Controls colors when nav is transparent (top of page, not scrolled).
+   *  'dark'  = white logo + white lines (use over dark hero images — default)
+   *  'light' = dark logo + dark lines (use over light-background pages)
+   */
+  initialVariant?: 'dark' | 'light'
 }
 
-export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
+export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark' }: HomeNavProps) {
   const [pastHero, setPastHero] = useState(false)
   const [open, setOpen]         = useState(false)
   const navRef                  = useRef<HTMLElement>(null)
@@ -44,6 +49,9 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
   }, [open])
 
   const solid = pinned || pastHero || open
+  // showDark: use dark logo + dark hamburger lines
+  // true when solid (scrolled/pinned) OR when page has a light background
+  const showDark = solid || initialVariant === 'light'
 
   return (
     <nav
@@ -65,7 +73,7 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
 
           <Link href="/" className="flex-shrink-0">
             <Image
-              src={solid ? '/brand/dark-logo.png' : '/brand/white-logo.png'}
+              src={showDark ? '/brand/dark-logo.png' : '/brand/white-logo.png'}
               alt="FjordAnglers"
               width={160}
               height={40}
@@ -89,7 +97,7 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
               style={{
                 background: open
                   ? 'rgba(230,126,80,0.15)'
-                  : solid
+                  : showDark
                   ? 'rgba(10,46,77,0.08)'
                   : 'rgba(255,255,255,0.12)',
               }}
@@ -107,7 +115,7 @@ export function HomeNav({ pinned = false, topOffset = 0 }: HomeNavProps) {
                   style={{
                     width: '18px',
                     height: '1.5px',
-                    background: solid ? '#0A2E4D' : '#fff',
+                    background: showDark ? '#0A2E4D' : '#fff',
                     opacity: style.opacity ?? 0.8,
                     transform: style.transform,
                   }}
