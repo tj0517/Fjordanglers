@@ -308,6 +308,8 @@ type Props = {
   onBoundsChange?: (bounds: MapBounds) => void
   /** ID of the experience card being hovered in the listing panel */
   hoveredExpId?: string | null
+  /** Called when a price pin is tapped/clicked — used on mobile to sync bottom sheet */
+  onPinClick?: (id: string) => void
 }
 
 // ─── Icon resolver — single source of truth ───────────────────────────────────
@@ -375,7 +377,7 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
   )
 }
 
-export default function MapView({ experiences, onBoundsChange, hoveredExpId }: Props) {
+export default function MapView({ experiences, onBoundsChange, hoveredExpId, onPinClick }: Props) {
   // mapHoveredId — tracks which pin the mouse is over on the map.
   // Combined with hoveredExpId (card hover) via isHighlighted() below.
   // Replaces all previous direct e.target.setIcon() calls — icon is now
@@ -455,6 +457,7 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
                   click: (e) => {
                     L.DomEvent.stopPropagation(e.originalEvent)
                     setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
+                    onPinClick?.(exp.id)
                   },
                 }}
               >
@@ -479,6 +482,7 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
               click: (e) => {
                 L.DomEvent.stopPropagation(e.originalEvent)
                 setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
+                onPinClick?.(exp.id)
               },
             }}
           >
@@ -503,6 +507,7 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId }: P
               click: (e) => {
                 L.DomEvent.stopPropagation(e.originalEvent)
                 setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
+                onPinClick?.(exp.id)
               },
             }}
           >

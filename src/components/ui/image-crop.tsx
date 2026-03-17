@@ -101,13 +101,23 @@ function LiveCardPreview({ blobUrl, tx, ty, scale, naturalW, aspect }: LivePrevi
           </div>
         </div>
         <div style={{ padding: '8px 10px 10px' }}>
-          <div style={{ height: 8, borderRadius: 4, background: 'rgba(10,46,77,0.15)', marginBottom: 5, width: '80%' }} />
-          <div style={{ height: 6, borderRadius: 3, background: 'rgba(10,46,77,0.08)', marginBottom: 6, width: '55%' }} />
-          <div className="flex items-center gap-1.5">
-            <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(10,46,77,0.12)', flexShrink: 0 }} />
-            <div style={{ height: 6, borderRadius: 3, background: 'rgba(10,46,77,0.08)', width: '50%' }} />
+          {/* Title */}
+          <div style={{ height: 8, borderRadius: 4, background: 'rgba(10,46,77,0.15)', marginBottom: 4, width: '80%' }} />
+          {/* Location row — map pin + city */}
+          <div className="flex items-center gap-1" style={{ marginBottom: 5 }}>
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.35)" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+              <circle cx="12" cy="9" r="2.5"/>
+            </svg>
+            <div style={{ height: 5, borderRadius: 3, background: 'rgba(10,46,77,0.08)', width: '50%' }} />
           </div>
-          <div style={{ height: 7, borderRadius: 3, background: 'rgba(10,46,77,0.1)', marginTop: 6, width: '35%' }} />
+          {/* Guide */}
+          <div className="flex items-center gap-1.5" style={{ marginBottom: 5 }}>
+            <div style={{ width: 14, height: 14, borderRadius: '50%', background: 'rgba(10,46,77,0.12)', flexShrink: 0 }} />
+            <div style={{ height: 5, borderRadius: 3, background: 'rgba(10,46,77,0.08)', width: '45%' }} />
+          </div>
+          {/* Price */}
+          <div style={{ height: 7, borderRadius: 3, background: 'rgba(10,46,77,0.1)', width: '35%' }} />
         </div>
       </div>
     </div>
@@ -174,7 +184,7 @@ function LiveGalleryPreview({ blobUrl, tx, ty, scale, naturalW, aspect }: LivePr
 
 function LiveHeroPreview({ blobUrl, tx, ty, scale, naturalW, aspect }: LivePreviewProps & { aspect: number }) {
   const pScale = PREVIEW_W / CROP_VP
-  const HERO_H = Math.round(PREVIEW_W / aspect)   // same height as crop frame at pScale → 1:1 match
+  const HERO_H = Math.round(PREVIEW_W / aspect)   // 1:1 match with crop frame
 
   return (
     <div style={{ width: PREVIEW_W }}>
@@ -183,6 +193,7 @@ function LiveHeroPreview({ blobUrl, tx, ty, scale, naturalW, aspect }: LivePrevi
         Hero preview
       </p>
       <div style={{ borderRadius: '10px', overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
+        {/* Hero image */}
         <div className="relative" style={{ width: PREVIEW_W, height: HERO_H, background: '#07111C' }}>
           {blobUrl !== '' && <LiveImg blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={naturalW} pScale={pScale} />}
           {/* Gradient — bottom 65%, mirrors real page */}
@@ -192,10 +203,19 @@ function LiveHeroPreview({ blobUrl, tx, ty, scale, naturalW, aspect }: LivePrevi
           }} />
           {/* Mock title */}
           <div className="absolute bottom-0 left-0 px-2 pb-2">
-            <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.25)', width: 60, marginBottom: 3 }} />
-            <div style={{ height: 8, borderRadius: 3, background: 'rgba(255,255,255,0.55)', width: 100, marginBottom: 3 }} />
-            <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.2)', width: 70 }} />
+            <div style={{ height: 4, borderRadius: 3, background: 'rgba(255,255,255,0.2)', width: 55, marginBottom: 3 }} />
+            <div style={{ height: 8, borderRadius: 3, background: 'rgba(255,255,255,0.55)', width: 110, marginBottom: 4 }} />
+            <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.18)', width: 75 }} />
           </div>
+        </div>
+        {/* Page content band — shows the viewport below the hero */}
+        <div style={{ background: '#F8FAFB', padding: '6px 10px 8px', borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+          <div className="flex gap-2">
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(10,46,77,0.1)', width: '30%' }} />
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(10,46,77,0.06)', width: '20%' }} />
+            <div style={{ height: 6, borderRadius: 3, background: 'rgba(10,46,77,0.06)', width: '15%' }} />
+          </div>
+          <div style={{ height: 5, borderRadius: 3, background: 'rgba(10,46,77,0.07)', width: '65%', marginTop: 5 }} />
         </div>
       </div>
     </div>
@@ -495,12 +515,14 @@ export function ImageCropModal({ src, aspect, onConfirm, onCancel }: ImageCropMo
         {/* ── Right: live preview ── */}
         {loaded && (
           <div
-            className="flex flex-col items-center justify-center gap-4"
+            className="flex flex-col items-center gap-4"
             style={{
               width: PREVIEW_W + 48,
               background: 'rgba(10,46,77,0.03)',
               borderLeft: '1px solid rgba(10,46,77,0.07)',
               padding: '24px',
+              overflowY: 'auto',
+              alignSelf: 'stretch',
             }}
           >
             {/* Toggle */}

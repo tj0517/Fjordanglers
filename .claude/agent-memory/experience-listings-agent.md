@@ -261,3 +261,45 @@ Usunięto: `docs/booking-flow.md`, `docs/listing-booking-spec.md` (nieaktualne)
 - Fish slider na homepage: unified single slider (usunięto `md:hidden` split)
 - `supabase migration repair` — sync historii migracji
 - CHECK constraint blokujące inserty — drops przez SQL Editor
+
+---
+
+## Sesja 2026-03-16 (ciąg dalszy) — Nav transparency, mobile map Airbnb-style
+
+### Nav transparency (wszystkie strony)
+
+`HomeNav` dostał `initialVariant?: 'dark' | 'light'` prop:
+- `showDark = solid || initialVariant === 'light'`
+- `'dark'` (domyślny) = biały logo (na dark hero)
+- `'light'` = ciemny logo (na jasnym tle)
+
+**`(public)/layout.tsx`** — usunięto `HomeNav` z layoutu. Każda strona importuje nav samodzielnie z właściwym wariantem:
+- `/guides/[id]` → `<HomeNav />` (dark hero)
+- `/guides` → `<HomeNav initialVariant="light" />`
+- `/guides/apply` → `<HomeNav />`
+- `/blog` → `<HomeNav initialVariant="light" />`
+- `/blog/[slug]` → `<HomeNav />`
+- `/species/[slug]` → `<HomeNav />`
+
+**`src/app/trips/experiences-nav.tsx`**: dodano `scrolled` state + scroll listener — transparent at top, solid on scroll.
+
+**`src/components/trips/trip-detail-nav.tsx`** (NEW): Client Component dla `/trips/[id]` — transparent white logo over dark hero → solid dark on scroll.
+
+### Mobile map — Airbnb-style (`src/app/trips/map-section.tsx`)
+
+Kompletny rewrite `map-section.tsx`:
+- `isDesktop` state (hydration-safe default: `false`)
+- `mobileView: 'list' | 'map'` state
+- Auto-switch: `useEffect` → `if (!desktop) setMobileView('map')` — mapa widoczna od razu na mobile
+- **Mobile map view**: fullscreen mapa + bottom sheet 220px z poziomym scrollem kart (`SheetCard` 248px)
+- **Mobile list view**: grid kart + FAB "Map" fixed bottom center
+- `handlePinClick`: scroll bottom sheet do wybranej karty
+- `useViewportFilter = bounds != null && !hasServerFilters && isDesktop` (brak viewport filter na mobile)
+
+**`map-view.tsx`**: dodano `onPinClick?: (id: string) => void` prop, wywoływany we wszystkich 3 click handlerach.
+**`map-wrapper.tsx`**: dodano `onPinClick` passthrough.
+
+### Naprawione bugi
+
+- **Bug**: `mobileView` domyślnie `'list'` → użytkownik musiał znaleźć FAB → Fix: auto-switch na mobile w useEffect
+- **Bug**: Height mismatch — `calc(100dvh - var(--nav-h, 72px))` vs spacer `var(--nav-h, 120px)` → Fix: zmieniono fallback z `72px` → `120px` w mobile map height
