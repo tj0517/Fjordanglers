@@ -179,8 +179,8 @@ export default function MapSection({
 
   const hasServerFilters = filterKey !== ''
 
-  // Viewport filter only applies on desktop (mobile bottom sheet = all trips)
-  const useViewportFilter = bounds != null && !hasServerFilters && isDesktop
+  // Viewport filter applies on desktop and on mobile map view
+  const useViewportFilter = bounds != null && !hasServerFilters && (isDesktop || mobileView === 'map')
 
   const visibleExperiences = useViewportFilter
     ? allGeoExperiences.filter(exp => isInBounds(exp, bounds!))
@@ -189,17 +189,17 @@ export default function MapSection({
   const visibleCount = useViewportFilter ? visibleExperiences.length : initialTotal
   const isFiltered   = useViewportFilter
 
-  // Pin tapped on map → highlight + scroll bottom sheet to card
+  // Pin tapped on map → highlight + scroll bottom sheet to matching card
   const handlePinClick = useCallback((id: string) => {
     setHoveredExpId(prev => prev === id ? null : id)
     if (!isDesktop && sheetScrollRef.current) {
-      const idx = initialExperiences.findIndex(e => e.id === id)
+      const idx = visibleExperiences.findIndex(e => e.id === id)
       if (idx >= 0) {
         const CARD_W = 248 + 12 // card width + gap
         sheetScrollRef.current.scrollTo({ left: idx * CARD_W, behavior: 'smooth' })
       }
     }
-  }, [isDesktop, initialExperiences])
+  }, [isDesktop, visibleExperiences])
 
   // ─── DESKTOP layout ─────────────────────────────────────────────────────────
 
@@ -276,6 +276,7 @@ export default function MapSection({
         <div className="absolute inset-0" style={{ bottom: `${SHEET_H}px` }}>
           <MapWrapper
             experiences={allGeoExperiences}
+            onBoundsChange={setBounds}
             hoveredExpId={hoveredExpId}
             onPinClick={handlePinClick}
           />
@@ -318,10 +319,24 @@ export default function MapSection({
             />
           </div>
 
-          {/* Count */}
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] px-5 mb-2.5 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-            {initialTotal} trip{initialTotal !== 1 ? 's' : ''}
-          </p>
+          {/* Count + clear filter */}
+          <div className="flex items-center gap-2 px-5 mb-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              {isFiltered
+                ? <><span style={{ color: '#0A2E4D' }}>{visibleCount}</span> in this area</>
+                : <>{initialTotal} trip{initialTotal !== 1 ? 's' : ''}</>
+              }
+            </p>
+            {isFiltered && (
+              <button
+                onClick={() => setBounds(null)}
+                className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}
+              >
+                Clear ✕
+              </button>
+            )}
+          </div>
 
           {/* Horizontal scrollable cards */}
           <div
@@ -334,16 +349,24 @@ export default function MapSection({
               scrollbarWidth: 'none',
             } as React.CSSProperties}
           >
-            {initialExperiences.map(exp => (
-              <SheetCard
-                key={exp.id}
-                exp={exp}
-                selected={hoveredExpId === exp.id}
-                onClick={() => handlePinClick(exp.id)}
-              />
-            ))}
+            {visibleExperiences.length === 0 ? (
+              <div className="flex items-center justify-center w-full py-6">
+                <p className="text-[13px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                  No trips in this area — pan or zoom
+                </p>
+              </div>
+            ) : (
+              visibleExperiences.map(exp => (
+                <SheetCard
+                  key={exp.id}
+                  exp={exp}
+                  selected={hoveredExpId === exp.id}
+                  onClick={() => handlePinClick(exp.id)}
+                />
+              ))
+            )}
 
-            {initialTotal > initialExperiences.length && (
+            {!isFiltered && initialTotal > initialExperiences.length && (
               <Link
                 href="/trips"
                 className="flex-shrink-0 flex items-center justify-center text-sm font-semibold f-body rounded-2xl"
