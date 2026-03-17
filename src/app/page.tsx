@@ -7,6 +7,7 @@ import { CountryFlag } from '@/components/ui/country-flag'
 import { SpeciesSlider } from '@/components/home/species-slider'
 import { HomeNav } from '@/components/home/home-nav'
 import { HeroSearchBar } from '@/components/home/hero-search-bar'
+import { BgVideo } from '@/components/home/bg-video'
 import { BLOG_POSTS } from '@/lib/blog-data'
 import { Footer } from '@/components/layout/footer'
 
@@ -62,12 +63,10 @@ export default async function HomePage() {
           className="relative"
           style={{ minHeight: '96vh' }}
         >
-          <video
-            autoPlay muted loop playsInline
+          <BgVideo
+            src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/hero_bg.mp4"
             className="absolute inset-0 w-full h-full object-cover"
-          >
-            <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/hero_bg.mp4" type="video/mp4" />
-          </video>
+          />
           <div
             className="absolute inset-0"
             style={{
@@ -646,9 +645,10 @@ export default async function HomePage() {
       <section style={{ background: '#F3EDE4' }}>
         <div className="relative overflow-hidden" style={{ minHeight: '580px' }}>
 
-          <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover object-center">
-            <source src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/cta.mp4" type="video/mp4" />
-          </video>
+          <BgVideo
+            src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/cta.mp4"
+            className="absolute inset-0 w-full h-full object-cover object-center"
+          />
           <div
             className="absolute inset-0"
             style={{ background: 'linear-gradient(105deg, rgba(4,12,22,0.94) 0%, rgba(4,12,22,0.82) 50%, rgba(4,12,22,0.55) 100%)' }}
