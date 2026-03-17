@@ -2,8 +2,6 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 type Props = {
   params: Promise<{ expId: string }>
   searchParams: Promise<{ bookingId?: string }>
@@ -15,178 +13,113 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
   if (!bookingId) notFound()
 
-  // Fetch booking + experience data
-  const db = createServiceClient()
-  const { data: booking } = await db
+  const service = createServiceClient()
+
+  const { data: booking } = await service
     .from('bookings')
-    .select(
-      'id, status, booking_date, guests, total_eur, deposit_eur, guide_payout_eur, experiences(title, id), guides(full_name)',
-    )
+    .select('id, booking_date, guests, total_eur, angler_full_name, angler_email, status, experiences(title), guides(full_name)')
     .eq('id', bookingId)
     .single()
 
   if (!booking) notFound()
 
-  const experience = booking.experiences as unknown as { title: string; id: string } | null
-  const guide = booking.guides as unknown as { full_name: string } | null
+  const expTitle = (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing trip'
+  const guideName = (booking.guides as unknown as { full_name: string } | null)?.full_name ?? 'your guide'
 
-  const bookingDateFormatted = new Date(`${booking.booking_date}T12:00:00`).toLocaleDateString(
-    'en-GB',
-    { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
-  )
+  const dateFormatted = new Date(`${booking.booking_date}T12:00:00`).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  void expId
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-16"
-      style={{ background: '#F3EDE4' }}
-    >
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16" style={{ background: '#F3EDE4' }}>
       <div
-        className="w-full max-w-lg p-10 text-center"
+        className="w-full max-w-md p-10 flex flex-col items-center text-center"
         style={{
           background: '#FDFAF7',
           borderRadius: '32px',
           border: '1px solid rgba(10,46,77,0.08)',
-          boxShadow: '0 8px 48px rgba(10,46,77,0.1)',
+          boxShadow: '0 4px 32px rgba(10,46,77,0.08)',
         }}
       >
-        {/* Success icon */}
         <div
-          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+          className="w-16 h-16 rounded-full flex items-center justify-center mb-6"
           style={{ background: 'rgba(74,222,128,0.12)' }}
         >
-          <svg
-            width="36"
-            height="36"
-            viewBox="0 0 36 36"
-            fill="none"
-            stroke="#16A34A"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="18" cy="18" r="16" />
-            <polyline points="11,18 16,23 25,13" />
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17L4 12" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
 
-        <h1
-          className="text-[#0A2E4D] text-3xl font-bold f-display mb-3"
-          style={{ lineHeight: 1.2 }}
-        >
-          Request Sent!
+        <p className="text-[11px] uppercase tracking-[0.22em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+          Request sent
+        </p>
+        <h1 className="text-[#0A2E4D] text-2xl font-bold f-display mb-2">
+          You&apos;re all set!
         </h1>
-        <p className="f-body text-base mb-8" style={{ color: 'rgba(10,46,77,0.55)' }}>
-          Your booking request has been sent to{' '}
-          <span className="font-semibold" style={{ color: '#0A2E4D' }}>
-            {guide?.full_name ?? 'your guide'}
-          </span>
-          . They will confirm within 24 hours.
+        <p className="text-sm f-body mb-8" style={{ color: 'rgba(10,46,77,0.5)' }}>
+          Your request has been sent to <strong style={{ color: '#0A2E4D' }}>{guideName}</strong>. They&apos;ll confirm within 24 hours.
         </p>
 
-        {/* Booking summary */}
         <div
-          className="p-5 mb-8 text-left"
-          style={{
-            background: 'rgba(10,46,77,0.03)',
-            borderRadius: '16px',
-            border: '1px solid rgba(10,46,77,0.07)',
-          }}
+          className="w-full text-left mb-8"
+          style={{ background: '#F3EDE4', borderRadius: '20px', overflow: 'hidden' }}
         >
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.2em] mb-3 f-body"
-            style={{ color: 'rgba(10,46,77,0.38)' }}
-          >
-            Booking Summary
+          <div className="px-5 py-4">
+            <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Trip</p>
+            <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{expTitle}</p>
+          </div>
+          <div className="px-5 py-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+            <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Date</p>
+            <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{dateFormatted}</p>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Anglers</p>
+              <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Total</p>
+              <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>€{booking.total_eur}</p>
+            </div>
+          </div>
+          {booking.angler_email != null && (
+            <div className="px-5 py-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+              <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Confirmation to</p>
+              <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{booking.angler_email}</p>
+            </div>
+          )}
+        </div>
+
+        <div
+          className="w-full px-4 py-3 rounded-2xl mb-8 text-left"
+          style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.14)' }}
+        >
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+            💳 No payment required now. You&apos;ll only pay after the guide confirms your booking.
           </p>
-
-          <dl className="flex flex-col gap-2.5">
-            {experience?.title && (
-              <Row label="Trip" value={experience.title} />
-            )}
-            <Row label="Date" value={bookingDateFormatted} />
-            <Row
-              label="Guests"
-              value={`${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`}
-            />
-            <Row label="Total trip cost" value={`€${booking.total_eur}`} />
-            {booking.deposit_eur != null && (
-              <Row label="Deposit paid (30%)" value={`€${booking.deposit_eur}`} highlight />
-            )}
-            {booking.deposit_eur != null && (
-              <Row
-                label="Balance due (70%)"
-                value={`€${Math.round((booking.total_eur - booking.deposit_eur) * 100) / 100}`}
-                muted
-              />
-            )}
-          </dl>
         </div>
 
-        {/* Trust signals */}
-        <div className="mb-8 flex flex-col gap-2.5">
-          {[
-            '🛡️  No further charge until the guide confirms.',
-            '⏰  Guides respond within 24 hours.',
-            '📧  Confirmation email sent to your inbox.',
-          ].map(text => (
-            <p key={text} className="text-xs f-body text-left" style={{ color: 'rgba(10,46,77,0.5)' }}>
-              {text}
-            </p>
-          ))}
-        </div>
-
-        {/* CTAs */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 w-full">
           <Link
             href="/account/bookings"
-            className="block w-full py-3.5 rounded-2xl text-white font-semibold text-sm tracking-wide f-body transition-all hover:brightness-110"
+            className="w-full py-3.5 rounded-2xl text-white text-sm font-semibold f-body text-center transition-all hover:brightness-110"
             style={{ background: '#0A2E4D' }}
           >
-            View My Bookings
+            View my bookings
           </Link>
           <Link
             href="/trips"
-            className="block w-full py-3.5 rounded-2xl text-sm font-semibold f-body transition-all hover:opacity-80"
-            style={{
-              border: '1.5px solid rgba(10,46,77,0.15)',
-              color: 'rgba(10,46,77,0.7)',
-              background: 'transparent',
-            }}
+            className="w-full py-3.5 rounded-2xl text-sm font-semibold f-body text-center transition-all hover:bg-black/5"
+            style={{ color: 'rgba(10,46,77,0.6)' }}
           >
-            Browse More Experiences
+            Browse more trips
           </Link>
         </div>
       </div>
-    </div>
-  )
-}
-
-// ─── Helper ───────────────────────────────────────────────────────────────────
-
-function Row({
-  label,
-  value,
-  highlight = false,
-  muted = false,
-}: {
-  label: string
-  value: string
-  highlight?: boolean
-  muted?: boolean
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <dt className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-        {label}
-      </dt>
-      <dd
-        className="text-sm font-semibold f-body"
-        style={{
-          color: highlight ? '#E67E50' : muted ? 'rgba(10,46,77,0.45)' : '#0A2E4D',
-        }}
-      >
-        {value}
-      </dd>
     </div>
   )
 }

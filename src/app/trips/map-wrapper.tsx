@@ -20,11 +20,13 @@ export default function MapWrapper({
   onBoundsChange,
   hoveredExpId,
   onPinClick,
+  showPopups,
 }: {
   experiences: ExperienceWithGuide[]
   onBoundsChange?: (bounds: MapBounds) => void
   hoveredExpId?: string | null
   onPinClick?: (id: string) => void
+  showPopups?: boolean
 }) {
   return (
     <MapView
@@ -32,6 +34,7 @@ export default function MapWrapper({
       onBoundsChange={onBoundsChange}
       hoveredExpId={hoveredExpId}
       onPinClick={onPinClick}
+      showPopups={showPopups}
     />
   )
 }

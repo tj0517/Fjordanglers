@@ -268,12 +268,18 @@ export async function createExperience(
         location_spots:       (payload.location_spots as unknown as DbJson) ?? null,
         booking_type:         payload.booking_type ?? 'classic',
         published:            payload.published,
+        // Pricing / duration (legacy + new packages)
+        duration_options:     (payload.duration_options as unknown as DbJson) ?? null,
+        duration_hours:       payload.duration_hours ?? null,
+        duration_days:        payload.duration_days ?? null,
+        price_per_person_eur: payload.price_per_person_eur ?? null,
+        max_guests:           payload.max_guests ?? 8,
+        difficulty:           payload.difficulty ?? null,
+        packages:             buildPackages(payload),
         // Structured fields
         season_from:          payload.season_from ?? null,
         season_to:            payload.season_to ?? null,
         fishing_methods:      payload.fishing_methods ?? [],
-        // packages = canonical pricing/duration (replaces duration_options etc.)
-        packages:             buildPackages(payload),
         inclusions:           (payload.inclusions_data ?? null) as DbJson | null,
         landscape_url:        payload.landscape_url ?? null,
         // Trip content fields
@@ -351,9 +357,15 @@ export async function updateExperience(
     if (payload.published != null)           update.published           = payload.published
     // New structured fields
     if (payload.season_from !== undefined)    update.season_from        = payload.season_from ?? null
-    if (payload.season_to !== undefined)      update.season_to          = payload.season_to ?? null
-    if (payload.fishing_methods != null)      update.fishing_methods    = payload.fishing_methods
-    // packages — rebuild whenever duration_options, difficulty, or max_guests changes
+    if (payload.season_to !== undefined)          update.season_to          = payload.season_to ?? null
+    if (payload.fishing_methods != null)          update.fishing_methods    = payload.fishing_methods
+    // Pricing / duration — write to legacy columns + new packages
+    if (payload.duration_options !== undefined)   update.duration_options   = (payload.duration_options as unknown as DbJson) ?? null
+    if (payload.difficulty !== undefined)         update.difficulty         = payload.difficulty ?? null
+    if (payload.max_guests !== undefined)         update.max_guests         = payload.max_guests ?? null
+    if (payload.price_per_person_eur !== undefined) update.price_per_person_eur = payload.price_per_person_eur ?? null
+    if (payload.duration_hours !== undefined)     update.duration_hours     = payload.duration_hours ?? null
+    if (payload.duration_days !== undefined)      update.duration_days      = payload.duration_days ?? null
     if (
       payload.duration_options !== undefined ||
       payload.difficulty       !== undefined ||
@@ -361,10 +373,10 @@ export async function updateExperience(
     ) {
       update.packages = buildPackages(payload as ExperiencePayload)
     }
-    if (payload.inclusions_data !== undefined) update.inclusions        = payload.inclusions_data ?? null
-    if (payload.landscape_url !== undefined)   update.landscape_url     = payload.landscape_url ?? null
+    if (payload.inclusions_data !== undefined)    update.inclusions         = payload.inclusions_data ?? null
+    if (payload.landscape_url !== undefined)      update.landscape_url      = payload.landscape_url ?? null
     // Trip content fields
-    if (payload.itinerary !== undefined)                  update.itinerary                 = payload.itinerary ?? null
+    if (payload.itinerary !== undefined)                  update.itinerary                 = (payload.itinerary ?? null) as DbJson | null
     if (payload.location_description !== undefined)       update.location_description      = payload.location_description?.trim() || null
     if (payload.boat_description !== undefined)           update.boat_description          = payload.boat_description?.trim() || null
     if (payload.accommodation_description !== undefined)  update.accommodation_description = payload.accommodation_description?.trim() || null

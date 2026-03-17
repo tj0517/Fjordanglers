@@ -86,15 +86,22 @@ const IconLogout = () => (
   </svg>
 )
 
+const IconInquiries = () => (
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M1.5 2.5h12a1 1 0 011 1v7a1 1 0 01-1 1H4l-3 2.5V3.5a1 1 0 011-1z" />
+  </svg>
+)
+
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'Overview',    href: '/dashboard',              icon: <IconOverview /> },
-  { label: 'Trips', href: '/dashboard/trips',  icon: <IconCompass /> },
-  { label: 'Bookings',    href: '/dashboard/bookings',     icon: <IconBookings /> },
-  { label: 'Calendar',    href: '/dashboard/calendar',     icon: <IconCalendar /> },
-  { label: 'Earnings',    href: '/dashboard/earnings',     icon: <IconTrending /> },
-  { label: 'Profile',     href: '/dashboard/profile',      icon: <IconUser /> },
+  { label: 'Overview',   href: '/dashboard',              icon: <IconOverview />   },
+  { label: 'Trips',      href: '/dashboard/trips',        icon: <IconCompass />    },
+  { label: 'Bookings',   href: '/dashboard/bookings',     icon: <IconBookings />   },
+  { label: 'Inquiries',  href: '/dashboard/inquiries',    icon: <IconInquiries />  },
+  { label: 'Calendar',   href: '/dashboard/calendar',     icon: <IconCalendar />   },
+  { label: 'Earnings',   href: '/dashboard/earnings',     icon: <IconTrending />   },
+  { label: 'Profile',    href: '/dashboard/profile',      icon: <IconUser />       },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────

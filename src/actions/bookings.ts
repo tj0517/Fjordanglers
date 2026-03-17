@@ -21,7 +21,7 @@ const createBookingSchema = z.object({
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1, 'Select at least one date'),
   guests: z.number().int().min(1).max(50),
   durationOptionLabel: z.string().optional(),
-  anglerName: z.string().min(1, 'Name is required').max(100),
+  anglerName: z.string().max(100).optional(),
   anglerEmail: z.string().email('Valid email required'),
   anglerPhone: z.string().optional(),
   anglerCountry: z.string().optional(),
@@ -34,13 +34,12 @@ type CreateBookingInput = z.infer<typeof createBookingSchema>
 
 export async function createBookingCheckout(
   input: CreateBookingInput,
-): Promise<{ checkoutUrl: string } | { error: string }> {
-  // ── Auth ──────────────────────────────────────────────────────────────────
+): Promise<{ bookingId: string } | { error: string }> {
+  // ── Auth (optional — guest bookings allowed) ──────────────────────────────
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Please sign in to book this experience.' }
 
   // ── Validate ──────────────────────────────────────────────────────────────
   const parsed = createBookingSchema.safeParse(input)
@@ -79,12 +78,6 @@ export async function createBookingCheckout(
   } | null
 
   if (!guideRaw) return { error: 'Guide not found.' }
-  if (!guideRaw.stripe_account_id || !guideRaw.stripe_charges_enabled) {
-    return {
-      error:
-        'This guide has not completed their payment setup yet. Please contact us or try another experience.',
-    }
-  }
 
   // ── Validate guests ────────────────────────────────────────────────────────
   const maxGuests = experience.max_guests ?? 20
@@ -109,7 +102,8 @@ export async function createBookingCheckout(
     .from('bookings')
     .insert({
       experience_id: experienceId,
-      angler_id: user.id,
+      angler_id: user?.id ?? null,
+      angler_email: anglerEmail,
       guide_id: guideRaw.id,
       booking_date: dates[0], // primary date
       guests,
@@ -118,7 +112,7 @@ export async function createBookingCheckout(
       guide_payout_eur: guidePayoutEur,
       deposit_eur: depositEur,
       commission_rate: commissionRate,
-      angler_full_name: anglerName,
+      angler_full_name: anglerName ?? null,
       angler_country: anglerCountry ?? null,
       angler_phone: anglerPhone ?? null,
       special_requests: specialRequests ?? null,
@@ -133,65 +127,7 @@ export async function createBookingCheckout(
     return { error: 'Failed to create booking. Please try again.' }
   }
 
-  // ── Create Stripe Checkout session ────────────────────────────────────────
-  const datesSummary =
-    dates.length === 1
-      ? new Date(`${dates[0]}T12:00:00`).toLocaleDateString('en-GB', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        })
-      : `${dates.length} dates (${dates[0]} – ${dates[dates.length - 1]})`
-
-  try {
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode: 'payment',
-        payment_method_types: ['card'],
-        customer_email: anglerEmail,
-        line_items: [
-          {
-            price_data: {
-              currency: 'eur',
-              product_data: {
-                name: `${experience.title} — 30% Deposit`,
-                description: `${datesSummary} · ${guests} ${guests === 1 ? 'angler' : 'anglers'} · Balance due on confirmation`,
-              },
-              unit_amount: Math.round(depositEur * 100), // cents
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          bookingId: booking.id,
-          guideId: guideRaw.id,
-          experienceId,
-        },
-        success_url: `${env.NEXT_PUBLIC_APP_URL}/book/${experienceId}/confirmation?bookingId=${booking.id}`,
-        cancel_url: `${env.NEXT_PUBLIC_APP_URL}{/trips/${experienceId}`,
-        payment_intent_data: {
-          // Platform fee on the deposit portion
-          application_fee_amount: Math.round(platformFeeEur * 0.3 * 100),
-          transfer_data: { destination: guideRaw.stripe_account_id },
-          metadata: { bookingId: booking.id },
-        },
-      },
-      { idempotencyKey: `checkout-${booking.id}` },
-    )
-
-    // ── Save session id ──────────────────────────────────────────────────────
-    await serviceClient
-      .from('bookings')
-      .update({ stripe_checkout_id: session.id })
-      .eq('id', booking.id)
-
-    return { checkoutUrl: session.url! }
-  } catch (err) {
-    console.error('[createBookingCheckout] Stripe error:', err)
-    // Roll back the pending booking so the slot isn't blocked
-    await serviceClient.from('bookings').delete().eq('id', booking.id)
-    return { error: 'Payment setup failed. Please try again.' }
-  }
+  return { bookingId: booking.id }
 }
 
 // ─── acceptBooking ────────────────────────────────────────────────────────────

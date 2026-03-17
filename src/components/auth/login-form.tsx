@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn } from '@/actions/auth'
+import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -70,7 +71,7 @@ export function LoginForm() {
   const searchParams = useSearchParams()
 
   // Where to go after successful login (set by middleware when protecting /dashboard)
-  const nextUrl = searchParams.get('next') ?? '/dashboard'
+  const nextUrl = searchParams.get('next') ?? '/account'
 
   // Surface errors from the /auth/callback route (e.g. expired confirmation link)
   const callbackError = searchParams.get('error')
@@ -260,23 +261,15 @@ export function LoginForm() {
       </button>
 
       {/* Divider */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          margin: '24px 0',
-        }}
-      >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
         <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
-        <span
-          style={{ color: 'rgba(10,46,77,0.3)', fontSize: '12px' }}
-          className="f-body"
-        >
-          or
-        </span>
+        <span style={{ color: 'rgba(10,46,77,0.3)', fontSize: '12px' }} className="f-body">or</span>
         <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
       </div>
+
+      <GoogleAuthButton next={nextUrl} />
+
+      <div style={{ marginTop: '24px' }} />
 
       {/* Secondary links */}
       <p style={{ textAlign: 'center', color: 'rgba(10,46,77,0.5)', fontSize: '14px' }} className="f-body">

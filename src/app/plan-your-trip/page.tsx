@@ -5,10 +5,12 @@
  *
  * Two-step multi-select form. Calls submitInquiry Server Action.
  * Can be submitted without auth (angler_id = null if not logged in).
+ * Accepts ?guideId= query param to pre-assign a guide.
  */
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, Suspense } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { submitInquiry } from '@/actions/inquiries'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -51,7 +53,10 @@ const labelStyle: React.CSSProperties = {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function PlanYourTripPage() {
+function PlanYourTripForm() {
+  const searchParams = useSearchParams()
+  const guideId = searchParams.get('guideId') ?? undefined
+
   const [step, setStep] = useState<1 | 2>(1)
   const [submitted, setSubmitted] = useState(false)
   const [inquiryId, setInquiryId] = useState<string | null>(null)
@@ -118,6 +123,7 @@ export default function PlanYourTripPage() {
           riverType,
           notes: notes || undefined,
         },
+        guideId,
       })
 
       if ('error' in result) {
@@ -669,5 +675,13 @@ export default function PlanYourTripPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function PlanYourTripPage() {
+  return (
+    <Suspense fallback={null}>
+      <PlanYourTripForm />
+    </Suspense>
   )
 }

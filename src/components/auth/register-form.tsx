@@ -1,15 +1,9 @@
 'use client'
 
-/**
- * RegisterForm — full name, email, password, confirm password sign-up form.
- *
- * Calls the signUp Server Action. On success renders a "Check your email"
- * confirmation state in-place (no navigation, per spec).
- */
-
 import { useState } from 'react'
 import Link from 'next/link'
 import { signUp } from '@/actions/auth'
+import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -53,7 +47,9 @@ const errorTextStyle: React.CSSProperties = {
   fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
 }
 
-// ─── Field error map type ──────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Role = 'angler' | 'guide'
 
 type FieldErrors = {
   fullName?: string
@@ -63,9 +59,27 @@ type FieldErrors = {
   form?: string
 }
 
+// ─── Role cards ───────────────────────────────────────────────────────────────
+
+const ROLES: { key: Role; icon: string; title: string; desc: string }[] = [
+  {
+    key: 'angler',
+    icon: '🎣',
+    title: 'I\'m an angler',
+    desc: 'Find & book guided fishing trips',
+  },
+  {
+    key: 'guide',
+    icon: '🗺',
+    title: 'I\'m a guide',
+    desc: 'List your trips & earn',
+  },
+]
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function RegisterForm() {
+  const [role, setRole] = useState<Role>('angler')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -81,19 +95,16 @@ export function RegisterForm() {
     if (!fullName.trim()) {
       next.fullName = 'Full name is required.'
     }
-
     if (!email.trim()) {
       next.email = 'Email is required.'
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       next.email = 'Please enter a valid email address.'
     }
-
     if (!password) {
       next.password = 'Password is required.'
     } else if (password.length < 8) {
       next.password = 'Password must be at least 8 characters.'
     }
-
     if (!confirmPassword) {
       next.confirmPassword = 'Please confirm your password.'
     } else if (password !== confirmPassword) {
@@ -111,7 +122,7 @@ export function RegisterForm() {
     setIsLoading(true)
     setErrors({})
 
-    const result = await signUp(fullName.trim(), email.trim(), password)
+    const result = await signUp(fullName.trim(), email.trim(), password, role)
 
     if ('error' in result) {
       setErrors({ form: result.error })
@@ -150,24 +161,13 @@ export function RegisterForm() {
           </svg>
         </div>
         <h2
-          style={{
-            color: '#0A2E4D',
-            fontSize: '22px',
-            fontWeight: 700,
-            marginBottom: '12px',
-            lineHeight: 1.2,
-          }}
+          style={{ color: '#0A2E4D', fontSize: '22px', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}
           className="f-display"
         >
           Check your email
         </h2>
         <p
-          style={{
-            color: 'rgba(10,46,77,0.55)',
-            fontSize: '15px',
-            lineHeight: 1.6,
-            marginBottom: '32px',
-          }}
+          style={{ color: 'rgba(10,46,77,0.55)', fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}
           className="f-body"
         >
           We sent a confirmation link to{' '}
@@ -176,13 +176,7 @@ export function RegisterForm() {
         </p>
         <Link
           href="/login"
-          style={{
-            display: 'inline-block',
-            color: '#E67E50',
-            fontSize: '14px',
-            fontWeight: 600,
-            textDecoration: 'none',
-          }}
+          style={{ display: 'inline-block', color: '#E67E50', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}
           className="f-body"
         >
           Back to sign in
@@ -196,7 +190,62 @@ export function RegisterForm() {
   return (
     <form onSubmit={(e) => { void handleSubmit(e) }} noValidate>
 
-      {/* Form-level error */}
+      {/* ── Google ─────────────────────────────────────────────────────────── */}
+      <GoogleAuthButton label="Sign up with Google" />
+
+      {/* ── Divider ─────────────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
+        <span style={{ color: 'rgba(10,46,77,0.3)', fontSize: '12px', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>or sign up with email</span>
+        <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
+      </div>
+
+      {/* ── Role selector ──────────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '28px' }}>
+        {ROLES.map(r => (
+          <button
+            key={r.key}
+            type="button"
+            onClick={() => setRole(r.key)}
+            style={{
+              background: role === r.key ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
+              border: role === r.key ? '1.5px solid #0A2E4D' : '1.5px solid rgba(10,46,77,0.12)',
+              borderRadius: '16px',
+              padding: '16px 12px',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              textAlign: 'left' as const,
+            }}
+          >
+            <span style={{ fontSize: '22px', display: 'block', marginBottom: '8px' }}>{r.icon}</span>
+            <p
+              style={{
+                color: role === r.key ? '#fff' : '#0A2E4D',
+                fontSize: '13px',
+                fontWeight: 700,
+                margin: 0,
+                marginBottom: '2px',
+                fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+              }}
+            >
+              {r.title}
+            </p>
+            <p
+              style={{
+                color: role === r.key ? 'rgba(255,255,255,0.6)' : 'rgba(10,46,77,0.4)',
+                fontSize: '11px',
+                margin: 0,
+                fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+                lineHeight: 1.4,
+              }}
+            >
+              {r.desc}
+            </p>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Form-level error ───────────────────────────────────────────────── */}
       {errors.form && (
         <div
           role="alert"
@@ -214,11 +263,9 @@ export function RegisterForm() {
         </div>
       )}
 
-      {/* Full name */}
+      {/* ── Full name ──────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="register-fullname" style={labelStyle} className="f-body">
-          Full name
-        </label>
+        <label htmlFor="register-fullname" style={labelStyle} className="f-body">Full name</label>
         <input
           id="register-fullname"
           type="text"
@@ -232,23 +279,16 @@ export function RegisterForm() {
             ...(focusedField === 'fullName' ? inputFocusStyle : {}),
             ...(errors.fullName ? inputErrorStyle : {}),
           }}
-          aria-describedby={errors.fullName ? 'register-fullname-error' : undefined}
-          aria-invalid={!!errors.fullName}
           placeholder="Erik Andersen"
           disabled={isLoading}
+          aria-invalid={!!errors.fullName}
         />
-        {errors.fullName && (
-          <p id="register-fullname-error" role="alert" style={errorTextStyle} className="f-body">
-            {errors.fullName}
-          </p>
-        )}
+        {errors.fullName && <p role="alert" style={errorTextStyle} className="f-body">{errors.fullName}</p>}
       </div>
 
-      {/* Email */}
+      {/* ── Email ──────────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="register-email" style={labelStyle} className="f-body">
-          Email address
-        </label>
+        <label htmlFor="register-email" style={labelStyle} className="f-body">Email address</label>
         <input
           id="register-email"
           type="email"
@@ -262,23 +302,16 @@ export function RegisterForm() {
             ...(focusedField === 'email' ? inputFocusStyle : {}),
             ...(errors.email ? inputErrorStyle : {}),
           }}
-          aria-describedby={errors.email ? 'register-email-error' : undefined}
-          aria-invalid={!!errors.email}
           placeholder="you@example.com"
           disabled={isLoading}
+          aria-invalid={!!errors.email}
         />
-        {errors.email && (
-          <p id="register-email-error" role="alert" style={errorTextStyle} className="f-body">
-            {errors.email}
-          </p>
-        )}
+        {errors.email && <p role="alert" style={errorTextStyle} className="f-body">{errors.email}</p>}
       </div>
 
-      {/* Password */}
+      {/* ── Password ───────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="register-password" style={labelStyle} className="f-body">
-          Password
-        </label>
+        <label htmlFor="register-password" style={labelStyle} className="f-body">Password</label>
         <input
           id="register-password"
           type="password"
@@ -292,23 +325,16 @@ export function RegisterForm() {
             ...(focusedField === 'password' ? inputFocusStyle : {}),
             ...(errors.password ? inputErrorStyle : {}),
           }}
-          aria-describedby={errors.password ? 'register-password-error' : undefined}
-          aria-invalid={!!errors.password}
           placeholder="Min. 8 characters"
           disabled={isLoading}
+          aria-invalid={!!errors.password}
         />
-        {errors.password && (
-          <p id="register-password-error" role="alert" style={errorTextStyle} className="f-body">
-            {errors.password}
-          </p>
-        )}
+        {errors.password && <p role="alert" style={errorTextStyle} className="f-body">{errors.password}</p>}
       </div>
 
-      {/* Confirm password */}
+      {/* ── Confirm password ───────────────────────────────────────────────── */}
       <div style={{ marginBottom: '28px' }}>
-        <label htmlFor="register-confirm-password" style={labelStyle} className="f-body">
-          Confirm password
-        </label>
+        <label htmlFor="register-confirm-password" style={labelStyle} className="f-body">Confirm password</label>
         <input
           id="register-confirm-password"
           type="password"
@@ -322,19 +348,14 @@ export function RegisterForm() {
             ...(focusedField === 'confirmPassword' ? inputFocusStyle : {}),
             ...(errors.confirmPassword ? inputErrorStyle : {}),
           }}
-          aria-describedby={errors.confirmPassword ? 'register-confirm-password-error' : undefined}
-          aria-invalid={!!errors.confirmPassword}
           placeholder="Repeat your password"
           disabled={isLoading}
+          aria-invalid={!!errors.confirmPassword}
         />
-        {errors.confirmPassword && (
-          <p id="register-confirm-password-error" role="alert" style={errorTextStyle} className="f-body">
-            {errors.confirmPassword}
-          </p>
-        )}
+        {errors.confirmPassword && <p role="alert" style={errorTextStyle} className="f-body">{errors.confirmPassword}</p>}
       </div>
 
-      {/* Submit */}
+      {/* ── Submit ─────────────────────────────────────────────────────────── */}
       <button
         type="submit"
         disabled={isLoading}
@@ -353,23 +374,19 @@ export function RegisterForm() {
         }}
         className="f-body"
       >
-        {isLoading ? 'Creating account...' : 'Create account'}
+        {isLoading
+          ? 'Creating account…'
+          : role === 'guide'
+            ? 'Create guide account'
+            : 'Create angler account'}
       </button>
 
       <p
-        style={{
-          textAlign: 'center',
-          marginTop: '24px',
-          color: 'rgba(10,46,77,0.5)',
-          fontSize: '14px',
-        }}
+        style={{ textAlign: 'center', marginTop: '24px', color: 'rgba(10,46,77,0.5)', fontSize: '14px' }}
         className="f-body"
       >
         Already have an account?{' '}
-        <Link
-          href="/login"
-          style={{ color: '#0A2E4D', fontWeight: 600, textDecoration: 'none' }}
-        >
+        <Link href="/login" style={{ color: '#0A2E4D', fontWeight: 600, textDecoration: 'none' }}>
           Sign in
         </Link>
       </p>

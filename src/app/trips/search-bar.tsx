@@ -345,14 +345,14 @@ export function SearchBar() {
       `}</style>
 
       <div
-        className="flex items-center"
+        className="flex items-center flex-1 min-w-0"
         style={{
           background:   'white',
           borderRadius: '9999px',
           border:       '1px solid rgba(255,255,255,0.15)',
           boxShadow:    '0 4px 28px rgba(0,0,0,0.22)',
           height:       '52px',
-          width:        '420px',
+          maxWidth:     '420px',
         }}
       >
         {/* ── Destination ── */}

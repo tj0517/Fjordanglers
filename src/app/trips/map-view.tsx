@@ -310,6 +310,8 @@ type Props = {
   hoveredExpId?: string | null
   /** Called when a price pin is tapped/clicked — used on mobile to sync bottom sheet */
   onPinClick?: (id: string) => void
+  /** Whether to show popup cards on pin click. Pass false on mobile. */
+  showPopups?: boolean
 }
 
 // ─── Icon resolver — single source of truth ───────────────────────────────────
@@ -377,7 +379,7 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
   )
 }
 
-export default function MapView({ experiences, onBoundsChange, hoveredExpId, onPinClick }: Props) {
+export default function MapView({ experiences, onBoundsChange, hoveredExpId, onPinClick, showPopups = true }: Props) {
   // mapHoveredId — tracks which pin the mouse is over on the map.
   // Combined with hoveredExpId (card hover) via isHighlighted() below.
   // Replaces all previous direct e.target.setIcon() calls — icon is now
@@ -461,9 +463,11 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId, onP
                   },
                 }}
               >
-                <Popup closeButton={false} className="fjord-popup">
-                  <ExpPopup exp={exp} />
-                </Popup>
+                {showPopups && (
+                  <Popup closeButton={false} className="fjord-popup">
+                    <ExpPopup exp={exp} />
+                  </Popup>
+                )}
               </Marker>
             )}
           </span>
@@ -486,9 +490,11 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId, onP
               },
             }}
           >
-            <Popup closeButton={false} className="fjord-popup">
-              <ExpPopup exp={exp} />
-            </Popup>
+            {showPopups && (
+              <Popup closeButton={false} className="fjord-popup">
+                <ExpPopup exp={exp} />
+              </Popup>
+            )}
           </Marker>
         </span>
       ))}
@@ -511,16 +517,20 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId, onP
               },
             }}
           >
-            <Popup closeButton={false} className="fjord-popup">
-              <ExpPopup exp={exp} />
-            </Popup>
+            {showPopups && (
+              <Popup closeButton={false} className="fjord-popup">
+                <ExpPopup exp={exp} />
+              </Popup>
+            )}
           </Marker>
           {/* Secondary spots — dots visible only when price pin is hovered/highlighted */}
           {isHighlighted(exp.id) && spots.slice(1).map((s, i) => (
             <Marker key={i} position={[s.lat, s.lng]} icon={dotIcon()}>
-              <Popup closeButton={false} className="fjord-popup">
-                <ExpPopup exp={exp} />
-              </Popup>
+              {showPopups && (
+                <Popup closeButton={false} className="fjord-popup">
+                  <ExpPopup exp={exp} />
+                </Popup>
+              )}
             </Marker>
           ))}
         </span>

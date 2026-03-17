@@ -49,6 +49,7 @@ export async function signUp(
   fullName: string,
   email: string,
   password: string,
+  role: 'angler' | 'guide' = 'angler',
 ): Promise<AuthResult> {
   try {
     const supabase = await createClient()
@@ -59,6 +60,7 @@ export async function signUp(
       options: {
         data: {
           full_name: fullName,
+          role,
         },
         // Supabase will send a confirmation email and redirect to /auth/callback
         emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,

@@ -1,14 +1,9 @@
 'use client'
 
-/**
- * BookingCheckoutForm — client component for the /book/[expId] checkout page.
- *
- * Renders angler contact fields, submits to createBookingCheckout Server Action,
- * then redirects to Stripe Checkout.
- */
-
 import { useState, useTransition } from 'react'
 import { createBookingCheckout } from '@/actions/bookings'
+import { createClient } from '@/lib/supabase/client'
+import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { COUNTRIES } from '@/lib/countries'
 
 type Props = {
@@ -18,15 +13,11 @@ type Props = {
   durationOptionLabel?: string
   defaultName?: string
   defaultEmail?: string
+  isLoggedIn?: boolean
 }
 
-function formatDate(iso: string): string {
-  return new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  })
-}
+type Mode = 'guest' | 'login' | 'register'
+
 
 export default function BookingCheckoutForm({
   expId,
@@ -35,12 +26,20 @@ export default function BookingCheckoutForm({
   durationOptionLabel,
   defaultName = '',
   defaultEmail = '',
+  isLoggedIn = false,
 }: Props) {
+  const [mode, setMode] = useState<Mode>('guest')
+
+  // Contact fields
   const [anglerName, setAnglerName] = useState(defaultName)
   const [anglerEmail, setAnglerEmail] = useState(defaultEmail)
   const [anglerPhone, setAnglerPhone] = useState('')
   const [anglerCountry, setAnglerCountry] = useState('')
   const [specialRequests, setSpecialRequests] = useState('')
+
+  // Auth fields (login + register)
+  const [password, setPassword] = useState('')
+
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -49,16 +48,48 @@ export default function BookingCheckoutForm({
     setError(null)
 
     startTransition(async () => {
+      const supabase = createClient()
+
+      // ── Login ──────────────────────────────────────────────────────────────
+      if (mode === 'login') {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: anglerEmail,
+          password,
+        })
+        if (signInError) {
+          setError('Invalid email or password.')
+          return
+        }
+      }
+
+      // ── Create account ─────────────────────────────────────────────────────
+      if (mode === 'register') {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: anglerEmail,
+          password,
+          options: { data: { full_name: anglerName } },
+        })
+        if (signUpError) {
+          setError(signUpError.message)
+          return
+        }
+        if (!data.session) {
+          setError('Account created — check your email to confirm, then try booking again.')
+          return
+        }
+      }
+
+      // ── Submit booking ──────────────────────────────────────────────────────
       const result = await createBookingCheckout({
         experienceId: expId,
         dates,
         guests,
         durationOptionLabel,
-        anglerName,
+        anglerName: mode === 'guest' ? anglerName : undefined,
         anglerEmail,
-        anglerPhone: anglerPhone || undefined,
-        anglerCountry: anglerCountry || undefined,
-        specialRequests: specialRequests || undefined,
+        anglerPhone: mode === 'guest' ? (anglerPhone || undefined) : undefined,
+        anglerCountry: mode === 'guest' ? (anglerCountry || undefined) : undefined,
+        specialRequests: mode === 'guest' ? (specialRequests || undefined) : undefined,
       })
 
       if ('error' in result) {
@@ -66,8 +97,7 @@ export default function BookingCheckoutForm({
         return
       }
 
-      // Redirect to Stripe Checkout
-      window.location.href = result.checkoutUrl
+      window.location.href = `/book/${expId}/confirmation?bookingId=${result.bookingId}`
     })
   }
 
@@ -96,103 +126,164 @@ export default function BookingCheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-      {/* Dates summary chips */}
-      {dates.length > 0 && (
-        <div>
-          <p style={labelStyle}>Selected dates</p>
-          <div className="flex flex-wrap gap-2">
-            {dates.map(iso => (
-              <span
-                key={iso}
-                className="text-xs font-medium px-3 py-1.5 rounded-full f-body"
-                style={{
-                  background: 'rgba(230,126,80,0.1)',
-                  color: '#C05A2A',
-                  border: '1px solid rgba(230,126,80,0.2)',
-                }}
-              >
-                {formatDate(iso)}
-              </span>
-            ))}
-          </div>
+      {/* ── Mode toggle — hidden when already logged in ──────────────────────── */}
+      {!isLoggedIn && (
+        <div
+          className="flex rounded-2xl p-1 gap-1"
+          style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.08)' }}
+        >
+          {([
+            { key: 'guest',    label: 'Guest' },
+            { key: 'login',    label: 'Log In' },
+            { key: 'register', label: 'Sign Up' },
+          ] as { key: Mode; label: string }[]).map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => { setMode(key); setError(null) }}
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold f-body transition-all"
+              style={{
+                background: mode === key ? '#FDFAF7' : 'transparent',
+                color: mode === key ? '#0A2E4D' : 'rgba(10,46,77,0.4)',
+                boxShadow: mode === key ? '0 1px 6px rgba(10,46,77,0.08)' : 'none',
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* Name */}
-      <div>
-        <label style={labelStyle}>
-          Full name <span style={{ color: '#E67E50' }}>*</span>
-        </label>
-        <input
-          type="text"
-          required
-          placeholder="Your full name"
-          value={anglerName}
-          onChange={e => setAnglerName(e.target.value)}
-          className="f-body"
-          style={inputStyle}
-        />
-      </div>
+      {/* ── Guest fields ─────────────────────────────────────────────────────── */}
+      {mode === 'guest' && (
+        <>
+          <div>
+            <label style={labelStyle}>
+              Full name <span style={{ color: '#E67E50' }}>*</span>
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="Your full name"
+              value={anglerName}
+              onChange={e => setAnglerName(e.target.value)}
+              className="f-body"
+              style={inputStyle}
+            />
+          </div>
 
-      {/* Email */}
-      <div>
-        <label style={labelStyle}>
-          Email <span style={{ color: '#E67E50' }}>*</span>
-        </label>
-        <input
-          type="email"
-          required
-          placeholder="you@example.com"
-          value={anglerEmail}
-          onChange={e => setAnglerEmail(e.target.value)}
-          className="f-body"
-          style={inputStyle}
-        />
-      </div>
+          <div>
+            <label style={labelStyle}>
+              Email <span style={{ color: '#E67E50' }}>*</span>
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={anglerEmail}
+              onChange={e => setAnglerEmail(e.target.value)}
+              className="f-body"
+              style={inputStyle}
+            />
+          </div>
 
-      {/* Phone + Country row */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label style={labelStyle}>Phone (optional)</label>
-          <input
-            type="tel"
-            placeholder="+48 600 000 000"
-            value={anglerPhone}
-            onChange={e => setAnglerPhone(e.target.value)}
-            className="f-body"
-            style={inputStyle}
-          />
-        </div>
-        <div>
-          <label style={labelStyle}>Country</label>
-          <select
-            value={anglerCountry}
-            onChange={e => setAnglerCountry(e.target.value)}
-            className="f-body"
-            style={{ ...inputStyle, cursor: 'pointer' }}
-          >
-            <option value="">Select country</option>
-            {COUNTRIES.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label style={labelStyle}>Phone (optional)</label>
+              <input
+                type="tel"
+                placeholder="+48 600 000 000"
+                value={anglerPhone}
+                onChange={e => setAnglerPhone(e.target.value)}
+                className="f-body"
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Country</label>
+              <select
+                value={anglerCountry}
+                onChange={e => setAnglerCountry(e.target.value)}
+                className="f-body"
+                style={{ ...inputStyle, cursor: 'pointer' }}
+              >
+                <option value="">Select country</option>
+                {COUNTRIES.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      {/* Special requests */}
-      <div>
-        <label style={labelStyle}>Special requests (optional)</label>
-        <textarea
-          rows={3}
-          placeholder="Dietary requirements, gear preferences, accessibility needs…"
-          value={specialRequests}
-          onChange={e => setSpecialRequests(e.target.value)}
-          className="f-body resize-none"
-          style={{ ...inputStyle, height: 'auto' }}
-        />
-      </div>
+          <div>
+            <label style={labelStyle}>Special requests (optional)</label>
+            <textarea
+              rows={3}
+              placeholder="Dietary requirements, gear preferences, accessibility needs…"
+              value={specialRequests}
+              onChange={e => setSpecialRequests(e.target.value)}
+              className="f-body resize-none"
+              style={{ ...inputStyle, height: 'auto' }}
+            />
+          </div>
+        </>
+      )}
 
-      {/* Error message */}
+      {/* ── Auth fields (login + register) ───────────────────────────────────── */}
+      {!isLoggedIn && (mode === 'login' || mode === 'register') && (
+        <>
+          {mode === 'register' && (
+            <>
+              <GoogleAuthButton
+                next={`/book/${expId}/confirmation`}
+                label="Sign up with Google"
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
+                <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>or</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
+              </div>
+            </>
+          )}
+          <div>
+            <label style={labelStyle}>
+              Email <span style={{ color: '#E67E50' }}>*</span>
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={anglerEmail}
+              onChange={e => setAnglerEmail(e.target.value)}
+              className="f-body"
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              Password <span style={{ color: '#E67E50' }}>*</span>
+            </label>
+            <input
+              type="password"
+              required
+              minLength={mode === 'register' ? 8 : 1}
+              placeholder={mode === 'register' ? 'Min 8 characters' : 'Your password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="f-body"
+              style={inputStyle}
+            />
+            {mode === 'register' && (
+              <p className="text-[11px] mt-1.5 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                Creates your angler account to track bookings.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Error ───────────────────────────────────────────────────────────── */}
       {error != null && (
         <div
           className="px-4 py-3 rounded-xl text-sm f-body"
@@ -206,7 +297,7 @@ export default function BookingCheckoutForm({
         </div>
       )}
 
-      {/* Submit */}
+      {/* ── Submit ──────────────────────────────────────────────────────────── */}
       <button
         type="submit"
         disabled={isPending}
@@ -227,10 +318,10 @@ export default function BookingCheckoutForm({
               <circle cx="8" cy="8" r="6" strokeOpacity="0.25" />
               <path d="M8 2a6 6 0 016 6" strokeLinecap="round" />
             </svg>
-            Redirecting to payment…
+            Sending request…
           </>
         ) : (
-          'Pay 30% Deposit →'
+          'Request to Book →'
         )}
       </button>
 
@@ -238,7 +329,7 @@ export default function BookingCheckoutForm({
         className="text-center text-xs f-body"
         style={{ color: 'rgba(10,46,77,0.38)' }}
       >
-        You&apos;ll be redirected to secure Stripe checkout. No card stored.
+        No payment required now. Guide will confirm within 24 hours.
       </p>
     </form>
   )

@@ -510,7 +510,7 @@ export function FiltersModal() {
       {/* Trigger button */}
       <button
         onClick={handleOpen}
-        className="flex-shrink-0 h-9 flex items-center gap-2 px-4 rounded-xl transition-all active:scale-[0.97] f-body"
+        className="flex-shrink-0 h-[52px] md:h-9 flex items-center gap-2 px-4 rounded-2xl md:rounded-xl transition-all active:scale-[0.97] f-body"
         style={{
           background: urlActiveCount > 0 ? 'rgba(230,126,80,0.15)' : 'rgba(10,46,77,0.08)',
           color:      urlActiveCount > 0 ? '#9E4820' : 'rgba(10,46,77,0.8)',

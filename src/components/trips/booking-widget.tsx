@@ -1046,17 +1046,24 @@ export function BookingWidget({
         </>
       ) : (
         <>
-          <Link
-            href={`/book/${expId}${selectedDates.length > 0 ? `?dates=${selectedDates.join(',')}` : ''}`}
-            className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-            style={{ background: '#E67E50' }}
-          >
-            {selectedDates.length > 0
-              ? selectedDates.length === 1
-                ? 'Request to Book →'
-                : `Request ${selectedDates.length} Dates →`
-              : 'Check Availability →'}
-          </Link>
+          {selectedDates.length > 0 ? (
+            <Link
+              href={`/book/${expId}?dates=${selectedDates.join(',')}&guests=${groupSize}`}
+              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              style={{ background: '#E67E50' }}
+            >
+              {selectedDates.length === 1 ? 'Request to Book →' : `Request ${selectedDates.length} Dates →`}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              style={{ background: '#E67E50' }}
+            >
+              Check Availability →
+            </button>
+          )}
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
             {selectedDates.length > 0
               ? 'No charge yet — confirm with your guide first.'

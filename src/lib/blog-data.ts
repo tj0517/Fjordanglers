@@ -12,6 +12,15 @@ export interface BlogPost {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'fishing-regulations-norway-2026',
+    title: 'Fishing in Norway 2026: Regulations, Licenses, and Limits – A Complete Guide',
+    excerpt: 'Everything you need to know before your trip: licenses (fiskekort, fiskeravgift), export limits, equipment disinfection, and the rules for sea, freshwater, and salmon fishing.',
+    date: 'March 17, 2026',
+    readTime: '10 min',
+    category: 'Planning',
+    img: FISH_IMG['Salmon'],
+  },
+  {
     slug: 'atlantic-salmon-norway-guide',
     title: 'Atlantic Salmon in Norway: A Complete Guide for 2026',
     excerpt: 'Everything you need to know about planning your salmon fishing trip to the rivers of northern Norway — seasons, gear, and the best beats.',

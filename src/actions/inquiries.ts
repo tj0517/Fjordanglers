@@ -35,6 +35,7 @@ const submitInquirySchema = z.object({
       notes: z.string().max(2000).optional(),
     })
     .default({}),
+  guideId: z.string().uuid().optional(),
 })
 
 // ─── submitInquiry ────────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ export async function submitInquiry(
     experienceLevel,
     groupSize,
     preferences,
+    guideId,
   } = parsed.data
 
   // Validate date range
@@ -81,6 +83,7 @@ export async function submitInquiry(
       group_size: groupSize,
       preferences: preferences as unknown as Json,
       status: 'inquiry',
+      assigned_guide_id: guideId ?? null,
     })
     .select('id')
     .single()
@@ -93,6 +96,7 @@ export async function submitInquiry(
   // Placeholder for email notification
   console.log(`[submitInquiry] New inquiry ${inquiry.id} from ${anglerEmail}`)
 
+  revalidatePath('/dashboard/inquiries')
   return { inquiryId: inquiry.id }
 }
 
@@ -289,8 +293,84 @@ export async function acceptOffer(
     }
   }
 
-  // Guide without Stripe → redirect to trip page with confirmation
+  // Guide without Stripe → confirm directly
+  await serviceClient
+    .from('trip_inquiries')
+    .update({ status: 'confirmed' })
+    .eq('id', inquiryId)
   return {
     checkoutUrl: `${env.NEXT_PUBLIC_APP_URL}/account/trips/${inquiryId}?status=accepted`,
   }
+}
+
+// ─── sendOfferByGuide ─────────────────────────────────────────────────────────
+
+export async function sendOfferByGuide(
+  inquiryId: string,
+  offer: {
+    assignedRiver: string
+    offerPriceEur: number
+    offerDetails: string
+  },
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  // Find the guide profile for this user
+  const { data: guide } = await supabase
+    .from('guides')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+  if (!guide) return { error: 'Guide profile not found.' }
+
+  // Validate offer price
+  if (offer.offerPriceEur <= 0) return { error: 'Offer price must be greater than 0.' }
+
+  const serviceClient = createServiceClient()
+
+  // Fetch the inquiry
+  const { data: inquiry } = await serviceClient
+    .from('trip_inquiries')
+    .select('id, assigned_guide_id, status')
+    .eq('id', inquiryId)
+    .single()
+
+  if (!inquiry) return { error: 'Inquiry not found.' }
+
+  // Authorization: must be assigned to this guide, or unassigned
+  if (
+    inquiry.assigned_guide_id !== null &&
+    inquiry.assigned_guide_id !== guide.id
+  ) {
+    return { error: 'You are not authorized to send an offer for this inquiry.' }
+  }
+
+  // Status check
+  if (inquiry.status !== 'inquiry' && inquiry.status !== 'reviewing') {
+    return { error: 'An offer can only be sent for inquiries in inquiry or reviewing status.' }
+  }
+
+  const { error: updateError } = await serviceClient
+    .from('trip_inquiries')
+    .update({
+      status: 'offer_sent',
+      assigned_guide_id: guide.id,
+      assigned_river: offer.assignedRiver,
+      offer_price_eur: offer.offerPriceEur,
+      offer_details: offer.offerDetails,
+    })
+    .eq('id', inquiryId)
+
+  if (updateError) {
+    console.error('[sendOfferByGuide]', updateError)
+    return { error: 'Failed to send offer. Please try again.' }
+  }
+
+  revalidatePath('/dashboard/inquiries')
+  revalidatePath(`/dashboard/inquiries/${inquiryId}`)
+  return {}
 }

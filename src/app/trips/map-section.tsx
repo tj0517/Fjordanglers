@@ -55,23 +55,27 @@ function SheetCard({
   onClick: () => void
 }) {
   const coverUrl = cardThumb(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url ?? null)
+  const [hovered, setHovered] = useState(false)
+  const active = selected || hovered
 
   return (
     <Link
       href={`/trips/${exp.id}`}
       onClick={onClick}
-      className="flex-shrink-0 text-left transition-transform duration-200 active:scale-[0.98]"
+      className="group flex-shrink-0 text-left transition-transform duration-200 active:scale-[0.98]"
       style={{ width: '248px' }}
       aria-label={exp.title}
     >
       <div
-        className="overflow-hidden"
+        className="overflow-hidden transition-all duration-200 group-hover:-translate-y-1"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         style={{
           borderRadius: '16px',
           background: '#FDFAF7',
-          border: selected ? '2px solid #E67E50' : '1px solid rgba(10,46,77,0.09)',
-          boxShadow: selected
-            ? '0 4px 20px rgba(230,126,80,0.22)'
+          border: active ? '2px solid #E67E50' : '1px solid rgba(10,46,77,0.09)',
+          boxShadow: active
+            ? '0 8px 28px rgba(230,126,80,0.30)'
             : '0 2px 12px rgba(10,46,77,0.07)',
         }}
       >
@@ -83,7 +87,7 @@ function SheetCard({
               alt={exp.title}
               fill
               sizes="248px"
-              className="object-cover"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.04]"
             />
           ) : (
             <div className="w-full h-full" style={{ background: '#EDE6DB' }} />
@@ -189,7 +193,7 @@ export default function MapSection({
   const visibleCount = useViewportFilter ? visibleExperiences.length : initialTotal
   const isFiltered   = useViewportFilter
 
-  // Pin tapped on map → highlight + scroll bottom sheet to matching card
+  // Pin tapped on map → highlight on desktop; scroll bottom sheet on mobile (no highlight)
   const handlePinClick = useCallback((id: string) => {
     setHoveredExpId(prev => prev === id ? null : id)
     if (!isDesktop && sheetScrollRef.current) {
@@ -279,6 +283,7 @@ export default function MapSection({
             onBoundsChange={setBounds}
             hoveredExpId={hoveredExpId}
             onPinClick={handlePinClick}
+            showPopups={false}
           />
         </div>
 
@@ -547,7 +552,7 @@ function DesktopCard({
             )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 flex justify-center pb-3 opacity-0 translate-y-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0">
+          <div className="absolute inset-x-0 bottom-0 hidden md:flex justify-center pb-3 opacity-0 translate-y-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0">
             <span
               className="text-[12px] font-semibold f-body px-4 py-1.5 rounded-full"
               style={{ background: '#E67E50', color: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}

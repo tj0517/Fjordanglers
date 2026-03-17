@@ -21,7 +21,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code        = requestUrl.searchParams.get('code')
-  const next        = requestUrl.searchParams.get('next') ?? '/dashboard'
+  const next        = requestUrl.searchParams.get('next') ?? '/account'
   const origin      = requestUrl.origin
 
   if (code != null) {
@@ -40,11 +40,23 @@ export async function GET(request: NextRequest) {
         try {
           const service = createServiceClient()
 
+          // ── Ensure profile row exists with correct role ─────────────────────
+          // For email signups: role comes from user_metadata set during signUp().
+          // For Google OAuth: default to 'angler' (guides sign up via invite flow).
+          const metaRole = (data.user?.user_metadata?.role as string | undefined) ?? 'angler'
+          await service
+            .from('profiles')
+            .upsert(
+              { id: userId, role: metaRole },
+              { onConflict: 'id', ignoreDuplicates: true },
+            )
+
+          // ── Auto-link guide listing if invite_email matches ─────────────────
           const { data: guide } = await service
             .from('guides')
             .select('id')
             .eq('invite_email', userEmail)
-            .is('user_id', null)          // only unlinked listings
+            .is('user_id', null)
             .maybeSingle()
 
           if (guide != null) {
@@ -53,14 +65,12 @@ export async function GET(request: NextRequest) {
                 .from('guides')
                 .update({ user_id: userId, is_beta_listing: false })
                 .eq('id', guide.id),
-              // Upsert only id + role — preserves full_name / avatar_url on conflict
               service
                 .from('profiles')
                 .upsert({ id: userId, role: 'guide' }, { onConflict: 'id' }),
             ])
           }
         } catch (linkErr) {
-          // Do NOT block the redirect — admin can link manually from /admin/guides/[id]
           console.error('[auth/callback] auto-link error:', linkErr)
         }
       }

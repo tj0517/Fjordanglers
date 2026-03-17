@@ -12,14 +12,40 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       bookings: {
         Row: {
           accepted_at: string | null
           angler_country: string | null
+          angler_email: string | null
           angler_full_name: string | null
-          angler_id: string
+          angler_id: string | null
           angler_phone: string | null
           booking_date: string
           cancelled_at: string | null
@@ -49,8 +75,9 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           angler_country?: string | null
+          angler_email?: string | null
           angler_full_name?: string | null
-          angler_id: string
+          angler_id?: string | null
           angler_phone?: string | null
           booking_date: string
           cancelled_at?: string | null
@@ -80,8 +107,9 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           angler_country?: string | null
+          angler_email?: string | null
           angler_full_name?: string | null
-          angler_id?: string
+          angler_id?: string | null
           angler_phone?: string | null
           booking_date?: string
           cancelled_at?: string | null
@@ -239,44 +267,11 @@ export type Database = {
           },
         ]
       }
-      guide_images: {
-        Row: {
-          id: string
-          guide_id: string
-          url: string
-          is_cover: boolean
-          sort_order: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          guide_id: string
-          url: string
-          is_cover?: boolean
-          sort_order?: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          guide_id?: string
-          url?: string
-          is_cover?: boolean
-          sort_order?: number
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guide_images_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: false
-            referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       experiences: {
         Row: {
-          boat_included: boolean | null
+          accommodation_description: string | null
+          boat_description: string | null
+          booking_type: string
           catch_and_release: boolean | null
           created_at: string
           description: string
@@ -286,42 +281,46 @@ export type Database = {
           duration_options: Json | null
           fish_types: string[]
           fishing_methods: string[]
+          food_description: string | null
+          gear_description: string | null
           group_pricing: Json | null
           guide_id: string
           id: string
           images: string[] | null
           inclusions: Json | null
+          itinerary: Json | null
           landscape_url: string | null
+          license_description: string | null
           license_region: string | null
+          location_area: Json | null
           location_city: string | null
           location_country: string | null
-          location_area: Json | null
-          location_spots: Json | null
+          location_description: string | null
           location_lat: number | null
-          location_latitude: number | null
           location_lng: number | null
-          location_longitude: number | null
+          location_spots: Json | null
           max_guests: number
           meeting_point: string | null
           meeting_point_address: string | null
           meeting_point_lat: number | null
           meeting_point_lng: number | null
-          meeting_time: string | null
-          booking_type: string
+          packages: Json | null
           price_per_person_eur: number | null
           published: boolean
           season_from: number | null
           season_to: number | null
           slug: string | null
-          tags: string[] | null
           technique: string | null
           title: string
+          transport_description: string | null
           updated_at: string
           what_excluded: string[]
           what_included: string[]
         }
         Insert: {
-          boat_included?: boolean | null
+          accommodation_description?: string | null
+          boat_description?: string | null
+          booking_type?: string
           catch_and_release?: boolean | null
           created_at?: string
           description: string
@@ -331,42 +330,46 @@ export type Database = {
           duration_options?: Json | null
           fish_types?: string[]
           fishing_methods?: string[]
+          food_description?: string | null
+          gear_description?: string | null
           group_pricing?: Json | null
           guide_id: string
           id?: string
           images?: string[] | null
           inclusions?: Json | null
+          itinerary?: Json | null
           landscape_url?: string | null
+          license_description?: string | null
           license_region?: string | null
+          location_area?: Json | null
           location_city?: string | null
           location_country?: string | null
-          location_area?: Json | null
-          location_spots?: Json | null
+          location_description?: string | null
           location_lat?: number | null
-          location_latitude?: number | null
           location_lng?: number | null
-          location_longitude?: number | null
+          location_spots?: Json | null
           max_guests?: number
           meeting_point?: string | null
           meeting_point_address?: string | null
           meeting_point_lat?: number | null
           meeting_point_lng?: number | null
-          meeting_time?: string | null
-          booking_type?: string
+          packages?: Json | null
           price_per_person_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null
           slug?: string | null
-          tags?: string[] | null
           technique?: string | null
           title: string
+          transport_description?: string | null
           updated_at?: string
           what_excluded?: string[]
           what_included?: string[]
         }
         Update: {
-          boat_included?: boolean | null
+          accommodation_description?: string | null
+          boat_description?: string | null
+          booking_type?: string
           catch_and_release?: boolean | null
           created_at?: string
           description?: string
@@ -376,36 +379,38 @@ export type Database = {
           duration_options?: Json | null
           fish_types?: string[]
           fishing_methods?: string[]
+          food_description?: string | null
+          gear_description?: string | null
           group_pricing?: Json | null
           guide_id?: string
           id?: string
           images?: string[] | null
           inclusions?: Json | null
+          itinerary?: Json | null
           landscape_url?: string | null
+          license_description?: string | null
           license_region?: string | null
+          location_area?: Json | null
           location_city?: string | null
           location_country?: string | null
-          location_area?: Json | null
-          location_spots?: Json | null
+          location_description?: string | null
           location_lat?: number | null
-          location_latitude?: number | null
           location_lng?: number | null
-          location_longitude?: number | null
+          location_spots?: Json | null
           max_guests?: number
           meeting_point?: string | null
           meeting_point_address?: string | null
           meeting_point_lat?: number | null
           meeting_point_lng?: number | null
-          meeting_time?: string | null
-          booking_type?: string
+          packages?: Json | null
           price_per_person_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null
           slug?: string | null
-          tags?: string[] | null
           technique?: string | null
           title?: string
+          transport_description?: string | null
           updated_at?: string
           what_excluded?: string[]
           what_included?: string[]
@@ -413,6 +418,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "experiences_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_images: {
+        Row: {
+          created_at: string
+          guide_id: string
+          id: string
+          is_cover: boolean
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          guide_id: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          created_at?: string
+          guide_id?: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_images_guide_id_fkey"
             columns: ["guide_id"]
             isOneToOne: false
             referencedRelation: "guides"
@@ -438,6 +478,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           external_reviews: Json | null
+          facebook_url: string | null
           fish_expertise: string[]
           full_name: string
           google_profile_url: string | null
@@ -445,10 +486,9 @@ export type Database = {
           google_review_count: number | null
           id: string
           instagram_url: string | null
-          facebook_url: string | null
-          website_url: string | null
           invite_email: string | null
           is_beta_listing: boolean
+          landscape_url: string | null
           languages: string[]
           lead_id: string | null
           pricing_model: Database["public"]["Enums"]["pricing_model"]
@@ -459,11 +499,11 @@ export type Database = {
           stripe_charges_enabled: boolean
           stripe_payouts_enabled: boolean
           tagline: string | null
-          landscape_url: string | null
           total_reviews: number
           updated_at: string
           user_id: string | null
           verified_at: string | null
+          website_url: string | null
           years_experience: number | null
           youtube_url: string | null
         }
@@ -484,6 +524,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           external_reviews?: Json | null
+          facebook_url?: string | null
           fish_expertise?: string[]
           full_name: string
           google_profile_url?: string | null
@@ -493,6 +534,7 @@ export type Database = {
           instagram_url?: string | null
           invite_email?: string | null
           is_beta_listing?: boolean
+          landscape_url?: string | null
           languages?: string[]
           lead_id?: string | null
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
@@ -503,11 +545,11 @@ export type Database = {
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           tagline?: string | null
-          landscape_url?: string | null
           total_reviews?: number
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
+          website_url?: string | null
           years_experience?: number | null
           youtube_url?: string | null
         }
@@ -528,6 +570,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           external_reviews?: Json | null
+          facebook_url?: string | null
           fish_expertise?: string[]
           full_name?: string
           google_profile_url?: string | null
@@ -537,6 +580,7 @@ export type Database = {
           instagram_url?: string | null
           invite_email?: string | null
           is_beta_listing?: boolean
+          landscape_url?: string | null
           languages?: string[]
           lead_id?: string | null
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
@@ -547,11 +591,11 @@ export type Database = {
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           tagline?: string | null
-          landscape_url?: string | null
           total_reviews?: number
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
+          website_url?: string | null
           years_experience?: number | null
           youtube_url?: string | null
         }
@@ -1916,6 +1960,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       booking_status: [

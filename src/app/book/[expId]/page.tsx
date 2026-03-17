@@ -42,20 +42,17 @@ export default async function BookPage({ params, searchParams }: Props) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect(`/login?next=/book/${expId}?dates=${rawDates}&guests=${guests}`)
-  }
-
   let defaultName = ''
-  let defaultEmail = user.email ?? ''
+  let defaultEmail = user?.email ?? ''
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.full_name) defaultName = profile.full_name
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+    if (profile?.full_name) defaultName = profile.full_name
+  }
 
   // ── Price calculation (mirrors BookingWidget logic) ────────────────────────
   const pricePerPerson = experience.price_per_person_eur ?? 0
@@ -140,6 +137,78 @@ export default async function BookPage({ params, searchParams }: Props) {
             </div>
           </div>
 
+          {/* Trip details */}
+          <div
+            className="p-6"
+            style={{
+              background: '#FDFAF7',
+              borderRadius: '24px',
+              border: '1px solid rgba(10,46,77,0.08)',
+            }}
+          >
+            <p
+              className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 f-body"
+              style={{ color: 'rgba(10,46,77,0.4)' }}
+            >
+              Your Trip
+            </p>
+
+            <div className="flex flex-col gap-3">
+              {/* Dates */}
+              <div className="flex items-start gap-3">
+                <div
+                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                  style={{ background: 'rgba(230,126,80,0.1)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#E67E50" strokeWidth="1.5">
+                    <rect x="1" y="2" width="12" height="11" rx="2" />
+                    <line x1="1" y1="6" x2="13" y2="6" />
+                    <line x1="4" y1="0.5" x2="4" y2="3.5" />
+                    <line x1="10" y1="0.5" x2="10" y2="3.5" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] f-body mb-1" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                    {dates.length === 1 ? 'Date' : `Dates (${dates.length})`}
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {dates.map(iso => (
+                      <p key={iso} className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                        {new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ height: '1px', background: 'rgba(10,46,77,0.06)' }} />
+
+              {/* Guests */}
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(10,46,77,0.05)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#0A2E4D" strokeWidth="1.5" strokeOpacity="0.5">
+                    <circle cx="7" cy="4.5" r="2.5" />
+                    <path d="M1.5 12.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Anglers</p>
+                  <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                    {guests} {guests === 1 ? 'angler' : 'anglers'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Price breakdown */}
           <div
             className="p-6"
@@ -178,34 +247,17 @@ export default async function BookPage({ params, searchParams }: Props) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-bold f-display" style={{ color: '#E67E50' }}>
-                    Due today (30%)
+                    Due today
                   </p>
                   <p
                     className="text-[11px] f-body mt-0.5"
                     style={{ color: 'rgba(10,46,77,0.4)' }}
                   >
-                    Deposit — refundable if guide declines
+                    No payment — guide confirms within 24h
                   </p>
                 </div>
                 <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
-                  €{depositEur}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                    Balance (70%)
-                  </p>
-                  <p
-                    className="text-[11px] f-body mt-0.5"
-                    style={{ color: 'rgba(10,46,77,0.35)' }}
-                  >
-                    Due after guide confirmation
-                  </p>
-                </div>
-                <p className="text-lg font-bold f-display" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                  €{balanceDue}
+                  €0
                 </p>
               </div>
             </div>
@@ -221,9 +273,9 @@ export default async function BookPage({ params, searchParams }: Props) {
             }}
           >
             {[
-              { icon: '🛡️', text: 'No additional charge until guide confirms' },
+              { icon: '🛡️', text: 'No payment required to send a request' },
               { icon: '⏰', text: 'Guide responds within 24 hours' },
-              { icon: '🔒', text: 'Secure payment via Stripe — no card stored' },
+              { icon: '✓', text: 'Free to request — pay only after confirmation' },
             ].map(item => (
               <div key={item.text} className="flex items-center gap-3 mb-2.5 last:mb-0">
                 <span className="text-base leading-none">{item.icon}</span>
@@ -260,6 +312,7 @@ export default async function BookPage({ params, searchParams }: Props) {
               guests={guests}
               defaultName={defaultName}
               defaultEmail={defaultEmail}
+              isLoggedIn={user != null}
             />
           </div>
         </div>

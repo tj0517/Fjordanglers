@@ -323,7 +323,7 @@ export default async function GuideProfilePage({
 
                 <div className="flex flex-wrap gap-6 py-6 px-7 rounded-3xl mt-4" style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)' }}>
                   {[
-                    { label: 'Trip',    value: guide.years_experience != null ? `${guide.years_experience} years` : '—' },
+                    { label: 'Experience', value: guide.years_experience != null ? `${guide.years_experience} years` : '—' },
                     { label: 'Total reviews', value: guide.total_reviews.toString() },
                     { label: 'Rating',        value: guide.average_rating != null ? `★ ${guide.average_rating.toFixed(1)}` : '—' },
                     { label: 'Location',      value: `${guide.city != null ? `${guide.city}, ` : ''}${guide.country}` },
@@ -493,7 +493,7 @@ export default async function GuideProfilePage({
 
                 <div className="flex gap-4 pb-6 mb-6" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
                   {[
-                    { label: 'Years exp.',  value: guide.years_experience != null ? `${guide.years_experience}` : '—' },
+                    { label: 'Experience', value: guide.years_experience != null ? `${guide.years_experience} yrs` : '—' },
                     { label: 'Trips',       value: guideExperiences.length.toString() },
                     { label: 'Rating',      value: guide.average_rating != null ? `★ ${guide.average_rating.toFixed(1)}` : '—' },
                   ].map(stat => (
