@@ -29,23 +29,44 @@ export default function SortSelect() {
       >
         Sort:
       </span>
-      <select
-        value={sort}
-        onChange={e => handleChange(e.target.value)}
-        className="f-body outline-none cursor-pointer rounded-xl"
-        style={{
-          fontSize: '13px',
-          background: 'rgba(10,46,77,0.05)',
-          border: '1px solid rgba(10,46,77,0.10)',
-          color: '#0A2E4D',
-          padding: '6px 12px',
-          fontFamily: 'inherit',
-        }}
-      >
-        {SORT_OPTIONS.map(o => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
+
+      {/* Custom-styled select wrapper */}
+      <div className="relative">
+        <select
+          value={sort}
+          onChange={e => handleChange(e.target.value)}
+          className="f-body cursor-pointer rounded-xl appearance-none outline-none"
+          style={{
+            fontSize: '13px',
+            fontWeight: sort ? 600 : 400,
+            background: sort ? 'rgba(10,46,77,0.09)' : 'rgba(10,46,77,0.05)',
+            border: `1.5px solid ${sort ? 'rgba(10,46,77,0.22)' : 'rgba(10,46,77,0.10)'}`,
+            color: sort ? '#0A2E4D' : 'rgba(10,46,77,0.55)',
+            padding: '6px 32px 6px 12px',
+            fontFamily: 'inherit',
+            transition: 'background 0.15s, border-color 0.15s',
+          }}
+        >
+          {SORT_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+
+        {/* Custom chevron */}
+        <div
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+        >
+          <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+            <path
+              d="M1 1l4 4 4-4"
+              stroke={sort ? '#0A2E4D' : 'rgba(10,46,77,0.4)'}
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
     </div>
   )
 }

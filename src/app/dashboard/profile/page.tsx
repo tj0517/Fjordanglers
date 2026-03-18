@@ -75,7 +75,7 @@ export default async function ProfilePage() {
 
         {/* Avatar + info */}
         <div className="px-8 pb-8">
-          <div className="flex items-end justify-between -mt-8 mb-5">
+          <div className="relative z-10 flex items-end justify-between -mt-8 mb-5">
             {/* Avatar */}
             <div
               className="w-16 h-16 rounded-2xl overflow-hidden"

@@ -60,7 +60,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       <DashboardSidebar guide={guide} />
-      <main style={{ marginLeft: '240px', minHeight: '100vh' }}>
+      {/* pt-14 = mobile top bar height; lg:pt-0 removes it on desktop */}
+      <main className="lg:ml-[240px] pt-14 lg:pt-0" style={{ minHeight: '100vh' }}>
         {children}
       </main>
     </div>

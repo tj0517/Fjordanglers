@@ -774,11 +774,11 @@ export function BookingWidget({
         {/* Dropdown panel */}
         {optionOpen && multipleOptions && (
           <div
-            className="absolute left-0 right-0 z-50 mt-2 rounded-2xl overflow-hidden"
+            className="absolute left-0 right-0 z-50 mt-2 rounded-2xl p-1.5"
             style={{
-              background: '#F3EDE4',
-              border: '1.5px solid rgba(10,46,77,0.12)',
-              boxShadow: '0 16px 48px rgba(10,46,77,0.16)',
+              background: '#FDFAF7',
+              border: '1.5px solid rgba(10,46,77,0.10)',
+              boxShadow: '0 20px 56px rgba(10,46,77,0.18)',
               top: '100%',
             }}
             role="listbox"
@@ -799,10 +799,9 @@ export function BookingWidget({
                   role="option"
                   aria-selected={isSel}
                   onClick={() => selectOption(i)}
-                  className="w-full flex items-center justify-between px-4 py-3.5 text-left transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-3 text-left rounded-xl transition-all hover:bg-[rgba(10,46,77,0.05)]"
                   style={{
-                    background: isSel ? 'rgba(10,46,77,0.06)' : 'transparent',
-                    borderBottom: i < durationOptions.length - 1 ? '1px solid rgba(10,46,77,0.07)' : 'none',
+                    background: isSel ? 'rgba(10,46,77,0.07)' : 'transparent',
                   }}
                 >
                   <div className="min-w-0">
@@ -907,16 +906,16 @@ export function BookingWidget({
             </button>
 
             {/* Count */}
-            <div className="text-center select-none">
+            <div className="flex items-center gap-2 select-none">
               <span
-                className="text-xl font-bold f-display"
-                style={{ color: '#0A2E4D' }}
+                className="text-lg font-bold f-display"
+                style={{ color: '#0A2E4D', lineHeight: '1' }}
               >
                 {groupSize}
               </span>
               <span
-                className="ml-2 text-sm f-body"
-                style={{ color: 'rgba(10,46,77,0.5)' }}
+                className="text-sm f-body"
+                style={{ color: 'rgba(10,46,77,0.5)', lineHeight: '1' }}
               >
                 {groupSize === 1 ? 'angler' : 'anglers'}
               </span>

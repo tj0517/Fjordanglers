@@ -167,6 +167,42 @@ const inputBase = {
   color: '#0A2E4D',
 }
 
+/** Styled <select> — matches TextInput visuals + brand-consistent custom chevron. */
+function StyledSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <div className="relative">
+      <select
+        {...props}
+        className={cn(
+          'w-full px-4 py-3 pr-10 rounded-2xl text-sm f-body outline-none transition-all appearance-none cursor-pointer',
+          props.className,
+        )}
+        style={{ ...inputBase, ...(props.style ?? {}) }}
+        onFocus={e => {
+          e.currentTarget.style.borderColor = '#E67E50'
+          props.onFocus?.(e)
+        }}
+        onBlur={e => {
+          e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)'
+          props.onBlur?.(e)
+        }}
+      />
+      {/* Custom chevron — hidden from pointer events */}
+      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+          <path
+            d="M1 1l4 4 4-4"
+            stroke="rgba(10,46,77,0.4)"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+  )
+}
+
 function Field({ label, required, children }: { label: React.ReactNode; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
@@ -285,19 +321,16 @@ function MonthSelect({
   placeholder: string
 }) {
   return (
-    <select
+    <StyledSelect
       value={value ?? ''}
       onChange={e => onChange(e.target.value === '' ? null : Number(e.target.value))}
-      className="w-full px-4 py-3 rounded-2xl text-sm f-body outline-none transition-all appearance-none cursor-pointer"
-      style={inputBase}
-      onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
-      onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
+      style={{ color: value != null ? '#0A2E4D' : 'rgba(10,46,77,0.38)' }}
     >
       <option value="">{placeholder}</option>
       {MONTHS.map(m => (
         <option key={m.value} value={m.value}>{m.label}</option>
       ))}
-    </select>
+    </StyledSelect>
   )
 }
 
@@ -1274,21 +1307,16 @@ export default function ExperienceForm({
           {/* Country + City */}
           <div className="grid grid-cols-2 gap-5">
             <Field label="Country">
-              <select
+              <StyledSelect
                 value={locationCountry}
                 onChange={e => setLocationCountry(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl text-sm f-body transition-all focus:outline-none"
-                style={{
-                  background: '#F3EDE4',
-                  border: '1.5px solid rgba(10,46,77,0.12)',
-                  color: locationCountry ? '#0A2E4D' : 'rgba(10,46,77,0.38)',
-                }}
+                style={{ color: locationCountry ? '#0A2E4D' : 'rgba(10,46,77,0.38)' }}
               >
                 <option value="">Select country…</option>
                 {COUNTRIES.map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
-              </select>
+              </StyledSelect>
             </Field>
             <Field label="City / Region">
               <TextInput

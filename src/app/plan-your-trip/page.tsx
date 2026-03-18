@@ -355,12 +355,14 @@ function PlanYourTripForm() {
                     <rect x="0" y="0.5" width="12" height="1.2" rx="0.6" fill="currentColor" />
                   </svg>
                 </button>
-                <span className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                  {groupSize}{' '}
-                  <span className="text-sm font-normal" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                <div className="flex items-center gap-2 select-none">
+                  <span className="text-lg font-bold f-display" style={{ color: '#0A2E4D', lineHeight: '1' }}>
+                    {groupSize}
+                  </span>
+                  <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)', lineHeight: '1' }}>
                     {groupSize === 1 ? 'angler' : 'anglers'}
                   </span>
-                </span>
+                </div>
                 <button
                   type="button"
                   onClick={() => setGroupSize(n => Math.min(12, n + 1))}

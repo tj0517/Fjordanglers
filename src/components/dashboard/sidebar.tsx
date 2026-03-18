@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
@@ -94,210 +95,247 @@ const IconInquiries = () => (
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
-const NAV_ACTIVE = [
-  { label: 'Listings',   href: '/dashboard/trips',        icon: <IconCompass />    },
-  { label: 'Profile',    href: '/dashboard/profile',      icon: <IconUser />       },
-] as const
-
-const NAV_SOON = [
-  { label: 'Bookings',   icon: <IconBookings />   },
-  { label: 'Inquiries',  icon: <IconInquiries />  },
-  { label: 'Calendar',   icon: <IconCalendar />   },
-  { label: 'Earnings',   icon: <IconTrending />   },
+const NAV = [
+  { label: 'Overview',  href: '/dashboard',            icon: <IconOverview />,   exact: true  },
+  { label: 'Listings',  href: '/dashboard/trips',       icon: <IconCompass />,    exact: false },
+  { label: 'Bookings',  href: '/dashboard/bookings',    icon: <IconBookings />,   exact: false },
+  { label: 'Inquiries', href: '/dashboard/inquiries',   icon: <IconInquiries />,  exact: false },
+  { label: 'Calendar',  href: '/dashboard/calendar',    icon: <IconCalendar />,   exact: false },
+  { label: 'Earnings',  href: '/dashboard/earnings',    icon: <IconTrending />,   exact: false },
+  { label: 'Profile',   href: '/dashboard/profile',     icon: <IconUser />,       exact: false },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
   const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
-  // Resolve display values — fallback to placeholder when not authenticated
-  const displayName    = guide?.full_name ?? 'Guide'
-  const displayAvatar  = guide?.avatar_url ?? null
-  const isFounder      = guide?.pricing_model === 'commission'
-  const payoutsActive  = (guide?.stripe_charges_enabled === true) && (guide?.stripe_payouts_enabled === true)
-  const isPending      = guide?.status === 'pending'
+  // Close sidebar on navigation
+  useEffect(() => { setMobileOpen(false) }, [pathname])
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
+  const displayName   = guide?.full_name ?? 'Guide'
+  const displayAvatar = guide?.avatar_url ?? null
+  const isFounder     = guide?.pricing_model === 'commission'
+  const payoutsActive = (guide?.stripe_charges_enabled === true) && (guide?.stripe_payouts_enabled === true)
+  const isPending     = guide?.status === 'pending'
+
+  function isActive(href: string, exact: boolean) {
+    return exact ? pathname === href : pathname.startsWith(href)
+  }
 
   return (
-    <aside
-      className="fixed inset-y-0 left-0 flex flex-col"
-      style={{
-        width: '240px',
-        background: '#07111C',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
-        zIndex: 40,
-      }}
-    >
-      {/* Grain texture */}
+    <>
+      {/* ── Mobile top bar ─────────────────────────────────────────────────── */}
       <div
-        aria-hidden="true"
-        className="absolute inset-0 pointer-events-none"
+        className="lg:hidden fixed top-0 inset-x-0 z-50 flex items-center gap-3 px-4 h-14"
         style={{
-          backgroundImage: GRAIN_BG,
-          backgroundSize: '200px 200px',
-          opacity: 0.055,
-          mixBlendMode: 'screen',
+          background: 'rgba(243,237,228,0.95)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(10,46,77,0.08)',
         }}
-      />
-
-      {/* Logo */}
-      <div
-        className="relative px-6 pt-6 pb-5"
-        style={{ zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <Link href="/">
-          <Image
-            src="/brand/white-logo.png"
-            alt="FjordAnglers"
-            width={140}
-            height={36}
-            className="h-7 w-auto"
-            style={{ opacity: 0.7 }}
-          />
-        </Link>
-        <p className="text-[10px] uppercase tracking-[0.22em] mt-1.5 f-body" style={{ color: 'rgba(255,255,255,0.22)' }}>
-          Guide Dashboard
-        </p>
-      </div>
-
-      {/* Guide profile card */}
-      <div
-        className="relative px-4 py-3"
-        style={{ zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-      >
-        <div
-          className="flex items-center gap-3 px-3 py-3 rounded-2xl"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+        {/* Hamburger */}
+        <button
+          onClick={() => setMobileOpen(o => !o)}
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          className="w-9 h-9 flex flex-col items-center justify-center gap-[5px] rounded-xl flex-shrink-0"
+          style={{ background: mobileOpen ? 'rgba(230,126,80,0.12)' : 'rgba(10,46,77,0.07)' }}
         >
-          <div
-            className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0"
-            style={{ border: '2px solid rgba(230,126,80,0.35)' }}
-          >
+          {[
+            { transform: mobileOpen ? 'translateY(6.5px) rotate(45deg)' : 'none' },
+            { opacity: mobileOpen ? 0 : undefined, transform: mobileOpen ? 'scaleX(0)' : 'none' },
+            { transform: mobileOpen ? 'translateY(-6.5px) rotate(-45deg)' : 'none' },
+          ].map((s, i) => (
+            <span
+              key={i}
+              className="block rounded-full transition-all duration-300 origin-center"
+              style={{ width: '18px', height: '1.5px', background: '#0A2E4D', opacity: s.opacity ?? 0.7, transform: s.transform }}
+            />
+          ))}
+        </button>
+
+        {/* Logo */}
+        <Link href="/dashboard">
+          <Image src="/brand/dark-logo.png" alt="FjordAnglers" width={120} height={30} className="h-6 w-auto" />
+        </Link>
+
+        {/* Guide name + avatar */}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>{displayName}</span>
+          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(230,126,80,0.3)' }}>
             {displayAvatar != null ? (
-              <Image
-                src={displayAvatar}
-                alt={displayName}
-                width={36}
-                height={36}
-                className="object-cover"
-              />
+              <Image src={displayAvatar} alt={displayName} width={32} height={32} className="object-cover" />
             ) : (
-              <div
-                className="w-full h-full flex items-center justify-center text-white text-sm f-body"
-                style={{ background: '#0A2E4D' }}
-              >
+              <div className="w-full h-full flex items-center justify-center text-white text-xs f-body" style={{ background: '#0A2E4D' }}>
                 {displayName[0]}
               </div>
             )}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-white text-sm font-semibold truncate f-body leading-tight">{displayName}</p>
-            <span
-              className="inline-block text-[9px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full mt-0.5 f-body"
-              style={{ background: 'rgba(230,126,80,0.15)', color: '#E67E50' }}
-            >
-              {isFounder ? 'Founding Guide' : 'Guide'}
-            </span>
-          </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="relative flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto" style={{ zIndex: 1 }}>
-        {NAV_ACTIVE.map((item) => {
-          const isActive = pathname.startsWith(item.href)
+      {/* ── Mobile overlay ─────────────────────────────────────────────────── */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40"
+          style={{ background: 'rgba(0,0,0,0.48)', backdropFilter: 'blur(2px)' }}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all f-body"
-              style={{
-                background: isActive ? 'rgba(230,126,80,0.1)' : 'transparent',
-                color: isActive ? '#E67E50' : 'rgba(255,255,255,0.45)',
-                border: isActive ? '1px solid rgba(230,126,80,0.15)' : '1px solid transparent',
-              }}
-            >
-              <span style={{ opacity: isActive ? 1 : 0.65 }}>{item.icon}</span>
-              {item.label}
-            </Link>
-          )
-        })}
+      {/* ── Sidebar ────────────────────────────────────────────────────────── */}
+      <aside
+        className={`fixed inset-y-0 left-0 flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{
+          width: '240px',
+          background: '#07111C',
+          borderRight: '1px solid rgba(255,255,255,0.05)',
+          zIndex: 40,
+        }}
+      >
+        {/* Grain texture */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: GRAIN_BG,
+            backgroundSize: '200px 200px',
+            opacity: 0.055,
+            mixBlendMode: 'screen',
+          }}
+        />
 
-        {/* Coming soon */}
-        <div className="mt-3 mb-1 px-3">
-          <p className="text-[9px] uppercase tracking-[0.2em] f-body" style={{ color: 'rgba(255,255,255,0.18)' }}>
-            Coming soon
+        {/* Logo */}
+        <div
+          className="relative px-6 pt-6 pb-5"
+          style={{ zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+        >
+          <Link href="/">
+            <Image
+              src="/brand/white-logo.png"
+              alt="FjordAnglers"
+              width={140}
+              height={36}
+              className="h-7 w-auto"
+              style={{ opacity: 0.7 }}
+            />
+          </Link>
+          <p className="text-[10px] uppercase tracking-[0.22em] mt-1.5 f-body" style={{ color: 'rgba(255,255,255,0.22)' }}>
+            Guide Dashboard
           </p>
         </div>
-        {NAV_SOON.map((item) => (
-          <div
-            key={item.label}
-            className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm f-body"
-            style={{ color: 'rgba(255,255,255,0.2)', cursor: 'default' }}
-          >
-            <div className="flex items-center gap-3">
-              <span style={{ opacity: 0.4 }}>{item.icon}</span>
-              {item.label}
-            </div>
-            <span
-              className="text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-full f-body"
-              style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }}
-            >
-              Soon
-            </span>
-          </div>
-        ))}
-      </nav>
 
-      {/* Bottom: payout status + sign out + back to site */}
-      <div
-        className="relative px-4 pb-5 pt-4"
-        style={{ zIndex: 1, borderTop: '1px solid rgba(255,255,255,0.05)' }}
-      >
-        {/* Account status */}
+        {/* Guide profile card */}
         <div
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-2"
-          style={{ background: 'rgba(255,255,255,0.04)' }}
+          className="relative px-4 py-3"
+          style={{ zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
         >
           <div
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{
-              background: payoutsActive ? '#4ADE80' : isPending ? '#E67E50' : '#94A3B8',
-              boxShadow: payoutsActive ? '0 0 6px rgba(74,222,128,0.5)' : 'none',
-            }}
-          />
-          <div>
-            <p className="text-white/55 text-xs f-body leading-tight">
-              {payoutsActive ? 'Payouts active' : isPending ? 'Awaiting review' : 'Stripe not set up'}
-            </p>
-            <p className="text-white/25 text-[10px] f-body">
-              {payoutsActive ? 'Stripe Connect' : isPending ? 'We\'ll email you soon' : 'Connect in Settings'}
-            </p>
+            className="flex items-center gap-3 px-3 py-3 rounded-2xl"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+          >
+            <div
+              className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0"
+              style={{ border: '2px solid rgba(230,126,80,0.35)' }}
+            >
+              {displayAvatar != null ? (
+                <Image src={displayAvatar} alt={displayName} width={36} height={36} className="object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white text-sm f-body" style={{ background: '#0A2E4D' }}>
+                  {displayName[0]}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-white text-sm font-semibold truncate f-body leading-tight">{displayName}</p>
+              <span
+                className="inline-block text-[9px] font-bold uppercase tracking-[0.18em] px-2 py-0.5 rounded-full mt-0.5 f-body"
+                style={{ background: 'rgba(230,126,80,0.15)', color: '#E67E50' }}
+              >
+                {isFounder ? 'Founding Guide' : 'Guide'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Sign out — submits to Server Action which clears session + redirects */}
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.06] mb-0.5"
-            style={{ color: 'rgba(255,255,255,0.35)', cursor: 'pointer', border: 'none', background: 'transparent' }}
-          >
-            <IconLogout />
-            Sign out
-          </button>
-        </form>
+        {/* Navigation */}
+        <nav className="relative flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto" style={{ zIndex: 1 }}>
+          {NAV.map((item) => {
+            const active = isActive(item.href, item.exact)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all f-body"
+                style={{
+                  background: active ? 'rgba(230,126,80,0.1)' : 'transparent',
+                  color:      active ? '#E67E50' : 'rgba(255,255,255,0.45)',
+                  border:     active ? '1px solid rgba(230,126,80,0.15)' : '1px solid transparent',
+                }}
+              >
+                <span style={{ opacity: active ? 1 : 0.65 }}>{item.icon}</span>
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
 
-        <Link
-          href="/"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.04]"
-          style={{ color: 'rgba(255,255,255,0.28)' }}
+        {/* Bottom: payout status + sign out + back to site */}
+        <div
+          className="relative px-4 pb-5 pt-4"
+          style={{ zIndex: 1, borderTop: '1px solid rgba(255,255,255,0.05)' }}
         >
-          <IconArrowLeft />
-          Back to site
-        </Link>
-      </div>
-    </aside>
+          {/* Account status */}
+          <div
+            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl mb-2"
+            style={{ background: 'rgba(255,255,255,0.04)' }}
+          >
+            <div
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{
+                background: payoutsActive ? '#4ADE80' : isPending ? '#E67E50' : '#94A3B8',
+                boxShadow:  payoutsActive ? '0 0 6px rgba(74,222,128,0.5)' : 'none',
+              }}
+            />
+            <div>
+              <p className="text-white/55 text-xs f-body leading-tight">
+                {payoutsActive ? 'Payouts active' : isPending ? 'Awaiting review' : 'Stripe not set up'}
+              </p>
+              <p className="text-white/25 text-[10px] f-body">
+                {payoutsActive ? 'Stripe Connect' : isPending ? 'We\'ll email you soon' : 'Connect in Settings'}
+              </p>
+            </div>
+          </div>
+
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.06] mb-0.5"
+              style={{ color: 'rgba(255,255,255,0.35)', cursor: 'pointer', border: 'none', background: 'transparent' }}
+            >
+              <IconLogout />
+              Sign out
+            </button>
+          </form>
+
+          <Link
+            href="/"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.04]"
+            style={{ color: 'rgba(255,255,255,0.28)' }}
+          >
+            <IconArrowLeft />
+            Back to site
+          </Link>
+        </div>
+      </aside>
+    </>
   )
 }
