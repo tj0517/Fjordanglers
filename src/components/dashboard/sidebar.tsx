@@ -94,14 +94,16 @@ const IconInquiries = () => (
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
-const NAV = [
-  { label: 'Overview',   href: '/dashboard',              icon: <IconOverview />   },
-  { label: 'Trips',      href: '/dashboard/trips',        icon: <IconCompass />    },
-  { label: 'Bookings',   href: '/dashboard/bookings',     icon: <IconBookings />   },
-  { label: 'Inquiries',  href: '/dashboard/inquiries',    icon: <IconInquiries />  },
-  { label: 'Calendar',   href: '/dashboard/calendar',     icon: <IconCalendar />   },
-  { label: 'Earnings',   href: '/dashboard/earnings',     icon: <IconTrending />   },
+const NAV_ACTIVE = [
+  { label: 'Listings',   href: '/dashboard/trips',        icon: <IconCompass />    },
   { label: 'Profile',    href: '/dashboard/profile',      icon: <IconUser />       },
+] as const
+
+const NAV_SOON = [
+  { label: 'Bookings',   icon: <IconBookings />   },
+  { label: 'Inquiries',  icon: <IconInquiries />  },
+  { label: 'Calendar',   icon: <IconCalendar />   },
+  { label: 'Earnings',   icon: <IconTrending />   },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -202,11 +204,8 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
 
       {/* Navigation */}
       <nav className="relative flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto" style={{ zIndex: 1 }}>
-        {NAV.map((item) => {
-          const isActive =
-            item.href === '/dashboard'
-              ? pathname === '/dashboard'
-              : pathname.startsWith(item.href)
+        {NAV_ACTIVE.map((item) => {
+          const isActive = pathname.startsWith(item.href)
 
           return (
             <Link
@@ -224,6 +223,31 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
             </Link>
           )
         })}
+
+        {/* Coming soon */}
+        <div className="mt-3 mb-1 px-3">
+          <p className="text-[9px] uppercase tracking-[0.2em] f-body" style={{ color: 'rgba(255,255,255,0.18)' }}>
+            Coming soon
+          </p>
+        </div>
+        {NAV_SOON.map((item) => (
+          <div
+            key={item.label}
+            className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm f-body"
+            style={{ color: 'rgba(255,255,255,0.2)', cursor: 'default' }}
+          >
+            <div className="flex items-center gap-3">
+              <span style={{ opacity: 0.4 }}>{item.icon}</span>
+              {item.label}
+            </div>
+            <span
+              className="text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded-full f-body"
+              style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }}
+            >
+              Soon
+            </span>
+          </div>
+        ))}
       </nav>
 
       {/* Bottom: payout status + sign out + back to site */}

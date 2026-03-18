@@ -143,6 +143,7 @@ export async function sendOffer(
   offer: {
     assignedGuideId: string
     assignedRiver: string
+    offerPriceMinEur?: number
     offerPriceEur: number
     offerDetails: string
   },
@@ -161,6 +162,9 @@ export async function sendOffer(
   if (profile?.role !== 'admin') return { error: 'Admin access required.' }
 
   if (offer.offerPriceEur <= 0) return { error: 'Offer price must be greater than 0.' }
+  if (offer.offerPriceMinEur != null && offer.offerPriceMinEur >= offer.offerPriceEur) {
+    return { error: 'Minimum price must be less than the maximum price.' }
+  }
 
   const serviceClient = createServiceClient()
   const { error } = await serviceClient
@@ -169,6 +173,7 @@ export async function sendOffer(
       status: 'offer_sent',
       assigned_guide_id: offer.assignedGuideId,
       assigned_river: offer.assignedRiver,
+      offer_price_min_eur: offer.offerPriceMinEur ?? null,
       offer_price_eur: offer.offerPriceEur,
       offer_details: offer.offerDetails,
     })
@@ -179,8 +184,10 @@ export async function sendOffer(
     return { error: 'Failed to send offer.' }
   }
 
-  // Placeholder email
-  console.log(`[sendOffer] Offer sent for inquiry ${inquiryId} — €${offer.offerPriceEur}`)
+  const priceLabel = offer.offerPriceMinEur != null
+    ? `€${offer.offerPriceMinEur}–€${offer.offerPriceEur}`
+    : `€${offer.offerPriceEur}`
+  console.log(`[sendOffer] Offer sent for inquiry ${inquiryId} — ${priceLabel}`)
 
   revalidatePath('/admin/inquiries')
   revalidatePath(`/admin/inquiries/${inquiryId}`)
@@ -309,6 +316,7 @@ export async function sendOfferByGuide(
   inquiryId: string,
   offer: {
     assignedRiver: string
+    offerPriceMinEur?: number
     offerPriceEur: number
     offerDetails: string
   },
@@ -329,6 +337,9 @@ export async function sendOfferByGuide(
 
   // Validate offer price
   if (offer.offerPriceEur <= 0) return { error: 'Offer price must be greater than 0.' }
+  if (offer.offerPriceMinEur != null && offer.offerPriceMinEur >= offer.offerPriceEur) {
+    return { error: 'Minimum price must be less than the maximum price.' }
+  }
 
   const serviceClient = createServiceClient()
 
@@ -360,6 +371,7 @@ export async function sendOfferByGuide(
       status: 'offer_sent',
       assigned_guide_id: guide.id,
       assigned_river: offer.assignedRiver,
+      offer_price_min_eur: offer.offerPriceMinEur ?? null,
       offer_price_eur: offer.offerPriceEur,
       offer_details: offer.offerDetails,
     })

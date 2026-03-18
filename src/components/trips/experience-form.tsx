@@ -30,7 +30,6 @@ import {
   type ImageInput,
   type DurationOptionPayload,
   type GroupPricingPayload,
-  type InclusionsPayload,
   type ItineraryStep,
 } from '@/actions/experiences'
 
@@ -74,28 +73,6 @@ const MONTHS = [
   { value: 9,  label: 'Sep' }, { value: 10, label: 'Oct' },
   { value: 11, label: 'Nov' }, { value: 12, label: 'Dec' },
 ]
-
-const INCLUSION_ITEMS = [
-  { key: 'rods',          label: 'Fishing rods & reels' },
-  { key: 'tackle',        label: 'Tackle & lures' },
-  { key: 'boat',          label: 'Boat & fuel' },
-  { key: 'safety',        label: 'Safety equipment' },
-  { key: 'license',       label: 'Fishing license' },
-  { key: 'lunch',         label: 'Lunch / snacks' },
-  { key: 'drinks',        label: 'Drinks' },
-  { key: 'fish_cleaning', label: 'Fish cleaning & packing' },
-  { key: 'transport',     label: 'Transport to fishing spot' },
-  { key: 'accommodation', label: 'Accommodation' },
-] as const
-
-type InclusionKey = typeof INCLUSION_ITEMS[number]['key']
-type InclusionsState = Record<InclusionKey, boolean>
-
-const DEFAULT_INCLUSIONS: InclusionsState = {
-  rods: false, tackle: false, boat: false, safety: false,
-  license: false, lunch: false, drinks: false, fish_cleaning: false,
-  transport: false, accommodation: false,
-}
 
 type PricingType = 'per_person' | 'per_boat' | 'per_group'
 
@@ -157,7 +134,7 @@ export type ExperienceFormDefaults = {
   fishing_methods?: string[]
   duration_options?: DurationOptionPayload[]
   group_pricing?: GroupPricingPayload | null
-  inclusions_data?: InclusionsPayload | null
+  inclusions_data?: Record<string, unknown> | null
   landscape_url?: string | null
   // ── Trip content fields ───────────────────────────────────────────────────
   itinerary?: ItineraryStep[] | null
@@ -465,28 +442,6 @@ export default function ExperienceForm({
   // ── Max guests ───────────────────────────────────────────────────────────
   const [maxGuests, setMaxGuests] = useState(dv.max_guests ?? '4')
 
-  // ── Inclusions ───────────────────────────────────────────────────────────
-  const [inclusions, setInclusions] = useState<InclusionsState>(() => {
-    if (dv.inclusions_data != null) {
-      return {
-        ...DEFAULT_INCLUSIONS,
-        rods:          dv.inclusions_data.rods          ?? false,
-        tackle:        dv.inclusions_data.tackle        ?? false,
-        boat:          dv.inclusions_data.boat          ?? false,
-        safety:        dv.inclusions_data.safety        ?? false,
-        license:       dv.inclusions_data.license       ?? false,
-        lunch:         dv.inclusions_data.lunch         ?? false,
-        drinks:        dv.inclusions_data.drinks        ?? false,
-        fish_cleaning: dv.inclusions_data.fish_cleaning ?? false,
-        transport:     dv.inclusions_data.transport     ?? false,
-        accommodation: dv.inclusions_data.accommodation ?? false,
-      }
-    }
-    return { ...DEFAULT_INCLUSIONS }
-  })
-  const [customIncluded, setCustomIncluded] = useState<string[]>(dv.inclusions_data?.custom_included ?? [])
-  const [customExcluded, setCustomExcluded] = useState<string[]>(dv.inclusions_data?.custom_excluded ?? [])
-
   // ── Location ─────────────────────────────────────────────────────────────
   const [locationCountry, setLocationCountry] = useState(dv.location_country ?? '')
   const [locationCity,    setLocationCity]    = useState(dv.location_city ?? '')
@@ -759,34 +714,6 @@ export default function ExperienceForm({
       pricePerPerson = durationOptionsPayload[0].price_eur
     }
 
-    // ── Build inclusions payload ───────────────────────────────────────────
-    const inclusionsPayload: InclusionsPayload = {
-      ...inclusions,
-      custom_included: customIncluded.filter(s => s.trim() !== ''),
-      custom_excluded: customExcluded.filter(s => s.trim() !== ''),
-    }
-
-    // ── Derive what_included / what_excluded for backward compat ──────────
-    const what_included: string[] = [
-      'Fishing guide',
-      ...INCLUSION_ITEMS
-        .filter(item => {
-          if (item.key === 'accommodation' && !hasDaysOption) return false
-          return inclusions[item.key]
-        })
-        .map(item => item.label),
-      ...customIncluded.filter(s => s.trim() !== ''),
-    ]
-    const what_excluded: string[] = [
-      ...INCLUSION_ITEMS
-        .filter(item => {
-          if (item.key === 'accommodation' && !hasDaysOption) return false
-          return !inclusions[item.key]
-        })
-        .map(item => item.label),
-      ...customExcluded.filter(s => s.trim() !== ''),
-    ]
-
     const payload: ExperiencePayload = {
       title:                title.trim(),
       description:          description.trim(),
@@ -806,8 +733,8 @@ export default function ExperienceForm({
       location_area:        locationMode === 'area'   ? locationArea  : null,
       location_spots:       locationMode === 'spots'  ? locationSpots : null,
       booking_type:         bookingType,
-      what_included,
-      what_excluded,
+      what_included:        [],
+      what_excluded:        [],
       published,
       images:               buildImages(),
       // Structured fields
@@ -816,7 +743,7 @@ export default function ExperienceForm({
       fishing_methods:      fishingMethods,
       duration_options:     durationOptionsPayload,
       group_pricing:        null,
-      inclusions_data:      inclusionsPayload,
+      inclusions_data:      null,
       landscape_url:        landscapeUrl.trim() || null,
       // Trip content fields
       itinerary:                    itinerary.length > 0 ? itinerary.filter(s => s.label.trim() !== '') : null,
@@ -918,19 +845,6 @@ export default function ExperienceForm({
       </div>
     )
   }
-
-  // ── Auto-generate "not included" preview list ──────────────────────────────
-  const autoNotIncluded = INCLUSION_ITEMS
-    .filter(item => {
-      if (item.key === 'accommodation' && !hasDaysOption) return false
-      return !inclusions[item.key]
-    })
-    .map(item => item.label)
-
-  const notIncludedPreview = [
-    ...autoNotIncluded,
-    ...customExcluded.filter(s => s.trim() !== ''),
-  ]
 
   // ── Form ──────────────────────────────────────────────────────────────────
   return (
@@ -1733,174 +1647,6 @@ export default function ExperienceForm({
               />
             </div>
           ))}
-        </div>
-      </SectionCard>
-
-      {/* ── Section 8: What's Included ───────────────────────────────── */}
-      <SectionCard
-        title="What's Included"
-        subtitle="Toggle what's included in the price. Untoggled items auto-populate the 'Not included' list."
-      >
-        <div className="flex flex-col gap-3">
-
-          {/* Always-on: Fishing guide */}
-          <div className="flex items-center gap-3 py-1">
-            <div
-              className="relative w-11 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
-              style={{ background: 'rgba(22,163,74,0.18)' }}
-            >
-              <svg width="11" height="8" viewBox="0 0 11 8" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="1,3.5 3.8,6.5 10,1" />
-              </svg>
-            </div>
-            <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-              Fishing guide <span className="text-[10px] ml-1" style={{ color: 'rgba(10,46,77,0.3)' }}>(always included)</span>
-            </span>
-          </div>
-
-          {/* Toggleable standard items */}
-          {INCLUSION_ITEMS.map(item => {
-            // Accommodation only visible when at least one option has days > 1
-            if (item.key === 'accommodation' && !hasDaysOption) return null
-
-            const isOn = inclusions[item.key]
-            return (
-              <div key={item.key} className="flex items-center gap-3 py-0.5">
-                <Toggle
-                  checked={isOn}
-                  onChange={v => setInclusions(prev => ({ ...prev, [item.key]: v }))}
-                />
-                <span
-                  className="text-sm f-body transition-colors"
-                  style={{ color: isOn ? '#0A2E4D' : 'rgba(10,46,77,0.4)' }}
-                >
-                  {item.label}
-                </span>
-              </div>
-            )
-          })}
-
-          {/* ── Custom included items ────────────────────────────────── */}
-          {(customIncluded.length > 0 || customIncluded.length < 3) && (
-            <div className="mt-2 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                Custom included items
-              </p>
-              <div className="flex flex-col gap-2">
-                {customIncluded.map((item, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <div
-                      className="w-11 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
-                      style={{ background: 'rgba(230,126,80,0.15)' }}
-                    >
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none" stroke="#E67E50" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="1,3.5 3.5,6 9,1" />
-                      </svg>
-                    </div>
-                    <TextInput
-                      type="text"
-                      value={item}
-                      onChange={e => setCustomIncluded(prev => {
-                        const next = [...prev]
-                        next[i] = e.target.value
-                        return next
-                      })}
-                      placeholder="e.g. GPS tracker"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setCustomIncluded(prev => prev.filter((_, idx) => idx !== i))}
-                      className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:brightness-95"
-                      style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
-                      aria-label="Remove item"
-                    >
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6">
-                        <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
-                      </svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {customIncluded.length < 3 && (
-                <button
-                  type="button"
-                  onClick={() => setCustomIncluded(prev => [...prev, ''])}
-                  className="mt-3 text-xs font-semibold f-body transition-all hover:brightness-95 px-4 py-2 rounded-full"
-                  style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
-                >
-                  + Add custom item
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* ── Auto-generated "not included" preview ───────────────── */}
-          {notIncludedPreview.length > 0 && (
-            <div
-              className="mt-3 p-4 rounded-2xl"
-              style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.1)' }}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] mb-2 f-body" style={{ color: 'rgba(220,38,38,0.65)' }}>
-                ✗ Not included — auto-generated
-              </p>
-              <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                {notIncludedPreview.join(' · ')}
-              </p>
-            </div>
-          )}
-
-          {/* ── Custom "not included" notes ──────────────────────────── */}
-          <div className="mt-2 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-              Custom &quot;not included&quot; notes
-            </p>
-            <div className="flex flex-col gap-2">
-              {customExcluded.map((item, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <div
-                    className="w-11 h-6 rounded-full flex-shrink-0 flex items-center justify-center"
-                    style={{ background: 'rgba(220,38,38,0.08)' }}
-                  >
-                    <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round">
-                      <line x1="1" y1="1" x2="8" y2="8" /><line x1="8" y1="1" x2="1" y2="8" />
-                    </svg>
-                  </div>
-                  <TextInput
-                    type="text"
-                    value={item}
-                    onChange={e => setCustomExcluded(prev => {
-                      const next = [...prev]
-                      next[i] = e.target.value
-                      return next
-                    })}
-                    placeholder="e.g. Fishing license (buy via license map)"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setCustomExcluded(prev => prev.filter((_, idx) => idx !== i))}
-                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all hover:brightness-95"
-                    style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
-                    aria-label="Remove note"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6">
-                      <line x1="1" y1="1" x2="9" y2="9" /><line x1="9" y1="1" x2="1" y2="9" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-            {customExcluded.length < 3 && (
-              <button
-                type="button"
-                onClick={() => setCustomExcluded(prev => [...prev, ''])}
-                className="mt-3 text-xs font-semibold f-body transition-all hover:brightness-95 px-4 py-2 rounded-full"
-                style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
-              >
-                + Add custom note
-              </button>
-            )}
-          </div>
-
         </div>
       </SectionCard>
 

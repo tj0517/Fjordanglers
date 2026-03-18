@@ -263,10 +263,12 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
               style={{ borderTop: '1px solid rgba(10,46,77,0.07)', borderBottom: '1px solid rgba(10,46,77,0.07)' }}
             >
               <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                Offer price
+                {inquiry.offer_price_min_eur != null ? 'Price range' : 'Offer price'}
               </p>
               <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                €{inquiry.offer_price_eur}
+                {inquiry.offer_price_min_eur != null
+                  ? `€${inquiry.offer_price_min_eur} – €${inquiry.offer_price_eur}`
+                  : `€${inquiry.offer_price_eur}`}
               </p>
             </div>
 

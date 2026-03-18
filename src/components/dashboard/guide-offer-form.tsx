@@ -45,6 +45,7 @@ export default function GuideOfferForm({ inquiryId }: Props) {
   const [success, setSuccess] = useState(false)
 
   const [assignedRiver, setAssignedRiver] = useState('')
+  const [offerPriceMin, setOfferPriceMin] = useState('')
   const [offerPrice, setOfferPrice] = useState('')
   const [offerDetails, setOfferDetails] = useState('')
 
@@ -61,6 +62,11 @@ export default function GuideOfferForm({ inquiryId }: Props) {
       setError('Enter a valid offer price.')
       return
     }
+    const priceMinNum = offerPriceMin.trim() ? parseFloat(offerPriceMin) : undefined
+    if (priceMinNum != null && (isNaN(priceMinNum) || priceMinNum <= 0)) {
+      setError('Enter a valid minimum price.')
+      return
+    }
     if (!offerDetails.trim()) {
       setError('Enter offer details.')
       return
@@ -69,6 +75,7 @@ export default function GuideOfferForm({ inquiryId }: Props) {
     startTransition(async () => {
       const result = await sendOfferByGuide(inquiryId, {
         assignedRiver: assignedRiver.trim(),
+        offerPriceMinEur: priceMinNum,
         offerPriceEur: priceNum,
         offerDetails: offerDetails.trim(),
       })
@@ -114,27 +121,51 @@ export default function GuideOfferForm({ inquiryId }: Props) {
         />
       </div>
 
-      {/* Price */}
+      {/* Price range */}
       <div>
-        <label style={labelStyle}>Offer price (EUR) *</label>
-        <div className="relative">
-          <span
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body"
-            style={{ color: 'rgba(10,46,77,0.4)' }}
-          >
-            €
-          </span>
-          <input
-            type="number"
-            step="0.01"
-            min="1"
-            placeholder="1200.00"
-            value={offerPrice}
-            onChange={(e) => setOfferPrice(e.target.value)}
-            className="f-body"
-            style={{ ...inputStyle, paddingLeft: '26px' }}
-          />
+        <label style={labelStyle}>Price range (EUR) *</label>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <span
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body"
+              style={{ color: 'rgba(10,46,77,0.4)' }}
+            >
+              €
+            </span>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              placeholder="800"
+              value={offerPriceMin}
+              onChange={(e) => setOfferPriceMin(e.target.value)}
+              className="f-body"
+              style={{ ...inputStyle, paddingLeft: '26px' }}
+            />
+          </div>
+          <span className="text-sm f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>—</span>
+          <div className="relative flex-1">
+            <span
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body"
+              style={{ color: 'rgba(10,46,77,0.4)' }}
+            >
+              €
+            </span>
+            <input
+              type="number"
+              step="1"
+              min="1"
+              placeholder="1200"
+              value={offerPrice}
+              onChange={(e) => setOfferPrice(e.target.value)}
+              className="f-body"
+              style={{ ...inputStyle, paddingLeft: '26px' }}
+            />
+          </div>
         </div>
+        <p className="mt-1.5 text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+          Leave the first field empty to set a fixed price. The right value is the final charged amount.
+        </p>
       </div>
 
       {/* Offer details */}
