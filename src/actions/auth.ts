@@ -50,29 +50,9 @@ export async function signUp(
   email: string,
   password: string,
   role: 'angler' | 'guide' = 'angler',
-  /**
-   * Where to send the user after they click the confirmation link.
-   * Defaults to '/account'. Guide invite flow passes '/dashboard'.
-   */
-  redirectAfterConfirm: string = '/account',
-  /**
-   * When set, the guide profile with this ID is automatically claimed
-   * when the user confirms their email — regardless of what email they used.
-   * The guideId is embedded in the confirmation URL as ?claim=GUID so it
-   * survives the email round-trip without any DB storage.
-   */
-  claimGuideId?: string,
 ): Promise<AuthResult> {
   try {
     const supabase = await createClient()
-
-    const callbackUrl = new URL(
-      `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
-    )
-    callbackUrl.searchParams.set('next', redirectAfterConfirm)
-    if (claimGuideId != null && claimGuideId !== '') {
-      callbackUrl.searchParams.set('claim', claimGuideId)
-    }
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -83,7 +63,7 @@ export async function signUp(
           role,
         },
         // Supabase will send a confirmation email and redirect to /auth/callback
-        emailRedirectTo: callbackUrl.toString(),
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
       },
     })
 

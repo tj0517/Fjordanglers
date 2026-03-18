@@ -19,9 +19,8 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { RegisterForm } from '@/components/auth/register-form'
+import { ClaimGuideForm } from '@/components/auth/claim-guide-form'
 
 export async function generateMetadata({
   params,
@@ -241,17 +240,7 @@ export default async function GuideInvitePage({
               </div>
             </div>
 
-            <Suspense>
-              <RegisterForm
-                invite={{
-                  profileName: guide.full_name,
-                  profileCountry: location || guide.country,
-                  profileAvatar: guide.avatar_url,
-                  guideId: guide.id,
-                  redirectAfterConfirm: '/dashboard',
-                }}
-              />
-            </Suspense>
+            <ClaimGuideForm guideId={guide.id} />
           </div>
 
           {/* Footer */}

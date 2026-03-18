@@ -1,30 +1,34 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DashboardSidebar from '@/components/dashboard/sidebar'
-import GuideOnboarding from '@/components/dashboard/guide-onboarding'
 
 /**
  * Dashboard layout — server component.
  *
  * Flow:
- *   1. Auth check — middleware already guards /dashboard/*, so user is always present here.
- *   2. Check for guides row linked to this user.
- *   3. If NO guides row → render GuideOnboarding wizard (no sidebar).
- *      The wizard calls createGuideProfile() then router.refresh(),
- *      which causes this layout to re-fetch and show the normal dashboard.
+ *   1. Auth check — redirect to /login if unauthenticated.
+ *   2. Admin accounts → redirect to /admin.
+ *   3. If NO guides row → render content without sidebar (each page handles its own empty state).
  *   4. If guides row EXISTS → render normal sidebar + page content.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // ── No auth (shouldn't reach here — middleware redirects) ─────────────────
+  // ── No auth → send to login ───────────────────────────────────────────────
   if (user == null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#F3EDE4' }}>
-        <p className="text-[#0A2E4D]/45 text-sm f-body">Please sign in to access your dashboard.</p>
-      </div>
-    )
+    redirect('/login')
+  }
+
+  // ── Check profile role first (admin gets their own panel) ─────────────────
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role === 'admin') {
+    redirect('/admin')
   }
 
   // ── Fetch guide profile ───────────────────────────────────────────────────
@@ -34,24 +38,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('user_id', user.id)
     .single()
 
-  // ── No guide profile yet ──────────────────────────────────────────────────
+  // ── No guide row yet — render page content directly (no sidebar) ──────────
+  // Each page handles its own empty/pending state. This avoids aggressive
+  // redirects that break navigation for newly registered or angler accounts.
   if (guide == null) {
-    // Admins don't have a guides row — send them to their panel
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profile?.role === 'admin') {
-      redirect('/admin')
-    }
-
-    // Regular user → show onboarding wizard
-    const fullName = (user.user_metadata?.full_name as string | undefined) ?? ''
     return (
       <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-        <GuideOnboarding defaultFullName={fullName} />
+        {children}
       </div>
     )
   }

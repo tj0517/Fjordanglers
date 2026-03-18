@@ -3,10 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import type { User } from '@supabase/supabase-js'
 
 const NAV_LINKS = [
   { label: 'Trips', href: '/trips' },
-  { label: 'Guides',      href: '/guides' },
+  { label: 'Guides', href: '/guides' },
 ]
 
 interface HomeNavProps {
@@ -22,8 +24,30 @@ interface HomeNavProps {
 export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark' }: HomeNavProps) {
   const [pastHero, setPastHero] = useState(false)
   const [open, setOpen]         = useState(false)
+  const [user, setUser]         = useState<User | null>(null)
+  const [authLoaded, setAuthLoaded] = useState(false)
   const navRef                  = useRef<HTMLElement>(null)
 
+  // ── Auth state ──────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const supabase = createClient()
+
+    // Get current session — set authLoaded=true only after we know the state
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+      setAuthLoaded(true)
+    }).catch(() => { setAuthLoaded(true) })
+
+    // Keep in sync on sign in / sign out
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setAuthLoaded(true)
+    })
+
+    return () => { subscription.unsubscribe() }
+  }, [])
+
+  // ── Scroll + keyboard + outside click ──────────────────────────────────────
   useEffect(() => {
     if (pinned) return
     const onScroll = () => setPastHero(window.scrollY > 10)
@@ -48,10 +72,13 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
     return () => document.removeEventListener('mousedown', onClickOutside)
   }, [open])
 
-  const solid = pinned || pastHero || open
-  // showDark: use dark logo + dark hamburger lines
-  // true when solid (scrolled/pinned) OR when page has a light background
+  const solid    = pinned || pastHero || open
   const showDark = solid || initialVariant === 'light'
+
+  // Initials for avatar bubble (first letter of name or email)
+  const initials = user
+    ? ((user.user_metadata?.full_name as string | undefined) ?? user.email ?? '?')[0].toUpperCase()
+    : ''
 
   return (
     <nav
@@ -68,7 +95,7 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
       }}
     >
       <div className="overflow-hidden">
-        {/* Top bar */}
+        {/* ── Top bar ─────────────────────────────────────────────────────── */}
         <div className="h-[72px] flex items-center justify-between px-6 md:px-10">
 
           <Link href="/" className="flex-shrink-0">
@@ -82,15 +109,44 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
             />
           </Link>
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/guides/apply"
-              className="hidden md:inline-flex text-[14px] font-semibold px-5 py-2 rounded-xl text-white f-body transition-all hover:brightness-110 active:scale-[0.97]"
-              style={{ background: '#E67E50' }}
-            >
-              Join as Guide
-            </Link>
+          <div className="flex items-center gap-2">
 
+            {/* ── Auth loading skeleton ──────────────────────────────────── */}
+            {!authLoaded && (
+              <div
+                className="hidden md:block w-24 h-8 rounded-xl animate-pulse"
+                style={{ background: showDark ? 'rgba(10,46,77,0.08)' : 'rgba(255,255,255,0.1)' }}
+              />
+            )}
+
+            {/* ── Logged-out: Join as Guide CTA ─────────────────────────── */}
+            {authLoaded && user == null && (
+              <Link
+                href="/guides/apply"
+                className="hidden md:inline-flex text-[14px] font-semibold px-5 py-2 rounded-xl text-white f-body transition-all hover:brightness-110 active:scale-[0.97]"
+                style={{ background: '#E67E50' }}
+              >
+                Join as Guide
+              </Link>
+            )}
+
+            {/* ── Logged-in: avatar bubble → dashboard ──────────────────── */}
+            {authLoaded && user != null && (
+              <Link
+                href="/dashboard"
+                title="Go to dashboard"
+                className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl font-bold text-[13px] f-body transition-all hover:brightness-95 active:scale-[0.96]"
+                style={{
+                  background: showDark ? '#0A2E4D' : 'rgba(255,255,255,0.18)',
+                  color: '#fff',
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {initials}
+              </Link>
+            )}
+
+            {/* ── Hamburger ─────────────────────────────────────────────── */}
             <button
               onClick={() => setOpen(v => !v)}
               className="w-9 h-9 flex flex-col items-center justify-center gap-[5px] rounded-xl transition-all duration-200"
@@ -125,7 +181,7 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
           </div>
         </div>
 
-        {/* Slide-down menu */}
+        {/* ── Slide-down menu ─────────────────────────────────────────────── */}
         <div
           className="overflow-hidden transition-all duration-300"
           style={{ maxHeight: open ? '400px' : '0px' }}
@@ -152,22 +208,49 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
               className="pt-3 flex flex-col gap-2"
               style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}
             >
-              <Link
-                href="/login"
-                onClick={() => setOpen(false)}
-                className="text-[14px] font-medium px-4 py-2.5 rounded-xl f-body text-center transition-all hover:bg-[#0A2E4D]/[0.06]"
-                style={{ color: 'rgba(10,46,77,0.5)' }}
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/guides/apply"
-                onClick={() => setOpen(false)}
-                className="text-[14px] font-semibold px-4 py-3 rounded-xl text-white text-center f-body transition-all hover:brightness-110"
-                style={{ background: '#E67E50' }}
-              >
-                Join as Guide →
-              </Link>
+              {/* Loading skeleton for mobile menu */}
+              {!authLoaded && (
+                <div
+                  className="h-11 rounded-xl animate-pulse"
+                  style={{ background: 'rgba(10,46,77,0.07)' }}
+                />
+              )}
+
+              {authLoaded && user == null && (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setOpen(false)}
+                    className="text-[14px] font-medium px-4 py-2.5 rounded-xl f-body text-center transition-all hover:bg-[#0A2E4D]/[0.06]"
+                    style={{ color: 'rgba(10,46,77,0.5)' }}
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/guides/apply"
+                    onClick={() => setOpen(false)}
+                    className="text-[14px] font-semibold px-4 py-3 rounded-xl text-white text-center f-body transition-all hover:brightness-110"
+                    style={{ background: '#E67E50' }}
+                  >
+                    Join as Guide →
+                  </Link>
+                </>
+              )}
+
+              {authLoaded && user != null && (
+                <Link
+                  href="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="text-[14px] font-semibold px-4 py-3 rounded-xl text-white text-center f-body transition-all hover:brightness-110 flex items-center justify-center gap-2"
+                  style={{ background: '#0A2E4D' }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+                    <circle cx="7.5" cy="5" r="2.5" />
+                    <path d="M2.5 13c0-2.76 2.24-5 5-5s5 2.24 5 5" />
+                  </svg>
+                  My Dashboard
+                </Link>
+              )}
             </div>
           </div>
         </div>

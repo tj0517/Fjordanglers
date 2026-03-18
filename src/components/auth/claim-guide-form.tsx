@@ -1,11 +1,20 @@
 'use client'
 
+/**
+ * ClaimGuideForm — registration form used on /invite/[guideId].
+ *
+ * Calls claimGuideProfile() which uses auth.admin.createUser() with
+ * email_confirm: true — account is active immediately, no email step.
+ *
+ * On success shows a "Go to sign in" card. The guide then signs in
+ * normally and lands on their dashboard.
+ */
+
 import { useState } from 'react'
 import Link from 'next/link'
-import { signUp } from '@/actions/auth'
-import { GoogleAuthButton } from '@/components/auth/google-auth-button'
+import { claimGuideProfile } from '@/actions/invite'
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles (shared with RegisterForm) ────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -51,8 +60,6 @@ const errorTextStyle: React.CSSProperties = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Role = 'angler' | 'guide'
-
 type FieldErrors = {
   fullName?: string
   email?: string
@@ -61,35 +68,23 @@ type FieldErrors = {
   form?: string
 }
 
-// ─── Role cards ───────────────────────────────────────────────────────────────
-
-const ROLES: { key: Role; icon: string; title: string; desc: string }[] = [
-  {
-    key: 'angler',
-    icon: '🎣',
-    title: 'I\'m an angler',
-    desc: 'Find & book guided fishing trips',
-  },
-  {
-    key: 'guide',
-    icon: '🗺',
-    title: 'I\'m a guide',
-    desc: 'List your trips & earn',
-  },
-]
+type Props = {
+  guideId: string
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RegisterForm() {
-  const [role, setRole] = useState<Role>('angler')
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+export function ClaimGuideForm({ guideId }: Props) {
+  const [fullName, setFullName]             = useState('')
+  const [email, setEmail]                   = useState('')
+  const [password, setPassword]             = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [errors, setErrors] = useState<FieldErrors>({})
-  const [focusedField, setFocusedField] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
+  const [errors, setErrors]                 = useState<FieldErrors>({})
+  const [focusedField, setFocusedField]     = useState<string | null>(null)
+  const [isLoading, setIsLoading]           = useState(false)
+  const [successEmail, setSuccessEmail]     = useState<string | null>(null)
+
+  // ─── Validation ─────────────────────────────────────────────────────────────
 
   function validate(): boolean {
     const next: FieldErrors = {}
@@ -117,6 +112,8 @@ export function RegisterForm() {
     return Object.keys(next).length === 0
   }
 
+  // ─── Submit ─────────────────────────────────────────────────────────────────
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!validate()) return
@@ -124,7 +121,7 @@ export function RegisterForm() {
     setIsLoading(true)
     setErrors({})
 
-    const result = await signUp(fullName.trim(), email.trim(), password, role)
+    const result = await claimGuideProfile(guideId, fullName.trim(), email.trim(), password)
 
     if ('error' in result) {
       setErrors({ form: result.error })
@@ -132,123 +129,88 @@ export function RegisterForm() {
       return
     }
 
-    setIsSuccess(true)
+    setSuccessEmail(email.trim())
   }
 
   // ─── Success state ──────────────────────────────────────────────────────────
 
-  if (isSuccess) {
+  if (successEmail != null) {
     return (
       <div style={{ textAlign: 'center', padding: '8px 0' }}>
+        {/* Check icon */}
         <div
           style={{
             width: '64px',
             height: '64px',
             borderRadius: '50%',
-            background: 'rgba(230,126,80,0.1)',
+            background: 'rgba(74,222,128,0.1)',
+            border: '1.5px solid rgba(74,222,128,0.25)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 24px',
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
               d="M20 6L9 17L4 12"
-              stroke="#E67E50"
+              stroke="#16A34A"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
           </svg>
         </div>
+
         <h2
-          style={{ color: '#0A2E4D', fontSize: '22px', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}
           className="f-display"
+          style={{ color: '#0A2E4D', fontSize: '22px', fontWeight: 700, marginBottom: '10px', lineHeight: 1.2 }}
         >
-          Check your email
+          Profile claimed!
         </h2>
         <p
-          style={{ color: 'rgba(10,46,77,0.55)', fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}
           className="f-body"
+          style={{ color: 'rgba(10,46,77,0.55)', fontSize: '14px', lineHeight: 1.65, marginBottom: '8px' }}
         >
-          We sent a confirmation link to{' '}
-          <strong style={{ color: '#0A2E4D', fontWeight: 600 }}>{email}</strong>.
-          Click it to activate your account.
+          Your guide account is ready. Sign in with{' '}
+          <strong style={{ color: '#0A2E4D' }}>{successEmail}</strong>{' '}
+          to access your dashboard.
         </p>
+        <p
+          className="f-body"
+          style={{ color: 'rgba(10,46,77,0.38)', fontSize: '12px', lineHeight: 1.5, marginBottom: '32px' }}
+        >
+          No email confirmation needed — your account is active immediately.
+        </p>
+
         <Link
-          href="/login"
-          style={{ display: 'inline-block', color: '#E67E50', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}
+          href="/login?next=/dashboard"
+          style={{
+            display: 'inline-block',
+            background: '#E67E50',
+            color: '#fff',
+            padding: '12px 28px',
+            borderRadius: '14px',
+            fontSize: '14px',
+            fontWeight: 600,
+            textDecoration: 'none',
+            fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+          }}
           className="f-body"
         >
-          Back to sign in
+          Sign in to your dashboard →
         </Link>
       </div>
     )
   }
 
-  // ─── Form state ─────────────────────────────────────────────────────────────
+  // ─── Form ───────────────────────────────────────────────────────────────────
 
   return (
     <form onSubmit={(e) => { void handleSubmit(e) }} noValidate>
 
-      {/* ── Google ─────────────────────────────────────────────────────────── */}
-      <GoogleAuthButton label="Sign up with Google" />
-
-      {/* ── Divider ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
-        <span style={{ color: 'rgba(10,46,77,0.3)', fontSize: '12px', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>or sign up with email</span>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
-      </div>
-
-      {/* ── Role selector ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '28px' }}>
-        {ROLES.map(r => (
-          <button
-            key={r.key}
-            type="button"
-            onClick={() => setRole(r.key)}
-            style={{
-              background: role === r.key ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
-              border: role === r.key ? '1.5px solid #0A2E4D' : '1.5px solid rgba(10,46,77,0.12)',
-              borderRadius: '16px',
-              padding: '16px 12px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              textAlign: 'left' as const,
-            }}
-          >
-            <span style={{ fontSize: '22px', display: 'block', marginBottom: '8px' }}>{r.icon}</span>
-            <p
-              style={{
-                color: role === r.key ? '#fff' : '#0A2E4D',
-                fontSize: '13px',
-                fontWeight: 700,
-                margin: 0,
-                marginBottom: '2px',
-                fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
-              }}
-            >
-              {r.title}
-            </p>
-            <p
-              style={{
-                color: role === r.key ? 'rgba(255,255,255,0.6)' : 'rgba(10,46,77,0.4)',
-                fontSize: '11px',
-                margin: 0,
-                fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
-                lineHeight: 1.4,
-              }}
-            >
-              {r.desc}
-            </p>
-          </button>
-        ))}
-      </div>
-
       {/* ── Form-level error ───────────────────────────────────────────────── */}
-      {errors.form && (
+      {errors.form != null && (
         <div
           role="alert"
           style={{
@@ -266,10 +228,10 @@ export function RegisterForm() {
       )}
 
       {/* ── Full name ──────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="register-fullname" style={labelStyle} className="f-body">Full name</label>
+      <div style={{ marginBottom: '18px' }}>
+        <label htmlFor="claim-fullname" style={labelStyle} className="f-body">Your full name</label>
         <input
-          id="register-fullname"
+          id="claim-fullname"
           type="text"
           autoComplete="name"
           value={fullName}
@@ -279,20 +241,22 @@ export function RegisterForm() {
           style={{
             ...inputStyle,
             ...(focusedField === 'fullName' ? inputFocusStyle : {}),
-            ...(errors.fullName ? inputErrorStyle : {}),
+            ...(errors.fullName != null ? inputErrorStyle : {}),
           }}
           placeholder="Erik Andersen"
           disabled={isLoading}
-          aria-invalid={!!errors.fullName}
+          aria-invalid={errors.fullName != null}
         />
-        {errors.fullName && <p role="alert" style={errorTextStyle} className="f-body">{errors.fullName}</p>}
+        {errors.fullName != null && (
+          <p role="alert" style={errorTextStyle} className="f-body">{errors.fullName}</p>
+        )}
       </div>
 
       {/* ── Email ──────────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="register-email" style={labelStyle} className="f-body">Email address</label>
+      <div style={{ marginBottom: '18px' }}>
+        <label htmlFor="claim-email" style={labelStyle} className="f-body">Email address</label>
         <input
-          id="register-email"
+          id="claim-email"
           type="email"
           autoComplete="email"
           value={email}
@@ -302,20 +266,22 @@ export function RegisterForm() {
           style={{
             ...inputStyle,
             ...(focusedField === 'email' ? inputFocusStyle : {}),
-            ...(errors.email ? inputErrorStyle : {}),
+            ...(errors.email != null ? inputErrorStyle : {}),
           }}
           placeholder="you@example.com"
           disabled={isLoading}
-          aria-invalid={!!errors.email}
+          aria-invalid={errors.email != null}
         />
-        {errors.email && <p role="alert" style={errorTextStyle} className="f-body">{errors.email}</p>}
+        {errors.email != null && (
+          <p role="alert" style={errorTextStyle} className="f-body">{errors.email}</p>
+        )}
       </div>
 
       {/* ── Password ───────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: '20px' }}>
-        <label htmlFor="register-password" style={labelStyle} className="f-body">Password</label>
+      <div style={{ marginBottom: '18px' }}>
+        <label htmlFor="claim-password" style={labelStyle} className="f-body">Password</label>
         <input
-          id="register-password"
+          id="claim-password"
           type="password"
           autoComplete="new-password"
           value={password}
@@ -325,20 +291,22 @@ export function RegisterForm() {
           style={{
             ...inputStyle,
             ...(focusedField === 'password' ? inputFocusStyle : {}),
-            ...(errors.password ? inputErrorStyle : {}),
+            ...(errors.password != null ? inputErrorStyle : {}),
           }}
           placeholder="Min. 8 characters"
           disabled={isLoading}
-          aria-invalid={!!errors.password}
+          aria-invalid={errors.password != null}
         />
-        {errors.password && <p role="alert" style={errorTextStyle} className="f-body">{errors.password}</p>}
+        {errors.password != null && (
+          <p role="alert" style={errorTextStyle} className="f-body">{errors.password}</p>
+        )}
       </div>
 
       {/* ── Confirm password ───────────────────────────────────────────────── */}
       <div style={{ marginBottom: '28px' }}>
-        <label htmlFor="register-confirm-password" style={labelStyle} className="f-body">Confirm password</label>
+        <label htmlFor="claim-confirm-password" style={labelStyle} className="f-body">Confirm password</label>
         <input
-          id="register-confirm-password"
+          id="claim-confirm-password"
           type="password"
           autoComplete="new-password"
           value={confirmPassword}
@@ -348,13 +316,15 @@ export function RegisterForm() {
           style={{
             ...inputStyle,
             ...(focusedField === 'confirmPassword' ? inputFocusStyle : {}),
-            ...(errors.confirmPassword ? inputErrorStyle : {}),
+            ...(errors.confirmPassword != null ? inputErrorStyle : {}),
           }}
           placeholder="Repeat your password"
           disabled={isLoading}
-          aria-invalid={!!errors.confirmPassword}
+          aria-invalid={errors.confirmPassword != null}
         />
-        {errors.confirmPassword && <p role="alert" style={errorTextStyle} className="f-body">{errors.confirmPassword}</p>}
+        {errors.confirmPassword != null && (
+          <p role="alert" style={errorTextStyle} className="f-body">{errors.confirmPassword}</p>
+        )}
       </div>
 
       {/* ── Submit ─────────────────────────────────────────────────────────── */}
@@ -373,18 +343,28 @@ export function RegisterForm() {
           cursor: isLoading ? 'not-allowed' : 'pointer',
           transition: 'all 0.15s ease',
           fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
         }}
         className="f-body"
       >
-        {isLoading
-          ? 'Creating account…'
-          : role === 'guide'
-            ? 'Create guide account'
-            : 'Create angler account'}
+        {isLoading ? (
+          <>
+            <svg className="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="8" cy="8" r="6" strokeOpacity="0.25" />
+              <path d="M8 2a6 6 0 016 6" strokeLinecap="round" />
+            </svg>
+            Creating your account…
+          </>
+        ) : (
+          'Claim your guide profile'
+        )}
       </button>
 
       <p
-        style={{ textAlign: 'center', marginTop: '24px', color: 'rgba(10,46,77,0.5)', fontSize: '14px' }}
+        style={{ textAlign: 'center', marginTop: '20px', color: 'rgba(10,46,77,0.45)', fontSize: '13px' }}
         className="f-body"
       >
         Already have an account?{' '}

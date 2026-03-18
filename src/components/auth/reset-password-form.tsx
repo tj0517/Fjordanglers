@@ -20,7 +20,9 @@ import { createClient } from '@/lib/supabase/client'
 const inputStyle: React.CSSProperties = {
   width: '100%',
   background: 'rgba(10,46,77,0.04)',
-  border: '1px solid rgba(10,46,77,0.12)',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'rgba(10,46,77,0.12)',
   borderRadius: '12px',
   padding: '13px 16px',
   color: '#0A2E4D',
@@ -36,7 +38,7 @@ const inputFocusStyle: React.CSSProperties = {
 
 const inputErrorStyle: React.CSSProperties = {
   background: 'rgba(220,50,50,0.08)',
-  border: '1px solid rgba(220,50,50,0.2)',
+  borderColor: 'rgba(220,50,50,0.2)',
 }
 
 const labelStyle: React.CSSProperties = {

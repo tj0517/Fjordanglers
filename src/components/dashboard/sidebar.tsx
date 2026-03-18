@@ -96,13 +96,12 @@ const IconInquiries = () => (
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'Overview',  href: '/dashboard',            icon: <IconOverview />,   exact: true  },
-  { label: 'Listings',  href: '/dashboard/trips',       icon: <IconCompass />,    exact: false },
-  { label: 'Bookings',  href: '/dashboard/bookings',    icon: <IconBookings />,   exact: false },
-  { label: 'Inquiries', href: '/dashboard/inquiries',   icon: <IconInquiries />,  exact: false },
-  { label: 'Calendar',  href: '/dashboard/calendar',    icon: <IconCalendar />,   exact: false },
-  { label: 'Earnings',  href: '/dashboard/earnings',    icon: <IconTrending />,   exact: false },
-  { label: 'Profile',   href: '/dashboard/profile',     icon: <IconUser />,       exact: false },
+  { label: 'Listings',  href: '/dashboard/trips',     icon: <IconCompass />,   exact: false, soon: false },
+  { label: 'Profile',   href: '/dashboard/profile',   icon: <IconUser />,      exact: false, soon: false },
+  { label: 'Bookings',  href: '/dashboard/bookings',  icon: <IconBookings />,  exact: false, soon: true  },
+  { label: 'Inquiries', href: '/dashboard/inquiries', icon: <IconInquiries />, exact: false, soon: true  },
+  { label: 'Calendar',  href: '/dashboard/calendar',  icon: <IconCalendar />,  exact: false, soon: true  },
+  { label: 'Earnings',  href: '/dashboard/earnings',  icon: <IconTrending />,  exact: false, soon: true  },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -269,6 +268,25 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
         {/* Navigation */}
         <nav className="relative flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto" style={{ zIndex: 1 }}>
           {NAV.map((item) => {
+            if (item.soon) {
+              return (
+                <div
+                  key={item.href}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium f-body cursor-default select-none"
+                  style={{ color: 'rgba(255,255,255,0.2)' }}
+                >
+                  <span style={{ opacity: 0.35 }}>{item.icon}</span>
+                  <span className="flex-1">{item.label}</span>
+                  <span
+                    className="text-[8px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded f-body flex-shrink-0"
+                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }}
+                  >
+                    Soon
+                  </span>
+                </div>
+              )
+            }
+
             const active = isActive(item.href, item.exact)
             return (
               <Link
