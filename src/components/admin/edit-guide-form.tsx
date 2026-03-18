@@ -156,6 +156,11 @@ export type GuideEditData = {
   pricing_model: 'flat_fee' | 'commission'
   status: string
   is_beta_listing: boolean
+  /**
+   * Email used to auto-link the guide's auth account on registration.
+   * Editable here so admin can set it at any time — even after creation.
+   */
+  invite_email: string | null
   images?: GuideGalleryImage[]
 }
 
@@ -181,6 +186,7 @@ export default function EditGuideForm({ guide }: Props) {
   const [coverUrl,      setCoverUrl]      = useState(guide.cover_url ?? '')
   const [instagramUrl,  setInstagramUrl]  = useState(guide.instagram_url ?? '')
   const [youtubeUrl,    setYoutubeUrl]    = useState(guide.youtube_url ?? '')
+  const [inviteEmail,   setInviteEmail]   = useState(guide.invite_email ?? '')
   const [galleryImages,  setGalleryImages]  = useState<GuideGalleryImage[]>(guide.images ?? [])
   const [landscapeUrl,   setLandscapeUrl]   = useState<string>(guide.landscape_url ?? '')
   const [landscapeTab,    setLandscapeTab]    = useState<'library' | 'gallery' | 'upload'>('library')
@@ -224,6 +230,8 @@ export default function EditGuideForm({ guide }: Props) {
       youtube_url:      youtubeUrl || undefined,
       pricing_model:    pricingModel,
       status,
+      // null clears the field; trimmed string sets it
+      invite_email:     inviteEmail.trim() || null,
     }
 
     startTransition(async () => {
@@ -393,6 +401,21 @@ export default function EditGuideForm({ guide }: Props) {
               <option value="commission">Commission (10% per booking)</option>
               <option value="flat_fee">Flat fee (€29/month)</option>
             </SelectInput>
+          </div>
+
+          {/* Invite email — auto-pin guide's auth account on registration */}
+          <div className="md:col-span-2">
+            <FieldLabel htmlFor="edit-invite-email">Guide&apos;s email (invite / auto-link)</FieldLabel>
+            <TextInput
+              id="edit-invite-email"
+              type="email"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              placeholder="guide@email.com — they register with this email to auto-claim this profile"
+            />
+            <p className="mt-1.5 text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              When the guide registers with this exact email, their account is automatically pinned to this profile. Clear to remove the invite link.
+            </p>
           </div>
 
           {/* Bio */}

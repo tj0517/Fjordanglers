@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { signUp } from '@/actions/auth'
 import { GoogleAuthButton } from '@/components/auth/google-auth-button'
@@ -59,6 +60,25 @@ type FieldErrors = {
   form?: string
 }
 
+/**
+ * When the form is opened via an admin invite link (/invite/[guideId]),
+ * this data locks the role to 'guide' and shows the guide profile card.
+ *
+ * No email pre-matching required — the guideId travels inside the
+ * confirmation email URL (?claim=GUID) so the guide can register with
+ * any email address they choose.
+ */
+export type InviteData = {
+  /** The guide profile being claimed — shown in the profile card */
+  profileName: string
+  profileCountry: string
+  profileAvatar: string | null
+  /** Passed to signUp() so it's embedded in the confirmation URL as ?claim=GUID */
+  guideId: string
+  /** After email confirmation, redirect here (typically '/dashboard') */
+  redirectAfterConfirm: string
+}
+
 // ─── Role cards ───────────────────────────────────────────────────────────────
 
 const ROLES: { key: Role; icon: string; title: string; desc: string }[] = [
@@ -78,8 +98,10 @@ const ROLES: { key: Role; icon: string; title: string; desc: string }[] = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function RegisterForm() {
-  const [role, setRole] = useState<Role>('angler')
+export function RegisterForm({ invite }: { invite?: InviteData }) {
+  const isInviteMode = invite != null
+
+  const [role, setRole] = useState<Role>(isInviteMode ? 'guide' : 'angler')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -122,7 +144,14 @@ export function RegisterForm() {
     setIsLoading(true)
     setErrors({})
 
-    const result = await signUp(fullName.trim(), email.trim(), password, role)
+    const result = await signUp(
+      fullName.trim(),
+      email.trim(),
+      password,
+      role,
+      invite?.redirectAfterConfirm ?? '/account',
+      invite?.guideId,
+    )
 
     if ('error' in result) {
       setErrors({ form: result.error })
@@ -190,60 +219,141 @@ export function RegisterForm() {
   return (
     <form onSubmit={(e) => { void handleSubmit(e) }} noValidate>
 
-      {/* ── Google ─────────────────────────────────────────────────────────── */}
-      <GoogleAuthButton label="Sign up with Google" />
-
-      {/* ── Divider ─────────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
-        <span style={{ color: 'rgba(10,46,77,0.3)', fontSize: '12px', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>or sign up with email</span>
-        <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
-      </div>
-
-      {/* ── Role selector ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '28px' }}>
-        {ROLES.map(r => (
-          <button
-            key={r.key}
-            type="button"
-            onClick={() => setRole(r.key)}
+      {/* ── Invite mode: guide profile card ─────────────────────────────────── */}
+      {isInviteMode && invite != null && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            padding: '14px 16px',
+            borderRadius: '16px',
+            background: 'rgba(10,46,77,0.04)',
+            border: '1.5px solid rgba(10,46,77,0.1)',
+            marginBottom: '24px',
+          }}
+        >
+          {/* Avatar */}
+          <div
             style={{
-              background: role === r.key ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
-              border: role === r.key ? '1.5px solid #0A2E4D' : '1.5px solid rgba(10,46,77,0.12)',
-              borderRadius: '16px',
-              padding: '16px 12px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              textAlign: 'left' as const,
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              flexShrink: 0,
+              border: '1.5px solid rgba(10,46,77,0.1)',
+              background: '#0A2E4D',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <span style={{ fontSize: '22px', display: 'block', marginBottom: '8px' }}>{r.icon}</span>
-            <p
+            {invite.profileAvatar != null ? (
+              <Image
+                src={invite.profileAvatar}
+                alt={invite.profileName}
+                width={48}
+                height={48}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <span style={{ color: '#fff', fontSize: '18px', fontWeight: 700 }}>
+                {invite.profileName[0]}
+              </span>
+            )}
+          </div>
+
+          {/* Text */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ margin: 0, color: 'rgba(10,46,77,0.45)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+              Claiming guide profile
+            </p>
+            <p style={{ margin: 0, color: '#0A2E4D', fontSize: '14px', fontWeight: 700, fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {invite.profileName}
+            </p>
+            <p style={{ margin: 0, color: 'rgba(10,46,77,0.45)', fontSize: '11px', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>
+              {invite.profileCountry}
+            </p>
+          </div>
+
+          {/* Guide badge */}
+          <span
+            style={{
+              flexShrink: 0,
+              fontSize: '9px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              background: 'rgba(10,46,77,0.08)',
+              color: '#0A2E4D',
+              fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+            }}
+          >
+            Guide
+          </span>
+        </div>
+      )}
+
+      {/* ── Google — hidden in invite mode (no OAuth role mapping) ──────────── */}
+      {!isInviteMode && <GoogleAuthButton label="Sign up with Google" />}
+
+      {/* ── Divider ─────────────────────────────────────────────────────────── */}
+      {!isInviteMode && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
+          <span style={{ color: 'rgba(10,46,77,0.3)', fontSize: '12px', fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)' }}>or sign up with email</span>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
+        </div>
+      )}
+
+      {/* ── Role selector — hidden in invite mode ──────────────────────────── */}
+      {!isInviteMode && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '28px' }}>
+          {ROLES.map(r => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => setRole(r.key)}
               style={{
-                color: role === r.key ? '#fff' : '#0A2E4D',
-                fontSize: '13px',
-                fontWeight: 700,
-                margin: 0,
-                marginBottom: '2px',
-                fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+                background: role === r.key ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
+                border: role === r.key ? '1.5px solid #0A2E4D' : '1.5px solid rgba(10,46,77,0.12)',
+                borderRadius: '16px',
+                padding: '16px 12px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                textAlign: 'left' as const,
               }}
             >
-              {r.title}
-            </p>
-            <p
-              style={{
-                color: role === r.key ? 'rgba(255,255,255,0.6)' : 'rgba(10,46,77,0.4)',
-                fontSize: '11px',
-                margin: 0,
-                fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
-                lineHeight: 1.4,
-              }}
-            >
-              {r.desc}
-            </p>
-          </button>
-        ))}
-      </div>
+              <span style={{ fontSize: '22px', display: 'block', marginBottom: '8px' }}>{r.icon}</span>
+              <p
+                style={{
+                  color: role === r.key ? '#fff' : '#0A2E4D',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  margin: 0,
+                  marginBottom: '2px',
+                  fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+                }}
+              >
+                {r.title}
+              </p>
+              <p
+                style={{
+                  color: role === r.key ? 'rgba(255,255,255,0.6)' : 'rgba(10,46,77,0.4)',
+                  fontSize: '11px',
+                  margin: 0,
+                  fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
+                  lineHeight: 1.4,
+                }}
+              >
+                {r.desc}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Form-level error ───────────────────────────────────────────────── */}
       {errors.form && (
@@ -376,9 +486,11 @@ export function RegisterForm() {
       >
         {isLoading
           ? 'Creating account…'
-          : role === 'guide'
-            ? 'Create guide account'
-            : 'Create angler account'}
+          : isInviteMode
+            ? 'Claim your guide profile'
+            : role === 'guide'
+              ? 'Create guide account'
+              : 'Create angler account'}
       </button>
 
       <p

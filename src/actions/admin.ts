@@ -333,6 +333,12 @@ export type UpdateGuidePayload = {
   status: 'pending' | 'verified' | 'active' | 'suspended'
   /** When set, replaces all existing guide_images rows. */
   gallery_images?: GuideGalleryImage[]
+  /**
+   * Email address used to auto-link the guide's auth account on registration.
+   * When a guide registers with this exact email, /auth/callback pins them
+   * to this listing automatically. Pass null to clear.
+   */
+  invite_email?: string | null
 }
 
 export type AdminUpdateResult =
@@ -379,6 +385,10 @@ export async function updateGuide(
         youtube_url:      payload.youtube_url?.trim() || null,
         pricing_model:    payload.pricing_model,
         status:           payload.status,
+        // undefined = untouched; null = cleared; string = new value
+        ...(payload.invite_email !== undefined
+          ? { invite_email: payload.invite_email?.trim() || null }
+          : {}),
         ...(setVerifiedAt ? { verified_at: new Date().toISOString() } : {}),
       })
       .eq('id', guideId)

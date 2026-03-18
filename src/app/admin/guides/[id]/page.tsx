@@ -6,6 +6,7 @@ import DeleteGuideButton from '@/components/admin/delete-guide-button'
 import DeleteExperienceButton from '@/components/admin/delete-experience-button'
 import LinkGuideButton from '@/components/admin/link-guide-button'
 import LinkGuidePanel from '@/components/admin/link-guide-panel'
+import CopyInviteLink from '@/components/admin/copy-invite-link'
 
 /**
  * /admin/guides/[id] — Guide detail page for admin.
@@ -132,8 +133,13 @@ export default async function AdminGuideDetailPage({
                 </svg>
                 Edit guide
               </Link>
-              {/* Link account — shown only when no auth user is linked yet */}
-              {guide.user_id == null && <LinkGuidePanel guideId={guide.id} />}
+              {/* Invite link + manual link — shown only when no auth user is linked */}
+              {guide.user_id == null && (
+                <>
+                  <CopyInviteLink guideId={guide.id} />
+                  <LinkGuidePanel guideId={guide.id} />
+                </>
+              )}
               <Link
                 href={`/admin/guides/${guide.id}/trips/new`}
                 className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
@@ -167,35 +173,28 @@ export default async function AdminGuideDetailPage({
             )}
           </div>
 
-          {/* Bridge info — invite email + link action */}
+          {/* invite_email badge — shown only if admin set one (optional, legacy) */}
           {guide.invite_email != null && (
             <div
-              className="mt-4 px-4 py-3 rounded-xl flex items-center justify-between gap-3"
+              className="mt-4 px-4 py-2.5 rounded-xl flex items-center gap-2"
               style={{ background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.1)' }}
             >
-              {/* Left: email + status */}
-              <div className="flex items-start gap-2 min-w-0">
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#2563EB" strokeWidth="1.3" className="flex-shrink-0 mt-0.5">
-                  <rect x="1" y="4" width="11" height="7" rx="1.5" />
-                  <path d="M1 6.5l5.5 3 5.5-3" />
-                </svg>
-                <p className="text-[11px] f-body leading-relaxed" style={{ color: '#1D4ED8' }}>
-                  <strong>Invite email:</strong> {guide.invite_email}
-                  {guide.user_id != null ? (
-                    <span className="ml-2 font-semibold" style={{ color: '#16A34A' }}>
-                      ✓ Linked to auth account
-                    </span>
-                  ) : (
-                    <span className="ml-2 opacity-60">
-                      — waiting for guide to register
-                    </span>
-                  )}
-                </p>
-              </div>
-
-              {/* Right: link button (only when not yet linked) */}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#2563EB" strokeWidth="1.3" className="flex-shrink-0">
+                <rect x="1" y="3.5" width="10" height="7" rx="1.5" />
+                <path d="M1 6l5 3 5-3" />
+              </svg>
+              <p className="text-[11px] f-body" style={{ color: '#1D4ED8' }}>
+                <strong>Email match:</strong> {guide.invite_email}
+                {guide.user_id != null ? (
+                  <span className="ml-1.5 font-semibold" style={{ color: '#16A34A' }}>✓ linked</span>
+                ) : (
+                  <span className="ml-1.5 opacity-55">— waiting</span>
+                )}
+              </p>
               {guide.user_id == null && (
-                <LinkGuideButton guideId={guide.id} inviteEmail={guide.invite_email} />
+                <div className="ml-auto flex-shrink-0">
+                  <LinkGuideButton guideId={guide.id} inviteEmail={guide.invite_email} />
+                </div>
               )}
             </div>
           )}

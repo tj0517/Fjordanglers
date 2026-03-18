@@ -132,7 +132,12 @@ export type GuideFormDefaults = {
   years_experience?: string     // numeric string, e.g. "10"
   instagram_url?: string
   youtube_url?: string
-  invite_email?: string         // stored as bridge field, not shown in form
+  /**
+   * Email address that will be stored as guides.invite_email.
+   * When the guide registers with this email, /auth/callback auto-links
+   * their auth account to this listing. Pre-filled from lead, editable.
+   */
+  invite_email?: string
   pricing_model?: 'flat_fee' | 'commission'
 }
 
@@ -173,6 +178,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
   const [landscapeTab,  setLandscapeTab]    = useState<'library' | 'upload'>('library')
   const [instagramUrl, setInstagramUrl]     = useState(defaultValues?.instagram_url ?? '')
   const [youtubeUrl, setYoutubeUrl]       = useState(defaultValues?.youtube_url ?? '')
+  const [inviteEmail, setInviteEmail]     = useState(defaultValues?.invite_email ?? '')
   const [pricingModel, setPricingModel]   = useState<'flat_fee' | 'commission'>(defaultValues?.pricing_model ?? 'commission')
   const [error, setError]                 = useState<string | null>(null)
   const [success, setSuccess]             = useState(false)
@@ -232,8 +238,8 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
       instagram_url:    instagramUrl || undefined,
       youtube_url:      youtubeUrl || undefined,
       pricing_model:    pricingModel,
-      // Lead bridge — set when creating from a lead application
-      invite_email:     defaultValues?.invite_email || undefined,
+      // Lead bridge — auto-pin the guide's auth account on registration
+      invite_email:     inviteEmail.trim() || undefined,
       lead_id:          leadId ?? undefined,
     }
 
@@ -417,6 +423,20 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
               <option value="commission">Commission (10% per booking)</option>
               <option value="flat_fee">Flat fee (€29/month)</option>
             </SelectInput>
+          </div>
+
+          {/* Invite email — for auto-linking guide's future auth account */}
+          <div className="md:col-span-2">
+            <FieldLabel>Guide&apos;s email (invite)</FieldLabel>
+            <TextInput
+              type="email"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              placeholder="guide@email.com — they register with this email to auto-claim this profile"
+            />
+            <p className="mt-1.5 text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              When the guide registers with this exact email, their account is automatically pinned to this profile. You can also link manually later.
+            </p>
           </div>
 
           {/* Bio */}

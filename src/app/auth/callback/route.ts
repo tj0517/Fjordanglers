@@ -23,20 +23,22 @@ export async function GET(request: NextRequest) {
   const code        = requestUrl.searchParams.get('code')
   const next        = requestUrl.searchParams.get('next') ?? '/account'
   const origin      = requestUrl.origin
+  /**
+   * Set when the guide registered via /invite/[guideId].
+   * The guideId travels inside the confirmation email URL as ?claim=GUID
+   * so no DB token storage is needed.
+   */
+  const claim       = requestUrl.searchParams.get('claim')
 
   if (code != null) {
     const supabase = await createClient()
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (error == null) {
-      // ── Auto-link beta guide listing if invite_email matches ─────────────
-      // When a guide registers with the email stored in guides.invite_email,
-      // we immediately pin their auth account to the listing and grant dashboard access.
-      // Non-fatal: on any error the session is still valid, admin can link manually.
       const userEmail = data.user?.email
       const userId    = data.user?.id
 
-      if (userEmail != null && userId != null) {
+      if (userId != null) {
         try {
           const service = createServiceClient()
 
@@ -51,30 +53,56 @@ export async function GET(request: NextRequest) {
               { onConflict: 'id', ignoreDuplicates: true },
             )
 
-          // ── Auto-link guide listing if invite_email matches ─────────────────
-          const { data: guide } = await service
-            .from('guides')
-            .select('id')
-            .eq('invite_email', userEmail)
-            .is('user_id', null)
-            .maybeSingle()
+          // ── Priority 1: claim token (link-based, email-agnostic) ────────────
+          // Guide registered via /invite/[guideId] — pin by guide ID directly.
+          // More reliable than email matching: works with any email the guide uses.
+          if (claim != null) {
+            const { data: claimGuide } = await service
+              .from('guides')
+              .select('id')
+              .eq('id', claim)
+              .is('user_id', null)   // only claim if still unclaimed (race-condition guard)
+              .maybeSingle()
 
-          if (guide != null) {
-            await Promise.all([
-              service
-                .from('guides')
-                .update({ user_id: userId, is_beta_listing: false })
-                .eq('id', guide.id),
-              service
-                .from('profiles')
-                .upsert({ id: userId, role: 'guide' }, { onConflict: 'id' }),
-            ])
+            if (claimGuide != null) {
+              await Promise.all([
+                service
+                  .from('guides')
+                  .update({ user_id: userId, is_beta_listing: false })
+                  .eq('id', claimGuide.id),
+                service
+                  .from('profiles')
+                  .upsert({ id: userId, role: 'guide' }, { onConflict: 'id' }),
+              ])
+            }
+          // ── Priority 2: invite_email fallback (email-based, legacy) ──────────
+          // Kept for backward compat: guides who register without the invite link
+          // but whose email was stored as guides.invite_email still get auto-linked.
+          } else if (userEmail != null) {
+            const { data: emailGuide } = await service
+              .from('guides')
+              .select('id')
+              .eq('invite_email', userEmail)
+              .is('user_id', null)
+              .maybeSingle()
+
+            if (emailGuide != null) {
+              await Promise.all([
+                service
+                  .from('guides')
+                  .update({ user_id: userId, is_beta_listing: false })
+                  .eq('id', emailGuide.id),
+                service
+                  .from('profiles')
+                  .upsert({ id: userId, role: 'guide' }, { onConflict: 'id' }),
+              ])
+            }
           }
         } catch (linkErr) {
           console.error('[auth/callback] auto-link error:', linkErr)
+          // Non-fatal — session is still valid, admin can link manually
         }
       }
-      // ─────────────────────────────────────────────────────────────────────
 
       // Session established — send the user to their destination
       return NextResponse.redirect(`${origin}${next}`)

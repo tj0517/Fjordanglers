@@ -39,7 +39,7 @@ export default async function AdminEditGuidePage({
     supabase
       .from('guides')
       .select(
-        'id, full_name, country, city, bio, languages, fish_expertise, years_experience, avatar_url, cover_url, instagram_url, youtube_url, pricing_model, status, is_beta_listing',
+        'id, full_name, country, city, bio, languages, fish_expertise, years_experience, avatar_url, cover_url, instagram_url, youtube_url, pricing_model, status, is_beta_listing, invite_email',
       )
       .eq('id', id)
       .single(),
