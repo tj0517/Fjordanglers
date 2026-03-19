@@ -102,8 +102,9 @@ export default function CalendarGrid({
   const isShared = calendarMode === 'shared'
   const router = useRouter()
   const [navPending, startNav] = useTransition()
-  const modalRef      = useRef<HTMLDivElement>(null)
-  const multiModalRef = useRef<HTMLDivElement>(null)
+  const modalRef       = useRef<HTMLDivElement>(null)
+  const multiModalRef  = useRef<HTMLDivElement>(null)
+  const monthModalRef  = useRef<HTMLDivElement>(null)
 
   // ── Single-day modal state ─────────────────────────────────────────────────
   const [selectedDay,   setSelectedDay]   = useState<string | null>(null)
@@ -131,6 +132,11 @@ export default function CalendarGrid({
   const [rangeExpIds,    setRangeExpIds]    = useState<string[]>([])
   const [rangeReason,    setRangeReason]    = useState('')
 
+  // ── Block-this-month modal state ─────────────────────────────────────────────
+  const [showMonthModal,    setShowMonthModal]    = useState(false)
+  const [monthBlockExpIds,  setMonthBlockExpIds]  = useState<string[]>([])
+  const [monthBlockReason,  setMonthBlockReason]  = useState('')
+
   // ── Shared action state ─────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [actionError,  setActionError]  = useState<string | null>(null)
@@ -147,6 +153,7 @@ export default function CalendarGrid({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
+      if (showMonthModal)      { setShowMonthModal(false); return }
       if (showRangeModal)      { setShowRangeModal(false); return }
       if (showMultiModal)      { setShowMultiModal(false); return }
       if (selectedDay != null) { closeModal(); return }
@@ -154,11 +161,12 @@ export default function CalendarGrid({
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [showRangeModal, showMultiModal, selectedDay, selectionMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showMonthModal, showRangeModal, showMultiModal, selectedDay, selectionMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus modal on open
   useEffect(() => { if (selectedDay != null)  modalRef.current?.focus()      }, [selectedDay])
   useEffect(() => { if (showMultiModal)        multiModalRef.current?.focus() }, [showMultiModal])
+  useEffect(() => { if (showMonthModal)        monthModalRef.current?.focus() }, [showMonthModal])
 
   // ── Build per-day index ────────────────────────────────────────────────────
   // In per_listing mode, filter to only the active trip so the calendar is
@@ -272,6 +280,31 @@ export default function CalendarGrid({
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     setShowRangeModal(false)
+    router.refresh()
+  }
+
+  // ── Block-this-month helpers ────────────────────────────────────────────────
+  function openMonthModal() {
+    setMonthBlockExpIds(experiences.map(e => e.id))
+    setMonthBlockReason('')
+    setActionError(null)
+    setShowMonthModal(true)
+  }
+
+  async function handleMonthBlock() {
+    if (monthBlockExpIds.length === 0) return
+    const firstDay = toDateStr(year, month, 1)
+    const lastDay  = toDateStr(year, month, new Date(year, month, 0).getDate())
+    setIsSubmitting(true); setActionError(null)
+    const result = await blockDates({
+      experienceIds: monthBlockExpIds,
+      dateStart:     firstDay,
+      dateEnd:       lastDay,
+      reason:        monthBlockReason.trim() || undefined,
+    })
+    setIsSubmitting(false)
+    if ('error' in result) { setActionError(result.error); return }
+    setShowMonthModal(false)
     router.refresh()
   }
 
@@ -435,17 +468,27 @@ export default function CalendarGrid({
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {selectedDays.size > 0 && (
-                  <button
-                    onClick={openMultiModal}
-                    className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors f-body"
-                    style={{ background: '#E67E50', color: 'white', border: 'none', cursor: 'pointer' }}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
-                      <rect x="4.5" y="0" width="2" height="11" rx="1" />
-                      <rect x="0" y="4.5" width="11" height="2" rx="1" />
-                    </svg>
-                    Block {selectedDays.size} {selectedDays.size === 1 ? 'day' : 'days'}
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setSelectedDays(new Set())}
+                      className="text-xs f-body px-3 py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
+                      style={{ color: 'rgba(10,46,77,0.45)', cursor: 'pointer', border: '1px solid rgba(10,46,77,0.08)', background: 'transparent' }}
+                      title="Deselect all"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={openMultiModal}
+                      className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors f-body"
+                      style={{ background: '#E67E50', color: 'white', border: 'none', cursor: 'pointer' }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
+                        <rect x="4.5" y="0" width="2" height="11" rx="1" />
+                        <rect x="0" y="4.5" width="11" height="2" rx="1" />
+                      </svg>
+                      Block {selectedDays.size} {selectedDays.size === 1 ? 'day' : 'days'}
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={exitSelectionMode}
@@ -513,6 +556,24 @@ export default function CalendarGrid({
                     <line x1="8" y1="0.5" x2="8" y2="3.5" />
                   </svg>
                   Block season
+                </button>
+                <button
+                  onClick={openMonthModal}
+                  className="flex items-center gap-1.5 text-xs font-semibold f-body px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ color: '#E67E50', border: '1px solid rgba(230,126,80,0.25)', cursor: 'pointer', background: 'rgba(230,126,80,0.06)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(230,126,80,0.12)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(230,126,80,0.06)' }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="0.5" y="2.5" width="10" height="8" rx="1" />
+                    <line x1="0.5" y1="5" x2="10.5" y2="5" />
+                    <line x1="3" y1="0.5" x2="3" y2="3.5" />
+                    <line x1="8" y1="0.5" x2="8" y2="3.5" />
+                    <line x1="5.5" y1="7" x2="5.5" y2="9.5" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="4.25" y1="7" x2="6.75" y2="7" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                  <span className="hidden sm:inline">Block month</span>
+                  <span className="sm:hidden">Month</span>
                 </button>
               </div>
             </>
@@ -1330,6 +1391,177 @@ export default function CalendarGrid({
               </button>
               <button
                 onClick={() => setShowRangeModal(false)}
+                disabled={isSubmitting}
+                className="px-5 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
+                style={{ color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.1)', cursor: 'pointer', background: 'transparent' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ─── Block-this-month modal ───────────────────────────────────────── */}
+      {showMonthModal && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setShowMonthModal(false)}
+            aria-hidden="true"
+          />
+
+          <div
+            ref={monthModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Block ${MONTH_NAMES[month - 1]} ${year}`}
+            tabIndex={-1}
+            className="fixed z-50 flex flex-col"
+            style={{
+              top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+              width: '100%', maxWidth: '460px', maxHeight: '85vh',
+              background: '#FDFAF7', borderRadius: '20px',
+              boxShadow: '0 20px 60px rgba(7,17,28,0.25)',
+              border: '1px solid rgba(10,46,77,0.08)', outline: 'none',
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 py-5"
+                 style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-1"
+                   style={{ color: 'rgba(10,46,77,0.38)' }}>Block availability</p>
+                <h3 className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                  Block {MONTH_NAMES[month - 1]} {year}
+                </h3>
+              </div>
+              <button onClick={() => setShowMonthModal(false)} aria-label="Close"
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06] flex-shrink-0"
+                style={{ color: 'rgba(10,46,77,0.4)' }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+
+              {/* Date badge — read-only */}
+              <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl"
+                   style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.18)' }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0">
+                  <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
+                  <line x1="1.5" y1="6" x2="12.5" y2="6" />
+                  <line x1="4.5" y1="2" x2="4.5" y2="6" />
+                  <line x1="9.5" y1="2" x2="9.5" y2="6" />
+                </svg>
+                <p className="text-xs f-body font-semibold" style={{ color: '#C96030' }}>
+                  {toDateStr(year, month, 1)} → {toDateStr(year, month, new Date(year, month, 0).getDate())}
+                  <span className="font-normal ml-2" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                    ({new Date(year, month, 0).getDate()} days)
+                  </span>
+                </p>
+              </div>
+
+              {/* Which trips to block */}
+              {experiences.length > 1 ? (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
+                     style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</p>
+                  <div className="flex flex-col gap-1.5">
+                    {experiences.map((exp, i) => {
+                      const checked = monthBlockExpIds.includes(exp.id)
+                      return (
+                        <label key={exp.id}
+                          className="flex items-center gap-2.5 cursor-pointer select-none px-3 py-2 rounded-lg"
+                          style={{
+                            background: checked ? 'rgba(230,126,80,0.06)' : 'rgba(10,46,77,0.02)',
+                            border: `1px solid ${checked ? 'rgba(230,126,80,0.2)' : 'rgba(10,46,77,0.08)'}`,
+                          }}
+                        >
+                          <input type="checkbox" checked={checked} className="sr-only"
+                            onChange={() => setMonthBlockExpIds(prev =>
+                              prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id]
+                            )}
+                          />
+                          <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                                style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
+                            {checked && (
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </span>
+                          <span className="w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ background: TRIP_PALETTE[i % TRIP_PALETTE.length] }} />
+                          <span className="text-xs f-body font-semibold truncate" style={{ color: '#0A2E4D' }}>
+                            {exp.title}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                     style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: TRIP_PALETTE[0] }} />
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    Will block <strong>{experiences[0]?.title ?? 'trip'}</strong>
+                  </p>
+                </div>
+              )}
+
+              {/* Reason */}
+              <div>
+                <label htmlFor="month-reason"
+                  className="block text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
+                  style={{ color: 'rgba(10,46,77,0.5)' }}>
+                  Reason (private, optional)
+                </label>
+                <input
+                  id="month-reason"
+                  type="text"
+                  value={monthBlockReason}
+                  onChange={e => setMonthBlockReason(e.target.value)}
+                  placeholder="e.g. Off season, vacation, maintenance…"
+                  maxLength={120}
+                  className="w-full text-sm f-body px-3 py-2 rounded-lg focus:outline-none"
+                  style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.15)', color: '#0A2E4D' }}
+                />
+              </div>
+
+              {actionError != null && (
+                <p className="text-xs f-body" style={{ color: '#DC2626' }}>{actionError}</p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 flex gap-2"
+                 style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+              <button
+                onClick={handleMonthBlock}
+                disabled={isSubmitting || monthBlockExpIds.length === 0}
+                className="flex-1 text-sm font-semibold f-body py-3 rounded-xl transition-opacity"
+                style={{
+                  background: '#E67E50',
+                  color:      'white',
+                  border:     'none',
+                  opacity: isSubmitting || monthBlockExpIds.length === 0 ? 0.55 : 1,
+                  cursor:  isSubmitting || monthBlockExpIds.length === 0 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isSubmitting
+                  ? 'Blocking…'
+                  : monthBlockExpIds.length === experiences.length
+                  ? `Block all of ${MONTH_NAMES[month - 1]}`
+                  : `Block ${MONTH_NAMES[month - 1]} for ${monthBlockExpIds.length} trip${monthBlockExpIds.length !== 1 ? 's' : ''}`}
+              </button>
+              <button
+                onClick={() => setShowMonthModal(false)}
                 disabled={isSubmitting}
                 className="px-5 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
                 style={{ color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.1)', cursor: 'pointer', background: 'transparent' }}

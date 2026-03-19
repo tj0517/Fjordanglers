@@ -191,9 +191,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export function generateStaticParams() {
-  return Object.keys(FISH_DATA).map(slug => ({ slug }))
-}
+// Pages are rendered on first request and ISR-cached via revalidate above.
+// No generateStaticParams — avoids needing Supabase at build time.
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
