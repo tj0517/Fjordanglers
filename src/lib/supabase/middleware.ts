@@ -45,10 +45,7 @@ export async function updateSession(request: NextRequest) {
   // Sign out locally so the browser doesn't retry in an infinite loop, then
   // redirect to /login. `scope: 'local'` skips the server call (which would
   // fail anyway) and just clears the cookies via the setAll handler above.
-  if (
-    error?.code === 'refresh_token_not_found' ||
-    error?.message?.toLowerCase().includes('refresh token')
-  ) {
+  if (error?.code === 'refresh_token_not_found') {
     await supabase.auth.signOut({ scope: 'local' })
 
     const loginUrl = new URL('/login', request.url)
