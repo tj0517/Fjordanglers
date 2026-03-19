@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import CalendarGrid from '@/components/dashboard/calendar-grid'
-import CalendarModeToggle from '@/components/dashboard/calendar-mode-toggle'
 
 export const revalidate = 0  // always fetch fresh data — calendar changes frequently
 
@@ -25,11 +24,7 @@ export default async function CalendarPage({
 
   if (user == null) redirect('/login?next=/dashboard/calendar')
 
-  // ── Guide profile ───────────────────────────────────────────────────────────
-  // Split into two queries so that a pending migration (calendar_mode column
-  // not yet applied) never breaks the core calendar — the settings query
-  // returns null on a 42703 "column does not exist" error, and we fall back
-  // to 'per_listing' safely.
+  // ── Guide profile ────────────────────────────────────────────────────────────
   const { data: guide } = await supabase
     .from('guides')
     .select('id, full_name')
@@ -37,13 +32,6 @@ export default async function CalendarPage({
     .single()
 
   if (guide == null) redirect('/dashboard')
-
-  // Fetch calendar_mode separately — resilient to the migration not yet applied
-  const { data: guidePrefs } = await supabase
-    .from('guides')
-    .select('calendar_mode')
-    .eq('id', guide.id)
-    .single()
 
   // ── Resolve year / month from URL (default = current month) ────────────────
   const sp = await searchParams
@@ -110,10 +98,6 @@ export default async function CalendarPage({
     return acc + Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1
   }, 0)
 
-  // Falls back to 'per_listing' if migration hasn't been applied yet
-  const calendarMode: 'per_listing' | 'shared' =
-    guidePrefs?.calendar_mode === 'shared' ? 'shared' : 'per_listing'
-
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[900px]">
 
@@ -126,7 +110,7 @@ export default async function CalendarPage({
           Availability Calendar
         </h1>
         <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-          Block dates when you're unavailable — anglers won't see those days for booking.
+          Block dates when you&apos;re unavailable — anglers won&apos;t see those days for booking.
         </p>
       </div>
 
@@ -167,12 +151,6 @@ export default async function CalendarPage({
         ))}
       </div>
 
-      {/* ─── Calendar mode toggle ─────────────────────────────────────────── */}
-      <CalendarModeToggle
-        current={calendarMode}
-        tripCount={expIds.length}
-      />
-
       {/* ─── Calendar grid ────────────────────────────────────────────────── */}
       <CalendarGrid
         year={safeYear}
@@ -180,7 +158,7 @@ export default async function CalendarPage({
         experiences={experiences ?? []}
         blocked={blocked}
         bookings={bookings}
-        calendarMode={calendarMode}
+        calendarMode="shared"
       />
 
     </div>

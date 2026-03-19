@@ -68,6 +68,9 @@ const SEASON_PRESETS = [
   { key: 'full',   icon: '🔒', label: 'Full year', range: 'Jan 1 – Dec 31',  startMD: [1,  1] as [number, number], endMD: [12,31] as [number, number] },
 ]
 
+// ─── Trip colour palette — one colour per experience, cycling ─────────────────
+const TRIP_PALETTE: string[] = ['#1B4F72', '#0891B2', '#059669', '#7C3AED', '#BE185D']
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toDateStr(y: number, m: number, d: number): string {
@@ -131,6 +134,14 @@ export default function CalendarGrid({
   // ── Shared action state ─────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [actionError,  setActionError]  = useState<string | null>(null)
+
+  // ── Per-trip colour map ────────────────────────────────────────────────────
+  const expColors = useMemo(
+    () => Object.fromEntries(
+      experiences.map((e, i) => [e.id, TRIP_PALETTE[i % TRIP_PALETTE.length]!])
+    ),
+    [experiences]
+  )
 
   // ── Keyboard: Escape closes modals / exits selection ──────────────────────
   useEffect(() => {
@@ -197,7 +208,7 @@ export default function CalendarGrid({
   function openDay(dayStr: string) {
     setSelectedDay(dayStr)
     setShowBlockForm(false)
-    setBlockExpIds(!isShared && activeTripId != null ? [activeTripId] : experiences.map(e => e.id))
+    setBlockExpIds(experiences.map(e => e.id))
     setBlockEndDate(dayStr)
     setBlockReason('')
     setActionError(null)
@@ -225,7 +236,7 @@ export default function CalendarGrid({
     })
   }
   function openMultiModal() {
-    setMultiBlockExpIds(!isShared && activeTripId != null ? [activeTripId] : experiences.map(e => e.id))
+    setMultiBlockExpIds(experiences.map(e => e.id))
     setMultiBlockReason('')
     setActionError(null)
     setShowMultiModal(true)
@@ -241,14 +252,14 @@ export default function CalendarGrid({
   function openRangeModal() {
     setRangeStart(toDateStr(year, month, 1))
     setRangeEnd(toDateStr(year, month, new Date(year, month, 0).getDate()))
-    setRangeExpIds(!isShared && activeTripId != null ? [activeTripId] : experiences.map(e => e.id))
+    setRangeExpIds(experiences.map(e => e.id))
     setRangeReason('')
     setActionError(null)
     setShowRangeModal(true)
   }
 
   async function handleRangeBlock() {
-    const expIds = isShared ? experiences.map(e => e.id) : rangeExpIds
+    const expIds = rangeExpIds
     if (expIds.length === 0 || rangeStart === '') return
     setIsSubmitting(true); setActionError(null)
     const end    = rangeEnd >= rangeStart ? rangeEnd : rangeStart
@@ -267,8 +278,7 @@ export default function CalendarGrid({
   // ── Actions ────────────────────────────────────────────────────────────────
   async function handleBlock() {
     if (selectedDay == null) return
-    // In shared mode, always block ALL experiences regardless of checkbox state
-    const expIds = isShared ? experiences.map(e => e.id) : blockExpIds
+    const expIds = blockExpIds
     if (expIds.length === 0) return
     setIsSubmitting(true); setActionError(null)
     const end = blockEndDate >= selectedDay ? blockEndDate : selectedDay
@@ -287,8 +297,7 @@ export default function CalendarGrid({
   async function handleMultiBlock() {
     const dates = Array.from(selectedDays).sort()
     if (dates.length === 0) return
-    // In shared mode, always block ALL experiences regardless of checkbox state
-    const expIds = isShared ? experiences.map(e => e.id) : multiBlockExpIds
+    const expIds = multiBlockExpIds
     if (expIds.length === 0) return
     setIsSubmitting(true); setActionError(null)
     const result = await blockMultipleDates({
@@ -599,34 +608,28 @@ export default function CalendarGrid({
                   ) : day}
                 </span>
 
-                {/* Indicators */}
-                <div className="flex flex-wrap gap-1 mt-auto">
-                  {fullyBlocked && (
-                    <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded f-body leading-none"
-                          style={{ background: 'rgba(230,126,80,0.18)', color: '#C96030' }}>
-                      Blocked
-                    </span>
-                  )}
-                  {partBlocked && (
-                    <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded f-body leading-none"
-                          style={{ background: 'rgba(230,126,80,0.12)', color: '#C96030' }}>
-                      Some trips
-                    </span>
-                  )}
-                  {/* Confirmed booking — blue */}
-                  {hasConfirmed && (
-                    <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded f-body leading-none"
-                          style={{ background: 'rgba(27,79,114,0.12)', color: '#1B4F72' }}>
-                      {confirmedBk.length === 1 ? 'Booked' : `${confirmedBk.length} bk`}
-                    </span>
-                  )}
-                  {/* Pending-only booking — amber */}
-                  {!hasConfirmed && hasPending && (
-                    <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded f-body leading-none"
-                          style={{ background: 'rgba(217,119,6,0.12)', color: '#B45309' }}>
-                      {pendingBk.length === 1 ? 'Pending' : `${pendingBk.length} pend`}
-                    </span>
-                  )}
+                {/* Per-trip status dots */}
+                <div className="flex flex-col gap-px w-full mt-auto">
+                  {experiences.map((exp) => {
+                    const isExpBlocked = data?.blockedExpIds.has(exp.id) ?? false
+                    const expBks       = data?.bookingEntries.filter(b => b.experience_id === exp.id) ?? []
+                    const hasConf      = expBks.some(b => b.status === 'confirmed')
+                    const hasPend      = expBks.some(b => b.status === 'pending')
+                    if (!isExpBlocked && !hasConf && !hasPend) return null
+                    const chipBg    = hasConf ? 'rgba(27,79,114,0.13)'   : hasPend ? 'rgba(217,119,6,0.12)'    : 'rgba(230,126,80,0.13)'
+                    const chipColor = hasConf ? '#1B4F72'                : hasPend ? '#B45309'                  : '#C96030'
+                    const dotColor  = expColors[exp.id] ?? '#0A2E4D'
+                    const label     = exp.title.split(' ')[0]!
+                    return (
+                      <div key={exp.id}
+                        className="flex items-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
+                        style={{ background: chipBg, color: chipColor }}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+                        <span className="truncate" style={{ maxWidth: 40 }}>{label}</span>
+                      </div>
+                    )
+                  })}
                 </div>
               </button>
             )
@@ -634,23 +637,46 @@ export default function CalendarGrid({
         </div>
 
         {/* ── Legend ────────────────────────────────────────────────────────────── */}
-        <div className="flex items-center flex-wrap gap-x-6 gap-y-2 px-6 py-3"
+        <div className="px-6 py-3 flex flex-col gap-2.5"
              style={{ borderTop: '1px solid rgba(10,46,77,0.05)' }}>
-          {[
-            { label: 'Available',            color: 'rgba(10,46,77,0.25)',  bg: 'rgba(10,46,77,0.06)'   },
-            { label: 'Some trips blocked',   color: '#C96030',              bg: 'rgba(230,126,80,0.12)'  },
-            { label: 'Blocked',              color: '#C96030',              bg: 'rgba(230,126,80,0.2)'   },
-            { label: 'Confirmed booking',    color: '#1B4F72',              bg: 'rgba(27,79,114,0.12)'   },
-            { label: 'Pending booking',      color: '#B45309',              bg: 'rgba(217,119,6,0.12)'   },
-          ].map(item => (
-            <div key={item.label} className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded"
-                   style={{ background: item.bg, border: `1px solid ${item.color}` }} />
-              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                {item.label}
-              </span>
+
+          {/* Trip colour key */}
+          {experiences.length > 0 && (
+            <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5">
+              {experiences.map((exp, i) => (
+                <div key={exp.id} className="flex items-center gap-1.5">
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{ background: TRIP_PALETTE[i % TRIP_PALETTE.length] }}
+                  />
+                  <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                    {exp.title}
+                    {!exp.published && (
+                      <span style={{ color: 'rgba(10,46,77,0.35)' }}> (draft)</span>
+                    )}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          {/* Status key */}
+          <div className="flex items-center flex-wrap gap-x-5 gap-y-1">
+            {([
+              { label: 'Confirmed booking', color: '#1B4F72', bg: 'rgba(27,79,114,0.12)'  },
+              { label: 'Pending booking',   color: '#B45309', bg: 'rgba(217,119,6,0.12)'  },
+              { label: 'Blocked',           color: '#C96030', bg: 'rgba(230,126,80,0.18)' },
+            ] as const).map(item => (
+              <div key={item.label} className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded"
+                     style={{ background: item.bg, border: `1px solid ${item.color}` }} />
+                <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  {item.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
         </div>
       </div>
 
@@ -802,25 +828,54 @@ export default function CalendarGrid({
                         style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.15)', color: '#0A2E4D' }} />
                     </div>
                   </div>
-                  {/* Which trip(s) will be blocked — info badge, no checkboxes */}
-                  <div
-                    className="mb-4 flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
-                    style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
-                         stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0">
-                      <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
-                      <line x1="1.5" y1="6" x2="12.5" y2="6" />
-                      <line x1="4.5" y1="2" x2="4.5" y2="6" />
-                      <line x1="9.5" y1="2" x2="9.5" y2="6" />
-                    </svg>
-                    <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
-                      {isShared
-                        ? <>Will block <strong>all {experiences.length} trip{experiences.length !== 1 ? 's' : ''}</strong></>
-                        : <>Will block <strong>{expById[activeTripId ?? '']?.title ?? 'selected trip'}</strong></>
-                      }
-                    </p>
-                  </div>
+                  {/* Which trips to block */}
+                  {experiences.length > 1 ? (
+                    <div className="mb-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
+                         style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</p>
+                      <div className="flex flex-col gap-1.5">
+                        {experiences.map((exp, i) => {
+                          const checked = blockExpIds.includes(exp.id)
+                          return (
+                            <label key={exp.id}
+                              className="flex items-center gap-2.5 cursor-pointer select-none px-3 py-2 rounded-lg"
+                              style={{
+                                background: checked ? 'rgba(230,126,80,0.06)' : 'rgba(10,46,77,0.02)',
+                                border: `1px solid ${checked ? 'rgba(230,126,80,0.2)' : 'rgba(10,46,77,0.08)'}`,
+                              }}
+                            >
+                              <input type="checkbox" checked={checked} className="sr-only"
+                                onChange={() => setBlockExpIds(prev =>
+                                  prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id]
+                                )}
+                              />
+                              <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                                    style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
+                                {checked && (
+                                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                    <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </span>
+                              <span className="w-2 h-2 rounded-full flex-shrink-0"
+                                    style={{ background: TRIP_PALETTE[i % TRIP_PALETTE.length] }} />
+                              <span className="text-xs f-body font-semibold truncate" style={{ color: '#0A2E4D' }}>
+                                {exp.title}
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mb-4 flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                         style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: TRIP_PALETTE[0] }} />
+                      <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                        Will block <strong>{experiences[0]?.title ?? 'trip'}</strong>
+                      </p>
+                    </div>
+                  )}
                   <div className="mb-4">
                     <label htmlFor="block-reason" className="block text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
                            style={{ color: 'rgba(10,46,77,0.5)' }}>Reason (private)</label>
@@ -833,22 +888,20 @@ export default function CalendarGrid({
                   <div className="flex gap-2">
                     <button
                       onClick={handleBlock}
-                      disabled={isSubmitting || (!isShared && blockExpIds.length === 0)}
+                      disabled={isSubmitting || blockExpIds.length === 0}
                       className="flex-1 text-sm font-semibold f-body py-2.5 rounded-xl transition-opacity"
                       style={{
                         background: '#E67E50',
                         color:      'white',
-                        opacity:    isSubmitting || (!isShared && blockExpIds.length === 0) ? 0.55 : 1,
-                        cursor:     isSubmitting || (!isShared && blockExpIds.length === 0) ? 'not-allowed' : 'pointer',
+                        opacity:    isSubmitting || blockExpIds.length === 0 ? 0.55 : 1,
+                        cursor:     isSubmitting || blockExpIds.length === 0 ? 'not-allowed' : 'pointer',
                         border:     'none',
                       }}>
                       {isSubmitting
                         ? 'Blocking…'
-                        : isShared
-                        ? 'Block all trips'
                         : blockExpIds.length === experiences.length
                         ? 'Block all trips'
-                        : `Block ${blockExpIds.length} experience${blockExpIds.length !== 1 ? 's' : ''}`}
+                        : `Block ${blockExpIds.length} trip${blockExpIds.length !== 1 ? 's' : ''}`}
                     </button>
                     <button onClick={() => setShowBlockForm(false)} disabled={isSubmitting}
                       className="px-4 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
@@ -956,25 +1009,54 @@ export default function CalendarGrid({
                 </div>
               </div>
 
-              {/* Which trip(s) will be blocked — info badge */}
-              <div
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
-                style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
-                     stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0">
-                  <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
-                  <line x1="1.5" y1="6" x2="12.5" y2="6" />
-                  <line x1="4.5" y1="2" x2="4.5" y2="6" />
-                  <line x1="9.5" y1="2" x2="9.5" y2="6" />
-                </svg>
-                <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
-                  {isShared
-                    ? <>Will block <strong>all {experiences.length} trip{experiences.length !== 1 ? 's' : ''}</strong></>
-                    : <>Will block <strong>{expById[activeTripId ?? '']?.title ?? 'selected trip'}</strong></>
-                  }
-                </p>
-              </div>
+              {/* Which trips to block */}
+              {experiences.length > 1 ? (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
+                     style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</p>
+                  <div className="flex flex-col gap-1.5">
+                    {experiences.map((exp, i) => {
+                      const checked = multiBlockExpIds.includes(exp.id)
+                      return (
+                        <label key={exp.id}
+                          className="flex items-center gap-2.5 cursor-pointer select-none px-3 py-2 rounded-lg"
+                          style={{
+                            background: checked ? 'rgba(230,126,80,0.06)' : 'rgba(10,46,77,0.02)',
+                            border: `1px solid ${checked ? 'rgba(230,126,80,0.2)' : 'rgba(10,46,77,0.08)'}`,
+                          }}
+                        >
+                          <input type="checkbox" checked={checked} className="sr-only"
+                            onChange={() => setMultiBlockExpIds(prev =>
+                              prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id]
+                            )}
+                          />
+                          <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                                style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
+                            {checked && (
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </span>
+                          <span className="w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ background: TRIP_PALETTE[i % TRIP_PALETTE.length] }} />
+                          <span className="text-xs f-body font-semibold truncate" style={{ color: '#0A2E4D' }}>
+                            {exp.title}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                     style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: TRIP_PALETTE[0] }} />
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    Will block <strong>{experiences[0]?.title ?? 'trip'}</strong> for {selectedDays.size} day{selectedDays.size !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
 
               {/* Reason */}
               <div>
@@ -994,20 +1076,20 @@ export default function CalendarGrid({
                  style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
               <button
                 onClick={handleMultiBlock}
-                disabled={isSubmitting || selectedDays.size === 0}
+                disabled={isSubmitting || selectedDays.size === 0 || multiBlockExpIds.length === 0}
                 className="flex-1 text-sm font-semibold f-body py-3 rounded-xl transition-opacity"
                 style={{
                   background: '#E67E50',
                   color:      'white',
                   border:     'none',
-                  cursor:     isSubmitting ? 'not-allowed' : 'pointer',
-                  opacity:    isSubmitting ? 0.55 : 1,
+                  cursor:     isSubmitting || multiBlockExpIds.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity:    isSubmitting || multiBlockExpIds.length === 0 ? 0.55 : 1,
                 }}>
                 {isSubmitting
                   ? 'Blocking…'
-                  : isShared
+                  : multiBlockExpIds.length === experiences.length
                   ? `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for all trips`
-                  : `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''}`}
+                  : `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for ${multiBlockExpIds.length} trip${multiBlockExpIds.length !== 1 ? 's' : ''}`}
               </button>
               <button onClick={() => setShowMultiModal(false)} disabled={isSubmitting}
                 className="px-5 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
@@ -1148,25 +1230,54 @@ export default function CalendarGrid({
                 </div>
               </div>
 
-              {/* ── Which trip(s) will be blocked ─────────────────────── */}
-              <div
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
-                style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
-                     stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0">
-                  <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
-                  <line x1="1.5" y1="6" x2="12.5" y2="6" />
-                  <line x1="4.5" y1="2" x2="4.5" y2="6" />
-                  <line x1="9.5" y1="2" x2="9.5" y2="6" />
-                </svg>
-                <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
-                  {isShared
-                    ? <>Will block <strong>all {experiences.length} trip{experiences.length !== 1 ? 's' : ''}</strong></>
-                    : <>Will block <strong>{expById[activeTripId ?? '']?.title ?? 'selected trip'}</strong></>
-                  }
-                </p>
-              </div>
+              {/* ── Which trips to block ──────────────────────────────── */}
+              {experiences.length > 1 ? (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
+                     style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</p>
+                  <div className="flex flex-col gap-1.5">
+                    {experiences.map((exp, i) => {
+                      const checked = rangeExpIds.includes(exp.id)
+                      return (
+                        <label key={exp.id}
+                          className="flex items-center gap-2.5 cursor-pointer select-none px-3 py-2 rounded-lg"
+                          style={{
+                            background: checked ? 'rgba(230,126,80,0.06)' : 'rgba(10,46,77,0.02)',
+                            border: `1px solid ${checked ? 'rgba(230,126,80,0.2)' : 'rgba(10,46,77,0.08)'}`,
+                          }}
+                        >
+                          <input type="checkbox" checked={checked} className="sr-only"
+                            onChange={() => setRangeExpIds(prev =>
+                              prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id]
+                            )}
+                          />
+                          <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
+                                style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
+                            {checked && (
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </span>
+                          <span className="w-2 h-2 rounded-full flex-shrink-0"
+                                style={{ background: TRIP_PALETTE[i % TRIP_PALETTE.length] }} />
+                          <span className="text-xs f-body font-semibold truncate" style={{ color: '#0A2E4D' }}>
+                            {exp.title}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                     style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: TRIP_PALETTE[0] }} />
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    Will block <strong>{experiences[0]?.title ?? 'trip'}</strong>
+                  </p>
+                </div>
+              )}
 
               {/* ── Reason ────────────────────────────────────────────────── */}
               <div>
@@ -1201,17 +1312,21 @@ export default function CalendarGrid({
             >
               <button
                 onClick={handleRangeBlock}
-                disabled={isSubmitting || rangeStart === '' || rangeEnd === '' || (!isShared && rangeExpIds.length === 0)}
+                disabled={isSubmitting || rangeStart === '' || rangeEnd === '' || rangeExpIds.length === 0}
                 className="flex-1 text-sm font-semibold f-body py-3 rounded-xl transition-opacity"
                 style={{
                   background: '#E67E50',
                   color:      'white',
                   border:     'none',
-                  opacity: isSubmitting || rangeStart === '' || (!isShared && rangeExpIds.length === 0) ? 0.55 : 1,
-                  cursor:  isSubmitting || rangeStart === '' || (!isShared && rangeExpIds.length === 0) ? 'not-allowed' : 'pointer',
+                  opacity: isSubmitting || rangeStart === '' || rangeExpIds.length === 0 ? 0.55 : 1,
+                  cursor:  isSubmitting || rangeStart === '' || rangeExpIds.length === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
-                {isSubmitting ? 'Blocking…' : 'Block dates'}
+                {isSubmitting
+                  ? 'Blocking…'
+                  : rangeExpIds.length === experiences.length
+                  ? 'Block dates for all trips'
+                  : `Block dates for ${rangeExpIds.length} trip${rangeExpIds.length !== 1 ? 's' : ''}`}
               </button>
               <button
                 onClick={() => setShowRangeModal(false)}

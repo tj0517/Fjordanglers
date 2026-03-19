@@ -1,7 +1,7 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 2 — guide dashboard ukończony.
+Sesja 3 — calendar redesign ukończony. Poprzednie sesje: guide dashboard, booking flow edge cases.
 
 ## Zrealizowane zadania
 
@@ -36,8 +36,42 @@ Sesja 2 — guide dashboard ukończony.
 - `/dashboard/earnings/page.tsx` — monthly bar chart + per-experience breakdown
 - `/dashboard/inquiries/page.tsx` — lista z linkami do `/dashboard/inquiries/[id]`
 
+### Sesja 3 — Legal pages + Auth + GTM + Calendar redesign
+
+#### Legal pages (zrealizowane)
+- `/legal/privacy-policy/page.tsx` — 16 sekcji, tabele (ProcessingTable, SharingTable, RetentionTable)
+- `/legal/terms-of-service/page.tsx` — 27 sekcji, CancellationMode grid, WarningCard, BulletList
+- Footer: Terms of Service · Privacy Policy · Cookie Policy linki
+- Wszystkie emaile: `contact@fjordanglers.com`
+
+#### Terms acceptance checkboxes
+- `BookingCheckoutForm.tsx` — termsAccepted state + checkbox + disabled submit
+- `onboarding-wizard.tsx` — krok 3 (Review) + checkbox z "commission structure and payout terms"
+- `apply-form.tsx` — checkbox przed submittem
+- `create-guide-form.tsx` — termsConfirmed + checkbox z dynamicznym imieniem przewodnika
+
+#### GTM
+- `cookie-banner.tsx` — zmienione z GA4 na GTM, consent-gated noscript iframe
+- `layout.tsx` — `NEXT_PUBLIC_GTM_ID` zamiast `NEXT_PUBLIC_GA_ID`
+- Env var do dodania: `NEXT_PUBLIC_GTM_ID=GTM-KFMMHGW8`
+
+#### Auth redirect
+- `login-form.tsx` + `auth-tabs.tsx` — default next: `/account` → `/dashboard`
+
+#### Calendar redesign
+- **`calendar/page.tsx`** — usunięto `CalendarModeToggle`, zawsze `calendarMode="shared"`, usunięto guidePrefs query
+- **`calendar-grid.tsx`**:
+  - `TRIP_PALETTE` — 5 brandowych kolorów per trip (`#1B4F72`, `#0891B2`, `#059669`, `#7C3AED`, `#BE185D`)
+  - `expColors` useMemo — mapuje experience.id → kolor z palety
+  - Day cells: per-trip colored chips zamiast generic "Booked/Blocked" (8px dot + pierwsza nazwa tripu)
+  - Legend: 2 rzędy — trip colour key (z nazwami tripów) + status key (Confirmed/Pending/Blocked)
+  - Wszystkie modaly (block day, multi-pick, range/season): **checkboxy per trip** zamiast "block all" info badge
+  - `handleBlock/handleMultiBlock/handleRangeBlock` — używają bezpośrednio state (blockExpIds, multiBlockExpIds, rangeExpIds), usunięto `isShared` override
+  - Default: wszystkie tripy zaznaczone przy otwarciu modalu
+  - Przyciski: "Block all trips" gdy wszystkie zaznaczone, "Block N trips" gdy wybór częściowy
+
 ## Stan typechecku
-`pnpm typecheck` → 0 błędów po wszystkich zmianach.
+`pnpm typecheck` → 0 błędów po wszystkich zmianach (sesja 3).
 
 ## Do zrobienia (booking flow właściwy)
 - `src/actions/bookings.ts` — Server Action `createBooking()` z Stripe PaymentIntent
