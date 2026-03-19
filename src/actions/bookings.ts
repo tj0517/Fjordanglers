@@ -88,7 +88,7 @@ export async function createBookingCheckout(
   // ── Calculate pricing ─────────────────────────────────────────────────────
   const pricePerPerson = experience.price_per_person_eur ?? 0
   const subtotal = Math.round(pricePerPerson * guests * dates.length * 100) / 100
-  const serviceFee = Math.round(subtotal * 0.07 * 100) / 100 // 7% angler-side fee
+  const serviceFee = Math.round(subtotal * 0.05 * 100) / 100 // 5% angler-side fee
   const totalEur = Math.round((subtotal + serviceFee) * 100) / 100
   const commissionRate = env.PLATFORM_COMMISSION_RATE // 0.10 by default
   const platformFeeEur = Math.round(subtotal * commissionRate * 100) / 100

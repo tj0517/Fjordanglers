@@ -11,7 +11,7 @@ import DurationCardsSelector from '@/components/trips/duration-cards-selector'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import type { SpeciesInfo, FishVariant } from '@/components/trips/species-card'
 import type { ExperienceWithGuide } from '@/types'
-import type { InclusionsPayload, DurationOptionPayload, ItineraryStep } from '@/actions/experiences'
+import type { DurationOptionPayload, ItineraryStep } from '@/actions/experiences'
 import { FISH_IMG } from '@/lib/fish'
 import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
@@ -471,14 +471,6 @@ export default async function ExperienceDetailPage({
       ? `${exp.duration_days} ${exp.duration_days === 1 ? 'day' : 'days'}`
       : null
 
-  // Structured inclusions (JSONB) — cast to typed shape; null = legacy record
-  const inc = exp.inclusions as InclusionsPayload | null
-  const needsLicense = inc != null && !inc.license
-  const licenseArticleUrl =
-    needsLicense && exp.location_country != null
-      ? (LICENSE_ARTICLE[exp.location_country] ?? null)
-      : null
-
   // ── New content fields (added via DB migration 20260316171516) ───────────────
   const expRaw = rawExp as unknown as Record<string, unknown>
   const itinerary        = (expRaw.itinerary as ItineraryStep[] | null) ?? null
@@ -894,7 +886,6 @@ export default async function ExperienceDetailPage({
                   <h2 className="text-[#0A2E4D] text-2xl font-bold mb-6 f-display">
                     What to know
                   </h2>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {tripDetailCards.map(card => (
                       <div
@@ -926,77 +917,7 @@ export default async function ExperienceDetailPage({
                       </div>
                     ))}
                   </div>
-
-                  {/* License callout — only shown when license is not included (legacy inclusions) */}
-                  {needsLicense && licenseDesc == null && (
-                    <div
-                      className="flex items-start gap-4 p-5 rounded-2xl mt-4"
-                      style={{
-                        background: 'rgba(230,126,80,0.06)',
-                        border: '1px solid rgba(230,126,80,0.20)',
-                      }}
-                    >
-                      <span className="text-xl flex-shrink-0 mt-0.5" role="img" aria-label="License">📋</span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                          Fishing license required
-                        </p>
-                        <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                          A local fishing license is not included — you&apos;ll need to arrange your own before the trip.
-                          {licenseArticleUrl != null ? (
-                            <>
-                              {' '}
-                              <Link
-                                href={licenseArticleUrl}
-                                className="font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
-                                style={{ color: '#E67E50' }}
-                              >
-                                How to get a license in {exp.location_country} →
-                              </Link>
-                            </>
-                          ) : (
-                            ' Your guide can advise on where to purchase one.'
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  )}
                 </section>
-              )}
-
-              {/* Legacy license callout — shown only when no trip details at all */}
-              {tripDetailCards.length === 0 && needsLicense && (
-                <div
-                  className="flex items-start gap-4 p-5 rounded-2xl mb-12"
-                  style={{
-                    background: 'rgba(230,126,80,0.06)',
-                    border: '1px solid rgba(230,126,80,0.20)',
-                  }}
-                >
-                  <span className="text-xl flex-shrink-0 mt-0.5" role="img" aria-label="License">📋</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                      Fishing license required
-                    </p>
-                    <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                      A local fishing license is not included — you&apos;ll need to arrange your own before the trip.
-                      {licenseArticleUrl != null ? (
-                        <>
-                          {' '}
-                          <Link
-                            href={licenseArticleUrl}
-                            className="font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
-                            style={{ color: '#E67E50' }}
-                          >
-                            How to get a license in {exp.location_country} →
-                          </Link>
-                        </>
-                      ) : (
-                        ' Your guide can advise on where to purchase one.'
-                      )}
-                    </p>
-                  </div>
-                </div>
               )}
 
               {/* Location + Map */}

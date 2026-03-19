@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { Fraunces, DM_Sans } from 'next/font/google'
+import { CookieBanner } from '@/components/ui/cookie-banner'
 import './globals.css'
+
+const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID
 
 const fraunces = Fraunces({
   subsets: ['latin'],
@@ -42,7 +45,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {GTM_ID && <CookieBanner gtmId={GTM_ID} />}
+      </body>
     </html>
   )
 }

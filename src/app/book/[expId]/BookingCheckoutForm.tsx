@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { createBookingCheckout } from '@/actions/bookings'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleAuthButton } from '@/components/auth/google-auth-button'
@@ -39,6 +40,8 @@ export default function BookingCheckoutForm({
 
   // Auth fields (login + register)
   const [password, setPassword] = useState('')
+
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -297,10 +300,64 @@ export default function BookingCheckoutForm({
         </div>
       )}
 
+      {/* ── Terms acceptance ─────────────────────────────────────────────────── */}
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <span className="relative flex-shrink-0 mt-0.5">
+          <input
+            type="checkbox"
+            required
+            checked={termsAccepted}
+            onChange={e => setTermsAccepted(e.target.checked)}
+            className="sr-only peer"
+          />
+          {/* Custom checkbox box */}
+          <span
+            className="flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-[1.5px] transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-[#E67E50]/40"
+            style={{
+              background: termsAccepted ? '#E67E50' : '#F3EDE4',
+              borderColor: termsAccepted ? '#E67E50' : 'rgba(10,46,77,0.2)',
+            }}
+          >
+            {termsAccepted && (
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                <path
+                  d="M1 4l2.5 2.5L9 1"
+                  stroke="white"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </span>
+        </span>
+        <span className="text-[12px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          I have read and agree to the{' '}
+          <Link
+            href="/legal/terms-of-service"
+            target="_blank"
+            className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+            style={{ color: '#0A2E4D' }}
+          >
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link
+            href="/legal/privacy-policy"
+            target="_blank"
+            className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+            style={{ color: '#0A2E4D' }}
+          >
+            Privacy Policy
+          </Link>
+          .
+        </span>
+      </label>
+
       {/* ── Submit ──────────────────────────────────────────────────────────── */}
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || !termsAccepted}
         className="w-full py-4 rounded-2xl text-white font-semibold text-sm tracking-wide f-body transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         style={{ background: '#E67E50' }}
       >
@@ -329,7 +386,7 @@ export default function BookingCheckoutForm({
         className="text-center text-xs f-body"
         style={{ color: 'rgba(10,46,77,0.38)' }}
       >
-        No payment required now. Guide will confirm within 24 hours.
+        No payment now. Guide confirms within 24h — then 30% deposit via Stripe.
       </p>
     </form>
   )

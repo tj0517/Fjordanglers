@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
-import type { DurationOptionPayload, InclusionsPayload, GroupPricingPayload, ItineraryStep } from '@/actions/experiences'
+import type { DurationOptionPayload, GroupPricingPayload, ItineraryStep } from '@/actions/experiences'
 import type * as GeoJSON from 'geojson'
 
 /**
@@ -81,7 +81,6 @@ export default async function AdminEditExperiencePage({
     season_from:          exp.season_from ?? null,
     season_to:            exp.season_to ?? null,
     fishing_methods:      exp.fishing_methods ?? [],
-    inclusions_data:      (exp.inclusions as unknown as InclusionsPayload) ?? null,
     group_pricing:        (exp.group_pricing as unknown as GroupPricingPayload) ?? null,
     location_area:        (exp.location_area as unknown as GeoJSON.Polygon) ?? null,
     location_spots:       (exp.location_spots as unknown as import('@/types').LocationSpot[]) ?? null,

@@ -29,7 +29,7 @@ export default async function DashboardNewExperiencePage() {
   if (guide == null) redirect('/guides/apply')
 
   return (
-    <div className="px-10 py-10 max-w-[840px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[840px]">
 
       {/* ─── Breadcrumb ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-8">

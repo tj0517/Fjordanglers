@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -196,6 +197,7 @@ export function OnboardingWizard() {
   const [screen, setScreen] = useState<Screen>({ type: 'plan' })
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const {
     register,
@@ -1081,6 +1083,61 @@ export function OnboardingWizard() {
                   {serverError}
                 </div>
               )}
+
+              {/* Terms acceptance */}
+              <label
+                className="flex items-start gap-3 mt-5 pt-5 cursor-pointer select-none"
+                style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}
+              >
+                <span className="relative flex-shrink-0 mt-0.5">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={e => setTermsAccepted(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <span
+                    className="flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-[1.5px] transition-all"
+                    style={{
+                      background: termsAccepted ? '#E67E50' : 'rgba(10,46,77,0.04)',
+                      borderColor: termsAccepted ? '#E67E50' : 'rgba(10,46,77,0.2)',
+                    }}
+                  >
+                    {termsAccepted && (
+                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path
+                          d="M1 4l2.5 2.5L9 1"
+                          stroke="white"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                </span>
+                <span className="text-[12px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  I have read and agree to the{' '}
+                  <Link
+                    href="/legal/terms-of-service"
+                    target="_blank"
+                    className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+                    style={{ color: '#0A2E4D' }}
+                  >
+                    Terms of Service
+                  </Link>
+                  {' '}and{' '}
+                  <Link
+                    href="/legal/privacy-policy"
+                    target="_blank"
+                    className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+                    style={{ color: '#0A2E4D' }}
+                  >
+                    Privacy Policy
+                  </Link>
+                  , including the commission structure and payout terms applicable to my chosen plan.
+                </span>
+              </label>
             </div>
           )
         })()}
@@ -1106,7 +1163,7 @@ export function OnboardingWizard() {
           <button
             type="button"
             onClick={() => { void handleSubmit(onSubmit)() }}
-            disabled={submitting}
+            disabled={submitting || !termsAccepted}
             className="flex items-center gap-2.5 text-white text-sm font-semibold px-8 py-3.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:brightness-100"
             style={{ background: '#E67E50' }}
           >

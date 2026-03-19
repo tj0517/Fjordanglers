@@ -37,7 +37,7 @@ export default async function ExperiencesPage() {
   // ── Auth guard ──────────────────────────────────────────────────────────────
   if (user == null) {
     return (
-      <div className="px-10 py-10">
+      <div className="px-4 py-6 sm:px-8 sm:py-10">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
@@ -60,7 +60,7 @@ export default async function ExperiencesPage() {
 
   if (guide == null) {
     return (
-      <div className="px-10 py-10">
+      <div className="px-4 py-6 sm:px-8 sm:py-10">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
@@ -109,15 +109,15 @@ export default async function ExperiencesPage() {
       : 0
 
   return (
-    <div className="px-10 py-10 max-w-[1100px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
 
       {/* ─── Header ─────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between gap-4 mb-8">
         <div>
           <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
             Guide Dashboard
           </p>
-          <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">My Trips</h1>
+          <h1 className="text-[#0A2E4D] text-2xl sm:text-3xl font-bold f-display">My Trips</h1>
           <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
             Manage your listed fishing trips.
           </p>
@@ -125,19 +125,20 @@ export default async function ExperiencesPage() {
 
         <Link
           href="/dashboard/trips/new"
-          className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
+          className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 sm:px-5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body flex-shrink-0"
           style={{ background: '#E67E50' }}
         >
           <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
             <rect x="5.8" y="1" width="1.4" height="11" rx="0.7" />
             <rect x="1" y="5.8" width="11" height="1.4" rx="0.7" />
           </svg>
-          New Trip
+          <span className="hidden sm:inline">New Trip</span>
+          <span className="sm:hidden">New</span>
         </Link>
       </div>
 
       {/* ─── Stats mini row ──────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-8">
         {([
           {
             label: 'Total listed',
@@ -202,10 +203,10 @@ export default async function ExperiencesPage() {
                   overflow: 'hidden',
                 }}
               >
-                <div className="flex items-stretch">
+                <div className="flex flex-col sm:flex-row sm:items-stretch">
 
                   {/* Cover image */}
-                  <div className="relative w-56 flex-shrink-0">
+                  <div className="relative h-44 sm:h-auto sm:w-56 flex-shrink-0">
                     {cover != null ? (
                       <Image
                         src={cover}
@@ -232,7 +233,7 @@ export default async function ExperiencesPage() {
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 px-7 py-6 flex flex-col justify-between min-w-0">
+                  <div className="flex-1 px-5 py-5 sm:px-7 sm:py-6 flex flex-col justify-between min-w-0">
                     <div>
                       {/* Tags */}
                       <div className="flex items-center gap-2 mb-3 flex-wrap">
@@ -273,32 +274,32 @@ export default async function ExperiencesPage() {
 
                     {/* Bottom row */}
                     <div
-                      className="flex items-center justify-between mt-5 pt-4"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-5 pt-4"
                       style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}
                     >
                       {/* Metrics */}
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
                         <div>
                           <p className="text-[#0A2E4D] text-lg font-bold f-display">
                             €{exp.price_per_person_eur}
                             <span className="text-sm font-normal text-[#0A2E4D]/40 f-body">/pp</span>
                           </p>
                         </div>
-                        <div className="w-px h-7" style={{ background: 'rgba(10,46,77,0.09)' }} />
+                        <div className="w-px h-7 hidden sm:block" style={{ background: 'rgba(10,46,77,0.09)' }} />
                         <div>
                           <p className="text-[11px] uppercase tracking-[0.15em] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
                             Duration
                           </p>
                           <p className="text-[#0A2E4D] text-sm font-semibold f-body">{duration}</p>
                         </div>
-                        <div className="w-px h-7" style={{ background: 'rgba(10,46,77,0.09)' }} />
+                        <div className="w-px h-7 hidden sm:block" style={{ background: 'rgba(10,46,77,0.09)' }} />
                         <div>
                           <p className="text-[11px] uppercase tracking-[0.15em] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
                             Bookings
                           </p>
                           <p className="text-[#0A2E4D] text-sm font-semibold f-body">{bookings}</p>
                         </div>
-                        <div className="w-px h-7" style={{ background: 'rgba(10,46,77,0.09)' }} />
+                        <div className="w-px h-7 hidden sm:block" style={{ background: 'rgba(10,46,77,0.09)' }} />
                         <div>
                           <p className="text-[11px] uppercase tracking-[0.15em] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
                             Max guests
@@ -308,7 +309,7 @@ export default async function ExperiencesPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <Link
                           href={`/trips/${exp.id}`}
                           className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:bg-[#F3EDE4] f-body"

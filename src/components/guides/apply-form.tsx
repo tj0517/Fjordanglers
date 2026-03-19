@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { submitGuideApplication } from '@/actions/guide-apply'
 import { FISH_ALL } from '@/lib/fish'
 import { COUNTRIES as SCANDI_COUNTRIES } from '@/lib/countries'
@@ -27,10 +28,11 @@ const inputStyle = {
 }
 
 export function ApplyForm() {
-  const [fish, setFish]       = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
+  const [fish, setFish]               = useState<string[]>([])
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [loading, setLoading]         = useState(false)
+  const [success, setSuccess]         = useState(false)
+  const [error, setError]             = useState<string | null>(null)
 
   const toggleFish = (f: string) =>
     setFish(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f])
@@ -164,10 +166,62 @@ export function ApplyForm() {
         <p className="text-xs f-body" style={{ color: '#c0392b' }}>{error}</p>
       )}
 
+      {/* Terms acceptance */}
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <span className="relative flex-shrink-0 mt-0.5">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={e => setTermsAccepted(e.target.checked)}
+            className="sr-only"
+          />
+          <span
+            className="flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-[1.5px] transition-all"
+            style={{
+              background: termsAccepted ? '#E67E50' : '#fff',
+              borderColor: termsAccepted ? '#E67E50' : 'rgba(10,46,77,0.2)',
+            }}
+          >
+            {termsAccepted && (
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                <path
+                  d="M1 4l2.5 2.5L9 1"
+                  stroke="white"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </span>
+        </span>
+        <span className="text-[12px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          I have read and agree to the{' '}
+          <Link
+            href="/legal/terms-of-service"
+            target="_blank"
+            className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+            style={{ color: '#0A2E4D' }}
+          >
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link
+            href="/legal/privacy-policy"
+            target="_blank"
+            className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+            style={{ color: '#0A2E4D' }}
+          >
+            Privacy Policy
+          </Link>
+          .
+        </span>
+      </label>
+
       <button
         type="submit"
-        disabled={loading}
-        className="w-full font-semibold text-sm text-white rounded-xl f-body transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+        disabled={loading || !termsAccepted}
+        className="w-full font-semibold text-sm text-white rounded-xl f-body transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
         style={{ background: '#E67E50', padding: '14px', marginTop: '4px' }}
       >
         {loading ? 'Submitting…' : 'Apply to join →'}

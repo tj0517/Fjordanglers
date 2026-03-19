@@ -99,7 +99,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
           style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.14)' }}
         >
           <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-            💳 No payment required now. You&apos;ll only pay after the guide confirms your booking.
+            💳 Once the guide confirms, you&apos;ll pay a 30% deposit securely via Stripe. The remaining balance is due before the trip.
           </p>
         </div>
 

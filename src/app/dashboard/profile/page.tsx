@@ -9,7 +9,7 @@ export default async function ProfilePage() {
   // ── Auth guard ──────────────────────────────────────────────────────────────
   if (user == null) {
     return (
-      <div className="px-10 py-10 max-w-[800px]">
+      <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[800px]">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
@@ -32,7 +32,7 @@ export default async function ProfilePage() {
 
   if (guide == null) {
     return (
-      <div className="px-10 py-10 max-w-[800px]">
+      <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[800px]">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
@@ -48,7 +48,7 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="px-10 py-10 max-w-[800px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[800px]">
       <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
         Guide Dashboard
       </p>

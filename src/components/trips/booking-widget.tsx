@@ -271,8 +271,8 @@ type BookingWidgetProps = {
 
 // ─── Platform fee ─────────────────────────────────────────────────────────────
 
-/** 7% service fee charged to the angler on top of the base price. */
-const SERVICE_FEE_RATE = 0.07
+/** 5% service fee charged to the angler on top of the base price. */
+const SERVICE_FEE_RATE = 0.05
 
 // ─── Price calculation ────────────────────────────────────────────────────────
 
@@ -688,7 +688,7 @@ export function BookingWidget({
               On request
             </p>
             <p className="text-xs f-body mt-1.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              Guide sends a personalised offer
+              Guide sets up your trip offer
             </p>
           </>
         ) : (
@@ -973,7 +973,7 @@ export function BookingWidget({
           {/* Service fee */}
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-              Service fee (7%)
+              Service fee (5%)
             </span>
             <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
               €{serviceFee}
@@ -1039,7 +1039,7 @@ export function BookingWidget({
           </Link>
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
             {selectedDates.length > 0
-              ? 'Guide will review and send a personalised offer.'
+              ? 'Guide reviews and sets up your offer — no payment until confirmed.'
               : 'Select preferred dates above.'}
           </p>
         </>
@@ -1065,7 +1065,7 @@ export function BookingWidget({
           )}
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
             {selectedDates.length > 0
-              ? 'No charge yet — confirm with your guide first.'
+              ? '30% deposit via Stripe after guide confirms. Balance due before the trip.'
               : 'Select dates above to book.'}
           </p>
         </>
@@ -1078,8 +1078,8 @@ export function BookingWidget({
       <div className="flex flex-col gap-3">
         {[
           { icon: '✓', text: 'Guide verified by FjordAnglers' },
-          { icon: '€', text: 'Price shown — no hidden fees' },
-          { icon: '⌚', text: 'Confirmed within 24 hours' },
+          { icon: '🔒', text: 'Secure payment via Stripe' },
+          { icon: '⌚', text: 'Guide confirms within 24 hours' },
         ].map(item => (
           <div key={item.text} className="flex items-center gap-3">
             <span

@@ -28,7 +28,7 @@ export default async function GuideInquiriesPage() {
 
   if (user == null) {
     return (
-      <div className="px-10 py-10 max-w-[1100px]">
+      <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
         <p className="text-[#0A2E4D]/45 text-sm f-body">
           Please{' '}
           <Link href="/login" className="text-[#E67E50] underline underline-offset-2">
@@ -49,7 +49,7 @@ export default async function GuideInquiriesPage() {
 
   if (guide == null) {
     return (
-      <div className="px-10 py-10 max-w-[1100px]">
+      <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
         <p className="text-[#0A2E4D]/45 text-sm f-body">No guide profile found.</p>
       </div>
     )
@@ -99,7 +99,7 @@ export default async function GuideInquiriesPage() {
   ]
 
   return (
-    <div className="px-10 py-10 max-w-[1100px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
 
       {/* Header */}
       <div className="mb-8">

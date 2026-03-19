@@ -725,59 +725,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         </div>
       </SectionCard>
 
-      {/* ── External Reviews ───────────────────────────────────────── */}
-      <SectionCard
-        title="External Reviews"
-        subtitle="Provide your Google Business profile URL so anglers can see your verified reviews."
-      >
-        <div className="flex flex-col gap-4">
-          <div>
-            <Label htmlFor="google_profile_url">Google Business Profile URL</Label>
-            <input
-              id="google_profile_url"
-              type="url"
-              value={googleUrl}
-              onChange={e => setGoogleUrl(e.target.value)}
-              placeholder="https://g.page/your-business"
-              style={inputBase}
-              onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
-              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="google_rating">Google rating (1.0 – 5.0)</Label>
-              <input
-                id="google_rating"
-                type="number"
-                min="1"
-                max="5"
-                step="0.1"
-                value={googleRating}
-                onChange={e => setGoogleRating(e.target.value)}
-                placeholder="4.8"
-                style={inputBase}
-                onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
-                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
-              />
-            </div>
-            <div>
-              <Label htmlFor="google_review_count">Number of reviews</Label>
-              <input
-                id="google_review_count"
-                type="number"
-                min="0"
-                value={googleReviewCount}
-                onChange={e => setGoogleReviewCount(e.target.value)}
-                placeholder="128"
-                style={inputBase}
-                onFocus={e => { e.currentTarget.style.borderColor = '#E67E50' }}
-                onBlur={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.1)' }}
-              />
-            </div>
-          </div>
-        </div>
-      </SectionCard>
+      {/* External Reviews section removed — not used */}
 
       {/* ── Social links ───────────────────────────────────────────── */}
       <SectionCard title="Social Links" subtitle="Optional — helps anglers follow your work">

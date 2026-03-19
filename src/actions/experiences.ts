@@ -67,6 +67,8 @@ export type InclusionsPayload = {
   accommodation: boolean
   custom_included: string[]
   custom_excluded: string[]
+  /** Optional freetext note per inclusion key (e.g. rods → "All spinning rods provided") */
+  notes?: Record<string, string>
 }
 
 export type ItineraryStep = {

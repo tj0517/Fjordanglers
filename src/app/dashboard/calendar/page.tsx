@@ -115,7 +115,7 @@ export default async function CalendarPage({
     guidePrefs?.calendar_mode === 'shared' ? 'shared' : 'per_listing'
 
   return (
-    <div className="px-10 py-10 max-w-[900px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[900px]">
 
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <div className="mb-8">

@@ -25,7 +25,7 @@ export default async function EarningsPage() {
   // ── Auth guard ──────────────────────────────────────────────────────────────
   if (user == null) {
     return (
-      <div className="px-10 py-10">
+      <div className="px-4 py-6 sm:px-8 sm:py-10">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
@@ -48,7 +48,7 @@ export default async function EarningsPage() {
 
   if (guide == null) {
     return (
-      <div className="px-10 py-10">
+      <div className="px-4 py-6 sm:px-8 sm:py-10">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Guide Dashboard
         </p>
@@ -157,7 +157,7 @@ export default async function EarningsPage() {
   // ─── RENDER ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="px-10 py-10 max-w-[900px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[900px]">
 
       {/* Header */}
       <div className="mb-8">
@@ -309,7 +309,7 @@ export default async function EarningsPage() {
               const sharePct = totalEarned > 0 ? (exp.revenue / totalEarned) * 100 : 0
 
               return (
-                <div key={exp.id} className="px-7 py-4 flex items-center gap-5">
+                <div key={exp.id} className="px-4 sm:px-7 py-4 flex items-center gap-4 sm:gap-5">
                   {/* Rank */}
                   <p
                     className="text-2xl font-bold f-display flex-shrink-0 w-7 text-center"
@@ -346,7 +346,7 @@ export default async function EarningsPage() {
 
       {/* Stripe Connect notice */}
       <div
-        className="mt-6 px-7 py-5 flex items-center gap-5"
+        className="mt-6 px-4 sm:px-7 py-5 flex items-center gap-4 sm:gap-5"
         style={{
           background: 'linear-gradient(105deg, #0A1F35 0%, #1B4F72 100%)',
           borderRadius: '20px',

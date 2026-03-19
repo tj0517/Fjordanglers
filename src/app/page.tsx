@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { getFeaturedExperiences, getPlatformStats, getSpeciesCounts, getFeaturedGuides, getExperienceLocations } from '@/lib/supabase/queries'
-import type { GuideRow } from '@/lib/supabase/queries'
+import type { FeaturedGuide } from '@/lib/supabase/queries'
 import { FISH_CATALOG } from '@/lib/fish'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { SpeciesSlider } from '@/components/home/species-slider'
@@ -568,7 +568,7 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {featuredGuides.map((guide: GuideRow) => {
+              {featuredGuides.map((guide: FeaturedGuide) => {
                 const fishPills = (guide.fish_expertise as string[]).slice(0, 2)
                 return (
                   <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
@@ -688,7 +688,7 @@ export default async function HomePage() {
                 >
                   Get listed — DM us →
                 </a>
-                <a href="mailto:guides@fjordanglers.com" className="text-sm font-medium f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                <a href="mailto:contact@fjordanglers.com" className="text-sm font-medium f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>
                   or email us
                 </a>
               </div>

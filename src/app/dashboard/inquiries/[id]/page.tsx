@@ -83,7 +83,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
   const canSendOffer = inquiry.status === 'inquiry' || inquiry.status === 'reviewing'
 
   return (
-    <div className="px-10 py-10 max-w-[1100px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
 
       {/* Header */}
       <div className="mb-8">

@@ -133,9 +133,32 @@ export function Footer() {
           <p className="text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.18)' }}>
             © 2026 FjordAnglers. All rights reserved.
           </p>
-          <p className="hidden md:block text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.14)' }}>
-            Norway · Sweden · Finland · Iceland · Denmark
-          </p>
+          <div className="flex items-center gap-5 flex-wrap">
+            <Link
+              href="/legal/terms-of-service"
+              className="text-[12px] f-body transition-colors hover:text-white/40"
+              style={{ color: 'rgba(255,255,255,0.22)' }}
+            >
+              Terms of Service
+            </Link>
+            <Link
+              href="/legal/privacy-policy"
+              className="text-[12px] f-body transition-colors hover:text-white/40"
+              style={{ color: 'rgba(255,255,255,0.22)' }}
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              href="/legal/cookie-policy"
+              className="text-[12px] f-body transition-colors hover:text-white/40"
+              style={{ color: 'rgba(255,255,255,0.22)' }}
+            >
+              Cookie Policy
+            </Link>
+            <p className="hidden md:block text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.14)' }}>
+              Norway · Sweden · Finland · Iceland · Denmark
+            </p>
+          </div>
         </div>
       </div>
     </footer>

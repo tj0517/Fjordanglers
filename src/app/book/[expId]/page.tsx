@@ -7,7 +7,7 @@ import BookingCheckoutForm from './BookingCheckoutForm'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SERVICE_FEE_RATE = 0.07
+const SERVICE_FEE_RATE = 0.05
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -230,7 +230,7 @@ export default async function BookPage({ params, searchParams }: Props) {
                 label={`€${pricePerPerson}/pp × ${guests} ${guests === 1 ? 'angler' : 'anglers'} × ${dates.length} ${dates.length === 1 ? 'day' : 'days'}`}
                 value={`€${subtotal}`}
               />
-              <PriceLine label="Service fee (7%)" value={`€${serviceFee}`} muted />
+              <PriceLine label="Service fee (5%)" value={`€${serviceFee}`} muted />
 
               <div
                 className="my-1"
@@ -253,7 +253,7 @@ export default async function BookPage({ params, searchParams }: Props) {
                     className="text-[11px] f-body mt-0.5"
                     style={{ color: 'rgba(10,46,77,0.4)' }}
                   >
-                    No payment — guide confirms within 24h
+                    30% deposit via Stripe after confirmation
                   </p>
                 </div>
                 <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
@@ -274,8 +274,8 @@ export default async function BookPage({ params, searchParams }: Props) {
           >
             {[
               { icon: '🛡️', text: 'No payment required to send a request' },
-              { icon: '⏰', text: 'Guide responds within 24 hours' },
-              { icon: '✓', text: 'Free to request — pay only after confirmation' },
+              { icon: '⏰', text: 'Guide confirms within 24 hours' },
+              { icon: '🔒', text: '30% deposit via Stripe after confirmation — balance before the trip' },
             ].map(item => (
               <div key={item.text} className="flex items-center gap-3 mb-2.5 last:mb-0">
                 <span className="text-base leading-none">{item.icon}</span>
