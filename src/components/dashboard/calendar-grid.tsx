@@ -101,7 +101,8 @@ export default function CalendarGrid({
 }: CalendarGridProps) {
   const isShared = calendarMode === 'shared'
   const router = useRouter()
-  const [navPending, startNav] = useTransition()
+  const [navPending,     startNav]     = useTransition()
+  const [unblockPending, startUnblock] = useTransition()
   const modalRef       = useRef<HTMLDivElement>(null)
   const multiModalRef  = useRef<HTMLDivElement>(null)
   const monthModalRef  = useRef<HTMLDivElement>(null)
@@ -381,13 +382,13 @@ export default function CalendarGrid({
     setUnblockingId(blockId); setActionError(null)
     const result = await unblockDates(blockId)
     if ('error' in result) {
-      setUnblockingId(null)   // only reset on error — on success keep spinner
+      setUnblockingId(null)
       setActionError(result.error)
       return
     }
-    // Keep unblockingId set so the row stays in "removing" visual state
-    // until router.refresh() brings new data and the entry disappears
-    router.refresh()
+    // Use startTransition so we know when refresh completes, then clear state
+    startUnblock(() => { router.refresh() })
+    setUnblockingId(null)
   }
 
   // ── Derived data ───────────────────────────────────────────────────────────
@@ -938,7 +939,7 @@ export default function CalendarGrid({
                         </div>
                         <button
                           onClick={() => handleUnblock(b.id)}
-                          disabled={unblockingId != null}
+                          disabled={unblockingId === b.id || unblockPending}
                           className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold f-body px-2.5 py-1 rounded-lg transition-all"
                           style={{
                             color:      unblockingId === b.id ? 'rgba(201,96,48,0.5)' : '#C96030',
