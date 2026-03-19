@@ -73,4 +73,13 @@ function validateEnv(): Env {
   return result.data
 }
 
-export const env = validateEnv()
+// During `next build`, Next.js executes module-level code to analyse routes.
+// At that point server-only secrets (STRIPE_*, SUPABASE_SERVICE_ROLE_KEY) may
+// not be present in the build container — they're injected at runtime instead.
+// We skip strict validation in the build phase so the build succeeds; any
+// missing value will still cause a hard crash the first time the route actually
+// handles a request, which is the right time to surface the error.
+export const env: Env =
+  process.env.NEXT_PHASE === 'phase-production-build'
+    ? (process.env as unknown as Env)
+    : validateEnv()

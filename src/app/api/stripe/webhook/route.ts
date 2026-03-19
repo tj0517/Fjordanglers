@@ -15,6 +15,7 @@ import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
