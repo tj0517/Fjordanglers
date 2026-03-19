@@ -1,3 +1,4 @@
+// preview/main
 import Image from 'next/image'
 import Link from 'next/link'
 import { getFeaturedExperiences, getPlatformStats, getSpeciesCounts, getFeaturedGuides, getExperienceLocations } from '@/lib/supabase/queries'
