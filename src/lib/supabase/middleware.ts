@@ -39,9 +39,29 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: getUser() must be called to refresh the session.
   // Do NOT remove this line — it validates the JWT with Supabase Auth servers.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  // Stale / revoked refresh token (e.g. deleted test account, manual revocation).
+  // Sign out locally so the browser doesn't retry in an infinite loop, then
+  // redirect to /login. `scope: 'local'` skips the server call (which would
+  // fail anyway) and just clears the cookies via the setAll handler above.
+  if (
+    error?.code === 'refresh_token_not_found' ||
+    error?.message?.toLowerCase().includes('refresh token')
+  ) {
+    await supabase.auth.signOut({ scope: 'local' })
+
+    const loginUrl = new URL('/login', request.url)
+    const redirectResponse = NextResponse.redirect(loginUrl)
+
+    // Copy the cleared auth cookies to the redirect response so they are
+    // actually deleted in the browser (supabaseResponse has them after signOut)
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+    }
+
+    return { supabaseResponse: redirectResponse, user: null }
+  }
 
   return { supabaseResponse, user }
 }

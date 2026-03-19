@@ -3,8 +3,11 @@
 /**
  * Calendar Server Actions — guide manages availability / blocked dates.
  *
- * Uses the existing `experience_blocked_dates` table (date ranges per experience).
- * A single "block all" is implemented by inserting one row per experience.
+ * Uses the `experience_blocked_dates` table (date ranges per experience).
+ * A unique index on (experience_id, date_start, date_end) prevents duplicates.
+ *
+ * All inserts use upsert with ignoreDuplicates: true — blocking the same range
+ * twice is a no-op (idempotent), not an error.
  *
  * RLS on `experience_blocked_dates` ensures a guide can only read/write rows
  * that belong to their own experiences.
@@ -75,18 +78,23 @@ export async function blockDates(opts: {
       return { error: 'One or more experiences not found.' }
     }
 
-    const { error } = await supabase.from('experience_blocked_dates').insert(
-      opts.experienceIds.map((experienceId) => ({
-        experience_id: experienceId,
-        date_start:    opts.dateStart,
-        date_end:      opts.dateEnd,
-        reason:        opts.reason?.trim() || null,
-      }))
-    )
+    // upsert with ignoreDuplicates: true → INSERT … ON CONFLICT DO NOTHING
+    // Safe to call multiple times for the same range (idempotent).
+    const { error } = await supabase
+      .from('experience_blocked_dates')
+      .upsert(
+        opts.experienceIds.map((experienceId) => ({
+          experience_id: experienceId,
+          date_start:    opts.dateStart,
+          date_end:      opts.dateEnd,
+          reason:        opts.reason?.trim() || null,
+        })),
+        { onConflict: 'experience_id,date_start,date_end', ignoreDuplicates: true }
+      )
 
     if (error != null) {
       console.error('[calendar/blockDates]', error.message)
-      return { error: error.message }
+      return { error: 'Failed to block dates. Please try again.' }
     }
 
     return { success: true }
@@ -147,11 +155,15 @@ export async function blockMultipleDates(opts: {
       }))
     )
 
-    const { error } = await supabase.from('experience_blocked_dates').insert(rows)
+    // upsert with ignoreDuplicates: true → INSERT … ON CONFLICT DO NOTHING
+    // Already-blocked days in the selection are silently skipped.
+    const { error } = await supabase
+      .from('experience_blocked_dates')
+      .upsert(rows, { onConflict: 'experience_id,date_start,date_end', ignoreDuplicates: true })
 
     if (error != null) {
       console.error('[calendar/blockMultipleDates]', error.message)
-      return { error: error.message }
+      return { error: 'Failed to block dates. Please try again.' }
     }
 
     return { success: true }

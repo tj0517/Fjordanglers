@@ -1,7 +1,7 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 3 — calendar redesign ukończony. Poprzednie sesje: guide dashboard, booking flow edge cases.
+Sesja 5 — calendar: multi-kalendarze (agency mode), listings filter pills, Block▾ dropdown, unblock spinner, idempotent upsert, RLS fix, refresh_token fix. typecheck ✅ 0 błędów.
 
 ## Zrealizowane zadania
 
@@ -70,8 +70,56 @@ Sesja 3 — calendar redesign ukończony. Poprzednie sesje: guide dashboard, boo
   - Default: wszystkie tripy zaznaczone przy otwarciu modalu
   - Przyciski: "Block all trips" gdy wszystkie zaznaczone, "Block N trips" gdy wybór częściowy
 
+### Sesja 4 — Calendar UX + Build fixes
+
+#### Calendar dodatkowe features
+- **Clear button** w selection mode header — `setSelectedDays(new Set())`, zostaje w trybie zaznaczania
+- **Block month button** (salmon color) — otwiera modal blokowania całego bieżącego miesiąca
+  - `openMonthModal()` — default: wszystkie tripy, puste reason
+  - `handleMonthBlock()` — `blockDates({ dateStart: 'YYYY-MM-01', dateEnd: 'YYYY-MM-DD', experienceIds })`
+  - Modal: read-only date badge, trip checkboxes, reason input, dynamiczny label ("Block all of March" / "Block March for N trips")
+- **Per-trip colored chips** w komórkach dnia — dot w kolorze tripu + pierwsza nazwa tripu (truncate)
+- **Dwurzędowa legenda** — kolory tripów (nazwy) + klucz statusów
+
+#### Build fixes
+- **`env.ts`** — `NEXT_PHASE === 'phase-production-build'` skip Zod validation (runtime secrets niedostępne w build)
+- **`/api/stripe/webhook/route.ts`** — `export const dynamic = 'force-dynamic'`
+- **`species/[slug]/page.tsx`** — usunięto `generateStaticParams` (ISR via `revalidate`, nie potrzeba Supabase w build)
+
+#### Mobile overflow fix (guides/[id])
+- `items-start` → `lg:items-start` na głównym flex container
+- `w-full` na thumbnail strip w ExperienceGallery
+- `break-words` na bio i fact values
+
+### Sesja 5 — Multi-calendar (agency mode) + Calendar UX
+
+#### Bug fixes
+- **`audit_trigger_fn()`** — `OLD.user_id`/`NEW.user_id` → `auth.uid()` (experiences ma `guide_id` nie `user_id`); `RETURN NEW` → `RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END`
+- **`refresh_token_not_found`** — `src/lib/supabase/middleware.ts` dodano check: `signOut({ scope: 'local' })` + redirect `/login`; projekt używa `src/proxy.ts` (nie standardowego middleware.ts)
+- **Idempotent blocking** — `insert()` → `upsert({ onConflict: 'experience_id,date_start,date_end', ignoreDuplicates: true })` w `blockDates` i `blockMultipleDates`
+
+#### Calendar UX
+- **Listings pill-strip** ponad gridem — filtruje które tripy widać w komórkach (nie w headerze)
+- **Block ▾ dropdown** w headerze — łączy "Block season" + "Block month" w jedno menu
+- **Fixed cell height** `height: '80px'` — eliminuje viewport jump przy zmianie filtra
+- **Unblock spinner** — per-block `unblockingId` state; stan "usuwania" trzymany do momentu `router.refresh()` (nie czyszczony na success)
+
+#### Multi-calendar (agency mode)
+- **`supabase/migrations/20260319192731_add_guide_calendars.sql`** — tabele `guide_calendars` + `calendar_experiences` z RLS
+- **`src/actions/calendars.ts`** — CRUD: `createCalendar`, `updateCalendar`, `deleteCalendar`, `setCalendarExperiences` + fetche `getGuideCalendars`, `getCalendarExperienceMap`
+- **`src/components/dashboard/calendars-panel.tsx`** — sidebar: create/rename/delete kalendarzy + checkboxy przypisywania listingów; stan: `idle | creating | editing | confirming-delete`
+- **`src/app/dashboard/calendar/page.tsx`** — two-column layout; filtruje experiences przez `?calendarId=xxx`; empty state gdy brak listingów w kalendarzu
+- ⚠️ `as any` casty na `guide_calendars`/`calendar_experiences` — usunąć po regeneracji `database.types.ts`
+
+#### Wymagana akcja — migracja
+```bash
+supabase db push
+# lub wklej SQL z supabase/migrations/20260319192731_add_guide_calendars.sql w Dashboard
+supabase gen types typescript --local > src/lib/supabase/database.types.ts
+```
+
 ## Stan typechecku
-`pnpm typecheck` → 0 błędów po wszystkich zmianach (sesja 3).
+`pnpm typecheck` → 0 błędów (sesja 5).
 
 ## Do zrobienia (booking flow właściwy)
 - `src/actions/bookings.ts` — Server Action `createBooking()` z Stripe PaymentIntent

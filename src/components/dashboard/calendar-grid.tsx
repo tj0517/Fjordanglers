@@ -105,6 +105,7 @@ export default function CalendarGrid({
   const modalRef       = useRef<HTMLDivElement>(null)
   const multiModalRef  = useRef<HTMLDivElement>(null)
   const monthModalRef  = useRef<HTMLDivElement>(null)
+  const blockMenuRef   = useRef<HTMLDivElement>(null)
 
   // ── Single-day modal state ─────────────────────────────────────────────────
   const [selectedDay,   setSelectedDay]   = useState<string | null>(null)
@@ -137,9 +138,19 @@ export default function CalendarGrid({
   const [monthBlockExpIds,  setMonthBlockExpIds]  = useState<string[]>([])
   const [monthBlockReason,  setMonthBlockReason]  = useState('')
 
+  // ── Listings filter (view only — which trips to show in calendar) ─────────────
+  const [visibleExpIds, setVisibleExpIds] = useState<Set<string>>(
+    () => new Set(experiences.map(e => e.id))
+  )
+
+  // ── Block menu (season / month) ───────────────────────────────────────────────
+  const [showBlockMenu, setShowBlockMenu] = useState(false)
+
   // ── Shared action state ─────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [actionError,  setActionError]  = useState<string | null>(null)
+  // Tracks which specific block entry is being unblocked (for per-row spinner)
+  const [unblockingId, setUnblockingId] = useState<string | null>(null)
 
   // ── Per-trip colour map ────────────────────────────────────────────────────
   const expColors = useMemo(
@@ -149,10 +160,17 @@ export default function CalendarGrid({
     [experiences]
   )
 
+  // ── Visible trips (view filter) ────────────────────────────────────────────
+  const visibleExps = useMemo(
+    () => experiences.filter(e => visibleExpIds.has(e.id)),
+    [experiences, visibleExpIds]
+  )
+
   // ── Keyboard: Escape closes modals / exits selection ──────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
+      if (showBlockMenu)       { setShowBlockMenu(false); return }
       if (showMonthModal)      { setShowMonthModal(false); return }
       if (showRangeModal)      { setShowRangeModal(false); return }
       if (showMultiModal)      { setShowMultiModal(false); return }
@@ -161,7 +179,19 @@ export default function CalendarGrid({
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [showMonthModal, showRangeModal, showMultiModal, selectedDay, selectionMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showBlockMenu, showMonthModal, showRangeModal, showMultiModal, selectedDay, selectionMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Click-outside: close block menu ───────────────────────────────────────
+  useEffect(() => {
+    if (!showBlockMenu) return
+    const handler = (e: MouseEvent) => {
+      if (!blockMenuRef.current?.contains(e.target as Node)) {
+        setShowBlockMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showBlockMenu])
 
   // Focus modal on open
   useEffect(() => { if (selectedDay != null)  modalRef.current?.focus()      }, [selectedDay])
@@ -177,12 +207,15 @@ export default function CalendarGrid({
       if (map[key] == null) map[key] = { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set() }
       return map[key]!
     }
-    const filteredBlocked  = !isShared && activeTripId != null
+    // Apply view filter (visibleExpIds) on top of per_listing / shared mode filter
+    const filteredBlocked  = (!isShared && activeTripId != null
       ? blocked.filter(b => b.experience_id === activeTripId)
       : blocked
-    const filteredBookings = !isShared && activeTripId != null
+    ).filter(b => visibleExpIds.has(b.experience_id))
+    const filteredBookings = (!isShared && activeTripId != null
       ? bookings.filter(bk => bk.experience_id === activeTripId)
       : bookings
+    ).filter(bk => visibleExpIds.has(bk.experience_id))
     for (const b of filteredBlocked) {
       let cur = parseUTC(b.date_start)
       const end = parseUTC(b.date_end)
@@ -196,7 +229,7 @@ export default function CalendarGrid({
     }
     for (const bk of filteredBookings) get(bk.booking_date).bookingEntries.push(bk)
     return map
-  }, [blocked, bookings, isShared, activeTripId])
+  }, [blocked, bookings, isShared, activeTripId, visibleExpIds])
 
   // ── Calendar geometry ──────────────────────────────────────────────────────
   const daysInMonth  = new Date(year, month, 0).getDate()
@@ -345,10 +378,15 @@ export default function CalendarGrid({
   }
 
   async function handleUnblock(blockId: string) {
-    setIsSubmitting(true); setActionError(null)
+    setUnblockingId(blockId); setActionError(null)
     const result = await unblockDates(blockId)
-    setIsSubmitting(false)
-    if ('error' in result) { setActionError(result.error); return }
+    if ('error' in result) {
+      setUnblockingId(null)   // only reset on error — on success keep spinner
+      setActionError(result.error)
+      return
+    }
+    // Keep unblockingId set so the row stays in "removing" visual state
+    // until router.refresh() brings new data and the entry disappears
     router.refresh()
   }
 
@@ -388,52 +426,53 @@ export default function CalendarGrid({
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* ─── Per-trip picker ─────────────────────────────────────────────────── */}
-      {!isShared && experiences.length > 1 && (
-        <div
-          className="mb-4 px-5 py-4 rounded-2xl"
-          style={{
-            background: '#FDFAF7',
-            border:     '1px solid rgba(10,46,77,0.07)',
-          }}
-        >
-          <p
-            className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-3"
-            style={{ color: 'rgba(10,46,77,0.38)' }}
+      {/* ─── Listings filter pills ───────────────────────────────────────────── */}
+      {experiences.length > 1 && (
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          {/* "All" pill */}
+          <button
+            onClick={() => setVisibleExpIds(new Set(experiences.map(e => e.id)))}
+            className="text-xs font-semibold f-body px-3 py-1.5 rounded-full transition-all"
+            style={{
+              background: visibleExpIds.size === experiences.length ? '#0A2E4D'              : 'rgba(10,46,77,0.05)',
+              color:      visibleExpIds.size === experiences.length ? 'white'                : 'rgba(10,46,77,0.5)',
+              border:     visibleExpIds.size === experiences.length ? '1px solid transparent' : '1px solid rgba(10,46,77,0.1)',
+              cursor: 'pointer',
+            }}
           >
-            Viewing calendar for
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {experiences.map(exp => {
-              const isActive = activeTripId === exp.id
-              return (
-                <button
-                  key={exp.id}
-                  onClick={() => setActiveTripId(exp.id)}
-                  className="flex items-center gap-2 text-sm font-semibold f-body px-4 py-2 rounded-xl transition-all"
-                  style={{
-                    background: isActive ? '#0A2E4D'                  : 'rgba(10,46,77,0.05)',
-                    color:      isActive ? 'white'                    : 'rgba(10,46,77,0.55)',
-                    border:     isActive ? '1px solid transparent'    : '1px solid rgba(10,46,77,0.1)',
-                    cursor:     'pointer',
-                  }}
-                >
-                  {exp.title}
-                  {!exp.published && (
-                    <span
-                      className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full"
-                      style={{
-                        background: isActive ? 'rgba(255,255,255,0.15)' : 'rgba(10,46,77,0.08)',
-                        color:      isActive ? 'rgba(255,255,255,0.7)'  : 'rgba(10,46,77,0.4)',
-                      }}
-                    >
-                      Draft
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+            All
+          </button>
+
+          {/* Per-trip pills */}
+          {experiences.map((exp, i) => {
+            const isOn  = visibleExpIds.has(exp.id)
+            const dot   = TRIP_PALETTE[i % TRIP_PALETTE.length]!
+            return (
+              <button
+                key={exp.id}
+                onClick={() => {
+                  setVisibleExpIds(prev => {
+                    const next = new Set(prev)
+                    if (next.has(exp.id)) next.delete(exp.id)
+                    else next.add(exp.id)
+                    // Never leave everything unchecked — if last one deselected, restore all
+                    if (next.size === 0) return new Set(experiences.map(e => e.id))
+                    return next
+                  })
+                }}
+                className="flex items-center gap-1.5 text-xs font-semibold f-body px-3 py-1.5 rounded-full transition-all"
+                style={{
+                  background: isOn ? 'rgba(10,46,77,0.08)' : 'rgba(10,46,77,0.03)',
+                  color:      isOn ? '#0A2E4D'              : 'rgba(10,46,77,0.35)',
+                  border:     isOn ? `1.5px solid ${dot}`   : '1.5px solid rgba(10,46,77,0.08)',
+                  cursor: 'pointer',
+                }}
+              >
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: isOn ? dot : 'rgba(10,46,77,0.2)' }} />
+                <span className="max-w-[120px] truncate">{exp.title}</span>
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -540,41 +579,80 @@ export default function CalendarGrid({
                     <rect x="0.5" y="6.5" width="4" height="4" rx="0.5" />
                     <rect x="6.5" y="6.5" width="4" height="4" rx="0.5" />
                   </svg>
-                  Select days
+                  <span className="hidden sm:inline">Select days</span>
                 </button>
-                <button
-                  onClick={openRangeModal}
-                  className="flex items-center gap-1.5 text-xs font-semibold f-body px-3 py-1.5 rounded-lg transition-colors"
-                  style={{ color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.12)', cursor: 'pointer', background: 'rgba(10,46,77,0.04)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,46,77,0.08)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(10,46,77,0.04)' }}
-                >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="0.5" y="2.5" width="10" height="8" rx="1" />
-                    <line x1="0.5" y1="5" x2="10.5" y2="5" />
-                    <line x1="3" y1="0.5" x2="3" y2="3.5" />
-                    <line x1="8" y1="0.5" x2="8" y2="3.5" />
-                  </svg>
-                  Block season
-                </button>
-                <button
-                  onClick={openMonthModal}
-                  className="flex items-center gap-1.5 text-xs font-semibold f-body px-3 py-1.5 rounded-lg transition-colors"
-                  style={{ color: '#E67E50', border: '1px solid rgba(230,126,80,0.25)', cursor: 'pointer', background: 'rgba(230,126,80,0.06)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(230,126,80,0.12)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(230,126,80,0.06)' }}
-                >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="0.5" y="2.5" width="10" height="8" rx="1" />
-                    <line x1="0.5" y1="5" x2="10.5" y2="5" />
-                    <line x1="3" y1="0.5" x2="3" y2="3.5" />
-                    <line x1="8" y1="0.5" x2="8" y2="3.5" />
-                    <line x1="5.5" y1="7" x2="5.5" y2="9.5" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="4.25" y1="7" x2="6.75" y2="7" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                  <span className="hidden sm:inline">Block month</span>
-                  <span className="sm:hidden">Month</span>
-                </button>
+
+                {/* ── Block ▾ dropdown ──────────────────────────────────────── */}
+                <div className="relative" ref={blockMenuRef}>
+                  <button
+                    onClick={() => setShowBlockMenu(p => !p)}
+                    className="flex items-center gap-1 text-xs font-semibold f-body px-3 py-1.5 rounded-lg transition-colors"
+                    style={{
+                      color:      '#0A2E4D',
+                      border:     '1px solid rgba(10,46,77,0.12)',
+                      background: showBlockMenu ? 'rgba(10,46,77,0.08)' : 'rgba(10,46,77,0.04)',
+                      cursor:     'pointer',
+                    }}
+                    aria-haspopup="menu"
+                    aria-expanded={showBlockMenu}
+                  >
+                    Block
+                    <svg
+                      width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+                      style={{ transform: showBlockMenu ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}
+                    >
+                      <polyline points="1.5,3 4.5,6 7.5,3" />
+                    </svg>
+                  </button>
+
+                  {showBlockMenu && (
+                    <div
+                      className="absolute right-0 top-full mt-1.5 z-30 rounded-xl overflow-hidden flex flex-col"
+                      style={{
+                        background:  '#FDFAF7',
+                        border:      '1px solid rgba(10,46,77,0.1)',
+                        boxShadow:   '0 8px 28px rgba(7,17,28,0.12)',
+                        minWidth:    '152px',
+                      }}
+                      role="menu"
+                    >
+                      <button
+                        role="menuitem"
+                        onClick={() => { setShowBlockMenu(false); openRangeModal() }}
+                        className="flex items-center gap-2.5 px-4 py-3 text-xs font-semibold f-body text-left transition-colors"
+                        style={{ color: '#0A2E4D', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,46,77,0.05)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="0.5" y="2.5" width="10" height="8" rx="1" />
+                          <line x1="0.5" y1="5" x2="10.5" y2="5" />
+                          <line x1="3" y1="0.5" x2="3" y2="3.5" />
+                          <line x1="8" y1="0.5" x2="8" y2="3.5" />
+                        </svg>
+                        Block season
+                      </button>
+                      <button
+                        role="menuitem"
+                        onClick={() => { setShowBlockMenu(false); openMonthModal() }}
+                        className="flex items-center gap-2.5 px-4 py-3 text-xs font-semibold f-body text-left transition-colors"
+                        style={{ color: '#E67E50', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(230,126,80,0.06)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="0.5" y="2.5" width="10" height="8" rx="1" />
+                          <line x1="0.5" y1="5" x2="10.5" y2="5" />
+                          <line x1="3" y1="0.5" x2="3" y2="3.5" />
+                          <line x1="8" y1="0.5" x2="8" y2="3.5" />
+                          <line x1="5.5" y1="7" x2="5.5" y2="9.5" strokeWidth="2" strokeLinecap="round" />
+                          <line x1="4.25" y1="7" x2="6.75" y2="7" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                        Block month
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
@@ -595,7 +673,7 @@ export default function CalendarGrid({
         <div className="grid grid-cols-7 gap-px p-px" style={{ background: 'rgba(10,46,77,0.04)' }}>
           {/* Empty offset */}
           {Array.from({ length: startOffset }, (_, i) => (
-            <div key={`off-${i}`} style={{ background: '#FDFAF7', minHeight: '72px' }} />
+            <div key={`off-${i}`} style={{ background: '#FDFAF7', height: '80px' }} />
           ))}
 
           {/* Day cells */}
@@ -609,10 +687,10 @@ export default function CalendarGrid({
             const isSelected   = selectionMode && selectedDays.has(dayStr)
             const blockedCount  = data?.blockedExpIds.size ?? 0
             // Per-trip mode: day is simply blocked or not for this one trip.
-            // Shared / "all trips" mode: partial = some but not all trips blocked.
+            // Shared / "all trips" mode: partial = some but not all visible trips blocked.
             const fullyBlocked = !isShared && activeTripId != null
               ? (data?.blockedExpIds.has(activeTripId) ?? false)
-              : (blockedCount >= experiences.length && blockedCount > 0)
+              : (blockedCount >= visibleExps.length && blockedCount > 0)
             const partBlocked  = !isShared && activeTripId != null
               ? false
               : (blockedCount > 0 && !fullyBlocked)
@@ -633,15 +711,14 @@ export default function CalendarGrid({
               <button
                 key={dayStr}
                 onClick={() => handleDayClick(dayStr)}
-                className="relative flex flex-col items-start p-2 transition-colors text-left"
+                className="relative flex flex-col items-start p-2 transition-colors text-left overflow-hidden"
                 style={{
-                  background:  bg,
-                  minHeight:   '72px',
-                  opacity:     isPast && !isSelected ? 0.45 : 1,
-                  cursor:      'pointer',
-                  outline:     'none',
-                  // Selection mode ring
-                  border:      isSelected ? '2px solid #E67E50' : '2px solid transparent',
+                  background: bg,
+                  height:     '80px',   // fixed — prevents layout jump when chips change
+                  opacity:    isPast && !isSelected ? 0.45 : 1,
+                  cursor:     'pointer',
+                  outline:    'none',
+                  border:     isSelected ? '2px solid #E67E50' : '2px solid transparent',
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background =
@@ -669,9 +746,9 @@ export default function CalendarGrid({
                   ) : day}
                 </span>
 
-                {/* Per-trip status dots */}
+                {/* Per-trip status dots (only visible trips) */}
                 <div className="flex flex-col gap-px w-full mt-auto">
-                  {experiences.map((exp) => {
+                  {visibleExps.map((exp) => {
                     const isExpBlocked = data?.blockedExpIds.has(exp.id) ?? false
                     const expBks       = data?.bookingEntries.filter(b => b.experience_id === exp.id) ?? []
                     const hasConf      = expBks.some(b => b.status === 'confirmed')
@@ -701,23 +778,26 @@ export default function CalendarGrid({
         <div className="px-6 py-3 flex flex-col gap-2.5"
              style={{ borderTop: '1px solid rgba(10,46,77,0.05)' }}>
 
-          {/* Trip colour key */}
-          {experiences.length > 0 && (
+          {/* Trip colour key — only visible trips */}
+          {visibleExps.length > 0 && (
             <div className="flex items-center flex-wrap gap-x-5 gap-y-1.5">
-              {experiences.map((exp, i) => (
-                <div key={exp.id} className="flex items-center gap-1.5">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ background: TRIP_PALETTE[i % TRIP_PALETTE.length] }}
-                  />
-                  <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                    {exp.title}
-                    {!exp.published && (
-                      <span style={{ color: 'rgba(10,46,77,0.35)' }}> (draft)</span>
-                    )}
-                  </span>
-                </div>
-              ))}
+              {visibleExps.map((exp) => {
+                const globalIdx = experiences.findIndex(e => e.id === exp.id)
+                return (
+                  <div key={exp.id} className="flex items-center gap-1.5">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                      style={{ background: TRIP_PALETTE[globalIdx % TRIP_PALETTE.length] }}
+                    />
+                    <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                      {exp.title}
+                      {!exp.published && (
+                        <span style={{ color: 'rgba(10,46,77,0.35)' }}> (draft)</span>
+                      )}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           )}
 
@@ -835,7 +915,13 @@ export default function CalendarGrid({
                   <div className="flex flex-col gap-2">
                     {selData.blockedEntries.map(b => (
                       <div key={b.id} className="flex items-start gap-3 px-4 py-3 rounded-xl"
-                           style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.12)' }}>
+                           style={{
+                             background:  'rgba(230,126,80,0.06)',
+                             border:      '1px solid rgba(230,126,80,0.12)',
+                             opacity:     unblockingId === b.id ? 0.45 : 1,
+                             transition:  'opacity 0.2s',
+                             pointerEvents: unblockingId === b.id ? 'none' : 'auto',
+                           }}>
                         <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: '#E67E50' }} />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
@@ -850,10 +936,31 @@ export default function CalendarGrid({
                             </p>
                           )}
                         </div>
-                        <button onClick={() => handleUnblock(b.id)} disabled={isSubmitting}
-                          className="flex-shrink-0 text-xs font-semibold f-body px-2.5 py-1 rounded-lg transition-colors hover:bg-[#C96030]/[0.1]"
-                          style={{ color: '#C96030', cursor: 'pointer' }}>
-                          Unblock
+                        <button
+                          onClick={() => handleUnblock(b.id)}
+                          disabled={unblockingId != null}
+                          className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold f-body px-2.5 py-1 rounded-lg transition-all"
+                          style={{
+                            color:      unblockingId === b.id ? 'rgba(201,96,48,0.5)' : '#C96030',
+                            cursor:     unblockingId != null ? 'not-allowed' : 'pointer',
+                            background: 'transparent',
+                            border:     'none',
+                          }}
+                        >
+                          {unblockingId === b.id ? (
+                            <>
+                              <svg
+                                className="animate-spin"
+                                width="11" height="11" viewBox="0 0 11 11" fill="none"
+                                stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                              >
+                                <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
+                              </svg>
+                              Unblocking…
+                            </>
+                          ) : (
+                            'Unblock'
+                          )}
                         </button>
                       </div>
                     ))}
