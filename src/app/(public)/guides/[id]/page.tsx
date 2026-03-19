@@ -196,7 +196,7 @@ export default async function GuideProfilePage({
       {/* ─── MAIN CONTENT ────────────────────────────────────────── */}
       <div className="px-4 md:px-8 pb-12 md:pb-24" style={{ background: '#F3EDE4' }}>
         <div className="max-w-7xl mx-auto pt-8 md:pt-10">
-          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
+          <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 lg:items-start">
 
             {/* ─── LEFT ────────────────────────────────────────── */}
             <div className="flex-1 min-w-0">
@@ -211,7 +211,7 @@ export default async function GuideProfilePage({
                   {guide.full_name.split(' ')[0]}&apos;s story
                 </h2>
                 {guide.bio != null && (
-                  <p className="text-base leading-[1.8] f-body" style={{ color: 'rgba(10,46,77,0.65)', maxWidth: '600px' }}>
+                  <p className="text-base leading-[1.8] f-body break-words" style={{ color: 'rgba(10,46,77,0.65)', maxWidth: '600px' }}>
                     {guide.bio}
                   </p>
                 )}
@@ -333,7 +333,7 @@ export default async function GuideProfilePage({
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
                         {fact.label}
                       </p>
-                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{fact.value}</p>
+                      <p className="text-sm font-semibold f-body break-words" style={{ color: '#0A2E4D' }}>{fact.value}</p>
                     </div>
                   ))}
                 </div>

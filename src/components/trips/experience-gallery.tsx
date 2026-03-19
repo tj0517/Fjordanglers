@@ -167,7 +167,7 @@ export function ExperienceGallery({ images, title }: Props) {
         </div>
 
         {sorted.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
+          <div className="flex gap-2 overflow-x-auto pb-1 w-full" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
             {sorted.map((img, i) => (
               <button
                 key={img.id}
