@@ -72,7 +72,7 @@ export function LoginForm() {
   const searchParams = useSearchParams()
 
   // Where to go after successful login (set by middleware when protecting /dashboard)
-  const nextUrl = searchParams.get('next') ?? '/account'
+  const nextUrl = searchParams.get('next') ?? '/dashboard'
 
   // Surface errors from the /auth/callback route (e.g. expired confirmation link)
   const callbackError = searchParams.get('error')

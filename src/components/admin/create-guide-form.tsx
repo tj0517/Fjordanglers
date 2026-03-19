@@ -180,6 +180,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
   const [youtubeUrl, setYoutubeUrl]       = useState(defaultValues?.youtube_url ?? '')
   const [inviteEmail, setInviteEmail]     = useState(defaultValues?.invite_email ?? '')
   const [pricingModel, setPricingModel]   = useState<'flat_fee' | 'commission'>(defaultValues?.pricing_model ?? 'commission')
+  const [termsConfirmed, setTermsConfirmed] = useState(false)
   const [error, setError]                 = useState<string | null>(null)
   const [success, setSuccess]             = useState(false)
   const [createdId, setCreatedId]         = useState<string | null>(null)
@@ -209,6 +210,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
     setInstagramUrl('')
     setYoutubeUrl('')
     setPricingModel('commission')
+    setTermsConfirmed(false)
     setSuccess(false)
     setCreatedId(null)
     setError(null)
@@ -672,11 +674,72 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
         </div>
       </div>
 
+      {/* ── TERMS CONFIRMATION ──────────────────────────────────── */}
+      <div
+        className="p-6 mb-5 rounded-3xl"
+        style={{
+          background: '#FDFAF7',
+          border: '1px solid rgba(10,46,77,0.07)',
+          boxShadow: '0 2px 16px rgba(10,46,77,0.04)',
+        }}
+      >
+        <label className="flex items-start gap-3 cursor-pointer select-none">
+          <span className="relative flex-shrink-0 mt-0.5">
+            <input
+              type="checkbox"
+              checked={termsConfirmed}
+              onChange={e => setTermsConfirmed(e.target.checked)}
+              className="sr-only"
+            />
+            <span
+              className="flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-[1.5px] transition-all"
+              style={{
+                background: termsConfirmed ? '#E67E50' : '#F3EDE4',
+                borderColor: termsConfirmed ? '#E67E50' : 'rgba(10,46,77,0.2)',
+              }}
+            >
+              {termsConfirmed && (
+                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
+          </span>
+          <span className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+            I confirm that{' '}
+            <span className="font-semibold" style={{ color: '#0A2E4D' }}>
+              {fullName.trim() !== '' ? fullName.trim() : 'the guide'}
+            </span>{' '}
+            has read and accepted the{' '}
+            <a
+              href="/legal/terms-of-service"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+              style={{ color: '#0A2E4D' }}
+            >
+              Terms of Service
+            </a>
+            {' '}and{' '}
+            <a
+              href="/legal/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold underline underline-offset-2 transition-opacity hover:opacity-70"
+              style={{ color: '#0A2E4D' }}
+            >
+              Privacy Policy
+            </a>
+            , including the commission structure and payout terms.
+          </span>
+        </label>
+      </div>
+
       {/* ── SUBMIT ──────────────────────────────────────────────── */}
       <div className="flex items-center gap-4">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || !termsConfirmed}
           className="flex items-center gap-2 text-white text-sm font-semibold px-7 py-3.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100 f-body"
           style={{ background: '#E67E50' }}
         >

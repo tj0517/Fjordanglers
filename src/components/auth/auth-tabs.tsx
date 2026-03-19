@@ -67,7 +67,7 @@ export function AuthTabs() {
   const searchParams = useSearchParams()
 
   const initialTab = (searchParams.get('tab') === 'register' ? 'register' : 'login') as Tab
-  const nextUrl = searchParams.get('next') ?? '/account'
+  const nextUrl = searchParams.get('next') ?? '/dashboard'
   const callbackError = searchParams.get('error')
   const callbackErrorMsg = callbackError != null
     ? (CALLBACK_ERRORS[callbackError] ?? 'An authentication error occurred. Please try again.')
