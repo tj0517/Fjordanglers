@@ -1,0 +1,245 @@
+import Link from 'next/link'
+import Image from 'next/image'
+import { notFound, redirect } from 'next/navigation'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import BookingChat, { type ChatMessage } from '@/components/booking/chat'
+import type { Database } from '@/lib/supabase/database.types'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type BookingStatus = Database['public']['Enums']['booking_status']
+
+const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
+  confirmed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed' },
+  pending:    { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'   },
+  cancelled:  { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled' },
+  completed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed' },
+  refunded:   { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'  },
+  accepted:   { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'  },
+  declined:   { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'  },
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function AnglerBookingDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect(`/login?next=/account/bookings/${id}`)
+
+  // Booking — must belong to this angler (RLS enforces angler_id = auth.uid())
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select(
+      '*, experience:experiences(id, title, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id)',
+    )
+    .eq('id', id)
+    .eq('angler_id', user.id)
+    .single()
+
+  if (!booking) notFound()
+
+  // Initial messages
+  const serviceClient = createServiceClient()
+  const { data: rawMsgs } = await serviceClient
+    .from('booking_messages')
+    .select('id, body, sender_id, created_at')
+    .eq('booking_id', id)
+    .order('created_at', { ascending: true })
+
+  const initialMessages = (rawMsgs ?? []) as ChatMessage[]
+
+  const exp   = booking.experience as unknown as {
+    id: string; title: string;
+    experience_images: { url: string; is_cover: boolean; sort_order: number }[]
+  } | null
+  const guide = booking.guide as unknown as { id: string; full_name: string; user_id: string } | null
+  const s     = STATUS_STYLES[booking.status]
+
+  // Cover image
+  const images = exp?.experience_images ?? []
+  const cover  =
+    images.find(img => img.is_cover) ??
+    images.sort((a, b) => a.sort_order - b.sort_order)[0]
+  const coverUrl = cover?.url ?? null
+
+  const dateFormatted = new Date(booking.booking_date).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  })
+  const createdFormatted = new Date(booking.created_at).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
+
+  return (
+    <div className="px-10 py-10 max-w-[960px]">
+
+      {/* ── Back nav ────────────────────────────────────────────────────────── */}
+      <Link
+        href="/account/bookings"
+        className="inline-flex items-center gap-1.5 text-xs f-body mb-7 transition-opacity hover:opacity-70"
+        style={{ color: 'rgba(10,46,77,0.45)' }}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <polyline points="7,2 3,6 7,10" />
+          <line x1="3" y1="6" x2="11" y2="6" />
+        </svg>
+        My Bookings
+      </Link>
+
+      {/* ── Two-column layout ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
+
+        {/* ── LEFT: Booking info ─────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-5">
+          <div
+            className="overflow-hidden"
+            style={{
+              background: '#FDFAF7',
+              borderRadius: '24px',
+              border: '1px solid rgba(10,46,77,0.07)',
+              boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
+            }}
+          >
+            {/* Cover image */}
+            {coverUrl != null && (
+              <div style={{ height: 180, position: 'relative', background: 'rgba(10,46,77,0.08)' }}>
+                <Image
+                  src={coverUrl}
+                  alt={exp?.title ?? 'Trip'}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            )}
+
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="min-w-0">
+                  <p
+                    className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body"
+                    style={{ color: 'rgba(10,46,77,0.38)' }}
+                  >
+                    Your Booking · {createdFormatted}
+                  </p>
+                  <h1 className="text-[#0A2E4D] text-xl font-bold f-display leading-snug">
+                    {exp?.title ?? 'Fishing trip'}
+                  </h1>
+                  <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                    {dateFormatted}
+                  </p>
+                </div>
+                <span
+                  className="flex-shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] px-3 py-1.5 rounded-full f-body"
+                  style={{ background: s.bg, color: s.color }}
+                >
+                  {s.label}
+                </span>
+              </div>
+
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <InfoCard label="Anglers"    value={`${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`} />
+                <InfoCard label="Total paid" value={`€${booking.total_eur}`} />
+              </div>
+
+              {/* Guide card */}
+              {guide != null && (
+                <div
+                  className="flex items-center gap-3 p-4 rounded-2xl"
+                  style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.06)' }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                    style={{ background: '#0A2E4D' }}
+                  >
+                    {guide.full_name[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                      {guide.full_name}
+                    </p>
+                    <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      Your guide
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Link to original inquiry (custom trips only) */}
+              {booking.inquiry_id != null && (
+                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                  <Link
+                    href={`/account/trips/${booking.inquiry_id}`}
+                    className="inline-flex items-center gap-1.5 text-xs f-body font-medium transition-opacity hover:opacity-70"
+                    style={{ color: 'rgba(10,46,77,0.5)' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M10 2H2a1 1 0 00-1 1v6a1 1 0 001 1h2.5l1.5 1.5 1.5-1.5H10a1 1 0 001-1V3a1 1 0 00-1-1z" />
+                    </svg>
+                    View original request →
+                  </Link>
+                </div>
+              )}
+
+              {/* Special requests */}
+              {booking.special_requests != null && (
+                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                  <p
+                    className="text-[10px] uppercase tracking-[0.18em] mb-1.5 f-body"
+                    style={{ color: 'rgba(10,46,77,0.38)' }}
+                  >
+                    Your requests
+                  </p>
+                  <p
+                    className="text-sm f-body leading-relaxed"
+                    style={{ color: 'rgba(10,46,77,0.65)' }}
+                  >
+                    {booking.special_requests}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── RIGHT: Chat ────────────────────────────────────────────────────── */}
+        <div className="lg:sticky lg:top-6">
+          <BookingChat
+            bookingId={id}
+            currentUserId={user.id}
+            myName={booking.angler_full_name ?? 'You'}
+            partnerName={guide?.full_name ?? 'Guide'}
+            initialMessages={initialMessages}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
+function InfoCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      className="px-4 py-3 rounded-2xl"
+      style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.06)' }}
+    >
+      <p
+        className="text-[10px] uppercase tracking-[0.15em] mb-1 f-body"
+        style={{ color: 'rgba(10,46,77,0.38)' }}
+      >
+        {label}
+      </p>
+      <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
+        {value}
+      </p>
+    </div>
+  )
+}

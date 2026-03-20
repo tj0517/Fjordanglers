@@ -13,6 +13,7 @@ import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
+import { createBookingFromInquiry } from '@/lib/create-booking-from-inquiry'
 import { env } from '@/lib/env'
 import type { Json } from '@/lib/supabase/database.types'
 
@@ -28,11 +29,34 @@ const submitInquirySchema = z.object({
   groupSize: z.number().int().min(1).max(50),
   preferences: z
     .object({
-      budgetMin: z.number().optional(),
-      budgetMax: z.number().optional(),
-      accommodation: z.boolean().optional(),
-      riverType: z.string().optional(),
-      notes: z.string().max(2000).optional(),
+      // Duration & scheduling
+      durationType:     z.enum(['half_day', 'full_day', 'multi_day']).optional(),
+      numDays:          z.number().int().min(1).max(30).optional(),
+      flexibleDates:    z.boolean().optional(),
+      preferredMonths:  z.array(z.string()).optional(),
+      // Group composition
+      hasBeginners:     z.boolean().optional(),
+      hasChildren:      z.boolean().optional(),
+      // Logistics
+      gearNeeded:       z.enum(['own', 'need_some', 'need_all']).optional(),
+      accommodation:    z.union([
+        z.boolean(),   // backward-compat with old boolean values
+        z.enum(['needed', 'not_needed', 'flexible']),
+      ]).optional(),
+      transport:        z.enum(['need_pickup', 'self_drive', 'flexible']).optional(),
+      boatPreference:   z.string().max(200).optional(),
+      dietaryRestrictions: z.string().max(500).optional(),
+      // Nice to have
+      stayingAt:        z.string().max(200).optional(),
+
+      photographyPackage: z.boolean().optional(),
+      regionExperience: z.string().max(500).optional(),
+      // Budget (existing)
+      budgetMin:        z.number().optional(),
+      budgetMax:        z.number().optional(),
+      // Legacy
+      riverType:        z.string().optional(),
+      notes:            z.string().max(2000).optional(),
     })
     .default({}),
   guideId: z.string().uuid().optional(),
@@ -300,14 +324,74 @@ export async function acceptOffer(
     }
   }
 
-  // Guide without Stripe → confirm directly
+  // Guide without Stripe → confirm directly (no payment needed)
   await serviceClient
     .from('trip_inquiries')
     .update({ status: 'confirmed' })
     .eq('id', inquiryId)
+
+  // Create a real booking record so the chat & booking dashboard work
+  await createBookingFromInquiry(inquiryId, serviceClient, null)
+
   return {
     checkoutUrl: `${env.NEXT_PUBLIC_APP_URL}/account/trips/${inquiryId}?status=accepted`,
   }
+}
+
+// ─── declineInquiry ───────────────────────────────────────────────────────────
+
+export async function declineInquiry(
+  inquiryId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  // Find guide profile
+  const { data: guide } = await supabase
+    .from('guides')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+  if (!guide) return { error: 'Guide profile not found.' }
+
+  const serviceClient = createServiceClient()
+
+  // Fetch inquiry to verify authorization
+  const { data: inquiry } = await serviceClient
+    .from('trip_inquiries')
+    .select('id, assigned_guide_id, status')
+    .eq('id', inquiryId)
+    .single()
+
+  if (!inquiry) return { error: 'Inquiry not found.' }
+
+  // Auth: must be assigned to this guide or unassigned
+  if (inquiry.assigned_guide_id !== null && inquiry.assigned_guide_id !== guide.id) {
+    return { error: 'Not authorized.' }
+  }
+
+  // Can only decline open/reviewing inquiries
+  const declineable: string[] = ['inquiry', 'reviewing', 'offer_sent']
+  if (!declineable.includes(inquiry.status)) {
+    return { error: 'This inquiry cannot be declined at its current status.' }
+  }
+
+  const { error } = await serviceClient
+    .from('trip_inquiries')
+    .update({ status: 'cancelled' })
+    .eq('id', inquiryId)
+
+  if (error) {
+    console.error('[declineInquiry]', error)
+    return { error: 'Failed to decline inquiry. Please try again.' }
+  }
+
+  revalidatePath('/dashboard/inquiries')
+  revalidatePath(`/dashboard/inquiries/${inquiryId}`)
+  return {}
 }
 
 // ─── sendOfferByGuide ─────────────────────────────────────────────────────────

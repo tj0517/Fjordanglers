@@ -227,7 +227,7 @@ export default async function BookPage({ params, searchParams }: Props) {
 
             <div className="flex flex-col gap-2.5">
               <PriceLine
-                label={`€${pricePerPerson}/pp × ${guests} ${guests === 1 ? 'angler' : 'anglers'} × ${dates.length} ${dates.length === 1 ? 'day' : 'days'}`}
+                label={`Base price × ${guests} ${guests === 1 ? 'angler' : 'anglers'}`}
                 value={`€${subtotal}`}
               />
               <PriceLine label="Service fee (5%)" value={`€${serviceFee}`} muted />

@@ -14,6 +14,8 @@ type AnglerBooking = {
   guests: number
   total_eur: number
   status: BookingStatus
+  experience_id: string | null
+  inquiry_id: string | null
   experience: { id: string; title: string } | null
   guide: { full_name: string } | null
   experience_image: string | null
@@ -43,14 +45,14 @@ export default async function AnglerBookingsPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  // Fetch bookings
+  // ── Fetch all bookings (regular + inquiry-derived with experience_id=null) ──
   const { data: rawBookings } = await supabase
     .from('bookings')
     .select(
-      'id, booking_date, guests, total_eur, status, experiences(id, title, experience_images(url, is_cover, sort_order)), guides(full_name)',
+      'id, booking_date, guests, total_eur, status, experience_id, inquiry_id, experiences(id, title, experience_images(url, is_cover, sort_order)), guides(full_name)',
     )
     .eq('angler_id', user.id)
-    .order('created_at', { ascending: false })
+    .order('booking_date', { ascending: false })
 
   const bookings: AnglerBooking[] = (rawBookings ?? []).map(b => {
     const exp = b.experiences as unknown as {
@@ -60,28 +62,34 @@ export default async function AnglerBookingsPage() {
     } | null
 
     const images = exp?.experience_images ?? []
-    const cover =
+    const cover  =
       images.find(img => img.is_cover) ??
-      images.sort((a, b) => a.sort_order - b.sort_order)[0]
+      images.sort((a, x) => a.sort_order - x.sort_order)[0]
 
     return {
-      id: b.id,
-      booking_date: b.booking_date,
-      guests: b.guests ?? 1,
-      total_eur: b.total_eur,
-      status: b.status,
-      experience: exp ? { id: exp.id, title: exp.title } : null,
-      guide: b.guides as unknown as { full_name: string } | null,
+      id:             b.id,
+      booking_date:   b.booking_date,
+      guests:         b.guests ?? 1,
+      total_eur:      b.total_eur,
+      status:         b.status,
+      experience_id:  b.experience_id,
+      inquiry_id:     b.inquiry_id,
+      experience:     exp ? { id: exp.id, title: exp.title } : null,
+      guide:          b.guides as unknown as { full_name: string } | null,
       experience_image: cover?.url ?? null,
     }
   })
 
-  const upcoming = bookings.filter(b =>
-    (b.status === 'confirmed' || b.status === 'pending' || b.status === 'accepted') &&
-    new Date(b.booking_date) >= new Date(),
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  const todayStr = new Date().toISOString().slice(0, 10)
+
+  const upcoming = bookings.filter(
+    b =>
+      (b.status === 'confirmed' || b.status === 'pending' || b.status === 'accepted') &&
+      b.booking_date >= todayStr,
   )
   const totalSpent = bookings
-    .filter(b => b.status !== 'cancelled' && b.status !== 'refunded')
+    .filter(b => b.status !== 'cancelled' && b.status !== 'refunded' && b.status !== 'declined')
     .reduce((sum, b) => sum + b.total_eur, 0)
 
   const STATS = [
@@ -125,6 +133,9 @@ export default async function AnglerBookingsPage() {
     },
   ]
 
+  // ── Next trip banner ──────────────────────────────────────────────────────
+  const nextTrip = upcoming[0] ?? null
+
   return (
     <div className="px-10 py-10 max-w-[1100px]">
 
@@ -141,7 +152,6 @@ export default async function AnglerBookingsPage() {
             Track your fishing adventures.
           </p>
         </div>
-
         <Link
           href="/trips"
           className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
@@ -180,38 +190,39 @@ export default async function AnglerBookingsPage() {
         ))}
       </div>
 
-      {/* ── Next trip banner ────────────────────────────────────────────────── */}
-      {upcoming.length > 0 && (() => {
-        const next = upcoming[0]
-        const date = new Date(`${next.booking_date}T12:00:00`)
-        const daysAway = Math.ceil((date.getTime() - Date.now()) / 86400000)
+      {/* ── Next trip banner ─────────────────────────────────────────────────── */}
+      {nextTrip != null && (() => {
+        const isCustomTrip = nextTrip.experience_id == null
+        const title = nextTrip.experience?.title ?? (isCustomTrip ? 'Custom Fishing Trip' : 'Fishing trip')
+        const date  = new Date(`${nextTrip.booking_date}T12:00:00`)
+        const daysAway = Math.ceil((date.getTime() - Date.now()) / 86_400_000)
         return (
-          <div
-            className="flex items-center justify-between gap-4 px-7 py-5 mb-6"
-            style={{
-              background: 'linear-gradient(105deg, #0A1F35 0%, #1B4F72 100%)',
-              borderRadius: '20px',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] mb-0.5 f-body" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                Next adventure
-              </p>
-              <p className="text-white font-bold text-lg f-display">
-                {next.experience?.title ?? 'Fishing trip'}
-              </p>
-              <p className="text-sm f-body mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-                {daysAway <= 60 && (
-                  <span className="ml-2 font-semibold" style={{ color: '#E67E50' }}>
-                    in {daysAway} day{daysAway !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </p>
+          <Link href={`/account/bookings/${nextTrip.id}`}>
+            <div
+              className="flex items-center justify-between gap-4 px-7 py-5 mb-6"
+              style={{
+                background: 'linear-gradient(105deg, #0A1F35 0%, #1B4F72 100%)',
+                borderRadius: '20px',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] mb-0.5 f-body" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Next adventure
+                </p>
+                <p className="text-white font-bold text-lg f-display">{title}</p>
+                <p className="text-sm f-body mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  {date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {daysAway <= 60 && (
+                    <span className="ml-2 font-semibold" style={{ color: '#E67E50' }}>
+                      in {daysAway} day{daysAway !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="text-4xl flex-shrink-0">🎣</div>
             </div>
-            <div className="text-4xl flex-shrink-0">🎣</div>
-          </div>
+          </Link>
         )
       })()}
 
@@ -264,63 +275,81 @@ export default async function AnglerBookingsPage() {
           ) : (
             <div className="divide-y" style={{ '--tw-divide-opacity': 1 } as React.CSSProperties}>
               {bookings.map(booking => {
-                const s = STATUS_STYLES[booking.status]
+                const s            = STATUS_STYLES[booking.status]
+                const isCustomTrip = booking.experience_id == null
+                const title        = booking.experience?.title ?? (isCustomTrip ? 'Custom Trip' : 'Fishing trip')
                 const dateFormatted = new Date(`${booking.booking_date}T12:00:00`).toLocaleDateString(
                   'en-GB',
                   { day: 'numeric', month: 'short', year: 'numeric' },
                 )
 
                 return (
-                  <div key={booking.id} className="px-7 py-4 flex items-center gap-4">
-                    {/* Thumbnail */}
-                    <div
-                      className="flex-shrink-0 rounded-xl overflow-hidden"
-                      style={{ width: 48, height: 48, background: 'rgba(10,46,77,0.06)' }}
-                    >
-                      {booking.experience_image != null ? (
-                        <Image
-                          src={booking.experience_image}
-                          alt={booking.experience?.title ?? 'Trip'}
-                          width={48}
-                          height={48}
-                          className="object-cover w-full h-full"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-lg">🎣</div>
-                      )}
-                    </div>
+                  <Link
+                    key={booking.id}
+                    href={`/account/bookings/${booking.id}`}
+                    className="block hover:bg-[#F8F4EF] transition-colors"
+                  >
+                    <div className="px-7 py-4 flex items-center gap-4">
+                      {/* Thumbnail */}
+                      <div
+                        className="flex-shrink-0 rounded-xl overflow-hidden"
+                        style={{ width: 48, height: 48, background: 'rgba(10,46,77,0.06)' }}
+                      >
+                        {booking.experience_image != null ? (
+                          <Image
+                            src={booking.experience_image}
+                            alt={title}
+                            width={48}
+                            height={48}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-lg">🎣</div>
+                        )}
+                      </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[#0A2E4D] text-sm font-semibold f-body leading-snug truncate">
-                        {booking.experience?.title ?? 'Fishing trip'}
-                      </p>
-                      <p className="text-[#0A2E4D]/42 text-xs f-body truncate">
-                        {booking.guide?.full_name ?? 'Guide'}
-                      </p>
-                    </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[#0A2E4D] text-sm font-semibold f-body leading-snug truncate">
+                            {title}
+                          </p>
+                          {isCustomTrip && (
+                            <span
+                              className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full flex-shrink-0 f-body"
+                              style={{ background: 'rgba(59,130,246,0.1)', color: '#2563EB' }}
+                            >
+                              Custom
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[#0A2E4D]/42 text-xs f-body truncate">
+                          {booking.guide?.full_name ?? 'Guide'}
+                        </p>
+                      </div>
 
-                    {/* Date */}
-                    <div className="text-right flex-shrink-0 hidden sm:block">
-                      <p className="text-[#0A2E4D] text-xs font-medium f-body">{dateFormatted}</p>
-                      <p className="text-[#0A2E4D]/38 text-xs f-body">
-                        {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
-                      </p>
-                    </div>
+                      {/* Date */}
+                      <div className="text-right flex-shrink-0 hidden sm:block">
+                        <p className="text-[#0A2E4D] text-xs font-medium f-body">{dateFormatted}</p>
+                        <p className="text-[#0A2E4D]/38 text-xs f-body">
+                          {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
+                        </p>
+                      </div>
 
-                    {/* Amount */}
-                    <div className="text-right flex-shrink-0 w-14">
-                      <p className="text-[#0A2E4D] text-sm font-bold f-display">€{booking.total_eur}</p>
-                    </div>
+                      {/* Amount */}
+                      <div className="text-right flex-shrink-0 w-14">
+                        <p className="text-[#0A2E4D] text-sm font-bold f-display">€{booking.total_eur}</p>
+                      </div>
 
-                    {/* Status */}
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full flex-shrink-0 f-body"
-                      style={{ background: s.bg, color: s.color }}
-                    >
-                      {s.label}
-                    </span>
-                  </div>
+                      {/* Status */}
+                      <span
+                        className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full flex-shrink-0 f-body"
+                        style={{ background: s.bg, color: s.color }}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                  </Link>
                 )
               })}
             </div>
@@ -354,6 +383,32 @@ export default async function AnglerBookingsPage() {
             </Link>
           </div>
 
+          {/* Custom trip CTA */}
+          <div
+            className="px-6 py-6 flex flex-col"
+            style={{
+              background: '#FDFAF7',
+              borderRadius: '24px',
+              border: '1px solid rgba(10,46,77,0.07)',
+            }}
+          >
+            <p className="text-[10px] uppercase tracking-[0.18em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+              Custom trips
+            </p>
+            <h3 className="text-[#0A2E4D] text-sm font-bold f-display mb-1">
+              Need something tailored?
+            </h3>
+            <p className="f-body text-xs mb-4" style={{ color: 'rgba(10,46,77,0.5)' }}>
+              Request a custom itinerary from our expert guides.
+            </p>
+            <Link
+              href="/account/trips"
+              className="inline-flex items-center gap-1 self-start text-xs font-semibold f-body transition-opacity hover:opacity-70"
+              style={{ color: '#2563EB' }}
+            >
+              View trip requests →
+            </Link>
+          </div>
         </div>
       </div>
     </div>

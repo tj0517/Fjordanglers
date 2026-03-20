@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
+import InquiryFormConfigEditor from '@/components/trips/InquiryFormConfigEditor'
 import type { DurationOptionPayload, GroupPricingPayload } from '@/actions/experiences'
 import type * as GeoJSON from 'geojson'
 
@@ -123,6 +124,12 @@ export default async function DashboardEditExperiencePage({
         guideName={guide.full_name}
         context="guide"
         successPath="/dashboard/trips"
+        inquiryFormConfigSlot={
+          <InquiryFormConfigEditor
+            expId={exp.id}
+            initialConfig={exp.inquiry_form_config}
+          />
+        }
       />
     </div>
   )

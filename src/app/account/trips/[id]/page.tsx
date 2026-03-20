@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 import AcceptOfferButton from './AcceptOfferButton'
 
@@ -41,8 +41,10 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
     redirect(`/login?next=/account/trips/${id}`)
   }
 
-  // Fetch inquiry — must belong to this angler
-  const { data: inquiry } = await supabase
+  // Service client bypasses RLS — ownership verified manually below
+  const serviceClient = createServiceClient()
+
+  const { data: inquiry } = await serviceClient
     .from('trip_inquiries')
     .select('*, guides(full_name, country, avatar_url)')
     .eq('id', id)
@@ -50,11 +52,10 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
 
   if (!inquiry) notFound()
 
-  // Ownership check
-  const userEmail = user.email
+  // Ownership check: angler_id match OR email match (for non-linked inquiries)
   const isOwner =
     inquiry.angler_id === user.id ||
-    (userEmail != null && inquiry.angler_email === userEmail)
+    (user.email != null && inquiry.angler_email === user.email)
 
   if (!isOwner) notFound()
 

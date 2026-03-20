@@ -95,7 +95,10 @@ export default async function ExperiencesPage() {
   const bookingCountPerExp: Record<string, number> = {}
   let totalRevenue = 0
   bookingRows?.forEach(b => {
-    bookingCountPerExp[b.experience_id] = (bookingCountPerExp[b.experience_id] ?? 0) + 1
+    // inquiry-derived bookings have experience_id = null — skip per-exp count but include revenue
+    if (b.experience_id != null) {
+      bookingCountPerExp[b.experience_id] = (bookingCountPerExp[b.experience_id] ?? 0) + 1
+    }
     totalRevenue += b.guide_payout_eur
   })
 

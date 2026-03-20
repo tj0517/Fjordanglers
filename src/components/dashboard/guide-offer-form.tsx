@@ -45,9 +45,8 @@ export default function GuideOfferForm({ inquiryId }: Props) {
   const [success, setSuccess] = useState(false)
 
   const [assignedRiver, setAssignedRiver] = useState('')
-  const [offerPriceMin, setOfferPriceMin] = useState('')
-  const [offerPrice, setOfferPrice] = useState('')
-  const [offerDetails, setOfferDetails] = useState('')
+  const [offerPrice,    setOfferPrice]    = useState('')
+  const [offerDetails,  setOfferDetails]  = useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -62,11 +61,6 @@ export default function GuideOfferForm({ inquiryId }: Props) {
       setError('Enter a valid offer price.')
       return
     }
-    const priceMinNum = offerPriceMin.trim() ? parseFloat(offerPriceMin) : undefined
-    if (priceMinNum != null && (isNaN(priceMinNum) || priceMinNum <= 0)) {
-      setError('Enter a valid minimum price.')
-      return
-    }
     if (!offerDetails.trim()) {
       setError('Enter offer details.')
       return
@@ -74,10 +68,9 @@ export default function GuideOfferForm({ inquiryId }: Props) {
 
     startTransition(async () => {
       const result = await sendOfferByGuide(inquiryId, {
-        assignedRiver: assignedRiver.trim(),
-        offerPriceMinEur: priceMinNum,
-        offerPriceEur: priceNum,
-        offerDetails: offerDetails.trim(),
+        assignedRiver:  assignedRiver.trim(),
+        offerPriceEur:  priceNum,
+        offerDetails:   offerDetails.trim(),
       })
       if (result.error != null) {
         setError(result.error)
@@ -90,23 +83,24 @@ export default function GuideOfferForm({ inquiryId }: Props) {
   if (success) {
     return (
       <div
-        className="px-4 py-3 rounded-xl text-sm f-body"
+        className="px-4 py-4 rounded-xl flex flex-col gap-1"
         style={{
-          background: 'rgba(74,222,128,0.1)',
+          background: 'rgba(74,222,128,0.08)',
           border: '1px solid rgba(74,222,128,0.2)',
-          color: '#16A34A',
         }}
       >
-        Offer sent to the angler.
+        <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
+          Offer sent!
+        </p>
+        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
+          The angler will receive your offer and can accept or ask questions.
+        </p>
       </div>
     )
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <p className="text-sm f-body font-semibold" style={{ color: '#0A2E4D' }}>
-        Send an Offer
-      </p>
 
       {/* River / location */}
       <div>
@@ -121,50 +115,29 @@ export default function GuideOfferForm({ inquiryId }: Props) {
         />
       </div>
 
-      {/* Price range */}
+      {/* Price */}
       <div>
-        <label style={labelStyle}>Price range (EUR) *</label>
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <span
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body"
-              style={{ color: 'rgba(10,46,77,0.4)' }}
-            >
-              €
-            </span>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              placeholder="800"
-              value={offerPriceMin}
-              onChange={(e) => setOfferPriceMin(e.target.value)}
-              className="f-body"
-              style={{ ...inputStyle, paddingLeft: '26px' }}
-            />
-          </div>
-          <span className="text-sm f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>—</span>
-          <div className="relative flex-1">
-            <span
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body"
-              style={{ color: 'rgba(10,46,77,0.4)' }}
-            >
-              €
-            </span>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              placeholder="1200"
-              value={offerPrice}
-              onChange={(e) => setOfferPrice(e.target.value)}
-              className="f-body"
-              style={{ ...inputStyle, paddingLeft: '26px' }}
-            />
-          </div>
+        <label style={labelStyle}>Total price (EUR) *</label>
+        <div className="relative">
+          <span
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body"
+            style={{ color: 'rgba(10,46,77,0.4)' }}
+          >
+            €
+          </span>
+          <input
+            type="number"
+            step="1"
+            min="1"
+            placeholder="1200"
+            value={offerPrice}
+            onChange={(e) => setOfferPrice(e.target.value)}
+            className="f-body"
+            style={{ ...inputStyle, paddingLeft: '26px' }}
+          />
         </div>
         <p className="mt-1.5 text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-          Leave the first field empty to set a fixed price. The right value is the final charged amount.
+          Total amount the angler will be charged.
         </p>
       </div>
 

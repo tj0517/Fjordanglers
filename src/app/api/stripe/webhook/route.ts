@@ -13,6 +13,7 @@ import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
+import { createBookingFromInquiry } from '@/lib/create-booking-from-inquiry'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -115,16 +116,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       return
     }
 
+    const paymentIntentId =
+      typeof session.payment_intent === 'string' ? session.payment_intent : null
+
     await db
       .from('trip_inquiries')
       .update({
         status: 'confirmed',
-        stripe_payment_intent_id:
-          typeof session.payment_intent === 'string' ? session.payment_intent : null,
+        stripe_payment_intent_id: paymentIntentId,
       })
       .eq('id', inquiryId)
 
-    console.log(`[webhook] Inquiry ${inquiryId} confirmed — sending emails`)
+    // Create a real booking record so the chat & booking dashboard work
+    await createBookingFromInquiry(inquiryId, db, paymentIntentId)
+
+    console.log(`[webhook] Inquiry ${inquiryId} confirmed — booking created, sending emails`)
     // TODO: sendInquiryConfirmationEmail(inquiryId)
     return
   }

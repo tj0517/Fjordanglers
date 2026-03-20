@@ -130,6 +130,66 @@ export async function createBookingCheckout(
   return { bookingId: booking.id }
 }
 
+// ─── sendBookingMessage ───────────────────────────────────────────────────────
+
+/**
+ * Send a message within a booking's chat thread.
+ * Both the angler and the guide for the booking may send.
+ */
+export type SentMessage = {
+  id: string
+  body: string
+  sender_id: string
+  created_at: string
+}
+
+export async function sendBookingMessage(
+  bookingId: string,
+  body: string,
+): Promise<{ error?: string; message?: SentMessage }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const trimmed = body.trim()
+  if (!trimmed) return { error: 'Message cannot be empty.' }
+  if (trimmed.length > 2000) return { error: 'Message is too long (max 2000 characters).' }
+
+  // Verify the caller is the angler or guide for this booking (RLS does this too,
+  // but we want a friendly error rather than a silent DB reject).
+  const { data: booking } = await supabase
+    .from('bookings')
+    .select('id, angler_id, guide_id, guides(user_id)')
+    .eq('id', bookingId)
+    .single()
+
+  if (!booking) return { error: 'Booking not found.' }
+
+  const guide = booking.guides as unknown as { user_id: string } | null
+  const isAngler = booking.angler_id === user.id
+  const isGuide  = guide?.user_id === user.id
+
+  if (!isAngler && !isGuide) return { error: 'You do not have access to this booking.' }
+
+  // Insert and return the created row so the client can replace the optimistic placeholder
+  const { data: msg, error } = await supabase
+    .from('booking_messages')
+    .insert({ booking_id: bookingId, sender_id: user.id, body: trimmed })
+    .select('id, body, sender_id, created_at')
+    .single()
+
+  if (error || !msg) {
+    console.error('[sendBookingMessage]', error)
+    return { error: 'Failed to send message. Please try again.' }
+  }
+
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
+  revalidatePath(`/account/bookings/${bookingId}`)
+  return { message: { id: msg.id, body: msg.body, sender_id: msg.sender_id, created_at: msg.created_at } }
+}
+
 // ─── acceptBooking ────────────────────────────────────────────────────────────
 
 export async function acceptBooking(bookingId: string): Promise<{ error?: string }> {

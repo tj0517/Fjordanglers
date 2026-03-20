@@ -16,15 +16,15 @@ type BookingRow = Database['public']['Tables']['bookings']['Row'] & {
 
 const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
   confirmed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed' },
-  pending:    { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending' },
+  pending:    { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'   },
   cancelled:  { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled' },
   completed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed' },
-  refunded:   { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded' },
-  // Added with Wave 4A enum extension
-  accepted:   { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted' },
-  declined:   { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined' },
+  refunded:   { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'  },
+  accepted:   { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'  },
+  declined:   { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'  },
 }
 
+const GRID = '2fr 1.5fr 110px 70px 90px 90px 110px 130px'
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
@@ -32,7 +32,6 @@ export default async function BookingsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // ── Auth guard ──────────────────────────────────────────────────────────────
   if (user == null) {
     return (
       <div className="px-4 py-6 sm:px-8 sm:py-10">
@@ -49,7 +48,6 @@ export default async function BookingsPage() {
     )
   }
 
-  // ── Guide lookup ────────────────────────────────────────────────────────────
   const { data: guide } = await supabase
     .from('guides')
     .select('id, full_name')
@@ -71,7 +69,7 @@ export default async function BookingsPage() {
     )
   }
 
-  // ── Data fetch ──────────────────────────────────────────────────────────────
+  // ── Fetch all bookings (includes inquiry-derived ones with experience_id=null) ─
   const { data: rawBookings } = await supabase
     .from('bookings')
     .select('*, experience:experiences(title)')
@@ -80,22 +78,19 @@ export default async function BookingsPage() {
 
   const bookings = (rawBookings ?? []) as unknown as BookingRow[]
 
-  // ── Derived stats ───────────────────────────────────────────────────────────
-  const totalBookings   = bookings.length
-  const pendingCount    = bookings.filter(b => b.status === 'pending').length
-  const confirmedCount  = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed').length
-  const totalRevenue    = bookings
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  const pendingCount   = bookings.filter(b => b.status === 'pending').length
+  const confirmedCount = bookings.filter(b => b.status === 'confirmed' || b.status === 'completed').length
+  const totalRevenue   = bookings
     .filter(b => b.status === 'confirmed' || b.status === 'completed')
     .reduce((sum, b) => sum + b.guide_payout_eur, 0)
 
   const STATS = [
-    { label: 'Total bookings',  value: totalBookings,               sub: 'all time' },
-    { label: 'Pending review',  value: pendingCount,                sub: 'awaiting confirmation' },
-    { label: 'Confirmed',       value: confirmedCount,              sub: 'confirmed & completed' },
-    { label: 'Total earned',    value: `€${Math.round(totalRevenue).toLocaleString()}`, sub: 'guide payout' },
+    { label: 'Total bookings',  value: bookings.length,                              sub: 'all time'              },
+    { label: 'Pending review',  value: pendingCount,                                 sub: 'awaiting confirmation' },
+    { label: 'Confirmed',       value: confirmedCount,                               sub: 'confirmed & completed' },
+    { label: 'Total earned',    value: `€${Math.round(totalRevenue).toLocaleString()}`, sub: 'guide payout'       },
   ]
-
-  // ─── RENDER ────────────────────────────────────────────────────────────────
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
@@ -106,7 +101,9 @@ export default async function BookingsPage() {
           Guide Dashboard
         </p>
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">Bookings</h1>
-        <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">All booking requests for your trips.</p>
+        <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
+          All booking requests and confirmed custom trips.
+        </p>
       </div>
 
       {/* Stats row */}
@@ -131,7 +128,7 @@ export default async function BookingsPage() {
         ))}
       </div>
 
-      {/* Bookings table */}
+      {/* Table / empty */}
       {bookings.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center py-24 text-center"
@@ -171,7 +168,7 @@ export default async function BookingsPage() {
           <div
             className="grid px-7 py-3"
             style={{
-              gridTemplateColumns: '2fr 1.5fr 100px 70px 90px 90px 110px 130px',
+              gridTemplateColumns: GRID,
               borderBottom: '1px solid rgba(10,46,77,0.07)',
               gap: '12px',
             }}
@@ -189,9 +186,11 @@ export default async function BookingsPage() {
 
           {/* Rows */}
           <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
-            {bookings.map((booking) => {
+            {bookings.map(booking => {
               const s = STATUS_STYLES[booking.status]
-              const expTitle = booking.experience?.title ?? '—'
+              // experience_id === null → booking was created from a custom inquiry
+              const isCustomTrip = booking.experience_id == null
+              const expTitle     = booking.experience?.title ?? (isCustomTrip ? 'Custom Trip' : '—')
               const dateFormatted = new Date(booking.booking_date).toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short', year: 'numeric',
               })
@@ -201,8 +200,9 @@ export default async function BookingsPage() {
                   key={booking.id}
                   className="grid items-center px-7 py-4"
                   style={{
-                    gridTemplateColumns: '2fr 1.5fr 100px 70px 90px 90px 110px 130px',
+                    gridTemplateColumns: GRID,
                     gap: '12px',
+                    background: isCustomTrip ? 'rgba(59,130,246,0.02)' : undefined,
                   }}
                 >
                   {/* Angler */}
@@ -218,16 +218,24 @@ export default async function BookingsPage() {
                     )}
                   </div>
 
-                  {/* Experience */}
-                  <p className="text-[#0A2E4D]/70 text-sm f-body truncate">{expTitle}</p>
+                  {/* Trip */}
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {isCustomTrip && (
+                      <span
+                        className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full flex-shrink-0 f-body"
+                        style={{ background: 'rgba(59,130,246,0.12)', color: '#2563EB' }}
+                      >
+                        Custom
+                      </span>
+                    )}
+                    <p className="text-[#0A2E4D]/70 text-sm f-body truncate">{expTitle}</p>
+                  </div>
 
                   {/* Date */}
                   <p className="text-[#0A2E4D] text-sm f-body">{dateFormatted}</p>
 
                   {/* Guests */}
-                  <p className="text-[#0A2E4D] text-sm font-medium f-body">
-                    {booking.guests} {booking.guests === 1 ? 'pax' : 'pax'}
-                  </p>
+                  <p className="text-[#0A2E4D] text-sm font-medium f-body">{booking.guests} pax</p>
 
                   {/* Total */}
                   <p className="text-[#0A2E4D] text-sm font-bold f-display">€{booking.total_eur}</p>
@@ -243,15 +251,18 @@ export default async function BookingsPage() {
                     {s.label}
                   </span>
 
-                  {/* Actions — accept/decline for pending bookings */}
-                  <div>
-                    {booking.status === 'pending' ? (
+                  {/* Actions */}
+                  <div className="flex flex-col gap-1.5">
+                    {booking.status === 'pending' && (
                       <BookingActions bookingId={booking.id} />
-                    ) : (
-                      <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.25)' }}>
-                        —
-                      </span>
                     )}
+                    <Link
+                      href={`/dashboard/bookings/${booking.id}`}
+                      className="text-[11px] font-semibold f-body transition-opacity hover:opacity-70"
+                      style={{ color: '#E67E50' }}
+                    >
+                      View / Chat →
+                    </Link>
                   </div>
                 </div>
               )
@@ -259,7 +270,6 @@ export default async function BookingsPage() {
           </div>
         </div>
       )}
-
     </div>
   )
 }

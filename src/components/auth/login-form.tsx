@@ -71,8 +71,9 @@ const CALLBACK_ERRORS: Record<string, string> = {
 export function LoginForm() {
   const searchParams = useSearchParams()
 
-  // Where to go after successful login (set by middleware when protecting /dashboard)
-  const nextUrl = searchParams.get('next') ?? '/dashboard'
+  // Where to go after successful login — /account role-routes correctly:
+  // guides → /dashboard, anglers → /account/bookings, admins → /admin
+  const nextUrl = searchParams.get('next') ?? '/account'
 
   // Surface errors from the /auth/callback route (e.g. expired confirmation link)
   const callbackError = searchParams.get('error')

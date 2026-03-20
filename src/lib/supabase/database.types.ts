@@ -47,6 +47,41 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_messages: {
+        Row: {
+          body: string
+          booking_id: string
+          created_at: string
+          id: string
+          read_at: string | null
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          booking_id: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          booking_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           accepted_at: string | null
@@ -66,11 +101,12 @@ export type Database = {
           declined_reason: string | null
           deposit_eur: number | null
           duration_option: string | null
-          experience_id: string
+          experience_id: string | null
           guests: number
           guide_id: string
           guide_payout_eur: number
           id: string
+          inquiry_id: string | null
           platform_fee_eur: number
           special_requests: string | null
           status: Database["public"]["Enums"]["booking_status"]
@@ -98,9 +134,10 @@ export type Database = {
           declined_reason?: string | null
           deposit_eur?: number | null
           duration_option?: string | null
-          experience_id: string
+          experience_id?: string | null
           guests?: number
           guide_id: string
+          inquiry_id?: string | null
           guide_payout_eur: number
           id?: string
           platform_fee_eur?: number
@@ -130,11 +167,12 @@ export type Database = {
           declined_reason?: string | null
           deposit_eur?: number | null
           duration_option?: string | null
-          experience_id?: string
+          experience_id?: string | null
           guests?: number
           guide_id?: string
           guide_payout_eur?: number
           id?: string
+          inquiry_id?: string | null
           platform_fee_eur?: number
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
@@ -310,6 +348,7 @@ export type Database = {
           accommodation_description: string | null
           boat_description: string | null
           booking_type: string
+          inquiry_form_config: import('@/lib/inquiry-form-config').InquiryFormConfig | null
           catch_and_release: boolean | null
           created_at: string
           description: string
@@ -359,6 +398,7 @@ export type Database = {
           accommodation_description?: string | null
           boat_description?: string | null
           booking_type?: string
+          inquiry_form_config?: import('@/lib/inquiry-form-config').InquiryFormConfig | null
           catch_and_release?: boolean | null
           created_at?: string
           description: string
@@ -408,6 +448,7 @@ export type Database = {
           accommodation_description?: string | null
           boat_description?: string | null
           booking_type?: string
+          inquiry_form_config?: import('@/lib/inquiry-form-config').InquiryFormConfig | null
           catch_and_release?: boolean | null
           created_at?: string
           description?: string

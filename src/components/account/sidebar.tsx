@@ -23,6 +23,12 @@ const IconCompass = () => (
   </svg>
 )
 
+const IconMessage = () => (
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M13 2H2a1 1 0 00-1 1v7a1 1 0 001 1h3.5l2 2 2-2H13a1 1 0 001-1V3a1 1 0 00-1-1z" />
+  </svg>
+)
+
 
 const IconArrowLeft = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4">
@@ -42,8 +48,9 @@ const IconLogout = () => (
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'My Bookings', href: '/account/bookings', icon: <IconBookings /> },
-  { label: 'Browse Trips', href: '/trips',            icon: <IconCompass />, external: true },
+  { label: 'My Bookings',  href: '/account/bookings', icon: <IconBookings /> },
+  { label: 'My Requests',  href: '/account/trips',    icon: <IconMessage  /> },
+  { label: 'Browse Trips', href: '/trips',             icon: <IconCompass />, external: true },
 ] as const
 
 

@@ -30,6 +30,7 @@ const EXP_EXTRA = {
   license_description:       null,
   gear_description:          null,
   transport_description:     null,
+  inquiry_form_config:       null,
 }
 
 export const MOCK_GUIDES: MockGuide[] = [

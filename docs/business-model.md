@@ -11,6 +11,7 @@ Anglers from Central Europe (Poland, Germany, Czech Republic) struggle with:
 1. **Language barriers** — Scandinavian guides rarely have English-friendly online presence
 2. **Complex license rules** — Fishing licenses in Norway/Sweden/Finland vary by zone, species, and season
 3. **No unified discovery platform** — guides are scattered across local Facebook groups and word of mouth
+4. **Booking flow work on mailing** - there is a little options for guides to mannage all fro. one place and for custommer to compare and bookg fast offers
 
 ---
 
@@ -22,8 +23,8 @@ Three core features:
 - **Guide profiles** — discover, compare, and trust-verify guides (with external reviews from Google, etc.)
 - **Trip pages** — browse bookable trips with duration options and group-size pricing
 - **License Map** — interactive map of fishing zones with "where to buy" links
+- **Acount system**- dashboards with calendar for guides and booking dash for anglers with chat for guides.
 
-Plus a **Concierge / Plan Your Trip** flow for complex custom trips (Iceland salmon, multi-river packages).
 
 ---
 

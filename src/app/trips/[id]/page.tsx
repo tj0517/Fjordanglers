@@ -792,7 +792,7 @@ export default async function ExperienceDetailPage({
 
               {/* Quick facts strip */}
               <div
-                className="flex flex-wrap gap-6 py-7 px-8 rounded-3xl mb-6"
+                className="flex flex-wrap gap-4 sm:gap-6 py-5 sm:py-7 px-4 sm:px-8 rounded-3xl mb-6"
                 style={{
                   background: '#FDFAF7',
                   border: '1px solid rgba(10,46,77,0.07)',

@@ -35,10 +35,20 @@ type BookingEntry = {
   angler_full_name: string | null
 }
 
+type InquiryEntry = {
+  id:          string
+  dates_from:  string
+  dates_to:    string
+  angler_name: string
+  group_size:  number
+  status:      string
+}
+
 type DayData = {
   blockedEntries:  BlockedEntry[]
   bookingEntries:  BookingEntry[]
   blockedExpIds:   Set<string>
+  inquiryEntries:  InquiryEntry[]
 }
 
 export type CalendarGridProps = {
@@ -47,6 +57,7 @@ export type CalendarGridProps = {
   experiences:  Experience[]
   blocked:      BlockedEntry[]
   bookings:     BookingEntry[]
+  inquiries:    InquiryEntry[]
   /** How this guide manages availability. Defaults to 'per_listing'. */
   calendarMode: 'per_listing' | 'shared'
 }
@@ -97,7 +108,7 @@ function formatDayLong(dateStr: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CalendarGrid({
-  year, month, experiences, blocked, bookings, calendarMode,
+  year, month, experiences, blocked, bookings, inquiries, calendarMode,
 }: CalendarGridProps) {
   const isShared = calendarMode === 'shared'
   const router = useRouter()
@@ -151,7 +162,10 @@ export default function CalendarGrid({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [actionError,  setActionError]  = useState<string | null>(null)
   // Tracks which specific block entry is being unblocked (for per-row spinner)
-  const [unblockingId, setUnblockingId] = useState<string | null>(null)
+  const [unblockingId,      setUnblockingId]      = useState<string | null>(null)
+  // Multiselect unblock
+  const [selectedBlockIds,  setSelectedBlockIds]  = useState<Set<string>>(new Set())
+  const [isUnblockingMulti, setIsUnblockingMulti] = useState(false)
 
   // ── Per-trip colour map ────────────────────────────────────────────────────
   const expColors = useMemo(
@@ -205,7 +219,7 @@ export default function CalendarGrid({
   const dayMap = useMemo((): Record<string, DayData> => {
     const map: Record<string, DayData> = {}
     function get(key: string): DayData {
-      if (map[key] == null) map[key] = { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set() }
+      if (map[key] == null) map[key] = { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [] }
       return map[key]!
     }
     // Apply view filter (visibleExpIds) on top of per_listing / shared mode filter
@@ -229,8 +243,21 @@ export default function CalendarGrid({
       }
     }
     for (const bk of filteredBookings) get(bk.booking_date).bookingEntries.push(bk)
+
+    // Expand inquiry date ranges into every day they cover
+    for (const inq of inquiries) {
+      let cur = parseUTC(inq.dates_from)
+      const end = parseUTC(inq.dates_to)
+      while (cur <= end) {
+        const key = cur.toISOString().slice(0, 10)
+        const day = get(key)
+        if (!day.inquiryEntries.some(e => e.id === inq.id)) day.inquiryEntries.push(inq)
+        cur = new Date(cur.getTime() + 86_400_000)
+      }
+    }
+
     return map
-  }, [blocked, bookings, isShared, activeTripId, visibleExpIds])
+  }, [blocked, bookings, inquiries, isShared, activeTripId, visibleExpIds])
 
   // ── Calendar geometry ──────────────────────────────────────────────────────
   const daysInMonth  = new Date(year, month, 0).getDate()
@@ -255,7 +282,7 @@ export default function CalendarGrid({
     setBlockReason('')
     setActionError(null)
   }
-  function closeModal() { setSelectedDay(null); setShowBlockForm(false); setActionError(null) }
+  function closeModal() { setSelectedDay(null); setShowBlockForm(false); setActionError(null); setSelectedBlockIds(new Set()) }
 
   // ── Multi-pick helpers ─────────────────────────────────────────────────────
   function enterSelectionMode() {
@@ -282,6 +309,25 @@ export default function CalendarGrid({
     setMultiBlockReason('')
     setActionError(null)
     setShowMultiModal(true)
+  }
+
+  async function handleMultiUnblock() {
+    // Collect all block IDs from all selected days
+    const blockIds = Array.from(selectedDays).flatMap(
+      day => (dayMap[day]?.blockedEntries ?? []).map(b => b.id)
+    )
+    if (blockIds.length === 0) return
+    setIsUnblockingMulti(true); setActionError(null)
+    const results = await Promise.all(blockIds.map(id => unblockDates(id)))
+    const failed = results.find(r => 'error' in r)
+    if (failed && 'error' in failed) {
+      setActionError(failed.error)
+      setIsUnblockingMulti(false)
+      return
+    }
+    setIsUnblockingMulti(false)
+    exitSelectionMode()
+    startUnblock(() => { router.refresh() })
   }
 
   // ── Day click ──────────────────────────────────────────────────────────────
@@ -386,9 +432,33 @@ export default function CalendarGrid({
       setActionError(result.error)
       return
     }
-    // Use startTransition so we know when refresh completes, then clear state
     startUnblock(() => { router.refresh() })
     setUnblockingId(null)
+  }
+
+  async function handleUnblockSelected() {
+    if (selectedBlockIds.size === 0 || isUnblockingMulti) return
+    setIsUnblockingMulti(true); setActionError(null)
+    const ids = Array.from(selectedBlockIds)
+    const results = await Promise.all(ids.map(id => unblockDates(id)))
+    const failed = results.find(r => 'error' in r)
+    if (failed && 'error' in failed) {
+      setActionError(failed.error)
+      setIsUnblockingMulti(false)
+      return
+    }
+    setSelectedBlockIds(new Set())
+    setIsUnblockingMulti(false)
+    startUnblock(() => { router.refresh() })
+  }
+
+  function toggleBlockSelect(id: string) {
+    setSelectedBlockIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   // ── Derived data ───────────────────────────────────────────────────────────
@@ -397,8 +467,8 @@ export default function CalendarGrid({
     [experiences],
   )
   const selData: DayData = selectedDay != null
-    ? (dayMap[selectedDay] ?? { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set() })
-    : { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set() }
+    ? (dayMap[selectedDay] ?? { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [] })
+    : { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [] }
 
   const sortedSelectedDays = useMemo(() => Array.from(selectedDays).sort(), [selectedDays])
 
@@ -507,29 +577,62 @@ export default function CalendarGrid({
                 </span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {selectedDays.size > 0 && (
-                  <>
-                    <button
-                      onClick={() => setSelectedDays(new Set())}
-                      className="text-xs f-body px-3 py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
-                      style={{ color: 'rgba(10,46,77,0.45)', cursor: 'pointer', border: '1px solid rgba(10,46,77,0.08)', background: 'transparent' }}
-                      title="Deselect all"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={openMultiModal}
-                      className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors f-body"
-                      style={{ background: '#E67E50', color: 'white', border: 'none', cursor: 'pointer' }}
-                    >
-                      <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
-                        <rect x="4.5" y="0" width="2" height="11" rx="1" />
-                        <rect x="0" y="4.5" width="11" height="2" rx="1" />
-                      </svg>
-                      Block {selectedDays.size} {selectedDays.size === 1 ? 'day' : 'days'}
-                    </button>
-                  </>
-                )}
+                {selectedDays.size > 0 && (() => {
+                  const blockedCount = Array.from(selectedDays).reduce(
+                    (acc, day) => acc + (dayMap[day]?.blockedEntries.length ?? 0), 0
+                  )
+                  return (
+                    <>
+                      <button
+                        onClick={() => setSelectedDays(new Set())}
+                        className="text-xs f-body px-3 py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
+                        style={{ color: 'rgba(10,46,77,0.45)', cursor: 'pointer', border: '1px solid rgba(10,46,77,0.08)', background: 'transparent' }}
+                      >
+                        Clear
+                      </button>
+                      {blockedCount > 0 && (
+                        <button
+                          onClick={handleMultiUnblock}
+                          disabled={isUnblockingMulti}
+                          className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors f-body"
+                          style={{
+                            background: isUnblockingMulti ? 'rgba(10,46,77,0.15)' : 'rgba(10,46,77,0.08)',
+                            color:      '#0A2E4D',
+                            border:     'none',
+                            cursor:     isUnblockingMulti ? 'not-allowed' : 'pointer',
+                          }}
+                        >
+                          {isUnblockingMulti ? (
+                            <>
+                              <svg className="animate-spin" width="10" height="10" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
+                              </svg>
+                              Unblocking…
+                            </>
+                          ) : (
+                            <>
+                              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                <line x1="1" y1="5.5" x2="10" y2="5.5" />
+                              </svg>
+                              Unblock {selectedDays.size} {selectedDays.size === 1 ? 'day' : 'days'}
+                            </>
+                          )}
+                        </button>
+                      )}
+                      <button
+                        onClick={openMultiModal}
+                        className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors f-body"
+                        style={{ background: '#E67E50', color: 'white', border: 'none', cursor: 'pointer' }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
+                          <rect x="4.5" y="0" width="2" height="11" rx="1" />
+                          <rect x="0" y="4.5" width="11" height="2" rx="1" />
+                        </svg>
+                        Block {selectedDays.size} {selectedDays.size === 1 ? 'day' : 'days'}
+                      </button>
+                    </>
+                  )
+                })()}
                 <button
                   onClick={exitSelectionMode}
                   className="text-xs f-body px-3 py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
@@ -697,7 +800,7 @@ export default function CalendarGrid({
               : (blockedCount > 0 && !fullyBlocked)
 
             // Booking state split by status
-            const confirmedBk = data?.bookingEntries.filter(b => b.status === 'confirmed') ?? []
+            const confirmedBk = data?.bookingEntries.filter(b => b.status === 'confirmed' || b.status === 'accepted') ?? []
             const pendingBk   = data?.bookingEntries.filter(b => b.status === 'pending')   ?? []
             const hasConfirmed = confirmedBk.length > 0
             const hasPending   = pendingBk.length > 0
@@ -747,28 +850,70 @@ export default function CalendarGrid({
                   ) : day}
                 </span>
 
-                {/* Per-trip status dots (only visible trips) */}
+                {/* Per-trip status indicators */}
                 <div className="flex flex-col gap-px w-full mt-auto">
                   {visibleExps.map((exp) => {
                     const isExpBlocked = data?.blockedExpIds.has(exp.id) ?? false
                     const expBks       = data?.bookingEntries.filter(b => b.experience_id === exp.id) ?? []
-                    const hasConf      = expBks.some(b => b.status === 'confirmed')
+                    const hasConf      = expBks.some(b => b.status === 'confirmed' || b.status === 'accepted')
                     const hasPend      = expBks.some(b => b.status === 'pending')
                     if (!isExpBlocked && !hasConf && !hasPend) return null
-                    const chipBg    = hasConf ? 'rgba(27,79,114,0.13)'   : hasPend ? 'rgba(217,119,6,0.12)'    : 'rgba(230,126,80,0.13)'
-                    const chipColor = hasConf ? '#1B4F72'                : hasPend ? '#B45309'                  : '#C96030'
-                    const dotColor  = expColors[exp.id] ?? '#0A2E4D'
-                    const label     = exp.title.split(' ')[0]!
+                    const dotColor = expColors[exp.id] ?? '#0A2E4D'
+
+                    // Booking takes visual priority over blocked
+                    if (hasConf || hasPend) {
+                      return (
+                        <div key={exp.id}
+                          className="flex items-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
+                          style={{
+                            background: hasConf ? 'rgba(27,79,114,0.12)' : 'rgba(217,119,6,0.11)',
+                            color:      hasConf ? '#1B4F72'              : '#B45309',
+                          }}
+                        >
+                          <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor" style={{ flexShrink: 0 }}>
+                            <circle cx="4" cy="2.5" r="1.8"/>
+                            <path d="M1 7c0-1.657 1.343-3 3-3s3 1.343 3 3" strokeWidth="0" fillRule="evenodd"/>
+                          </svg>
+                          <span className="truncate" style={{ maxWidth: 36 }}>
+                            {hasConf ? 'Booked' : 'Pending'}
+                          </span>
+                        </div>
+                      )
+                    }
+
+                    // Blocked only
                     return (
                       <div key={exp.id}
                         className="flex items-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
-                        style={{ background: chipBg, color: chipColor }}
+                        style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.4)' }}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
-                        <span className="truncate" style={{ maxWidth: 40 }}>{label}</span>
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dotColor, opacity: 0.5 }} />
+                        <span>Off</span>
                       </div>
                     )
                   })}
+
+                  {/* Inquiry chip — one per day showing count */}
+                  {(() => {
+                    const inqs = data?.inquiryEntries ?? []
+                    if (inqs.length === 0) return null
+                    const hasConfirmedInq = inqs.some(i => i.status === 'confirmed' || i.status === 'offer_accepted' || i.status === 'completed')
+                    const hasOfferInq     = inqs.some(i => i.status === 'offer_sent')
+                    const bg    = hasConfirmedInq ? 'rgba(74,222,128,0.1)'   : hasOfferInq ? 'rgba(230,126,80,0.12)'  : 'rgba(109,40,217,0.1)'
+                    const color = hasConfirmedInq ? '#16A34A'                : hasOfferInq ? '#C96030'               : '#6D28D9'
+                    const label = hasConfirmedInq ? 'Confirmed'              : hasOfferInq ? 'Offer'                 : inqs.length > 1 ? `${inqs.length} Req` : 'Request'
+                    return (
+                      <div
+                        className="flex items-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
+                        style={{ background: bg, color }}
+                      >
+                        <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ flexShrink: 0 }}>
+                          <path d="M7 1H1a.5.5 0 00-.5.5v4A.5.5 0 001 6h2l1.5 1.5L6 6h1a.5.5 0 00.5-.5v-4A.5.5 0 007 1z"/>
+                        </svg>
+                        <span>{label}</span>
+                      </div>
+                    )
+                  })()}
                 </div>
               </button>
             )
@@ -805,15 +950,33 @@ export default function CalendarGrid({
           {/* Status key */}
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1">
             {([
-              { label: 'Confirmed booking', color: '#1B4F72', bg: 'rgba(27,79,114,0.12)'  },
-              { label: 'Pending booking',   color: '#B45309', bg: 'rgba(217,119,6,0.12)'  },
-              { label: 'Blocked',           color: '#C96030', bg: 'rgba(230,126,80,0.18)' },
+              { label: 'Booked',   chip: { bg: 'rgba(27,79,114,0.12)',  color: '#1B4F72' }, icon: 'person' },
+              { label: 'Pending',  chip: { bg: 'rgba(217,119,6,0.11)',  color: '#B45309' }, icon: 'person' },
+              { label: 'Request',  chip: { bg: 'rgba(109,40,217,0.1)',  color: '#6D28D9' }, icon: 'msg'    },
+              { label: 'Off',      chip: { bg: 'rgba(10,46,77,0.07)',   color: 'rgba(10,46,77,0.4)' }, icon: 'dot' },
             ] as const).map(item => (
               <div key={item.label} className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded"
-                     style={{ background: item.bg, border: `1px solid ${item.color}` }} />
-                <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                <div className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[8px] font-bold f-body"
+                     style={{ background: item.chip.bg, color: item.chip.color }}>
+                  {item.icon === 'person' ? (
+                    <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor">
+                      <circle cx="4" cy="2.5" r="1.8"/>
+                      <path d="M1 7c0-1.657 1.343-3 3-3s3 1.343 3 3"/>
+                    </svg>
+                  ) : item.icon === 'msg' ? (
+                    <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.4">
+                      <path d="M7 1H1a.5.5 0 00-.5.5v4A.5.5 0 001 6h2l1.5 1.5L6 6h1a.5.5 0 00.5-.5v-4A.5.5 0 007 1z"/>
+                    </svg>
+                  ) : (
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(10,46,77,0.4)', opacity: 0.5 }} />
+                  )}
                   {item.label}
+                </div>
+                <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  {item.label === 'Booked'   ? 'confirmed booking' :
+                   item.label === 'Pending'  ? 'awaiting confirmation' :
+                   item.label === 'Request'  ? 'custom trip inquiry' :
+                   'unavailable / blocked'}
                 </span>
               </div>
             ))}
@@ -862,6 +1025,54 @@ export default function CalendarGrid({
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
 
+              {/* Trip inquiries / requests */}
+              {selData.inquiryEntries.length > 0 && (
+                <section>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold f-body mb-3"
+                     style={{ color: 'rgba(10,46,77,0.38)' }}>
+                    Requests ({selData.inquiryEntries.length})
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {selData.inquiryEntries.map(inq => {
+                      const isConfirmedInq = inq.status === 'confirmed' || inq.status === 'offer_accepted' || inq.status === 'completed'
+                      const isOfferInq     = inq.status === 'offer_sent'
+                      const bgInq   = isConfirmedInq ? 'rgba(74,222,128,0.06)'  : isOfferInq ? 'rgba(230,126,80,0.06)'  : 'rgba(109,40,217,0.05)'
+                      const bdrInq  = isConfirmedInq ? '1px solid rgba(74,222,128,0.18)' : isOfferInq ? '1px solid rgba(230,126,80,0.18)' : '1px solid rgba(109,40,217,0.15)'
+                      const dotInq  = isConfirmedInq ? '#16A34A' : isOfferInq ? '#E67E50' : '#6D28D9'
+                      const statusLabel =
+                        inq.status === 'inquiry'        ? 'New'        :
+                        inq.status === 'reviewing'      ? 'Reviewing'  :
+                        inq.status === 'offer_sent'     ? 'Offer sent' :
+                        inq.status === 'offer_accepted' ? 'Accepted'   :
+                        inq.status === 'confirmed'      ? 'Confirmed'  :
+                        inq.status === 'completed'      ? 'Completed'  : inq.status
+                      return (
+                        <a
+                          key={inq.id}
+                          href={`/dashboard/inquiries/${inq.id}`}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-opacity hover:opacity-80"
+                          style={{ background: bgInq, border: bdrInq, textDecoration: 'none' }}
+                        >
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotInq }} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                              {inq.angler_name}
+                            </p>
+                            <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                              {inq.dates_from} → {inq.dates_to} · {inq.group_size} {inq.group_size === 1 ? 'angler' : 'anglers'}
+                            </p>
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body flex-shrink-0"
+                                style={{ background: bgInq, color: dotInq, border: bdrInq }}>
+                            {statusLabel}
+                          </span>
+                        </a>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+
               {/* Bookings */}
               {selData.bookingEntries.length > 0 && (
                 <section>
@@ -871,7 +1082,7 @@ export default function CalendarGrid({
                   </p>
                   <div className="flex flex-col gap-2">
                     {selData.bookingEntries.map(bk => {
-                      const isConfirmed = bk.status === 'confirmed'
+                      const isConfirmed = bk.status === 'confirmed' || bk.status === 'accepted'
                       const isPendingBk = bk.status === 'pending'
                       return (
                         <div key={bk.id} className="flex items-center gap-3 px-4 py-3 rounded-xl"
@@ -909,62 +1120,124 @@ export default function CalendarGrid({
               {/* Blocked entries */}
               {selData.blockedEntries.length > 0 && (
                 <section>
-                  <p className="text-[10px] uppercase tracking-[0.18em] font-bold f-body mb-3"
-                     style={{ color: 'rgba(10,46,77,0.38)' }}>
-                    Blocked ({selData.blockedEntries.length})
-                  </p>
+                  {/* Header row: label + select-all + unblock-selected */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-[10px] uppercase tracking-[0.18em] font-bold f-body flex-1"
+                       style={{ color: 'rgba(10,46,77,0.38)' }}>
+                      Blocked ({selData.blockedEntries.length})
+                    </p>
+                    {selData.blockedEntries.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const allIds = new Set(selData.blockedEntries.map(b => b.id))
+                          const allSelected = selData.blockedEntries.every(b => selectedBlockIds.has(b.id))
+                          setSelectedBlockIds(allSelected ? new Set() : allIds)
+                        }}
+                        className="text-[10px] font-semibold f-body transition-colors"
+                        style={{ color: 'rgba(10,46,77,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        {selData.blockedEntries.every(b => selectedBlockIds.has(b.id)) ? 'Deselect all' : 'Select all'}
+                      </button>
+                    )}
+                    {selectedBlockIds.size > 0 && (
+                      <button
+                        onClick={handleUnblockSelected}
+                        disabled={isUnblockingMulti}
+                        className="flex items-center gap-1.5 text-xs font-bold f-body px-3 py-1 rounded-lg transition-all"
+                        style={{
+                          background: isUnblockingMulti ? 'rgba(230,126,80,0.4)' : '#E67E50',
+                          color:      'white',
+                          border:     'none',
+                          cursor:     isUnblockingMulti ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {isUnblockingMulti ? (
+                          <>
+                            <svg className="animate-spin" width="10" height="10" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
+                            </svg>
+                            Unblocking…
+                          </>
+                        ) : (
+                          `Unblock ${selectedBlockIds.size}`
+                        )}
+                      </button>
+                    )}
+                  </div>
+
                   <div className="flex flex-col gap-2">
-                    {selData.blockedEntries.map(b => (
-                      <div key={b.id} className="flex items-start gap-3 px-4 py-3 rounded-xl"
-                           style={{
-                             background:  'rgba(230,126,80,0.06)',
-                             border:      '1px solid rgba(230,126,80,0.12)',
-                             opacity:     unblockingId === b.id ? 0.45 : 1,
-                             transition:  'opacity 0.2s',
-                             pointerEvents: unblockingId === b.id ? 'none' : 'auto',
-                           }}>
-                        <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1" style={{ background: '#E67E50' }} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                            {expById[b.experience_id]?.title ?? 'Trip'}
-                          </p>
-                          <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                            {b.date_start === b.date_end ? b.date_start : `${b.date_start} → ${b.date_end}`}
-                          </p>
-                          {b.reason != null && b.reason !== '' && (
-                            <p className="text-xs f-body mt-1 italic" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                              "{b.reason}"
+                    {selData.blockedEntries.map(b => {
+                      const isSelected = selectedBlockIds.has(b.id)
+                      const isBusy = unblockingId === b.id || isUnblockingMulti
+                      return (
+                        <div
+                          key={b.id}
+                          className="flex items-start gap-3 px-4 py-3 rounded-xl cursor-pointer"
+                          style={{
+                            background:    isSelected ? 'rgba(230,126,80,0.1)' : 'rgba(230,126,80,0.06)',
+                            border:        isSelected ? '1px solid rgba(230,126,80,0.3)' : '1px solid rgba(230,126,80,0.12)',
+                            opacity:       isBusy ? 0.45 : 1,
+                            transition:    'all 0.15s',
+                            pointerEvents: isBusy ? 'none' : 'auto',
+                          }}
+                          onClick={() => toggleBlockSelect(b.id)}
+                        >
+                          {/* Checkbox */}
+                          <div
+                            className="flex-shrink-0 w-4 h-4 rounded flex items-center justify-center mt-0.5"
+                            style={{
+                              background: isSelected ? '#E67E50' : 'transparent',
+                              border:     isSelected ? 'none' : '1.5px solid rgba(10,46,77,0.2)',
+                              transition: 'all 0.12s',
+                            }}
+                          >
+                            {isSelected && (
+                              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="1.5,4.5 3.5,6.5 7.5,2.5"/>
+                              </svg>
+                            )}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                              {expById[b.experience_id]?.title ?? 'Trip'}
                             </p>
+                            <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                              {b.date_start === b.date_end ? b.date_start : `${b.date_start} → ${b.date_end}`}
+                            </p>
+                            {b.reason != null && b.reason !== '' && (
+                              <p className="text-xs f-body mt-1 italic" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                                &ldquo;{b.reason}&rdquo;
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Single unblock button (only when nothing selected) */}
+                          {selectedBlockIds.size === 0 && (
+                            <button
+                              onClick={e => { e.stopPropagation(); void handleUnblock(b.id) }}
+                              disabled={unblockingId === b.id || unblockPending}
+                              className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold f-body px-2.5 py-1 rounded-lg transition-all"
+                              style={{
+                                color:      unblockingId === b.id ? 'rgba(201,96,48,0.5)' : '#C96030',
+                                cursor:     unblockingId !== null ? 'not-allowed' : 'pointer',
+                                background: 'transparent',
+                                border:     'none',
+                              }}
+                            >
+                              {unblockingId === b.id ? (
+                                <>
+                                  <svg className="animate-spin" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                    <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
+                                  </svg>
+                                  Unblocking…
+                                </>
+                              ) : 'Unblock'}
+                            </button>
                           )}
                         </div>
-                        <button
-                          onClick={() => handleUnblock(b.id)}
-                          disabled={unblockingId === b.id || unblockPending}
-                          className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold f-body px-2.5 py-1 rounded-lg transition-all"
-                          style={{
-                            color:      unblockingId === b.id ? 'rgba(201,96,48,0.5)' : '#C96030',
-                            cursor:     unblockingId != null ? 'not-allowed' : 'pointer',
-                            background: 'transparent',
-                            border:     'none',
-                          }}
-                        >
-                          {unblockingId === b.id ? (
-                            <>
-                              <svg
-                                className="animate-spin"
-                                width="11" height="11" viewBox="0 0 11 11" fill="none"
-                                stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                              >
-                                <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
-                              </svg>
-                              Unblocking…
-                            </>
-                          ) : (
-                            'Unblock'
-                          )}
-                        </button>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </section>
               )}

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import CalendarGrid from '@/components/dashboard/calendar-grid'
 import CalendarsPanel from '@/components/dashboard/calendars-panel'
 import { getGuideCalendars, getCalendarExperienceMap } from '@/actions/calendars'
@@ -101,13 +101,26 @@ export default async function CalendarPage({
         .in('experience_id', expIds)
         .gte('booking_date', firstDay)
         .lte('booking_date', lastDay)
-        .in('status', ['pending', 'confirmed'])
+        .in('status', ['pending', 'confirmed', 'accepted'])
         .order('booking_date')
     : null
 
-  const [blockedResult, bookingsResult] = await Promise.all([
+  // ── Trip inquiries assigned to this guide, overlapping the viewed month ──────
+  // Service client needed — RLS blocks user-scoped reads on trip_inquiries
+  const serviceClient = createServiceClient()
+  const inquiriesQuery = serviceClient
+    .from('trip_inquiries')
+    .select('id, dates_from, dates_to, angler_name, group_size, status')
+    .eq('assigned_guide_id', guide.id)
+    .neq('status', 'cancelled')
+    .lte('dates_from', lastDay)
+    .gte('dates_to', firstDay)
+    .order('dates_from')
+
+  const [blockedResult, bookingsResult, inquiriesResult] = await Promise.all([
     blockedQuery  ?? Promise.resolve({ data: [] }),
     bookingsQuery ?? Promise.resolve({ data: [] }),
+    inquiriesQuery,
   ])
 
   const blocked = (blockedResult.data ?? []) as Array<{
@@ -115,6 +128,9 @@ export default async function CalendarPage({
   }>
   const bookings = (bookingsResult.data ?? []) as Array<{
     id: string; experience_id: string; booking_date: string; guests: number; status: string; angler_full_name: string | null
+  }>
+  const inquiries = (inquiriesResult.data ?? []) as Array<{
+    id: string; dates_from: string; dates_to: string; angler_name: string; group_size: number; status: string
   }>
 
   // ── Stats (scoped to active calendar / all) ───────────────────────────────────
@@ -176,8 +192,8 @@ export default async function CalendarPage({
               },
               {
                 label: 'Bookings this month',
-                value: String(bookings.length),
-                sub:   'pending or confirmed',
+                value: String(bookings.length + inquiries.length),
+                sub:   `${bookings.length} bookings · ${inquiries.length} requests`,
               },
             ].map(s => (
               <div
@@ -226,6 +242,7 @@ export default async function CalendarPage({
               experiences={experiences}
               blocked={blocked}
               bookings={bookings}
+              inquiries={inquiries}
               calendarMode="shared"
             />
           )}

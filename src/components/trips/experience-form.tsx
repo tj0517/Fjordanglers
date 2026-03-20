@@ -158,6 +158,12 @@ type Props = {
   /** Optional label to show in the form title */
   guideName?: string
   context: 'admin' | 'guide'
+  /**
+   * Inquiry form config editor — rendered OUTSIDE the <form> element (below it),
+   * visible only on the Pricing tab when bookingType is 'icelandic' or 'both'.
+   * Kept outside the form so its buttons never interfere with form submission.
+   */
+  inquiryFormConfigSlot?: React.ReactNode
 }
 
 // ─── Micro-components ─────────────────────────────────────────────────────────
@@ -244,9 +250,10 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   )
 }
 
-function SectionCard({ title, subtitle, optional, children }: { title: string; subtitle?: string; optional?: boolean; children: React.ReactNode }) {
+function SectionCard({ id, title, subtitle, optional, children }: { id?: string; title: string; subtitle?: string; optional?: boolean; children: React.ReactNode }) {
   return (
     <div
+      id={id}
       className="p-8 mb-5 rounded-3xl"
       style={{
         background: '#FDFAF7',
@@ -397,6 +404,18 @@ function polygonCentroid(polygon: GeoJSON.Polygon): { lat: number; lng: number }
   return { lat: parseFloat(avgLat.toFixed(6)), lng: parseFloat(avgLng.toFixed(6)) }
 }
 
+// ─── Form Tabs ────────────────────────────────────────────────────────────────
+
+type FormTabKey = 'info' | 'pricing' | 'location' | 'content' | 'media'
+
+const FORM_TABS: { key: FormTabKey; label: string; next: FormTabKey | null }[] = [
+  { key: 'pricing',  label: 'Pricing',  next: 'info'     },
+  { key: 'info',     label: 'Info',     next: 'location' },
+  { key: 'location', label: 'Location', next: 'content'  },
+  { key: 'content',  label: 'Content',  next: 'media'    },
+  { key: 'media',    label: 'Media',    next: null        },
+]
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ExperienceForm({
@@ -407,6 +426,7 @@ export default function ExperienceForm({
   successPath,
   guideName,
   context,
+  inquiryFormConfigSlot,
 }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
@@ -582,8 +602,10 @@ export default function ExperienceForm({
   // ── Booking type ─────────────────────────────────────────────────────────
   const [bookingType, setBookingType] = useState<'classic' | 'icelandic' | 'both'>(dv.booking_type ?? 'classic')
 
+  // ── Form tab ─────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<FormTabKey>('pricing')
 
-  // ── Settings ─────────────────────────────────────────────────────────────
+  // Settings ─────────────────────────────────────────────────────────────
   const [published, setPublished] = useState(dv.published ?? false)
 
   // ── Error / success ──────────────────────────────────────────────────────
@@ -842,6 +864,11 @@ export default function ExperienceForm({
     })
   }
 
+  // ── Tab navigation ────────────────────────────────────────────────────────
+  const currentTabDef = FORM_TABS.find(t => t.key === activeTab)!
+  const prevTabKey    = FORM_TABS.slice().reverse().find(t => t.next === activeTab)?.key ?? null
+  const isLastFormTab = currentTabDef.next == null
+
   // ── Success state ─────────────────────────────────────────────────────────
   if (success && createdId != null) {
     return (
@@ -911,6 +938,7 @@ export default function ExperienceForm({
 
   // ── Form ──────────────────────────────────────────────────────────────────
   return (
+    <>
     <form onSubmit={handleSubmit} className="max-w-[760px]">
 
       {/* Error banner */}
@@ -928,61 +956,43 @@ export default function ExperienceForm({
         </div>
       )}
 
-      {/* ── Booking Flow ─────────────────────────────────────────────── */}
-      <SectionCard
-        title="Booking Flow"
-        subtitle="Choose how anglers book this experience."
+      {/* ── Tab bar ──────────────────────────────────────────────────────── */}
+      <div
+        className="flex gap-1 p-1 mb-6"
+        style={{
+          background:   'rgba(10,46,77,0.05)',
+          borderRadius: '14px',
+          width:        'fit-content',
+        }}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {([
-            {
-              value: 'classic' as const,
-              label: 'Classic Booking',
-              desc: 'Angler picks dates and requests a trip. You confirm within 24h. 30% deposit via Stripe, balance before the trip.',
-            },
-            {
-              value: 'icelandic' as const,
-              label: 'Price on request',
-              desc: 'Angler sends an inquiry with dates and preferences. You set up the offer and send back pricing — no fixed price needed.',
-            },
-            {
-              value: 'both' as const,
-              label: 'Both',
-              desc: 'Angler chooses: book at a fixed price or send an inquiry. You set a base price and can accept custom inquiries too.',
-            },
-          ]).map(({ value, label, desc }) => (
+        {FORM_TABS.map(tab => {
+          const isActive = activeTab === tab.key
+          return (
             <button
-              key={value}
+              key={tab.key}
               type="button"
-              onClick={() => setBookingType(value)}
-              className="flex items-start gap-3 px-5 py-4 rounded-2xl text-left transition-all h-full"
-              style={bookingType === value
-                ? { background: 'rgba(230,126,80,0.08)', border: '1.5px solid rgba(230,126,80,0.45)' }
-                : { background: 'rgba(10,46,77,0.03)', border: '1.5px solid rgba(10,46,77,0.08)' }
-              }
+              onClick={() => setActiveTab(tab.key)}
+              className="px-4 py-2 rounded-[10px] text-sm f-body transition-all"
+              style={{
+                background: isActive ? 'white' : 'transparent',
+                color:      isActive ? '#0A2E4D' : 'rgba(10,46,77,0.5)',
+                fontWeight: isActive ? 600 : 400,
+                boxShadow:  isActive ? '0 1px 4px rgba(10,46,77,0.1)' : 'none',
+                border:     'none',
+                cursor:     'pointer',
+              }}
             >
-              <span
-                className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                style={bookingType === value
-                  ? { borderColor: '#E67E50', background: '#E67E50' }
-                  : { borderColor: 'rgba(10,46,77,0.25)', background: 'transparent' }
-                }
-              >
-                {bookingType === value && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                )}
-              </span>
-              <div>
-                <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{label}</p>
-                <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>{desc}</p>
-              </div>
+              {tab.label}
             </button>
-          ))}
-        </div>
-      </SectionCard>
+          )
+        })}
+      </div>
 
-      {/* ── Section 1: Basic Info ────────────────────────────────────── */}
-      <SectionCard title="Basic Info" subtitle="Write what actually happens — species, method, what's included. No marketing fluff.">
+      {/* ── Info tab: Basic Info · Fishing Details ───────────────────── */}
+      {activeTab === 'info' && (<>
+
+      {/* ── Basic Info ───────────────────────────────────────────────── */}
+      <SectionCard id="form-info" title="Basic Info" subtitle="Write what actually happens — species, method, what's included. No marketing fluff.">
         <div className="flex flex-col gap-5">
           <Field label="Title" required>
             <TextInput
@@ -1004,7 +1014,7 @@ export default function ExperienceForm({
       </SectionCard>
 
       {/* ── Section 2: Fishing Details ───────────────────────────────── */}
-      <SectionCard title="Fishing Details" subtitle="Target species and difficulty">
+      <SectionCard id="form-fishing" title="Fishing Details" subtitle="Target species and difficulty">
         <div className="flex flex-col gap-6">
 
           {/* Target species */}
@@ -1062,8 +1072,82 @@ export default function ExperienceForm({
         </div>
       </SectionCard>
 
-      {/* ── Section 3: Pricing & Logistics (hidden for price-on-request) ── */}
-      {bookingType !== 'icelandic' && <SectionCard title="Pricing & Logistics">
+      </>)} {/* end Info tab */}
+
+      {/* ── Pricing tab: Booking Flow · Pricing & Logistics ─────────────── */}
+      {activeTab === 'pricing' && (<>
+
+      {/* ── Booking Flow ─────────────────────────────────────────────── */}
+      <SectionCard
+        id="form-booking"
+        title="Booking Flow"
+        subtitle="Choose how anglers book this experience."
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {([
+            {
+              value: 'classic' as const,
+              label: 'Classic Booking',
+              desc: 'Angler picks dates and requests a trip. You confirm within 24h. 30% deposit via Stripe, balance before the trip.',
+            },
+            {
+              value: 'icelandic' as const,
+              label: 'Price on request',
+              desc: 'Angler sends an inquiry with dates and preferences. You set up the offer and send back pricing — no fixed price needed.',
+            },
+            {
+              value: 'both' as const,
+              label: 'Both',
+              desc: 'Angler chooses: book at a fixed price or send an inquiry. You set a base price and can accept custom inquiries too.',
+            },
+          ]).map(({ value, label, desc }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setBookingType(value)}
+              className="flex items-start gap-3 px-5 py-4 rounded-2xl text-left transition-all h-full"
+              style={bookingType === value
+                ? { background: 'rgba(230,126,80,0.08)', border: '1.5px solid rgba(230,126,80,0.45)' }
+                : { background: 'rgba(10,46,77,0.03)', border: '1.5px solid rgba(10,46,77,0.08)' }
+              }
+            >
+              <span
+                className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+                style={bookingType === value
+                  ? { borderColor: '#E67E50', background: '#E67E50' }
+                  : { borderColor: 'rgba(10,46,77,0.25)', background: 'transparent' }
+                }
+              >
+                {bookingType === value && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                )}
+              </span>
+              <div>
+                <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{label}</p>
+                <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>{desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* ── Pricing & Logistics (hidden for price-on-request) ────────── */}
+      {bookingType === 'icelandic' && (
+        <div
+          className="px-6 py-5 mb-5 rounded-3xl"
+          style={{
+            background: 'rgba(10,46,77,0.04)',
+            border: '1px solid rgba(10,46,77,0.08)',
+          }}
+        >
+          <p className="text-sm font-bold f-body mb-1" style={{ color: '#0A2E4D' }}>Price on request</p>
+          <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.5)' }}>
+            Since this experience uses the &quot;Price on request&quot; booking flow, pricing is
+            set individually per inquiry. No fixed prices are needed here.
+          </p>
+        </div>
+      )}
+      {bookingType !== 'icelandic' && <SectionCard id="form-pricing" title="Pricing & Logistics">
         <div className="flex flex-col gap-7">
 
           {/* A) Season */}
@@ -1327,8 +1411,14 @@ export default function ExperienceForm({
         </div>
       </SectionCard>}
 
+      </>)} {/* end Pricing tab */}
+
+      {/* ── Location tab ─────────────────────────────────────────────────── */}
+      {activeTab === 'location' && (<>
+
       {/* ── Section 4: Location ──────────────────────────────────────── */}
       <SectionCard
+        id="form-location"
         title="Location"
         subtitle="Fill in the text fields, then pin the exact spot on the map."
       >
@@ -1531,8 +1621,14 @@ export default function ExperienceForm({
         </div>
       </SectionCard>
 
+      </>)} {/* end Location tab */}
+
+      {/* ── Content tab: Trip Plan · Trip Details ────────────────────────── */}
+      {activeTab === 'content' && (<>
+
       {/* ── Section 5: Trip Plan ─────────────────────────────────────── */}
       <SectionCard
+        id="form-plan"
         title="Trip Plan"
         optional
         subtitle="Describe the day step by step. Only shown on the trip page if filled in."
@@ -1609,6 +1705,7 @@ export default function ExperienceForm({
 
       {/* ── Section 6: Trip Details ───────────────────────────────────── */}
       <SectionCard
+        id="form-details"
         title="Trip Details"
         optional
         subtitle="Fill in only what's relevant — empty sections won't appear on the trip page."
@@ -1719,9 +1816,14 @@ export default function ExperienceForm({
         </div>
       </SectionCard>
 
-      {/* ── Section 7: Photos ────────────────────────────────────────── */}
+      </>)} {/* end Content tab */}
+
+      {/* ── Media tab: Hero · Photos · Settings ──────────────────────────── */}
+      {activeTab === 'media' && (<>
+
       {/* ── Section: Hero Landscape ──────────────────────────────── */}
       <SectionCard
+        id="form-hero"
         title="Hero Background"
         subtitle="Full-width landscape shown behind the experience title. Pick from our library or upload your own."
       >
@@ -1834,7 +1936,7 @@ export default function ExperienceForm({
         />
       )}
 
-      <SectionCard title="Photos" subtitle="Cover photo is required. Gallery: up to 6 photos, select multiple at once.">
+      <SectionCard id="form-photos" title="Photos" subtitle="Cover photo is required. Gallery: up to 6 photos, select multiple at once.">
         <div className="flex flex-col gap-6">
           {/* Cover — single image with 16:9 crop */}
           <ImageUpload
@@ -1860,7 +1962,7 @@ export default function ExperienceForm({
 
       {/* ── Settings ──────────────────────────────────────────────── */}
       <div
-        className="px-8 py-6 mb-6 rounded-3xl flex items-center justify-between"
+        className="px-8 py-6 mb-5 rounded-3xl flex items-center justify-between"
         style={{
           background: '#FDFAF7',
           border: '1px solid rgba(10,46,77,0.07)',
@@ -1876,25 +1978,38 @@ export default function ExperienceForm({
         <Toggle checked={published} onChange={setPublished} />
       </div>
 
-      {/* ── Submit ───────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-4">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="flex items-center gap-2 text-white text-sm font-semibold px-7 py-3.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100 f-body"
-          style={{ background: '#E67E50' }}
-        >
-          {isPending ? (
-            <>
-              <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="7" cy="7" r="5" strokeOpacity="0.25" />
-                <path d="M7 2a5 5 0 015 5" strokeLinecap="round" />
-              </svg>
-              {mode === 'create' ? 'Creating…' : 'Saving…'}
-            </>
-          ) : (
-            <>
-              {mode === 'create' ? (
+      </>)} {/* end Media tab */}
+
+      {/* ── Footer navigation ──────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between pt-2 pb-2">
+        {prevTabKey != null ? (
+          <button
+            type="button"
+            onClick={() => setActiveTab(prevTabKey)}
+            className="text-sm font-semibold px-5 py-3 rounded-full f-body transition-all hover:brightness-95"
+            style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.6)' }}
+          >
+            ← Back
+          </button>
+        ) : <span />}
+
+        {isLastFormTab ? (
+          <div className="flex items-center gap-4">
+            <button
+              type="submit"
+              disabled={isPending}
+              className="flex items-center gap-2 text-white text-sm font-semibold px-7 py-3.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100 f-body"
+              style={{ background: '#E67E50' }}
+            >
+              {isPending ? (
+                <>
+                  <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="7" cy="7" r="5" strokeOpacity="0.25" />
+                    <path d="M7 2a5 5 0 015 5" strokeLinecap="round" />
+                  </svg>
+                  {mode === 'create' ? 'Creating…' : 'Saving…'}
+                </>
+              ) : mode === 'create' ? (
                 <>
                   <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
                     <rect x="5.8" y="1" width="1.4" height="11" rx="0.7" />
@@ -1905,18 +2020,36 @@ export default function ExperienceForm({
               ) : (
                 'Save Changes →'
               )}
-            </>
-          )}
-        </button>
-
-        {mode === 'create' && (
-          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-            {published
-              ? 'Goes live on /experiences immediately'
-              : 'Saved as draft — publish later'}
-          </p>
+            </button>
+            {mode === 'create' && (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                {published
+                  ? 'Goes live on /experiences immediately'
+                  : 'Saved as draft — publish later'}
+              </p>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { if (currentTabDef.next != null) setActiveTab(currentTabDef.next) }}
+            className="text-sm font-semibold px-5 py-3 rounded-full f-body transition-all hover:brightness-110"
+            style={{ background: '#0A2E4D', color: '#fff' }}
+          >
+            Continue →
+          </button>
         )}
       </div>
     </form>
+
+    {/* ── Inquiry form config — outside <form> to prevent submit interference ── */}
+    {activeTab === 'pricing'
+      && (bookingType === 'icelandic' || bookingType === 'both')
+      && inquiryFormConfigSlot != null && (
+      <div className="mt-4 max-w-[760px]">
+        {inquiryFormConfigSlot}
+      </div>
+    )}
+    </>
   )
 }

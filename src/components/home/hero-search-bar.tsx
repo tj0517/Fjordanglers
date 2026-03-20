@@ -164,7 +164,7 @@ function CalendarDropdown({
       {open && (
         <div
           className="absolute z-[200]"
-          style={{ ...PANEL_STYLE, top: 'calc(100% + 12px)', left: '0', width: '300px', padding: '20px' }}
+          style={{ ...PANEL_STYLE, top: 'calc(100% + 12px)', left: '50%', transform: 'translateX(-50%)', width: 'min(300px, calc(100vw - 32px))', padding: '20px' }}
         >
           {/* Stage hint */}
           <p className="text-[11px] f-body mb-3 text-center" style={{ color: 'rgba(255,255,255,0.35)' }}>
@@ -338,7 +338,7 @@ export function HeroSearchBar({ locations }: { locations: LocationEntry[] }) {
             <Command.List
               className="absolute left-0 top-full mt-2 z-[200]"
               style={{
-                width: '230px',
+                width: 'min(230px, calc(100vw - 32px))',
                 background: 'rgba(7,17,28,0.94)',
                 backdropFilter: 'blur(24px)',
                 WebkitBackdropFilter: 'blur(24px)',
