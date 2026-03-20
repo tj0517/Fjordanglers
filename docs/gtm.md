@@ -1,56 +1,56 @@
 # FjordAnglers — Go-To-Market Strategy
 
-> Source: `head/gtm.pdf`
+> Aktualizacja: 2026-03-20
 
 ---
 
-## Overview
+## Przegląd
 
-Two-sided marketplace → focus on **supply first** (guides), then use SEO to drive **demand** (anglers).
-
----
-
-## Phase 1 — Pre-Launch (Now)
-
-**Goal:** 15–20 guide profiles ready before soft launch.
-
-**How:**
-- Instagram DM outreach to Scandinavian fishing guides
-- Tested response rate: **50%+**
-- Manual admin onboarding — no self-serve signup yet
-- Offer: Founding Guide deal (3 months free + 8% lifetime commission)
-
-**Key metric:** Number of published guide profiles
+Dwustronny marketplace → fokus najpierw na **supply** (przewodnicy), potem SEO napędza **demand** (wędkarze).
 
 ---
 
-## Phase 2 — Soft Launch
+## Faza 1 — Pre-Launch (teraz)
 
-**Goal:** First organic traffic, first bookings/contacts.
+**Cel:** 15–20 profili przewodników gotowych przed soft launch.
 
-**How:**
-- SEO-optimized guide profiles go live
-- Light paid ads (Instagram/Meta) targeting Polish/German anglers
-- Content: License Map published (targets high-intent keywords)
+**Jak:**
+- Instagram DM outreach do skandynawskich przewodników wędkarskich
+- Potwierdzony wskaźnik odpowiedzi: **50%+**
+- Manualny onboarding przez admina — brak self-serve signup
+- Oferta: Founding Guide deal (8% komisji przez pierwsze 24 miesiące)
 
-**Key metric:** Weekly organic traffic trend (GSC)
-
----
-
-## Phase 3 — Full Launch
-
-**Goal:** Scale supply and demand, expand languages.
-
-**How:**
-- German and Polish landing pages
-- Broader paid acquisition
-- PR / fishing media partnerships
+**Kluczowa metryka:** Liczba opublikowanych profili przewodników
 
 ---
 
-## SEO Flywheel (Core Demand Driver)
+## Faza 2 — Soft Launch
 
-The primary demand acquisition channel is **organic search**.
+**Cel:** Pierwsze organiczne wejścia, pierwsze bookings/zapytania.
+
+**Jak:**
+- SEO-zoptymalizowane profile przewodników idą live
+- Light paid ads (Instagram/Meta) targetujące polskich/niemieckich wędkarzy
+- Content: License Map opublikowana (targets high-intent keywords)
+
+**Kluczowa metryka:** Tygodniowy trend organicznego ruchu (GSC)
+
+---
+
+## Faza 3 — Full Launch
+
+**Cel:** Skalowanie supply i demand, rozszerzenie języków.
+
+**Jak:**
+- Niemieckie i polskie landing pages
+- Szersza płatna akwizycja
+- PR / partnerstwa z mediami wędkarskimi
+
+---
+
+## SEO Flywheel (główny kanał demand)
+
+Podstawowy kanał akwizycji popytu to **organiczne wyszukiwanie**.
 
 ### Target Keywords
 - `fishing guide Norway` / `fishing guide Sweden`
@@ -58,25 +58,36 @@ The primary demand acquisition channel is **organic search**.
 - `fishing license Norway tourist`
 - `where to buy fishing license Norway`
 - `pike fishing Sweden`
+- `fly fishing guide Iceland`
 
-### SEO Strategy
-1. **Guide profile pages** — unique content per guide, location, species
-2. **License Map** — captures high-intent "how to fish legally" queries
-3. **Blog/Content** — species guides, location write-ups (post-MVP)
+### Strategia SEO
+1. **Strony tripów** — unikalny content per trip, lokalizacja, gatunek (URL: `/trips/[slug]`)
+2. **Profile przewodników** — unikalna strona per guide (URL: `/guides/[country]/[slug]`)
+3. **License Map** — przechwytuje high-intent queries "jak legalnie łowić"
+4. **Blog/Content** — species guides, opisy lokalizacji (post-MVP)
+
+### Techniczne SEO
+- `generateMetadata` z `title`, `description`, `openGraph.images` na każdej stronie
+- `sitemap.ts` generuje wpisy dla wszystkich `published = true` tripów i profili
+- Structured data (schema.org) dla tripów i przewodników
+- Mobile-first rendering
 
 ---
 
-## Social Media Strategy (Instagram)
+## Social Media (Instagram)
 
-**80/20 Rule:**
-- 80% value and inspiration content (fishing videos, locations, tips)
-- 20% platform promotion
+**Zasada 80/20:**
+- 80% wartościowy i inspirujący content (filmy wędkarskie, lokalizacje, porady)
+- 20% promocja platformy
 
 **Owner:** Łukasz (Head of Content)
 
+**Outreach do przewodników:** Instagram DM z personalizowaną wiadomością + link do Founding Guide landing page.
+
 ---
 
-## Content Priorities
-1. License Map (SEO) — **highest priority**
-2. Guide profile pages (SEO + conversion)
-3. Instagram content (brand awareness)
+## Priorytety contentu
+1. **License Map** (SEO) — najwyższy priorytet
+2. **Strony tripów** (SEO + konwersja)
+3. **Profile przewodników** (SEO + trust)
+4. **Instagram content** (brand awareness + guide outreach)

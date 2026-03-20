@@ -1,87 +1,154 @@
 # FjordAnglers — Brand Identity
 
-> Source: `identity/BRANDING.pdf` + `head/brand-bible.pdf` (v1.0, Feb 2026)
+> Wersja: 1.1 · Aktualizacja: 2026-03-20
 
 ---
 
-## Mission
+## Misja
 
 **"Connecting anglers with the best fishing experiences in the world — starting from Scandinavia."**
 
-A platform built by real anglers, not a corporation. Every decision should reflect authenticity over polish.
+Platforma zbudowana przez prawdziwych wędkarzy, nie korporację. Każda decyzja powinna odzwierciedlać autentyczność, nie polish.
 
 ---
 
-## Core Values
+## Wartości podstawowe
 
-| Value | Principle |
+| Wartość | Zasada |
 |---|---|
-| **Freedom** | "Your trip, your rules." No forced packages, no rigid itineraries. |
-| **Authenticity** | Built by real anglers who fish themselves. Not a tech startup play. |
-| **Simplicity** | Planning a trip should take minutes, not weeks. |
+| **Freedom** | "Your trip, your rules." Żadnych pakietów z wymuszonym programem. |
+| **Authenticity** | Zbudowane przez wędkarzy, którzy sami łowią. Nie startup-play. |
+| **Simplicity** | Zaplanowanie tripu powinno zająć minuty, nie tygodnie. |
 
 ---
 
 ## Tone of Voice
 
-Write like **a friend who's been there** — friendly, concrete, and direct. No marketing fluff.
+Pisz jak **przyjaciel, który tam był** — konkretnie, przyjaźnie i bezpośrednio. Zero marketingowego bełkotu.
 
-### Do ✅
-- "Find where you'll be fishing" 
+### Tak ✅
+- "Find where you'll be fishing"
 - "Book in 3 minutes"
 - "Real guides, real locations"
-- Short sentences. Active voice.
+- Krótkie zdania. Strona czynna.
 
-### Don't ❌
+### Nie ❌
 - "Exclusive fishing experiences"
 - "World-class professional anglers"
-- Corporate jargon or travel-brochure language
-- Vague superlatives ("best", "amazing", "incredible")
+- Korporacyjny żargon lub język folderów turystycznych
+- Niejasne superlatywy ("best", "amazing", "incredible")
 
 ---
 
 ## Visual Identity
 
-### Color Palette
+### Paleta kolorów
 
-| Name | Hex | Usage |
+| Nazwa | Hex | Użycie |
 |---|---|---|
-| **Fjord Blue** (Dark Blue) | `#0A2E4D` | Primary brand color, headers, CTAs |
-| **Salmon** (Orange) | `#E67E50` | Accent color, highlights, buttons |
-| **Ice White** (Off White) | `#F8FAFB` | Backgrounds, breathing space |
+| **Fjord Blue** | `#0A2E4D` | Główny kolor marki, nagłówki, dark BG |
+| **Salmon** | `#E67E50` | Akcent, highlights, przyciski CTA |
+| **Ice White** | `#F8FAFB` | Tła, przestrzeń oddychająca |
 
-> **Note:** CSS tokens in `globals.css` use slight variants:
-> - `--color-fjord-blue: #1B4F72` (lighter than brand PDF — use `#0A2E4D` for hero/dark contexts)
-> - `--color-salmon: #E67E22` (brand PDF uses `#E67E50`)
+**W kodzie — dwie konwencje:**
+- Inline styles: używaj zawsze `#0A2E4D` / `#E67E50` (dokładne wartości brand)
+- Tailwind: `text-[#0A2E4D]`, `bg-[#E67E50]`
+- CSS tokeny w `globals.css`: `--color-fjord-blue: #1B4F72` / `--color-salmon: #E67E22` (lekko inne — używać tylko przez Tailwind klasy `text-fjord-blue`)
 
-### Logo Variants
-Available in `/Desktop/fjordAnglers/identity/`:
-- `white logo.png` — for dark backgrounds
-- `dark logo.png` — for light backgrounds  
-- `SYGNET.png` — icon/favicon only
-- `balck sygnet.png` — monochrome sygnet
+### Typografia
 
-### Photography Style
-- **Golden hour** shots preferred
-- **Authentic action** — not posed stock photography
-- **Scandinavian minimalism** — lots of white/negative space
-- Real fish, real water, real people
+**Jedyna czcionka: DM Sans**
 
-### Typography
-- **Font:** Inter (system fallback: system-ui, -apple-system, sans-serif)
-- **Style:** Clean, generous spacing, Scandinavian minimalism
+```css
+/* W globals.css */
+--font-dm-sans: 'DM Sans', sans-serif;
+```
 
----
+Klasy pomocnicze:
+- `f-display` — nagłówki, duże teksty (font-family: DM Sans, zazwyczaj bold)
+- `f-body` — body text, labele, przyciski, inputs
 
-## Team
+**Nigdy nie używaj:** `font-sans`, `Inter`, `system-ui` jako głównej czcionki.
 
-| Person | Role |
+### Logo assets (`public/brand/`)
+
+| Plik | Użycie |
 |---|---|
-| **Tymon** | CEO, Strategy, Product, Outreach |
-| **Łukasz** | Head of Content, Visual Identity, Social Media |
-| **Krzychu** | Head of Fishing & Knowledge, Guide Verification, License Map data |
+| `white-logo.png` | Ciemne tła (Fjord Blue header, dark sections) |
+| `dark-logo.png` | Jasne tła (Ice White, białe sekcje) |
+| `sygnet.png` | Ikona / favicon / mała reprezentacja |
+
+Oryginały w `/Desktop/fjordAnglers/identity/`.
+
+### Styl fotografii
+- **Golden hour** preferowany
+- **Autentyczna akcja** — nie stockowe pozowane zdjęcia
+- **Skandynawski minimalizm** — dużo białej/negatywnej przestrzeni
+- Prawdziwe ryby, prawdziwa woda, prawdziwi ludzie
 
 ---
 
-## Target Species
-Salmon · Trout · Pike · Perch · Zander · Arctic Char
+## Komponenty UI — wytyczne
+
+### Karty / Cards
+```css
+background: #FDFAF7;
+border-radius: 20–24px;
+border: 1px solid rgba(10,46,77,0.07–0.1);
+box-shadow: 0 2px 16px rgba(10,46,77,0.05);
+```
+
+### Przyciski CTA (primary)
+```css
+background: #E67E50;
+border-radius: 16px;
+color: white;
+font-weight: 600;
+```
+
+### Przyciski secondary / ghost
+```css
+background: rgba(10,46,77,0.06–0.08);
+color: #0A2E4D;
+border: none;
+```
+
+### Tab bar (segmented control)
+```css
+/* Container */
+background: rgba(10,46,77,0.05);
+border-radius: 14px;
+padding: 4px;
+
+/* Active tab */
+background: white;
+box-shadow: 0 1px 4px rgba(10,46,77,0.1);
+border-radius: 10px;
+
+/* Inactive tab */
+color: rgba(10,46,77,0.5);
+```
+
+### Status badges
+| Status | BG | Kolor tekstu |
+|---|---|---|
+| New/inquiry | `rgba(59,130,246,0.1)` | `#2563EB` |
+| Reviewing | `rgba(139,92,246,0.1)` | `#7C3AED` |
+| Offer sent | `rgba(230,126,80,0.12)` | `#E67E50` |
+| Confirmed | `rgba(74,222,128,0.1)` | `#16A34A` |
+| Cancelled | `rgba(239,68,68,0.1)` | `#DC2626` |
+
+---
+
+## Zespół
+
+| Osoba | Rola |
+|---|---|
+| **Tymon** | CEO, Produkt, Dev (Next.js/Supabase/Stripe) |
+| **Łukasz** | Head of Content, Visual Identity, Social Media |
+| **Krzychu** | Head of Fishing & Knowledge, Weryfikacja przewodników, License Map |
+
+---
+
+## Gatunki docelowe
+Łosoś · Troć morska · Pstrąg · Szczupak · Okoń · Sandacz · Pstrąg arktyczny · Lipień
