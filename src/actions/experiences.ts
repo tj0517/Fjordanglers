@@ -139,6 +139,48 @@ export type ExperiencePayload = {
 type DbJson = import('@/lib/supabase/database.types').Json
 
 /**
+ * When a guide adds or updates a listing with booking_type 'classic' or 'both',
+ * the calendar-disable toggle should no longer apply — reset it to false.
+ *
+ * Called as a fire-and-forget side-effect after successful create/update.
+ * Errors are logged but not surfaced to the caller (non-critical path).
+ *
+ * Uses service client — the user-scoped client may not have UPDATE permission
+ * on the guides table (same RLS issue as in toggleCalendarDisabled).
+ */
+async function resetCalendarDisabledIfNeeded(
+  guideId:     string,
+  bookingType: string | undefined | null,
+): Promise<void> {
+  // Only classic/both listings block the "disable calendar" feature
+  if (bookingType !== 'classic' && bookingType !== 'both') return
+
+  try {
+    const service = createServiceClient()
+
+    // Only act if currently set to true — avoid a pointless write
+    const { data: guide } = await service
+      .from('guides')
+      .select('calendar_disabled')
+      .eq('id', guideId)
+      .single()
+
+    if (guide?.calendar_disabled !== true) return
+
+    const { error } = await service
+      .from('guides')
+      .update({ calendar_disabled: false })
+      .eq('id', guideId)
+
+    if (error != null) {
+      console.error('[experiences/resetCalendarDisabled]', error.message)
+    }
+  } catch (err) {
+    console.error('[experiences/resetCalendarDisabled] Unexpected:', err)
+  }
+}
+
+/**
  * Convert form DurationOptionPayload[] + trip-level scalars into the canonical
  * packages JSONB structure (trips-spec.md §5).
  *
@@ -337,6 +379,10 @@ export async function createExperience(
       }
     }
 
+    // If this listing has a direct booking flow (classic/both), calendar-disable
+    // is no longer valid — reset it so the guide's trip pages work correctly.
+    await resetCalendarDisabledIfNeeded(guideId, payload.booking_type ?? 'classic')
+
     return { success: true, data: { id: exp.id } }
   } catch (err) {
     console.error('[createExperience] Unexpected:', err)
@@ -438,6 +484,11 @@ export async function updateExperience(
           payload.accommodation_ids.map(accommodation_id => ({ experience_id: expId, accommodation_id }))
         )
       }
+    }
+
+    // If booking_type was explicitly changed to classic/both, reset calendar_disabled
+    if (payload.booking_type != null) {
+      await resetCalendarDisabledIfNeeded(perm.guideId, payload.booking_type)
     }
 
     return { success: true }

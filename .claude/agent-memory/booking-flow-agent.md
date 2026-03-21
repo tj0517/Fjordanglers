@@ -1,7 +1,47 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 20 — Bug fix #3 (DONE): Booking widget i AvailabilityPreviewCalendar pokazywały zablokowane daty guide'a nawet gdy `calendarDisabled=true`. Fix: gdy `effectiveType === 'icelandic'` BookingWidget przekazuje `config=null, blocked=[], booked=new Set()` do AvailabilityCalendar. Na stronie tripu AvailabilityPreviewCalendar dostaje `availabilityConfig=null, blockedDates=[], bookedDates=[]` gdy `calendarDisabled`. typecheck ✅ 0 errors.
+Sesja 27 — closeModal() przed router.refresh() w handleUnblock + handleUnblockSelected (DONE). Eliminuje flash starego stanu po unblock. typecheck ✅ 0 errors.
+
+Sesja 26 — Overlap guard na blockDates + blockMultipleDates (DONE). Dla każdego listingu każdy dzień może mieć co najwyżej jedną blokadę. typecheck ✅ 0 errors.
+
+Sesja 25 — Schedule UX improvement (DONE). Diagonal stripe background już był (schedStripe). Dokończono: (1) onMouseEnter używa schedStripeHov zamiast solid color, (2) chip "Sched" → "Weekly off" (w-full, justify-center, rgba(99,102,241,0.18), #4338CA), (3) legenda: "recurring weekly pattern" → "recurring weekly off". typecheck ✅ 0 errors.
+
+### Sesja 26 — Overlap guard (no duplicate blocks per day per listing)
+- **Problem**: `upsert ON CONFLICT (experience_id, date_start, date_end)` chronił tylko przed dokładnym duplikatem — nie przed nakładającymi się zakresami. Range Jan–Dec + osobna blokada May 5 = 2 wiersze na ten dzień.
+- **`blockDates`**: przed insertem query `lte('date_start', dateEnd) && gte('date_end', dateStart)` → Set pokrytych experienceIds → insert tylko `toInsert` (uncovered). Jeśli wszystkie już pokryte → `return { success: true }`.
+- **`blockMultipleDates`**: jeden bulk query (min–max date range) → `Set<"expId::date">` pokrytych par → filtruje każdą (experience, date) kombinację przed insertem. Obsługuje range-bloki (np. Jan–Dec zawiera 30 zaznaczonych dni → wszystkie pominięte).
+- Istniejące duplikaty w DB NIE są automatycznie czyszczone — wymagałoby jednorazowego SQL cleanup.
+
+Sesja 24 — showCalendarToggle fix (DONE). Root cause "nie mogę wyłączyć toggle off": gdy calendar_disabled=true I guide ma classic/both listing, `showCalendarToggle = !hasClassicListing = false` → toggle ukryty → nie można wyłączyć. Fix: `showCalendarToggle = !hasClassicListing || calendarDisabled`. Dodano warning banner "restore date picker". Sesja 23 (poprzednia): RLS fix na service client + useEffect sync + auto-reset przy create/update. typecheck ✅ 0 errors.
+
+### Sesja 25 — Schedule block UX improvement
+- **Cel**: "shedule powinno miec bardziej jasne ux bo aktualnie nie wyglada jakby blokowalo caly dzien"
+- Diagonal stripe background (`schedStripe`) był już ustawiony z poprzedniej sesji
+- `onMouseEnter`: zmieniono `'rgba(99,102,241,0.11)'` → `schedStripeHov` (gęstsza wersja paska)
+- Chip: `"Sched"` → `"Weekly off"` z `w-full justify-center` (span całej szerokości komórki), tło `rgba(99,102,241,0.18)` (było 0.10), kolor `#4338CA` (był #4F46E5)
+- Legenda: `'recurring weekly pattern'` → `'recurring weekly off'`
+
+### Sesja 23 — Calendar disabled toggle fixes
+- **Bug 1 (toggleCalendarDisabled)**: `requireGuide()` używało user-scoped client → RLS na `guides` blokował UPDATE silently (0 rows, error=null). Fix: service client po auth check + `.select('id')` żeby wykryć 0-row update.
+- **Bug 2 (UI desync)**: `useState(currentlyDisabled)` inicjalizuje się tylko raz (mount). Po `router.refresh()` prop zmienia się ale stan nie. Fix: `useEffect(() => setLocalDisabled(currentlyDisabled), [currentlyDisabled])` w `CalendarDisabledToggle`.
+- **Bug 3 (auto-reset)**: Gdy guide dodaje listing `classic`/`both` przy `calendar_disabled=true`, DB nie było resetowane. Fix: `resetCalendarDisabledIfNeeded(guideId, bookingType)` — service client, tylko jeśli faktycznie `calendar_disabled=true`, wywołane po create i update (jeśli `payload.booking_type` podany).
+
+### Sesja 22 — Range block split unblock (DONE)
+
+### Sesja 22 — Range block split (właściwy fix)
+- Sesja 21 była workaround (deduplication) — nadal kasowała cały range.
+- Nowa action `unblockDaysFromRange`: fetch bloku → oblicz segmenty → delete oryginał → insert segmenty
+  - Przykład: range Jan–Dec, unblock Mar 15 → Jan–Mar 14 + Mar 16–Dec
+  - Przykład: multi Mar 10 + Mar 20 → Jan–Mar 9 + Mar 11–Mar 19 + Mar 21–Dec
+- `handleUnblock`: jeśli `date_start ≠ date_end` → `unblockDaysFromRange(id, [selectedDay])`
+- `handleUnblockSelected`: to samo dla każdego zaznaczonego bloku
+- `handleMultiUnblock`: buduje `blockOpsMap` — single-day → `unblockDates`, range → `unblockDaysFromRange(id, days[])`
+- Usunięte workaroundy: warning pills, "Remove range" button label → z powrotem "Unblock"
+- Zachowany: `Range` badge w blocked entry row (informacyjny)
+
+### Sesja 21 — Range block fix + UX (workaround, zastąpiony w sesji 22)
+- **Root bug**: `handleMultiUnblock` zbierał ID bloków ze wszystkich zaznaczonych dni. Range-blok (np. Jan–Dec) pojawia się w `blockedEntries` KAŻDEGO dnia z zakresu → ten sam ID wysyłany wielokrotnie do `unblockDates`. Przy jednorazowym kasowaniu DB zwraca ok (nie-istniejący rekord = no-op), ale UI wyglądało jak "cały kalendarz wyczyszczony".
 
 ### Sesja 20 — Seria bugfixów calendar_disabled
 - **Bug 1** (fixed): calendar/page.tsx — query `select('id, full_name, calendar_disabled')` failował gdy kolumna nie istniała → guide=null → redirect('/dashboard'). Fix: split na 2 queries + `?? false`.

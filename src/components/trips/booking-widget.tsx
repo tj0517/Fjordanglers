@@ -520,6 +520,9 @@ export function BookingWidget({
     >
 
       {/* ── Inquiry-mode info banner (replaces date picker) ─────────────────── */}
+      {/* Shown for all icelandic-mode flows. Text differs by cause:           */}
+      {/*   calendarDisabled=true  → guide toggled off the calendar            */}
+      {/*   bookingType='icelandic' → this trip is natively inquiry-only       */}
       {!isDraft && effectiveType === 'icelandic' && (
         <div
           className="mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
@@ -531,8 +534,17 @@ export function BookingWidget({
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
-            <span className="font-semibold" style={{ color: '#0A2E4D' }}>Dates set in the inquiry form.</span>
-            {' '}This guide confirms availability personally before any payment.
+            {calendarDisabled ? (
+              <>
+                <span className="font-semibold" style={{ color: '#0A2E4D' }}>Booking by request only.</span>
+                {' '}This guide is currently taking bookings through personal inquiry — send a request and they&apos;ll confirm dates directly.
+              </>
+            ) : (
+              <>
+                <span className="font-semibold" style={{ color: '#0A2E4D' }}>Dates set in the inquiry form.</span>
+                {' '}This guide confirms availability personally before any payment.
+              </>
+            )}
           </p>
         </div>
       )}

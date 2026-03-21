@@ -76,10 +76,14 @@ export default async function CalendarPage({
   // ── Calendar-disabled toggle eligibility ──────────────────────────────────────
   // Show when all listings are icelandic (inquiry-only) flow, OR guide has no listings.
   // Guides with any 'classic' or 'both' listing already have a working calendar — no need.
+  //
+  // ALWAYS show when calendar_disabled = true, even if the guide now has classic/both
+  // listings — otherwise they'd have no way to turn it off (e.g. if the auto-reset
+  // didn't fire, or they had it enabled before adding a classic listing).
   const hasClassicListing = allExperiences.some(
     e => e.booking_type === 'classic' || e.booking_type === 'both'
   )
-  const showCalendarToggle = !hasClassicListing
+  const showCalendarToggle = !hasClassicListing || calendarDisabled
 
   // ── Calendars + experience assignments ───────────────────────────────────────
   const [calendars, calendarExperienceMap] = await Promise.all([
@@ -189,22 +193,31 @@ export default async function CalendarPage({
         </p>
       </div>
 
-      {/* ─── Calendar-disabled toggle (only for icelandic-only guides) ──────── */}
+      {/* ─── Calendar-disabled toggle ─────────────────────────────────────── */}
       {showCalendarToggle && (
         <div
           className="mb-6 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
+          style={{
+            background: '#FDFAF7',
+            border: `1px solid ${calendarDisabled && hasClassicListing ? 'rgba(230,126,80,0.25)' : 'rgba(10,46,77,0.07)'}`,
+          }}
         >
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold f-body mb-0.5" style={{ color: '#0A2E4D' }}>
               Disable calendar for all listings
             </p>
-            <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.52)' }}>
-              When disabled, your trip pages show a&nbsp;
-              <strong style={{ color: 'rgba(10,46,77,0.7)' }}>"Request this trip"</strong>
-              &nbsp;button instead of the date picker.
-              Anglers send an inquiry and you reply with a custom offer.
-            </p>
+            {calendarDisabled && hasClassicListing ? (
+              <p className="text-xs f-body leading-relaxed" style={{ color: '#C96030' }}>
+                Calendar is disabled but you have a direct-booking listing — turn this off to restore the date picker on your trip pages.
+              </p>
+            ) : (
+              <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.52)' }}>
+                When disabled, your trip pages show a&nbsp;
+                <strong style={{ color: 'rgba(10,46,77,0.7)' }}>&quot;Request this trip&quot;</strong>
+                &nbsp;button instead of the date picker.
+                Anglers send an inquiry and you reply with a custom offer.
+              </p>
+            )}
           </div>
           <div className="flex-shrink-0">
             <CalendarDisabledToggle currentlyDisabled={calendarDisabled} />
@@ -298,6 +311,7 @@ export default async function CalendarPage({
               inquiries={inquiries}
               calendarMode="shared"
               weeklySchedules={weeklySchedules}
+              calendarExperienceMap={calendarExperienceMap}
             />
           )}
         </div>

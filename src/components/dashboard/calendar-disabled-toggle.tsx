@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toggleCalendarDisabled } from '@/actions/calendar'
 
@@ -14,6 +14,12 @@ export function CalendarDisabledToggle({
   const [localDisabled, setLocalDisabled] = useState(currentlyDisabled)
   const [error, setError] = useState<string | null>(null)
 
+  // Sync local state when the server-rendered prop changes (e.g. after router.refresh()
+  // or when the parent re-renders with a fresh DB value from the Server Component).
+  useEffect(() => {
+    setLocalDisabled(currentlyDisabled)
+  }, [currentlyDisabled])
+
   async function handleToggle() {
     const next = !localDisabled
     setLocalDisabled(next)
@@ -21,7 +27,7 @@ export function CalendarDisabledToggle({
 
     const result = await toggleCalendarDisabled(next)
     if ('error' in result) {
-      setLocalDisabled(!next) // revert
+      setLocalDisabled(!next) // revert optimistic update
       setError(result.error)
       return
     }

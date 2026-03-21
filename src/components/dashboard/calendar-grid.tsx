@@ -12,7 +12,7 @@
 
 import { useState, useMemo, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { blockDates, blockMultipleDates, unblockDates } from '@/actions/calendar'
+import { blockDates, blockMultipleDates, unblockDates, unblockDaysFromRange } from '@/actions/calendar'
 import { createWeeklySchedule, deleteWeeklySchedule } from '@/actions/weekly-schedules'
 import type { WeeklySchedule } from '@/actions/weekly-schedules'
 
@@ -64,6 +64,13 @@ export type CalendarGridProps = {
   calendarMode:     'per_listing' | 'shared'
   /** Recurring weekday patterns set by the guide (e.g. Mon–Fri blocked all summer). */
   weeklySchedules?: WeeklySchedule[]
+  /**
+   * Map of calendarId → experienceIds — used for smart block pre-selection.
+   * When a day has a booking, blocking auto-selects all experiences that share
+   * a calendar with the booked trip. With 0-1 calendars (single-calendar setup)
+   * all experiences are selected (original behaviour).
+   */
+  calendarExperienceMap?: Record<string, string[]>
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -114,6 +121,7 @@ function formatDayLong(dateStr: string): string {
 export default function CalendarGrid({
   year, month, experiences, blocked, bookings, inquiries, calendarMode,
   weeklySchedules = [],
+  calendarExperienceMap = {},
 }: CalendarGridProps) {
   const isShared = calendarMode === 'shared'
   const router = useRouter()
@@ -177,6 +185,31 @@ export default function CalendarGrid({
   // ── Shared action state ─────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [actionError,  setActionError]  = useState<string | null>(null)
+
+  // ── Smart block pre-selection ────────────────────────────────────────────────
+  // When a day has ≥1 booking:
+  //   • 0-1 named calendars (single-calendar setup) → select ALL experiences
+  //   • 2+ named calendars                          → select only experiences
+  //     sharing a calendar with the booked trip(s); other calendars untouched
+  // No bookings → always selects all experiences (default behaviour).
+  function smartBlockExpIds(dayBookings: BookingEntry[]): string[] {
+    const allIds     = experiences.map(e => e.id)
+    if (dayBookings.length === 0) return allIds
+
+    const calEntries = Object.entries(calendarExperienceMap)
+    // Single or no named calendars → shared-calendar behaviour (block all)
+    if (calEntries.length <= 1) return allIds
+
+    const bookedExpIds = new Set(dayBookings.map(b => b.experience_id))
+    const smartIds     = new Set<string>()
+    for (const [, expIds] of calEntries) {
+      if (expIds.some(id => bookedExpIds.has(id))) {
+        expIds.forEach(id => smartIds.add(id))
+      }
+    }
+    // Booked experience not in any named calendar → fallback to all
+    return smartIds.size > 0 ? Array.from(smartIds) : allIds
+  }
   // Tracks which specific block entry is being unblocked (for per-row spinner)
   const [unblockingId,      setUnblockingId]      = useState<string | null>(null)
   // Multiselect unblock
@@ -295,10 +328,11 @@ export default function CalendarGrid({
   function openDay(dayStr: string) {
     setSelectedDay(dayStr)
     setShowBlockForm(false)
-    setBlockExpIds(experiences.map(e => e.id))
     setBlockEndDate(dayStr)
     setBlockReason('')
     setActionError(null)
+    const dayBookings = dayMap[dayStr]?.bookingEntries ?? []
+    setBlockExpIds(smartBlockExpIds(dayBookings))
   }
   function closeModal() { setSelectedDay(null); setShowBlockForm(false); setActionError(null); setSelectedBlockIds(new Set()) }
 
@@ -323,20 +357,41 @@ export default function CalendarGrid({
     })
   }
   function openMultiModal() {
-    setMultiBlockExpIds(experiences.map(e => e.id))
+    const allDayBookings = Array.from(selectedDays).flatMap(
+      day => dayMap[day]?.bookingEntries ?? []
+    )
+    setMultiBlockExpIds(smartBlockExpIds(allDayBookings))
     setMultiBlockReason('')
     setActionError(null)
     setShowMultiModal(true)
   }
 
   async function handleMultiUnblock() {
-    // Collect all block IDs from all selected days
-    const blockIds = Array.from(selectedDays).flatMap(
-      day => (dayMap[day]?.blockedEntries ?? []).map(b => b.id)
-    )
-    if (blockIds.length === 0) return
+    // Build a map of blockId → { block, daysToRemove[] } so each unique range
+    // block is split exactly once, removing only the selected days that fall
+    // within it.  Single-day blocks (date_start === date_end) are just deleted.
+    const blockOpsMap = new Map<string, { block: (typeof selData.blockedEntries)[number]; days: string[] }>()
+
+    for (const day of Array.from(selectedDays)) {
+      for (const b of dayMap[day]?.blockedEntries ?? []) {
+        if (!blockOpsMap.has(b.id)) {
+          blockOpsMap.set(b.id, { block: b, days: [] })
+        }
+        blockOpsMap.get(b.id)!.days.push(day)
+      }
+    }
+
+    if (blockOpsMap.size === 0) return
     setIsUnblockingMulti(true); setActionError(null)
-    const results = await Promise.all(blockIds.map(id => unblockDates(id)))
+
+    const results = await Promise.all(
+      Array.from(blockOpsMap.values()).map(({ block, days }) =>
+        block.date_start === block.date_end
+          ? unblockDates(block.id)                        // single-day → delete
+          : unblockDaysFromRange(block.id, days)          // range → split
+      )
+    )
+
     const failed = results.find(r => 'error' in r)
     if (failed && 'error' in failed) {
       setActionError(failed.error)
@@ -497,29 +552,43 @@ export default function CalendarGrid({
 
   async function handleUnblock(blockId: string) {
     setUnblockingId(blockId); setActionError(null)
-    const result = await unblockDates(blockId)
+    const block = selData.blockedEntries.find(b => b.id === blockId)
+    // Range block: split around the currently-viewed day instead of deleting all
+    const result =
+      block != null && block.date_start !== block.date_end && selectedDay != null
+        ? await unblockDaysFromRange(blockId, [selectedDay])
+        : await unblockDates(blockId)
     if ('error' in result) {
       setUnblockingId(null)
       setActionError(result.error)
       return
     }
+    // Close modal immediately — avoids a flash of stale blocked state
+    // while router.refresh() re-fetches server data in the background.
+    closeModal()
     startUnblock(() => { router.refresh() })
-    setUnblockingId(null)
   }
 
   async function handleUnblockSelected() {
     if (selectedBlockIds.size === 0 || isUnblockingMulti) return
     setIsUnblockingMulti(true); setActionError(null)
-    const ids = Array.from(selectedBlockIds)
-    const results = await Promise.all(ids.map(id => unblockDates(id)))
+    // For range blocks, only remove the currently-viewed day (split); delete single-day blocks
+    const results = await Promise.all(
+      Array.from(selectedBlockIds).map(id => {
+        const block = selData.blockedEntries.find(b => b.id === id)
+        return block != null && block.date_start !== block.date_end && selectedDay != null
+          ? unblockDaysFromRange(id, [selectedDay])
+          : unblockDates(id)
+      })
+    )
     const failed = results.find(r => 'error' in r)
     if (failed && 'error' in failed) {
       setActionError(failed.error)
       setIsUnblockingMulti(false)
       return
     }
-    setSelectedBlockIds(new Set())
-    setIsUnblockingMulti(false)
+    // Close modal immediately — avoids stale state flash before refresh completes
+    closeModal()
     startUnblock(() => { router.refresh() })
   }
 
@@ -920,12 +989,16 @@ export default function CalendarGrid({
             const hasConfirmed = confirmedBk.length > 0
             const hasPending   = pendingBk.length > 0
 
-            // Background — manual block takes priority over schedule block
+            // Background — manual block takes priority over schedule block.
+            // Schedule-blocked days use a diagonal stripe pattern so guides
+            // immediately read them as "recurring unavailable" (standard calendar UX).
+            const schedStripe     = 'repeating-linear-gradient(-45deg, rgba(99,102,241,0.05), rgba(99,102,241,0.05) 3px, rgba(99,102,241,0.13) 3px, rgba(99,102,241,0.13) 6px)'
+            const schedStripeHov  = 'repeating-linear-gradient(-45deg, rgba(99,102,241,0.09), rgba(99,102,241,0.09) 3px, rgba(99,102,241,0.2)  3px, rgba(99,102,241,0.2)  6px)'
             let bg = '#FDFAF7'
             if (isSelected)               bg = 'rgba(230,126,80,0.13)'
             else if (fullyBlocked)        bg = 'rgba(230,126,80,0.08)'
             else if (partBlocked)         bg = 'rgba(230,126,80,0.04)'
-            else if (isScheduleBlocked)   bg = 'rgba(99,102,241,0.06)'
+            else if (isScheduleBlocked)   bg = schedStripe
 
             return (
               <button
@@ -945,7 +1018,7 @@ export default function CalendarGrid({
                     isSelected        ? 'rgba(230,126,80,0.2)'  :
                     isToday           ? 'rgba(10,46,77,0.07)'   :
                     fullyBlocked      ? 'rgba(230,126,80,0.14)' :
-                    isScheduleBlocked ? 'rgba(99,102,241,0.11)' :
+                    isScheduleBlocked ? schedStripeHov          :
                                         'rgba(10,46,77,0.04)'
                 }}
                 onMouseLeave={e => { e.currentTarget.style.background = bg }}
@@ -1035,15 +1108,15 @@ export default function CalendarGrid({
                   {/* Weekly schedule chip — only when not already manually blocked */}
                   {isScheduleBlocked && !fullyBlocked && (
                     <div
-                      className="flex items-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
-                      style={{ background: 'rgba(99,102,241,0.1)', color: '#4F46E5' }}
+                      className="w-full flex items-center justify-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
+                      style={{ background: 'rgba(99,102,241,0.18)', color: '#4338CA' }}
                     >
                       <svg width="6" height="6" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.3" style={{ flexShrink: 0 }}>
                         <circle cx="4" cy="4" r="3.2"/>
                         <line x1="4" y1="1.8" x2="4" y2="4" strokeLinecap="round"/>
                         <line x1="4" y1="4" x2="5.4" y2="5.4" strokeLinecap="round"/>
                       </svg>
-                      <span>Sched</span>
+                      <span>Weekly off</span>
                     </div>
                   )}
                 </div>
@@ -1115,7 +1188,7 @@ export default function CalendarGrid({
                   {item.label === 'Booked'    ? 'confirmed booking'        :
                    item.label === 'Pending'   ? 'awaiting confirmation'    :
                    item.label === 'Request'   ? 'custom trip inquiry'      :
-                   item.label === 'Schedule'  ? 'recurring weekly pattern' :
+                   item.label === 'Schedule'  ? 'recurring weekly off' :
                    'unavailable / blocked'}
                 </span>
               </div>
@@ -1339,9 +1412,20 @@ export default function CalendarGrid({
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                              {expById[b.experience_id]?.title ?? 'Trip'}
-                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                                {expById[b.experience_id]?.title ?? 'Trip'}
+                              </p>
+                              {/* Range badge — shown when block covers more than one day */}
+                              {b.date_start !== b.date_end && (
+                                <span
+                                  className="flex-shrink-0 text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full f-body"
+                                  style={{ background: 'rgba(230,126,80,0.12)', color: '#C96030' }}
+                                >
+                                  Range
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
                               {b.date_start === b.date_end ? b.date_start : `${b.date_start} → ${b.date_end}`}
                             </p>
@@ -1392,7 +1476,25 @@ export default function CalendarGrid({
               {showBlockForm && (
                 <section className="rounded-xl p-4"
                          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.08)' }}>
-                  <p className="text-sm font-bold f-body mb-4" style={{ color: '#0A2E4D' }}>Block dates</p>
+                  <p className="text-sm font-bold f-body mb-3" style={{ color: '#0A2E4D' }}>Block dates</p>
+
+                  {/* Smart-selection hint — shown when booking exists on this day */}
+                  {selectedDay != null &&
+                   (dayMap[selectedDay]?.bookingEntries ?? []).length > 0 && (
+                    <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg"
+                         style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.1)' }}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
+                        <circle cx="6" cy="6" r="5" stroke="rgba(10,46,77,0.4)" strokeWidth="1.2"/>
+                        <line x1="6" y1="4" x2="6" y2="6.5" stroke="rgba(10,46,77,0.4)" strokeWidth="1.2" strokeLinecap="round"/>
+                        <circle cx="6" cy="8.5" r="0.6" fill="rgba(10,46,77,0.4)"/>
+                      </svg>
+                      <p className="text-[11px] f-body leading-snug" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                        {Object.entries(calendarExperienceMap).length > 1
+                          ? 'Pre-selected trips share a calendar with the existing booking'
+                          : 'Pre-selected all trips — one shared calendar'}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div>
                       <label htmlFor="block-start" className="block text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
