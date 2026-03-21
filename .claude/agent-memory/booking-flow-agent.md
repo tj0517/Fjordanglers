@@ -1,7 +1,12 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 5 — calendar: multi-kalendarze (agency mode), listings filter pills, Block▾ dropdown, unblock spinner, idempotent upsert, RLS fix, refresh_token fix. typecheck ✅ 0 błędów.
+Sesja 20 — Bug fix #3 (DONE): Booking widget i AvailabilityPreviewCalendar pokazywały zablokowane daty guide'a nawet gdy `calendarDisabled=true`. Fix: gdy `effectiveType === 'icelandic'` BookingWidget przekazuje `config=null, blocked=[], booked=new Set()` do AvailabilityCalendar. Na stronie tripu AvailabilityPreviewCalendar dostaje `availabilityConfig=null, blockedDates=[], bookedDates=[]` gdy `calendarDisabled`. typecheck ✅ 0 errors.
+
+### Sesja 20 — Seria bugfixów calendar_disabled
+- **Bug 1** (fixed): calendar/page.tsx — query `select('id, full_name, calendar_disabled')` failował gdy kolumna nie istniała → guide=null → redirect('/dashboard'). Fix: split na 2 queries + `?? false`.
+- **Bug 2** (fixed): trips/[id]/page.tsx — `calendar_disabled` nie było w `EXP_SELECT` join → zawsze `undefined` → toggle nie działał. Fix: osobne query po id guide'a.
+- **Bug 3** (fixed): booking-widget.tsx + trips/[id]/page.tsx — AvailabilityCalendar/PreviewCalendar pokazywały blocked dates gdy `calendarDisabled=true`. Fix: puste tablice gdy `effectiveType === 'icelandic'`.
 
 ## Zrealizowane zadania
 
@@ -595,8 +600,164 @@ Formularz tworzenia/edycji tripu podzielony na 5 zakładek — taki sam wzorzec 
 
 `pnpm typecheck` → **0 błędów**
 
+### Sesja 17 — Guide Inquiry UX fix + Weekly Schedule feature
+
+#### Inquiry detail page (`/dashboard/inquiries/[id]`) — right column redesign
+- **Removed**: Generic "Actions" header
+- **Added**: "What they need" summary block at top (always shown when canSendOffer or offer_sent)
+  - Shows: dates+tripDays, group, target species (max 3 + overflow count), duration type
+  - Each row: inline SVG icon (calendar, people, fish, clock) + value
+  - Separated from form by `borderBottom: '1px solid rgba(10,46,77,0.08)'`
+- **Added**: "Your offer" section label above GuideOfferForm
+- **Changed**: offer_sent banner color: purple → salmon/amber (rgba(230,126,80,0.07))
+- **GuideOfferForm**: removed "Send an Offer" heading; improved success state (green box + subtitle)
+
+#### Weekly Schedule feature — full implementation
+**Use case**: Guide who guides only on weekends sets Mon–Fri blocked for entire summer. Pattern repeats every week within the period.
+
+**Files created:**
+- `supabase/migrations/20260320160000_add_guide_weekly_schedules.sql` — new table with RLS
+- `src/actions/weekly-schedules.ts` — `createWeeklySchedule()`, `deleteWeeklySchedule()`, export `WeeklySchedule` type
+
+**Files modified:**
+- `src/lib/supabase/database.types.ts` — added `guide_weekly_schedules` table type (between guide_calendars and guide_images)
+- `src/app/dashboard/calendar/page.tsx` — fetches weekly schedules + passes as `weeklySchedules` prop to CalendarGrid
+- `src/components/dashboard/calendar-grid.tsx`:
+  - New import: `createWeeklySchedule`, `deleteWeeklySchedule`, `WeeklySchedule` type
+  - New prop: `weeklySchedules?: WeeklySchedule[]` (default `[]`)
+  - New state: `showScheduleModal`, `scheduleFrom`, `scheduleTo`, `scheduleWeekdays (Set<number>)`, `scheduleLabel`, `scheduleError`, `isSubmittingSchedule`, `deletingScheduleId`
+  - New ref: `scheduleModalRef`
+  - Day cell: computes `isScheduleBlocked` via `(jsUTCDay + 6) % 7` → check against all schedules
+  - Background: `rgba(99,102,241,0.06)` for schedule-blocked (indigo/purple, lighter than manual blocks)
+  - New chip: "⏱ Sched" in indigo (`#4F46E5`) when schedule-blocked AND not manually blocked
+  - Block▾ dropdown: new "Weekly schedule" item (indigo color, clock SVG, badge count if schedules exist)
+  - New modal: period picker + weekday toggles (Mon–Sun) + quick presets (Mon–Fri / Sat–Sun) + optional label + list of existing schedules with delete
+  - Legend: added "Schedule · recurring weekly pattern" entry
+
+**Weekday encoding**: `0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri, 5=Sat, 6=Sun` (ISO weekday - 1)
+
+**Visual hierarchy (day cell backgrounds):**
+1. Selected (multi-pick): salmon 0.13
+2. Fully blocked (manual): salmon 0.08
+3. Partially blocked: salmon 0.04
+4. Schedule blocked: indigo 0.06
+5. Normal: #FDFAF7
+
+**Wymagana akcja — migracja DB:**
+```sql
+-- wklej: supabase/migrations/20260320160000_add_guide_weekly_schedules.sql
+```
+
+### Sesja 19 — Inquiry form: multi-period picker + Guide offer form: date picker + map
+
+#### Angler inquiry form — MultiPeriodPicker (zamiana DateRangePicker)
+- **`src/app/trips/[id]/inquire/InquireForm.tsx`** — kompletny rewrite zakładki Trip:
+  - Dodano typy: `Period = { from: string; to: string }`, `BlockedRange`, `DayState`
+  - Nowe propsy: `availabilityConfig?: AvailConfigRow | null`, `blockedDates?: BlockedRange[]`
+  - Zastąpiono `DateRangePicker` przez `MultiPeriodPicker`:
+    - Tryby: "Individual days" (single click) / "Date range" (click start → end)
+    - Blocked dates: widoczne (strikethrough/red) ale NIE klikalne
+    - Multi-period: każda selekcja dodaje się do `periods: Period[]` array
+    - Chips z × do usuwania; counter "N periods · M days"; "Clear all"
+  - State: `specificFrom/specificTo` → `periods: Period[]`
+  - Submit: `datesFrom = earliest from`, `datesTo = latest to`, `preferences.allDatePeriods = periods` (gdy >1)
+- **`src/actions/inquiries.ts`** — dodano `allDatePeriods: z.array(z.object({ from, to })).optional()` do preferences schema
+- **`src/app/trips/[id]/inquire/page.tsx`** — pobiera `experience_availability_config` + `experience_blocked_dates`, przekazuje do InquireForm
+
+#### Trip slug page — AvailabilityPreviewCalendar (read-only)
+- **`src/components/trips/availability-preview-calendar.tsx`** — NEW:
+  - Read-only kalendarz: available (zielona kropka), blocked (strikethrough + czerwony), booked, unavailable
+  - Nawigacja miesiącami (canPrev/canNext)
+  - Legenda + CTA footer "Preview only — pick your exact dates in the next step"
+  - Tylko dla `icelandic` i `both` booking types
+- **`src/app/trips/[id]/page.tsx`** — dodano `<AvailabilityPreviewCalendar>` przed `<CancellationPolicyBanner>`
+
+#### DB migration — offer fields
+- **`supabase/migrations/20260320180000_add_offer_meeting_fields.sql`** — NEW:
+  - `ALTER TABLE trip_inquiries ADD COLUMN offer_date_from date, offer_date_to date, offer_meeting_lat float8, offer_meeting_lng float8`
+- **`src/lib/supabase/database.types.ts`** — dodano 4 nowe pola do `trip_inquiries` Row/Insert/Update
+
+#### sendOfferByGuide action — nowe parametry
+- **`src/actions/inquiries.ts`** — `sendOfferByGuide()`:
+  - Nowe pola: `offerDateFrom?`, `offerDateTo?`, `offerMeetingLat?`, `offerMeetingLng?`
+  - DB update: `offer_date_from`, `offer_date_to`, `offer_meeting_lat`, `offer_meeting_lng`
+
+#### GuideOfferForm — kompletny rewrite
+- **`src/components/dashboard/guide-offer-form.tsx`** — rewritten:
+  - Nowe propsy: `anglerDatesFrom, anglerDatesTo, anglerAllPeriods?, guideWeeklySchedules?`
+  - Export: `GuideOfferFormProps` (named)
+  - **Sekcja 1**: Angler's dates — read-only chips (blue, multi-period aware)
+  - **Sekcja 2**: `OfferDatePicker` — wewnętrzny komponent kalendarza:
+    - Pokazuje daty anglera (niebieski tint: `angler_period` / `angler_window`)
+    - Pokazuje blocked weekdays przewodnika (`guide_blocked` → strikethrough/red, clickable z warningiem)
+    - Przewodnik wybiera confirmed dates (pomarańczowe: half-gradient bar + orange circle)
+    - Legenda 3-elementowa
+    - Start view = miesiąc daty anglera (min: today)
+    - Click 1 = start; click 2 = end (normalize); click 3 = reset
+    - Hover preview range gdy pending
+  - **Sekcja 3**: River/location (text input)
+  - **Sekcja 4**: Meeting point — toggle "Pin on map →" / "Hide map":
+    - `dynamic(() => import('@/components/trips/location-picker-map'), { ssr: false })`
+    - Gdy pin ustawiony + mapa ukryta: pokazuje coords chip z × remove
+  - **Sekcja 5**: Total price (number input)
+  - **Sekcja 6**: Offer details (textarea)
+  - Submit przekazuje wszystkie nowe pola do `sendOfferByGuide`
+
+#### Inquiry detail page — zmiany
+- **`src/app/dashboard/inquiries/[id]/page.tsx`**:
+  - `Promise.all` + `guide_weekly_schedules` query (period_from, period_to, blocked_weekdays)
+  - `prefs` type rozszerzony o `allDatePeriods?: { from: string; to: string }[]`
+  - `GuideOfferForm` dostaje: `anglerDatesFrom`, `anglerDatesTo`, `anglerAllPeriods`, `guideWeeklySchedules`
+  - `OfferRecap` rozszerzony o: `offer_date_from`, `offer_date_to`, `offer_meeting_lat`, `offer_meeting_lng`
+    - Confirmed dates row
+    - Meeting point row z Google Maps link (lat,lng ↗)
+    - Dodana sekcja "Your Offer" header
+
+#### Wymagana akcja — migracja DB
+```sql
+-- wklej: supabase/migrations/20260320180000_add_offer_meeting_fields.sql
+```
+
+### Sesja 18 — Calendar Disabled feature
+
+#### Cel
+Przewodnicy, którzy mają tylko `icelandic` listings (lub brak listingów) mogą wyłączyć swój kalendarz. Efekt: wszystkie strony publiczne `/trips/[id]` pokazują przycisk "Request this trip" zamiast date pickera.
+
+#### Nowe pliki
+- `supabase/migrations/20260320170000_add_calendar_disabled.sql` — `ALTER TABLE guides ADD COLUMN calendar_disabled boolean NOT NULL DEFAULT false`
+- `src/components/dashboard/calendar-disabled-toggle.tsx` — Client Component; optymistyczny toggle; indigo active state; calls `toggleCalendarDisabled()`
+
+#### Zmodyfikowane pliki
+- `src/lib/supabase/database.types.ts` — dodano `calendar_disabled: boolean` do guides Row/Insert/Update
+- `src/types/index.ts` — dodano `calendar_disabled` do `ExperienceWithGuide.guide` Pick
+- `src/lib/supabase/queries.ts` — dodano `calendar_disabled` do `EXP_SELECT` guide fields
+- `src/actions/calendar.ts` — dodano `toggleCalendarDisabled(disabled: boolean)` server action
+- `src/lib/mock-data.ts` — dodano `calendar_disabled: false` do wszystkich 3 mock guides
+- `src/app/dashboard/calendar/page.tsx`:
+  - Guide query: `select('id, full_name, calendar_disabled')`
+  - Experiences query: `select('id, title, published, booking_type')`
+  - `showCalendarToggle = !hasClassicListing` (guide bez 'classic'/'both' listings)
+  - Toggle card UI ponad two-column layout gdy `showCalendarToggle`
+- `src/app/trips/[id]/page.tsx`:
+  - Lokalny `EXP_SELECT` rozszerzony o `languages, calendar_disabled` w guide
+  - `BookingWidget` i `MobileBookingBar` dostają `calendarDisabled={exp.guide.calendar_disabled ?? false}`
+  - `AvailabilityPreviewCalendar` pokazuje się też gdy `calendar_disabled=true`
+- `src/components/trips/booking-widget.tsx`:
+  - Nowy prop `calendarDisabled?: boolean` (default `false`)
+  - `effectiveType = calendarDisabled ? 'icelandic' : ...` (zawsze wygrywa)
+  - `MobileBookingBar`: wczesny return z inquiry bar gdy `calendarDisabled || bookingType === 'icelandic'`
+
+#### Logika eligibility
+- Toggle widoczny gdy: `allExperiences.every(e => e.booking_type === 'icelandic') || allExperiences.length === 0`
+- Przewodnicy z jakimkolwiek `classic` lub `both` listing → toggle ukryty (już mają działający kalendarz)
+
+#### Wymagana akcja — migracja DB
+```sql
+-- wklej: supabase/migrations/20260320170000_add_calendar_disabled.sql
+```
+
 ## Stan typechecku
-`pnpm typecheck` → 0 błędów (sesja 16).
+`pnpm typecheck` → 0 błędów (sesja 18).
 
 ## Wzorzec cenowy
 ```typescript

@@ -79,7 +79,7 @@ export default async function DashboardEditExperiencePage({
     published:            exp.published,
     images,
     landscape_url:        exp.landscape_url ?? null,
-    // ── Structured fields (the ones that were missing — root cause of pricing reset) ──
+    // ── Structured fields ────────────────────────────────────────────────────
     duration_options:     (exp.duration_options as unknown as DurationOptionPayload[]) ?? undefined,
     season_from:          exp.season_from ?? null,
     season_to:            exp.season_to ?? null,
@@ -89,6 +89,15 @@ export default async function DashboardEditExperiencePage({
     location_spots:       (exp.location_spots as unknown as import('@/types').LocationSpot[]) ?? null,
     booking_type:         (exp.booking_type as 'classic' | 'icelandic') ?? 'classic',
     accommodation_ids:    (expAccommodations ?? []).map(r => r.accommodation_id),
+    // ── Trip content fields (were missing — root cause of empty form fields) ─
+    itinerary:               (exp.itinerary as unknown as import('@/actions/experiences').ItineraryStep[]) ?? null,
+    location_description:    exp.location_description ?? null,
+    boat_description:        exp.boat_description ?? null,
+    accommodation_description: exp.accommodation_description ?? null,
+    food_description:        exp.food_description ?? null,
+    license_description:     exp.license_description ?? null,
+    gear_description:        exp.gear_description ?? null,
+    transport_description:   exp.transport_description ?? null,
   }
 
   return (
