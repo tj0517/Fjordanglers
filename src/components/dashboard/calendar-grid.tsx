@@ -13,6 +13,8 @@
 import { useState, useMemo, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { blockDates, blockMultipleDates, unblockDates } from '@/actions/calendar'
+import { createWeeklySchedule, deleteWeeklySchedule } from '@/actions/weekly-schedules'
+import type { WeeklySchedule } from '@/actions/weekly-schedules'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,14 +54,16 @@ type DayData = {
 }
 
 export type CalendarGridProps = {
-  year:         number
-  month:        number
-  experiences:  Experience[]
-  blocked:      BlockedEntry[]
-  bookings:     BookingEntry[]
-  inquiries:    InquiryEntry[]
+  year:             number
+  month:            number
+  experiences:      Experience[]
+  blocked:          BlockedEntry[]
+  bookings:         BookingEntry[]
+  inquiries:        InquiryEntry[]
   /** How this guide manages availability. Defaults to 'per_listing'. */
-  calendarMode: 'per_listing' | 'shared'
+  calendarMode:     'per_listing' | 'shared'
+  /** Recurring weekday patterns set by the guide (e.g. Mon–Fri blocked all summer). */
+  weeklySchedules?: WeeklySchedule[]
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -109,15 +113,17 @@ function formatDayLong(dateStr: string): string {
 
 export default function CalendarGrid({
   year, month, experiences, blocked, bookings, inquiries, calendarMode,
+  weeklySchedules = [],
 }: CalendarGridProps) {
   const isShared = calendarMode === 'shared'
   const router = useRouter()
   const [navPending,     startNav]     = useTransition()
   const [unblockPending, startUnblock] = useTransition()
-  const modalRef       = useRef<HTMLDivElement>(null)
-  const multiModalRef  = useRef<HTMLDivElement>(null)
-  const monthModalRef  = useRef<HTMLDivElement>(null)
-  const blockMenuRef   = useRef<HTMLDivElement>(null)
+  const modalRef           = useRef<HTMLDivElement>(null)
+  const multiModalRef      = useRef<HTMLDivElement>(null)
+  const monthModalRef      = useRef<HTMLDivElement>(null)
+  const scheduleModalRef   = useRef<HTMLDivElement>(null)
+  const blockMenuRef       = useRef<HTMLDivElement>(null)
 
   // ── Single-day modal state ─────────────────────────────────────────────────
   const [selectedDay,   setSelectedDay]   = useState<string | null>(null)
@@ -149,6 +155,16 @@ export default function CalendarGrid({
   const [showMonthModal,    setShowMonthModal]    = useState(false)
   const [monthBlockExpIds,  setMonthBlockExpIds]  = useState<string[]>([])
   const [monthBlockReason,  setMonthBlockReason]  = useState('')
+
+  // ── Weekly schedule modal state ───────────────────────────────────────────────
+  const [showScheduleModal,    setShowScheduleModal]    = useState(false)
+  const [scheduleFrom,         setScheduleFrom]         = useState('')
+  const [scheduleTo,           setScheduleTo]           = useState('')
+  const [scheduleWeekdays,     setScheduleWeekdays]     = useState<Set<number>>(new Set())
+  const [scheduleLabel,        setScheduleLabel]        = useState('')
+  const [scheduleError,        setScheduleError]        = useState<string | null>(null)
+  const [isSubmittingSchedule, setIsSubmittingSchedule] = useState(false)
+  const [deletingScheduleId,   setDeletingScheduleId]   = useState<string | null>(null)
 
   // ── Listings filter (view only — which trips to show in calendar) ─────────────
   const [visibleExpIds, setVisibleExpIds] = useState<Set<string>>(
@@ -186,6 +202,7 @@ export default function CalendarGrid({
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (showBlockMenu)       { setShowBlockMenu(false); return }
+      if (showScheduleModal)   { setShowScheduleModal(false); return }
       if (showMonthModal)      { setShowMonthModal(false); return }
       if (showRangeModal)      { setShowRangeModal(false); return }
       if (showMultiModal)      { setShowMultiModal(false); return }
@@ -194,7 +211,7 @@ export default function CalendarGrid({
     }
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [showBlockMenu, showMonthModal, showRangeModal, showMultiModal, selectedDay, selectionMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showBlockMenu, showScheduleModal, showMonthModal, showRangeModal, showMultiModal, selectedDay, selectionMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Click-outside: close block menu ───────────────────────────────────────
   useEffect(() => {
@@ -209,9 +226,10 @@ export default function CalendarGrid({
   }, [showBlockMenu])
 
   // Focus modal on open
-  useEffect(() => { if (selectedDay != null)  modalRef.current?.focus()      }, [selectedDay])
-  useEffect(() => { if (showMultiModal)        multiModalRef.current?.focus() }, [showMultiModal])
-  useEffect(() => { if (showMonthModal)        monthModalRef.current?.focus() }, [showMonthModal])
+  useEffect(() => { if (selectedDay != null)  modalRef.current?.focus()          }, [selectedDay])
+  useEffect(() => { if (showMultiModal)        multiModalRef.current?.focus()     }, [showMultiModal])
+  useEffect(() => { if (showMonthModal)        monthModalRef.current?.focus()     }, [showMonthModal])
+  useEffect(() => { if (showScheduleModal)     scheduleModalRef.current?.focus()  }, [showScheduleModal])
 
   // ── Build per-day index ────────────────────────────────────────────────────
   // In per_listing mode, filter to only the active trip so the calendar is
@@ -360,7 +378,7 @@ export default function CalendarGrid({
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     setShowRangeModal(false)
-    router.refresh()
+    startNav(() => router.refresh())
   }
 
   // ── Block-this-month helpers ────────────────────────────────────────────────
@@ -385,7 +403,60 @@ export default function CalendarGrid({
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     setShowMonthModal(false)
-    router.refresh()
+    startNav(() => router.refresh())
+  }
+
+  // ── Weekly schedule helpers ─────────────────────────────────────────────────
+  function openScheduleModal() {
+    setScheduleFrom(toDateStr(year, month, 1))
+    setScheduleTo(toDateStr(year, month, new Date(year, month, 0).getDate()))
+    setScheduleWeekdays(new Set())
+    setScheduleLabel('')
+    setScheduleError(null)
+    setShowScheduleModal(true)
+  }
+
+  function toggleScheduleWeekday(idx: number) {
+    setScheduleWeekdays(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
+  async function handleCreateSchedule() {
+    if (scheduleWeekdays.size === 0) {
+      setScheduleError('Select at least one weekday to block.')
+      return
+    }
+    if (scheduleFrom === '' || scheduleTo === '') {
+      setScheduleError('Set the active period.')
+      return
+    }
+    if (scheduleTo < scheduleFrom) {
+      setScheduleError('End date must be on or after start date.')
+      return
+    }
+    setIsSubmittingSchedule(true); setScheduleError(null)
+    const result = await createWeeklySchedule({
+      periodFrom:      scheduleFrom,
+      periodTo:        scheduleTo,
+      blockedWeekdays: Array.from(scheduleWeekdays),
+      label:           scheduleLabel.trim() || undefined,
+    })
+    setIsSubmittingSchedule(false)
+    if ('error' in result) { setScheduleError(result.error); return }
+    setShowScheduleModal(false)
+    startNav(() => router.refresh())
+  }
+
+  async function handleDeleteSchedule(id: string) {
+    setDeletingScheduleId(id); setScheduleError(null)
+    const result = await deleteWeeklySchedule(id)
+    setDeletingScheduleId(null)
+    if ('error' in result) { setScheduleError(result.error); return }
+    startNav(() => router.refresh())
   }
 
   // ── Actions ────────────────────────────────────────────────────────────────
@@ -404,7 +475,7 @@ export default function CalendarGrid({
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     closeModal()
-    router.refresh()
+    startNav(() => router.refresh())
   }
 
   async function handleMultiBlock() {
@@ -421,7 +492,7 @@ export default function CalendarGrid({
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     exitSelectionMode()
-    router.refresh()
+    startNav(() => router.refresh())
   }
 
   async function handleUnblock(blockId: string) {
@@ -549,14 +620,28 @@ export default function CalendarGrid({
 
       {/* ─── Calendar card ───────────────────────────────────────────────────── */}
       <div
-        className="rounded-2xl overflow-hidden"
+        className="rounded-2xl overflow-hidden relative"
         style={{
-          background:  '#FDFAF7',
-          border:      '1px solid rgba(10,46,77,0.07)',
-          opacity:     navPending ? 0.6 : 1,
-          transition:  'opacity 0.15s',
+          background: '#FDFAF7',
+          border:     '1px solid rgba(10,46,77,0.07)',
         }}
       >
+        {/* Loading overlay — shown during any mutation or navigation */}
+        {(navPending || unblockPending || isSubmitting || isSubmittingSchedule) && (
+          <div
+            className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
+            style={{ background: 'rgba(253,250,247,0.75)', backdropFilter: 'blur(2px)' }}
+          >
+            <svg
+              className="animate-spin"
+              width="32" height="32" viewBox="0 0 32 32" fill="none"
+              style={{ color: '#E67E50' }}
+            >
+              <circle cx="16" cy="16" r="13" stroke="rgba(10,46,77,0.1)" strokeWidth="3" />
+              <path d="M16 3 A13 13 0 0 1 29 16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
         {/* ── Header ──────────────────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-6 py-4 gap-4"
@@ -754,6 +839,28 @@ export default function CalendarGrid({
                         </svg>
                         Block month
                       </button>
+                      <div style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }} />
+                      <button
+                        role="menuitem"
+                        onClick={() => { setShowBlockMenu(false); openScheduleModal() }}
+                        className="flex items-center gap-2.5 px-4 py-3 text-xs font-semibold f-body text-left transition-colors"
+                        style={{ color: '#4F46E5', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.06)' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <circle cx="6" cy="6" r="5" />
+                          <line x1="6" y1="3" x2="6" y2="6" strokeLinecap="round" />
+                          <line x1="6" y1="6" x2="8.2" y2="7.8" strokeLinecap="round" />
+                        </svg>
+                        Weekly schedule
+                        {weeklySchedules.length > 0 && (
+                          <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                                style={{ background: 'rgba(99,102,241,0.12)', color: '#4F46E5' }}>
+                            {weeklySchedules.length}
+                          </span>
+                        )}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -799,17 +906,26 @@ export default function CalendarGrid({
               ? false
               : (blockedCount > 0 && !fullyBlocked)
 
+            // Weekly schedule blocking — 0=Mon…6=Sun
+            const jsUTCDay    = parseUTC(dayStr).getUTCDay()  // 0=Sun…6=Sat
+            const weekdayIdx  = (jsUTCDay + 6) % 7            // remap to 0=Mon…6=Sun
+            const isScheduleBlocked = weeklySchedules.some(s =>
+              dayStr >= s.period_from && dayStr <= s.period_to &&
+              (s.blocked_weekdays ?? []).includes(weekdayIdx)
+            )
+
             // Booking state split by status
             const confirmedBk = data?.bookingEntries.filter(b => b.status === 'confirmed' || b.status === 'accepted') ?? []
             const pendingBk   = data?.bookingEntries.filter(b => b.status === 'pending')   ?? []
             const hasConfirmed = confirmedBk.length > 0
             const hasPending   = pendingBk.length > 0
 
-            // Background
+            // Background — manual block takes priority over schedule block
             let bg = '#FDFAF7'
-            if (isSelected)        bg = 'rgba(230,126,80,0.13)'
-            else if (fullyBlocked) bg = 'rgba(230,126,80,0.08)'
-            else if (partBlocked)  bg = 'rgba(230,126,80,0.04)'
+            if (isSelected)               bg = 'rgba(230,126,80,0.13)'
+            else if (fullyBlocked)        bg = 'rgba(230,126,80,0.08)'
+            else if (partBlocked)         bg = 'rgba(230,126,80,0.04)'
+            else if (isScheduleBlocked)   bg = 'rgba(99,102,241,0.06)'
 
             return (
               <button
@@ -826,10 +942,11 @@ export default function CalendarGrid({
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background =
-                    isSelected     ? 'rgba(230,126,80,0.2)'  :
-                    isToday        ? 'rgba(10,46,77,0.07)'   :
-                    fullyBlocked   ? 'rgba(230,126,80,0.14)' :
-                                     'rgba(10,46,77,0.04)'
+                    isSelected        ? 'rgba(230,126,80,0.2)'  :
+                    isToday           ? 'rgba(10,46,77,0.07)'   :
+                    fullyBlocked      ? 'rgba(230,126,80,0.14)' :
+                    isScheduleBlocked ? 'rgba(99,102,241,0.11)' :
+                                        'rgba(10,46,77,0.04)'
                 }}
                 onMouseLeave={e => { e.currentTarget.style.background = bg }}
                 aria-label={`${dayStr}${isSelected ? ', selected' : ''}${hasConfirmed ? ', booked' : hasPending ? ', pending booking' : ''}${fullyBlocked ? ', fully blocked' : partBlocked ? ', partially blocked' : ''}`}
@@ -914,6 +1031,21 @@ export default function CalendarGrid({
                       </div>
                     )
                   })()}
+
+                  {/* Weekly schedule chip — only when not already manually blocked */}
+                  {isScheduleBlocked && !fullyBlocked && (
+                    <div
+                      className="flex items-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
+                      style={{ background: 'rgba(99,102,241,0.1)', color: '#4F46E5' }}
+                    >
+                      <svg width="6" height="6" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.3" style={{ flexShrink: 0 }}>
+                        <circle cx="4" cy="4" r="3.2"/>
+                        <line x1="4" y1="1.8" x2="4" y2="4" strokeLinecap="round"/>
+                        <line x1="4" y1="4" x2="5.4" y2="5.4" strokeLinecap="round"/>
+                      </svg>
+                      <span>Sched</span>
+                    </div>
+                  )}
                 </div>
               </button>
             )
@@ -950,10 +1082,11 @@ export default function CalendarGrid({
           {/* Status key */}
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1">
             {([
-              { label: 'Booked',   chip: { bg: 'rgba(27,79,114,0.12)',  color: '#1B4F72' }, icon: 'person' },
-              { label: 'Pending',  chip: { bg: 'rgba(217,119,6,0.11)',  color: '#B45309' }, icon: 'person' },
-              { label: 'Request',  chip: { bg: 'rgba(109,40,217,0.1)',  color: '#6D28D9' }, icon: 'msg'    },
-              { label: 'Off',      chip: { bg: 'rgba(10,46,77,0.07)',   color: 'rgba(10,46,77,0.4)' }, icon: 'dot' },
+              { label: 'Booked',    chip: { bg: 'rgba(27,79,114,0.12)',  color: '#1B4F72' }, icon: 'person' },
+              { label: 'Pending',   chip: { bg: 'rgba(217,119,6,0.11)',  color: '#B45309' }, icon: 'person' },
+              { label: 'Request',   chip: { bg: 'rgba(109,40,217,0.1)',  color: '#6D28D9' }, icon: 'msg'    },
+              { label: 'Off',       chip: { bg: 'rgba(10,46,77,0.07)',   color: 'rgba(10,46,77,0.4)' }, icon: 'dot' },
+              { label: 'Schedule',  chip: { bg: 'rgba(99,102,241,0.1)',  color: '#4F46E5' }, icon: 'clock'  },
             ] as const).map(item => (
               <div key={item.label} className="flex items-center gap-1.5">
                 <div className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[8px] font-bold f-body"
@@ -967,15 +1100,22 @@ export default function CalendarGrid({
                     <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.4">
                       <path d="M7 1H1a.5.5 0 00-.5.5v4A.5.5 0 001 6h2l1.5 1.5L6 6h1a.5.5 0 00.5-.5v-4A.5.5 0 007 1z"/>
                     </svg>
+                  ) : item.icon === 'clock' ? (
+                    <svg width="6" height="6" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.3">
+                      <circle cx="4" cy="4" r="3.2"/>
+                      <line x1="4" y1="1.8" x2="4" y2="4" strokeLinecap="round"/>
+                      <line x1="4" y1="4" x2="5.4" y2="5.4" strokeLinecap="round"/>
+                    </svg>
                   ) : (
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(10,46,77,0.4)', opacity: 0.5 }} />
                   )}
                   {item.label}
                 </div>
                 <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                  {item.label === 'Booked'   ? 'confirmed booking' :
-                   item.label === 'Pending'  ? 'awaiting confirmation' :
-                   item.label === 'Request'  ? 'custom trip inquiry' :
+                  {item.label === 'Booked'    ? 'confirmed booking'        :
+                   item.label === 'Pending'   ? 'awaiting confirmation'    :
+                   item.label === 'Request'   ? 'custom trip inquiry'      :
+                   item.label === 'Schedule'  ? 'recurring weekly pattern' :
                    'unavailable / blocked'}
                 </span>
               </div>
@@ -1773,6 +1913,300 @@ export default function CalendarGrid({
               <button
                 onClick={() => setShowRangeModal(false)}
                 disabled={isSubmitting}
+                className="px-5 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
+                style={{ color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.1)', cursor: 'pointer', background: 'transparent' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ─── Weekly Schedule modal ────────────────────────────────────────── */}
+      {showScheduleModal && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(2px)' }}
+            onClick={() => setShowScheduleModal(false)}
+            aria-hidden="true"
+          />
+
+          <div
+            ref={scheduleModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Set weekly schedule"
+            tabIndex={-1}
+            className="fixed z-50 flex flex-col"
+            style={{
+              top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+              width: '100%', maxWidth: '480px', maxHeight: '90vh',
+              background: '#FDFAF7', borderRadius: '20px',
+              boxShadow: '0 20px 60px rgba(7,17,28,0.25)',
+              border: '1px solid rgba(10,46,77,0.08)', outline: 'none',
+            }}
+          >
+            {/* Header */}
+            <div
+              className="flex items-start justify-between px-6 py-5"
+              style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
+            >
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-1"
+                   style={{ color: 'rgba(10,46,77,0.38)' }}>Availability</p>
+                <h3 className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                  Weekly schedule
+                </h3>
+                <p className="text-xs f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                  Block specific weekdays over a period — e.g. Mon–Fri off all summer if you guide on weekends only.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                aria-label="Close"
+                className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06] flex-shrink-0 ml-4"
+                style={{ color: 'rgba(10,46,77,0.4)' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+
+              {/* ── Active period ──────────────────────────────────────────── */}
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-2.5"
+                   style={{ color: 'rgba(10,46,77,0.38)' }}>Active period</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="sched-from"
+                      className="block text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
+                      style={{ color: 'rgba(10,46,77,0.5)' }}
+                    >
+                      From
+                    </label>
+                    <input
+                      id="sched-from"
+                      type="date"
+                      value={scheduleFrom}
+                      onChange={e => setScheduleFrom(e.target.value)}
+                      className="w-full text-sm f-body px-3 py-2 rounded-lg focus:outline-none"
+                      style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.15)', color: '#0A2E4D' }}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="sched-to"
+                      className="block text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
+                      style={{ color: 'rgba(10,46,77,0.5)' }}
+                    >
+                      To
+                    </label>
+                    <input
+                      id="sched-to"
+                      type="date"
+                      min={scheduleFrom}
+                      value={scheduleTo}
+                      onChange={e => setScheduleTo(e.target.value)}
+                      className="w-full text-sm f-body px-3 py-2 rounded-lg focus:outline-none"
+                      style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.15)', color: '#0A2E4D' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Weekday toggles ────────────────────────────────────────── */}
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-2.5"
+                   style={{ color: 'rgba(10,46,77,0.38)' }}>Block these weekdays</p>
+
+                {/* Quick presets */}
+                <div className="flex gap-2 mb-3">
+                  {([
+                    { label: 'Mon–Fri', days: [0, 1, 2, 3, 4] },
+                    { label: 'Sat–Sun', days: [5, 6] },
+                  ] as const).map(preset => {
+                    const isActive =
+                      preset.days.length === scheduleWeekdays.size &&
+                      preset.days.every(d => scheduleWeekdays.has(d))
+                    return (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setScheduleWeekdays(isActive ? new Set() : new Set(preset.days))}
+                        className="text-xs font-semibold f-body px-3 py-1.5 rounded-full transition-all"
+                        style={{
+                          background: isActive ? 'rgba(99,102,241,0.1)' : 'rgba(10,46,77,0.05)',
+                          color:      isActive ? '#4F46E5'               : 'rgba(10,46,77,0.5)',
+                          border:     `1px solid ${isActive ? 'rgba(99,102,241,0.22)' : 'rgba(10,46,77,0.1)'}`,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {preset.label}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Individual day buttons */}
+                <div className="grid grid-cols-7 gap-1">
+                  {DAY_NAMES_SHORT.map((name, idx) => {
+                    const isActive = scheduleWeekdays.has(idx)
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => toggleScheduleWeekday(idx)}
+                        className="flex flex-col items-center gap-1 py-2.5 rounded-xl text-[10px] font-bold f-body transition-all"
+                        style={{
+                          background: isActive ? 'rgba(99,102,241,0.1)' : 'rgba(10,46,77,0.04)',
+                          color:      isActive ? '#4F46E5'               : 'rgba(10,46,77,0.4)',
+                          border:     `1.5px solid ${isActive ? 'rgba(99,102,241,0.25)' : 'transparent'}`,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {name}
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ background: isActive ? '#4F46E5' : 'rgba(10,46,77,0.15)' }}
+                        />
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* ── Optional label ─────────────────────────────────────────── */}
+              <div>
+                <label
+                  htmlFor="sched-label"
+                  className="block text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
+                  style={{ color: 'rgba(10,46,77,0.5)' }}
+                >
+                  Label (optional)
+                </label>
+                <input
+                  id="sched-label"
+                  type="text"
+                  value={scheduleLabel}
+                  onChange={e => setScheduleLabel(e.target.value)}
+                  placeholder="e.g. Summer weekends, Work schedule…"
+                  maxLength={60}
+                  className="w-full text-sm f-body px-3 py-2 rounded-lg focus:outline-none"
+                  style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.15)', color: '#0A2E4D' }}
+                />
+              </div>
+
+              {/* ── Existing schedules ─────────────────────────────────────── */}
+              {weeklySchedules.length > 0 && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-2.5"
+                     style={{ color: 'rgba(10,46,77,0.38)' }}>Active schedules</p>
+                  <div className="flex flex-col gap-2">
+                    {weeklySchedules.map(s => {
+                      const dayLabels = (s.blocked_weekdays ?? [])
+                        .slice()
+                        .sort((a, b) => a - b)
+                        .map(d => DAY_NAMES_SHORT[d] ?? '')
+                        .join(', ')
+                      const isDeleting = deletingScheduleId === s.id
+                      return (
+                        <div
+                          key={s.id}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                          style={{
+                            background: 'rgba(99,102,241,0.05)',
+                            border:     '1px solid rgba(99,102,241,0.15)',
+                            opacity:    isDeleting ? 0.45 : 1,
+                            transition: 'opacity 0.15s',
+                          }}
+                        >
+                          {/* Clock icon */}
+                          <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="#4F46E5" strokeWidth="1.4" className="flex-shrink-0">
+                            <circle cx="6" cy="6" r="5" />
+                            <line x1="6" y1="3" x2="6" y2="6" strokeLinecap="round" />
+                            <line x1="6" y1="6" x2="8.2" y2="7.8" strokeLinecap="round" />
+                          </svg>
+
+                          <div className="min-w-0 flex-1">
+                            {s.label != null && s.label !== '' && (
+                              <p className="text-xs font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                                {s.label}
+                              </p>
+                            )}
+                            <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                              {dayLabels}
+                            </p>
+                            <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                              {s.period_from} – {s.period_to}
+                            </p>
+                          </div>
+
+                          {/* Delete button */}
+                          <button
+                            onClick={() => void handleDeleteSchedule(s.id)}
+                            disabled={isDeleting}
+                            aria-label="Delete schedule"
+                            className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-[#DC2626]/[0.08]"
+                            style={{
+                              color:      isDeleting ? 'rgba(10,46,77,0.2)' : 'rgba(10,46,77,0.3)',
+                              border:     'none',
+                              background: 'transparent',
+                              cursor:     isDeleting ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {isDeleting ? (
+                              <svg className="animate-spin" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
+                              </svg>
+                            ) : (
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <polyline points="3,3.5 9,3.5 8.5,10.5 3.5,10.5" />
+                                <line x1="1.5" y1="3.5" x2="10.5" y2="3.5" />
+                                <line x1="4.5" y1="1.5" x2="7.5" y2="1.5" strokeLinecap="round" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {scheduleError != null && (
+                <p className="text-xs f-body" style={{ color: '#DC2626' }}>{scheduleError}</p>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div
+              className="px-6 py-4 flex gap-2"
+              style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}
+            >
+              <button
+                onClick={() => void handleCreateSchedule()}
+                disabled={isSubmittingSchedule || scheduleWeekdays.size === 0 || scheduleFrom === ''}
+                className="flex-1 text-sm font-semibold f-body py-3 rounded-xl transition-opacity"
+                style={{
+                  background: '#4F46E5',
+                  color:      'white',
+                  border:     'none',
+                  opacity: isSubmittingSchedule || scheduleWeekdays.size === 0 || scheduleFrom === '' ? 0.55 : 1,
+                  cursor:  isSubmittingSchedule || scheduleWeekdays.size === 0 || scheduleFrom === '' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isSubmittingSchedule ? 'Saving…' : 'Save schedule'}
+              </button>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                disabled={isSubmittingSchedule}
                 className="px-5 text-sm f-body rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
                 style={{ color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.1)', cursor: 'pointer', background: 'transparent' }}
               >

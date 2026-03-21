@@ -36,7 +36,7 @@ export default async function AdminEditExperiencePage({
   const supabase = await createClient()
 
   // ── Parallel fetch ──────────────────────────────────────────────────────────
-  const [{ data: guide }, { data: exp }] = await Promise.all([
+  const [{ data: guide }, { data: exp }, { data: guideAccommodations }, { data: expAccommodations }] = await Promise.all([
     supabase
       .from('guides')
       .select('id, full_name, is_beta_listing')
@@ -48,6 +48,15 @@ export default async function AdminEditExperiencePage({
       .eq('id', expId)
       .eq('guide_id', guideId) // sanity check — experience must belong to this guide
       .single(),
+    supabase
+      .from('guide_accommodations')
+      .select('id, name, type, description, max_guests, location_note')
+      .eq('guide_id', guideId)
+      .order('name'),
+    supabase
+      .from('experience_accommodations')
+      .select('accommodation_id')
+      .eq('experience_id', expId),
   ])
 
   if (guide == null || exp == null) notFound()
@@ -90,6 +99,7 @@ export default async function AdminEditExperiencePage({
     location_description:         (exp as Record<string, unknown>).location_description as string ?? null,
     boat_description:             (exp as Record<string, unknown>).boat_description as string ?? null,
     accommodation_description:    (exp as Record<string, unknown>).accommodation_description as string ?? null,
+    accommodation_ids:            (expAccommodations ?? []).map(r => r.accommodation_id),
     food_description:             (exp as Record<string, unknown>).food_description as string ?? null,
     license_description:          (exp as Record<string, unknown>).license_description as string ?? null,
     gear_description:             (exp as Record<string, unknown>).gear_description as string ?? null,
@@ -160,6 +170,7 @@ export default async function AdminEditExperiencePage({
         guideName={guide.full_name}
         context="admin"
         successPath={`/admin/guides/${guide.id}`}
+        guideAccommodations={guideAccommodations ?? []}
       />
     </div>
   )

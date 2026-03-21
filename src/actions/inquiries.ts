@@ -54,6 +54,13 @@ const submitInquirySchema = z.object({
       // Budget (existing)
       budgetMin:        z.number().optional(),
       budgetMax:        z.number().optional(),
+      // Full multi-period selection (from MultiPeriodPicker)
+      allDatePeriods:   z.array(
+        z.object({
+          from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          to:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        })
+      ).optional(),
       // Legacy
       riverType:        z.string().optional(),
       notes:            z.string().max(2000).optional(),
@@ -399,10 +406,16 @@ export async function declineInquiry(
 export async function sendOfferByGuide(
   inquiryId: string,
   offer: {
-    assignedRiver: string
+    assignedRiver:   string
     offerPriceMinEur?: number
-    offerPriceEur: number
-    offerDetails: string
+    offerPriceEur:   number
+    offerDetails:    string
+    /** Confirmed trip date range (guide may differ from angler's request) */
+    offerDateFrom?:  string   // YYYY-MM-DD
+    offerDateTo?:    string   // YYYY-MM-DD
+    /** Meeting / departure point GPS pin */
+    offerMeetingLat?: number
+    offerMeetingLng?: number
   },
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -452,12 +465,16 @@ export async function sendOfferByGuide(
   const { error: updateError } = await serviceClient
     .from('trip_inquiries')
     .update({
-      status: 'offer_sent',
-      assigned_guide_id: guide.id,
-      assigned_river: offer.assignedRiver,
+      status:              'offer_sent',
+      assigned_guide_id:   guide.id,
+      assigned_river:      offer.assignedRiver,
       offer_price_min_eur: offer.offerPriceMinEur ?? null,
-      offer_price_eur: offer.offerPriceEur,
-      offer_details: offer.offerDetails,
+      offer_price_eur:     offer.offerPriceEur,
+      offer_details:       offer.offerDetails,
+      offer_date_from:     offer.offerDateFrom    ?? null,
+      offer_date_to:       offer.offerDateTo      ?? null,
+      offer_meeting_lat:   offer.offerMeetingLat  ?? null,
+      offer_meeting_lng:   offer.offerMeetingLng  ?? null,
     })
     .eq('id', inquiryId)
 

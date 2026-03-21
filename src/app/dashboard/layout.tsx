@@ -31,6 +31,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/admin')
   }
 
+  // ── Non-guide (angler) accounts don't belong here ────────────────────────
+  if (profile?.role !== 'guide') {
+    redirect('/account/bookings')
+  }
+
   // ── Fetch guide profile ───────────────────────────────────────────────────
   const { data: guide } = await supabase
     .from('guides')

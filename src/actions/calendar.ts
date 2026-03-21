@@ -209,6 +209,37 @@ export async function updateCalendarMode(
   }
 }
 
+// ─── Toggle calendar_disabled ─────────────────────────────────────────────────
+
+/**
+ * Toggles the guide's `calendar_disabled` flag.
+ * When true, trip pages show inquiry-only booking (no date picker / instant checkout).
+ * Only meaningful for guides whose listings are all `icelandic` booking type.
+ */
+export async function toggleCalendarDisabled(
+  disabled: boolean,
+): Promise<CalendarActionResult> {
+  try {
+    const { supabase, guideId } = await requireGuide()
+
+    const { error } = await supabase
+      .from('guides')
+      .update({ calendar_disabled: disabled })
+      .eq('id', guideId)
+
+    if (error != null) {
+      console.error('[calendar/toggleCalendarDisabled]', error.message)
+      return { error: error.message }
+    }
+
+    return { success: true }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
+    console.error('[calendar/toggleCalendarDisabled] Unexpected error:', err)
+    return { error: 'Failed to update calendar setting. Please try again.' }
+  }
+}
+
 // ─── Unblock dates ────────────────────────────────────────────────────────────
 
 /**

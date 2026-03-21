@@ -35,13 +35,24 @@ export default async function DashboardEditExperiencePage({
 
   if (guide == null) redirect('/guides/apply')
 
-  // Fetch the experience + images — verify ownership
-  const { data: exp } = await supabase
-    .from('experiences')
-    .select('*, images:experience_images(id, url, is_cover, sort_order)')
-    .eq('id', id)
-    .eq('guide_id', guide.id)   // ← ownership guard
-    .single()
+  // Fetch the experience + images + linked accommodations — verify ownership
+  const [{ data: exp }, { data: guideAccommodations }, { data: expAccommodations }] = await Promise.all([
+    supabase
+      .from('experiences')
+      .select('*, images:experience_images(id, url, is_cover, sort_order)')
+      .eq('id', id)
+      .eq('guide_id', guide.id)   // ← ownership guard
+      .single(),
+    supabase
+      .from('guide_accommodations')
+      .select('id, name, type, description, max_guests, location_note')
+      .eq('guide_id', guide.id)
+      .order('name'),
+    supabase
+      .from('experience_accommodations')
+      .select('accommodation_id')
+      .eq('experience_id', id),
+  ])
 
   if (exp == null) notFound()
 
@@ -77,6 +88,7 @@ export default async function DashboardEditExperiencePage({
     location_area:        (exp.location_area as unknown as GeoJSON.Polygon) ?? null,
     location_spots:       (exp.location_spots as unknown as import('@/types').LocationSpot[]) ?? null,
     booking_type:         (exp.booking_type as 'classic' | 'icelandic') ?? 'classic',
+    accommodation_ids:    (expAccommodations ?? []).map(r => r.accommodation_id),
   }
 
   return (
@@ -124,6 +136,7 @@ export default async function DashboardEditExperiencePage({
         guideName={guide.full_name}
         context="guide"
         successPath="/dashboard/trips"
+        guideAccommodations={guideAccommodations ?? []}
         inquiryFormConfigSlot={
           <InquiryFormConfigEditor
             expId={exp.id}

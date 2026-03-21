@@ -81,7 +81,7 @@ export default async function HomePage() {
             className="relative px-4 md:px-8 lg:px-14 pt-[76px] pb-10 md:pb-16"
             style={{ zIndex: 3, minHeight: '96vh' }}
           >
-          <div className="max-w-[1360px] mx-auto flex flex-col justify-between" style={{ minHeight: 'calc(96vh - 76px)' }}>
+          <div className="max-w-[1360px] mx-auto flex flex-col justify-between" style={{ minHeight: 'min(calc(96vh - 76px), 720px)' }}>
             {/* Top: live badge */}
             <div className="flex justify-end">
               <div

@@ -42,11 +42,12 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
 
   const serviceClient = createServiceClient()
 
-  // ── Parallel fetch: inquiry data + navigation list ────────────────────────
+  // ── Parallel fetch: inquiry data + navigation list + guide schedules ──────
   const [
     inquiryResult,
     navAssignedResult,
     navUnassignedResult,
+    guideSchedulesResult,
   ] = await Promise.all([
     serviceClient
       .from('trip_inquiries')
@@ -68,9 +69,16 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
       .is('assigned_guide_id', null)
       .in('status', ['inquiry', 'reviewing'])
       .order('created_at', { ascending: false }),
+
+    // Guide's recurring weekly schedule (for calendar display)
+    serviceClient
+      .from('guide_weekly_schedules')
+      .select('period_from, period_to, blocked_weekdays')
+      .eq('guide_id', guide.id),
   ])
 
-  const inquiry = inquiryResult.data
+  const inquiry         = inquiryResult.data
+  const guideSchedules  = guideSchedulesResult.data ?? []
   if (!inquiry) notFound()
 
   // Authorization: must be assigned to this guide OR unassigned
@@ -129,13 +137,14 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
     boatPreference?:      string
     dietaryRestrictions?: string
     stayingAt?:           string
-
     photographyPackage?:  boolean
     regionExperience?:    string
     budgetMin?:           number
     budgetMax?:           number
     riverType?:           string
     notes?:               string
+    /** Multi-period selection from angler's MultiPeriodPicker */
+    allDatePeriods?:      { from: string; to: string }[]
   }
 
   const s = STATUS_STYLES[displayStatus]
@@ -466,7 +475,13 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                 >
                   Your offer
                 </p>
-                <GuideOfferForm inquiryId={id} />
+                <GuideOfferForm
+                  inquiryId={id}
+                  anglerDatesFrom={inquiry.dates_from}
+                  anglerDatesTo={inquiry.dates_to}
+                  anglerAllPeriods={prefs.allDatePeriods}
+                  guideWeeklySchedules={guideSchedules}
+                />
                 {canDecline && (
                   <div className="pt-4 mt-2" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
                     <InquiryDeclineButton inquiryId={id} />
@@ -548,7 +563,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                   Request declined
                 </p>
                 <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                  This inquiry has been cancelled.
+                  This request has been cancelled.
                 </p>
               </div>
             )}
@@ -607,28 +622,59 @@ function OfferRecap({
   inquiry,
 }: {
   inquiry: {
-    assigned_river: string | null
-    offer_price_eur: number | null
-    offer_details:   string | null
+    assigned_river:   string | null
+    offer_price_eur:  number | null
+    offer_details:    string | null
+    offer_date_from:  string | null
+    offer_date_to:    string | null
+    offer_meeting_lat: number | null
+    offer_meeting_lng: number | null
   }
 }) {
   if (inquiry.offer_price_eur == null) return null
+
+  const mapsHref =
+    inquiry.offer_meeting_lat != null && inquiry.offer_meeting_lng != null
+      ? `https://www.google.com/maps?q=${inquiry.offer_meeting_lat},${inquiry.offer_meeting_lng}`
+      : null
+
   return (
     <div
-      className="rounded-xl p-4 flex flex-col gap-2"
+      className="rounded-xl p-4 flex flex-col gap-2.5"
       style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}
     >
       <p
-        className="text-[10px] font-bold uppercase tracking-[0.18em] mb-1 f-body"
+        className="text-[10px] font-bold uppercase tracking-[0.18em] mb-0.5 f-body"
         style={{ color: 'rgba(10,46,77,0.38)' }}
       >
         Your Offer
       </p>
 
+      {/* Confirmed dates */}
+      {inquiry.offer_date_from != null && inquiry.offer_date_to != null && (
+        <div className="flex items-start justify-between gap-3">
+          <span
+            className="text-xs f-body flex-shrink-0"
+            style={{ color: 'rgba(10,46,77,0.45)', width: 100 }}
+          >
+            Confirmed dates
+          </span>
+          <span className="text-sm f-body font-medium text-right" style={{ color: '#0A2E4D' }}>
+            {inquiry.offer_date_from === inquiry.offer_date_to
+              ? inquiry.offer_date_from
+              : `${inquiry.offer_date_from} – ${inquiry.offer_date_to}`}
+          </span>
+        </div>
+      )}
+
+      {/* River / location */}
       {inquiry.assigned_river != null && (
         <div className="flex items-start justify-between gap-3">
-          <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)', width: 110, flexShrink: 0 }}>
-            River / Location
+          <span
+            className="text-xs f-body flex-shrink-0"
+            style={{ color: 'rgba(10,46,77,0.45)', width: 100 }}
+          >
+            Location
           </span>
           <span className="text-sm f-body font-medium text-right" style={{ color: '#0A2E4D' }}>
             {inquiry.assigned_river}
@@ -636,8 +682,34 @@ function OfferRecap({
         </div>
       )}
 
+      {/* Meeting point */}
+      {mapsHref != null && (
+        <div className="flex items-start justify-between gap-3">
+          <span
+            className="text-xs f-body flex-shrink-0"
+            style={{ color: 'rgba(10,46,77,0.45)', width: 100 }}
+          >
+            Meeting point
+          </span>
+          <a
+            href={mapsHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs f-body font-medium text-right hover:underline transition-colors"
+            style={{ color: '#E67E50' }}
+          >
+            {inquiry.offer_meeting_lat!.toFixed(4)},{' '}
+            {inquiry.offer_meeting_lng!.toFixed(4)} ↗
+          </a>
+        </div>
+      )}
+
+      {/* Price */}
       <div className="flex items-start justify-between gap-3">
-        <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)', width: 110, flexShrink: 0 }}>
+        <span
+          className="text-xs f-body flex-shrink-0"
+          style={{ color: 'rgba(10,46,77,0.45)', width: 100 }}
+        >
           Total price
         </span>
         <span className="text-base f-display font-bold" style={{ color: '#E67E50' }}>
@@ -645,6 +717,7 @@ function OfferRecap({
         </span>
       </div>
 
+      {/* Details */}
       {inquiry.offer_details != null && inquiry.offer_details.length > 0 && (
         <div className="pt-2" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
           <p

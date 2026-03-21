@@ -126,6 +126,8 @@ export type ExperiencePayload = {
   location_description?: string | null
   boat_description?: string | null
   accommodation_description?: string | null
+  /** IDs of guide_accommodations to link to this experience. */
+  accommodation_ids?: string[]
   food_description?: string | null
   license_description?: string | null
   gear_description?: string | null
@@ -321,6 +323,20 @@ export async function createExperience(
       }
     }
 
+    // ── 3. Set experience accommodations ────────────────────────────────────
+    if (payload.accommodation_ids != null && payload.accommodation_ids.length > 0) {
+      const accRows = payload.accommodation_ids.map(accommodation_id => ({
+        experience_id: exp.id,
+        accommodation_id,
+      }))
+      const { error: accError } = await supabase
+        .from('experience_accommodations')
+        .insert(accRows)
+      if (accError != null) {
+        console.error('[createExperience/accommodations]', accError.message)
+      }
+    }
+
     return { success: true, data: { id: exp.id } }
   } catch (err) {
     console.error('[createExperience] Unexpected:', err)
@@ -410,6 +426,16 @@ export async function updateExperience(
             is_cover:   img.is_cover,
             sort_order: img.sort_order,
           }))
+        )
+      }
+    }
+
+    // ── Re-sync accommodations if provided ───────────────────────────────────
+    if (payload.accommodation_ids != null) {
+      await supabase.from('experience_accommodations').delete().eq('experience_id', expId)
+      if (payload.accommodation_ids.length > 0) {
+        await supabase.from('experience_accommodations').insert(
+          payload.accommodation_ids.map(accommodation_id => ({ experience_id: expId, accommodation_id }))
         )
       }
     }

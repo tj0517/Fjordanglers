@@ -142,10 +142,21 @@ export type ExperienceFormDefaults = {
   location_description?: string | null
   boat_description?: string | null
   accommodation_description?: string | null
+  /** IDs of guide_accommodations linked to this experience. */
+  accommodation_ids?: string[]
   food_description?: string | null
   license_description?: string | null
   gear_description?: string | null
   transport_description?: string | null
+}
+
+type GuideAccommodationItem = {
+  id: string
+  name: string
+  type: string
+  description: string | null
+  max_guests: number | null
+  location_note: string | null
 }
 
 type Props = {
@@ -158,6 +169,11 @@ type Props = {
   /** Optional label to show in the form title */
   guideName?: string
   context: 'admin' | 'guide'
+  /**
+   * Guide's saved accommodations — shown as a multi-select checklist in the
+   * Trip Details section. Pass [] when none exist yet.
+   */
+  guideAccommodations?: GuideAccommodationItem[]
   /**
    * Inquiry form config editor — rendered OUTSIDE the <form> element (below it),
    * visible only on the Pricing tab when bookingType is 'icelandic' or 'both'.
@@ -426,6 +442,7 @@ export default function ExperienceForm({
   successPath,
   guideName,
   context,
+  guideAccommodations = [],
   inquiryFormConfigSlot,
 }: Props) {
   const router = useRouter()
@@ -563,22 +580,25 @@ export default function ExperienceForm({
   )
 
   // ── Trip details (optional text fields) ──────────────────────────────────
-  const [locationDescription,      setLocationDescription]      = useState(dv.location_description ?? '')
-  const [boatDescription,          setBoatDescription]          = useState(dv.boat_description ?? '')
-  const [accommodationDescription, setAccommodationDescription] = useState(dv.accommodation_description ?? '')
-  const [foodDescription,          setFoodDescription]          = useState(dv.food_description ?? '')
-  const [licenseDescription,       setLicenseDescription]       = useState(dv.license_description ?? '')
-  const [gearDescription,          setGearDescription]          = useState(dv.gear_description ?? '')
-  const [transportDescription,     setTransportDescription]     = useState(dv.transport_description ?? '')
+  const [locationDescription,  setLocationDescription]  = useState(dv.location_description ?? '')
+  const [boatDescription,      setBoatDescription]      = useState(dv.boat_description ?? '')
+  const [foodDescription,      setFoodDescription]      = useState(dv.food_description ?? '')
+  const [licenseDescription,   setLicenseDescription]   = useState(dv.license_description ?? '')
+  const [gearDescription,      setGearDescription]      = useState(dv.gear_description ?? '')
+  const [transportDescription, setTransportDescription] = useState(dv.transport_description ?? '')
+
+  // Structured accommodation links (replaces legacy accommodation_description textarea)
+  const [selectedAccommodationIds, setSelectedAccommodationIds] = useState<string[]>(
+    dv.accommodation_ids ?? []
+  )
 
   // Track which trip-detail fields are expanded (toggle ON). Seeded from existing text.
   const [enabledTripDetails, setEnabledTripDetails] = useState<Record<string, boolean>>(() => ({
-    boat:          (dv.boat_description ?? '') !== '',
-    accommodation: (dv.accommodation_description ?? '') !== '',
-    food:          (dv.food_description ?? '') !== '',
-    license:       (dv.license_description ?? '') !== '',
-    gear:          (dv.gear_description ?? '') !== '',
-    transport:     (dv.transport_description ?? '') !== '',
+    boat:      (dv.boat_description ?? '') !== '',
+    food:      (dv.food_description ?? '') !== '',
+    license:   (dv.license_description ?? '') !== '',
+    gear:      (dv.gear_description ?? '') !== '',
+    transport: (dv.transport_description ?? '') !== '',
   }))
 
   const toggleTripDetail = useCallback((key: string) => {
@@ -587,16 +607,21 @@ export default function ExperienceForm({
       if (isOn) {
         // Clear the text when disabling so it saves as null
         switch (key) {
-          case 'boat':          setBoatDescription(''); break
-          case 'accommodation': setAccommodationDescription(''); break
-          case 'food':          setFoodDescription(''); break
-          case 'license':       setLicenseDescription(''); break
-          case 'gear':          setGearDescription(''); break
-          case 'transport':     setTransportDescription(''); break
+          case 'boat':      setBoatDescription(''); break
+          case 'food':      setFoodDescription(''); break
+          case 'license':   setLicenseDescription(''); break
+          case 'gear':      setGearDescription(''); break
+          case 'transport': setTransportDescription(''); break
         }
       }
       return { ...prev, [key]: !isOn }
     })
+  }, [])
+
+  const toggleAccommodation = useCallback((id: string) => {
+    setSelectedAccommodationIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
   }, [])
 
   // ── Booking type ─────────────────────────────────────────────────────────
@@ -834,7 +859,8 @@ export default function ExperienceForm({
       itinerary:                    itinerary.length > 0 ? itinerary.filter(s => s.label.trim() !== '') : null,
       location_description:         locationDescription.trim() || null,
       boat_description:             boatDescription.trim() || null,
-      accommodation_description:    accommodationDescription.trim() || null,
+      accommodation_description:    null,
+      accommodation_ids:            selectedAccommodationIds,
       food_description:             foodDescription.trim() || null,
       license_description:          licenseDescription.trim() || null,
       gear_description:             gearDescription.trim() || null,
@@ -1711,6 +1737,92 @@ export default function ExperienceForm({
         subtitle="Fill in only what's relevant — empty sections won't appear on the trip page."
       >
         <div className="flex flex-col gap-5">
+
+          {/* ── Accommodation multi-select ──────────────────────────────── */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'rgba(10,46,77,0.5)', flexShrink: 0 }}>
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+              <label className="text-xs font-semibold uppercase tracking-[0.16em] f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                Accommodation
+              </label>
+            </div>
+            {guideAccommodations.length === 0 ? (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                No accommodations saved yet.{' '}
+                <a
+                  href="/dashboard/accommodations"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                  style={{ color: '#E67E50' }}
+                >
+                  Add in Accommodations →
+                </a>
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {guideAccommodations.map(acc => {
+                  const isSelected = selectedAccommodationIds.includes(acc.id)
+                  return (
+                    <button
+                      key={acc.id}
+                      type="button"
+                      onClick={() => toggleAccommodation(acc.id)}
+                      className="flex items-start gap-3 px-4 py-3 rounded-xl text-left transition-all"
+                      style={{
+                        background: isSelected ? 'rgba(230,126,80,0.07)' : 'rgba(10,46,77,0.03)',
+                        border: `1.5px solid ${isSelected ? 'rgba(230,126,80,0.3)' : 'rgba(10,46,77,0.07)'}`,
+                      }}
+                    >
+                      {/* Checkbox visual */}
+                      <div
+                        className="flex-shrink-0 w-4 h-4 mt-0.5 rounded flex items-center justify-center"
+                        style={{
+                          background: isSelected ? '#E67E50' : 'transparent',
+                          border: `1.5px solid ${isSelected ? '#E67E50' : 'rgba(10,46,77,0.2)'}`,
+                        }}
+                      >
+                        {isSelected && (
+                          <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                            <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{acc.name}</span>
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-[0.14em] px-2 py-0.5 rounded-full f-body"
+                            style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.45)' }}
+                          >
+                            {acc.type}
+                          </span>
+                          {acc.max_guests != null && (
+                            <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                              up to {acc.max_guests} guests
+                            </span>
+                          )}
+                        </div>
+                        {acc.description != null && (
+                          <p className="text-xs mt-0.5 f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                            {acc.description}
+                          </p>
+                        )}
+                        {acc.location_note != null && (
+                          <p className="text-[10px] mt-0.5 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                            📍 {acc.location_note}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           {([
             {
               key: 'boat',
@@ -1723,18 +1835,6 @@ export default function ExperienceForm({
               placeholder: 'e.g. 6m aluminium boat, 60HP Yamaha, echo sounder, life jackets. Seats 4 anglers comfortably.',
               value: boatDescription,
               setter: setBoatDescription,
-            },
-            {
-              key: 'accommodation',
-              label: 'Accommodation',
-              icon: (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
-                </svg>
-              ),
-              placeholder: 'e.g. Private riverside cabin, 2 bedrooms, fully equipped kitchen, WiFi. 5 min walk to the river.',
-              value: accommodationDescription,
-              setter: setAccommodationDescription,
             },
             {
               key: 'food',

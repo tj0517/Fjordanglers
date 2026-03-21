@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
+import { AccommodationGallery } from '@/components/trips/accommodation-gallery'
 import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
 import { SpeciesCard } from '@/components/trips/species-card'
 import { BookingWidget, MobileBookingBar } from '@/components/trips/booking-widget'
@@ -17,6 +18,7 @@ import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { TripDetailNav } from '@/components/trips/trip-detail-nav'
+import { AvailabilityPreviewCalendar } from '@/components/trips/availability-preview-calendar'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -383,7 +385,7 @@ export default async function ExperienceDetailPage({
   //
   // This means guides can visit /trips/[id] to preview their draft BEFORE publishing.
   // Anon visitors hitting a draft URL still get 404 (RLS returns null).
-  const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating, cancellation_policy), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
+  const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
 
   // Try with auth client first (respects RLS — guides see own drafts)
   const supabase = await createClient()
@@ -408,11 +410,36 @@ export default async function ExperienceDetailPage({
 
   if (rawExp == null) notFound()
 
+  // Fetch linked accommodations separately — gracefully returns [] if migration not applied
+  let linkedAccommodations: Array<{
+    accommodation: { id: string; name: string; type: string; description: string | null; max_guests: number | null; location_note: string | null; images: string[] }
+  }> = []
+  try {
+    const { data: accData } = await supabase
+      .from('experience_accommodations')
+      .select('accommodation:guide_accommodations ( id, name, type, description, max_guests, location_note, images )')
+      .eq('experience_id', id)
+    if (accData != null) {
+      linkedAccommodations = accData as typeof linkedAccommodations
+    }
+  } catch {
+    // Tables don't exist yet — ignore
+  }
+
   const exp: ExperienceWithGuide = {
     ...(rawExp as unknown as ExperienceWithGuide),
     images: [...(rawExp.images ?? []) as ExperienceWithGuide['images']]
       .sort((a, b) => a.sort_order - b.sort_order),
   }
+
+  // calendar_disabled — added in migration 20260320170000.
+  // Queried separately so a missing column never breaks the trip page (falls back to false).
+  const { data: guideCalendarFlags } = await supabase
+    .from('guides')
+    .select('calendar_disabled')
+    .eq('id', exp.guide_id)
+    .maybeSingle()
+  const calendarDisabled = guideCalendarFlags?.calendar_disabled ?? false
 
   const isDraft = !exp.published
 
@@ -473,22 +500,22 @@ export default async function ExperienceDetailPage({
 
   // ── New content fields (added via DB migration 20260316171516) ───────────────
   const expRaw = rawExp as unknown as Record<string, unknown>
-  const itinerary        = (expRaw.itinerary as ItineraryStep[] | null) ?? null
-  const locationDesc     = (expRaw.location_description as string | null) ?? null
-  const boatDesc         = (expRaw.boat_description as string | null) ?? null
-  const accommodationDesc = (expRaw.accommodation_description as string | null) ?? null
-  const foodDesc         = (expRaw.food_description as string | null) ?? null
-  const licenseDesc      = (expRaw.license_description as string | null) ?? null
-  const gearDesc         = (expRaw.gear_description as string | null) ?? null
-  const transportDesc    = (expRaw.transport_description as string | null) ?? null
+  const itinerary    = (expRaw.itinerary as ItineraryStep[] | null) ?? null
+  const locationDesc = (expRaw.location_description as string | null) ?? null
+  const boatDesc     = (expRaw.boat_description as string | null) ?? null
+  const foodDesc     = (expRaw.food_description as string | null) ?? null
+  const licenseDesc  = (expRaw.license_description as string | null) ?? null
+  const gearDesc     = (expRaw.gear_description as string | null) ?? null
+  const transportDesc = (expRaw.transport_description as string | null) ?? null
+
+  const accommodations = linkedAccommodations
 
   const tripDetailCards = [
-    { key: 'boat',          label: 'Boat',             icon: '⛵', text: boatDesc },
-    { key: 'accommodation', label: 'Accommodation',    icon: '🏠', text: accommodationDesc },
-    { key: 'food',          label: 'Food & Drinks',    icon: '🍽️', text: foodDesc },
-    { key: 'license',       label: 'Fishing Licence',  icon: '📋', text: licenseDesc },
-    { key: 'gear',          label: 'Gear & Equipment', icon: '🎣', text: gearDesc },
-    { key: 'transport',     label: 'Getting There',    icon: '🚗', text: transportDesc },
+    { key: 'boat',      label: 'Boat',             icon: '⛵',  text: boatDesc },
+    { key: 'food',      label: 'Food & Drinks',    icon: '🍽️', text: foodDesc },
+    { key: 'license',   label: 'Fishing Licence',  icon: '📋', text: licenseDesc },
+    { key: 'gear',      label: 'Gear & Equipment', icon: '🎣', text: gearDesc },
+    { key: 'transport', label: 'Getting There',    icon: '🚗',  text: transportDesc },
   ].filter(c => c.text != null && c.text.trim() !== '')
 
   return (
@@ -873,6 +900,95 @@ export default async function ExperienceDetailPage({
                 <DurationCardsSelector options={durationOptions} />
               )}
 
+              {/* ─── Accommodations ────────────────────────────────────── */}
+              {accommodations.length > 0 && (
+                <section className="mb-14">
+                  <SalmonRule />
+                  <p
+                    className="text-xs font-semibold uppercase tracking-[0.25em] mt-4 mb-3 f-body"
+                    style={{ color: '#E67E50' }}
+                  >
+                    Where you&apos;ll stay
+                  </p>
+                  <h2 className="text-[#0A2E4D] text-2xl font-bold mb-8 f-display">
+                    Accommodation
+                  </h2>
+
+                  <div className="flex flex-col gap-8">
+                    {accommodations.map(({ accommodation: acc }) => (
+                      <div
+                        key={acc.id}
+                        className="rounded-3xl overflow-hidden"
+                        style={{
+                          background: '#FDFAF7',
+                          border: '1px solid rgba(10,46,77,0.07)',
+                          boxShadow: '0 4px 32px rgba(10,46,77,0.07)',
+                        }}
+                      >
+                        {/* ── Photo grid ─────────────────────────────────── */}
+                        {acc.images != null && acc.images.length > 0 && (
+                          <AccommodationGallery images={acc.images} name={acc.name} />
+                        )}
+
+                        {/* ── Content ────────────────────────────────────── */}
+                        <div className="p-6 sm:p-8">
+                          <div className="flex items-start justify-between gap-4 mb-4">
+                            <div>
+                              <h3
+                                className="text-xl font-bold f-display leading-tight mb-2"
+                                style={{ color: '#0A2E4D' }}
+                              >
+                                {acc.name}
+                              </h3>
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                <span
+                                  className="text-[10px] font-bold uppercase tracking-[0.18em] px-3 py-1 rounded-full f-body"
+                                  style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }}
+                                >
+                                  {acc.type}
+                                </span>
+                                {acc.max_guests != null && (
+                                  <span
+                                    className="text-xs f-body font-medium"
+                                    style={{ color: 'rgba(10,46,77,0.5)' }}
+                                  >
+                                    Up to {acc.max_guests} guests
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {acc.description != null && (
+                            <p
+                              className="text-sm leading-relaxed f-body mb-4"
+                              style={{ color: 'rgba(10,46,77,0.68)', maxWidth: '560px' }}
+                            >
+                              {acc.description}
+                            </p>
+                          )}
+
+                          {acc.location_note != null && (
+                            <div className="flex items-center gap-2">
+                              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                                <path d="M6.5 1C4.29 1 2.5 2.79 2.5 5c0 3 4 7 4 7s4-4 4-7c0-2.21-1.79-4-4-4z" fill="rgba(230,126,80,0.6)" />
+                                <circle cx="6.5" cy="5" r="1.4" fill="#E67E50" />
+                              </svg>
+                              <p
+                                className="text-xs f-body"
+                                style={{ color: 'rgba(10,46,77,0.5)' }}
+                              >
+                                {acc.location_note}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {/* ─── Trip Details ──────────────────────────────────────── */}
               {tripDetailCards.length > 0 && (
                 <section className="mb-12">
@@ -1025,6 +1141,51 @@ export default async function ExperienceDetailPage({
                 </section>
               )}
 
+              {/* ─── Availability preview calendar — inquiry-based trips only ── */}
+              {(exp.booking_type === 'icelandic' || exp.booking_type === 'both' || calendarDisabled) && !isDraft && (
+                calendarDisabled ? (
+                  /* ── Calendar disabled: guide uses inquiry-only mode ── */
+                  <section>
+                    <div
+                      className="rounded-2xl px-5 py-5 flex gap-4 items-start"
+                      style={{ background: '#F3EDE4', border: '1px solid rgba(230,126,80,0.18)' }}
+                    >
+                      {/* Icon */}
+                      <div
+                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                        style={{ background: 'rgba(230,126,80,0.14)' }}
+                      >
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E67E50" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="16" rx="2" />
+                          <line x1="3" y1="9" x2="21" y2="9" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                        </svg>
+                      </div>
+                      {/* Text */}
+                      <div>
+                        <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>
+                          Flexible scheduling — dates agreed with guide
+                        </p>
+                        <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                          This guide handles bookings through personal inquiry.
+                          Send a request with your preferred dates and group size —
+                          the guide will confirm availability and send a custom offer.
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                ) : (
+                  <AvailabilityPreviewCalendar
+                    expId={exp.id}
+                    availabilityConfig={availabilityConfig}
+                    blockedDates={blockedDates}
+                    bookedDates={bookedDates}
+                    bookingType={exp.booking_type as 'classic' | 'icelandic' | 'both'}
+                  />
+                )
+              )}
+
               {/* Cancellation policy banner */}
               <CancellationPolicyBanner policy={exp.guide.cancellation_policy} />
 
@@ -1140,6 +1301,7 @@ export default async function ExperienceDetailPage({
                 blockedDates={blockedDates}
                 bookedDates={bookedDates}
                 bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
+                calendarDisabled={calendarDisabled}
               />
             </aside>
 
@@ -1157,6 +1319,7 @@ export default async function ExperienceDetailPage({
         durationHours={exp.duration_hours}
         durationDays={exp.duration_days}
         bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
+        calendarDisabled={calendarDisabled}
       />
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}

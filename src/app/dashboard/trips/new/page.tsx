@@ -28,6 +28,12 @@ export default async function DashboardNewExperiencePage() {
 
   if (guide == null) redirect('/guides/apply')
 
+  const { data: guideAccommodations } = await supabase
+    .from('guide_accommodations')
+    .select('id, name, type, description, max_guests, location_note')
+    .eq('guide_id', guide.id)
+    .order('name')
+
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[840px]">
 
@@ -78,6 +84,7 @@ export default async function DashboardNewExperiencePage() {
         guideName={guide.full_name}
         context="guide"
         successPath="/dashboard/trips"
+        guideAccommodations={guideAccommodations ?? []}
       />
     </div>
   )

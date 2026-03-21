@@ -96,7 +96,8 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
     >
       <div className="overflow-hidden">
         {/* ── Top bar ─────────────────────────────────────────────────────── */}
-        <div className="h-[72px] flex items-center justify-between px-6 md:px-10">
+        <div className="h-[72px] flex items-center px-4 md:px-8 lg:px-14">
+          <div className="max-w-[1360px] mx-auto w-full flex items-center justify-between">
 
           <Link href="/" className="flex-shrink-0">
             <Image
@@ -178,6 +179,7 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
                 />
               ))}
             </button>
+          </div>
           </div>
         </div>
 

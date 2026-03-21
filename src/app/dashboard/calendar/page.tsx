@@ -3,6 +3,8 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import CalendarGrid from '@/components/dashboard/calendar-grid'
 import CalendarsPanel from '@/components/dashboard/calendars-panel'
 import { getGuideCalendars, getCalendarExperienceMap } from '@/actions/calendars'
+import { CalendarDisabledToggle } from '@/components/dashboard/calendar-disabled-toggle'
+import type { WeeklySchedule } from '@/actions/weekly-schedules'
 
 export const revalidate = 0  // always fresh — calendar changes frequently
 
@@ -27,6 +29,7 @@ export default async function CalendarPage({
   if (user == null) redirect('/login?next=/dashboard/calendar')
 
   // ── Guide profile ────────────────────────────────────────────────────────────
+  // Base query — columns guaranteed to exist in all DB versions.
   const { data: guide } = await supabase
     .from('guides')
     .select('id, full_name')
@@ -34,6 +37,16 @@ export default async function CalendarPage({
     .single()
 
   if (guide == null) redirect('/dashboard')
+
+  // calendar_disabled — added in migration 20260320170000.
+  // Queried separately so a missing column never breaks the page (falls back to false).
+  const { data: guideFlags } = await supabase
+    .from('guides')
+    .select('calendar_disabled')
+    .eq('id', guide.id)
+    .maybeSingle()
+
+  const calendarDisabled = guideFlags?.calendar_disabled ?? false
 
   // ── URL params ───────────────────────────────────────────────────────────────
   const sp = await searchParams
@@ -52,13 +65,21 @@ export default async function CalendarPage({
   // ── All experiences for this guide ───────────────────────────────────────────
   const { data: allExperiencesRaw } = await supabase
     .from('experiences')
-    .select('id, title, published')
+    .select('id, title, published, booking_type')
     .eq('guide_id', guide.id)
     .order('title')
 
   const allExperiences = (allExperiencesRaw ?? []) as Array<{
-    id: string; title: string; published: boolean
+    id: string; title: string; published: boolean; booking_type: string | null
   }>
+
+  // ── Calendar-disabled toggle eligibility ──────────────────────────────────────
+  // Show when all listings are icelandic (inquiry-only) flow, OR guide has no listings.
+  // Guides with any 'classic' or 'both' listing already have a working calendar — no need.
+  const hasClassicListing = allExperiences.some(
+    e => e.booking_type === 'classic' || e.booking_type === 'both'
+  )
+  const showCalendarToggle = !hasClassicListing
 
   // ── Calendars + experience assignments ───────────────────────────────────────
   const [calendars, calendarExperienceMap] = await Promise.all([
@@ -117,10 +138,18 @@ export default async function CalendarPage({
     .gte('dates_to', firstDay)
     .order('dates_from')
 
-  const [blockedResult, bookingsResult, inquiriesResult] = await Promise.all([
+  // ── Weekly schedules ─────────────────────────────────────────────────────────
+  const weeklySchedulesQuery = supabase
+    .from('guide_weekly_schedules')
+    .select('id, guide_id, label, period_from, period_to, blocked_weekdays, created_at')
+    .eq('guide_id', guide.id)
+    .order('period_from')
+
+  const [blockedResult, bookingsResult, inquiriesResult, weeklySchedulesResult] = await Promise.all([
     blockedQuery  ?? Promise.resolve({ data: [] }),
     bookingsQuery ?? Promise.resolve({ data: [] }),
     inquiriesQuery,
+    weeklySchedulesQuery,
   ])
 
   const blocked = (blockedResult.data ?? []) as Array<{
@@ -132,6 +161,7 @@ export default async function CalendarPage({
   const inquiries = (inquiriesResult.data ?? []) as Array<{
     id: string; dates_from: string; dates_to: string; angler_name: string; group_size: number; status: string
   }>
+  const weeklySchedules = (weeklySchedulesResult.data ?? []) as WeeklySchedule[]
 
   // ── Stats (scoped to active calendar / all) ───────────────────────────────────
   const blockedDaysCount = blocked.reduce((acc, b) => {
@@ -158,6 +188,29 @@ export default async function CalendarPage({
             : 'Block dates when you\'re unavailable — anglers won\'t see those days for booking.'}
         </p>
       </div>
+
+      {/* ─── Calendar-disabled toggle (only for icelandic-only guides) ──────── */}
+      {showCalendarToggle && (
+        <div
+          className="mb-6 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold f-body mb-0.5" style={{ color: '#0A2E4D' }}>
+              Disable calendar for all listings
+            </p>
+            <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.52)' }}>
+              When disabled, your trip pages show a&nbsp;
+              <strong style={{ color: 'rgba(10,46,77,0.7)' }}>"Request this trip"</strong>
+              &nbsp;button instead of the date picker.
+              Anglers send an inquiry and you reply with a custom offer.
+            </p>
+          </div>
+          <div className="flex-shrink-0">
+            <CalendarDisabledToggle currentlyDisabled={calendarDisabled} />
+          </div>
+        </div>
+      )}
 
       {/* ─── Two-column layout: panel + calendar ──────────────────────────── */}
       <div className="flex flex-col lg:flex-row gap-6 lg:items-start">
@@ -244,6 +297,7 @@ export default async function CalendarPage({
               bookings={bookings}
               inquiries={inquiries}
               calendarMode="shared"
+              weeklySchedules={weeklySchedules}
             />
           )}
         </div>

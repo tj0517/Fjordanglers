@@ -44,7 +44,7 @@ export default async function GuideInquiriesPage({
         <p className="text-[#0A2E4D]/45 text-sm f-body">
           Please{' '}
           <Link href="/login" className="text-[#E67E50] underline underline-offset-2">sign in</Link>
-          {' '}to view inquiries.
+          {' '}to view requests.
         </p>
       </div>
     )
@@ -140,7 +140,7 @@ export default async function GuideInquiriesPage({
           Custom <span style={{ fontStyle: 'italic' }}>Requests</span>
         </h1>
         <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
-          Concierge inquiries assigned to you or open for claiming.
+          Concierge requests assigned to you or open for claiming.
         </p>
       </div>
 
@@ -234,7 +234,7 @@ export default async function GuideInquiriesPage({
             </svg>
           </div>
           <h3 className="text-[#0A2E4D] text-xl font-bold mb-2 f-display">
-            {statusFilter === 'all' ? 'No inquiries yet' : 'No requests in this category'}
+            {statusFilter === 'all' ? 'No requests yet' : 'No requests in this category'}
           </h3>
           <p className="text-[#0A2E4D]/45 text-sm f-body">
             {statusFilter === 'all'

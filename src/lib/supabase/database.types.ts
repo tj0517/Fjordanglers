@@ -308,6 +308,36 @@ export type Database = {
           },
         ]
       }
+      experience_accommodations: {
+        Row: {
+          experience_id:    string
+          accommodation_id: string
+        }
+        Insert: {
+          experience_id:    string
+          accommodation_id: string
+        }
+        Update: {
+          experience_id?:    string
+          accommodation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_accommodations_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experiences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "experience_accommodations_accommodation_id_fkey"
+            columns: ["accommodation_id"]
+            isOneToOne: false
+            referencedRelation: "guide_accommodations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       experience_images: {
         Row: {
           created_at: string
@@ -533,6 +563,88 @@ export type Database = {
           },
         ]
       }
+      guide_accommodations: {
+        Row: {
+          id:            string
+          guide_id:      string
+          name:          string
+          type:          string
+          description:   string | null
+          max_guests:    number | null
+          location_note: string | null
+          images:        string[]
+          created_at:    string
+        }
+        Insert: {
+          id?:            string
+          guide_id:       string
+          name:           string
+          type:           string
+          description?:   string | null
+          max_guests?:    number | null
+          location_note?: string | null
+          images?:        string[]
+          created_at?:    string
+        }
+        Update: {
+          id?:            string
+          guide_id?:      string
+          name?:          string
+          type?:          string
+          description?:   string | null
+          max_guests?:    number | null
+          location_note?: string | null
+          images?:        string[]
+          created_at?:    string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_accommodations_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_weekly_schedules: {
+        Row: {
+          blocked_weekdays: number[]
+          created_at: string
+          guide_id: string
+          id: string
+          label: string | null
+          period_from: string
+          period_to: string
+        }
+        Insert: {
+          blocked_weekdays: number[]
+          created_at?: string
+          guide_id: string
+          id?: string
+          label?: string | null
+          period_from: string
+          period_to: string
+        }
+        Update: {
+          blocked_weekdays?: number[]
+          created_at?: string
+          guide_id?: string
+          id?: string
+          label?: string | null
+          period_from?: string
+          period_to?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_weekly_schedules_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_images: {
         Row: {
           created_at: string
@@ -578,6 +690,7 @@ export type Database = {
           boat_length_m: number | null
           boat_name: string | null
           boat_type: string | null
+          calendar_disabled: boolean
           calendar_mode: string
           cancellation_policy: string
           certifications: string[] | null
@@ -624,6 +737,7 @@ export type Database = {
           boat_length_m?: number | null
           boat_name?: string | null
           boat_type?: string | null
+          calendar_disabled?: boolean
           calendar_mode?: string
           cancellation_policy?: string
           certifications?: string[] | null
@@ -670,6 +784,7 @@ export type Database = {
           boat_length_m?: number | null
           boat_name?: string | null
           boat_type?: string | null
+          calendar_disabled?: boolean
           calendar_mode?: string
           cancellation_policy?: string
           certifications?: string[] | null
@@ -867,7 +982,11 @@ export type Database = {
           experience_level: string
           group_size: number
           id: string
+          offer_date_from: string | null
+          offer_date_to: string | null
           offer_details: string | null
+          offer_meeting_lat: number | null
+          offer_meeting_lng: number | null
           offer_price_eur: number | null
           offer_price_min_eur: number | null
           preferences: Json
@@ -889,7 +1008,11 @@ export type Database = {
           experience_level: string
           group_size: number
           id?: string
+          offer_date_from?: string | null
+          offer_date_to?: string | null
           offer_details?: string | null
+          offer_meeting_lat?: number | null
+          offer_meeting_lng?: number | null
           offer_price_eur?: number | null
           offer_price_min_eur?: number | null
           preferences?: Json
@@ -911,7 +1034,11 @@ export type Database = {
           experience_level?: string
           group_size?: number
           id?: string
+          offer_date_from?: string | null
+          offer_date_to?: string | null
           offer_details?: string | null
+          offer_meeting_lat?: number | null
+          offer_meeting_lng?: number | null
           offer_price_eur?: number | null
           offer_price_min_eur?: number | null
           preferences?: Json

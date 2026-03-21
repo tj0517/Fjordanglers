@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import InquireForm from './InquireForm'
+import type { AvailConfigRow } from '@/components/trips/booking-widget'
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export default async function InquirePage({
   const serviceClient = createServiceClient()
   const { data: experience } = await serviceClient
     .from('experiences')
-    .select('id, title, guide_id, inquiry_form_config, guides(id, full_name, avatar_url)')
+    .select('id, title, guide_id, fish_types, inquiry_form_config, guides(id, full_name, avatar_url)')
     .eq('id', id)
     .eq('published', true)
     .single()
@@ -28,6 +29,22 @@ export default async function InquirePage({
   const guide = Array.isArray(experience.guides)
     ? experience.guides[0]
     : experience.guides
+
+  // Fetch guide availability config + blocked dates in parallel
+  const [availConfigRes, blockedDatesRes] = await Promise.all([
+    serviceClient
+      .from('experience_availability_config')
+      .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
+      .eq('experience_id', id)
+      .maybeSingle(),
+    serviceClient
+      .from('experience_blocked_dates')
+      .select('date_start, date_end')
+      .eq('experience_id', id),
+  ])
+
+  const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
+  const blockedDates       = (blockedDatesRes.data ?? []) as { date_start: string; date_end: string }[]
 
   // Check if user is logged in — pre-fill their name + email if so
   const supabase = await createClient()
@@ -91,6 +108,9 @@ export default async function InquirePage({
           anglerName={anglerName}
           anglerEmail={anglerEmail}
           formConfig={experience.inquiry_form_config}
+          availabilityConfig={availabilityConfig}
+          blockedDates={blockedDates}
+          fishTypes={experience.fish_types ?? []}
         />
 
       </div>

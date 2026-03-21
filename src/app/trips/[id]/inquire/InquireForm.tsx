@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { submitInquiry } from '@/actions/inquiries'
-import { type InquiryFormConfig, resolveFormConfig } from '@/lib/inquiry-form-config'
+import { type InquiryFormConfig, SPECIES_OPTIONS, resolveFormConfig } from '@/lib/inquiry-form-config'
+import type { AvailConfigRow } from '@/components/trips/booking-widget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -12,14 +13,34 @@ type AccommodationOption = 'needed' | 'not_needed' | 'flexible'
 type TransportOption     = 'need_pickup' | 'self_drive' | 'flexible'
 type TabKey              = 'trip' | 'group' | 'needs' | 'extras'
 
+/** A single selected period — single day has from === to. */
+type Period = { from: string; to: string }
+
+/** Blocked date range from guide's calendar. */
+type BlockedRange = { date_start: string; date_end: string }
+
+type DayState =
+  | 'unavailable'     // past, off-season, or too far ahead
+  | 'blocked'         // guide blocked — visible but NOT clickable
+  | 'available'       // open to pick
+  | 'selected_single' // single day picked
+  | 'selected_start'  // first day of a range
+  | 'selected_end'    // last day of a range
+  | 'in_range'        // inside a selected range
+  | 'pending_start'   // first click in range mode (waiting for end)
+  | 'pending_range'   // hover preview inside a pending range
+
 type Props = {
-  experienceId:   string
-  guideId:        string | null
-  prefilledDates: string[]
-  prefilledGroup: number
-  anglerName:     string | null
-  anglerEmail:    string | null
-  formConfig?:    Partial<InquiryFormConfig> | null
+  experienceId:        string
+  guideId:             string | null
+  prefilledDates:      string[]
+  prefilledGroup:      number
+  anglerName:          string | null
+  anglerEmail:         string | null
+  formConfig?:         Partial<InquiryFormConfig> | null
+  availabilityConfig?: AvailConfigRow | null
+  blockedDates?:       BlockedRange[]
+  fishTypes?:          string[]
 }
 
 // ─── Tabs metadata ────────────────────────────────────────────────────────────
@@ -32,11 +53,6 @@ const TABS: { key: TabKey; label: string; next: TabKey | null }[] = [
 ]
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const SPECIES_OPTIONS = [
-  'Salmon', 'Sea Trout', 'Brown Trout', 'Pike', 'Perch',
-  'Arctic Char', 'Grayling', 'Halibut', 'Cod', 'Zander',
-]
 
 
 const DURATION_OPTIONS: { value: DurationType; label: string; sub: string }[] = [
@@ -63,139 +79,218 @@ const TRANSPORT_OPTIONS: { value: TransportOption; label: string; sub: string }[
   { value: 'flexible',    label: 'Flexible',    sub: 'Depends on location'        },
 ]
 
-// ─── DateRangePicker ──────────────────────────────────────────────────────────
+// ─── MultiPeriodPicker ────────────────────────────────────────────────────────
+//
+// Lets the angler pick:
+//   • Single days     — click any available date (mode: 'single')
+//   • Date ranges     — click start then end    (mode: 'range')
+//   • Multiple periods of either kind
+//
+// Guide's blocked dates are rendered with strikethrough and are NOT clickable.
+// Past and off-season dates are greyed out and NOT clickable.
 
-function DateRangePicker({
-  from,
-  to,
+function MultiPeriodPicker({
+  periods,
   onChange,
+  availabilityConfig,
+  blockedDates = [],
   disabled = false,
 }: {
-  from:     string   // 'YYYY-MM-DD' or ''
-  to:       string   // 'YYYY-MM-DD' or ''
-  onChange: (from: string, to: string) => void
-  disabled?: boolean
+  periods:             Period[]
+  onChange:            (p: Period[]) => void
+  availabilityConfig?: AvailConfigRow | null
+  blockedDates?:       BlockedRange[]
+  disabled?:           boolean
 }) {
-  const todayDate = new Date()
-  todayDate.setHours(0, 0, 0, 0)
-  const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-  const [viewYear,  setViewYear]  = useState(todayDate.getFullYear())
-  const [viewMonth, setViewMonth] = useState(todayDate.getMonth()) // 0-indexed
-  const [hovered,   setHovered]   = useState<string | null>(null)
+  const advHours = availabilityConfig?.advance_notice_hours ?? 0
+  const minDate  = new Date(now.getTime() + advHours * 3_600_000)
+  const minISO   = `${minDate.getFullYear()}-${String(minDate.getMonth() + 1).padStart(2, '0')}-${String(minDate.getDate()).padStart(2, '0')}`
 
-  function prevMonth() {
-    if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
-    else setViewMonth(m => m - 1)
+  const maxDays  = availabilityConfig?.max_advance_days ?? 365
+  const maxDate  = new Date(now)
+  maxDate.setDate(maxDate.getDate() + maxDays)
+  const maxISO   = `${maxDate.getFullYear()}-${String(maxDate.getMonth() + 1).padStart(2, '0')}-${String(maxDate.getDate()).padStart(2, '0')}`
+
+  const [pickMode,    setPickMode]    = useState<'single' | 'range'>('range')
+  const [pendingFrom, setPendingFrom] = useState<string | null>(null)
+  const [hovered,     setHovered]     = useState<string | null>(null)
+  const [viewY,       setViewY]       = useState(now.getFullYear())
+  const [viewM,       setViewM]       = useState(now.getMonth())
+
+  function switchMode(mode: 'single' | 'range') {
+    setPickMode(mode)
+    setPendingFrom(null)
+    setHovered(null)
   }
-  function nextMonth() {
-    if (viewMonth === 11) { setViewYear(y => y + 1); setViewMonth(0) }
-    else setViewMonth(m => m + 1)
+
+  function getDayState(iso: string): DayState {
+    // Already selected?
+    for (const p of periods) {
+      if (p.from === iso && p.to === iso) return 'selected_single'
+      if (p.from === iso)                 return 'selected_start'
+      if (p.to   === iso)                 return 'selected_end'
+      if (iso > p.from && iso < p.to)     return 'in_range'
+    }
+
+    // Pending range preview
+    if (pendingFrom != null) {
+      if (iso === pendingFrom) return 'pending_start'
+      if (hovered != null) {
+        const lo = pendingFrom <= hovered ? pendingFrom : hovered
+        const hi = pendingFrom <= hovered ? hovered : pendingFrom
+        if (iso > lo && iso < hi) return 'pending_range'
+      }
+    }
+
+    // Past or out of window
+    if (iso < minISO || iso > maxISO) return 'unavailable'
+
+    // Guide-blocked ranges — VISIBLE but NOT clickable
+    for (const r of blockedDates) {
+      if (iso >= r.date_start && iso <= r.date_end) return 'blocked'
+    }
+
+    // Config-based gates (seasons, weekdays)
+    if (availabilityConfig) {
+      const [, mStr] = iso.split('-')
+      const month1   = parseInt(mStr, 10)
+      if (availabilityConfig.available_months.length > 0 &&
+          !availabilityConfig.available_months.includes(month1))
+        return 'unavailable'
+      const wd = new Date(iso + 'T00:00:00').getDay()
+      if (availabilityConfig.available_weekdays.length > 0 &&
+          !availabilityConfig.available_weekdays.includes(wd))
+        return 'unavailable'
+    }
+
+    return 'available'
   }
 
-  function handleDayClick(dateStr: string) {
+  function handleDayClick(iso: string) {
     if (disabled) return
-    if (!from || (from && to)) {
-      onChange(dateStr, '') // start new selection
+    const state = getDayState(iso)
+
+    // Non-interactive states
+    if (state === 'unavailable' || state === 'blocked') return
+
+    // Cancel pending selection on re-click of pending start
+    if (state === 'pending_start') {
+      setPendingFrom(null); setHovered(null); return
+    }
+
+    // Remove period if clicking a selected day
+    if (
+      state === 'selected_single' ||
+      state === 'selected_start'  ||
+      state === 'selected_end'    ||
+      state === 'in_range'
+    ) {
+      onChange(periods.filter(p => !(iso >= p.from && iso <= p.to)))
+      return
+    }
+
+    if (pickMode === 'single') {
+      // Toggle single day
+      const already = periods.findIndex(p => p.from === iso && p.to === iso)
+      if (already >= 0) {
+        onChange(periods.filter((_, i) => i !== already))
+      } else {
+        onChange([...periods, { from: iso, to: iso }].sort((a, b) => a.from.localeCompare(b.from)))
+      }
+      return
+    }
+
+    // Range mode
+    if (pendingFrom == null) {
+      setPendingFrom(iso)
     } else {
-      // Complete selection — ensure from < to
-      if (dateStr >= from) onChange(from, dateStr)
-      else onChange(dateStr, from)
+      const from = pendingFrom <= iso ? pendingFrom : iso
+      const to   = pendingFrom <= iso ? iso : pendingFrom
+      onChange([...periods, { from, to }].sort((a, b) => a.from.localeCompare(b.from)))
+      setPendingFrom(null); setHovered(null)
     }
   }
 
-  // Effective end for hover preview (only forward ranges)
-  const effectiveEnd = from && !to && hovered && hovered >= from ? hovered : to
+  // Calendar geometry
+  const daysInMonth = new Date(viewY, viewM + 1, 0).getDate()
+  const startPad    = (new Date(viewY, viewM, 1).getDay() + 6) % 7
+  const monthLabel  = new Date(viewY, viewM, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 
-  // Build day cells for current view month
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate()
-  const firstDow    = new Date(viewYear, viewMonth, 1).getDay() // 0=Sun
-  const offset      = (firstDow + 6) % 7                        // Mon=0
-  const cells: (string | null)[] = []
-  for (let i = 0; i < offset; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) {
-    cells.push(`${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
+  function goPrev() {
+    if (viewM === 0) { setViewY(y => y - 1); setViewM(11) } else setViewM(m => m - 1)
+  }
+  function goNext() {
+    if (viewM === 11) { setViewY(y => y + 1); setViewM(0) } else setViewM(m => m + 1)
   }
 
-  const monthLabel = new Date(viewYear, viewMonth, 1)
-    .toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  const canPrev = viewY > now.getFullYear() || (viewY === now.getFullYear() && viewM > now.getMonth())
+  const canNext = (() => {
+    const ny = viewM === 11 ? viewY + 1 : viewY
+    const nm = viewM === 11 ? 0 : viewM + 1
+    return `${ny}-${String(nm + 1).padStart(2, '0')}-01` <= maxISO
+  })()
 
-  const fmtDate = (d: string) =>
-    new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  function fmtPeriod(p: Period) {
+    const fmt = (d: string) =>
+      new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    return p.from === p.to ? fmt(p.from) : `${fmt(p.from)} – ${fmt(p.to)}`
+  }
 
-  const dayCount = from && to
-    ? Math.round((new Date(to + 'T00:00:00').getTime() - new Date(from + 'T00:00:00').getTime()) / 86400000) + 1
-    : 0
+  // Total days across all periods
+  const totalDays = periods.reduce((sum, p) => {
+    const msPerDay = 86_400_000
+    return sum + Math.round((new Date(p.to + 'T00:00:00').getTime() - new Date(p.from + 'T00:00:00').getTime()) / msPerDay) + 1
+  }, 0)
 
   return (
     <div>
-      {/* ── Selected range summary ───────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-3">
-        <div
-          className="flex-1 px-3 py-2 rounded-xl"
-          style={{
-            background: from ? 'rgba(10,46,77,0.07)' : 'rgba(10,46,77,0.03)',
-            border: `1px solid ${from ? 'rgba(10,46,77,0.18)' : 'rgba(10,46,77,0.08)'}`,
-          }}
-        >
-          <span className="text-[9px] font-bold uppercase tracking-widest f-body block"
-            style={{ color: 'rgba(10,46,77,0.35)' }}>From</span>
-          <span className="text-[12px] font-semibold f-body"
-            style={{ color: from ? '#0A2E4D' : 'rgba(10,46,77,0.25)' }}>
-            {from ? fmtDate(from) : '—'}
-          </span>
-        </div>
-
-        <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: '16px', flexShrink: 0 }}>→</span>
-
-        <div
-          className="flex-1 px-3 py-2 rounded-xl"
-          style={{
-            background: to ? 'rgba(10,46,77,0.07)' : 'rgba(10,46,77,0.03)',
-            border: `1px solid ${to ? 'rgba(10,46,77,0.18)' : 'rgba(10,46,77,0.08)'}`,
-          }}
-        >
-          <span className="text-[9px] font-bold uppercase tracking-widest f-body block"
-            style={{ color: 'rgba(10,46,77,0.35)' }}>To</span>
-          <span className="text-[12px] font-semibold f-body"
-            style={{ color: to ? '#0A2E4D' : 'rgba(10,46,77,0.25)' }}>
-            {to ? fmtDate(to) : '—'}
-          </span>
-        </div>
-
-        {(from || to) && (
+      {/* ── Mode toggle ────────────────────────────────────────────────── */}
+      <div className="flex gap-2 mb-3">
+        {([
+          { mode: 'single' as const, label: 'Individual days' },
+          { mode: 'range'  as const, label: 'Date range'      },
+        ]).map(({ mode, label }) => (
           <button
+            key={mode}
             type="button"
-            onClick={() => onChange('', '')}
-            style={{
-              width: 28, height: 28, borderRadius: '8px',
-              background: 'rgba(10,46,77,0.06)', border: 'none',
-              cursor: 'pointer', color: 'rgba(10,46,77,0.45)',
-              fontSize: '16px', lineHeight: 1, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            disabled={disabled}
+            onClick={() => switchMode(mode)}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
+            style={
+              pickMode === mode
+                ? { background: '#0A2E4D', color: 'white',              border: '1.5px solid #0A2E4D' }
+                : { background: 'transparent', color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.15)' }
+            }
           >
-            ×
+            {mode === 'single'
+              ? <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.4" /><circle cx="5.5" cy="5.5" r="1.5" fill="currentColor" /></svg>
+              : <svg width="14" height="9"  viewBox="0 0 14 9"  fill="none"><rect x="1" y="1" width="5" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><rect x="8" y="1" width="5" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.3" /><line x1="6" y1="4.5" x2="8" y2="4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" /></svg>
+            }
+            {label}
           </button>
-        )}
+        ))}
       </div>
 
-      {/* ── Calendar ─────────────────────────────────────────────────── */}
+      {/* ── Calendar ───────────────────────────────────────────────────── */}
       <div style={{ background: 'rgba(10,46,77,0.025)', borderRadius: '16px', padding: '14px 16px 16px', border: '1px solid rgba(10,46,77,0.07)' }}>
 
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-3">
-          <button type="button" onClick={prevMonth} disabled={disabled}
-            style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(10,46,77,0.07)', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', color: '#0A2E4D', fontSize: '18px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            ‹
-          </button>
-          <span className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>
-            {monthLabel}
-          </span>
-          <button type="button" onClick={nextMonth} disabled={disabled}
-            style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(10,46,77,0.07)', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', color: '#0A2E4D', fontSize: '18px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            ›
-          </button>
+          <button
+            type="button" onClick={goPrev} disabled={!canPrev || disabled}
+            style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(10,46,77,0.07)', border: 'none', cursor: (!canPrev || disabled) ? 'not-allowed' : 'pointer', color: '#0A2E4D', fontSize: '18px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: canPrev ? 1 : 0.3 }}
+          >‹</button>
+
+          <span className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{monthLabel}</span>
+
+          <button
+            type="button" onClick={goNext} disabled={!canNext || disabled}
+            style={{ width: 28, height: 28, borderRadius: '8px', background: 'rgba(10,46,77,0.07)', border: 'none', cursor: (!canNext || disabled) ? 'not-allowed' : 'pointer', color: '#0A2E4D', fontSize: '18px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: canNext ? 1 : 0.3 }}
+          >›</button>
         </div>
 
         {/* Weekday headers */}
@@ -210,73 +305,173 @@ function DateRangePicker({
 
         {/* Day cells */}
         <div className="grid grid-cols-7 gap-0.5">
-          {cells.map((dateStr, idx) => {
-            if (!dateStr) return <div key={`pad-${idx}`} />
+          {Array.from({ length: startPad }).map((_, i) => <div key={`pad${i}`} />)}
 
-            const isPast    = dateStr < todayStr
-            const isStart   = !!from && dateStr === from
-            const isEnd     = !!to   && dateStr === to
-            const inRange   = !!(from && effectiveEnd && dateStr > from && dateStr < effectiveEnd)
-            const isPreview = !!(from && !to && hovered && dateStr === hovered && hovered >= from)
-            const isToday   = dateStr === todayStr
-            const dayNum    = parseInt(dateStr.split('-')[2], 10)
+          {Array.from({ length: daysInMonth }).map((_, i) => {
+            const d      = i + 1
+            const iso    = `${viewY}-${String(viewM + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+            const state  = getDayState(iso)
+            const isToday = iso === todayISO
 
-            let bg     = 'transparent'
-            let color  = isPast ? 'rgba(10,46,77,0.2)' : '#0A2E4D'
-            let fw     = isToday ? 700 : 400
-            let border = 'none'
+            const clickable = state !== 'unavailable' && state !== 'blocked'
 
-            if (isStart || isEnd) {
-              bg = '#0A2E4D'; color = 'white'; fw = 700
-            } else if (isPreview) {
-              bg = 'rgba(10,46,77,0.22)'; fw = 600
-            } else if (inRange) {
-              bg = 'rgba(10,46,77,0.09)'
-            } else if (isToday) {
-              border = '1.5px solid rgba(10,46,77,0.25)'
+            let bg       = 'transparent'
+            let color    = '#0A2E4D'
+            let fw       = isToday ? 700 : 400
+            let border   = isToday ? '1.5px solid rgba(10,46,77,0.2)' : 'none'
+            let opacity  = 1
+            let textDeco = 'none'
+            let titleTxt = ''
+
+            switch (state) {
+              case 'selected_single':
+                bg = '#E67E50'; color = 'white'; fw = 700; border = 'none'; break
+              case 'selected_start':
+                bg = '#E67E50'; color = 'white'; fw = 700; border = 'none'; break
+              case 'selected_end':
+                bg = '#E67E50'; color = 'white'; fw = 700; border = 'none'; break
+              case 'in_range':
+                bg = 'rgba(230,126,80,0.15)'; color = '#8B3800'; fw = 500; border = 'none'; break
+              case 'pending_start':
+                bg = '#0A2E4D'; color = 'white'; fw = 700; border = 'none'; break
+              case 'pending_range':
+                bg = 'rgba(10,46,77,0.09)'; color = '#0A2E4D'; fw = 500; border = 'none'; break
+              case 'blocked':
+                bg = 'rgba(239,68,68,0.06)'; color = 'rgba(239,68,68,0.5)'; opacity = 0.85
+                textDeco = 'line-through'; border = 'none'
+                titleTxt = 'Guide is unavailable on this date'
+                break
+              case 'unavailable':
+                color = 'rgba(10,46,77,0.2)'; opacity = 0.4; border = 'none'; break
             }
 
             return (
               <button
-                key={dateStr}
+                key={iso}
                 type="button"
-                disabled={disabled || isPast}
-                onClick={() => handleDayClick(dateStr)}
-                onMouseEnter={() => { if (!disabled && from && !to) setHovered(dateStr) }}
+                disabled={disabled || !clickable}
+                onClick={() => handleDayClick(iso)}
+                onMouseEnter={() => { if (!disabled && pendingFrom != null) setHovered(iso) }}
                 onMouseLeave={() => setHovered(null)}
+                title={titleTxt || undefined}
+                aria-label={iso}
                 style={{
-                  background:   bg,
+                  background:     bg,
                   color,
-                  fontWeight:   fw,
-                  borderRadius: '7px',
+                  fontWeight:     fw,
+                  borderRadius:   '7px',
                   border,
-                  cursor:       isPast || disabled ? 'default' : 'pointer',
-                  fontSize:     '13px',
-                  fontFamily:   'var(--font-dm-sans, DM Sans, sans-serif)',
-                  padding:      '7px 0',
-                  width:        '100%',
-                  textAlign:    'center',
-                  lineHeight:   1,
-                  transition:   'background 0.1s',
-                  opacity:      isPast ? 0.35 : 1,
+                  cursor:         (!clickable || disabled) ? 'default' : 'pointer',
+                  fontSize:       '13px',
+                  fontFamily:     'var(--font-dm-sans, DM Sans, sans-serif)',
+                  padding:        '7px 0',
+                  width:          '100%',
+                  textAlign:      'center',
+                  lineHeight:     1,
+                  transition:     'background 0.1s',
+                  opacity,
+                  textDecoration: textDeco,
                 }}
               >
-                {dayNum}
+                {d}
               </button>
             )
           })}
         </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+          {(([
+            { bg: '#E67E50',                      label: 'Selected'     },
+            { bg: 'rgba(230,126,80,0.2)',          label: 'In range'     },
+            { bg: 'rgba(239,68,68,0.15)',          label: 'Closed',        strike: true },
+            { bg: 'rgba(10,46,77,0.15)',           label: 'Not available'              },
+          ]) as { bg: string; label: string; strike?: true }[]).map(({ bg, label, strike }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: bg }} />
+              <span
+                className={`text-[10px] f-body ${strike ? 'line-through' : ''}`}
+                style={{ color: 'rgba(10,46,77,0.4)' }}
+              >
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ── Hint ─────────────────────────────────────────────────────── */}
-      <p className="text-[11px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
-        {!from
-          ? 'Click to select your start date'
-          : !to
-            ? 'Now click your end date'
-            : `${dayCount} day${dayCount === 1 ? '' : 's'} selected`
-        }
-      </p>
+      {/* ── Contextual hint ─────────────────────────────────────────── */}
+      {pendingFrom != null ? (
+        <p className="text-[11px] f-body mt-2 font-medium" style={{ color: '#E67E50' }}>
+          {new Date(pendingFrom + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} selected — now click your end date
+        </p>
+      ) : (
+        <p className="text-[11px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
+          {pickMode === 'single'
+            ? 'Click any open day. Click again to remove. Add as many separate days as you like.'
+            : periods.length > 0
+              ? 'Click to add another range, or remove periods below.'
+              : 'Click your start date, then click your end date.'
+          }
+        </p>
+      )}
+
+      {/* ── Selected periods chips ──────────────────────────────────── */}
+      {periods.length > 0 && (
+        <div className="mt-3">
+          <p
+            className="text-[10px] font-bold uppercase tracking-widest f-body mb-2"
+            style={{ color: 'rgba(10,46,77,0.35)' }}
+          >
+            {periods.length} period{periods.length === 1 ? '' : 's'} · {totalDays} day{totalDays === 1 ? '' : 's'} total
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {periods.map((p, idx) => (
+              <span
+                key={idx}
+                className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1.5 rounded-full"
+                style={{
+                  background: 'rgba(10,46,77,0.06)',
+                  color:      '#0A2E4D',
+                  border:     '1px solid rgba(10,46,77,0.12)',
+                }}
+              >
+                {fmtPeriod(p)}
+                <button
+                  type="button"
+                  onClick={() => onChange(periods.filter((_, i) => i !== idx))}
+                  disabled={disabled}
+                  aria-label={`Remove ${fmtPeriod(p)}`}
+                  style={{
+                    lineHeight: 1, fontSize: '14px',
+                    color: 'rgba(10,46,77,0.4)',
+                    cursor: disabled ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+
+            {/* Clear all */}
+            <button
+              type="button"
+              onClick={() => { onChange([]); setPendingFrom(null); setHovered(null) }}
+              disabled={disabled}
+              className="text-[11px] f-body px-2.5 py-1.5 rounded-full transition-opacity hover:opacity-70"
+              style={{
+                background: 'transparent',
+                color:      'rgba(10,46,77,0.35)',
+                border:     '1px solid rgba(10,46,77,0.1)',
+                cursor:     disabled ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Clear all
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -527,12 +722,19 @@ function TabHeading({ title, subtitle }: { title: string; subtitle?: string }) {
 
 export default function InquireForm({
   guideId,
+  prefilledDates,
   prefilledGroup,
   anglerName,
   anglerEmail,
   formConfig: rawConfig,
+  availabilityConfig,
+  blockedDates = [],
+  fishTypes,
 }: Props) {
   const cfg = resolveFormConfig(rawConfig)
+
+  const availableSpecies =
+    (fishTypes?.length ?? 0) > 0 ? fishTypes! : SPECIES_OPTIONS
 
   const isRequired = (key: keyof InquiryFormConfig) => cfg[key] === 'required'
   const isVisible  = (key: keyof InquiryFormConfig) => cfg[key] !== 'hidden'
@@ -554,8 +756,12 @@ export default function InquireForm({
   // ── Trip type & duration
   const [durationType,     setDurationType]     = useState<DurationType>('full_day')
   const [numDays,          setNumDays]          = useState(3)
-  const [specificFrom, setSpecificFrom] = useState('')
-  const [specificTo,   setSpecificTo]   = useState('')
+
+  // ── Multi-period date selection (replaces single from/to range)
+  const [periods, setPeriods] = useState<Period[]>(() => {
+    const valid = prefilledDates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    return valid.map(d => ({ from: d, to: d }))
+  })
 
   // ── Group
   const [group,        setGroup]        = useState(prefilledGroup)
@@ -583,7 +789,7 @@ export default function InquireForm({
 
   // ── Computed: which tabs have any data entered
   const filledTabs: Partial<Record<TabKey, boolean>> = {
-    trip:   !!specificFrom && !!specificTo,
+    trip:   periods.length > 0,
     group:  species.length > 0,
     needs:  !!(gearNeeded || accommodation || transport || boatPref || dietary),
     extras: !!(photographyPackage !== null || stayingAt || notes || budgetMin || budgetMax),
@@ -599,8 +805,7 @@ export default function InquireForm({
   function validateCurrentTab(): string | null {
     switch (activeTab) {
       case 'trip':
-        if (!specificFrom || !specificTo) return 'Please select your preferred dates.'
-        if (specificFrom > specificTo)    return 'Start date must be before end date.'
+        if (periods.length === 0) return 'Please select at least one date or date range.'
         return null
       case 'group':
         if (species.length === 0) return 'Please select at least one target species.'
@@ -641,18 +846,19 @@ export default function InquireForm({
       return
     }
 
-    // Validate dates + compute range
+    // Validate dates + compute envelope range from all selected periods
     let datesFrom = ''
     let datesTo   = ''
     const nextErrorTabs: Partial<Record<TabKey, boolean>> = {}
 
-    if (!specificFrom || !specificTo) {
-      nextErrorTabs.trip = true
-    } else if (specificFrom > specificTo) {
+    if (periods.length === 0) {
       nextErrorTabs.trip = true
     } else {
-      datesFrom = specificFrom
-      datesTo   = specificTo
+      // datesFrom = earliest start, datesTo = latest end across all periods
+      const allFrom = periods.map(p => p.from).sort()
+      const allTo   = periods.map(p => p.to).sort()
+      datesFrom = allFrom[0]
+      datesTo   = allTo[allTo.length - 1]
     }
 
     if (species.length === 0)                                              nextErrorTabs.group  = true
@@ -699,12 +905,13 @@ export default function InquireForm({
           boatPreference:      boatPref.trim()           || undefined,
           dietaryRestrictions: dietary.trim()            || undefined,
           stayingAt:           stayingAt.trim()          || undefined,
-
           photographyPackage:  photographyPackage ?? undefined,
           regionExperience:    regionExperience.trim()   || undefined,
           budgetMin:           budgetMin ? Number(budgetMin) : undefined,
           budgetMax:           budgetMax ? Number(budgetMax) : undefined,
           notes:               notes.trim()              || undefined,
+          // Full multi-period selection preserved for guide review
+          allDatePeriods:      periods.length > 1 ? periods : undefined,
         },
         guideId: guideId ?? undefined,
       })
@@ -861,13 +1068,19 @@ export default function InquireForm({
               </div>
             )}
 
-            {/* Preferred dates */}
+            {/* Preferred dates — multi-period picker */}
             <div>
-              <label style={labelCss} className="f-body">Preferred dates *</label>
-              <DateRangePicker
-                from={specificFrom}
-                to={specificTo}
-                onChange={(f, t) => { setSpecificFrom(f); setSpecificTo(t) }}
+              <label style={labelCss} className="f-body">
+                Preferred dates *
+                <span style={{ color: 'rgba(10,46,77,0.35)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+                  (pick single days, ranges, or multiple periods)
+                </span>
+              </label>
+              <MultiPeriodPicker
+                periods={periods}
+                onChange={setPeriods}
+                availabilityConfig={availabilityConfig}
+                blockedDates={blockedDates}
                 disabled={isPending}
               />
             </div>
@@ -913,7 +1126,7 @@ export default function InquireForm({
             <div>
               <label style={labelCss} className="f-body">Target species *</label>
               <div className="flex flex-wrap gap-2">
-                {SPECIES_OPTIONS.map(s => {
+                {availableSpecies.map(s => {
                   const on = species.includes(s)
                   return (
                     <button key={s} type="button"

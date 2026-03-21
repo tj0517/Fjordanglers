@@ -12,6 +12,13 @@
  *   - target species
  */
 
+// ─── Species options ──────────────────────────────────────────────────────────
+
+export const SPECIES_OPTIONS = [
+  'Salmon', 'Sea Trout', 'Brown Trout', 'Pike', 'Perch',
+  'Arctic Char', 'Grayling', 'Halibut', 'Cod', 'Zander',
+]
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type FieldVisibility = 'required' | 'optional' | 'hidden'

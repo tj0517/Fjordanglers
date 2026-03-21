@@ -40,6 +40,7 @@ const IconCompass = () => (
   </svg>
 )
 
+
 const IconCalendar = () => (
   <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
     <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" />
@@ -93,15 +94,26 @@ const IconInquiries = () => (
   </svg>
 )
 
+const IconBed = () => (
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M1 10.5V7a2 2 0 012-2h9a2 2 0 012 2v3.5" />
+    <line x1="1" y1="10.5" x2="14" y2="10.5" />
+    <line x1="1" y1="13" x2="1" y2="10.5" />
+    <line x1="14" y1="13" x2="14" y2="10.5" />
+    <rect x="4.5" y="6" width="3" height="2" rx="0.5" />
+  </svg>
+)
+
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'Listings',  href: '/dashboard/trips',     icon: <IconCompass />,   exact: false, soon: false },
-  { label: 'Profile',   href: '/dashboard/profile',   icon: <IconUser />,      exact: false, soon: false },
-  { label: 'Bookings',  href: '/dashboard/bookings',  icon: <IconBookings />,  exact: false, soon: false },
-  { label: 'Inquiries', href: '/dashboard/inquiries', icon: <IconInquiries />, exact: false, soon: false },
-  { label: 'Calendar',  href: '/dashboard/calendar',  icon: <IconCalendar />,  exact: false, soon: false },
-  { label: 'Earnings',  href: '/dashboard/earnings',  icon: <IconTrending />,  exact: false, soon: false },
+  { label: 'Listings',       href: '/dashboard/trips',           icon: <IconCompass />,   exact: false, soon: false },
+  { label: 'Profile',        href: '/dashboard/profile',         icon: <IconUser />,      exact: false, soon: false },
+  { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <IconBed />,       exact: false, soon: false },
+  { label: 'Bookings',       href: '/dashboard/bookings',        icon: <IconBookings />,  exact: false, soon: false },
+  { label: 'Requests',       href: '/dashboard/inquiries',       icon: <IconInquiries />, exact: false, soon: false },
+  { label: 'Calendar',       href: '/dashboard/calendar',        icon: <IconCalendar />,  exact: false, soon: false },
+  { label: 'Earnings',       href: '/dashboard/earnings',        icon: <IconTrending />,  exact: false, soon: false },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────

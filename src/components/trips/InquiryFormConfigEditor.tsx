@@ -147,7 +147,6 @@ export default function InquiryFormConfigEditor({ expId, initialConfig }: Props)
     })
   }
 
-  // Count overrides from defaults
   const overrides = (Object.keys(config) as Array<keyof InquiryFormConfig>)
     .filter(k => config[k] !== DEFAULT_INQUIRY_FORM_CONFIG[k]).length
 
@@ -241,7 +240,7 @@ export default function InquiryFormConfigEditor({ expId, initialConfig }: Props)
                 >
                   <FieldRow
                     field={field}
-                    value={config[field.key]}
+                    value={config[field.key] as FieldVisibility}
                     onChange={v => setField(field.key, v)}
                     disabled={isPending}
                   />

@@ -267,6 +267,11 @@ type BookingWidgetProps = {
   bookedDates?: string[]
   /** 'classic' = Stripe checkout; 'icelandic' = inquiry only; 'both' = angler picks either */
   bookingType?: 'classic' | 'icelandic' | 'both'
+  /**
+   * When true, the guide has disabled their calendar — override to inquiry-only
+   * regardless of the individual experience's booking_type.
+   */
+  calendarDisabled?: boolean
 }
 
 // ─── Platform fee ─────────────────────────────────────────────────────────────
@@ -368,6 +373,7 @@ export function BookingWidget({
   blockedDates,
   bookedDates,
   bookingType = 'classic',
+  calendarDisabled = false,
 }: BookingWidgetProps) {
 
   // ── Parse duration options ────────────────────────────────────────────────
@@ -405,9 +411,13 @@ export function BookingWidget({
   // ── 'both' mode — angler picks their preferred payment path ──────────────
   /** Only used when bookingType === 'both'. Defaults to classic (book & pay). */
   const [subMode, setSubMode] = useState<'book' | 'request'>('book')
-  /** The resolved booking type after applying subMode for 'both'. */
-  const effectiveType: 'classic' | 'icelandic' =
-    bookingType === 'both'
+  /**
+   * The resolved booking type after applying subMode for 'both'.
+   * calendarDisabled always wins — forces inquiry-only regardless of experience setting.
+   */
+  const effectiveType: 'classic' | 'icelandic' = calendarDisabled
+    ? 'icelandic'
+    : bookingType === 'both'
       ? subMode === 'book' ? 'classic' : 'icelandic'
       : (bookingType ?? 'classic')
 
@@ -509,8 +519,26 @@ export function BookingWidget({
       }}
     >
 
-      {/* ── Date picker (dropdown) ───────────────────────────────────────────── */}
-      {!isDraft && (
+      {/* ── Inquiry-mode info banner (replaces date picker) ─────────────────── */}
+      {!isDraft && effectiveType === 'icelandic' && (
+        <div
+          className="mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
+          style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+            <span className="font-semibold" style={{ color: '#0A2E4D' }}>Dates set in the inquiry form.</span>
+            {' '}This guide confirms availability personally before any payment.
+          </p>
+        </div>
+      )}
+
+      {/* ── Date picker (dropdown) — only for classic/direct booking ───────── */}
+      {!isDraft && effectiveType === 'classic' && (
         <div className="mb-5" ref={calendarRef} style={{ position: 'relative' }}>
 
           {/* Trigger row: date picker + quick-book circle */}
@@ -643,7 +671,7 @@ export function BookingWidget({
       )}
 
       {/* ── Divider ────────────────────────────────────────────────────────── */}
-      {!isDraft && (
+      {!isDraft && effectiveType === 'classic' && (
         <div className="mb-5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
       )}
 
@@ -1038,9 +1066,7 @@ export function BookingWidget({
             Request this trip →
           </Link>
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            {selectedDates.length > 0
-              ? 'Guide reviews and sets up your offer — no payment until confirmed.'
-              : 'Select preferred dates above.'}
+            Guide reviews your request and sets up a custom offer — no payment until confirmed.
           </p>
         </>
       ) : (
@@ -1113,6 +1139,7 @@ export function MobileBookingBar({
   durationHours,
   durationDays,
   bookingType = 'classic',
+  calendarDisabled = false,
 }: Omit<BookingWidgetProps, 'difficulty'>) {
   const durationOptions = useMemo<DurationOptionPayload[]>(() => {
     if (!Array.isArray(rawDurationOptions) || rawDurationOptions.length === 0) {
@@ -1130,7 +1157,8 @@ export function MobileBookingBar({
 
   if (isDraft) return null
 
-  if (bookingType === 'icelandic') {
+  // calendarDisabled always wins — show inquiry-only bar
+  if (bookingType === 'icelandic' || calendarDisabled) {
     return (
       <div
         className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between px-6 py-4"

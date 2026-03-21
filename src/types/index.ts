@@ -10,13 +10,14 @@ import type { Tables, Enums } from '@/lib/supabase'
 
 // ─── Row aliases ───────────────────────────────────────────────────────────
 
-export type Profile         = Tables<'profiles'>
-export type Guide           = Tables<'guides'>
-export type Experience      = Tables<'experiences'>
-export type ExperienceImage = Tables<'experience_images'>
-export type Booking         = Tables<'bookings'>
-export type Payment         = Tables<'payments'>
-export type Lead            = Tables<'leads'>
+export type Profile              = Tables<'profiles'>
+export type Guide                = Tables<'guides'>
+export type Experience           = Tables<'experiences'>
+export type ExperienceImage      = Tables<'experience_images'>
+export type GuideAccommodation   = Tables<'guide_accommodations'>
+export type Booking              = Tables<'bookings'>
+export type Payment              = Tables<'payments'>
+export type Lead                 = Tables<'leads'>
 
 // ─── Enum aliases ──────────────────────────────────────────────────────────
 
@@ -58,8 +59,12 @@ export type ExperienceWithGuide = Omit<Experience, 'images'> & {
   guide: Pick<
     Guide,
     'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating' | 'cancellation_policy' | 'languages'
-  >
+  > & { calendar_disabled?: boolean | null }
   images: ExperienceImage[]
+  /** Linked accommodations — populated when querying via EXP_SELECT. */
+  accommodations?: Array<{
+    accommodation: Pick<GuideAccommodation, 'id' | 'name' | 'type' | 'description' | 'max_guests' | 'location_note'>
+  }>
 }
 
 /** Guide with published experiences — guide profile page. */
