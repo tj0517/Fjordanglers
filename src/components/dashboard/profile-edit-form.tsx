@@ -39,7 +39,7 @@ const LANGUAGE_OPTIONS = [
 ]
 
 const SPECIALTY_OPTIONS = [
-  'Fly fishing', 'Family-friendly', 'Trophy salmon',
+  'Fly fishing', 'Family-friendly',
   'Ice fishing', 'Sea fishing', 'Catch & release', 'Beginner-friendly',
 ]
 
@@ -284,7 +284,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       }
 
       setSaved(true)
-      router.refresh()
+      router.push('/dashboard')
     })
   }
 

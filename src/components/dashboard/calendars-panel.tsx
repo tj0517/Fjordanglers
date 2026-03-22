@@ -248,22 +248,34 @@ export default function CalendarsPanel({
                     {expCount}
                   </span>
 
-                  {/* Action buttons — visible on hover */}
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                  {/* Action buttons — pencil always visible, delete on hover */}
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button
                       onClick={() => startEdit(cal)}
-                      className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.08]"
-                      style={{ color: 'rgba(10,46,77,0.35)', cursor: 'pointer' }}
-                      title="Edit calendar"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                      style={{
+                        color:      expCount === 0 ? '#E67E50' : 'rgba(10,46,77,0.5)',
+                        background: expCount === 0 ? 'rgba(230,126,80,0.12)' : 'transparent',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = expCount === 0 ? 'rgba(230,126,80,0.2)' : 'rgba(10,46,77,0.08)'
+                        e.currentTarget.style.color = expCount === 0 ? '#E67E50' : '#0A2E4D'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = expCount === 0 ? 'rgba(230,126,80,0.12)' : 'transparent'
+                        e.currentTarget.style.color = expCount === 0 ? '#E67E50' : 'rgba(10,46,77,0.5)'
+                      }}
+                      title="Assign listings to this calendar"
                       aria-label={`Edit ${cal.name}`}
                     >
-                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="12" height="12" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M7.5 1.5l2 2L3 10H1V8L7.5 1.5z"/>
                       </svg>
                     </button>
                     <button
                       onClick={() => setMode({ type: 'confirming-delete', calendarId: cal.id, calendarName: cal.name })}
-                      className="w-6 h-6 rounded-lg flex items-center justify-center transition-colors hover:bg-red-50"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100 hover:bg-red-50"
                       style={{ color: 'rgba(10,46,77,0.3)', cursor: 'pointer' }}
                       title="Delete calendar"
                       aria-label={`Delete ${cal.name}`}

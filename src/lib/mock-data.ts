@@ -66,7 +66,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     // ── New profile columns ────────────────────────────────────────────────────
     slug: 'erik-bjornsson-bergen',
     tagline: 'Salmon & sea trout specialist in Western Norway since 2009',
-    specialties: ['Fly fishing expert', 'Trophy salmon', 'Family-friendly'],
+    specialties: ['Fly fishing expert', 'Family-friendly'],
     google_rating: 4.9,
     google_review_count: 47,
     google_profile_url: 'https://g.page/erik-bjornsson-fishing',
@@ -81,6 +81,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     boat_length_m: 7.2,
     boat_engine: 'Yamaha 150HP',
     boat_capacity: 4,
+    default_balance_payment_method: 'cash',
     // ──────────────────────────────────────────────────────────────────────────
     created_at: '2023-01-15T00:00:00Z',
     updated_at: '2023-01-15T00:00:00Z',
@@ -130,6 +131,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     boat_length_m: null,
     boat_engine: null,
     boat_capacity: null,
+    default_balance_payment_method: 'cash',
     created_at: '2023-03-20T00:00:00Z',
     updated_at: '2023-03-20T00:00:00Z',
     experience_count: 3,
@@ -178,6 +180,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     boat_length_m: 5.5,
     boat_engine: 'Mercury 90HP',
     boat_capacity: 4,
+    default_balance_payment_method: 'cash',
     created_at: '2023-06-10T00:00:00Z',
     updated_at: '2023-06-10T00:00:00Z',
     experience_count: 2,

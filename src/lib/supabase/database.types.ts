@@ -90,6 +90,10 @@ export type Database = {
           angler_full_name: string | null
           angler_id: string | null
           angler_phone: string | null
+          balance_paid_at: string | null
+          balance_payment_method: string | null
+          balance_stripe_checkout_id: string | null
+          balance_stripe_payment_intent_id: string | null
           booking_date: string
           cancelled_at: string | null
           cancelled_reason: string | null
@@ -123,6 +127,10 @@ export type Database = {
           angler_full_name?: string | null
           angler_id?: string | null
           angler_phone?: string | null
+          balance_paid_at?: string | null
+          balance_payment_method?: string | null
+          balance_stripe_checkout_id?: string | null
+          balance_stripe_payment_intent_id?: string | null
           booking_date: string
           cancelled_at?: string | null
           cancelled_reason?: string | null
@@ -156,6 +164,10 @@ export type Database = {
           angler_full_name?: string | null
           angler_id?: string | null
           angler_phone?: string | null
+          balance_paid_at?: string | null
+          balance_payment_method?: string | null
+          balance_stripe_checkout_id?: string | null
+          balance_stripe_payment_intent_id?: string | null
           booking_date?: string
           cancelled_at?: string | null
           cancelled_reason?: string | null
@@ -572,6 +584,7 @@ export type Database = {
           description:   string | null
           max_guests:    number | null
           location_note: string | null
+          link_url:      string | null
           images:        string[]
           created_at:    string
         }
@@ -583,6 +596,7 @@ export type Database = {
           description?:   string | null
           max_guests?:    number | null
           location_note?: string | null
+          link_url?:      string | null
           images?:        string[]
           created_at?:    string
         }
@@ -594,6 +608,7 @@ export type Database = {
           description?:   string | null
           max_guests?:    number | null
           location_note?: string | null
+          link_url?:      string | null
           images?:        string[]
           created_at?:    string
         }
@@ -698,6 +713,7 @@ export type Database = {
           country: string
           cover_url: string | null
           created_at: string
+          default_balance_payment_method: string
           external_reviews: Json | null
           facebook_url: string | null
           fish_expertise: string[]
@@ -745,6 +761,7 @@ export type Database = {
           country: string
           cover_url?: string | null
           created_at?: string
+          default_balance_payment_method?: string
           external_reviews?: Json | null
           facebook_url?: string | null
           fish_expertise?: string[]
@@ -792,6 +809,7 @@ export type Database = {
           country?: string
           cover_url?: string | null
           created_at?: string
+          default_balance_payment_method?: string
           external_reviews?: Json | null
           facebook_url?: string | null
           fish_expertise?: string[]

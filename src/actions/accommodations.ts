@@ -10,6 +10,7 @@ type AccommodationPayload  = {
   description?: string | null
   max_guests?: number | null
   location_note?: string | null
+  link_url?: string | null
 }
 
 export type AccActionResult<T = undefined> =
@@ -51,6 +52,7 @@ export async function createAccommodation(
         description:   payload.description?.trim() || null,
         max_guests:    payload.max_guests ?? null,
         location_note: payload.location_note?.trim() || null,
+        link_url:      payload.link_url?.trim() || null,
       })
       .select()
       .single()
@@ -76,6 +78,7 @@ export async function updateAccommodation(
     if (payload.description   !== undefined) update.description   = payload.description?.trim() || null
     if (payload.max_guests    !== undefined) update.max_guests    = payload.max_guests ?? null
     if (payload.location_note !== undefined) update.location_note = payload.location_note?.trim() || null
+    if (payload.link_url      !== undefined) update.link_url      = payload.link_url?.trim() || null
 
     const { error } = await ctx.supabase
       .from('guide_accommodations')

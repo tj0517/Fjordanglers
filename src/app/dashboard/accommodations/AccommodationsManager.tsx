@@ -108,10 +108,11 @@ type FormState = {
   description: string
   max_guests: string
   location_note: string
+  link_url: string
 }
 
 const EMPTY_FORM: FormState = {
-  name: '', type: 'cabin', description: '', max_guests: '', location_note: '',
+  name: '', type: 'cabin', description: '', max_guests: '', location_note: '', link_url: '',
 }
 
 function AccForm({
@@ -211,6 +212,21 @@ function AccForm({
             style={inputBase}
           />
         </div>
+      </div>
+
+      {/* Link URL */}
+      <div>
+        <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          Booking / website link
+        </label>
+        <input
+          type="url"
+          value={form.link_url}
+          onChange={e => set('link_url', e.target.value)}
+          placeholder="e.g. https://booking.com/..."
+          className="w-full px-4 py-2.5 rounded-xl text-sm f-body outline-none"
+          style={inputBase}
+        />
       </div>
 
       {/* Actions */}
@@ -330,6 +346,7 @@ export default function AccommodationsManager({
         description:   form.description.trim() || null,
         max_guests:    form.max_guests !== '' ? parseInt(form.max_guests, 10) : null,
         location_note: form.location_note.trim() || null,
+        link_url:      form.link_url.trim() || null,
       })
       if (!res.success) { setError(res.error); return }
       if (res.data != null) setAccommodations(prev => [...prev, res.data!])
@@ -346,6 +363,7 @@ export default function AccommodationsManager({
         description:   form.description.trim() || null,
         max_guests:    form.max_guests !== '' ? parseInt(form.max_guests, 10) : null,
         location_note: form.location_note.trim() || null,
+        link_url:      form.link_url.trim() || null,
       })
       if (!res.success) { setError(res.error); return }
       setAccommodations(prev => prev.map(a => a.id === id ? {
@@ -355,6 +373,7 @@ export default function AccommodationsManager({
         description:   form.description.trim() || null,
         max_guests:    form.max_guests !== '' ? parseInt(form.max_guests, 10) : null,
         location_note: form.location_note.trim() || null,
+        link_url:      form.link_url.trim() || null,
       } : a))
       setEditingId(null)
     })
@@ -440,6 +459,7 @@ export default function AccommodationsManager({
                   description:   acc.description ?? '',
                   max_guests:    acc.max_guests != null ? String(acc.max_guests) : '',
                   location_note: acc.location_note ?? '',
+                  link_url:      acc.link_url ?? '',
                 }}
                 onSave={form => handleUpdate(acc.id, form)}
                 onCancel={() => setEditingId(null)}
@@ -475,6 +495,20 @@ export default function AccommodationsManager({
                     <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
                       📍 {acc.location_note}
                     </p>
+                  )}
+                  {acc.link_url != null && (
+                    <a
+                      href={acc.link_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] f-body mt-0.5 underline underline-offset-2"
+                      style={{ color: '#E67E50' }}
+                    >
+                      <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3.5 1.5H1.5v6h6V5.5" /><path d="M5 1.5h2.5V4" /><line x1="4" y1="5" x2="7.5" y2="1.5" />
+                      </svg>
+                      View listing
+                    </a>
                   )}
 
                   {/* Image gallery */}
