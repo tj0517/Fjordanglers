@@ -13,7 +13,7 @@ type SidebarGuide = {
   full_name: string
   avatar_url: string | null
   pricing_model: string
-  stripe_charges_enabled: boolean
+  stripe_account_id: string | null
   stripe_payouts_enabled: boolean
   status: string
 } | null
@@ -73,6 +73,17 @@ const IconUser = () => (
   </svg>
 )
 
+const IconAccount = () => (
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <circle cx="7.5" cy="7.5" r="5.5" />
+    <circle cx="7.5" cy="7.5" r="1.8" fill="currentColor" stroke="none" />
+    <line x1="7.5" y1="2" x2="7.5" y2="4.5" strokeLinecap="round" />
+    <line x1="7.5" y1="10.5" x2="7.5" y2="13" strokeLinecap="round" />
+    <line x1="2" y1="7.5" x2="4.5" y2="7.5" strokeLinecap="round" />
+    <line x1="10.5" y1="7.5" x2="13" y2="7.5" strokeLinecap="round" />
+  </svg>
+)
+
 const IconArrowLeft = () => (
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4">
     <polyline points="7,2 3,6 7,10" />
@@ -108,12 +119,14 @@ const IconBed = () => (
 
 const NAV = [
   { label: 'Listings',       href: '/dashboard/trips',           icon: <IconCompass />,   exact: false, soon: false },
-  { label: 'Profile',        href: '/dashboard/profile',         icon: <IconUser />,      exact: false, soon: false },
-  { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <IconBed />,       exact: false, soon: false },
   { label: 'Bookings',       href: '/dashboard/bookings',        icon: <IconBookings />,  exact: false, soon: false },
   { label: 'Requests',       href: '/dashboard/inquiries',       icon: <IconInquiries />, exact: false, soon: false },
   { label: 'Calendar',       href: '/dashboard/calendar',        icon: <IconCalendar />,  exact: false, soon: false },
   { label: 'Earnings',       href: '/dashboard/earnings',        icon: <IconTrending />,  exact: false, soon: false },
+  { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <IconBed />,       exact: false, soon: false },
+  // ─── Guide identity ─────────────────────────────────────────────────────────
+  { label: 'Profile',        href: '/dashboard/profile',         icon: <IconUser />,      exact: false, soon: false },
+  { label: 'Account',        href: '/dashboard/account',         icon: <IconAccount />,   exact: false, soon: false },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -131,11 +144,13 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
-  const displayName   = guide?.full_name ?? 'Guide'
-  const displayAvatar = guide?.avatar_url ?? null
-  const isFounder     = guide?.pricing_model === 'commission'
-  const payoutsActive = (guide?.stripe_charges_enabled === true) && (guide?.stripe_payouts_enabled === true)
-  const isPending     = guide?.status === 'pending'
+  const displayName    = guide?.full_name ?? 'Guide'
+  const displayAvatar  = guide?.avatar_url ?? null
+  const isFounder      = guide?.pricing_model === 'commission'
+  // Custom Connect (transfers-only): charges_enabled is always false; payouts_enabled is the live signal
+  const payoutsActive  = guide?.stripe_payouts_enabled === true
+  const stripeVerifying = guide?.stripe_account_id != null && !payoutsActive
+  const isPending      = guide?.status === 'pending'
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href)
@@ -279,41 +294,55 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
 
         {/* Navigation */}
         <nav className="relative flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto" style={{ zIndex: 1 }}>
-          {NAV.map((item) => {
+          {NAV.map((item, idx) => {
+            // Visual separator before the identity section (Profile + Account)
+            const isIdentitySection = item.label === 'Profile' || item.label === 'Account'
+            const prevItem = NAV[idx - 1]
+            const showSeparator = isIdentitySection && prevItem != null
+              && prevItem.label !== 'Profile' && prevItem.label !== 'Account'
+
             if (item.soon) {
               return (
-                <div
-                  key={item.href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium f-body cursor-default select-none"
-                  style={{ color: 'rgba(255,255,255,0.2)' }}
-                >
-                  <span style={{ opacity: 0.35 }}>{item.icon}</span>
-                  <span className="flex-1">{item.label}</span>
-                  <span
-                    className="text-[8px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded f-body flex-shrink-0"
-                    style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }}
+                <div key={item.href}>
+                  {showSeparator && (
+                    <div className="mx-3 my-1" style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                  )}
+                  <div
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium f-body cursor-default select-none"
+                    style={{ color: 'rgba(255,255,255,0.2)' }}
                   >
-                    Soon
-                  </span>
+                    <span style={{ opacity: 0.35 }}>{item.icon}</span>
+                    <span className="flex-1">{item.label}</span>
+                    <span
+                      className="text-[8px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded f-body flex-shrink-0"
+                      style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.25)' }}
+                    >
+                      Soon
+                    </span>
+                  </div>
                 </div>
               )
             }
 
             const active = isActive(item.href, item.exact)
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all f-body"
-                style={{
-                  background: active ? 'rgba(230,126,80,0.1)' : 'transparent',
-                  color:      active ? '#E67E50' : 'rgba(255,255,255,0.45)',
-                  border:     active ? '1px solid rgba(230,126,80,0.15)' : '1px solid transparent',
-                }}
-              >
-                <span style={{ opacity: active ? 1 : 0.65 }}>{item.icon}</span>
-                {item.label}
-              </Link>
+              <div key={item.href}>
+                {showSeparator && (
+                  <div className="mx-3 my-1" style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                )}
+                <Link
+                  href={item.href}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all f-body"
+                  style={{
+                    background: active ? 'rgba(230,126,80,0.1)' : 'transparent',
+                    color:      active ? '#E67E50' : 'rgba(255,255,255,0.45)',
+                    border:     active ? '1px solid rgba(230,126,80,0.15)' : '1px solid transparent',
+                  }}
+                >
+                  <span style={{ opacity: active ? 1 : 0.65 }}>{item.icon}</span>
+                  {item.label}
+                </Link>
+              </div>
             )
           })}
         </nav>
@@ -331,16 +360,28 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
             <div
               className="w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{
-                background: payoutsActive ? '#4ADE80' : isPending ? '#E67E50' : '#94A3B8',
-                boxShadow:  payoutsActive ? '0 0 6px rgba(74,222,128,0.5)' : 'none',
+                background: payoutsActive
+                  ? '#4ADE80'
+                  : stripeVerifying
+                  ? '#E67E50'
+                  : '#94A3B8',
+                boxShadow: payoutsActive ? '0 0 6px rgba(74,222,128,0.5)' : 'none',
               }}
             />
             <div>
               <p className="text-white/55 text-xs f-body leading-tight">
-                {payoutsActive ? 'Payouts active' : isPending ? 'Awaiting review' : 'Stripe not set up'}
+                {payoutsActive
+                  ? 'Payouts active'
+                  : stripeVerifying
+                  ? 'Under review'
+                  : 'Bank account not set up'}
               </p>
               <p className="text-white/25 text-[10px] f-body">
-                {payoutsActive ? 'Stripe Connect' : isPending ? 'We\'ll email you soon' : 'Connect in Settings'}
+                {payoutsActive
+                  ? 'Weekly payouts on Monday'
+                  : stripeVerifying
+                  ? 'Stripe verifying — 1–2 days'
+                  : 'Add in Account settings'}
               </p>
             </div>
           </div>

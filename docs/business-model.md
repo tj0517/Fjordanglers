@@ -19,11 +19,10 @@ Wędkarze z Europy Środkowej (Polska, Niemcy, Czechy) napotykają:
 
 Anglojęzyczny **marketplace** łączący wędkarzy z Europy Środkowej ze skandynawskimi przewodnikami.
 
-Cztery filary:
+Trzy filary:
 - **Profile przewodników** — odkryj, porównaj i zweryfikuj przewodnika
 - **Strony tripów** — przeglądaj bookable trips z opcjami długości i ceną
 - **Inquiry flow** — zapytania o niestandardowe tripy z ofertowaniem przez przewodnika
-- **License Map** — interaktywna mapa stref wędkarskich z linkami "gdzie kupić"
 
 ---
 
@@ -40,16 +39,17 @@ Cztery filary:
 
 ## Model przychodów
 
-### Jeden model: komisja od transakcji
+### Dwa strumienie: komisja od guide'a + service fee od anglera
 
-Każdy guide na FjordAnglers ma bookable tripy. FjordAnglers pobiera komisję od każdej płatności.
+Każdy guide na FjordAnglers ma bookable tripy. FjordAnglers pobiera komisję od przewodnika **oraz** service fee od wędkarza.
 
 | | |
 |---|---|
-| **Standardowa komisja** | 10% wartości tripu |
-| **Mechanizm** | Stripe Connect — `application_fee_amount` automatycznie odliczany |
+| **Komisja guide'a** | 10% wartości tripu (odliczane od wypłaty guide'a) |
+| **Service fee anglera** | 5% doliczane do ceny widocznej przez wędkarza |
+| **Mechanizm** | Stripe Connect — `application_fee_amount` (komisja + service fee) |
 | **Guide jest** | Merchant of record (przez Stripe Connect Express) |
-| **Wypłata** | Automatyczny transfer na konto Stripe guide'a |
+| **Wypłata** | Automatyczny transfer na konto Stripe guide'a (po odliczeniu komisji) |
 
 ---
 
@@ -57,7 +57,7 @@ Każdy guide na FjordAnglers ma bookable tripy. FjordAnglers pobiera komisję od
 
 | | |
 |---|---|
-| **Komisja** | **8%** przez pierwsze 24 miesiące od rejestracji |
+| **Komisja guide'a** | **8%** przez pierwsze 24 miesiące od rejestracji (service fee 5% bez zmian) |
 | **Po 24 miesiącach** | Standardowe 10% automatycznie |
 | **Cel** | Zbudowanie supply-side przed launche'm |
 
@@ -87,9 +87,14 @@ Przewodnik wybiera model dla każdego tripu (`experiences.booking_type`):
 
 ```typescript
 // src/lib/pricing.ts
-const rate = Number(env.PLATFORM_COMMISSION_RATE)  // 0.10 lub 0.08
-const platformFeeEur = Math.round(totalEur * rate * 100) / 100
-const guidePayoutEur = totalEur - platformFeeEur
+const guideRate = Number(env.PLATFORM_COMMISSION_RATE)  // 0.10 lub 0.08
+const serviceFeeRate = 0.05
+
+const guideFeeEur = Math.round(tripPriceEur * guideRate * 100) / 100
+const serviceFeeEur = Math.round(tripPriceEur * serviceFeeRate * 100) / 100
+const anglerTotalEur = tripPriceEur + serviceFeeEur
+const guidePayoutEur = tripPriceEur - guideFeeEur
+const platformRevenueEur = guideFeeEur + serviceFeeEur
 ```
 
 ---
@@ -115,7 +120,7 @@ Przewodnik wybiera jeden preset podczas onboardingu:
 - Wtórna: brytyjscy i skandynawscy wędkarze
 
 **Strona podażowa (przewodnicy):**
-- Norwescy, szwedzcy, fińscy przewodnicy wędkarscy
+- Norwescy, szwedzcy, fińscy i islandzcy przewodnicy wędkarscy
 - Znajdowani głównie na Instagramie (potwierdzony wskaźnik odpowiedzi 50%+)
 
 **Gatunki docelowe:** Łosoś, Troć, Szczupak, Okoń, Sandacz, Pstrąg arktyczny

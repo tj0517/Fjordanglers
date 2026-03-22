@@ -18,7 +18,7 @@ Główny kontekst projektu jest w `/CLAUDE.md` (root repozytorium).
 
 **Czcionka:** DM Sans — klasy `f-display` (nagłówki) i `f-body` (body)
 
-**Komisja:** 10% standard / 8% Founding Guide (pierwsze 24 miesiące)
+**Komisja:** 10% standard / 8% Founding Guide (pierwsze 24 miesiące) + 5% service fee angler
 
 **Booking types:** `direct` (instant) · `icelandic` (inquiry) · `both`
 

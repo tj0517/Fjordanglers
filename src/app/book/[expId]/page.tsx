@@ -59,8 +59,6 @@ export default async function BookPage({ params, searchParams }: Props) {
   const subtotal = Math.round(pricePerPerson * guests * dates.length * 100) / 100
   const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100
   const totalEur = Math.round((subtotal + serviceFee) * 100) / 100
-  const depositEur = Math.round(totalEur * 0.3 * 100) / 100
-  const balanceDue = Math.round((totalEur - depositEur) * 100) / 100
 
   // ── Cover image ───────────────────────────────────────────────────────────
   const coverImage = experience.images.find(img => img.is_cover) ?? experience.images[0]
@@ -253,7 +251,7 @@ export default async function BookPage({ params, searchParams }: Props) {
                     className="text-[11px] f-body mt-0.5"
                     style={{ color: 'rgba(10,46,77,0.4)' }}
                   >
-                    30% deposit via Stripe after confirmation
+                    30% deposit via Stripe after guide confirmation
                   </p>
                 </div>
                 <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
@@ -273,10 +271,10 @@ export default async function BookPage({ params, searchParams }: Props) {
             }}
           >
             {[
-              { icon: '🛡️', text: 'No payment required to send a request' },
-              { icon: '⏰', text: 'Guide confirms within 24 hours' },
-              { icon: '🔒', text: '30% deposit via Stripe after confirmation — balance before the trip' },
-            ].map(item => (
+                { icon: '🛡️', text: 'No payment required to send a request' },
+                { icon: '⏰', text: 'Guide confirms within 24 hours' },
+                { icon: '🔒', text: '30% deposit via Stripe after confirmation — balance before the trip' },
+              ].map(item => (
               <div key={item.text} className="flex items-center gap-3 mb-2.5 last:mb-0">
                 <span className="text-base leading-none">{item.icon}</span>
                 <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>

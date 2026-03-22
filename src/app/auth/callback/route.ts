@@ -36,19 +36,23 @@ export async function GET(request: NextRequest) {
       const userEmail = data.user?.email
       const userId    = data.user?.id
 
+      // For email signups: role comes from user_metadata set during signUp().
+      // For Google OAuth: default to 'angler' (guides sign up via invite flow).
+      const metaRole = (data.user?.user_metadata?.role as string | undefined) ?? 'angler'
+
       if (userEmail != null && userId != null) {
         try {
           const service = createServiceClient()
 
           // ── Ensure profile row exists with correct role ─────────────────────
-          // For email signups: role comes from user_metadata set during signUp().
-          // For Google OAuth: default to 'angler' (guides sign up via invite flow).
-          const metaRole = (data.user?.user_metadata?.role as string | undefined) ?? 'angler'
+          // NOTE: do NOT use ignoreDuplicates: true here — the DB trigger may
+          // auto-create the row with role='angler' before this runs, and we
+          // must overwrite that with the user's chosen role (guide/angler).
           await service
             .from('profiles')
             .upsert(
               { id: userId, role: metaRole },
-              { onConflict: 'id', ignoreDuplicates: true },
+              { onConflict: 'id' },
             )
 
           // ── Auto-link guide listing if invite_email matches ─────────────────
@@ -76,8 +80,11 @@ export async function GET(request: NextRequest) {
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      // Session established — send the user to their destination
-      return NextResponse.redirect(`${origin}${next}`)
+      // Session established — send to role-appropriate destination.
+      // Guides go straight to the dashboard (setup banners guide them from there).
+      // All other roles use the `next` param (defaults to /account).
+      const destination = metaRole === 'guide' ? '/dashboard' : next
+      return NextResponse.redirect(`${origin}${destination}`)
     }
 
     console.error('[auth/callback] exchangeCodeForSession error:', error.message)

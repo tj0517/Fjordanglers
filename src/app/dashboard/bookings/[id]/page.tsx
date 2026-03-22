@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import BookingActions from '@/components/dashboard/booking-actions'
+import MarkBalancePaidButton from '@/components/dashboard/mark-balance-paid-button'
 import { CountryFlag } from '@/components/ui/country-flag'
 import type { Database } from '@/lib/supabase/database.types'
 
@@ -209,6 +210,18 @@ export default async function GuideBookingDetailPage({
             {booking.status === 'pending' && (
               <div className="mt-5 pt-5" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
                 <BookingActions bookingId={id} />
+              </div>
+            )}
+
+            {/* Mark cash balance received */}
+            {booking.status === 'confirmed' &&
+             booking.balance_payment_method === 'cash' &&
+             booking.balance_paid_at == null && (
+              <div className="mt-5 pt-5" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                <MarkBalancePaidButton
+                  bookingId={id}
+                  balanceAmount={Math.round(booking.total_eur * 0.7)}
+                />
               </div>
             )}
           </div>

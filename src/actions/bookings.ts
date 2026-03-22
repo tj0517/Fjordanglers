@@ -31,6 +31,14 @@ const createBookingSchema = z.object({
 type CreateBookingInput = z.infer<typeof createBookingSchema>
 
 // ─── createBookingCheckout ────────────────────────────────────────────────────
+//
+// Creates a DB booking row and returns bookingId.
+// No payment at this stage — payment happens only after guide accepts.
+//
+// Flow for all booking types:
+//   1. Angler submits → DB row (status: pending)
+//   2. Guide accepts → acceptBooking() → Stripe Checkout (destination charge)
+//   3. Angler pays  → webhook → status: confirmed
 
 export async function createBookingCheckout(
   input: CreateBookingInput,
@@ -61,7 +69,7 @@ export async function createBookingCheckout(
   const { data: experience } = await supabase
     .from('experiences')
     .select(
-      'id, title, price_per_person_eur, max_guests, guide_id, guides(id, full_name, stripe_account_id, stripe_charges_enabled, pricing_model)',
+      'id, title, price_per_person_eur, max_guests, guide_id, guides(id, full_name, stripe_account_id, pricing_model)',
     )
     .eq('id', experienceId)
     .eq('published', true)
@@ -73,7 +81,6 @@ export async function createBookingCheckout(
     id: string
     full_name: string
     stripe_account_id: string | null
-    stripe_charges_enabled: boolean
     pricing_model: string
   } | null
 
@@ -191,6 +198,14 @@ export async function sendBookingMessage(
 }
 
 // ─── acceptBooking ────────────────────────────────────────────────────────────
+//
+// Guide accepts a pending booking:
+//   → Stripe Checkout created (destination charge: Stripe auto-splits on payment)
+//   → status: 'accepted'
+//   → Angler receives PayDepositBanner → pays deposit → webhook → 'confirmed'
+//
+// 30% deposit now, 70% balance before the trip.
+// application_fee = proportional platform fee (service fee + commission).
 
 export async function acceptBooking(bookingId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -199,31 +214,91 @@ export async function acceptBooking(bookingId: string): Promise<{ error?: string
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Unauthorized' }
 
-  // Verify caller is the guide for this booking
   const { data: guide } = await supabase
     .from('guides')
-    .select('id')
+    .select('id, stripe_account_id, stripe_payouts_enabled, default_balance_payment_method')
     .eq('user_id', user.id)
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
 
-  const { data: booking } = await supabase
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id')
+    .select('id, status, guide_id, total_eur, guide_payout_eur, angler_email, stripe_checkout_id, experiences(title)')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
 
   if (!booking) return { error: 'Booking not found.' }
-  if (booking.status !== 'pending' && booking.status !== 'confirmed') {
+  if (booking.status !== 'pending') {
     return { error: 'Only pending bookings can be accepted.' }
   }
 
-  const { error } = await supabase
+  // ── Stripe Checkout (destination charge) ─────────────────────────────────
+  let stripeCheckoutId: string | null = null
+
+  if (guide.stripe_account_id && guide.stripe_payouts_enabled) {
+    // Idempotency: don't create a duplicate checkout if one already exists
+    if (!booking.stripe_checkout_id) {
+      try {
+        const totalEur       = booking.total_eur
+        const guidePayoutEur = booking.guide_payout_eur
+        const depositCents   = Math.round(totalEur * 0.3 * 100)
+        const platformFee    = Math.round((totalEur - guidePayoutEur) * 0.3 * 100)
+
+        const experienceTitle =
+          (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+
+        const session = await stripe.checkout.sessions.create(
+          {
+            mode:                 'payment',
+            payment_method_types: ['card'],
+            customer_email:       booking.angler_email ?? undefined,
+            line_items: [
+              {
+                price_data: {
+                  currency:     'eur',
+                  product_data: {
+                    name:        `${experienceTitle} — 30% Deposit`,
+                    description: 'Deposit to confirm your booking. Remaining balance is due before the trip.',
+                  },
+                  unit_amount: depositCents,
+                },
+                quantity: 1,
+              },
+            ],
+            metadata:    { bookingId, guideId: guide.id },
+            success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
+            cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+            payment_intent_data: {
+              application_fee_amount: platformFee,
+              transfer_data:          { destination: guide.stripe_account_id },
+              metadata:               { bookingId },
+            },
+          },
+          { idempotencyKey: `booking-accept-${bookingId}` },
+        )
+
+        stripeCheckoutId = session.id
+      } catch (err) {
+        console.error('[acceptBooking] Stripe Checkout error:', err)
+        // Non-fatal: accept without payment link, admin can create checkout manually
+      }
+    } else {
+      stripeCheckoutId = booking.stripe_checkout_id
+    }
+  }
+
+  const balanceMethod = (guide.default_balance_payment_method ?? 'cash') as 'stripe' | 'cash'
+
+  const { error } = await serviceClient
     .from('bookings')
     .update({
-      status: 'accepted',
-      accepted_at: new Date().toISOString(),
+      status:                  'accepted',
+      accepted_at:             new Date().toISOString(),
+      balance_payment_method:  balanceMethod,
+      ...(stripeCheckoutId != null ? { stripe_checkout_id: stripeCheckoutId } : {}),
     })
     .eq('id', bookingId)
 
@@ -233,10 +308,103 @@ export async function acceptBooking(bookingId: string): Promise<{ error?: string
   }
 
   revalidatePath('/dashboard/bookings')
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
   return {}
 }
 
+// ─── renewDepositCheckout ─────────────────────────────────────────────────────
+//
+// Called when the angler's Stripe Checkout session has expired (24h Stripe limit).
+// Creates a fresh destination-charge session and updates the DB.
+// Only valid for 'accepted' bookings (guide has already confirmed).
+
+export async function renewDepositCheckout(
+  bookingId: string,
+): Promise<{ url: string } | { error: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select(
+      'id, status, angler_id, total_eur, guide_payout_eur, angler_email, guide_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
+    )
+    .eq('id', bookingId)
+    .eq('angler_id', user.id)
+    .eq('status', 'accepted')
+    .single()
+
+  if (!booking) return { error: 'Booking not found or not ready for payment.' }
+
+  const guide = booking.guides as unknown as {
+    stripe_account_id: string | null
+    stripe_payouts_enabled: boolean
+  } | null
+
+  if (!guide?.stripe_account_id || !guide.stripe_payouts_enabled) {
+    return { error: 'Payment not available — guide payout account not ready. Please contact us.' }
+  }
+
+  const experienceTitle =
+    (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+
+  const totalEur       = booking.total_eur
+  const guidePayoutEur = booking.guide_payout_eur
+  const depositCents   = Math.round(totalEur * 0.3 * 100)
+  const platformFee    = Math.round((totalEur - guidePayoutEur) * 0.3 * 100)
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode:                 'payment',
+      payment_method_types: ['card'],
+      customer_email:       booking.angler_email ?? undefined,
+      line_items: [
+        {
+          price_data: {
+            currency:     'eur',
+            product_data: {
+              name:        `${experienceTitle} — 30% Deposit`,
+              description: 'Deposit to confirm your booking. Remaining balance is due before the trip.',
+            },
+            unit_amount: depositCents,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata:            { bookingId, guideId: booking.guide_id },
+      success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
+      cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+      payment_intent_data: {
+        application_fee_amount: platformFee,
+        transfer_data:          { destination: guide.stripe_account_id },
+        metadata:               { bookingId },
+      },
+    })
+
+    // Update DB with fresh checkout ID (overwrites the expired one)
+    await serviceClient
+      .from('bookings')
+      .update({ stripe_checkout_id: session.id })
+      .eq('id', bookingId)
+
+    return { url: session.url! }
+  } catch (err) {
+    console.error('[renewDepositCheckout]', err)
+    return { error: 'Failed to create payment session — please try again.' }
+  }
+}
+
 // ─── declineBooking ───────────────────────────────────────────────────────────
+//
+// Handles three states:
+//  'pending'  no payment     → just cancel (no money moved)
+//  'accepted' + checkout_id  → guide accepted, angler hasn't paid → expire Checkout session
+//  'confirmed'+ payment_intent → angler paid (destination charge) → refund + auto-reverses transfer
 
 export async function declineBooking(
   bookingId: string,
@@ -255,23 +423,53 @@ export async function declineBooking(
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
 
-  const { data: booking } = await supabase
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id')
+    .select('id, status, guide_id, stripe_checkout_id, stripe_payment_intent_id')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
 
   if (!booking) return { error: 'Booking not found.' }
-  if (booking.status !== 'pending' && booking.status !== 'confirmed') {
-    return { error: 'Only pending bookings can be declined.' }
+
+  const declineable = ['pending', 'accepted', 'confirmed']
+  if (!declineable.includes(booking.status)) {
+    return { error: 'This booking cannot be declined at its current status.' }
   }
 
-  const { error } = await supabase
+  // ── Stripe cleanup ────────────────────────────────────────────────────────
+
+  if (booking.status === 'accepted' && booking.stripe_checkout_id) {
+    // Icelandic — guide accepted, angler hasn't paid yet → expire so they can't complete
+    try {
+      await stripe.checkout.sessions.expire(booking.stripe_checkout_id)
+    } catch (err) {
+      // Session may already be expired — not fatal
+      console.warn('[declineBooking] Could not expire checkout session:', err)
+    }
+  }
+
+  if (booking.status === 'confirmed' && booking.stripe_payment_intent_id) {
+    // Icelandic confirmed (destination charge) — refund auto-reverses the transfer to guide
+    try {
+      await stripe.refunds.create({
+        payment_intent:   booking.stripe_payment_intent_id,
+        reason:           'requested_by_customer',
+        reverse_transfer: true, // explicit for destination charges
+      })
+    } catch (err) {
+      console.error('[declineBooking] Stripe refund error:', err)
+      return { error: 'Failed to refund payment — please contact support.' }
+    }
+  }
+
+  const { error } = await serviceClient
     .from('bookings')
     .update({
-      status: 'declined',
-      declined_at: new Date().toISOString(),
+      status:          'declined',
+      declined_at:     new Date().toISOString(),
       declined_reason: reason ?? null,
     })
     .eq('id', bookingId)
@@ -282,5 +480,192 @@ export async function declineBooking(
   }
 
   revalidatePath('/dashboard/bookings')
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
+  return {}
+}
+
+// ─── createBalanceCheckout ────────────────────────────────────────────────────
+//
+// Angler pays the remaining 70% balance via Stripe.
+// NO application_fee_amount — platform takes 0% on balance.
+// Idempotency: if a balance checkout already exists and is open, returns its URL.
+
+export async function createBalanceCheckout(
+  bookingId: string,
+): Promise<{ url: string } | { error: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select(
+      'id, status, angler_id, total_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
+    )
+    .eq('id', bookingId)
+    .eq('angler_id', user.id)
+    .eq('status', 'confirmed')
+    .single()
+
+  if (!booking) return { error: 'Booking not found or not ready for balance payment.' }
+  if (booking.balance_payment_method !== 'stripe') return { error: 'This booking uses cash payment.' }
+  if (booking.balance_paid_at != null) return { error: 'Balance already paid.' }
+
+  const guide = booking.guides as unknown as {
+    stripe_account_id: string | null
+    stripe_payouts_enabled: boolean
+  } | null
+
+  if (!guide?.stripe_account_id || !guide.stripe_payouts_enabled) {
+    return { error: 'Payment not available — guide payout account not ready. Please contact us.' }
+  }
+
+  // Idempotency: if a Checkout session already exists and is still open, return its URL
+  if (booking.balance_stripe_checkout_id) {
+    try {
+      const existing = await stripe.checkout.sessions.retrieve(booking.balance_stripe_checkout_id)
+      if (existing.status === 'open' && existing.url) {
+        return { url: existing.url }
+      }
+    } catch {
+      // Session expired or invalid — fall through to create a new one
+    }
+  }
+
+  const experienceTitle =
+    (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+
+  const balanceCents = Math.round(booking.total_eur * 0.7 * 100)
+
+  try {
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode:                 'payment',
+        payment_method_types: ['card'],
+        customer_email:       booking.angler_email ?? undefined,
+        line_items: [
+          {
+            price_data: {
+              currency:     'eur',
+              product_data: {
+                name:        `${experienceTitle} — Remaining Balance`,
+                description: 'Remaining 70% balance for your confirmed fishing trip.',
+              },
+              unit_amount: balanceCents,
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: { bookingId, guideId: booking.guide_id, paymentType: 'balance' },
+        success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=balance_paid`,
+        cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+        payment_intent_data: {
+          // No application_fee_amount — 100% goes to the guide
+          transfer_data: { destination: guide.stripe_account_id },
+          metadata:      { bookingId, paymentType: 'balance' },
+        },
+      },
+      { idempotencyKey: `booking-balance-${bookingId}` },
+    )
+
+    await serviceClient
+      .from('bookings')
+      .update({ balance_stripe_checkout_id: session.id })
+      .eq('id', bookingId)
+
+    return { url: session.url! }
+  } catch (err) {
+    console.error('[createBalanceCheckout]', err)
+    return { error: 'Failed to create payment session — please try again.' }
+  }
+}
+
+// ─── markBalancePaid ──────────────────────────────────────────────────────────
+//
+// Guide confirms receipt of cash balance.
+// Only valid for confirmed bookings with balance_payment_method === 'cash'.
+
+export async function markBalancePaid(
+  bookingId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: guide } = await supabase
+    .from('guides')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+  if (!guide) return { error: 'Guide profile not found.' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select('id, status, guide_id, balance_payment_method, balance_paid_at')
+    .eq('id', bookingId)
+    .eq('guide_id', guide.id)
+    .single()
+
+  if (!booking) return { error: 'Booking not found.' }
+  if (booking.status !== 'confirmed') return { error: 'Only confirmed bookings can be marked as paid.' }
+  if (booking.balance_payment_method !== 'cash') return { error: 'This booking is set to Stripe payment — cannot mark manually.' }
+  if (booking.balance_paid_at != null) return { error: 'Balance already marked as paid.' }
+
+  const { error } = await serviceClient
+    .from('bookings')
+    .update({
+      balance_paid_at: new Date().toISOString(),
+      status:          'completed',
+    })
+    .eq('id', bookingId)
+
+  if (error) {
+    console.error('[markBalancePaid]', error)
+    return { error: 'Failed to mark balance as paid.' }
+  }
+
+  revalidatePath('/dashboard/bookings')
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
+  return {}
+}
+
+// ─── updateBalancePaymentMethod ───────────────────────────────────────────────
+//
+// Guide sets their default balance payment method (stripe | cash).
+// Applied to future bookings when acceptBooking() is called.
+
+export async function updateBalancePaymentMethod(
+  method: 'stripe' | 'cash',
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  if (method !== 'stripe' && method !== 'cash') {
+    return { error: 'Invalid payment method.' }
+  }
+
+  const serviceClient = createServiceClient()
+  const { error } = await serviceClient
+    .from('guides')
+    .update({ default_balance_payment_method: method })
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[updateBalancePaymentMethod]', error)
+    return { error: 'Failed to update balance payment method.' }
+  }
+
+  revalidatePath('/dashboard/account')
   return {}
 }

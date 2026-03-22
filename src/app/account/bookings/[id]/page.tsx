@@ -2,7 +2,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { stripe } from '@/lib/stripe/client'
 import BookingChat, { type ChatMessage } from '@/components/booking/chat'
+import PayDepositBanner from '@/components/booking/pay-deposit-banner'
+import PayBalanceBanner from '@/components/booking/pay-balance-banner'
 import type { Database } from '@/lib/supabase/database.types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,10 +26,12 @@ const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: s
 
 export default async function AnglerBookingDetailPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ id: string }>
+  params:       Promise<{ id: string }>
+  searchParams: Promise<{ status?: string }>
 }) {
-  const { id } = await params
+  const [{ id }, { status: qStatus }] = await Promise.all([params, searchParams])
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -43,6 +48,43 @@ export default async function AnglerBookingDetailPage({
     .single()
 
   if (!booking) notFound()
+
+  // ── Stripe Checkout URL ───────────────────────────────────────────────────
+  // Guide has accepted → a Checkout session was created in acceptBooking().
+  // Try to fetch the live URL server-side (no JS round-trip).
+  // If expired / missing, the banner's renewDepositCheckout() handles it client-side.
+  let depositCheckoutUrl: string | null = null
+
+  // awaitingPayment: guide has accepted AND a Checkout session exists for the angler
+  const awaitingPayment =
+    booking.status === 'accepted' &&
+    booking.stripe_checkout_id != null
+
+  if (awaitingPayment && booking.stripe_checkout_id) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(booking.stripe_checkout_id)
+      if (session.status === 'open' && session.url) {
+        depositCheckoutUrl = session.url
+      }
+      // If expired (status !== 'open') we leave depositCheckoutUrl = null →
+      // the banner will call renewDepositCheckout() on click.
+    } catch {
+      // Session ID might not exist (e.g. test env mismatch) — let banner handle it
+    }
+  }
+
+  // ── ?status=paid — Stripe success_url callback (deposit) ─────────────────
+  // Stripe redirects here after successful deposit payment.  The webhook will
+  // confirm the booking asynchronously; show a short "payment received" message.
+  const justPaid = qStatus === 'paid'
+
+  // ── awaitingBalance: deposit paid, balance not yet settled ─────────────────
+  const awaitingBalance =
+    booking.status === 'confirmed' &&
+    booking.balance_paid_at == null
+
+  // ── ?status=balance_paid — Stripe balance success_url callback ─────────────
+  const justBalancePaid = qStatus === 'balance_paid'
 
   // Initial messages
   const serviceClient = createServiceClient()
@@ -145,8 +187,76 @@ export default async function AnglerBookingDetailPage({
               {/* Summary */}
               <div className="grid grid-cols-2 gap-3 mb-5">
                 <InfoCard label="Anglers"    value={`${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`} />
-                <InfoCard label="Total paid" value={`€${booking.total_eur}`} />
+                <InfoCard label="Total" value={`€${booking.total_eur}`} />
               </div>
+
+              {/* ── Deposit payment success banner ─────────────────────────── */}
+              {justPaid && (
+                <div
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
+                  style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="9" cy="9" r="7.5" />
+                    <path d="M6 9l2 2 4-4" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
+                      Payment received!
+                    </p>
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(22,163,74,0.75)' }}>
+                      Your booking is being confirmed — this usually takes a few seconds.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Balance payment success banner ─────────────────────────── */}
+              {justBalancePaid && (
+                <div
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
+                  style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="9" cy="9" r="7.5" />
+                    <path d="M6 9l2 2 4-4" />
+                  </svg>
+                  <div>
+                    <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
+                      Balance paid — you&apos;re all set!
+                    </p>
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(22,163,74,0.75)' }}>
+                      Full payment received. Your trip is confirmed and ready to go.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Pay deposit banner ───────────────────────────────────────
+                   pending + checkout_id → direct booking (angler didn't complete Stripe yet)
+                   accepted             → icelandic booking (guide accepted, waiting for payment)
+              ── */}
+              {awaitingPayment && !justPaid && (
+                <div className="mb-4">
+                  <PayDepositBanner
+                    bookingId={id}
+                    initialCheckoutUrl={depositCheckoutUrl}
+                    totalEur={booking.total_eur}
+                  />
+                </div>
+              )}
+
+              {/* ── Pay balance banner ─────────────────────────────────────── */}
+              {awaitingBalance && !justBalancePaid && (
+                <div className="mb-4">
+                  <PayBalanceBanner
+                    bookingId={id}
+                    totalEur={booking.total_eur}
+                    paymentMethod={(booking.balance_payment_method ?? 'cash') as 'stripe' | 'cash'}
+                    guideName={guide?.full_name ?? 'Your guide'}
+                  />
+                </div>
+              )}
 
               {/* Guide card */}
               {guide != null && (

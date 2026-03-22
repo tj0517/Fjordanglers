@@ -100,6 +100,7 @@ export default function BookingCheckoutForm({
         return
       }
 
+      // Always redirect to confirmation page — guide will accept, then angler pays
       window.location.href = `/book/${expId}/confirmation?bookingId=${result.bookingId}`
     })
   }
