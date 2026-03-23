@@ -549,8 +549,28 @@ export function BookingWidget({
         </div>
       )}
 
-      {/* ── Date picker (dropdown) — only for classic/direct booking ───────── */}
-      {!isDraft && effectiveType === 'classic' && (
+      {/* ── Classic-mode info banner — date picker lives on the booking page ── */}
+      {!isDraft && bookingType === 'classic' && (
+        <div
+          className="mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
+          style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+          </svg>
+          <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+            <span className="font-semibold" style={{ color: '#0A2E4D' }}>Pick your dates in the next step.</span>
+            {' '}Choose your trip dates and group size on the booking page — no payment until your guide confirms.
+          </p>
+        </div>
+      )}
+
+      {/* ── Date picker (dropdown) — only for 'both' type in book sub-mode ─── */}
+      {/* Classic type has its own full-page date picker at /book/[expId]     */}
+      {!isDraft && effectiveType === 'classic' && bookingType !== 'classic' && (
         <div className="mb-5" ref={calendarRef} style={{ position: 'relative' }}>
 
           {/* Trigger row: date picker + quick-book circle */}
@@ -682,8 +702,8 @@ export function BookingWidget({
         </div>
       )}
 
-      {/* ── Divider ────────────────────────────────────────────────────────── */}
-      {!isDraft && effectiveType === 'classic' && (
+      {/* ── Divider (only when date picker is shown) ───────────────────────── */}
+      {!isDraft && effectiveType === 'classic' && bookingType !== 'classic' && (
         <div className="mb-5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
       )}
 
@@ -1083,7 +1103,17 @@ export function BookingWidget({
         </>
       ) : (
         <>
-          {selectedDates.length > 0 ? (
+          {/* ── Pure classic: date picker is on /book/[expId] — just go there ── */}
+          {bookingType === 'classic' ? (
+            <Link
+              href={`/book/${expId}?guests=${groupSize}`}
+              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              style={{ background: '#E67E50' }}
+            >
+              Book this trip →
+            </Link>
+          ) : selectedDates.length > 0 ? (
+            /* 'both' type with dates already picked in the widget */
             <Link
               href={`/book/${expId}?dates=${selectedDates.join(',')}&guests=${groupSize}`}
               className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
@@ -1092,6 +1122,7 @@ export function BookingWidget({
               {selectedDates.length === 1 ? 'Request to Book →' : `Request ${selectedDates.length} Dates →`}
             </Link>
           ) : (
+            /* 'both' type — nudge to pick dates in the dropdown above */
             <button
               type="button"
               onClick={() => calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
@@ -1102,9 +1133,11 @@ export function BookingWidget({
             </button>
           )}
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            {selectedDates.length > 0
-              ? '30% deposit via Stripe after guide confirms. Balance due before the trip.'
-              : 'Select dates above to book.'}
+            {bookingType === 'classic'
+              ? 'Pick your dates on the next page — no payment until your guide confirms.'
+              : selectedDates.length > 0
+                ? '30% deposit via Stripe after guide confirms. Balance due before the trip.'
+                : 'Select dates above to book.'}
           </p>
         </>
       )}
@@ -1259,7 +1292,7 @@ export function MobileBookingBar({
         className="text-white font-semibold px-8 py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
         style={{ background: '#E67E50' }}
       >
-        Request to Book →
+        Book this trip →
       </Link>
     </div>
   )

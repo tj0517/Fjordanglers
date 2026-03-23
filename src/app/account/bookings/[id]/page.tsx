@@ -41,7 +41,7 @@ export default async function AnglerBookingDetailPage({
   const { data: booking } = await supabase
     .from('bookings')
     .select(
-      '*, experience:experiences(id, title, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id)',
+      '*, experience:experiences(id, title, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_payouts_enabled)',
     )
     .eq('id', id)
     .eq('angler_id', user.id)
@@ -55,10 +55,10 @@ export default async function AnglerBookingDetailPage({
   // If expired / missing, the banner's renewDepositCheckout() handles it client-side.
   let depositCheckoutUrl: string | null = null
 
-  // awaitingPayment: guide has accepted AND a Checkout session exists for the angler
-  const awaitingPayment =
-    booking.status === 'accepted' &&
-    booking.stripe_checkout_id != null
+  // awaitingPayment: guide has accepted (deposit banner always shown)
+  // - if guideHasStripe: shows real Stripe link (or renew button if expired)
+  // - if !guideHasStripe: shows test YES / NO mock panel
+  const awaitingPayment = booking.status === 'accepted'
 
   if (awaitingPayment && booking.stripe_checkout_id) {
     try {
@@ -100,7 +100,12 @@ export default async function AnglerBookingDetailPage({
     id: string; title: string;
     experience_images: { url: string; is_cover: boolean; sort_order: number }[]
   } | null
-  const guide = booking.guide as unknown as { id: string; full_name: string; user_id: string } | null
+  const guide = booking.guide as unknown as {
+    id: string; full_name: string; user_id: string; stripe_payouts_enabled: boolean | null
+  } | null
+
+  // testMode = true when guide has no Stripe connected yet
+  const guideHasStripe = guide?.stripe_payouts_enabled === true
   const s     = STATUS_STYLES[booking.status]
 
   // Cover image
@@ -242,6 +247,7 @@ export default async function AnglerBookingDetailPage({
                     bookingId={id}
                     initialCheckoutUrl={depositCheckoutUrl}
                     totalEur={booking.total_eur}
+                    testMode={!guideHasStripe}
                   />
                 </div>
               )}
@@ -254,6 +260,7 @@ export default async function AnglerBookingDetailPage({
                     totalEur={booking.total_eur}
                     paymentMethod={(booking.balance_payment_method ?? 'cash') as 'stripe' | 'cash'}
                     guideName={guide?.full_name ?? 'Your guide'}
+                    testMode={!guideHasStripe}
                   />
                 </div>
               )}

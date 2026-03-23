@@ -4,31 +4,26 @@ import { useState, useTransition } from 'react'
 import { submitInquiry } from '@/actions/inquiries'
 import { type InquiryFormConfig, SPECIES_OPTIONS, resolveFormConfig } from '@/lib/inquiry-form-config'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
+import { MultiPeriodPicker, type Period, type BlockedRange } from '@/components/trips/multi-period-picker'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type DayState =
+  | 'available'
+  | 'unavailable'
+  | 'blocked'
+  | 'selected_single'
+  | 'selected_start'
+  | 'selected_end'
+  | 'in_range'
+  | 'pending_start'
+  | 'pending_range'
 
 type DurationType        = 'half_day' | 'full_day' | 'multi_day'
 type GearOption          = 'own' | 'need_some' | 'need_all'
 type AccommodationOption = 'needed' | 'not_needed' | 'flexible'
 type TransportOption     = 'need_pickup' | 'self_drive' | 'flexible'
 type TabKey              = 'trip' | 'group' | 'needs' | 'extras'
-
-/** A single selected period — single day has from === to. */
-type Period = { from: string; to: string }
-
-/** Blocked date range from guide's calendar. */
-type BlockedRange = { date_start: string; date_end: string }
-
-type DayState =
-  | 'unavailable'     // past, off-season, or too far ahead
-  | 'blocked'         // guide blocked — visible but NOT clickable
-  | 'available'       // open to pick
-  | 'selected_single' // single day picked
-  | 'selected_start'  // first day of a range
-  | 'selected_end'    // last day of a range
-  | 'in_range'        // inside a selected range
-  | 'pending_start'   // first click in range mode (waiting for end)
-  | 'pending_range'   // hover preview inside a pending range
 
 type Props = {
   experienceId:        string
@@ -79,17 +74,9 @@ const TRANSPORT_OPTIONS: { value: TransportOption; label: string; sub: string }[
   { value: 'flexible',    label: 'Flexible',    sub: 'Depends on location'        },
 ]
 
-// ─── MultiPeriodPicker ────────────────────────────────────────────────────────
-//
-// Lets the angler pick:
-//   • Single days     — click any available date (mode: 'single')
-//   • Date ranges     — click start then end    (mode: 'range')
-//   • Multiple periods of either kind
-//
-// Guide's blocked dates are rendered with strikethrough and are NOT clickable.
-// Past and off-season dates are greyed out and NOT clickable.
+// ─── (MultiPeriodPicker moved to @/components/trips/multi-period-picker) ───────
 
-function MultiPeriodPicker({
+function _placeholder_remove_({
   periods,
   onChange,
   availabilityConfig,

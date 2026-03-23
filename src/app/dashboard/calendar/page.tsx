@@ -73,17 +73,12 @@ export default async function CalendarPage({
     id: string; title: string; published: boolean; booking_type: string | null
   }>
 
-  // ── Calendar-disabled toggle eligibility ──────────────────────────────────────
-  // Show when all listings are icelandic (inquiry-only) flow, OR guide has no listings.
-  // Guides with any 'classic' or 'both' listing already have a working calendar — no need.
-  //
-  // ALWAYS show when calendar_disabled = true, even if the guide now has classic/both
-  // listings — otherwise they'd have no way to turn it off (e.g. if the auto-reset
-  // didn't fire, or they had it enabled before adding a classic listing).
+  // ── Calendar-disabled toggle — shown to ALL guides ───────────────────────────
+  // Every guide can choose to hide the date picker and switch to inquiry-only flow.
   const hasClassicListing = allExperiences.some(
     e => e.booking_type === 'classic' || e.booking_type === 'both'
   )
-  const showCalendarToggle = !hasClassicListing || calendarDisabled
+  const showCalendarToggle = true
 
   // ── Calendars + experience assignments ───────────────────────────────────────
   const [calendars, calendarExperienceMap] = await Promise.all([
@@ -203,19 +198,29 @@ export default async function CalendarPage({
           }}
         >
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold f-body mb-0.5" style={{ color: '#0A2E4D' }}>
-              Disable calendar for all listings
-            </p>
+            <div className="flex items-center gap-2 mb-0.5">
+              <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                Disable calendar
+              </p>
+              {calendarDisabled && (
+                <span
+                  className="text-[9px] font-bold uppercase tracking-[0.12em] px-2 py-0.5 rounded-full f-body"
+                  style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}
+                >
+                  Active
+                </span>
+              )}
+            </div>
             {calendarDisabled && hasClassicListing ? (
               <p className="text-xs f-body leading-relaxed" style={{ color: '#C96030' }}>
                 Calendar is disabled but you have a direct-booking listing — turn this off to restore the date picker on your trip pages.
               </p>
             ) : (
               <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.52)' }}>
-                When disabled, your trip pages show a&nbsp;
+                When enabled, trip pages show a{' '}
                 <strong style={{ color: 'rgba(10,46,77,0.7)' }}>&quot;Request this trip&quot;</strong>
-                &nbsp;button instead of the date picker.
-                Anglers send an inquiry and you reply with a custom offer.
+                {' '}button instead of the date picker.
+                Anglers send an inquiry — you reply with a custom offer.
               </p>
             )}
           </div>
@@ -265,7 +270,12 @@ export default async function CalendarPage({
               <div
                 key={s.label}
                 className="rounded-2xl px-4 py-3"
-                style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
+                style={{
+                  background: '#FDFAF7',
+                  border: '1px solid rgba(10,46,77,0.07)',
+                  opacity: calendarDisabled ? 0.45 : 1,
+                  transition: 'opacity 0.2s',
+                }}
               >
                 <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-1"
                    style={{ color: 'rgba(10,46,77,0.38)' }}>
@@ -277,43 +287,83 @@ export default async function CalendarPage({
             ))}
           </div>
 
-          {/* Empty state when calendar has no experiences assigned */}
-          {activeCalendarId != null && expIds.length === 0 ? (
-            <div
-              className="rounded-2xl flex flex-col items-center justify-center py-16 text-center"
-              style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
-            >
+          {/* Disabled overlay wrapper */}
+          <div className="relative">
+
+            {/* Gray overlay when calendar is disabled */}
+            {calendarDisabled && (
               <div
-                className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
-                style={{ background: 'rgba(10,46,77,0.06)' }}
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl text-center px-6 gap-3"
+                style={{
+                  background: 'rgba(243,237,228,0.82)',
+                  backdropFilter: 'blur(3px)',
+                  WebkitBackdropFilter: 'blur(3px)',
+                  border: '1.5px dashed rgba(10,46,77,0.18)',
+                }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.4)" strokeWidth="1.5">
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <line x1="3" y1="9" x2="21" y2="9" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                </svg>
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                  style={{ background: 'rgba(10,46,77,0.07)' }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.5">
+                    <rect x="3" y="4" width="14" height="12" rx="2" />
+                    <line x1="3" y1="8.5" x2="17" y2="8.5" />
+                    <line x1="7" y1="2" x2="7" y2="6" />
+                    <line x1="13" y1="2" x2="13" y2="6" />
+                    <line x1="6" y1="13" x2="14" y2="13" strokeOpacity="0.4" />
+                    <line x1="6" y1="11" x2="14" y2="11" strokeOpacity="0.4" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
+                    Calendar disabled
+                  </p>
+                  <p className="text-xs f-body mt-1 max-w-xs mx-auto" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                    Your trip pages show a &ldquo;Request this trip&rdquo; button instead of the date picker.
+                    Turn off the toggle above to re-enable direct booking.
+                  </p>
+                </div>
               </div>
-              <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>
-                No listings assigned
-              </p>
-              <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                Click the pencil icon next to this calendar to assign listings.
-              </p>
-            </div>
-          ) : (
-            <CalendarGrid
-              year={safeYear}
-              month={safeMonth}
-              experiences={experiences}
-              blocked={blocked}
-              bookings={bookings}
-              inquiries={inquiries}
-              calendarMode="shared"
-              weeklySchedules={weeklySchedules}
-              calendarExperienceMap={calendarExperienceMap}
-            />
-          )}
+            )}
+
+            {/* Empty state when calendar has no experiences assigned */}
+            {activeCalendarId != null && expIds.length === 0 ? (
+              <div
+                className="rounded-2xl flex flex-col items-center justify-center py-16 text-center"
+                style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
+              >
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
+                  style={{ background: 'rgba(10,46,77,0.06)' }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.4)" strokeWidth="1.5">
+                    <rect x="3" y="4" width="18" height="16" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>
+                  No listings assigned
+                </p>
+                <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                  Click the pencil icon next to this calendar to assign listings.
+                </p>
+              </div>
+            ) : (
+              <CalendarGrid
+                year={safeYear}
+                month={safeMonth}
+                experiences={experiences}
+                blocked={blocked}
+                bookings={bookings}
+                inquiries={inquiries}
+                calendarMode="shared"
+                weeklySchedules={weeklySchedules}
+                calendarExperienceMap={calendarExperienceMap}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>

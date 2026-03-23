@@ -292,6 +292,42 @@ export async function toggleCalendarDisabled(
       return { error: 'Could not update calendar setting — guide not found.' }
     }
 
+    // When disabling the calendar, wipe ALL calendar data for this guide.
+    // The guide starts fresh when they re-enable. All operations are non-fatal —
+    // the flag is already saved, so we just log any cleanup failures.
+    if (disabled) {
+      // ── Fetch IDs needed for child-table deletes ──────────────────────────
+      const [expsRes, calsRes] = await Promise.all([
+        service.from('experiences').select('id').eq('guide_id', guideId),
+        service.from('guide_calendars').select('id').eq('guide_id', guideId),
+      ])
+
+      const expIds = (expsRes.data ?? []).map(e => e.id)
+      const calIds = (calsRes.data ?? []).map(c => c.id)
+
+      // ── Step 1: delete calendar_experiences (FK → guide_calendars) ────────
+      if (calIds.length > 0) {
+        const { error: e1 } = await service
+          .from('calendar_experiences')
+          .delete()
+          .in('calendar_id', calIds)
+        if (e1) console.error('[toggleCalendarDisabled] calendar_experiences:', e1.message)
+      }
+
+      // ── Step 2: delete guide_calendars + weekly_schedules in parallel ─────
+      await Promise.all([
+        service.from('guide_calendars').delete().eq('guide_id', guideId)
+          .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] guide_calendars:', e.message) }),
+        service.from('guide_weekly_schedules').delete().eq('guide_id', guideId)
+          .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] weekly_schedules:', e.message) }),
+        // blocked dates keyed on experience_id
+        ...(expIds.length > 0
+          ? [service.from('experience_blocked_dates').delete().in('experience_id', expIds)
+              .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] blocked_dates:', e.message) })]
+          : []),
+      ])
+    }
+
     return { success: true }
   } catch (err) {
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err

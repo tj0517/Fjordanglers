@@ -38,7 +38,7 @@ function sortImages<T extends { sort_order: number }>(images: T[]): T[] {
  * Uses FK-based embedding: guide_id → guides, experience_id → experience_images.
  */
 const EXP_SELECT =
-  '*, guide:guides ( id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
+  '*, guide:guides ( id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages, calendar_disabled ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
 
 /**
  * Lean select for map data — all columns needed by map pins + card popups,

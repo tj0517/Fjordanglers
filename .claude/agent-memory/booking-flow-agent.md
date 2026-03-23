@@ -1,7 +1,7 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 31 — Unified payment flow (DONE). Płatność zawsze po akceptacji guide'a, dla wszystkich typów bookingu. typecheck ✅ 0 errors.
+Sesja 32 — Mock payment panel + calendar disable overlay + classic booking flow refactored (DONE). typecheck ✅ 0 errors.
 
 ---
 
@@ -115,8 +115,40 @@ stripe trigger charge.refunded
 
 ---
 
+## Sesja 32 — zmiany
+
+### Mock payment panel (testMode)
+- `src/actions/bookings.ts` — dodano `mockConfirmDeposit()` i `mockCompleteBalance()` (brak Stripe, tylko DB update)
+- `src/components/booking/pay-deposit-banner.tsx` — `testMode` prop: YES/NO panel zamiast Stripe link
+- `src/components/booking/pay-balance-banner.tsx` — `testMode` prop: YES/NO panel zamiast Stripe Checkout
+- `src/app/account/bookings/[id]/page.tsx`:
+  - `awaitingPayment = booking.status === 'accepted'` (usunięto warunek `stripe_checkout_id != null`)
+  - `testMode={!guide?.stripe_payouts_enabled}` — auto-detection bez env var
+  - Guide query: dodano `stripe_payouts_enabled`
+
+### Calendar disabled overlay
+- `src/app/dashboard/calendar/page.tsx`:
+  - `showCalendarToggle = true` — dla WSZYSTKICH guide'ów (usunięto warunek `!hasClassicListing`)
+  - Overlay `absolute inset-0 z-10` z `backdropFilter: blur(3px)` gdy `calendarDisabled`
+  - Stats cards: `opacity: 0.45` gdy disabled
+
+### Classic booking flow (two-step)
+- `src/app/book/[expId]/BookingDateStep.tsx` — NEW: date range picker (klik start → klik end) + group size stepper + live price
+  - `DayState` union type dla 9 stanów dnia
+  - `expandRange(from, to)` → individual ISO dates array
+  - On "Continue": `router.push(/book/${expId}?dates=...&guests=...)`
+- `src/app/book/[expId]/page.tsx` — rewritten:
+  - Step 1 (no dates): `BookingDateStep` w `max-w-2xl` centered layout
+  - Step 2 (dates in URL): existing contact form + "Step 2 of 2" label + "← Change dates" link
+- `src/components/trips/booking-widget.tsx`:
+  - Date picker dropdown: teraz `bookingType !== 'classic'` — nie pokazuje się dla pure classic
+  - CTA dla `classic`: `<Link href="/book/${expId}?guests=${groupSize}">Book this trip →</Link>`
+  - Hint text: `'Pick your dates on the next page — no payment until your guide confirms.'`
+  - Mobile bar: label zmieniony na `'Book this trip →'`
+
 ## Historia decyzji
 
 **Sesja 29**: Direct booking pay immediately → destination charge → pieniądze do guide'a od razu
 **Sesja 30**: Hold funds on platform → separate charges + transfers → guide nie przyjął → trudny refund (prawny risk EMD2/PSD2)
 **Sesja 31 (finalna)**: Płatność zawsze po akceptacji obu stron → najprostsza architektura, brak regulatory exposure
+**Sesja 32**: Classic booking flow = ikelandic flow (trip page simple CTA → /book/[expId] date picker step 1 → contact form step 2)

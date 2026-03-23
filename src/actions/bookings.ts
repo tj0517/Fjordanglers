@@ -637,6 +637,90 @@ export async function markBalancePaid(
   return {}
 }
 
+// ─── mockConfirmDeposit ───────────────────────────────────────────────────────
+//
+// DEV / TEST ONLY — simulates the Stripe webhook that confirms a booking.
+// Directly sets status = 'confirmed' without any Stripe interaction.
+// Use this when guide has no Stripe account connected yet.
+
+export async function mockConfirmDeposit(
+  bookingId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select('id, status, angler_id')
+    .eq('id', bookingId)
+    .eq('angler_id', user.id)
+    .single()
+
+  if (!booking) return { error: 'Booking not found.' }
+  if (booking.status !== 'accepted') return { error: 'Booking must be in accepted state.' }
+
+  const { error } = await serviceClient
+    .from('bookings')
+    .update({ status: 'confirmed' })
+    .eq('id', bookingId)
+
+  if (error) {
+    console.error('[mockConfirmDeposit]', error)
+    return { error: 'Failed to confirm booking.' }
+  }
+
+  revalidatePath('/account/bookings')
+  revalidatePath(`/account/bookings/${bookingId}`)
+  return {}
+}
+
+// ─── mockCompleteBalance ──────────────────────────────────────────────────────
+//
+// DEV / TEST ONLY — simulates balance payment without Stripe.
+// Directly sets status = 'completed' and balance_paid_at = now().
+
+export async function mockCompleteBalance(
+  bookingId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select('id, status, angler_id, balance_paid_at')
+    .eq('id', bookingId)
+    .eq('angler_id', user.id)
+    .single()
+
+  if (!booking) return { error: 'Booking not found.' }
+  if (booking.status !== 'confirmed') return { error: 'Booking must be in confirmed state.' }
+  if (booking.balance_paid_at != null) return { error: 'Balance already paid.' }
+
+  const { error } = await serviceClient
+    .from('bookings')
+    .update({ status: 'completed', balance_paid_at: new Date().toISOString() })
+    .eq('id', bookingId)
+
+  if (error) {
+    console.error('[mockCompleteBalance]', error)
+    return { error: 'Failed to complete balance payment.' }
+  }
+
+  revalidatePath('/account/bookings')
+  revalidatePath(`/account/bookings/${bookingId}`)
+  return {}
+}
+
 // ─── updateBalancePaymentMethod ───────────────────────────────────────────────
 //
 // Guide sets their default balance payment method (stripe | cash).
