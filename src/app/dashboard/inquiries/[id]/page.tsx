@@ -6,6 +6,7 @@ import GuideOfferForm from '@/components/dashboard/guide-offer-form'
 import InquiryDeclineButton from '@/components/dashboard/inquiry-decline-button'
 import InquiryDetailTabs, { type InquiryDetailTabsProps } from '@/components/dashboard/inquiry-detail-tabs'
 import NavigationShortcuts from '@/components/dashboard/navigation-shortcuts'
+import InquiryChat, { type ChatMessage } from '@/components/inquiry-chat'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,12 +43,13 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
 
   const serviceClient = createServiceClient()
 
-  // ── Parallel fetch: inquiry data + navigation list + guide schedules ──────
+  // ── Parallel fetch: inquiry data + navigation list + guide schedules + chat
   const [
     inquiryResult,
     navAssignedResult,
     navUnassignedResult,
     guideSchedulesResult,
+    messagesResult,
   ] = await Promise.all([
     serviceClient
       .from('trip_inquiries')
@@ -75,10 +77,18 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
       .from('guide_weekly_schedules')
       .select('period_from, period_to, blocked_weekdays')
       .eq('guide_id', guide.id),
+
+    // Chat messages for this inquiry
+    serviceClient
+      .from('inquiry_messages')
+      .select('id, sender_id, sender_role, body, created_at, read_at')
+      .eq('inquiry_id', id)
+      .order('created_at', { ascending: true }),
   ])
 
   const inquiry         = inquiryResult.data
   const guideSchedules  = guideSchedulesResult.data ?? []
+  const initialMessages = (messagesResult.data ?? []) as ChatMessage[]
   if (!inquiry) notFound()
 
   // Authorization: must be assigned to this guide OR unassigned
@@ -375,7 +385,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
       </div>
 
       {/* ── Two-column layout ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6 mb-6">
 
         {/* ── Left: tabbed inquiry data ─────────────────────────────────── */}
         <InquiryDetailTabs {...tabProps} />
@@ -612,6 +622,16 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
 
         </div>
       </div>
+      {/* ── Chat ─────────────────────────────────────────────────────────── */}
+      <InquiryChat
+        inquiryId={id}
+        currentUserId={user.id}
+        currentUserRole="guide"
+        initialMessages={initialMessages}
+        otherPartyName={inquiry.angler_name}
+        readOnly={displayStatus === 'cancelled'}
+      />
+
     </div>
   )
 }

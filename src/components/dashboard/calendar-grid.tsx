@@ -38,12 +38,15 @@ type BookingEntry = {
 }
 
 type InquiryEntry = {
-  id:          string
-  dates_from:  string
-  dates_to:    string
-  angler_name: string
-  group_size:  number
-  status:      string
+  id:             string
+  dates_from:     string
+  dates_to:       string
+  /** Confirmed dates set by guide in offer — used for calendar display once accepted */
+  offer_date_from: string | null
+  offer_date_to:   string | null
+  angler_name:    string
+  group_size:     number
+  status:         string
 }
 
 type DayData = {
@@ -295,10 +298,22 @@ export default function CalendarGrid({
     }
     for (const bk of filteredBookings) get(bk.booking_date).bookingEntries.push(bk)
 
-    // Expand inquiry date ranges into every day they cover
+    // Expand inquiry date ranges into every day they cover.
+    // For confirmed/accepted inquiries that have offer dates, use those instead
+    // of the original (wider) request window — so the calendar shows only the
+    // actual booked days, not the whole "July–September" the angler requested.
+    const CONFIRMED_STATUSES = new Set(['offer_accepted', 'confirmed', 'completed'])
     for (const inq of inquiries) {
-      let cur = parseUTC(inq.dates_from)
-      const end = parseUTC(inq.dates_to)
+      const useOfferDates =
+        CONFIRMED_STATUSES.has(inq.status) &&
+        inq.offer_date_from != null &&
+        inq.offer_date_to   != null
+
+      const fromStr = useOfferDates ? inq.offer_date_from! : inq.dates_from
+      const toStr   = useOfferDates ? inq.offer_date_to!   : inq.dates_to
+
+      let cur = parseUTC(fromStr)
+      const end = parseUTC(toStr)
       while (cur <= end) {
         const key = cur.toISOString().slice(0, 10)
         const day = get(key)

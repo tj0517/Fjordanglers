@@ -458,6 +458,8 @@ export default function GuideOfferForm({
   // Offer date range (from calendar)
   const [offerDateFrom, setOfferDateFrom] = useState<string | null>(null)
   const [offerDateTo,   setOfferDateTo]   = useState<string | null>(null)
+  // Duration type — only relevant for single-day offers
+  const [singleDayDuration, setSingleDayDuration] = useState<'half_day' | 'full_day'>('full_day')
 
   // Form fields
   const [assignedRiver, setAssignedRiver] = useState('')
@@ -473,6 +475,16 @@ export default function GuideOfferForm({
     setOfferDateFrom(from)
     setOfferDateTo(to)
   }
+
+  // Compute confirmed duration for display
+  const confirmedDays = useMemo(() => {
+    if (offerDateFrom == null || offerDateTo == null) return null
+    const from = new Date(offerDateFrom + 'T12:00:00')
+    const to   = new Date(offerDateTo   + 'T12:00:00')
+    return Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1
+  }, [offerDateFrom, offerDateTo])
+
+  const isSingleDay = confirmedDays === 1
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -592,6 +604,77 @@ export default function GuideOfferForm({
           onChange={handleDatesChange}
           disabled={isPending}
         />
+
+        {/* Duration badge + single-day type picker */}
+        {confirmedDays != null && (
+          <div className="mt-2.5 flex flex-col gap-2">
+
+            {/* Badge: how many days confirmed */}
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 text-xs f-body font-semibold px-2.5 py-1 rounded-full"
+                style={{ background: 'rgba(230,126,80,0.1)', color: '#C4622A' }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+                  stroke="currentColor" strokeWidth="1.6">
+                  <circle cx="5" cy="5" r="4" />
+                  <polyline points="5,2.5 5,5 6.5,6.5" />
+                </svg>
+                {confirmedDays === 1 ? '1 day' : `${confirmedDays} days`}
+              </span>
+              {isSingleDay && (
+                <span
+                  className="text-[10px] f-body"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}
+                >
+                  — select duration:
+                </span>
+              )}
+            </div>
+
+            {/* Half / full day toggle for single-day bookings */}
+            {isSingleDay && (
+              <div className="flex gap-2">
+                {(
+                  [
+                    { value: 'full_day' as const, label: 'Full day', sub: '~8 hrs' },
+                    { value: 'half_day' as const, label: 'Half day', sub: '~4 hrs' },
+                  ]
+                ).map(opt => {
+                  const on = singleDayDuration === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setSingleDayDuration(opt.value)}
+                      disabled={isPending}
+                      className="flex flex-col items-start px-3 py-2.5 rounded-xl transition-all flex-1"
+                      style={{
+                        background: on ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
+                        border: on
+                          ? '1.5px solid #0A2E4D'
+                          : '1px solid rgba(10,46,77,0.1)',
+                      }}
+                    >
+                      <span
+                        className="text-[12px] font-bold f-body"
+                        style={{ color: on ? 'white' : '#0A2E4D' }}
+                      >
+                        {opt.label}
+                      </span>
+                      <span
+                        className="text-[10px] f-body mt-0.5"
+                        style={{ color: on ? 'rgba(255,255,255,0.55)' : 'rgba(10,46,77,0.4)' }}
+                      >
+                        {opt.sub}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── 3. River / location ───────────────────────────────────── */}

@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 import AcceptOfferButton from './AcceptOfferButton'
+import InquiryChat, { type ChatMessage } from '@/components/inquiry-chat'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,11 +45,21 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
   // Service client bypasses RLS — ownership verified manually below
   const serviceClient = createServiceClient()
 
-  const { data: inquiry } = await serviceClient
-    .from('trip_inquiries')
-    .select('*, guides(full_name, country, avatar_url)')
-    .eq('id', id)
-    .single()
+  const [inquiryResult, messagesResult] = await Promise.all([
+    serviceClient
+      .from('trip_inquiries')
+      .select('*, guides(full_name, country, avatar_url)')
+      .eq('id', id)
+      .single(),
+    serviceClient
+      .from('inquiry_messages')
+      .select('id, sender_id, sender_role, body, created_at, read_at')
+      .eq('inquiry_id', id)
+      .order('created_at', { ascending: true }),
+  ])
+
+  const inquiry = inquiryResult.data
+  const initialMessages = (messagesResult.data ?? []) as ChatMessage[]
 
   if (!inquiry) notFound()
 
@@ -403,6 +414,19 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
                 Your guide will be in touch with final details closer to the trip date.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* ── Chat with guide ─────────────────────────────────────────────── */}
+        {inquiry.status !== 'cancelled' && (
+          <div className="mt-6">
+            <InquiryChat
+              inquiryId={id}
+              currentUserId={user.id}
+              currentUserRole="angler"
+              initialMessages={initialMessages}
+              otherPartyName={assignedGuide?.full_name ?? 'Your Guide'}
+            />
           </div>
         )}
 

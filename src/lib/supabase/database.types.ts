@@ -82,6 +82,44 @@ export type Database = {
           },
         ]
       }
+      inquiry_messages: {
+        Row: {
+          id: string
+          inquiry_id: string
+          sender_id: string
+          sender_role: string
+          body: string
+          created_at: string
+          read_at: string | null
+        }
+        Insert: {
+          id?: string
+          inquiry_id: string
+          sender_id: string
+          sender_role: string
+          body: string
+          created_at?: string
+          read_at?: string | null
+        }
+        Update: {
+          id?: string
+          inquiry_id?: string
+          sender_id?: string
+          sender_role?: string
+          body?: string
+          created_at?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiry_messages_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "trip_inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           accepted_at: string | null
@@ -112,6 +150,7 @@ export type Database = {
           id: string
           inquiry_id: string | null
           platform_fee_eur: number
+          requested_dates: string[] | null
           special_requests: string | null
           status: Database["public"]["Enums"]["booking_status"]
           stripe_checkout_id: string | null
@@ -149,6 +188,7 @@ export type Database = {
           guide_payout_eur: number
           id?: string
           platform_fee_eur?: number
+          requested_dates?: string[] | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           stripe_checkout_id?: string | null
@@ -186,6 +226,7 @@ export type Database = {
           id?: string
           inquiry_id?: string | null
           platform_fee_eur?: number
+          requested_dates?: string[] | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
           stripe_checkout_id?: string | null

@@ -106,6 +106,12 @@ export default async function AnglerBookingDetailPage({
 
   // testMode = true when guide has no Stripe connected yet
   const guideHasStripe = guide?.stripe_payouts_enabled === true
+
+  // If declined and guide sent a message (alternative dates / context) — show it prominently
+  const guideDeclineMessage =
+    booking.status === 'declined' && guide != null
+      ? (initialMessages.filter(m => m.sender_id === guide.user_id).at(-1) ?? null)
+      : null
   const s     = STATUS_STYLES[booking.status]
 
   // Cover image
@@ -301,6 +307,81 @@ export default async function AnglerBookingDetailPage({
                     </svg>
                     View original request →
                   </Link>
+                </div>
+              )}
+
+              {/* Declined — reason + guide's alternative dates message */}
+              {booking.status === 'declined' && (
+                <div className="mt-4 pt-4 flex flex-col gap-3" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+
+                  {/* Red: why declined */}
+                  <div
+                    className="flex items-start gap-3 px-4 py-4 rounded-2xl"
+                    style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" className="flex-shrink-0 mt-0.5">
+                      <circle cx="9" cy="9" r="7.5" />
+                      <path d="M6.5 6.5l5 5M11.5 6.5l-5 5" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-semibold f-body mb-1" style={{ color: '#DC2626' }}>
+                        Guide couldn&apos;t accept this booking
+                      </p>
+                      {booking.declined_reason != null && booking.declined_reason.length > 0 ? (
+                        <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                          {booking.declined_reason}
+                        </p>
+                      ) : (
+                        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                          No reason provided. Feel free to reach out via chat.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Blue: guide's alternative dates message (if they proposed new dates) */}
+                  {guideDeclineMessage != null && (
+                    <div
+                      className="px-4 py-4 rounded-2xl flex flex-col gap-2.5"
+                      style={{ background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.18)' }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
+                          <line x1="5" y1="1" x2="5" y2="4" />
+                          <line x1="11" y1="1" x2="11" y2="4" />
+                          <line x1="2" y1="6.5" x2="14" y2="6.5" />
+                        </svg>
+                        <p
+                          className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
+                          style={{ color: '#2563EB' }}
+                        >
+                          Message from {guide?.full_name ?? 'guide'}
+                        </p>
+                      </div>
+
+                      <p
+                        className="text-xs f-body leading-relaxed whitespace-pre-line"
+                        style={{ color: 'rgba(10,46,77,0.7)' }}
+                      >
+                        {guideDeclineMessage.body}
+                      </p>
+
+                      {/* CTA: rebook with the experience */}
+                      {exp?.id != null && (
+                        <a
+                          href={`/book/${exp.id}`}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold f-body transition-opacity hover:opacity-75"
+                          style={{ color: '#2563EB' }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+                            <path d="M3 6h6M7 4l2 2-2 2" />
+                          </svg>
+                          Book new dates for this experience →
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

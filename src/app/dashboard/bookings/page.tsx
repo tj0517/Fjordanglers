@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
-import BookingActions from '@/components/dashboard/booking-actions'
 import { CountryFlag } from '@/components/ui/country-flag'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -9,7 +8,8 @@ import { CountryFlag } from '@/components/ui/country-flag'
 type BookingStatus = Database['public']['Enums']['booking_status']
 
 type BookingRow = Database['public']['Tables']['bookings']['Row'] & {
-  experience: { title: string } | null
+  experience:      { title: string } | null
+  requested_dates: string[] | null
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -191,7 +191,8 @@ export default async function BookingsPage() {
               // experience_id === null → booking was created from a custom inquiry
               const isCustomTrip = booking.experience_id == null
               const expTitle     = booking.experience?.title ?? (isCustomTrip ? 'Custom Trip' : '—')
-              const dateFormatted = new Date(booking.booking_date).toLocaleDateString('en-GB', {
+              const reqDates = (booking.requested_dates as string[] | null) ?? null
+              const dateFormatted = new Date(booking.booking_date + 'T12:00:00').toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short', year: 'numeric',
               })
 
@@ -232,7 +233,15 @@ export default async function BookingsPage() {
                   </div>
 
                   {/* Date */}
-                  <p className="text-[#0A2E4D] text-sm f-body">{dateFormatted}</p>
+                  <div>
+                    <p className="text-[#0A2E4D] text-sm f-body">{dateFormatted}</p>
+                    {reqDates != null && reqDates.length > 1 && (
+                      <p className="text-[10px] f-body mt-0.5"
+                         style={{ color: '#2563EB' }}>
+                        +{reqDates.length - 1} more date{reqDates.length - 1 > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
 
                   {/* Guests */}
                   <p className="text-[#0A2E4D] text-sm font-medium f-body">{booking.guests} pax</p>
@@ -253,15 +262,16 @@ export default async function BookingsPage() {
 
                   {/* Actions */}
                   <div className="flex flex-col gap-1.5">
-                    {booking.status === 'pending' && (
-                      <BookingActions bookingId={booking.id} />
-                    )}
                     <Link
                       href={`/dashboard/bookings/${booking.id}`}
-                      className="text-[11px] font-semibold f-body transition-opacity hover:opacity-70"
-                      style={{ color: '#E67E50' }}
+                      className="inline-flex items-center gap-1 text-[11px] font-bold f-body px-3 py-1.5 rounded-lg transition-all hover:brightness-110"
+                      style={
+                        booking.status === 'pending'
+                          ? { background: 'rgba(230,126,80,0.12)', color: '#E67E50' }
+                          : { color: '#E67E50' }
+                      }
                     >
-                      View / Chat →
+                      {booking.status === 'pending' ? '🔔 Respond →' : 'View / Chat →'}
                     </Link>
                   </div>
                 </div>

@@ -18,7 +18,10 @@ import { env } from '@/lib/env'
 
 const createBookingSchema = z.object({
   experienceId: z.string().uuid(),
+  // Availability window boundaries (angler's "when can you come")
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1, 'Select at least one date'),
+  // Actual trip duration in days — price is based on this, NOT dates.length
+  numDays: z.number().int().min(1).max(30).optional(),
   guests: z.number().int().min(1).max(50),
   durationOptionLabel: z.string().optional(),
   anglerName: z.string().max(100).optional(),
@@ -56,6 +59,7 @@ export async function createBookingCheckout(
   const {
     experienceId,
     dates,
+    numDays,
     guests,
     durationOptionLabel,
     anglerName,
@@ -64,6 +68,10 @@ export async function createBookingCheckout(
     anglerCountry,
     specialRequests,
   } = parsed.data
+
+  // Use explicit numDays (trip duration) if provided; fall back to dates.length
+  // for backward compat with any legacy calls that send individual date arrays.
+  const tripDays = numDays ?? dates.length
 
   // ── Fetch experience + guide ───────────────────────────────────────────────
   const { data: experience } = await supabase
@@ -94,7 +102,7 @@ export async function createBookingCheckout(
 
   // ── Calculate pricing ─────────────────────────────────────────────────────
   const pricePerPerson = experience.price_per_person_eur ?? 0
-  const subtotal = Math.round(pricePerPerson * guests * dates.length * 100) / 100
+  const subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
   const serviceFee = Math.round(subtotal * 0.05 * 100) / 100 // 5% angler-side fee
   const totalEur = Math.round((subtotal + serviceFee) * 100) / 100
   const commissionRate = env.PLATFORM_COMMISSION_RATE // 0.10 by default
@@ -112,7 +120,8 @@ export async function createBookingCheckout(
       angler_id: user?.id ?? null,
       angler_email: anglerEmail,
       guide_id: guideRaw.id,
-      booking_date: dates[0], // primary date
+      booking_date: dates[0], // primary date (first selected)
+      requested_dates: dates, // all selected dates
       guests,
       total_eur: totalEur,
       platform_fee_eur: platformFeeEur,
@@ -207,7 +216,15 @@ export async function sendBookingMessage(
 // 30% deposit now, 70% balance before the trip.
 // application_fee = proportional platform fee (service fee + commission).
 
-export async function acceptBooking(bookingId: string): Promise<{ error?: string }> {
+export async function acceptBooking(
+  bookingId: string,
+  options?: {
+    confirmedDays?:     string[]   // guide-picked individual days (multi-day picker)
+    confirmedDateFrom?: string     // legacy / booking-actions fallback
+    confirmedDateTo?:   string
+    guideNote?:         string
+  },
+): Promise<{ error?: string }> {
   const supabase = await createClient()
   const {
     data: { user },
@@ -225,7 +242,7 @@ export async function acceptBooking(bookingId: string): Promise<{ error?: string
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id, total_eur, guide_payout_eur, angler_email, stripe_checkout_id, experiences(title)')
+    .select('id, status, guide_id, total_eur, guide_payout_eur, angler_email, stripe_checkout_id, guests, commission_rate, experiences(title, price_per_person_eur)')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
@@ -235,6 +252,32 @@ export async function acceptBooking(bookingId: string): Promise<{ error?: string
     return { error: 'Only pending bookings can be accepted.' }
   }
 
+  // ── Recalculate pricing if guide confirmed specific days ──────────────────
+  const confirmedDays = options?.confirmedDays
+  let effectiveTotalEur       = booking.total_eur
+  let effectiveGuidePayoutEur = booking.guide_payout_eur
+  let pricingUpdate: Partial<{ total_eur: number; guide_payout_eur: number; deposit_eur: number; platform_fee_eur: number }> = {}
+
+  if (confirmedDays && confirmedDays.length > 0) {
+    const exp = booking.experiences as unknown as { title: string; price_per_person_eur: number | null } | null
+    const pricePerPerson = exp?.price_per_person_eur
+    if (pricePerPerson != null && booking.guests > 0) {
+      const numDays        = confirmedDays.length
+      const subtotal       = Math.round(pricePerPerson * booking.guests * numDays * 100) / 100
+      const serviceFee     = Math.round(subtotal * 0.05 * 100) / 100
+      effectiveTotalEur    = Math.round((subtotal + serviceFee) * 100) / 100
+      const platformFeeEur = Math.round(subtotal * booking.commission_rate * 100) / 100
+      effectiveGuidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
+      const depositEur     = Math.round(effectiveTotalEur * 0.3 * 100) / 100
+      pricingUpdate = {
+        total_eur:        effectiveTotalEur,
+        guide_payout_eur: effectiveGuidePayoutEur,
+        deposit_eur:      depositEur,
+        platform_fee_eur: platformFeeEur,
+      }
+    }
+  }
+
   // ── Stripe Checkout (destination charge) ─────────────────────────────────
   let stripeCheckoutId: string | null = null
 
@@ -242,8 +285,8 @@ export async function acceptBooking(bookingId: string): Promise<{ error?: string
     // Idempotency: don't create a duplicate checkout if one already exists
     if (!booking.stripe_checkout_id) {
       try {
-        const totalEur       = booking.total_eur
-        const guidePayoutEur = booking.guide_payout_eur
+        const totalEur       = effectiveTotalEur
+        const guidePayoutEur = effectiveGuidePayoutEur
         const depositCents   = Math.round(totalEur * 0.3 * 100)
         const platformFee    = Math.round((totalEur - guidePayoutEur) * 0.3 * 100)
 
@@ -299,6 +342,11 @@ export async function acceptBooking(bookingId: string): Promise<{ error?: string
       accepted_at:             new Date().toISOString(),
       balance_payment_method:  balanceMethod,
       ...(stripeCheckoutId != null ? { stripe_checkout_id: stripeCheckoutId } : {}),
+      // Trip start date: first confirmed day takes priority, then legacy confirmedDateFrom
+      ...(confirmedDays?.[0]          ? { booking_date: confirmedDays[0] } :
+          options?.confirmedDateFrom  ? { booking_date: options.confirmedDateFrom } : {}),
+      // Updated pricing when guide confirmed specific days
+      ...pricingUpdate,
     })
     .eq('id', bookingId)
 
@@ -307,8 +355,52 @@ export async function acceptBooking(bookingId: string): Promise<{ error?: string
     return { error: 'Failed to accept booking.' }
   }
 
+  // ── Guide note → booking chat ─────────────────────────────────────────────
+  {
+    const fmtD = (d: string) => {
+      try {
+        return new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', {
+          weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+        })
+      } catch { return d }
+    }
+
+    const manualNote = options?.guideNote?.trim() ?? ''
+    let body = ''
+
+    if (confirmedDays && confirmedDays.length > 0) {
+      // Multi-day: list every confirmed day
+      const n = confirmedDays.length
+      const dayLines = confirmedDays.map(d => `• ${fmtD(d)}`).join('\n')
+      body = `✅ Booking accepted!\n\n📅 Trip days confirmed (${n} day${n !== 1 ? 's' : ''}):\n${dayLines}`
+      if (Object.keys(pricingUpdate).length > 0) {
+        body += `\n\n💰 Updated total: €${effectiveTotalEur}`
+      }
+      if (manualNote) body += `\n\n${manualNote}`
+    } else if (options?.confirmedDateFrom) {
+      // Legacy single-date (from old BookingActions component)
+      body = `✅ Booking accepted! Trip date confirmed: ${fmtD(options.confirmedDateFrom)}`
+      if (manualNote) body += `\n\n${manualNote}`
+    } else if (manualNote) {
+      body = manualNote
+    } else {
+      // No dates, no note — still send acceptance notice
+      body = '✅ Booking accepted! I\'ll be in touch to confirm the exact dates.'
+    }
+
+    try {
+      await serviceClient
+        .from('booking_messages')
+        .insert({ booking_id: bookingId, sender_id: user.id, body })
+    } catch (msgErr) {
+      // Non-fatal — booking is accepted; message failure doesn't block confirmation
+      console.error('[acceptBooking] Failed to send guide note:', msgErr)
+    }
+  }
+
   revalidatePath('/dashboard/bookings')
   revalidatePath(`/dashboard/bookings/${bookingId}`)
+  revalidatePath(`/account/bookings/${bookingId}`)
   return {}
 }
 
@@ -405,10 +497,14 @@ export async function renewDepositCheckout(
 //  'pending'  no payment     → just cancel (no money moved)
 //  'accepted' + checkout_id  → guide accepted, angler hasn't paid → expire Checkout session
 //  'confirmed'+ payment_intent → angler paid (destination charge) → refund + auto-reverses transfer
+//
+// Optional `alternatives.from / .to` — guide proposes new dates.
+// Auto-composes a chat message sent to the angler with the suggested window.
 
 export async function declineBooking(
   bookingId: string,
   reason?: string,
+  alternatives?: { from: string; to: string },
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
   const {
@@ -479,8 +575,42 @@ export async function declineBooking(
     return { error: 'Failed to decline booking.' }
   }
 
+  // ── Auto-compose alternatives message → booking chat ──────────────────────
+  if (alternatives?.from && alternatives?.to) {
+    const fmt = (d: string) => {
+      try {
+        return new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', {
+          weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+        })
+      } catch { return d }
+    }
+
+    const datesStr =
+      alternatives.from === alternatives.to
+        ? fmt(alternatives.from)
+        : `${fmt(alternatives.from)} – ${fmt(alternatives.to)}`
+
+    const reasonPart = reason?.trim()
+      ? `Unfortunately those dates don't work for me — ${reason.trim().replace(/\.$/, '')}.\n\n`
+      : `Unfortunately I'm unable to take the booking for those dates.\n\n`
+
+    const autoMessage =
+      `${reasonPart}📅 I'm available on: ${datesStr}\n\n` +
+      `Feel free to send a new booking request for those dates, or message me here if you'd like to discuss other options.`
+
+    try {
+      await serviceClient
+        .from('booking_messages')
+        .insert({ booking_id: bookingId, sender_id: user.id, body: autoMessage })
+    } catch (msgErr) {
+      // Non-fatal — decline has already gone through
+      console.error('[declineBooking] Failed to send alternatives message:', msgErr)
+    }
+  }
+
   revalidatePath('/dashboard/bookings')
   revalidatePath(`/dashboard/bookings/${bookingId}`)
+  revalidatePath(`/account/bookings/${bookingId}`)
   return {}
 }
 

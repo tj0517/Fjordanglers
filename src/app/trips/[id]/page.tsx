@@ -1141,8 +1141,18 @@ export default async function ExperienceDetailPage({
                 </section>
               )}
 
-              {/* ─── Availability preview calendar — inquiry-based trips only ── */}
-              {(exp.booking_type === 'icelandic' || exp.booking_type === 'both' || calendarDisabled) && !isDraft && (
+              {/* ─── Availability preview calendar ──────────────────────────── */}
+              {/* Shown when:                                                  */}
+              {/*   • calendar disabled → "inquiry-only" notice                */}
+              {/*   • availability config set (any booking type)               */}
+              {/*   • booking_type is 'classic' or 'both' — calendar widget    */}
+              {/*     is always relevant even without explicit avail config     */}
+              {!isDraft && (
+                calendarDisabled ||
+                availabilityConfig != null ||
+                exp.booking_type === 'classic' ||
+                exp.booking_type === 'both'
+              ) && (
                 calendarDisabled ? (
                   /* ── Calendar disabled: guide uses inquiry-only mode ── */
                   <section>

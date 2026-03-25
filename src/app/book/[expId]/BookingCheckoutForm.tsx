@@ -11,6 +11,7 @@ type Props = {
   expId: string
   dates: string[]
   guests: number
+  numDays?: number
   durationOptionLabel?: string
   defaultName?: string
   defaultEmail?: string
@@ -24,6 +25,7 @@ export default function BookingCheckoutForm({
   expId,
   dates,
   guests,
+  numDays,
   durationOptionLabel,
   defaultName = '',
   defaultEmail = '',
@@ -86,6 +88,7 @@ export default function BookingCheckoutForm({
       const result = await createBookingCheckout({
         experienceId: expId,
         dates,
+        numDays,
         guests,
         durationOptionLabel,
         anglerName: mode === 'guest' ? anglerName : undefined,

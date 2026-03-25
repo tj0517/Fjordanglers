@@ -132,13 +132,15 @@ export function AvailabilityPreviewCalendar({
     return count
   }, [viewY, viewM, daysInMonth, availabilityConfig, blockedDates, bookedSet, minISO, maxISO])
 
-  const inquireHref = bookingType === 'classic'
-    ? `/book/${expId}`
-    : `/trips/${expId}/inquire`
+  // 'classic' and 'both' both route to the direct-booking page.
+  // 'icelandic' routes to the inquiry form.
+  const inquireHref = bookingType === 'icelandic'
+    ? `/trips/${expId}/inquire`
+    : `/book/${expId}`
 
-  const ctaLabel = bookingType === 'classic'
-    ? 'Book now →'
-    : 'Choose your dates →'
+  const ctaLabel = bookingType === 'icelandic'
+    ? 'Choose your dates →'
+    : 'Book now →'
 
   return (
     <section className="mb-12">

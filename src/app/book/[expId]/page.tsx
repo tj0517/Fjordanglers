@@ -13,22 +13,64 @@ const SERVICE_FEE_RATE = 0.05
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+const DURATION_LABELS: Record<string, string> = {
+  half_day:  'Half day (~4 hrs)',
+  full_day:  'Full day (~8 hrs)',
+  multi_day: 'Multi-day',
+}
+
 type Props = {
   params: Promise<{ expId: string }>
-  searchParams: Promise<{ dates?: string; guests?: string }>
+  searchParams: Promise<{
+    // legacy single-date flow (kept for backward compat)
+    dates?: string
+    // new window-based flow
+    windowFrom?:   string
+    windowTo?:     string
+    numDays?:      string
+    durationType?: string
+    guests?:       string
+    // step-1 pre-fill (from sidebar widget, does NOT skip to step 2)
+    prefill?:      string
+    // force initial tab on step 1: 'direct' | 'request'
+    mode?:         string
+  }>
 }
 
 export default async function BookPage({ params, searchParams }: Props) {
   const { expId } = await params
   const sp        = await searchParams
 
+  const guests = Math.max(1, parseInt(sp.guests ?? '1', 10))
+
+  // ── Window-based params (new flow) ────────────────────────────────────────
+  const windowFrom   = sp.windowFrom ?? null
+  const windowTo     = sp.windowTo   ?? null
+  const numDays      = Math.max(1, parseInt(sp.numDays ?? '1', 10))
+  const rawDurType   = sp.durationType ?? ''
+  const durationType = ['half_day', 'full_day', 'multi_day'].includes(rawDurType)
+    ? rawDurType : 'full_day'
+  const durationLabel = DURATION_LABELS[durationType] ?? 'Full day'
+
+  // ── Legacy single-date compat ─────────────────────────────────────────────
   const rawDates = sp.dates ?? ''
-  const dates = rawDates
+  const legacyDates = rawDates
     .split(',')
     .map(d => d.trim())
     .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
 
-  const guests = Math.max(1, parseInt(sp.guests ?? '1', 10))
+  // ── Step-1 pre-fill (from sidebar widget — does NOT skip to step 2) ─────────
+  // Use a separate `prefill` param so the step-1 guard (`dates.length === 0`) isn't tripped.
+  const prefillDates = (sp.prefill ?? '')
+    .split(',')
+    .map(d => d.trim())
+    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+
+  const initialMode = sp.mode === 'request' ? 'request' : prefillDates.length > 0 ? 'direct' : 'direct'
+
+  // Normalise: prefer window-based; fall back to legacy
+  const dates     = windowFrom != null ? [windowFrom, ...(windowTo && windowTo !== windowFrom ? [windowTo] : [])] : legacyDates
+  const effectiveNumDays = windowFrom != null ? numDays : legacyDates.length
 
   // ── Always fetch experience ────────────────────────────────────────────────
   const experience = await getExperience(expId)
@@ -65,8 +107,8 @@ export default async function BookPage({ params, searchParams }: Props) {
     </div>
   )
 
-  // ── STEP 1: No dates yet — show date + group picker ───────────────────────
-  if (dates.length === 0) {
+  // ── STEP 1: No window selected yet — show date + duration picker ─────────
+  if (windowFrom == null && dates.length === 0) {
     // Fetch availability data (public — use service client)
     const serviceClient = createServiceClient()
     const [availConfigRes, blockedDatesRes] = await Promise.all([
@@ -140,6 +182,9 @@ export default async function BookPage({ params, searchParams }: Props) {
             initialGuests={guests}
             availabilityConfig={availabilityConfig}
             blockedDates={blockedDates}
+            rawDurationOptions={experience.duration_options}
+            initialMode={initialMode}
+            initialDates={prefillDates}
           />
         </div>
       </div>
@@ -166,8 +211,8 @@ export default async function BookPage({ params, searchParams }: Props) {
     if (profile?.full_name) defaultName = profile.full_name
   }
 
-  // Price calculation
-  const subtotal   = Math.round(pricePerPerson * guests * dates.length * 100) / 100
+  // Price calculation — uses trip duration (numDays), NOT window length
+  const subtotal   = Math.round(pricePerPerson * guests * effectiveNumDays * 100) / 100
   const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100
   const totalEur   = Math.round((subtotal + serviceFee) * 100) / 100
 
@@ -235,7 +280,7 @@ export default async function BookPage({ params, searchParams }: Props) {
                 className="text-[10px] font-semibold f-body transition-opacity hover:opacity-70"
                 style={{ color: '#E67E50' }}
               >
-                ← Change dates
+                ← Change
               </Link>
             </div>
 
@@ -256,35 +301,22 @@ export default async function BookPage({ params, searchParams }: Props) {
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-[0.16em] f-body mb-1"
                      style={{ color: 'rgba(10,46,77,0.38)' }}>
-                    {dates.length === 1 ? 'Date' : `Dates (${dates.length} days)`}
+                    Availability window
                   </p>
                   <div className="flex flex-col gap-1">
-                    {/* Show first + last date range if > 2 dates (compact display) */}
-                    {dates.length <= 3 ? (
-                      dates.map(iso => (
-                        <p key={iso} className="text-sm font-semibold f-body"
-                           style={{ color: '#0A2E4D' }}>
-                          {new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', {
-                            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                          })}
-                        </p>
-                      ))
-                    ) : (
-                      <>
-                        <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                          {new Date(`${dates[0]}T12:00:00`).toLocaleDateString('en-GB', {
-                            weekday: 'short', day: 'numeric', month: 'long',
-                          })}
-                          {' — '}
-                          {new Date(`${dates[dates.length - 1]}T12:00:00`).toLocaleDateString('en-GB', {
-                            weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
-                          })}
-                        </p>
-                        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                          {dates.length} consecutive days
-                        </p>
-                      </>
-                    )}
+                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                      {windowFrom != null
+                        ? windowFrom === windowTo || windowTo == null
+                          ? new Date(`${windowFrom}T12:00:00`).toLocaleDateString('en-GB', {
+                              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                            })
+                          : `${new Date(`${windowFrom}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} — ${new Date(`${windowTo}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                        : dates.map(d => new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })).join(', ')
+                      }
+                    </p>
+                    <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      {durationLabel} · guide confirms exact dates
+                    </p>
                   </div>
                 </div>
               </div>
@@ -330,7 +362,7 @@ export default async function BookPage({ params, searchParams }: Props) {
 
             <div className="flex flex-col gap-2.5">
               <PriceLine
-                label={`€${pricePerPerson} × ${guests} ${guests === 1 ? 'angler' : 'anglers'} × ${dates.length} ${dates.length === 1 ? 'day' : 'days'}`}
+                label={`€${pricePerPerson} × ${guests} ${guests === 1 ? 'angler' : 'anglers'} × ${effectiveNumDays} ${effectiveNumDays === 1 ? 'day' : 'days'}`}
                 value={`€${subtotal}`}
               />
               <PriceLine label="Service fee (5%)" value={`€${serviceFee}`} muted />
@@ -397,13 +429,16 @@ export default async function BookPage({ params, searchParams }: Props) {
             </h2>
             <p className="text-sm f-body mb-6" style={{ color: 'rgba(10,46,77,0.5)' }}>
               {guests} {guests === 1 ? 'angler' : 'anglers'} ·{' '}
-              {dates.length} {dates.length === 1 ? 'day' : 'days'} selected
+              {durationLabel}
+              {dates.length > 1 && ` · ${dates.length} days`}
             </p>
 
             <BookingCheckoutForm
               expId={expId}
               dates={dates}
               guests={guests}
+              numDays={effectiveNumDays}
+              durationOptionLabel={durationLabel}
               defaultName={defaultName}
               defaultEmail={defaultEmail}
               isLoggedIn={user != null}

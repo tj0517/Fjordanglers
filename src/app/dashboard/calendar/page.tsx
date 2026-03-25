@@ -130,7 +130,7 @@ export default async function CalendarPage({
   const serviceClient = createServiceClient()
   const inquiriesQuery = serviceClient
     .from('trip_inquiries')
-    .select('id, dates_from, dates_to, angler_name, group_size, status')
+    .select('id, dates_from, dates_to, offer_date_from, offer_date_to, angler_name, group_size, status')
     .eq('assigned_guide_id', guide.id)
     .neq('status', 'cancelled')
     .lte('dates_from', lastDay)
@@ -158,7 +158,9 @@ export default async function CalendarPage({
     id: string; experience_id: string; booking_date: string; guests: number; status: string; angler_full_name: string | null
   }>
   const inquiries = (inquiriesResult.data ?? []) as Array<{
-    id: string; dates_from: string; dates_to: string; angler_name: string; group_size: number; status: string
+    id: string; dates_from: string; dates_to: string
+    offer_date_from: string | null; offer_date_to: string | null
+    angler_name: string; group_size: number; status: string
   }>
   const weeklySchedules = (weeklySchedulesResult.data ?? []) as WeeklySchedule[]
 
