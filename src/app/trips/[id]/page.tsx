@@ -1141,17 +1141,18 @@ export default async function ExperienceDetailPage({
                 </section>
               )}
 
-              {/* ─── Availability preview calendar ──────────────────────────── */}
+              {/* ─── Availability preview / period picker calendar ──────────── */}
               {/* Shown when:                                                  */}
               {/*   • calendar disabled → "inquiry-only" notice                */}
               {/*   • availability config set (any booking type)               */}
-              {/*   • booking_type is 'classic' or 'both' — calendar widget    */}
-              {/*     is always relevant even without explicit avail config     */}
+              {/*   • booking_type is 'classic', 'both', or 'icelandic'        */}
+              {/*     (icelandic shows interactive period picker)              */}
               {!isDraft && (
                 calendarDisabled ||
                 availabilityConfig != null ||
                 exp.booking_type === 'classic' ||
-                exp.booking_type === 'both'
+                exp.booking_type === 'both' ||
+                exp.booking_type === 'icelandic'
               ) && (
                 calendarDisabled ? (
                   /* ── Calendar disabled: guide uses inquiry-only mode ── */

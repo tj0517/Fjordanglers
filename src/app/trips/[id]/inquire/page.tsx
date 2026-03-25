@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import InquireForm from './InquireForm'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
+import { decodePeriodsParam } from '@/components/trips/multi-period-picker'
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -10,7 +11,7 @@ export default async function InquirePage({
   searchParams,
 }: {
   params:       Promise<{ id: string }>
-  searchParams: Promise<{ dates?: string; group?: string }>
+  searchParams: Promise<{ dates?: string; group?: string; periods?: string }>
 }) {
   const { id } = await params
   const sp     = await searchParams
@@ -65,8 +66,9 @@ export default async function InquirePage({
   }
 
   // Parse pre-filled values from URL
-  const prefilledDates = sp.dates ? sp.dates.split(',').filter(Boolean) : []
-  const prefilledGroup = sp.group ? Math.max(1, Math.min(50, Number(sp.group) || 1)) : 1
+  const prefilledDates   = sp.dates   ? sp.dates.split(',').filter(Boolean) : []
+  const prefilledPeriods = sp.periods ? decodePeriodsParam(sp.periods)      : []
+  const prefilledGroup   = sp.group   ? Math.max(1, Math.min(50, Number(sp.group) || 1)) : 1
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
@@ -104,6 +106,7 @@ export default async function InquirePage({
           experienceId={experience.id}
           guideId={guide?.id ?? null}
           prefilledDates={prefilledDates}
+          prefilledPeriods={prefilledPeriods}
           prefilledGroup={prefilledGroup}
           anglerName={anglerName}
           anglerEmail={anglerEmail}

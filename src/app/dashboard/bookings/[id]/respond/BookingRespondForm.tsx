@@ -29,6 +29,31 @@ export type BookingRespondFormProps = {
   guideWeeklySchedules:  WeeklySchedule[]
   blockedDates:          BlockedRange[]
   mode?:                 'page' | 'inline'
+  /** Called when the form is inside an external overlay and the user wants to close it. */
+  onClose?:              () => void
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * For "Send request" bookings the angler supplies an availability window
+ * (from → to) + a number of desired days.  Both are recoverable from DB columns:
+ *   requested_dates[0] = windowFrom, requested_dates[1] = windowTo  (when length === 2)
+ *   duration_option    = e.g. "Full day · 3 days" or "Full day (8 hrs)"
+ */
+function deriveWindowTo(
+  windowFrom:          string,
+  requestedDates?:     string[],
+): string | null {
+  if (!requestedDates || requestedDates.length !== 2) return null
+  const candidate = requestedDates[1]
+  return candidate !== windowFrom ? candidate : null
+}
+
+function deriveNumDays(durationOption: string | null): number | null {
+  if (!durationOption) return null
+  const m = durationOption.match(/(\d+)\s*days?/i)
+  return m ? parseInt(m[1], 10) : null
 }
 
 type Phase  = 'action' | 'form' | 'review'
@@ -76,7 +101,11 @@ function BookingSummaryCard({ anglerName, anglerCountry, experienceTitle, window
   windowFrom: string; anglerRequestedDates?: string[]; durationOption: string | null; guests: number
   totalEur: number; depositEur: number | null
 }) {
-  const multiDates = anglerRequestedDates && anglerRequestedDates.length > 1
+  // Derive window vs individual-dates display
+  const windowTo   = deriveWindowTo(windowFrom, anglerRequestedDates)
+  const numDays    = deriveNumDays(durationOption)
+  const isWindow   = windowTo != null
+  const multiDates = !isWindow && anglerRequestedDates && anglerRequestedDates.length > 1
 
   return (
     <div className="p-5 rounded-2xl flex flex-col gap-3"
@@ -85,10 +114,40 @@ function BookingSummaryCard({ anglerName, anglerCountry, experienceTitle, window
       <div className="flex flex-col gap-2">
         <SummaryRow label="Angler"  value={`${anglerCountry ? `${anglerCountry} · ` : ''}${anglerName}`} />
         <SummaryRow label="Trip"    value={experienceTitle} />
-        {multiDates ? (
+
+        {isWindow ? (
+          /* ── Request booking: show availability window ──────────────────── */
+          <div className="flex flex-col gap-1">
+            <div className="flex items-start gap-2 px-3 py-2 rounded-xl"
+                 style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.14)' }}>
+              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" className="shrink-0 mt-0.5"
+                   stroke="#2563EB" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="0.5" y="1" width="10" height="9" rx="1" />
+                <line x1="0.5" y1="4" x2="10.5" y2="4" />
+                <line x1="3.5" y1="0" x2="3.5" y2="2" />
+                <line x1="7.5" y1="0" x2="7.5" y2="2" />
+              </svg>
+              <div>
+                <p className="text-[10px] font-bold f-body uppercase tracking-[0.12em]"
+                   style={{ color: 'rgba(37,99,235,0.7)' }}>
+                  Availability window
+                </p>
+                <p className="text-[12px] font-semibold f-body mt-0.5" style={{ color: '#2563EB' }}>
+                  {fmtShort(windowFrom)} – {fmtShort(windowTo)}
+                  {numDays != null && (
+                    <span className="font-normal" style={{ color: 'rgba(37,99,235,0.65)' }}>
+                      {' '}· wants {numDays} {numDays === 1 ? 'day' : 'days'}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : multiDates ? (
+          /* ── Direct booking: multiple specific dates ────────────────────── */
           <div>
             <div className="flex items-baseline justify-between">
-              <span className="text-[11px] f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.45)' }}>
+              <span className="text-[11px] f-body shrink-0" style={{ color: 'rgba(10,46,77,0.45)' }}>
                 Requested ({anglerRequestedDates!.length} dates)
               </span>
             </div>
@@ -105,8 +164,10 @@ function BookingSummaryCard({ anglerName, anglerCountry, experienceTitle, window
             </div>
           </div>
         ) : (
+          /* ── Direct booking: single date ────────────────────────────────── */
           <SummaryRow label="Requested" value={`${fmtShort(windowFrom)}${durationOption ? ` · ${durationOption}` : ''}`} />
         )}
+
         <SummaryRow label="Guests"  value={`${guests} pax`} />
         <SummaryRow label="Total"   value={`€${totalEur}`} accent />
         {depositEur != null && <SummaryRow label="Deposit" value={`€${depositEur} (30%)`} />}
@@ -135,7 +196,14 @@ export default function BookingRespondForm({
   windowFrom, anglerRequestedDates, durationOption, guests, totalEur, depositEur, pricePerPersonEur,
   specialRequests, guideWeeklySchedules, blockedDates,
   mode = 'inline',
+  onClose,
 }: BookingRespondFormProps) {
+  // ── Derive request-booking metadata from DB columns ──────────────────────
+  /** windowTo is recoverable from requested_dates[1] when the booking came via "Send request" */
+  const effectiveWindowTo  = deriveWindowTo(windowFrom, anglerRequestedDates)
+  /** Number of fishing days the angler wants (parsed from duration_option label) */
+  const effectiveNumDays   = deriveNumDays(durationOption)
+  const isRequestBooking   = effectiveWindowTo != null
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -192,7 +260,7 @@ export default function BookingRespondForm({
   if (phase === 'action') {
     return (
       <div className={mode === 'page' ? 'px-4 py-8 sm:px-8 sm:py-12 max-w-[720px] mx-auto' : 'pt-5'}>
-        {mode === 'page' && (
+        {mode === 'page' && !onClose && (
           <Link href={`/dashboard/bookings/${bookingId}`}
             className="inline-flex items-center gap-1.5 text-xs f-body mb-8 transition-opacity hover:opacity-70"
             style={{ color: 'rgba(10,46,77,0.45)' }}>
@@ -211,12 +279,38 @@ export default function BookingRespondForm({
           </h2>
           <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.55)' }}>
             {experienceTitle} · {guests} {guests === 1 ? 'guest' : 'guests'} ·{' '}
-            {anglerRequestedDates && anglerRequestedDates.length > 1
-              ? `${anglerRequestedDates.length} dates`
-              : fmtShort(windowFrom)}
-            {durationOption ? ` · ${durationOption}` : ''} · €{totalEur}
+            {isRequestBooking
+              ? `${fmtShort(windowFrom)} – ${fmtShort(effectiveWindowTo!)}${effectiveNumDays ? ` · ${effectiveNumDays} days` : ''}`
+              : anglerRequestedDates && anglerRequestedDates.length > 1
+                ? `${anglerRequestedDates.length} dates`
+                : fmtShort(windowFrom)
+            }
+            {!isRequestBooking && durationOption ? ` · ${durationOption}` : ''} · €{totalEur}
           </p>
         </div>
+
+        {/* Availability window chip — request bookings only */}
+        {isRequestBooking && (
+          <div className="mb-5 flex items-center gap-2 px-3.5 py-2.5 rounded-xl"
+               style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.16)' }}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0"
+                 stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="1" y="1.5" width="11" height="10" rx="1.5" />
+              <line x1="1" y1="5" x2="12" y2="5" />
+              <line x1="4" y1="0.5" x2="4" y2="3" />
+              <line x1="9" y1="0.5" x2="9" y2="3" />
+            </svg>
+            <p className="text-[12px] f-body" style={{ color: '#2563EB' }}>
+              <span className="font-bold">Available:</span>{' '}
+              {fmtShort(windowFrom)} – {fmtShort(effectiveWindowTo!)}
+              {effectiveNumDays != null && (
+                <span className="font-semibold">
+                  {' '}· wants <strong>{effectiveNumDays} {effectiveNumDays === 1 ? 'day' : 'days'}</strong>
+                </span>
+              )}
+            </p>
+          </div>
+        )}
 
         {specialRequests != null && (
           <div className="mb-5 p-4 rounded-2xl"
@@ -272,15 +366,19 @@ export default function BookingRespondForm({
               <>
                 <div>
                   <p style={labelStyle}>
-                    Confirm trip days
+                    {isRequestBooking ? 'Select exact days from window' : 'Confirm trip days'}
                     <span className="ml-1 normal-case tracking-normal font-normal"
                           style={{ color: 'rgba(10,46,77,0.35)' }}>
-                      (optional — click to select, click again to deselect)
+                      {isRequestBooking
+                        ? '— click days within the angler\'s window'
+                        : '(optional — click to select, click again to deselect)'}
                     </span>
                   </p>
                   <RespondCalendar
                     calMode="multi"
                     anglerWindowFrom={windowFrom}
+                    anglerWindowTo={effectiveWindowTo}
+                    anglerNumDays={effectiveNumDays}
                     anglerDates={anglerRequestedDates}
                     weeklySchedules={guideWeeklySchedules}
                     blockedDates={blockedDates}
@@ -367,6 +465,8 @@ export default function BookingRespondForm({
                       <RespondCalendar
                         calMode="range"
                         anglerWindowFrom={windowFrom}
+                        anglerWindowTo={effectiveWindowTo}
+                        anglerNumDays={effectiveNumDays}
                         anglerDates={anglerRequestedDates}
                         weeklySchedules={guideWeeklySchedules}
                         blockedDates={blockedDates}
@@ -491,9 +591,11 @@ export default function BookingRespondForm({
           <ReviewRow
             label="Requested"
             value={
-              anglerRequestedDates && anglerRequestedDates.length > 1
-                ? `${anglerRequestedDates.length} dates: ${anglerRequestedDates.map(d => fmtShort(d)).join(', ')}`
-                : `${fmtShort(windowFrom)}${durationOption ? ` · ${durationOption}` : ''}`
+              isRequestBooking
+                ? `Window ${fmtShort(windowFrom)} – ${fmtShort(effectiveWindowTo!)}${effectiveNumDays ? ` · ${effectiveNumDays} days` : ''}`
+                : anglerRequestedDates && anglerRequestedDates.length > 1
+                  ? `${anglerRequestedDates.length} dates: ${anglerRequestedDates.map(d => fmtShort(d)).join(', ')}`
+                  : `${fmtShort(windowFrom)}${durationOption ? ` · ${durationOption}` : ''}`
             }
           />
           <ReviewRow label="Guests" value={`${guests} pax`} />
@@ -559,11 +661,22 @@ export default function BookingRespondForm({
       {mode === 'page' && (
         <p className="text-center mt-4 text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Changed your mind?{' '}
-          <Link href={`/dashboard/bookings/${bookingId}`}
-                className="underline underline-offset-2 hover:opacity-70"
-                style={{ color: 'rgba(10,46,77,0.5)' }}>
-            Back to booking details
-          </Link>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={goBack}
+              className="underline underline-offset-2 hover:opacity-70"
+              style={{ color: 'rgba(10,46,77,0.5)' }}
+            >
+              Edit your response
+            </button>
+          ) : (
+            <Link href={`/dashboard/bookings/${bookingId}`}
+                  className="underline underline-offset-2 hover:opacity-70"
+                  style={{ color: 'rgba(10,46,77,0.5)' }}>
+              Back to booking details
+            </Link>
+          )}
         </p>
       )}
     </div>

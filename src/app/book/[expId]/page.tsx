@@ -13,7 +13,8 @@ const SERVICE_FEE_RATE = 0.05
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-const DURATION_LABELS: Record<string, string> = {
+/** Legacy fallback labels — kept for old URLs / backward compat */
+const LEGACY_DURATION_LABELS: Record<string, string> = {
   half_day:  'Half day (~4 hrs)',
   full_day:  'Full day (~8 hrs)',
   multi_day: 'Multi-day',
@@ -28,6 +29,9 @@ type Props = {
     windowFrom?:   string
     windowTo?:     string
     numDays?:      string
+    /** New: guide package label (e.g. "Full day fly fishing · 3 days") */
+    pkgLabel?:     string
+    /** Legacy: kept for backward compat */
     durationType?: string
     guests?:       string
     // step-1 pre-fill (from sidebar widget, does NOT skip to step 2)
@@ -46,11 +50,11 @@ export default async function BookPage({ params, searchParams }: Props) {
   // ── Window-based params (new flow) ────────────────────────────────────────
   const windowFrom   = sp.windowFrom ?? null
   const windowTo     = sp.windowTo   ?? null
-  const numDays      = Math.max(1, parseInt(sp.numDays ?? '1', 10))
-  const rawDurType   = sp.durationType ?? ''
-  const durationType = ['half_day', 'full_day', 'multi_day'].includes(rawDurType)
-    ? rawDurType : 'full_day'
-  const durationLabel = DURATION_LABELS[durationType] ?? 'Full day'
+  const numDays = Math.max(1, parseInt(sp.numDays ?? '1', 10))
+  // Prefer new pkgLabel param (set by request mode); fall back to legacy durationType for old URLs
+  const rawDurType    = sp.durationType ?? ''
+  const legacyLabel   = LEGACY_DURATION_LABELS[rawDurType] ?? 'Full day'
+  const durationLabel = sp.pkgLabel ? decodeURIComponent(sp.pkgLabel) : legacyLabel
 
   // ── Legacy single-date compat ─────────────────────────────────────────────
   const rawDates = sp.dates ?? ''

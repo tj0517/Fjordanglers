@@ -36,7 +36,6 @@ import {
 const SERVICE_FEE_RATE = 0.05
 
 type BookingMode = 'direct' | 'request'
-type DurationType = 'half_day' | 'full_day' | 'multi_day'
 
 // ─── Package helpers ──────────────────────────────────────────────────────────
 
@@ -490,24 +489,24 @@ export default function BookingDateStep({
   const selectedPkg = durationOptions[selectedPkgIdx] ?? durationOptions[0]
 
   // ── Request mode state ───────────────────────────────────────────────────
-  const [periods,      setPeriods]      = useState<Period[]>([])
-  const [durationType, setDurationType] = useState<DurationType>('full_day')
-  const [numDays,      setNumDays]      = useState(2)
+  const [periods,         setPeriods]        = useState<Period[]>([])
+  const [requestPkgIdx,   setRequestPkgIdx]  = useState(0)
+  const [numDaysRequest,  setNumDaysRequest]  = useState(() => pkgDays(durationOptions[0] ?? durationOptions[0]))
 
   // ── Shared ────────────────────────────────────────────────────────────────
   const [groupSize, setGroupSize] = useState(Math.min(initialGuests, maxGuests))
 
-  // ── Request mode — window boundaries ─────────────────────────────────────
-  const windowFrom = periods.length > 0 ? periods[0].from : null
-  const windowTo   = periods.length > 0 ? periods[periods.length - 1].to : null
-  const hasWindow  = windowFrom != null && windowTo != null
+  // ── Request mode — derived ────────────────────────────────────────────────
+  const windowFrom     = periods.length > 0 ? periods[0].from : null
+  const windowTo       = periods.length > 0 ? periods[periods.length - 1].to : null
+  const hasWindow      = windowFrom != null && windowTo != null
+  const requestPkg     = durationOptions[requestPkgIdx] ?? durationOptions[0]
 
-  // ── Effective trip days (request mode) ───────────────────────────────────
-  const requestEffectiveDays = durationType === 'multi_day' ? numDays : 1
-  const durationLabel =
-    durationType === 'half_day'  ? 'Half day'
-    : durationType === 'full_day' ? 'Full day'
-    : `${numDays} days`
+  /** Human-readable label sent to step 2 and stored as duration_option on the booking */
+  const requestDurationLabel =
+    numDaysRequest === 1
+      ? pkgLabel(requestPkg)
+      : `${pkgLabel(requestPkg)} · ${numDaysRequest} days`
 
   // ── Navigation handlers ───────────────────────────────────────────────────
 
@@ -530,11 +529,11 @@ export default function BookingDateStep({
   function handleRequestContinue() {
     if (!hasWindow) return
     const params = new URLSearchParams({
-      windowFrom:   windowFrom!,
-      windowTo:     windowTo!,
-      numDays:      String(requestEffectiveDays),
-      durationType,
-      guests:       String(groupSize),
+      windowFrom: windowFrom!,
+      windowTo:   windowTo!,
+      numDays:    String(numDaysRequest),
+      pkgLabel:   requestDurationLabel,
+      guests:     String(groupSize),
     })
     router.push(`/book/${expId}?${params.toString()}`)
   }
@@ -812,14 +811,73 @@ export default function BookingDateStep({
 
       {/* ════════════════════════════════════════════════════════════════════ */}
       {/*  REQUEST MODE                                                      */}
+      {/*  1. Package     2. Availability window  3. Days  4. Group  5. Send */}
       {/* ════════════════════════════════════════════════════════════════════ */}
       {bookingMode === 'request' && (
         <>
-          <p className="text-sm f-body mb-4" style={{ color: 'rgba(10,46,77,0.5)' }}>
-            Tell the guide when you could come — they'll confirm the exact dates that work.
+          <p className="text-sm f-body mb-5" style={{ color: 'rgba(10,46,77,0.5)' }}>
+            Choose a package, tell the guide when you could come — they&apos;ll confirm exact dates.
           </p>
 
-          {/* Availability window calendar */}
+          {/* ── 1. Package selector ─────────────────────────────────────── */}
+          <div className="mb-6">
+            <p
+              className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+              style={{ color: 'rgba(10,46,77,0.38)' }}
+            >
+              Package
+            </p>
+            <div className="flex flex-col gap-2">
+              {durationOptions.map((opt, idx) => {
+                const on       = requestPkgIdx === idx
+                const label    = pkgLabel(opt)
+                const days     = pkgDays(opt)
+                const price    = pkgTotal(opt, groupSize)
+                const priceLbl = pkgPriceLabel(opt)
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setRequestPkgIdx(idx)
+                      setNumDaysRequest(pkgDays(opt))
+                    }}
+                    className="flex items-center justify-between px-4 py-3.5 rounded-2xl text-left transition-all"
+                    style={{
+                      background: on ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
+                      border:     on ? '1.5px solid #0A2E4D' : '1px solid rgba(10,46,77,0.1)',
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-bold f-body" style={{ color: on ? 'white' : '#0A2E4D' }}>
+                        {label}
+                      </p>
+                      <p className="text-[11px] f-body mt-0.5" style={{ color: on ? 'rgba(255,255,255,0.5)' : 'rgba(10,46,77,0.4)' }}>
+                        {days === 1 ? '1 day' : `${days} days`}
+                        {opt.includes_lodging && ' · incl. lodging'}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <p className="text-sm font-bold f-display" style={{ color: on ? '#E67E50' : '#0A2E4D' }}>
+                        €{price}
+                      </p>
+                      <p className="text-[10px] f-body" style={{ color: on ? 'rgba(255,255,255,0.45)' : 'rgba(10,46,77,0.35)' }}>
+                        {priceLbl}
+                      </p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ── 2. Availability window ──────────────────────────────────── */}
+          <p
+            className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+            style={{ color: 'rgba(10,46,77,0.38)' }}
+          >
+            When can you come?
+          </p>
           <MultiPeriodPicker
             periods={periods}
             onChange={setPeriods}
@@ -827,100 +885,97 @@ export default function BookingDateStep({
             blockedDates={blockedDates}
           />
 
-          {/* Trip duration — visible once a window is selected */}
+          {/* ── 3. How many days + anglers — visible once window is set ─── */}
           {hasWindow && (
-            <div className="mt-6">
-              <p
-                className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1 f-body"
-                style={{ color: 'rgba(10,46,77,0.38)' }}
-              >
-                Trip duration
-              </p>
-              <p
-                className="text-xs f-body mb-3"
-                style={{ color: 'rgba(10,46,77,0.45)' }}
-              >
-                How many days do you want to fish within this window?
-              </p>
-
-              {/* Duration type chips */}
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {(
-                  [
-                    { value: 'full_day'  as DurationType, label: 'Full day',  sub: '~8 hrs'  },
-                    { value: 'half_day'  as DurationType, label: 'Half day',  sub: '~4 hrs'  },
-                    { value: 'multi_day' as DurationType, label: 'Multi-day', sub: '2+ days' },
-                  ]
-                ).map(opt => {
-                  const on = durationType === opt.value
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setDurationType(opt.value)}
-                      className="flex flex-col items-start px-3 py-3 rounded-xl transition-all"
-                      style={{
-                        background: on ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
-                        border:     on ? '1.5px solid #0A2E4D' : '1px solid rgba(10,46,77,0.1)',
-                      }}
-                    >
-                      <span
-                        className="text-[12px] font-bold f-body"
-                        style={{ color: on ? 'white' : '#0A2E4D' }}
-                      >
-                        {opt.label}
-                      </span>
-                      <span
-                        className="text-[10px] f-body mt-0.5"
-                        style={{ color: on ? 'rgba(255,255,255,0.55)' : 'rgba(10,46,77,0.4)' }}
-                      >
-                        {opt.sub}
-                      </span>
-                    </button>
-                  )
-                })}
+            <>
+              <div className="mt-6">
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1 f-body"
+                  style={{ color: 'rgba(10,46,77,0.38)' }}
+                >
+                  How many days?
+                </p>
+                <p
+                  className="text-xs f-body mb-3"
+                  style={{ color: 'rgba(10,46,77,0.45)' }}
+                >
+                  Number of fishing days within your availability window.
+                </p>
+                <Stepper
+                  value={numDaysRequest}
+                  onChange={setNumDaysRequest}
+                  min={1}
+                  max={21}
+                  suffix={numDaysRequest === 1 ? 'day' : 'days'}
+                />
               </div>
 
-              {/* Days stepper — only for multi_day */}
-              {durationType === 'multi_day' && (
+              {/* ── 4. Anglers ──────────────────────────────────────────── */}
+              <div className="mt-6">
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+                  style={{ color: 'rgba(10,46,77,0.38)' }}
+                >
+                  Anglers
+                </p>
                 <Stepper
-                  value={numDays}
-                  onChange={setNumDays}
-                  min={2}
-                  max={21}
-                  suffix={numDays === 1 ? 'day' : 'days'}
+                  value={groupSize}
+                  onChange={setGroupSize}
+                  min={1}
+                  max={maxGuests}
+                  suffix={groupSize === 1 ? 'angler' : 'anglers'}
                 />
-              )}
-            </div>
+              </div>
+
+              {/* ── 5. Price estimate ────────────────────────────────────── */}
+              {(() => {
+                const subtotal = Math.round(pkgTotal(requestPkg, groupSize) * numDaysRequest * 100) / 100
+                const fee      = Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100
+                const total    = Math.round((subtotal + fee) * 100) / 100
+                const priceLbl = pkgPriceLabel(requestPkg)
+                return (
+                  <div
+                    className="mt-5 px-4 py-4 rounded-2xl"
+                    style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
+                        {pkgLabel(requestPkg)} ({priceLbl}) × {groupSize} {groupSize === 1 ? 'angler' : 'anglers'} × {numDaysRequest} {numDaysRequest === 1 ? 'day' : 'days'}
+                      </span>
+                      <span className="text-[11px] font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                        €{subtotal}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
+                        Service fee (5%)
+                      </span>
+                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
+                        €{fee}
+                      </span>
+                    </div>
+                    <div style={{ height: '1px', background: 'rgba(10,46,77,0.07)', marginBottom: '10px' }} />
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
+                         style={{ color: 'rgba(10,46,77,0.38)' }}>
+                        Estimate
+                      </p>
+                      <div className="text-right">
+                        <p className="font-bold f-display" style={{ fontSize: '28px', color: '#0A2E4D', lineHeight: 1 }}>
+                          €{total}
+                        </p>
+                        <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                          incl. fees · no payment now
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
+            </>
           )}
 
-          {/* Anglers */}
-          <div className="mt-6">
-            <p
-              className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
-              style={{ color: 'rgba(10,46,77,0.38)' }}
-            >
-              Anglers
-            </p>
-            <Stepper
-              value={groupSize}
-              onChange={setGroupSize}
-              min={1}
-              max={maxGuests}
-              suffix={groupSize === 1 ? 'angler' : 'anglers'}
-            />
-          </div>
-
-          {/* Price estimate */}
-          {hasWindow && (
-            <PriceEstimate
-              pricePerPerson={pricePerPerson}
-              groupSize={groupSize}
-              effectiveDays={requestEffectiveDays}
-            />
-          )}
-
-          {/* CTA */}
+          {/* ── CTA ──────────────────────────────────────────────────────── */}
           <button
             type="button"
             onClick={handleRequestContinue}
@@ -932,7 +987,7 @@ export default function BookingDateStep({
               'Pick your availability window to continue'
             ) : (
               <>
-                Continue — {durationLabel} · {groupSize} {groupSize === 1 ? 'angler' : 'anglers'}
+                Continue — {pkgLabel(requestPkg)} · {numDaysRequest} {numDaysRequest === 1 ? 'day' : 'days'} · {groupSize} {groupSize === 1 ? 'angler' : 'anglers'}
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M3 7h8M8 4l3 3-3 3" />
                 </svg>

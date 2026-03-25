@@ -29,6 +29,8 @@ type Props = {
   experienceId:        string
   guideId:             string | null
   prefilledDates:      string[]
+  /** Pre-filled date ranges from the trip page period picker (?periods= param). */
+  prefilledPeriods?:   Period[]
   prefilledGroup:      number
   anglerName:          string | null
   anglerEmail:         string | null
@@ -710,6 +712,7 @@ function TabHeading({ title, subtitle }: { title: string; subtitle?: string }) {
 export default function InquireForm({
   guideId,
   prefilledDates,
+  prefilledPeriods,
   prefilledGroup,
   anglerName,
   anglerEmail,
@@ -745,7 +748,9 @@ export default function InquireForm({
   const [numDays,          setNumDays]          = useState(3)
 
   // ── Multi-period date selection (replaces single from/to range)
+  // prefilledPeriods (from ?periods= param) takes priority over prefilledDates
   const [periods, setPeriods] = useState<Period[]>(() => {
+    if (prefilledPeriods && prefilledPeriods.length > 0) return prefilledPeriods
     const valid = prefilledDates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
     return valid.map(d => ({ from: d, to: d }))
   })

@@ -16,6 +16,14 @@ import Link from 'next/link'
 import type { DurationOptionPayload } from '@/actions/experiences'
 import type { Json } from '@/lib/supabase/database.types'
 import { DURATION_EVENT } from '@/components/trips/duration-cards-selector'
+import {
+  MultiPeriodPicker,
+  type Period,
+  fmtPeriod,
+  INQUIRY_PERIOD_EVENT,
+  type InquiryPeriodEventDetail,
+  encodePeriodsParam,
+} from '@/components/trips/multi-period-picker'
 
 // ─── Availability types ───────────────────────────────────────────────────────
 
@@ -399,14 +407,19 @@ export function BookingWidget({
   // ── Local state ───────────────────────────────────────────────────────────
   const [selectedOptIdx, setSelectedOptIdx] = useState(0)
   const [groupSize,      setGroupSize]      = useState(1)
-  /** Multi-select: sorted array of ISO date strings. */
+  /** Multi-select: sorted array of ISO date strings (classic/both modes). */
   const [selectedDates,  setSelectedDates]  = useState<string[]>([])
-  /** Whether the calendar dropdown is open. */
+  /** Whether the classic calendar dropdown is open. */
   const [calendarOpen,   setCalendarOpen]   = useState(false)
   /** Whether the duration option dropdown is open. */
   const [optionOpen,     setOptionOpen]     = useState(false)
-  const calendarRef = useRef<HTMLDivElement>(null)
-  const optionRef   = useRef<HTMLDivElement>(null)
+  /** Period picker state for icelandic mode. */
+  const [inquiryPeriods,      setInquiryPeriods]      = useState<Period[]>([])
+  /** Whether the icelandic period picker dropdown is open. */
+  const [inquiryCalendarOpen, setInquiryCalendarOpen] = useState(false)
+  const calendarRef        = useRef<HTMLDivElement>(null)
+  const optionRef          = useRef<HTMLDivElement>(null)
+  const inquiryCalendarRef = useRef<HTMLDivElement>(null)
 
   // ── 'both' mode — angler picks their preferred payment path ──────────────
   /** Only used when bookingType === 'both'. Defaults to classic (book & pay). */
@@ -467,6 +480,37 @@ export function BookingWidget({
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [optionOpen])
 
+  // Close icelandic period picker on outside click
+  useEffect(() => {
+    if (!inquiryCalendarOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (inquiryCalendarRef.current && !inquiryCalendarRef.current.contains(e.target as Node)) {
+        setInquiryCalendarOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [inquiryCalendarOpen])
+
+  // Sync inquiry periods with AvailabilityPreviewCalendar via custom event
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent<InquiryPeriodEventDetail>).detail
+      if (detail.source !== 'widget') setInquiryPeriods(detail.periods)
+    }
+    window.addEventListener(INQUIRY_PERIOD_EVENT, handler)
+    return () => window.removeEventListener(INQUIRY_PERIOD_EVENT, handler)
+  }, [])
+
+  function handleInquiryPeriodsChange(periods: Period[]) {
+    setInquiryPeriods(periods)
+    window.dispatchEvent(
+      new CustomEvent<InquiryPeriodEventDetail>(INQUIRY_PERIOD_EVENT, {
+        detail: { periods, source: 'widget' },
+      }),
+    )
+  }
+
   const bookedSet   = useMemo(() => new Set(bookedDates ?? []),  [bookedDates])
   const selectedSet = useMemo(() => new Set(selectedDates),       [selectedDates])
 
@@ -519,33 +563,161 @@ export function BookingWidget({
       }}
     >
 
-      {/* ── Inquiry-mode info banner (replaces date picker) ─────────────────── */}
-      {/* Shown for icelandic/both-request flows only.                        */}
-      {/* classic+calendarDisabled is handled by its own banner below.        */}
+      {/* ── Icelandic: period picker dropdown ─────────────────────────────────── */}
+      {/* calendarDisabled keeps the info banner; normal icelandic gets picker. */}
       {!isDraft && effectiveType === 'icelandic' && bookingType !== 'classic' && (
-        <div
-          className="mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
-          style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-          <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
-            {calendarDisabled ? (
-              <>
-                <span className="font-semibold" style={{ color: '#0A2E4D' }}>Booking by request only.</span>
-                {' '}This guide is currently taking bookings through personal inquiry — send a request and they&apos;ll confirm dates directly.
-              </>
-            ) : (
-              <>
-                <span className="font-semibold" style={{ color: '#0A2E4D' }}>Dates set in the inquiry form.</span>
-                {' '}This guide confirms availability personally before any payment.
-              </>
+        calendarDisabled ? (
+          /* Guide is inquiry-only — simple notice, no calendar */
+          <div
+            className="mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
+            style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              <span className="font-semibold" style={{ color: '#0A2E4D' }}>Booking by request only.</span>
+              {' '}This guide is currently taking bookings through personal inquiry — send a request and they&apos;ll confirm dates directly.
+            </p>
+          </div>
+        ) : (
+          /* Interactive period picker — same layout as classic date dropdown */
+          <div className="mb-5" ref={inquiryCalendarRef} style={{ position: 'relative' }}>
+
+            {/* Trigger row */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setInquiryCalendarOpen(o => !o)}
+                className="flex-1 flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all"
+                style={{
+                  background: '#F3EDE4',
+                  border: `1.5px solid ${inquiryCalendarOpen ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}`,
+                }}
+                aria-expanded={inquiryCalendarOpen}
+                aria-haspopup="dialog"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Calendar icon */}
+                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.45 }}>
+                    <rect x="1" y="2.5" width="13" height="11.5" rx="2" stroke="currentColor" strokeWidth="1.4" />
+                    <line x1="1" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.4" />
+                    <line x1="4.5" y1="1" x2="4.5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                    <line x1="10.5" y1="1" x2="10.5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+
+                  {inquiryPeriods.length === 0 ? (
+                    <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      Pick your travel period
+                    </span>
+                  ) : (
+                    <span className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                      {inquiryPeriods.length === 1
+                        ? fmtPeriod(inquiryPeriods[0])
+                        : `${inquiryPeriods.length} periods selected`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {inquiryPeriods.length > 0 && (
+                    <span
+                      onClick={e => { e.stopPropagation(); handleInquiryPeriodsChange([]) }}
+                      role="button"
+                      aria-label="Clear periods"
+                      className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
+                      style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}
+                    >
+                      Clear
+                    </span>
+                  )}
+                  <svg
+                    width="10" height="6" viewBox="0 0 10 6" fill="none"
+                    className="transition-transform"
+                    style={{
+                      transform: inquiryCalendarOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      color: 'rgba(10,46,77,0.35)',
+                    }}
+                  >
+                    <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </button>
+
+              {/* Scroll-to-CTA anchor */}
+              <a
+                href="#widget-cta"
+                className="flex-shrink-0 w-[50px] h-[50px] rounded-2xl flex items-center justify-center transition-all hover:brightness-110 active:scale-[0.95]"
+                style={{ background: '#0A2E4D' }}
+                title="Go to request button"
+              >
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6.5 2v9M2.5 7.5l4 4 4-4" />
+                </svg>
+              </a>
+            </div>
+
+            {/* Dropdown panel */}
+            {inquiryCalendarOpen && (
+              <div
+                className="absolute left-0 right-0 z-50 mt-2 p-4 rounded-2xl"
+                style={{
+                  background: '#F3EDE4',
+                  border: '1.5px solid rgba(10,46,77,0.12)',
+                  boxShadow: '0 16px 48px rgba(10,46,77,0.16)',
+                  top: '100%',
+                }}
+                role="dialog"
+                aria-label="Pick travel period"
+              >
+                <MultiPeriodPicker
+                  periods={inquiryPeriods}
+                  onChange={handleInquiryPeriodsChange}
+                  availabilityConfig={availabilityConfig ?? null}
+                  blockedDates={blockedDates ?? []}
+                />
+                <button
+                  type="button"
+                  onClick={() => setInquiryCalendarOpen(false)}
+                  className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-[0.14em] f-body transition-opacity hover:opacity-80"
+                  style={{ background: '#0A2E4D', color: '#fff' }}
+                >
+                  Done
+                </button>
+              </div>
             )}
-          </p>
-        </div>
+
+            {/* Selected period chips (shown when dropdown is closed) */}
+            {inquiryPeriods.length > 0 && !inquiryCalendarOpen && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {inquiryPeriods.map((p, idx) => (
+                  <span
+                    key={idx}
+                    className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(10,46,77,0.07)',
+                      color: '#0A2E4D',
+                      border: '1px solid rgba(10,46,77,0.12)',
+                    }}
+                  >
+                    {fmtPeriod(p)}
+                    <button
+                      type="button"
+                      onClick={() => handleInquiryPeriodsChange(inquiryPeriods.filter((_, i) => i !== idx))}
+                      aria-label={`Remove ${fmtPeriod(p)}`}
+                      className="opacity-50 hover:opacity-100 transition-opacity"
+                      style={{ lineHeight: 1, fontSize: '14px' }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       {/* ── Classic+disabled banner — calendar is off, dates on the booking page */}
@@ -701,8 +873,11 @@ export function BookingWidget({
         </div>
       )}
 
-      {/* ── Divider (only when date picker is shown) ───────────────────────── */}
-      {!isDraft && effectiveType === 'classic' && (
+      {/* ── Divider (date picker shown for classic, or icelandic without calendarDisabled) */}
+      {!isDraft && (
+        effectiveType === 'classic' ||
+        (effectiveType === 'icelandic' && bookingType !== 'classic' && !calendarDisabled)
+      ) && (
         <div className="mb-5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
       )}
 
@@ -1091,11 +1266,19 @@ export function BookingWidget({
         /* ── Icelandic / both-request / calendarDisabled-non-classic ─────── */
         <>
           <Link
-            href={`/trips/${expId}/inquire${selectedDates.length > 0 ? `?dates=${selectedDates.join(',')}&group=${groupSize}` : ''}`}
+            href={`/trips/${expId}/inquire${
+              inquiryPeriods.length > 0
+                ? `?periods=${encodePeriodsParam(inquiryPeriods)}&group=${groupSize}`
+                : `?group=${groupSize}`
+            }`}
             className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
             style={{ background: '#0A2E4D' }}
           >
-            Request this trip →
+            {inquiryPeriods.length > 0
+              ? inquiryPeriods.length === 1
+                ? `Request trip — ${fmtPeriod(inquiryPeriods[0])} →`
+                : `Request trip — ${inquiryPeriods.length} periods →`
+              : 'Request this trip →'}
           </Link>
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
             Guide reviews your request and sets up a custom offer — no payment until confirmed.

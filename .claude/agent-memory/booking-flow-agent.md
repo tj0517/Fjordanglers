@@ -1,7 +1,7 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 35 — Full-screen overlay dla form/review faz respond form (DONE). typecheck ✅ 0 errors.
+Sesja 39 — Desktop UX: respond form jako full-page popup widget (DONE). typecheck ✅ 0 errors.
 
 ---
 
@@ -351,3 +351,24 @@ Fazy po submit:
 **Sesja 33b**: Decline panel — "Propose alternative dates" toggle + auto-message in chat; angler sees guide's message prominently with "Book new dates →" CTA
 **Sesja 34**: Full-screen respond page z kalendarzem; split na RespondCalendar.tsx + BookingRespondForm.tsx (fix SWC OOM)
 **Sesja 35**: Full-screen overlay — klik Accept/Decline otwiera modal overlay (`fixed inset-0 z-50`); action cards zostają inline; multi-day **toggle** calendar (`calMode='multi'`, `confirmedDays: string[]`, live price recalc, DB pricing update w `acceptBooking()`)
+**Sesja 39**: Desktop UX — respond form jako full-page popup widget:
+- Usunięto embeddowany `BookingRespondForm mode="inline"` z `dashboard/bookings/[id]/page.tsx`
+- Nowy `RespondBookingWidget.tsx` — compact trigger card (orange banner + summary row) + `fixed inset-0 z-50` overlay (1040px modal, blur backdrop, ✕ button)
+- Inside overlay: `BookingRespondForm mode="page"` — wszystkie 3 fazy renderują się inline w overlaycie (bez double overlay)
+- `BookingRespondForm` — nowy prop `onClose?: () => void`: action phase nie pokazuje "Back to booking" gdy `onClose` defined; review phase "Changed your mind?" → `goBack()` zamiast Link
+- Efekt: czat (prawa kolumna) jest w pełni widoczny bo lewa kolumna nie ma już gigantycznego formularza; form ma pełną szerokość 1040px
+- typecheck ✅ 0 errors
+
+**Sesja 40**: Icelandic trip type — calendar widget parity + period picker:
+- `AvailabilityPreviewCalendar` — dla `bookingType === 'icelandic'` renderuje interaktywny `MultiPeriodPicker` zamiast read-only siatki; CTA "Request trip →" z `?periods=...` w URL; heading "Pick your travel period"
+- `BookingWidget` — dla `effectiveType === 'icelandic'` (bez `calendarDisabled`): dropdown period picker na górze (identyczny layout jak classic calendar dropdown ale z `MultiPeriodPicker`); period chips pod triggerem; CTA "Request trip — 1 Apr – 5 Apr →" z `?periods=...` w URL
+- Sync: `INQUIRY_PERIOD_EVENT` ('fa:inquiry-periods') — custom event synchronizuje oba pickers (source: 'preview' | 'widget')
+- `multi-period-picker.tsx` — nowe eksporty: `INQUIRY_PERIOD_EVENT`, `InquiryPeriodEventDetail`, `encodePeriodsParam`, `decodePeriodsParam`
+- `trips/[id]/page.tsx` — dodano `exp.booking_type === 'icelandic'` do warunku sekcji kalendarza (zawsze pokazuje dla icelandic)
+- `trips/[id]/inquire/page.tsx` — parsuje `?periods=` param via `decodePeriodsParam`, przekazuje do `InquireForm`
+- `InquireForm` — nowy prop `prefilledPeriods?: Period[]` (priorytet nad `prefilledDates` dla initialState)
+- typecheck ✅ 0 errors
+
+**Sesja 38**: Request booking UX guide-side — `RespondCalendar` + `BookingRespondForm` rozpoznają "request" vs "direct" booking:
+- `RespondCalendar` — nowe props `anglerWindowTo?` + `anglerNumDays?`; gdy window: ciągły niebieski zakres (gradient tails) zamiast 2 kropek; baner "Available: Jun 10–20 · wants 3 days" nad miesiącem; `isInAnglerAvailability()` + `getAnglerWindowOuterBg()` helpers; legenda: "Availability window" vs "Angler's dates"
+- `BookingRespondForm` — `deriveWindowTo()` (z `requested_dates[1]`) + `deriveNumDays()` (regex `\d+ days?` z `duration_option`); `isRequestBooking` flag; action phase: chip z oknem dostępności; form phase: label "Select exact days from window"; booking summary card: niebieski blok z oknem zamiast chip dates; review phase: "Window Jun 10 – Jun 20 · 3 days"; wszystkie 3 instancje RespondCalendar dostają nowe propsy

@@ -35,6 +35,38 @@ type DayState =
   | 'pending_start'   // first click in range mode (waiting for end)
   | 'pending_range'   // hover preview inside a pending range
 
+// ─── Shared event for syncing period pickers across components ─────────────────
+
+/** Fired by both AvailabilityPreviewCalendar and BookingWidget when periods change. */
+export const INQUIRY_PERIOD_EVENT = 'fa:inquiry-periods'
+
+export type InquiryPeriodEventDetail = {
+  periods: Period[]
+  /** 'preview' = main content calendar, 'widget' = right panel BookingWidget */
+  source: 'preview' | 'widget'
+}
+
+/** Encode periods array to URL param: "2026-04-01..2026-04-05,2026-04-08" */
+export function encodePeriodsParam(periods: Period[]): string {
+  return periods
+    .map(p => (p.from === p.to ? p.from : `${p.from}..${p.to}`))
+    .join(',')
+}
+
+/** Decode URL param back to periods array. */
+export function decodePeriodsParam(str: string): Period[] {
+  return str
+    .split(',')
+    .filter(Boolean)
+    .map(s => {
+      const parts = s.split('..')
+      const from  = parts[0]?.trim() ?? ''
+      const to    = parts[1]?.trim() ?? from
+      return { from, to }
+    })
+    .filter(p => /^\d{4}-\d{2}-\d{2}$/.test(p.from) && /^\d{4}-\d{2}-\d{2}$/.test(p.to))
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 export function periodTotalDays(periods: Period[]): number {
