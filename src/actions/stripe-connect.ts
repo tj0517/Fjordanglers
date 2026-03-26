@@ -1,16 +1,16 @@
 'use server'
 
 /**
- * Stripe Connect Custom account onboarding.
+ * Stripe Connect onboarding actions.
  *
- * Flow:
- *  1. Guide fills in personal info + IBAN on /dashboard/account
- *  2. createStripeCustomAccount() creates a Custom Stripe account + attaches the bank account
- *  3. stripe_account_id is saved to guides table (status: pending verification)
- *  4. Stripe verifies asynchronously → account.updated webhook fires
- *  5. Webhook sets stripe_payouts_enabled = true when ready
+ * startStripeOnboarding — Express account flow (current):
+ *  1. Guide clicks "Connect with Stripe" on /dashboard/account
+ *  2. We create an Express account pre-filled with known data (email, name, country)
+ *  3. Guide is redirected to Stripe's hosted onboarding form
+ *  4. After completing, guide returns to /dashboard/account?stripe_done=1
+ *  5. Stripe fires account.updated webhook → syncs payouts_enabled to DB
  *
- * The guide never leaves FjordAnglers — no Stripe-hosted pages.
+ * setupPayoutAccount — Custom account flow (legacy, kept for existing guides).
  *
  * SERVER-ONLY.
  */
@@ -18,6 +18,7 @@
 import { z } from 'zod'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
+import { env } from '@/lib/env'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 
@@ -202,4 +203,103 @@ export async function setupPayoutAccount(data: SetupPayoutInput): Promise<Action
   }
 
   return { success: true }
+}
+
+// ─── Express onboarding (current) ──────────────────────────────────────────────
+
+/**
+ * Creates (or resumes) a Stripe Express account for the authenticated guide,
+ * pre-filled with their known data, and returns a one-time hosted onboarding URL.
+ *
+ * Called from the client — result URL is used for window.location.href redirect.
+ * The link expires after ~10 minutes; use refresh_url to regenerate.
+ */
+export async function startStripeOnboarding(): Promise<
+  { url: string } | { error: string }
+> {
+  // 1. Auth check
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+  if (!user.email) return { error: 'Email required for payout setup' }
+
+  // 2. Fetch guide
+  const service = createServiceClient()
+  const { data: guide } = await service
+    .from('guides')
+    .select('id, stripe_account_id, full_name, country')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!guide) return { error: 'Guide profile not found' }
+
+  let accountId = guide.stripe_account_id
+
+  // 3. Create Express account if none exists (pre-fill with known data)
+  if (!accountId) {
+    const nameParts = guide.full_name.trim().split(/\s+/)
+    const firstName = nameParts[0] ?? ''
+    const lastName  = nameParts.slice(1).join(' ') || undefined
+
+    try {
+      const account = await stripe.accounts.create({
+        type:          'express',
+        email:         user.email,
+        country:       guide.country ?? 'NO',
+        capabilities:  {
+          card_payments: { requested: true },
+          transfers:     { requested: true },
+        },
+        business_type: 'individual',
+        individual: {
+          email:      user.email,
+          ...(firstName && { first_name: firstName }),
+          ...(lastName  && { last_name:  lastName  }),
+        },
+        settings: {
+          payouts: {
+            schedule:               { interval: 'weekly', weekly_anchor: 'monday' },
+            debit_negative_balances: true,
+          },
+        },
+      })
+      accountId = account.id
+
+      const { error: dbErr } = await service
+        .from('guides')
+        .update({ stripe_account_id: accountId })
+        .eq('id', guide.id)
+
+      if (dbErr) {
+        // Account created but DB save failed — clean up to stay consistent
+        await stripe.accounts.del(accountId).catch(() => {})
+        console.error('[stripe-connect] DB update error after Express account create:', dbErr)
+        return { error: 'Failed to save account — please try again' }
+      }
+    } catch (err) {
+      const msg = err instanceof Stripe.errors.StripeError
+        ? err.message
+        : 'Failed to create Stripe account — please try again'
+      console.error('[stripe-connect] Express accounts.create error:', err)
+      return { error: msg }
+    }
+  }
+
+  // 4. Generate a one-time account link (expires ~10 min)
+  const baseUrl = env.NEXT_PUBLIC_APP_URL
+  try {
+    const link = await stripe.accountLinks.create({
+      account:     accountId,
+      return_url:  `${baseUrl}/dashboard/account?stripe_done=1`,
+      refresh_url: `${baseUrl}/dashboard/account?stripe_refresh=1`,
+      type:        'account_onboarding',
+    })
+    return { url: link.url }
+  } catch (err) {
+    const msg = err instanceof Stripe.errors.StripeError
+      ? err.message
+      : 'Failed to generate onboarding link — please try again'
+    console.error('[stripe-connect] accountLinks.create error:', err)
+    return { error: msg }
+  }
 }

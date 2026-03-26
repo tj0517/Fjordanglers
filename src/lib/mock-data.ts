@@ -82,6 +82,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     boat_engine: 'Yamaha 150HP',
     boat_capacity: 4,
     default_balance_payment_method: 'cash',
+    accepted_payment_methods: ['cash', 'online'],
     // ──────────────────────────────────────────────────────────────────────────
     created_at: '2023-01-15T00:00:00Z',
     updated_at: '2023-01-15T00:00:00Z',
@@ -132,6 +133,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     boat_engine: null,
     boat_capacity: null,
     default_balance_payment_method: 'cash',
+    accepted_payment_methods: ['cash', 'online'],
     created_at: '2023-03-20T00:00:00Z',
     updated_at: '2023-03-20T00:00:00Z',
     experience_count: 3,
@@ -181,6 +183,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     boat_engine: 'Mercury 90HP',
     boat_capacity: 4,
     default_balance_payment_method: 'cash',
+    accepted_payment_methods: ['cash', 'online'],
     created_at: '2023-06-10T00:00:00Z',
     updated_at: '2023-06-10T00:00:00Z',
     experience_count: 2,

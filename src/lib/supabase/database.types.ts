@@ -738,6 +738,7 @@ export type Database = {
       }
       guides: {
         Row: {
+          accepted_payment_methods: string[] | null
           avatar_url: string | null
           average_rating: number | null
           bio: string | null
@@ -786,6 +787,7 @@ export type Database = {
           youtube_url: string | null
         }
         Insert: {
+          accepted_payment_methods?: string[] | null
           avatar_url?: string | null
           average_rating?: number | null
           bio?: string | null
@@ -834,6 +836,7 @@ export type Database = {
           youtube_url?: string | null
         }
         Update: {
+          accepted_payment_methods?: string[] | null
           avatar_url?: string | null
           average_rating?: number | null
           bio?: string | null

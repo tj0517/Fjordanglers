@@ -42,6 +42,9 @@ export type BoatType = 'center_console' | 'cabin' | 'rib' | 'drift_boat' | 'kaya
 /** Difficulty level for an experience */
 export type Difficulty = 'beginner' | 'intermediate' | 'expert'
 
+/** Matches CHECK constraint on guides.accepted_payment_methods items */
+export type PaymentMethod = 'cash' | 'online'
+
 /** A named fishing spot for multi-spot experiences */
 export type LocationSpot = { lat: number; lng: number; name: string }
 

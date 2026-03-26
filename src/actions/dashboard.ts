@@ -9,7 +9,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
-import type { CancellationPolicy, BoatType } from '@/types'
+import type { CancellationPolicy, BoatType, PaymentMethod } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,17 +56,22 @@ export type UpdateGuideProfileData = {
   boat_engine?: string | null
   boat_capacity?: number | null
   landscape_url?: string | null
+  accepted_payment_methods?: PaymentMethod[] | null
 }
 
 // ── Validation schema for new constrained fields ──────────────────────────────
 
 const updateGuideProfileSchema = z.object({
-  tagline:             z.string().max(120).nullish(),
-  cancellation_policy: z.enum(['flexible', 'moderate', 'strict']).optional(),
-  google_profile_url:  z.string().url('Google URL must start with https://').nullish(),
-  google_rating:       z.number().min(1).max(5).nullish(),
-  google_review_count: z.number().int().min(0).nullish(),
-  boat_capacity:       z.number().int().min(1).max(12).nullish(),
+  tagline:                   z.string().max(120).nullish(),
+  cancellation_policy:       z.enum(['flexible', 'moderate', 'strict']).optional(),
+  google_profile_url:        z.string().url('Google URL must start with https://').nullish(),
+  google_rating:             z.number().min(1).max(5).nullish(),
+  google_review_count:       z.number().int().min(0).nullish(),
+  boat_capacity:             z.number().int().min(1).max(12).nullish(),
+  accepted_payment_methods:  z
+    .array(z.enum(['cash', 'online']))
+    .min(1, 'Select at least one payment method.')
+    .nullish(),
 })
 
 // ─── Create guide profile ─────────────────────────────────────────────────────
@@ -149,12 +154,13 @@ export async function updateGuideProfile(
 
     // Validate constrained new fields
     const validation = updateGuideProfileSchema.safeParse({
-      tagline:             data.tagline,
-      cancellation_policy: data.cancellation_policy,
-      google_profile_url:  data.google_profile_url,
-      google_rating:       data.google_rating,
-      google_review_count: data.google_review_count,
-      boat_capacity:       data.boat_capacity,
+      tagline:                  data.tagline,
+      cancellation_policy:      data.cancellation_policy,
+      google_profile_url:       data.google_profile_url,
+      google_rating:            data.google_rating,
+      google_review_count:      data.google_review_count,
+      boat_capacity:            data.boat_capacity,
+      accepted_payment_methods: data.accepted_payment_methods,
     })
     if (!validation.success) {
       return { success: false, error: validation.error.issues[0].message }
@@ -187,8 +193,9 @@ export async function updateGuideProfile(
     if (data.boat_type !== undefined)         update.boat_type          = data.boat_type
     if (data.boat_length_m !== undefined)     update.boat_length_m      = data.boat_length_m
     if (data.boat_engine !== undefined)       update.boat_engine        = data.boat_engine?.trim() || null
-    if (data.boat_capacity !== undefined)     update.boat_capacity      = data.boat_capacity
-    if (data.landscape_url !== undefined)     update.landscape_url      = data.landscape_url
+    if (data.boat_capacity !== undefined)            update.boat_capacity             = data.boat_capacity
+    if (data.landscape_url !== undefined)            update.landscape_url             = data.landscape_url
+    if (data.accepted_payment_methods !== undefined) update.accepted_payment_methods  = data.accepted_payment_methods
 
     const { error } = await supabase
       .from('guides')

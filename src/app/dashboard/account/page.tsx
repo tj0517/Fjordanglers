@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PasswordResetButton } from './AccountActions'
-import { BankAccountForm } from './BankAccountForm'
+import { StripeConnectButton } from './StripeConnectButton'
 import { BalanceMethodForm } from './BalanceMethodForm'
 
 export const revalidate = 0
@@ -10,7 +10,15 @@ export const metadata = { title: 'Account — FjordAnglers Dashboard' }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ stripe_done?: string; stripe_refresh?: string }>
+}) {
+  const params        = await searchParams
+  const stripeDone    = params.stripe_done    === '1'
+  const stripeRefresh = params.stripe_refresh === '1'
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user == null) redirect('/login')
