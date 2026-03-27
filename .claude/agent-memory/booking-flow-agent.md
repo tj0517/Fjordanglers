@@ -1,7 +1,7 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 43 — Multi-day kalendarze booking flow (DONE). typecheck ✅ 0 errors.
+Sesja 44 — Multi-day range picker w booking-widget.tsx (DONE). typecheck ✅ 0 errors.
 
 ---
 
@@ -360,6 +360,35 @@ Fazy po submit:
 - Inside overlay: `BookingRespondForm mode="page"` — wszystkie 3 fazy renderują się inline w overlaycie (bez double overlay)
 - `BookingRespondForm` — nowy prop `onClose?: () => void`: action phase nie pokazuje "Back to booking" gdy `onClose` defined; review phase "Changed your mind?" → `goBack()` zamiast Link
 - Efekt: czat (prawa kolumna) jest w pełni widoczny bo lewa kolumna nie ma już gigantycznego formularza; form ma pełną szerokość 1040px
+- typecheck ✅ 0 errors
+
+**Sesja 44**: Multi-day range picker w `booking-widget.tsx` (trip page sidebar):
+- `addDays(isoDate, n)` helper dodany lokalnie (identyczny jak w BookingDateStep)
+- `CalendarProps` rozszerzony: `numDays?`, `hoverDate?`, `onHoverChange?`
+- `AvailabilityCalendar` — `isRangeCal = nDays > 1`:
+  - Range variables: `rangeStart/rangeEnd` (committed), `hoverStart/hoverEnd` (hover preview)
+  - Container div dostaje orange band background (gradient na endpoints, solid w środku)
+  - Hover preview: lighter rgba(230,126,80,0.10) band gdy no committed range
+  - `onMouseEnter` na buttonach → `onHoverChange(iso)` (tylko dla clickable)
+  - `onMouseLeave` na grid div → `onHoverChange(null)`
+  - Hint banner "Click a start date — N consecutive days will be selected"
+  - Legend: warunkowy — "Selected range" (band ikon) / "Available" / "Booked" dla range mode; oryginalne dla multi-select
+- `BookingWidget`:
+  - `hoverDate` state (nowy)
+  - `pkgDays = selectedOpt.days ?? 1`, `isRangeMode = pkgDays > 1`
+  - `handleToggleDate` — dla range mode: toggle single start date (click same → deselect)
+  - `selectOption` — `setSelectedDates([])` + `setHoverDate(null)` przy zmianie pakietu
+  - Outside-click handler → `setHoverDate(null)` przy zamknięciu kalendarza
+  - Done button → `setHoverDate(null)`
+  - `tripCount = isRangeMode ? 1 : ...` (pakiet N-day = 1 trip, nie N trips)
+  - `rangeHasBlockedDay` useMemo — sprawdza bookedSet + blockedDates overlapping
+  - `rangeEndISO`, `rangeStartFmt`, `rangeEndFmt`, `rangeDateLabel` — computed przed return()
+  - Trigger tekst: `"Pick a start date for your N-day trip"` (placeholder); `"5 Jun – 7 Jun (3 days)"` (selected)
+  - Chips: single range chip z kolorem czerwonym gdy `rangeHasBlockedDay`; warning tekst pod datami
+  - CTA — nowe przypadki:
+    - `rangeHasBlockedDay` → disabled "Range includes unavailable date"
+    - `isRangeMode && !blocked` → Link z `?windowFrom=X&windowTo=Y&numDays=N&pkgLabel=...` → idzie do Step 2
+    - `!isRangeMode` → oryginalne `?prefill=...` (bez zmian)
 - typecheck ✅ 0 errors
 
 **Sesja 43**: Multi-day calendar fix w `BookingDateStep.tsx`:
