@@ -23,6 +23,7 @@ import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-im
 import { ImageCropModal } from '@/components/ui/image-crop'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { createClient } from '@/lib/supabase/client'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import {
@@ -969,7 +970,8 @@ export default function ExperienceForm({
   // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <>
-    <form onSubmit={handleSubmit} className="max-w-[760px]">
+    <form onSubmit={handleSubmit} className="relative max-w-[760px]">
+      {isPending && <LoadingOverlay rounded="rounded-none" />}
 
       {/* Error banner */}
       {error != null && (

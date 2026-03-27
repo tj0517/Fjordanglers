@@ -9,6 +9,7 @@
 import { useState, useTransition } from 'react'
 import { updateBalancePaymentMethod } from '@/actions/bookings'
 import { HelpWidget } from '@/components/ui/help-widget'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 interface Props {
   current: 'stripe' | 'cash'
@@ -55,7 +56,8 @@ export function BalanceMethodForm({ current }: Props) {
   } as const
 
   return (
-    <div className="px-6 py-4 flex flex-col gap-4">
+    <div className="relative px-6 py-4 flex flex-col gap-4">
+      {isPending && <LoadingOverlay />}
 
       {/* Help */}
       <div className="flex items-center gap-2">

@@ -6,6 +6,7 @@ import { setupPayoutAccount } from '@/actions/stripe-connect'
 import type { SetupPayoutInput } from '@/actions/stripe-connect'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 // ─── Country list (Stripe-supported EEA + UK countries relevant for fishing guides) ─
 
@@ -153,7 +154,8 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
   const currentYear = new Date().getFullYear()
 
   return (
-    <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="relative px-6 py-5 flex flex-col gap-6">
+      {isPending && <LoadingOverlay />}
 
       {/* ── Personal information ──────────────────────────────────────────── */}
       <section>

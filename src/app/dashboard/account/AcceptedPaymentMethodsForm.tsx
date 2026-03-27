@@ -10,6 +10,7 @@
 import { useState, useTransition } from 'react'
 import { updateAcceptedPaymentMethods } from '@/actions/bookings'
 import { HelpWidget } from '@/components/ui/help-widget'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 type Method = 'cash' | 'online'
 
@@ -93,7 +94,8 @@ export function AcceptedPaymentMethodsForm({ current }: Props) {
   } as const
 
   return (
-    <div className="px-6 py-4 flex flex-col gap-4">
+    <div className="relative px-6 py-4 flex flex-col gap-4">
+      {isPending && <LoadingOverlay />}
 
       {/* Help */}
       <div className="flex items-center gap-2">

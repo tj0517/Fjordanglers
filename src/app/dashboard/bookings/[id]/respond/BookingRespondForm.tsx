@@ -7,6 +7,7 @@ import { acceptBooking, declineBooking } from '@/actions/bookings'
 import RespondCalendar, { fmtDate, fmtShort } from './RespondCalendar'
 import type { WeeklySchedule, BlockedRange } from './RespondCalendar'
 import { HelpWidget } from '@/components/ui/help-widget'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -561,7 +562,8 @@ export default function BookingRespondForm({
   const isAccept = action === 'accept'
 
   const reviewContent = (
-    <div className="px-6 py-6 sm:px-8 sm:py-8">
+    <div className="relative px-6 py-6 sm:px-8 sm:py-8">
+      {isPending && <LoadingOverlay rounded="rounded-[28px]" />}
       <div className="flex items-center gap-3 mb-5">
         <BackBtn onClick={goBack} />
         <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Back to edit</span>
@@ -785,6 +787,7 @@ function FullScreenOverlay({ children, onClose }: {
             borderRadius: '28px',
             boxShadow: '0 32px 96px rgba(10,46,77,0.25)',
             height: 'fit-content',
+            overflow: 'hidden',
           }}
           onClick={e => e.stopPropagation()}
         >

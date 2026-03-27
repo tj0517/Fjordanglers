@@ -15,6 +15,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { sendOfferByGuide } from '@/actions/inquiries'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import {
   type PriceTier,
   findApplicableTierPrice,
@@ -634,7 +635,8 @@ export default function GuideOfferForm({
   // ── Form ────────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+    <form onSubmit={handleSubmit} className="relative flex flex-col gap-5">
+      {isPending && <LoadingOverlay rounded="rounded-none" />}
 
       {/* ── 1. Angler's dates (read-only summary) ───────────────── */}
       <div>

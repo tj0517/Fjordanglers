@@ -28,6 +28,7 @@ import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import type { CancellationPolicy, BoatType } from '@/types'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -296,7 +297,8 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-[760px]">
+    <form onSubmit={handleSubmit} className="relative max-w-[760px]">
+      {isPending && <LoadingOverlay rounded="rounded-none" />}
 
       {/* Error banner */}
       {error != null && (

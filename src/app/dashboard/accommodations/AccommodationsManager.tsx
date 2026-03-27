@@ -11,6 +11,7 @@ import {
 import type { GuideAccommodationRow } from './page'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -135,9 +136,10 @@ function AccForm({
 
   return (
     <div
-      className="p-5 rounded-2xl flex flex-col gap-4"
+      className="relative p-5 rounded-2xl flex flex-col gap-4"
       style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}
     >
+      {isPending && <LoadingOverlay />}
       {/* Name + Type row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>

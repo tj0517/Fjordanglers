@@ -11,6 +11,7 @@
 
 import { useTransition, useState } from 'react'
 import { acceptBooking, declineBooking } from '@/actions/bookings'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -242,7 +243,8 @@ export default function BookingActions({ bookingId, windowFrom, durationOption }
     })()
 
     return (
-      <div className="flex flex-col gap-4">
+      <div className="relative flex flex-col gap-4">
+        {isPending && <LoadingOverlay rounded="rounded-none" />}
         <BackButton onClick={() => { setPanel('idle'); resetError() }} label="Confirm & Accept" />
 
         {/* ── Confirmed date ──────────────────────────────────────────────── */}
@@ -309,7 +311,8 @@ export default function BookingActions({ bookingId, windowFrom, durationOption }
   // ── Declining: reason + optional alternative dates ───────────────────────────
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="relative flex flex-col gap-4">
+      {isPending && <LoadingOverlay rounded="rounded-none" />}
       <BackButton onClick={() => { setPanel('idle'); resetError() }} label="Decline this booking" />
 
       {/* ── Reason ─────────────────────────────────────────────────────────── */}
