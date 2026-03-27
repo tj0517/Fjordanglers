@@ -31,7 +31,7 @@ export default async function DashboardHomePage() {
   // Full guide row — all fields needed for completion checks
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, country, bio, avatar_url, fish_expertise, stripe_account_id, stripe_payouts_enabled, status')
+    .select('id, full_name, country, bio, avatar_url, fish_expertise, stripe_account_id, stripe_payouts_enabled, status, slug')
     .eq('user_id', user.id)
     .single()
 
@@ -276,27 +276,136 @@ export default async function DashboardHomePage() {
         </div>
       )}
 
-      {/* All done — celebration banner */}
+      {/* All done — shortcuts panel */}
       {allDone && (
-        <div
-          className="rounded-2xl px-6 py-5 mb-8 flex items-center gap-4"
-          style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
-        >
+        <div className="mb-8">
+          {/* Ready banner */}
           <div
-            className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{ background: 'rgba(74,222,128,0.15)' }}
+            className="rounded-t-2xl px-6 py-4 flex items-center gap-3"
+            style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderBottom: 'none' }}
           >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round">
-              <polyline points="3,9 7,13 15,5" />
-            </svg>
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(74,222,128,0.15)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round">
+                <polyline points="2,6.5 5.5,10 11,3" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-bold f-body" style={{ color: '#16A34A' }}>
+                Profile complete — you&apos;re live!
+              </p>
+              <p className="text-xs f-body" style={{ color: 'rgba(22,163,74,0.7)' }}>
+                Anglers across Europe can discover and book your trips.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-bold f-body" style={{ color: '#16A34A' }}>
-              Your profile is complete!
-            </p>
-            <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(22,163,74,0.75)' }}>
-              All set — you&apos;re ready to accept bookings from anglers across Europe.
-            </p>
+
+          {/* Shortcuts grid */}
+          <div
+            className="rounded-b-2xl p-5 grid grid-cols-2 sm:grid-cols-3 gap-3"
+            style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', borderTop: 'none' }}
+          >
+            {[
+              {
+                label: 'My public profile',
+                sub:   'See how anglers find you',
+                href:  guide.slug ? `/guides/${guide.slug}` : '/dashboard/profile',
+                icon:  (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="8" cy="5.5" r="2.5" />
+                    <path d="M2.5 13.5c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" />
+                  </svg>
+                ),
+                primary: true,
+              },
+              {
+                label: '+ New trip listing',
+                sub:   'Add a new fishing trip',
+                href:  '/dashboard/trips/new',
+                icon:  (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <circle cx="8" cy="8" r="6.5" />
+                    <line x1="8" y1="5" x2="8" y2="11" />
+                    <line x1="5" y1="8" x2="11" y2="8" />
+                  </svg>
+                ),
+                primary: false,
+              },
+              {
+                label: 'Manage calendar',
+                sub:   'Set availability & blocks',
+                href:  '/dashboard/calendar',
+                icon:  (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <rect x="1.5" y="3" width="13" height="10.5" rx="1.5" />
+                    <line x1="1.5" y1="6.5" x2="14.5" y2="6.5" />
+                    <line x1="5" y1="1.5" x2="5" y2="4.5" />
+                    <line x1="11" y1="1.5" x2="11" y2="4.5" />
+                  </svg>
+                ),
+                primary: false,
+              },
+              {
+                label: 'Bookings',
+                sub:   `${pendingCount} pending`,
+                href:  '/dashboard/bookings',
+                icon:  (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <rect x="1.5" y="2" width="13" height="12" rx="1.5" />
+                    <line x1="5" y1="6"   x2="11" y2="6"   />
+                    <line x1="5" y1="8.5" x2="11" y2="8.5" />
+                    <line x1="5" y1="11"  x2="8.5" y2="11" />
+                  </svg>
+                ),
+                primary: false,
+              },
+              {
+                label: 'Requests',
+                sub:   `${requestCount} open`,
+                href:  '/dashboard/inquiries',
+                icon:  (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M1.5 2.5h13a1 1 0 011 1v8a1 1 0 01-1 1H4.5l-3.5 3V3.5a1 1 0 011-1z" />
+                  </svg>
+                ),
+                primary: false,
+              },
+              {
+                label: 'Edit profile',
+                sub:   'Update info & photos',
+                href:  '/dashboard/profile/edit',
+                icon:  (
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M11 2.5l2.5 2.5-8 8H3v-2.5l8-8z" />
+                  </svg>
+                ),
+                primary: false,
+              },
+            ].map(sc => (
+              <Link
+                key={sc.label}
+                href={sc.href}
+                className="flex items-start gap-3 px-4 py-3.5 rounded-xl transition-all hover:scale-[1.01]"
+                style={sc.primary ? {
+                  background: '#0A2E4D',
+                  color:      '#fff',
+                } : {
+                  background: 'rgba(10,46,77,0.04)',
+                  color:      '#0A2E4D',
+                  border:     '1px solid rgba(10,46,77,0.08)',
+                }}
+              >
+                <span className="mt-0.5 flex-shrink-0" style={{ opacity: sc.primary ? 0.75 : 0.55 }}>
+                  {sc.icon}
+                </span>
+                <div>
+                  <p className="text-sm font-semibold f-body leading-tight">{sc.label}</p>
+                  <p className="text-[11px] f-body mt-0.5" style={{ opacity: sc.primary ? 0.55 : 0.45 }}>{sc.sub}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       )}

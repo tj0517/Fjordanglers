@@ -1,8 +1,11 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { env } from '@/lib/env'
+import { stripe } from '@/lib/stripe/client'
 import { PasswordResetButton } from './AccountActions'
 import { StripeConnectButton } from './StripeConnectButton'
 import { AcceptedPaymentMethodsForm } from './AcceptedPaymentMethodsForm'
+import { MarketingConsentToggle } from './MarketingConsentToggle'
 
 export const revalidate = 0
 
@@ -25,11 +28,55 @@ export default async function AccountPage({
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods')
+    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, created_at')
     .eq('user_id', user.id)
     .single()
 
   if (guide == null) redirect('/dashboard')
+
+  // ── Commission rate — Founding Guide gets 8% for first 24 months ──────────
+  const FOUNDING_RATE    = 0.08
+  const STANDARD_RATE    = env.PLATFORM_COMMISSION_RATE
+  const monthsSinceJoin  = (Date.now() - new Date(guide.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  const isFoundingGuide  = monthsSinceJoin <= 24
+  const commissionRate   = guide.pricing_model === 'commission'
+    ? (isFoundingGuide ? FOUNDING_RATE : STANDARD_RATE)
+    : null
+
+  const commissionLabel  = commissionRate != null
+    ? `${Math.round(commissionRate * 100)}% per confirmed booking${isFoundingGuide ? ' (Founding Guide rate)' : ''}`
+    : '—'
+
+  // ── Stripe account settings (payout schedule + currency) ─────────────────
+  let payoutScheduleLabel = '—'
+  let payoutCurrencyLabel = 'EUR (€)'
+
+  if (guide.stripe_account_id) {
+    try {
+      const stripeAccount = await stripe.accounts.retrieve(guide.stripe_account_id)
+      const schedule = stripeAccount.settings?.payouts?.schedule
+      const currency = stripeAccount.default_currency?.toUpperCase() ?? 'EUR'
+
+      payoutCurrencyLabel = currency === 'EUR' ? 'EUR (€)'
+        : currency === 'GBP' ? 'GBP (£)'
+        : currency === 'SEK' ? 'SEK (kr)'
+        : currency === 'NOK' ? 'NOK (kr)'
+        : currency
+
+      if (schedule?.interval === 'weekly' && schedule.weekly_anchor) {
+        const day = schedule.weekly_anchor.charAt(0).toUpperCase() + schedule.weekly_anchor.slice(1)
+        payoutScheduleLabel = `Weekly — every ${day}`
+      } else if (schedule?.interval === 'daily') {
+        payoutScheduleLabel = 'Daily'
+      } else if (schedule?.interval === 'monthly') {
+        payoutScheduleLabel = `Monthly — day ${schedule.monthly_anchor ?? 1}`
+      } else if (schedule?.interval === 'manual') {
+        payoutScheduleLabel = 'Manual'
+      }
+    } catch {
+      // Non-fatal — fall back to defaults
+    }
+  }
 
   const email       = user.email ?? '—'
   const provider    = user.app_metadata?.provider ?? 'email'
@@ -145,14 +192,15 @@ export default async function AccountPage({
             </>
           )}
 
-          <Row label="Payout currency">
-            <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>EUR (€)</span>
-          </Row>
-
           {hasStripeAccount && (
-            <Row label="Payout schedule">
-              <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>Weekly — every Monday</span>
-            </Row>
+            <>
+              <Row label="Payout currency">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutCurrencyLabel}</span>
+              </Row>
+              <Row label="Payout schedule">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutScheduleLabel}</span>
+              </Row>
+            </>
           )}
         </Card>
 
@@ -228,7 +276,7 @@ export default async function AccountPage({
           </Row>
           <Row label="Commission rate">
             <span className="text-sm f-body" style={{ color: '#0A2E4D' }}>
-              {isCommission ? '10% per confirmed booking' : '—'}
+              {commissionLabel}
             </span>
           </Row>
           <Row label="Account status">
@@ -263,6 +311,17 @@ export default async function AccountPage({
           <AcceptedPaymentMethodsForm
             current={(guide.accepted_payment_methods ?? ['cash', 'online']) as ('cash' | 'online')[]}
           />
+        </Card>
+
+        {/* ── Photo & marketing consent ─────────────────────────────────────── */}
+        <Card title="Photo & marketing consent">
+          <div className="px-6 pt-4 pb-2">
+            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              Allow FjordAnglers to use your photos for platform promotion (website, Instagram, ads).
+              Your name will always be credited as the owner.
+            </p>
+          </div>
+          <MarketingConsentToggle current={guide.photo_marketing_consent ?? false} />
         </Card>
 
       </div>

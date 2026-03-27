@@ -92,7 +92,6 @@ export type ProfileDefaults = {
   boat_engine?: string | null
   boat_capacity?: number | null
   landscape_url?: string | null
-  photo_marketing_consent?: boolean | null
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -208,9 +207,6 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
   const [facebook,  setFacebook]  = useState(defaults.facebook_url ?? '')
   const [website,   setWebsite]   = useState(defaults.website_url ?? '')
 
-  // ── Marketing consent ───────────────────────────────────────────────────────
-  const [photoConsent, setPhotoConsent] = useState(defaults.photo_marketing_consent ?? false)
-
   // ── Photos ──────────────────────────────────────────────────────────────────
   const [avatarUrl,     setAvatarUrl]     = useState<string | null>(defaults.avatar_url)
   const [coverUrl,      setCoverUrl]      = useState<string | null>(defaults.cover_url)
@@ -281,7 +277,6 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         avatar_url:    avatarUrl,
         cover_url:     coverUrl,
         landscape_url: landscapeUrl.trim() || null,
-        photo_marketing_consent: photoConsent,
       })
 
       if (!result.success) {
@@ -910,43 +905,6 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
           </div>
         )}
       </div>
-
-      {/* ── Marketing consent ──────────────────────────────────────── */}
-      <SectionCard
-        title="Photo & Marketing Consent"
-        subtitle="Allow FjordAnglers to use your photos for platform promotion. Your name will always be credited."
-      >
-        <button
-          type="button"
-          role="switch"
-          aria-checked={photoConsent}
-          onClick={() => setPhotoConsent(prev => !prev)}
-          className="flex items-start gap-4 w-full text-left"
-        >
-          {/* Toggle pill */}
-          <div
-            className="flex-shrink-0 mt-0.5 w-11 h-6 rounded-full transition-colors duration-200 relative"
-            style={{ background: photoConsent ? '#E67E50' : 'rgba(10,46,77,0.15)' }}
-          >
-            <div
-              className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200"
-              style={{ left: photoConsent ? '22px' : '2px' }}
-            />
-          </div>
-          <div>
-            <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-              {photoConsent
-                ? 'I allow FjordAnglers to use my photos for marketing'
-                : 'I do not allow use of my photos for marketing'}
-            </p>
-            <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              {photoConsent
-                ? 'Your photos may appear on our website, Instagram, and in ads. Attribution: © your name, via FjordAnglers.'
-                : 'Your photos will only be shown within your guide profile. They will not be used in any external promotions.'}
-            </p>
-          </div>
-        </button>
-      </SectionCard>
 
       {/* ── Submit ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4">
