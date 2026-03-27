@@ -791,6 +791,7 @@ export type Database = {
           updated_at: string
           user_id: string | null
           verified_at: string | null
+          photo_marketing_consent: boolean
           website_url: string | null
           years_experience: number | null
           youtube_url: string | null
@@ -841,6 +842,7 @@ export type Database = {
           user_id?: string | null
           verified_at?: string | null
           website_url?: string | null
+          photo_marketing_consent?: boolean
           years_experience?: number | null
           youtube_url?: string | null
         }
@@ -889,6 +891,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
+          photo_marketing_consent?: boolean
           website_url?: string | null
           years_experience?: number | null
           youtube_url?: string | null
