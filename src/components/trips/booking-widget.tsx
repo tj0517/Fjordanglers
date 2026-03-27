@@ -901,9 +901,7 @@ export function BookingWidget({
 
               {selectedDates.length === 0 ? (
                 <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                  {isRangeMode
-                    ? `Pick a start date for your ${pkgDays}-day trip`
-                    : 'Select dates'}
+                  Select dates
                 </span>
               ) : (
                 <span className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>

@@ -486,7 +486,8 @@ export default function GuideOfferForm({
   // ── Pricing mode ─────────────────────────────────────────────────────────────
   const [pricingMode, setPricingMode] = useState<'single' | 'tiers'>('single')
   // Single price mode
-  const [offerPrice, setOfferPrice] = useState('')
+  const [offerPriceMin, setOfferPriceMin] = useState('')   // optional lower bound (widełki)
+  const [offerPrice,    setOfferPrice]    = useState('')   // final / max price
   // Tiers mode
   const [tiers, setTiers] = useState<TierRow[]>(DEFAULT_TIERS)
 
@@ -560,9 +561,18 @@ export default function GuideOfferForm({
 
     // Validate pricing
     if (pricingMode === 'single') {
-      const priceNum = parseFloat(offerPrice)
+      const priceNum    = parseFloat(offerPrice)
+      const priceMinNum = offerPriceMin.trim() ? parseFloat(offerPriceMin) : null
       if (isNaN(priceNum) || priceNum <= 0) {
         setError('Enter a valid offer price.')
+        return
+      }
+      if (priceMinNum != null && (isNaN(priceMinNum) || priceMinNum <= 0)) {
+        setError('Enter a valid minimum price.')
+        return
+      }
+      if (priceMinNum != null && priceMinNum >= priceNum) {
+        setError('Minimum price must be less than the final price.')
         return
       }
     } else {
@@ -592,9 +602,13 @@ export default function GuideOfferForm({
         offerMeetingLng: meetLng       ?? undefined,
       } as const
 
+      const priceMinParsed = offerPriceMin.trim() ? parseFloat(offerPriceMin) : undefined
       const pricingPayload =
         pricingMode === 'single'
-          ? { offerPriceEur: parseFloat(offerPrice) }
+          ? {
+              offerPriceEur:    parseFloat(offerPrice),
+              offerPriceMinEur: priceMinParsed,
+            }
           : {
               offerPriceTiers: tiers.map(t => ({
                 anglers:  parseInt(t.anglers),
@@ -913,31 +927,69 @@ export default function GuideOfferForm({
         {/* ── Single price ── */}
         {pricingMode === 'single' && (
           <>
-            <div className="relative">
-              <span
-                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
-                style={{ color: 'rgba(10,46,77,0.4)' }}
-              >
-                €
-              </span>
-              <input
-                type="number"
-                step="1"
-                min="1"
-                placeholder="1200"
-                value={offerPrice}
-                onChange={e => setOfferPrice(e.target.value)}
-                disabled={isPending}
-                className="f-body"
-                style={{ ...inputStyle, paddingLeft: '26px' }}
-                aria-label="Total offer price in EUR"
-              />
+            <div className="grid grid-cols-2 gap-2">
+              {/* From (optional) */}
+              <div>
+                <p className="text-[10px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                  From — optional
+                </p>
+                <div className="relative">
+                  <span
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}
+                  >
+                    €
+                  </span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    placeholder="800"
+                    value={offerPriceMin}
+                    onChange={e => setOfferPriceMin(e.target.value)}
+                    disabled={isPending}
+                    className="f-body"
+                    style={{ ...inputStyle, paddingLeft: '26px' }}
+                    aria-label="Minimum offer price in EUR (optional)"
+                  />
+                </div>
+              </div>
+
+              {/* Final price (required) */}
+              <div>
+                <p className="text-[10px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                  {offerPriceMin.trim() ? 'To / Final *' : 'Total *'}
+                </p>
+                <div className="relative">
+                  <span
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}
+                  >
+                    €
+                  </span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="1"
+                    placeholder="1200"
+                    value={offerPrice}
+                    onChange={e => setOfferPrice(e.target.value)}
+                    disabled={isPending}
+                    className="f-body"
+                    style={{ ...inputStyle, paddingLeft: '26px' }}
+                    aria-label="Total offer price in EUR"
+                  />
+                </div>
+              </div>
             </div>
-            <p
-              className="mt-1.5 text-[11px] f-body"
-              style={{ color: 'rgba(10,46,77,0.38)' }}
-            >
-              Total amount the angler will be charged.
+
+            {/* Live preview */}
+            <p className="mt-1.5 text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              {offerPriceMin.trim() && offerPrice.trim()
+                ? `Angler sees: €${offerPriceMin} – €${offerPrice}`
+                : offerPrice.trim()
+                ? `Angler sees: €${offerPrice} (fixed)`
+                : 'Set a range if the final price depends on conditions.'}
             </p>
           </>
         )}
