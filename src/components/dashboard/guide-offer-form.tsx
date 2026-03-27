@@ -15,6 +15,11 @@
 import { useState, useTransition, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { sendOfferByGuide } from '@/actions/inquiries'
+import {
+  type PriceTier,
+  findApplicableTierPrice,
+  validatePriceTiers,
+} from '@/lib/inquiry-pricing'
 
 // ─── Dynamic map import (Leaflet needs browser DOM) ───────────────────────────
 
@@ -51,7 +56,18 @@ export type GuideOfferFormProps = {
   anglerDatesTo:         string
   anglerAllPeriods?:     Period[]
   guideWeeklySchedules?: WeeklySchedule[]
+  /** Group size from the inquiry — used for live tier preview */
+  groupSize?:            number
 }
+
+// ─── Tier builder helpers ─────────────────────────────────────────────────────
+
+type TierRow = { anglers: string; price: string }
+
+const DEFAULT_TIERS: TierRow[] = [
+  { anglers: '1', price: '' },
+  { anglers: '2', price: '' },
+]
 
 type DayCellState =
   | 'past'
@@ -448,8 +464,9 @@ export default function GuideOfferForm({
   inquiryId,
   anglerDatesFrom,
   anglerDatesTo,
-  anglerAllPeriods   = [],
+  anglerAllPeriods     = [],
   guideWeeklySchedules = [],
+  groupSize,
 }: GuideOfferFormProps) {
   const [isPending, startTransition] = useTransition()
   const [error,   setError]   = useState<string | null>(null)
@@ -463,8 +480,53 @@ export default function GuideOfferForm({
 
   // Form fields
   const [assignedRiver, setAssignedRiver] = useState('')
-  const [offerPrice,    setOfferPrice]    = useState('')
   const [offerDetails,  setOfferDetails]  = useState('')
+
+  // ── Pricing mode ─────────────────────────────────────────────────────────────
+  const [pricingMode, setPricingMode] = useState<'single' | 'tiers'>('single')
+  // Single price mode
+  const [offerPrice, setOfferPrice] = useState('')
+  // Tiers mode
+  const [tiers, setTiers] = useState<TierRow[]>(DEFAULT_TIERS)
+
+  function addTier() {
+    setTiers(prev => {
+      const nums = prev.map(t => parseInt(t.anglers)).filter(n => !isNaN(n))
+      const next = nums.length > 0 ? Math.max(...nums) + 1 : 1
+      return [...prev, { anglers: String(next), price: '' }]
+    })
+  }
+
+  function removeTier(idx: number) {
+    setTiers(prev => {
+      if (prev.length <= 1) return prev
+      return prev.filter((_, i) => i !== idx)
+    })
+  }
+
+  function updateTier(idx: number, field: 'anglers' | 'price', value: string) {
+    setTiers(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t))
+  }
+
+  // Sorted tiers for display (highest anglers = last = "N+")
+  const sortedTierIndices = useMemo(
+    () =>
+      tiers
+        .map((t, i) => ({ idx: i, anglers: parseInt(t.anglers) || 0 }))
+        .sort((a, b) => a.anglers - b.anglers)
+        .map(x => x.idx),
+    [tiers],
+  )
+
+  // Live preview: which tier applies to the inquiry's group size
+  const tierPreviewPrice = useMemo<number | null>(() => {
+    if (pricingMode !== 'tiers' || groupSize == null) return null
+    const parsed: PriceTier[] = tiers
+      .map(t => ({ anglers: parseInt(t.anglers), priceEur: parseFloat(t.price) }))
+      .filter(t => !isNaN(t.anglers) && !isNaN(t.priceEur) && t.anglers > 0 && t.priceEur > 0)
+    if (parsed.length === 0) return null
+    return findApplicableTierPrice(parsed, groupSize)
+  }, [pricingMode, tiers, groupSize])
 
   // Meeting point map
   const [showMap, setShowMap] = useState(false)
@@ -494,26 +556,52 @@ export default function GuideOfferForm({
       setError('Enter the river or location name.')
       return
     }
-    const priceNum = parseFloat(offerPrice)
-    if (isNaN(priceNum) || priceNum <= 0) {
-      setError('Enter a valid offer price.')
-      return
+
+    // Validate pricing
+    if (pricingMode === 'single') {
+      const priceNum = parseFloat(offerPrice)
+      if (isNaN(priceNum) || priceNum <= 0) {
+        setError('Enter a valid offer price.')
+        return
+      }
+    } else {
+      const parsed: PriceTier[] = tiers.map(t => ({
+        anglers:  parseInt(t.anglers),
+        priceEur: parseFloat(t.price),
+      }))
+      const tiersErr = validatePriceTiers(parsed)
+      if (tiersErr != null) {
+        setError(tiersErr)
+        return
+      }
     }
+
     if (!offerDetails.trim()) {
       setError('Add offer details for the angler.')
       return
     }
 
     startTransition(async () => {
-      const result = await sendOfferByGuide(inquiryId, {
+      const base = {
         assignedRiver:   assignedRiver.trim(),
-        offerPriceEur:   priceNum,
         offerDetails:    offerDetails.trim(),
         offerDateFrom:   offerDateFrom ?? undefined,
         offerDateTo:     offerDateTo   ?? undefined,
         offerMeetingLat: meetLat       ?? undefined,
         offerMeetingLng: meetLng       ?? undefined,
-      })
+      } as const
+
+      const pricingPayload =
+        pricingMode === 'single'
+          ? { offerPriceEur: parseFloat(offerPrice) }
+          : {
+              offerPriceTiers: tiers.map(t => ({
+                anglers:  parseInt(t.anglers),
+                priceEur: parseFloat(t.price),
+              })),
+            }
+
+      const result = await sendOfferByGuide(inquiryId, { ...base, ...pricingPayload })
       if (result.error != null) {
         setError(result.error)
       } else {
@@ -793,34 +881,244 @@ export default function GuideOfferForm({
         )}
       </div>
 
-      {/* ── 5. Total price ────────────────────────────────────────── */}
+      {/* ── 5. Pricing ────────────────────────────────────────────── */}
       <div>
-        <label style={labelStyle}>Total price (EUR) *</label>
-        <div className="relative">
-          <span
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
-            style={{ color: 'rgba(10,46,77,0.4)' }}
-          >
-            €
-          </span>
-          <input
-            type="number"
-            step="1"
-            min="1"
-            placeholder="1200"
-            value={offerPrice}
-            onChange={e => setOfferPrice(e.target.value)}
-            disabled={isPending}
-            className="f-body"
-            style={{ ...inputStyle, paddingLeft: '26px' }}
-          />
+        <p style={labelStyle}>Pricing *</p>
+
+        {/* Mode toggle */}
+        <div className="flex gap-2 mb-3">
+          {(['single', 'tiers'] as const).map(mode => {
+            const on = pricingMode === mode
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setPricingMode(mode)}
+                disabled={isPending}
+                className="flex-1 py-2 rounded-xl text-[12px] font-semibold f-body transition-all"
+                style={{
+                  background: on ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
+                  color:      on ? 'white'   : '#0A2E4D',
+                  border:     on ? '1.5px solid #0A2E4D' : '1px solid rgba(10,46,77,0.1)',
+                }}
+              >
+                {mode === 'single' ? 'Single price' : 'By group size'}
+              </button>
+            )
+          })}
         </div>
-        <p
-          className="mt-1.5 text-[11px] f-body"
-          style={{ color: 'rgba(10,46,77,0.38)' }}
-        >
-          Total amount the angler will be charged.
-        </p>
+
+        {/* ── Single price ── */}
+        {pricingMode === 'single' && (
+          <>
+            <div className="relative">
+              <span
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                style={{ color: 'rgba(10,46,77,0.4)' }}
+              >
+                €
+              </span>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                placeholder="1200"
+                value={offerPrice}
+                onChange={e => setOfferPrice(e.target.value)}
+                disabled={isPending}
+                className="f-body"
+                style={{ ...inputStyle, paddingLeft: '26px' }}
+                aria-label="Total offer price in EUR"
+              />
+            </div>
+            <p
+              className="mt-1.5 text-[11px] f-body"
+              style={{ color: 'rgba(10,46,77,0.38)' }}
+            >
+              Total amount the angler will be charged.
+            </p>
+          </>
+        )}
+
+        {/* ── Price tiers ── */}
+        {pricingMode === 'tiers' && (
+          <div className="flex flex-col gap-2">
+
+            {/* Tier table */}
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{ border: '1.5px solid rgba(10,46,77,0.12)' }}
+            >
+              {/* Header row */}
+              <div
+                className="grid gap-2 px-3 py-2"
+                style={{
+                  gridTemplateColumns: '76px 1fr 28px',
+                  background:   'rgba(10,46,77,0.04)',
+                  borderBottom: '1px solid rgba(10,46,77,0.08)',
+                }}
+              >
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.15em] f-body"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}
+                >
+                  Anglers
+                </span>
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.15em] f-body"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}
+                >
+                  Total (EUR)
+                </span>
+                <span />
+              </div>
+
+              {/* Data rows — sorted ascending by anglers */}
+              {sortedTierIndices.map((originalIdx, displayIdx) => {
+                const tier   = tiers[originalIdx]
+                const isLast = displayIdx === sortedTierIndices.length - 1
+                const isOnly = tiers.length <= 1
+
+                return (
+                  <div
+                    key={originalIdx}
+                    className="grid gap-2 px-3 py-2 items-center"
+                    style={{
+                      gridTemplateColumns: '76px 1fr 28px',
+                      borderBottom: displayIdx < sortedTierIndices.length - 1
+                        ? '1px solid rgba(10,46,77,0.06)'
+                        : undefined,
+                    }}
+                  >
+                    {/* Anglers input + "+" suffix on last row */}
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={tier.anglers}
+                        onChange={e => updateTier(originalIdx, 'anglers', e.target.value)}
+                        disabled={isPending}
+                        aria-label={`Anglers for tier ${displayIdx + 1}`}
+                        className="f-body text-center"
+                        style={{
+                          width:        48,
+                          background:   '#F3EDE4',
+                          border:       '1px solid rgba(10,46,77,0.12)',
+                          borderRadius: 8,
+                          padding:      '5px 4px',
+                          fontSize:     13,
+                          color:        '#0A2E4D',
+                          outline:      'none',
+                        }}
+                      />
+                      {isLast && (
+                        <span
+                          className="text-[11px] font-bold f-body"
+                          style={{ color: 'rgba(10,46,77,0.35)' }}
+                        >
+                          +
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Price input */}
+                    <div className="relative">
+                      <span
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                        style={{ color: 'rgba(10,46,77,0.4)' }}
+                      >
+                        €
+                      </span>
+                      <input
+                        type="number"
+                        step="1"
+                        min="1"
+                        placeholder="1200"
+                        value={tier.price}
+                        onChange={e => updateTier(originalIdx, 'price', e.target.value)}
+                        disabled={isPending}
+                        aria-label={`Price for tier ${displayIdx + 1}`}
+                        className="f-body w-full"
+                        style={{ ...inputStyle, paddingLeft: '24px', padding: '7px 10px 7px 24px' }}
+                      />
+                    </div>
+
+                    {/* Remove button */}
+                    <button
+                      type="button"
+                      onClick={() => removeTier(originalIdx)}
+                      disabled={isPending || isOnly}
+                      aria-label={`Remove tier ${displayIdx + 1}`}
+                      className="w-7 h-7 rounded-full flex items-center justify-center transition-opacity hover:opacity-70 disabled:opacity-20 disabled:cursor-not-allowed flex-shrink-0"
+                      style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
+                    >
+                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="1" y1="1" x2="7" y2="7" />
+                        <line x1="7" y1="1" x2="1" y2="7" />
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Add tier button */}
+            <button
+              type="button"
+              onClick={addTier}
+              disabled={isPending}
+              className="self-start flex items-center gap-1.5 text-[11px] font-semibold f-body transition-opacity hover:opacity-75 disabled:opacity-40"
+              style={{ color: '#E67E50' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="6" y1="1" x2="6" y2="11" />
+                <line x1="1" y1="6" x2="11" y2="6" />
+              </svg>
+              Add tier
+            </button>
+
+            {/* Live preview for this inquiry's group size */}
+            {groupSize != null && (
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                style={{
+                  background: tierPreviewPrice != null
+                    ? 'rgba(230,126,80,0.06)'
+                    : 'rgba(10,46,77,0.03)',
+                  border: tierPreviewPrice != null
+                    ? '1px solid rgba(230,126,80,0.15)'
+                    : '1px solid rgba(10,46,77,0.07)',
+                }}
+              >
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
+                  stroke={tierPreviewPrice != null ? '#C4622A' : 'rgba(10,46,77,0.3)'}
+                  strokeWidth="1.6" strokeLinecap="round">
+                  <circle cx="6" cy="6" r="5" />
+                  <path d="M6 3.5v3l2 1.5" />
+                </svg>
+                <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                  Group of {groupSize}:{' '}
+                  <span
+                    className="font-semibold"
+                    style={{ color: tierPreviewPrice != null ? '#C4622A' : 'rgba(10,46,77,0.3)' }}
+                  >
+                    {tierPreviewPrice != null ? `€${tierPreviewPrice}` : '—'}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            <p
+              className="text-[11px] f-body"
+              style={{ color: 'rgba(10,46,77,0.38)' }}
+            >
+              Last row covers that count and above. Price auto-selected at checkout.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── 6. Offer details ─────────────────────────────────────── */}

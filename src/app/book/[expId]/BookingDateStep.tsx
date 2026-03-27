@@ -94,10 +94,17 @@ type Props = {
   initialDates?:       string[]
 }
 
-// ─── ISO helper ───────────────────────────────────────────────────────────────
+// ─── ISO helpers ──────────────────────────────────────────────────────────────
 
 function toISO(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+/** Return an ISO date string N calendar days after isoDate. */
+function addDays(isoDate: string, n: number): string {
+  const [yStr, mStr, dStr] = isoDate.split('-')
+  const date = new Date(Number(yStr), Number(mStr) - 1, Number(dStr) + n)
+  return toISO(date.getFullYear(), date.getMonth(), date.getDate())
 }
 
 // ─── Day status ───────────────────────────────────────────────────────────────
@@ -131,20 +138,27 @@ function getDayStatus(
 // ─── DirectDateCalendar ───────────────────────────────────────────────────────
 
 /**
- * Single-date month calendar for "Book directly" mode.
- * Available days have a green dot — blocked/unavailable are greyed/struck.
+ * Month calendar for "Book directly" mode.
+ *
+ * numDays === 1  → multi-select individual dates (green dot per day)
+ * numDays  >  1  → range-start picker: click a start date → entire N-day span
+ *                  highlights; clicking same date again deselects.
  */
 function DirectDateCalendar({
   selected,
   onToggle,
   availabilityConfig,
   blockedDates,
+  numDays = 1,
 }: {
   selected:           string[]
   onToggle:           (iso: string) => void
   availabilityConfig: AvailConfigRow | null
   blockedDates:       BlockedRange[]
+  numDays?:           number
 }) {
+  const isRangeMode = numDays > 1
+
   const now     = new Date()
   const todayY  = now.getFullYear()
   const todayM  = now.getMonth()
@@ -182,14 +196,19 @@ function DirectDateCalendar({
     else setViewM(m => m + 1)
   }
 
-  // Count available days for subheading
+  // Range mode: derive start / end from the single selected start date
+  const rangeStart = isRangeMode ? (selected[0] ?? null) : null
+  const rangeEnd   = rangeStart != null ? addDays(rangeStart, numDays - 1) : null
+
+  // Count available days for subheading (single-day mode only — range mode shows hint instead)
   const availableCount = useMemo(() => {
+    if (isRangeMode) return 0
     let n = 0
     for (let d = 1; d <= daysInMonth; d++) {
       if (getDayStatus(viewY, viewM, d, minISO, maxISO, availabilityConfig, blockedDates) === 'available') n++
     }
     return n
-  }, [viewY, viewM, daysInMonth, minISO, maxISO, availabilityConfig, blockedDates])
+  }, [isRangeMode, viewY, viewM, daysInMonth, minISO, maxISO, availabilityConfig, blockedDates])
 
   return (
     <div
@@ -197,6 +216,19 @@ function DirectDateCalendar({
       style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.1)' }}
     >
       <div className="p-4">
+
+        {/* Range mode hint banner */}
+        {isRangeMode && (
+          <div
+            className="mb-3 px-3 py-2 rounded-xl text-center"
+            style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.14)' }}
+          >
+            <p className="text-[11px] f-body font-medium" style={{ color: '#C4622A' }}>
+              Pick the <strong>start date</strong> — we'll block out {numDays} consecutive days
+            </p>
+          </div>
+        )}
+
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-1">
           <button
@@ -216,7 +248,7 @@ function DirectDateCalendar({
             <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
               {MONTH_NAMES[viewM]} {viewY}
             </p>
-            {availableCount > 0 && (
+            {!isRangeMode && availableCount > 0 && (
               <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
                 {availableCount} day{availableCount === 1 ? '' : 's'} open
               </p>
@@ -255,31 +287,53 @@ function DirectDateCalendar({
           {Array.from({ length: startPad }).map((_, i) => <div key={`pad${i}`} />)}
 
           {Array.from({ length: daysInMonth }).map((_, i) => {
-            const d      = i + 1
-            const iso    = toISO(viewY, viewM, d)
-            const status = getDayStatus(viewY, viewM, d, minISO, maxISO, availabilityConfig, blockedDates)
-            const isSel  = selected.includes(iso)
-            const isToday = iso === todayISO
-            const isAvail = status === 'available'
+            const d        = i + 1
+            const iso      = toISO(viewY, viewM, d)
+            const status   = getDayStatus(viewY, viewM, d, minISO, maxISO, availabilityConfig, blockedDates)
+            const isToday  = iso === todayISO
+            const isAvail  = status === 'available'
 
-            let bg      = 'transparent'
-            let color   = '#0A2E4D'
-            let opacity = 1
+            // ── Range-mode cell states ───────────────────────────────────
+            const isRangeStartDay = isRangeMode && rangeStart != null && iso === rangeStart
+            const isRangeEndDay   = isRangeMode && rangeEnd   != null && iso === rangeEnd
+            const isRangeMidDay   = isRangeMode && rangeStart != null && rangeEnd != null &&
+                                    iso > rangeStart && iso < rangeEnd
+            const isRangeAny      = isRangeStartDay || isRangeMidDay || isRangeEndDay
+
+            // ── Single-mode cell state ───────────────────────────────────
+            const isSingleSel = !isRangeMode && selected.includes(iso)
+            const isHighlighted = isSingleSel || isRangeStartDay || isRangeEndDay
+
+            // ── Outer cell background (range bar) ────────────────────────
+            let outerBg = 'transparent'
+            if (isRangeMidDay)    outerBg = 'rgba(230,126,80,0.1)'
+            if (isRangeStartDay && !isRangeEndDay)
+              outerBg = 'linear-gradient(to right, transparent 50%, rgba(230,126,80,0.1) 50%)'
+            if (isRangeEndDay && !isRangeStartDay)
+              outerBg = 'linear-gradient(to left, transparent 50%, rgba(230,126,80,0.1) 50%)'
+
+            // ── Inner circle ─────────────────────────────────────────────
+            let innerBg: string | undefined
+            if (isHighlighted)             innerBg = '#E67E50'
+            else if (isToday && isAvail)   innerBg = 'rgba(10,46,77,0.05)'
+
+            // ── Text styling ─────────────────────────────────────────────
+            let color    = '#0A2E4D'
+            let opacity  = 1
             let textDeco = 'none'
             let fw: number = isToday ? 700 : 400
 
-            if (isSel) {
-              bg = '#E67E50'; color = 'white'; fw = 700
-            } else if (status === 'blocked') {
-              color = 'rgba(239,68,68,0.4)'; textDeco = 'line-through'
-            } else if (status === 'past' || status === 'unavailable') {
-              color = 'rgba(10,46,77,0.2)'; opacity = 0.4
-            } else if (isAvail && isToday) {
-              bg = 'rgba(10,46,77,0.05)'
-            }
+            if (isHighlighted)                              { color = 'white'; fw = 700 }
+            else if (isRangeMidDay)                         { color = '#0A2E4D'; fw = 600 }
+            else if (status === 'blocked')                  { color = 'rgba(239,68,68,0.4)'; textDeco = 'line-through' }
+            else if (status === 'past' || status === 'unavailable') { color = 'rgba(10,46,77,0.2)'; opacity = 0.4 }
 
             return (
-              <div key={d} className="flex items-center justify-center py-px">
+              <div
+                key={d}
+                className="flex items-center justify-center py-px"
+                style={{ background: outerBg }}
+              >
                 <button
                   type="button"
                   disabled={!isAvail}
@@ -287,26 +341,26 @@ function DirectDateCalendar({
                   title={status === 'blocked' ? 'Guide is closed on this date' : undefined}
                   className="w-8 h-8 rounded-full flex flex-col items-center justify-center relative transition-all disabled:cursor-not-allowed"
                   style={{
-                    background: bg,
+                    background:     innerBg,
                     color,
                     opacity,
-                    fontWeight: fw,
+                    fontWeight:     fw,
                     textDecoration: textDeco,
-                    fontSize: '12px',
+                    fontSize:       '12px',
                   }}
                 >
                   <span className="f-body leading-none">{d}</span>
 
-                  {/* Today ring */}
-                  {isToday && !isSel && isAvail && (
+                  {/* Today ring (single-day mode only, when not selected) */}
+                  {isToday && !isHighlighted && !isRangeAny && isAvail && (
                     <span
                       className="absolute inset-0 rounded-full pointer-events-none"
                       style={{ border: '1.5px solid rgba(10,46,77,0.18)' }}
                     />
                   )}
 
-                  {/* Available dot */}
-                  {isAvail && !isSel && (
+                  {/* Available dot (single-day mode, not selected) */}
+                  {!isRangeMode && isAvail && !isSingleSel && (
                     <span
                       className="absolute rounded-full"
                       style={{ width: 3, height: 3, background: '#059669', bottom: 3, left: '50%', transform: 'translateX(-50%)' }}
@@ -320,11 +374,18 @@ function DirectDateCalendar({
 
         {/* Legend */}
         <div className="flex items-center gap-4 mt-3 flex-wrap">
-          {([
-            { color: '#059669',             label: 'Available' },
-            { color: 'rgba(239,68,68,0.4)', label: 'Closed',   strike: true },
-            { color: 'rgba(10,46,77,0.18)', label: 'Not available' },
-          ] as { color: string; label: string; strike?: boolean }[]).map(({ color, label, strike }) => (
+          {(isRangeMode
+            ? [
+                { color: '#E67E50',             label: 'Selected range' },
+                { color: 'rgba(239,68,68,0.4)', label: 'Closed', strike: true },
+                { color: 'rgba(10,46,77,0.18)', label: 'Not available' },
+              ]
+            : [
+                { color: '#059669',             label: 'Available' },
+                { color: 'rgba(239,68,68,0.4)', label: 'Closed', strike: true },
+                { color: 'rgba(10,46,77,0.18)', label: 'Not available' },
+              ]
+          ).map(({ color, label, strike }) => (
             <div key={label} className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
               <span
@@ -485,7 +546,10 @@ export default function BookingDateStep({
   const [bookingMode, setBookingMode] = useState<BookingMode>(initialMode)
 
   // ── Direct mode state ────────────────────────────────────────────────────
-  /** Multi-select: sorted ISO date strings */
+  /**
+   * For 1-day packages: array of individually selected ISO dates.
+   * For N-day packages: at most ONE element — the chosen start date.
+   */
   const [directDates,    setDirectDates]    = useState<string[]>(initialDates)
   const [selectedPkgIdx, setSelectedPkgIdx] = useState(0)
   const selectedPkg = durationOptions[selectedPkgIdx] ?? durationOptions[0]
@@ -503,6 +567,8 @@ export default function BookingDateStep({
   const windowTo       = periods.length > 0 ? periods[periods.length - 1].to : null
   const hasWindow      = windowFrom != null && windowTo != null
   const requestPkg     = durationOptions[requestPkgIdx] ?? durationOptions[0]
+  const requestPkgDays = pkgDays(requestPkg)
+  const requestPkgFixed = requestPkgDays > 1  // package has a fixed multi-day duration
 
   /** Human-readable label sent to step 2 and stored as duration_option on the booking */
   const requestDurationLabel =
@@ -510,22 +576,82 @@ export default function BookingDateStep({
       ? pkgLabel(requestPkg)
       : `${pkgLabel(requestPkg)} · ${numDaysRequest} days`
 
+  // ── Availability bounds (for range validation in direct mode) ─────────────
+  const minDateISO = useMemo(() => {
+    const now      = new Date()
+    const advHours = availabilityConfig?.advance_notice_hours ?? 0
+    const minDate  = new Date(now.getTime() + advHours * 3_600_000)
+    return toISO(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())
+  }, [availabilityConfig])
+
+  const maxDateISO = useMemo(() => {
+    const now     = new Date()
+    const maxDays = availabilityConfig?.max_advance_days ?? 365
+    const maxDate = new Date(now)
+    maxDate.setDate(maxDate.getDate() + maxDays)
+    return toISO(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate())
+  }, [availabilityConfig])
+
+  /**
+   * For N-day direct bookings: true when at least one day inside the selected
+   * range is blocked / unavailable.  CTA is disabled in this case.
+   */
+  const directRangeHasBlockedDay = useMemo(() => {
+    const days = pkgDays(selectedPkg)
+    if (days <= 1 || directDates.length === 0) return false
+    const startISO = directDates[0]
+    const endISO   = addDays(startISO, days - 1)
+    let cursor = startISO
+    while (cursor <= endISO) {
+      const [yStr, mStr, dStr] = cursor.split('-')
+      const s = getDayStatus(
+        Number(yStr), Number(mStr) - 1, Number(dStr),
+        minDateISO, maxDateISO, availabilityConfig, blockedDates,
+      )
+      if (s !== 'available') return true
+      cursor = addDays(cursor, 1)
+    }
+    return false
+  }, [selectedPkg, directDates, minDateISO, maxDateISO, availabilityConfig, blockedDates])
+
   // ── Navigation handlers ───────────────────────────────────────────────────
 
   function toggleDirectDate(iso: string) {
-    setDirectDates(prev =>
-      prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso].sort()
-    )
+    const days = pkgDays(selectedPkg)
+    if (days > 1) {
+      // Range mode: single start-date toggle
+      setDirectDates(prev => (prev[0] === iso ? [] : [iso]))
+    } else {
+      // Single-day mode: multi-select toggle
+      setDirectDates(prev =>
+        prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso].sort(),
+      )
+    }
   }
 
   function handleDirectContinue() {
-    if (directDates.length === 0) return
-    // Pass dates as legacy param → book page step 2 shows form
-    const params = new URLSearchParams({
-      dates:  directDates.join(','),
-      guests: String(groupSize),
-    })
-    router.push(`/book/${expId}?${params.toString()}`)
+    if (directDates.length === 0 || directRangeHasBlockedDay) return
+    const days = pkgDays(selectedPkg)
+    if (days > 1) {
+      // Multi-day package: send windowFrom / windowTo / numDays (same as request flow)
+      const startISO = directDates[0]
+      const endISO   = addDays(startISO, days - 1)
+      const params   = new URLSearchParams({
+        windowFrom: startISO,
+        windowTo:   endISO,
+        numDays:    String(days),
+        pkgLabel:   pkgLabel(selectedPkg),
+        guests:     String(groupSize),
+      })
+      router.push(`/book/${expId}?${params.toString()}`)
+    } else {
+      // Single-day: legacy dates param
+      const params = new URLSearchParams({
+        dates:  directDates.join(','),
+        guests: String(groupSize),
+      })
+      router.push(`/book/${expId}?${params.toString()}`)
+    }
   }
 
   function handleRequestContinue() {
@@ -543,6 +669,11 @@ export default function BookingDateStep({
   // ── CTA label for selected dates ─────────────────────────────────────────
   const directDatesLabel = (() => {
     if (directDates.length === 0) return null
+    const days = pkgDays(selectedPkg)
+    if (days > 1) {
+      const start = new Date(`${directDates[0]}T12:00:00`)
+      return `${days} days from ${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+    }
     if (directDates.length === 1)
       return new Date(`${directDates[0]}T12:00:00`).toLocaleDateString('en-GB', {
         weekday: 'short', day: 'numeric', month: 'short',
@@ -670,7 +801,7 @@ export default function BookingDateStep({
                   <button
                     key={idx}
                     type="button"
-                    onClick={() => setSelectedPkgIdx(idx)}
+                    onClick={() => { setSelectedPkgIdx(idx); setDirectDates([]) }}
                     className="flex items-center justify-between px-4 py-3.5 rounded-2xl text-left transition-all"
                     style={{
                       background: on ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
@@ -713,14 +844,32 @@ export default function BookingDateStep({
             onToggle={toggleDirectDate}
             availabilityConfig={availabilityConfig}
             blockedDates={blockedDates}
+            numDays={pkgDays(selectedPkg)}
           />
 
-          {/* Selected date chips */}
-          {directDates.length > 0 && (
+          {/* Blocked-range warning (multi-day mode) */}
+          {directRangeHasBlockedDay && directDates.length > 0 && (
+            <div
+              className="mt-2 px-3 py-2.5 rounded-xl flex items-start gap-2"
+              style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.15)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#DC2626" strokeWidth="1.6" strokeLinecap="round" className="flex-shrink-0 mt-0.5">
+                <circle cx="6.5" cy="6.5" r="5.5" />
+                <line x1="6.5" y1="4" x2="6.5" y2="7" />
+                <circle cx="6.5" cy="9" r="0.6" fill="#DC2626" stroke="none" />
+              </svg>
+              <p className="text-[11px] f-body" style={{ color: '#DC2626' }}>
+                Some days in this {pkgDays(selectedPkg)}-day range are not available. Please pick a different start date.
+              </p>
+            </div>
+          )}
+
+          {/* Selected chips */}
+          {directDates.length > 0 && !directRangeHasBlockedDay && (
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {directDates.map(iso => (
+              {pkgDays(selectedPkg) > 1 ? (
+                // Range chip for multi-day packages
                 <span
-                  key={iso}
                   className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
                   style={{
                     background: 'rgba(230,126,80,0.1)',
@@ -728,18 +877,45 @@ export default function BookingDateStep({
                     border: '1px solid rgba(230,126,80,0.2)',
                   }}
                 >
-                  {new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  {new Date(`${directDates[0]}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  {' '}–{' '}
+                  {new Date(`${addDays(directDates[0], pkgDays(selectedPkg) - 1)}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  {' '}({pkgDays(selectedPkg)} days)
                   <button
                     type="button"
-                    onClick={() => toggleDirectDate(iso)}
-                    aria-label={`Remove ${iso}`}
+                    onClick={() => setDirectDates([])}
+                    aria-label="Remove selection"
                     className="opacity-50 hover:opacity-100 transition-opacity"
                     style={{ lineHeight: 1 }}
                   >
                     ×
                   </button>
                 </span>
-              ))}
+              ) : (
+                // Individual date chips for single-day packages
+                directDates.map(iso => (
+                  <span
+                    key={iso}
+                    className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(230,126,80,0.1)',
+                      color: '#C05A2A',
+                      border: '1px solid rgba(230,126,80,0.2)',
+                    }}
+                  >
+                    {new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    <button
+                      type="button"
+                      onClick={() => toggleDirectDate(iso)}
+                      aria-label={`Remove ${iso}`}
+                      className="opacity-50 hover:opacity-100 transition-opacity"
+                      style={{ lineHeight: 1 }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              )}
             </div>
           )}
 
@@ -805,12 +981,14 @@ export default function BookingDateStep({
           <button
             type="button"
             onClick={handleDirectContinue}
-            disabled={directDates.length === 0}
+            disabled={directDates.length === 0 || directRangeHasBlockedDay}
             className="mt-5 w-full flex items-center justify-center gap-2 text-white font-bold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed f-body"
             style={{ background: '#E67E50' }}
           >
             {directDates.length === 0 ? (
-              'Select dates to continue'
+              pkgDays(selectedPkg) > 1
+                ? `Pick a start date for your ${pkgDays(selectedPkg)}-day trip`
+                : 'Select dates to continue'
             ) : (
               <>
                 Continue — {pkgLabel(selectedPkg)} · {directDatesLabel} · {groupSize} {groupSize === 1 ? 'angler' : 'anglers'}
@@ -908,25 +1086,57 @@ export default function BookingDateStep({
           {hasWindow && (
             <>
               <div className="mt-6">
-                <p
-                  className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1 f-body"
-                  style={{ color: 'rgba(10,46,77,0.38)' }}
-                >
-                  How many days?
-                </p>
-                <p
-                  className="text-xs f-body mb-3"
-                  style={{ color: 'rgba(10,46,77,0.45)' }}
-                >
-                  Number of fishing days within your availability window.
-                </p>
-                <Stepper
-                  value={numDaysRequest}
-                  onChange={setNumDaysRequest}
-                  min={1}
-                  max={21}
-                  suffix={numDaysRequest === 1 ? 'day' : 'days'}
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <p
+                    className="text-[10px] font-semibold uppercase tracking-[0.2em] f-body"
+                    style={{ color: 'rgba(10,46,77,0.38)' }}
+                  >
+                    How many days?
+                  </p>
+                  {requestPkgFixed && (
+                    <span
+                      className="text-[9px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded-full f-body"
+                      style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.45)' }}
+                    >
+                      Fixed by package
+                    </span>
+                  )}
+                </div>
+                {!requestPkgFixed && (
+                  <p
+                    className="text-xs f-body mb-3"
+                    style={{ color: 'rgba(10,46,77,0.45)' }}
+                  >
+                    Number of fishing days within your availability window.
+                  </p>
+                )}
+
+                {requestPkgFixed ? (
+                  /* Locked display — package defines the day count */
+                  <div
+                    className="flex items-center justify-between px-4 py-3 rounded-2xl"
+                    style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.12)' }}
+                  >
+                    <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      Duration fixed by "{pkgLabel(requestPkg)}"
+                    </span>
+                    <span className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>
+                      {requestPkgDays}
+                      <span className="text-sm font-normal ml-1.5 f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                        {requestPkgDays === 1 ? 'day' : 'days'}
+                      </span>
+                    </span>
+                  </div>
+                ) : (
+                  /* Free stepper — package has no fixed day count */
+                  <Stepper
+                    value={numDaysRequest}
+                    onChange={setNumDaysRequest}
+                    min={1}
+                    max={21}
+                    suffix={numDaysRequest === 1 ? 'day' : 'days'}
+                  />
+                )}
               </div>
 
               {/* ── 4. Anglers ──────────────────────────────────────────── */}

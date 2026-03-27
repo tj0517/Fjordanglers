@@ -1063,6 +1063,7 @@ export type Database = {
           offer_meeting_lng: number | null
           offer_price_eur: number | null
           offer_price_min_eur: number | null
+          offer_price_tiers: Json | null
           preferences: Json
           status: Database["public"]["Enums"]["trip_inquiry_status"]
           stripe_checkout_id: string | null
@@ -1089,6 +1090,7 @@ export type Database = {
           offer_meeting_lng?: number | null
           offer_price_eur?: number | null
           offer_price_min_eur?: number | null
+          offer_price_tiers?: Json | null
           preferences?: Json
           status?: Database["public"]["Enums"]["trip_inquiry_status"]
           stripe_checkout_id?: string | null
@@ -1115,6 +1117,7 @@ export type Database = {
           offer_meeting_lng?: number | null
           offer_price_eur?: number | null
           offer_price_min_eur?: number | null
+          offer_price_tiers?: Json | null
           preferences?: Json
           status?: Database["public"]["Enums"]["trip_inquiry_status"]
           stripe_checkout_id?: string | null

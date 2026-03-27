@@ -16,6 +16,11 @@ import { stripe } from '@/lib/stripe/client'
 import { createBookingFromInquiry } from '@/lib/create-booking-from-inquiry'
 import { env } from '@/lib/env'
 import type { Json } from '@/lib/supabase/database.types'
+import {
+  type PriceTier,
+  findApplicableTierPrice,
+  validatePriceTiers,
+} from '@/lib/inquiry-pricing'
 
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
@@ -260,7 +265,18 @@ export async function acceptOffer(
   if (inquiry.status !== 'offer_sent') {
     return { error: 'No pending offer to accept.' }
   }
-  if (!inquiry.offer_price_eur) return { error: 'No offer price set.' }
+  if (!inquiry.offer_price_eur && !inquiry.offer_price_tiers) {
+    return { error: 'No offer price set.' }
+  }
+
+  // Re-derive effective price from tiers (overrides stored offer_price_eur if tiers present)
+  const rawTiers = inquiry.offer_price_tiers as PriceTier[] | null
+  const effectiveOfferPrice =
+    rawTiers != null && rawTiers.length > 0
+      ? findApplicableTierPrice(rawTiers, inquiry.group_size)
+      : (inquiry.offer_price_eur ?? 0)
+
+  if (effectiveOfferPrice <= 0) return { error: 'No valid offer price set.' }
 
   const guide = inquiry.guides as unknown as {
     id: string
@@ -293,7 +309,7 @@ export async function acceptOffer(
                   name: `Custom Fishing Trip — ${inquiry.dates_from} to ${inquiry.dates_to}`,
                   description: `Guide: ${guide.full_name}${inquiry.assigned_river ? ` · ${inquiry.assigned_river}` : ''} · ${inquiry.group_size} ${inquiry.group_size === 1 ? 'angler' : 'anglers'}`,
                 },
-                unit_amount: Math.round(inquiry.offer_price_eur * 100),
+                unit_amount: Math.round(effectiveOfferPrice * 100),
               },
               quantity: 1,
             },
@@ -306,7 +322,7 @@ export async function acceptOffer(
           cancel_url: `${env.NEXT_PUBLIC_APP_URL}/account/trips/${inquiryId}`,
           payment_intent_data: {
             application_fee_amount: Math.round(
-              inquiry.offer_price_eur * commissionRate * 100,
+              effectiveOfferPrice * commissionRate * 100,
             ),
             transfer_data: { destination: guide.stripe_account_id },
             metadata: { inquiryId },
@@ -407,16 +423,22 @@ export async function declineInquiry(
 export async function sendOfferByGuide(
   inquiryId: string,
   offer: {
-    assignedRiver:   string
+    assignedRiver:     string
     offerPriceMinEur?: number
-    offerPriceEur:   number
-    offerDetails:    string
+    /** Required when NOT using price tiers. Ignored (overwritten) when tiers are present. */
+    offerPriceEur?:    number
+    /**
+     * Optional price ladder.  When provided, offer_price_eur is auto-derived from
+     * the tier that matches the inquiry's group_size at send time.
+     */
+    offerPriceTiers?:  PriceTier[]
+    offerDetails:      string
     /** Confirmed trip date range (guide may differ from angler's request) */
-    offerDateFrom?:  string   // YYYY-MM-DD
-    offerDateTo?:    string   // YYYY-MM-DD
+    offerDateFrom?:    string   // YYYY-MM-DD
+    offerDateTo?:      string   // YYYY-MM-DD
     /** Meeting / departure point GPS pin */
-    offerMeetingLat?: number
-    offerMeetingLng?: number
+    offerMeetingLat?:  number
+    offerMeetingLng?:  number
   },
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -433,18 +455,27 @@ export async function sendOfferByGuide(
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
 
-  // Validate offer price
-  if (offer.offerPriceEur <= 0) return { error: 'Offer price must be greater than 0.' }
-  if (offer.offerPriceMinEur != null && offer.offerPriceMinEur >= offer.offerPriceEur) {
-    return { error: 'Minimum price must be less than the maximum price.' }
+  const hasTiers = offer.offerPriceTiers != null && offer.offerPriceTiers.length > 0
+
+  // Validate pricing: need either a valid single price OR valid tiers
+  if (hasTiers) {
+    const tiersErr = validatePriceTiers(offer.offerPriceTiers!)
+    if (tiersErr != null) return { error: tiersErr }
+  } else {
+    if (!offer.offerPriceEur || offer.offerPriceEur <= 0) {
+      return { error: 'Enter a valid offer price.' }
+    }
+    if (offer.offerPriceMinEur != null && offer.offerPriceMinEur >= offer.offerPriceEur) {
+      return { error: 'Minimum price must be less than the maximum price.' }
+    }
   }
 
   const serviceClient = createServiceClient()
 
-  // Fetch the inquiry
+  // Fetch the inquiry — need group_size to derive effective price from tiers
   const { data: inquiry } = await serviceClient
     .from('trip_inquiries')
-    .select('id, assigned_guide_id, status')
+    .select('id, assigned_guide_id, status, group_size')
     .eq('id', inquiryId)
     .single()
 
@@ -463,14 +494,22 @@ export async function sendOfferByGuide(
     return { error: 'An offer can only be sent for inquiries in inquiry or reviewing status.' }
   }
 
+  // Compute effective price: derive from tiers when present
+  const effectivePriceEur = hasTiers
+    ? findApplicableTierPrice(offer.offerPriceTiers!, inquiry.group_size)
+    : (offer.offerPriceEur ?? 0)
+
   const { error: updateError } = await serviceClient
     .from('trip_inquiries')
     .update({
       status:              'offer_sent',
       assigned_guide_id:   guide.id,
       assigned_river:      offer.assignedRiver,
-      offer_price_min_eur: offer.offerPriceMinEur ?? null,
-      offer_price_eur:     offer.offerPriceEur,
+      offer_price_min_eur: hasTiers ? null : (offer.offerPriceMinEur ?? null),
+      offer_price_eur:     effectivePriceEur,
+      offer_price_tiers:   hasTiers
+                             ? (offer.offerPriceTiers as unknown as Json)
+                             : null,
       offer_details:       offer.offerDetails,
       offer_date_from:     offer.offerDateFrom    ?? null,
       offer_date_to:       offer.offerDateTo      ?? null,
@@ -483,6 +522,11 @@ export async function sendOfferByGuide(
     console.error('[sendOfferByGuide]', updateError)
     return { error: 'Failed to send offer. Please try again.' }
   }
+
+  const priceLabel = hasTiers
+    ? `tiers (${offer.offerPriceTiers!.length} steps, effective €${effectivePriceEur})`
+    : `€${effectivePriceEur}`
+  console.log(`[sendOfferByGuide] Offer sent for inquiry ${inquiryId} — ${priceLabel}`)
 
   revalidatePath('/dashboard/inquiries')
   revalidatePath(`/dashboard/inquiries/${inquiryId}`)

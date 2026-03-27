@@ -1,7 +1,7 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 41 — Manual payout model (DONE). typecheck ✅ 0 errors.
+Sesja 43 — Multi-day kalendarze booking flow (DONE). typecheck ✅ 0 errors.
 
 ---
 
@@ -360,6 +360,37 @@ Fazy po submit:
 - Inside overlay: `BookingRespondForm mode="page"` — wszystkie 3 fazy renderują się inline w overlaycie (bez double overlay)
 - `BookingRespondForm` — nowy prop `onClose?: () => void`: action phase nie pokazuje "Back to booking" gdy `onClose` defined; review phase "Changed your mind?" → `goBack()` zamiast Link
 - Efekt: czat (prawa kolumna) jest w pełni widoczny bo lewa kolumna nie ma już gigantycznego formularza; form ma pełną szerokość 1040px
+- typecheck ✅ 0 errors
+
+**Sesja 43**: Multi-day calendar fix w `BookingDateStep.tsx`:
+- `addDays(isoDate, n)` helper — bezpieczna arytmetyka kalendarza (new Date(y, m-1, d+n))
+- `DirectDateCalendar` — nowy prop `numDays?: number` (default 1):
+  - `numDays > 1` → range-start picker: angler klika start → auto-zaznacza N kolejnych dni z orange band (liniowy gradient na skrajach, pełne tło w środku); hint banner "Pick the start date — we'll block out N consecutive days"; legenda zmienia się na "Selected range"
+  - `numDays === 1` → bez zmian (multi-select z zielonymi kropkami)
+- Parent `BookingDateStep`:
+  - `minDateISO`/`maxDateISO` memoized (przeniesione z wnętrza DirectDateCalendar do parent)
+  - `directRangeHasBlockedDay` — sprawdza czy każdy dzień w N-dniowym zakresie jest `available`; wyłącza CTA gdy true
+  - `toggleDirectDate` — dla `days > 1`: toggle jednej daty start (click same → deselect); dla `days = 1`: bez zmian
+  - `handleDirectContinue` — dla `days > 1`: emituje `windowFrom/windowTo/numDays/pkgLabel` (same jak request mode); dla `days = 1`: legacy `dates=`
+  - Zmiana pakietu (`setSelectedPkgIdx`) → `setDirectDates([])` — czyści wybór
+  - Chips po wyborze: dla N-day → pojedynczy chip "5 Jun – 7 Jun (3 days)" z [×]; dla 1-day → bez zmian
+  - Warning banner gdy blocked days w zakresie (czerwony)
+  - CTA placeholder text: `"Pick a start date for your N-day trip"` dla multi-day
+  - `directDatesLabel` → dla multi-day: `"3 days from 5 Jun"` zamiast indywidualnych dat
+- Request mode:
+  - `requestPkgFixed = requestPkgDays > 1` — pakiet ma stałą liczbę dni
+  - "How many days" stepper ZABLOKOWANY gdy `requestPkgFixed`: pokazuje locked display `"3 days · Fixed by package"` zamiast steppera
+  - Wolny stepper tylko gdy pakiet 1-dniowy lub nie ma stałego czasu
+- typecheck ✅ 0 errors
+
+**Sesja 42**: Opcjonalne drabinki cenowe w icelandic flow:
+- `src/lib/inquiry-pricing.ts` — NEW: `PriceTier` type, `findApplicableTierPrice()`, `validatePriceTiers()`
+- `supabase/migrations/20260327200000_add_offer_price_tiers.sql` — `ALTER TABLE trip_inquiries ADD COLUMN offer_price_tiers jsonb NULL`
+- `database.types.ts` — `offer_price_tiers: Json | null` w Row/Insert/Update `trip_inquiries`
+- `src/actions/inquiries.ts` — `sendOfferByGuide` przyjmuje `offerPriceTiers?`; gdy podane: validation → compute effective price z tiers dla `group_size` → save tiers + auto-obliczony `offer_price_eur`; `acceptOffer` re-derivuje cenę z tiers (override `offer_price_eur`) przed Checkout
+- `GuideOfferForm` — toggle "Single price" / "By group size"; tier builder: dynamiczne wiersze [anglers] [€ price] [×]; `+Add tier`; live preview "Group of X: €Y" dla inquiry's `groupSize`; nowy prop `groupSize?`; `sortedTierIndices` do wyświetlania po anglers ASC; ostatni wiersz = "N+"
+- `dashboard/inquiries/[id]/page.tsx` — `OfferRecap` wyświetla tier table (zebra stripes, aktywny wiersz pomarańczowy, "their group" badge); `findApplicableTierPrice` dla effective price summary; przekazuje `groupSize` do obu instancji `OfferRecap`
+- `account/trips/[id]/page.tsx` — offer card z tier table (highlight "your group"), effective price callout; fallback na single price gdy brak tiers
 - typecheck ✅ 0 errors
 
 **Sesja 41**: Manual payout model — wypłaty guide'ów przez admina:

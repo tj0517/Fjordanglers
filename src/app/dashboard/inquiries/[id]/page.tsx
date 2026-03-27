@@ -7,6 +7,7 @@ import InquiryDeclineButton from '@/components/dashboard/inquiry-decline-button'
 import InquiryDetailTabs, { type InquiryDetailTabsProps } from '@/components/dashboard/inquiry-detail-tabs'
 import NavigationShortcuts from '@/components/dashboard/navigation-shortcuts'
 import InquiryChat, { type ChatMessage } from '@/components/inquiry-chat'
+import { type PriceTier, findApplicableTierPrice } from '@/lib/inquiry-pricing'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -491,6 +492,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                   anglerDatesTo={inquiry.dates_to}
                   anglerAllPeriods={prefs.allDatePeriods}
                   guideWeeklySchedules={guideSchedules}
+                  groupSize={inquiry.group_size}
                 />
                 {canDecline && (
                   <div className="pt-4 mt-2" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
@@ -518,7 +520,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                   </p>
                 </div>
 
-                {hasOffer && <OfferRecap inquiry={inquiry} />}
+                {hasOffer && <OfferRecap inquiry={inquiry} groupSize={inquiry.group_size} />}
 
                 {canDecline && (
                   <div className="pt-1">
@@ -556,7 +558,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                   </p>
                 </div>
 
-                {hasOffer && <OfferRecap inquiry={inquiry} />}
+                {hasOffer && <OfferRecap inquiry={inquiry} groupSize={inquiry.group_size} />}
               </div>
             )}
 
@@ -640,22 +642,43 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
 
 function OfferRecap({
   inquiry,
+  groupSize,
 }: {
   inquiry: {
-    assigned_river:   string | null
-    offer_price_eur:  number | null
-    offer_details:    string | null
-    offer_date_from:  string | null
-    offer_date_to:    string | null
+    assigned_river:    string | null
+    offer_price_eur:   number | null
+    offer_price_tiers: unknown
+    offer_details:     string | null
+    offer_date_from:   string | null
+    offer_date_to:     string | null
     offer_meeting_lat: number | null
     offer_meeting_lng: number | null
   }
+  groupSize?: number
 }) {
-  if (inquiry.offer_price_eur == null) return null
+  const priceTiers = Array.isArray(inquiry.offer_price_tiers)
+    ? (inquiry.offer_price_tiers as PriceTier[])
+    : null
+  const hasTiers = priceTiers != null && priceTiers.length > 0
+
+  if (inquiry.offer_price_eur == null && !hasTiers) return null
 
   const mapsHref =
     inquiry.offer_meeting_lat != null && inquiry.offer_meeting_lng != null
       ? `https://www.google.com/maps?q=${inquiry.offer_meeting_lat},${inquiry.offer_meeting_lng}`
+      : null
+
+  // When tiers present, highlight the row that applies to the inquiry's group_size
+  const activeTierAnglers =
+    hasTiers && groupSize != null
+      ? (() => {
+          const sorted = [...priceTiers!].sort((a, b) => a.anglers - b.anglers)
+          let match = sorted[0]
+          for (const t of sorted) {
+            if (t.anglers <= groupSize) match = t
+          }
+          return match.anglers
+        })()
       : null
 
   return (
@@ -724,18 +747,86 @@ function OfferRecap({
         </div>
       )}
 
-      {/* Price */}
-      <div className="flex items-start justify-between gap-3">
-        <span
-          className="text-xs f-body flex-shrink-0"
-          style={{ color: 'rgba(10,46,77,0.45)', width: 100 }}
-        >
-          Total price
-        </span>
-        <span className="text-base f-display font-bold" style={{ color: '#E67E50' }}>
-          €{inquiry.offer_price_eur}
-        </span>
-      </div>
+      {/* Price — either single value or tier table */}
+      {hasTiers ? (
+        <div>
+          <p
+            className="text-[10px] font-bold uppercase tracking-[0.15em] mb-2 f-body"
+            style={{ color: 'rgba(10,46,77,0.38)' }}
+          >
+            Price by group size
+          </p>
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ border: '1px solid rgba(10,46,77,0.1)' }}
+          >
+            {[...priceTiers!]
+              .sort((a, b) => a.anglers - b.anglers)
+              .map((tier, i, arr) => {
+                const isActive = tier.anglers === activeTierAnglers
+                const isLast   = i === arr.length - 1
+                return (
+                  <div
+                    key={tier.anglers}
+                    className="flex items-center justify-between px-3 py-2"
+                    style={{
+                      background: isActive
+                        ? 'rgba(230,126,80,0.08)'
+                        : i % 2 === 0 ? 'rgba(10,46,77,0.02)' : 'transparent',
+                      borderBottom: !isLast ? '1px solid rgba(10,46,77,0.06)' : undefined,
+                    }}
+                  >
+                    <span
+                      className="text-xs f-body"
+                      style={{ color: isActive ? '#0A2E4D' : 'rgba(10,46,77,0.55)', fontWeight: isActive ? 600 : 400 }}
+                    >
+                      {isLast
+                        ? `${tier.anglers}+ anglers`
+                        : `${tier.anglers} ${tier.anglers === 1 ? 'angler' : 'anglers'}`}
+                      {isActive && groupSize != null && (
+                        <span
+                          className="ml-2 text-[9px] font-bold uppercase tracking-[0.14em] px-1.5 py-0.5 rounded-full"
+                          style={{ background: 'rgba(230,126,80,0.15)', color: '#C4622A' }}
+                        >
+                          their group
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className="text-sm f-display font-bold"
+                      style={{ color: isActive ? '#E67E50' : '#0A2E4D' }}
+                    >
+                      €{tier.priceEur}
+                    </span>
+                  </div>
+                )
+              })}
+          </div>
+          {groupSize != null && activeTierAnglers != null && (
+            <p
+              className="mt-1.5 text-[10px] f-body"
+              style={{ color: 'rgba(10,46,77,0.4)' }}
+            >
+              Effective charge for {groupSize} {groupSize === 1 ? 'angler' : 'anglers'}:{' '}
+              <span className="font-semibold" style={{ color: '#E67E50' }}>
+                €{findApplicableTierPrice(priceTiers!, groupSize)}
+              </span>
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-start justify-between gap-3">
+          <span
+            className="text-xs f-body flex-shrink-0"
+            style={{ color: 'rgba(10,46,77,0.45)', width: 100 }}
+          >
+            Total price
+          </span>
+          <span className="text-base f-display font-bold" style={{ color: '#E67E50' }}>
+            €{inquiry.offer_price_eur}
+          </span>
+        </div>
+      )}
 
       {/* Details */}
       {inquiry.offer_details != null && inquiry.offer_details.length > 0 && (
