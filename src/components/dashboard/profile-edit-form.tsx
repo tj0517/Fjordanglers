@@ -26,6 +26,8 @@ import { updateGuideProfile } from '@/actions/dashboard'
 import { FISH_ALL } from '@/lib/fish'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import type { CancellationPolicy, BoatType } from '@/types'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { FieldTooltip } from '@/components/ui/field-tooltip'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -111,14 +113,15 @@ const inputBase: React.CSSProperties = {
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
-function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
+function Label({ children, htmlFor, tooltip }: { children: React.ReactNode; htmlFor?: string; tooltip?: string }) {
   return (
     <label
       htmlFor={htmlFor}
-      className="block text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body"
+      className="flex items-center text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body gap-1.5"
       style={{ color: 'rgba(10,46,77,0.45)' }}
     >
       {children}
+      {tooltip != null && <FieldTooltip text={tooltip} />}
     </label>
   )
 }
@@ -141,7 +144,7 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
   )
 }
 
-function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function SectionCard({ title, subtitle, help, children }: { title: string; subtitle?: string; help?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div
       className="p-8 mb-5 rounded-3xl"
@@ -151,7 +154,10 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
         boxShadow: '0 2px 16px rgba(10,46,77,0.04)',
       }}
     >
-      <h3 className="text-[#0A2E4D] text-base font-bold f-display mb-1">{title}</h3>
+      <div className="flex items-center gap-2 mb-1">
+        <h3 className="text-[#0A2E4D] text-base font-bold f-display">{title}</h3>
+        {help}
+      </div>
       {subtitle != null && (
         <p className="text-[#0A2E4D]/40 text-xs f-body mb-5">{subtitle}</p>
       )}
@@ -321,7 +327,13 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       )}
 
       {/* ── Hero Landscape ─────────────────────────────────────────── */}
-      <SectionCard title="Hero Background" subtitle="Full-width landscape shown behind your guide profile header. Pick from our library or upload your own.">
+      <SectionCard title="Hero Background" subtitle="Full-width landscape shown behind your guide profile header. Pick from our library or upload your own." help={
+        <HelpWidget title="Hero Background" description="The landscape image displayed full-width behind your guide profile header." items={[
+          { icon: '🖼️', title: 'Library images', text: 'Curated high-quality Scandinavian landscapes — pick one and crop it to fit your profile.' },
+          { icon: '📸', title: 'Upload your own', text: 'Use a photo from your own trips. Landscape orientation, minimum 2400px wide recommended.' },
+          { icon: '✕', title: 'Auto-assign', text: 'FjordAnglers will automatically pick a landscape that matches your location.' },
+        ]} />
+      }>
         {/* Tabs */}
         <div className="flex gap-1 mb-5 p-1 rounded-2xl" style={{ background: 'rgba(10,46,77,0.05)', width: 'fit-content' }}>
           {(['library', 'upload'] as const).map(tab => (
@@ -431,7 +443,12 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       </SectionCard>
 
       {/* ── Photos ─────────────────────────────────────────────────── */}
-      <SectionCard title="Photos" subtitle="Avatar shown on your profile card · Cover banner on your guide page">
+      <SectionCard title="Photos" subtitle="Avatar shown on your profile card · Cover banner on your guide page" help={
+        <HelpWidget title="Photos" items={[
+          { icon: '🧑', title: 'Avatar', text: 'Square photo shown on your profile card and next to your name throughout the platform. Best results: face clearly visible, square crop.' },
+          { icon: '🏞️', title: 'Cover photo', text: 'Wide banner displayed at the top of your guide page. Best results: 16:9, show you fishing or your location.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-5">
           <div className="grid grid-cols-2 gap-5">
             <ImageUpload
@@ -457,7 +474,15 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       </SectionCard>
 
       {/* ── Basic info ─────────────────────────────────────────────── */}
-      <SectionCard title="Basic Info">
+      <SectionCard title="Basic Info" help={
+        <HelpWidget title="Basic Info" description="Your public profile information — visible to all anglers on the platform." items={[
+          { icon: '👤', title: 'Full name', text: 'Your name as displayed on your guide profile and booking confirmations.' },
+          { icon: '📍', title: 'Country & City', text: 'Where you operate. Anglers search by location — keep this accurate.' },
+          { icon: '✏️', title: 'Tagline', text: 'One-line summary shown on your profile card. Max 120 characters. Example: "Salmon & trout specialist in Northern Norway since 2008".' },
+          { icon: '🚫', title: 'Cancellation policy', text: 'Minimum notice before trip start for a full refund. Flexible: 7 days · Moderate: 14 days · Strict: 30 days.' },
+          { icon: '📝', title: 'Bio', text: 'Tell anglers about yourself, your experience, and what makes your trips special. Be genuine and specific.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-5">
 
           {/* Full name */}
@@ -507,7 +532,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
 
           {/* Tagline */}
           <div>
-            <Label htmlFor="tagline">Tagline</Label>
+            <Label htmlFor="tagline" tooltip="One-line description shown on your profile card and in search results. Max 120 characters.">Tagline</Label>
             <input
               id="tagline"
               type="text"
@@ -572,7 +597,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
 
           {/* Bio */}
           <div>
-            <Label htmlFor="bio">Bio</Label>
+            <Label htmlFor="bio" tooltip="Your story as a guide — experience, what fish you target, and what makes your trips special. Be specific and genuine.">Bio</Label>
             <textarea
               id="bio"
               rows={5}
@@ -587,7 +612,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
 
           {/* Years of experience */}
           <div style={{ maxWidth: '200px' }}>
-            <Label htmlFor="years_experience">Years of experience</Label>
+            <Label htmlFor="years_experience" tooltip="Total years you have been guiding paying clients. Shown on your profile as a trust signal.">Years of experience</Label>
             <input
               id="years_experience"
               type="number"
@@ -605,7 +630,12 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       </SectionCard>
 
       {/* ── Expertise ──────────────────────────────────────────────── */}
-      <SectionCard title="Expertise" subtitle="What species do you guide for?">
+      <SectionCard title="Expertise" subtitle="What species do you guide for?" help={
+        <HelpWidget title="Expertise" items={[
+          { icon: '🐟', title: 'Target species', text: 'Select all fish you actively guide for. Anglers filter experiences by species — the more accurate, the better your match rate.' },
+          { icon: '🌍', title: 'Languages', text: 'Languages you can guide in. Anglers from your target markets will see this on your profile.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-6">
           <div>
             <Label>
@@ -641,7 +671,12 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       </SectionCard>
 
       {/* ── Specialties & Certifications ───────────────────────────── */}
-      <SectionCard title="Specialties & Certifications" subtitle="Highlight your unique strengths and credentials">
+      <SectionCard title="Specialties & Certifications" subtitle="Highlight your unique strengths and credentials" help={
+        <HelpWidget title="Specialties & Certifications" items={[
+          { icon: '⭐', title: 'Specialties', text: 'Select tags that highlight what makes your guiding unique — shown as badges on your profile.' },
+          { icon: '🏅', title: 'Certifications', text: 'Formal qualifications, safety courses, or official licences. Examples: Wilderness First Aid, Swift Water Rescue, Guide licence. Max 5.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-6">
 
           {/* Specialties pills */}
@@ -729,7 +764,13 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
       {/* External Reviews section removed — not used */}
 
       {/* ── Social links ───────────────────────────────────────────── */}
-      <SectionCard title="Social Links" subtitle="Optional — helps anglers follow your work">
+      <SectionCard title="Social Links" subtitle="Optional — helps anglers follow your work" help={
+        <HelpWidget title="Social Links" items={[
+          { icon: '📸', title: 'Instagram', text: 'Your most important social channel for fishing guides. Paste the full URL, e.g. https://instagram.com/yourhandle.' },
+          { icon: '▶️', title: 'YouTube', text: 'Trip videos and catch highlights build trust with anglers. Paste your channel URL.' },
+          { icon: '🌐', title: 'Website', text: 'Your own website or booking page if you have one.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-4">
           <div>
             <Label htmlFor="instagram_url">Instagram URL</Label>
