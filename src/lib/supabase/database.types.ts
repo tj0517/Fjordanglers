@@ -475,6 +475,8 @@ export type Database = {
           meeting_point_lng: number | null
           packages: Json | null
           price_per_person_eur: number | null
+          price_range_min_eur: number | null
+          price_range_max_eur: number | null
           published: boolean
           season_from: number | null
           season_to: number | null
@@ -525,6 +527,8 @@ export type Database = {
           meeting_point_lng?: number | null
           packages?: Json | null
           price_per_person_eur?: number | null
+          price_range_min_eur?: number | null
+          price_range_max_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null
@@ -575,6 +579,8 @@ export type Database = {
           meeting_point_lng?: number | null
           packages?: Json | null
           price_per_person_eur?: number | null
+          price_range_min_eur?: number | null
+          price_range_max_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null

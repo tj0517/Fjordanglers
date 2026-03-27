@@ -128,6 +128,8 @@ export type ExperienceFormDefaults = {
   location_area?: GeoJSON.Polygon | null
   location_spots?: LocationSpot[] | null
   booking_type?: 'classic' | 'icelandic'
+  price_range_min_eur?: number | null
+  price_range_max_eur?: number | null
   // Legacy arrays (still accepted for old records)
   what_included?: string[]
   what_excluded?: string[]
@@ -631,6 +633,8 @@ export default function ExperienceForm({
 
   // ── Booking type ─────────────────────────────────────────────────────────
   const [bookingType, setBookingType] = useState<'classic' | 'icelandic' | 'both'>(dv.booking_type ?? 'classic')
+  const [priceRangeMin, setPriceRangeMin] = useState<string>(dv.price_range_min_eur != null ? String(dv.price_range_min_eur) : '')
+  const [priceRangeMax, setPriceRangeMax] = useState<string>(dv.price_range_max_eur != null ? String(dv.price_range_max_eur) : '')
 
   // ── Form tab ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<FormTabKey>('pricing')
@@ -848,6 +852,8 @@ export default function ExperienceForm({
       location_area:        locationMode === 'area'   ? locationArea  : null,
       location_spots:       locationMode === 'spots'  ? locationSpots : null,
       booking_type:         bookingType,
+      price_range_min_eur:  priceRangeMin !== '' ? parseFloat(priceRangeMin) : null,
+      price_range_max_eur:  priceRangeMax !== '' ? parseFloat(priceRangeMax) : null,
       what_included:        [],
       what_excluded:        [],
       published,
@@ -1195,6 +1201,68 @@ export default function ExperienceForm({
             Since this experience uses the &quot;Price on request&quot; booking flow, pricing is
             set individually per inquiry. No fixed prices are needed here.
           </p>
+
+          {/* Optional price range hint */}
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+              Price range hint <span className="normal-case tracking-normal font-normal" style={{ color: 'rgba(10,46,77,0.35)' }}>— optional</span>
+            </p>
+            <p className="text-xs f-body mb-3 leading-relaxed" style={{ color: 'rgba(10,46,77,0.45)' }}>
+              Give anglers a ballpark before they inquire. These figures appear on your trip page but do not commit you to a specific price.
+            </p>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  From (€)
+                </label>
+                <div className="relative">
+                  <span
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}
+                  >€</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 400"
+                    value={priceRangeMin}
+                    onChange={e => setPriceRangeMin(e.target.value)}
+                    className="w-full rounded-xl pl-7 pr-3 py-2 text-sm f-body outline-none"
+                    style={{
+                      background: '#FDFAF7',
+                      border: '1.5px solid rgba(10,46,77,0.12)',
+                      color: '#0A2E4D',
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  To (€)
+                </label>
+                <div className="relative">
+                  <span
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}
+                  >€</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 800"
+                    value={priceRangeMax}
+                    onChange={e => setPriceRangeMax(e.target.value)}
+                    className="w-full rounded-xl pl-7 pr-3 py-2 text-sm f-body outline-none"
+                    style={{
+                      background: '#FDFAF7',
+                      border: '1.5px solid rgba(10,46,77,0.12)',
+                      color: '#0A2E4D',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
       {bookingType !== 'icelandic' && <SectionCard id="form-pricing" title="Pricing & Logistics" help={

@@ -102,6 +102,9 @@ export type ExperiencePayload = {
   location_area?: GeoJSON.Polygon | null
   location_spots?: LocationSpot[] | null
   booking_type?: 'classic' | 'icelandic' | 'both'
+  /** Optional price range hint for "Price on request" (icelandic) experiences. */
+  price_range_min_eur?: number | null
+  price_range_max_eur?: number | null
   /** @deprecated — kept for form compat; no longer stored as separate columns. */
   what_included: string[]
   /** @deprecated — kept for form compat; no longer stored as separate columns. */
@@ -337,6 +340,8 @@ export async function createExperience(
         license_description:          payload.license_description?.trim() || null,
         gear_description:             payload.gear_description?.trim() || null,
         transport_description:        payload.transport_description?.trim() || null,
+        price_range_min_eur:          payload.price_range_min_eur ?? null,
+        price_range_max_eur:          payload.price_range_max_eur ?? null,
       })
       .select('id')
       .single()
@@ -448,6 +453,8 @@ export async function updateExperience(
     if (payload.license_description !== undefined)        update.license_description       = payload.license_description?.trim() || null
     if (payload.gear_description !== undefined)           update.gear_description          = payload.gear_description?.trim() || null
     if (payload.transport_description !== undefined)      update.transport_description     = payload.transport_description?.trim() || null
+    if (payload.price_range_min_eur !== undefined)        update.price_range_min_eur       = payload.price_range_min_eur ?? null
+    if (payload.price_range_max_eur !== undefined)        update.price_range_max_eur       = payload.price_range_max_eur ?? null
 
     const { error } = await supabase
       .from('experiences')

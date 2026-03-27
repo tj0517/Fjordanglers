@@ -98,6 +98,8 @@ export default async function DashboardEditExperiencePage({
     license_description:     exp.license_description ?? null,
     gear_description:        exp.gear_description ?? null,
     transport_description:   exp.transport_description ?? null,
+    price_range_min_eur:     exp.price_range_min_eur ?? null,
+    price_range_max_eur:     exp.price_range_max_eur ?? null,
   }
 
   return (

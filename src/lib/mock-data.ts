@@ -31,6 +31,8 @@ const EXP_EXTRA = {
   gear_description:          null,
   transport_description:     null,
   inquiry_form_config:       null,
+  price_range_min_eur:       null,
+  price_range_max_eur:       null,
 }
 
 export const MOCK_GUIDES: MockGuide[] = [
