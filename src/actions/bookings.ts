@@ -285,56 +285,47 @@ export async function acceptBooking(
   // ── Stripe Checkout (destination charge) ─────────────────────────────────
   let stripeCheckoutId: string | null = null
 
-  if (guide.stripe_account_id && guide.stripe_payouts_enabled) {
-    // Idempotency: don't create a duplicate checkout if one already exists
-    if (!booking.stripe_checkout_id) {
-      try {
-        const totalEur       = effectiveTotalEur
-        const guidePayoutEur = effectiveGuidePayoutEur
-        const depositCents   = Math.round(totalEur * 0.3 * 100)
-        const platformFee    = Math.round((totalEur - guidePayoutEur) * 0.3 * 100)
+  // Always create a deposit checkout — money collected on platform, guide paid manually by admin.
+  if (!booking.stripe_checkout_id) {
+    try {
+      const depositCents    = Math.round(effectiveTotalEur * 0.3 * 100)
+      const experienceTitle =
+        (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
 
-        const experienceTitle =
-          (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-
-        const session = await stripe.checkout.sessions.create(
-          {
-            mode:                 'payment',
-            payment_method_types: ['card'],
-            customer_email:       booking.angler_email ?? undefined,
-            line_items: [
-              {
-                price_data: {
-                  currency:     'eur',
-                  product_data: {
-                    name:        `${experienceTitle} — 30% Deposit`,
-                    description: 'Deposit to confirm your booking. Remaining balance is due before the trip.',
-                  },
-                  unit_amount: depositCents,
+      const session = await stripe.checkout.sessions.create(
+        {
+          mode:                 'payment',
+          payment_method_types: ['card'],
+          customer_email:       booking.angler_email ?? undefined,
+          line_items: [
+            {
+              price_data: {
+                currency:     'eur',
+                product_data: {
+                  name:        `${experienceTitle} — 30% Deposit`,
+                  description: 'Deposit to confirm your booking. Remaining balance is due before the trip.',
                 },
-                quantity: 1,
+                unit_amount: depositCents,
               },
-            ],
-            metadata:    { bookingId, guideId: guide.id },
-            success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
-            cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
-            payment_intent_data: {
-              application_fee_amount: platformFee,
-              transfer_data:          { destination: guide.stripe_account_id },
-              metadata:               { bookingId },
+              quantity: 1,
             },
-          },
-          { idempotencyKey: `booking-accept-${bookingId}` },
-        )
+          ],
+          metadata:    { bookingId, guideId: guide.id },
+          success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
+          cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+          // No transfer_data — full amount stays on platform; admin sends payout manually.
+          payment_intent_data: { metadata: { bookingId } },
+        },
+        { idempotencyKey: `booking-accept-${bookingId}` },
+      )
 
-        stripeCheckoutId = session.id
-      } catch (err) {
-        console.error('[acceptBooking] Stripe Checkout error:', err)
-        // Non-fatal: accept without payment link, admin can create checkout manually
-      }
-    } else {
-      stripeCheckoutId = booking.stripe_checkout_id
+      stripeCheckoutId = session.id
+    } catch (err) {
+      console.error('[acceptBooking] Stripe Checkout error:', err)
+      // Non-fatal: accept without payment link, admin can create checkout manually
     }
+  } else {
+    stripeCheckoutId = booking.stripe_checkout_id
   }
 
   const balanceMethod = (guide.default_balance_payment_method ?? 'cash') as 'stripe' | 'cash'
@@ -437,22 +428,10 @@ export async function renewDepositCheckout(
 
   if (!booking) return { error: 'Booking not found or not ready for payment.' }
 
-  const guide = booking.guides as unknown as {
-    stripe_account_id: string | null
-    stripe_payouts_enabled: boolean
-  } | null
-
-  if (!guide?.stripe_account_id || !guide.stripe_payouts_enabled) {
-    return { error: 'Payment not available — guide payout account not ready. Please contact us.' }
-  }
-
   const experienceTitle =
     (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
 
-  const totalEur       = booking.total_eur
-  const guidePayoutEur = booking.guide_payout_eur
-  const depositCents   = Math.round(totalEur * 0.3 * 100)
-  const platformFee    = Math.round((totalEur - guidePayoutEur) * 0.3 * 100)
+  const depositCents = Math.round(booking.total_eur * 0.3 * 100)
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -475,9 +454,8 @@ export async function renewDepositCheckout(
       metadata:            { bookingId, guideId: booking.guide_id },
       success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
       cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+      // No transfer_data — full amount stays on platform; admin sends payout manually.
       payment_intent_data: {
-        application_fee_amount: platformFee,
-        transfer_data:          { destination: guide.stripe_account_id },
         metadata:               { bookingId },
       },
     })
@@ -621,7 +599,7 @@ export async function declineBooking(
 // ─── createBalanceCheckout ────────────────────────────────────────────────────
 //
 // Angler pays the remaining 70% balance via Stripe.
-// NO application_fee_amount — platform takes 0% on balance.
+// Manual payout model — full amount stays on platform; admin sends payout to guide.
 // Idempotency: if a balance checkout already exists and is open, returns its URL.
 
 export async function createBalanceCheckout(
@@ -638,7 +616,7 @@ export async function createBalanceCheckout(
   const { data: booking } = await serviceClient
     .from('bookings')
     .select(
-      'id, status, angler_id, total_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
+      'id, status, angler_id, total_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, experiences(title)',
     )
     .eq('id', bookingId)
     .eq('angler_id', user.id)
@@ -648,15 +626,6 @@ export async function createBalanceCheckout(
   if (!booking) return { error: 'Booking not found or not ready for balance payment.' }
   if (booking.balance_payment_method !== 'stripe') return { error: 'This booking uses cash payment.' }
   if (booking.balance_paid_at != null) return { error: 'Balance already paid.' }
-
-  const guide = booking.guides as unknown as {
-    stripe_account_id: string | null
-    stripe_payouts_enabled: boolean
-  } | null
-
-  if (!guide?.stripe_account_id || !guide.stripe_payouts_enabled) {
-    return { error: 'Payment not available — guide payout account not ready. Please contact us.' }
-  }
 
   // Idempotency: if a Checkout session already exists and is still open, return its URL
   if (booking.balance_stripe_checkout_id) {
@@ -697,10 +666,9 @@ export async function createBalanceCheckout(
         metadata: { bookingId, guideId: booking.guide_id, paymentType: 'balance' },
         success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=balance_paid`,
         cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+        // No transfer_data — full amount stays on platform; admin sends payout manually.
         payment_intent_data: {
-          // No application_fee_amount — 100% goes to the guide
-          transfer_data: { destination: guide.stripe_account_id },
-          metadata:      { bookingId, paymentType: 'balance' },
+          metadata: { bookingId, paymentType: 'balance' },
         },
       },
       { idempotencyKey: `booking-balance-${bookingId}` },

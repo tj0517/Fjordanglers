@@ -150,6 +150,8 @@ export type Database = {
           id: string
           inquiry_id: string | null
           marketing_consent: boolean
+          payout_sent_at: string | null
+          payout_status: string
           platform_fee_eur: number
           requested_dates: string[] | null
           special_requests: string | null
@@ -189,6 +191,8 @@ export type Database = {
           guide_payout_eur: number
           id?: string
           marketing_consent?: boolean
+          payout_sent_at?: string | null
+          payout_status?: string
           platform_fee_eur?: number
           requested_dates?: string[] | null
           special_requests?: string | null
@@ -228,6 +232,8 @@ export type Database = {
           id?: string
           inquiry_id?: string | null
           marketing_consent?: boolean
+          payout_sent_at?: string | null
+          payout_status?: string
           platform_fee_eur?: number
           requested_dates?: string[] | null
           special_requests?: string | null

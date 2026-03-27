@@ -21,6 +21,7 @@ import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
+import { revalidatePath } from 'next/cache'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -280,6 +281,10 @@ export async function startStripeOnboarding(): Promise<
     }
 
     try {
+      // Stripe requires a public URL — skip for local dev
+      const appUrl = env.NEXT_PUBLIC_APP_URL
+      const isLocalhost = appUrl.includes('localhost') || appUrl.includes('127.0.0.1')
+
       const account = await stripe.accounts.create({
         type:          'express',
         email:         user.email,
@@ -292,7 +297,7 @@ export async function startStripeOnboarding(): Promise<
         business_profile: {
           // MCC 7999 — Recreation Services (fishing guides / outdoor activities)
           mcc: '7999',
-          url: env.NEXT_PUBLIC_APP_URL,
+          ...(!isLocalhost && { url: appUrl }),
         },
         individual: {
           email:      user.email,
@@ -330,10 +335,13 @@ export async function startStripeOnboarding(): Promise<
 
   // 4. Patch business_profile on existing accounts (mcc + url may be missing)
   //    Safe to call even if already set — Stripe ignores no-op updates.
+  //    Skip url on localhost — Stripe requires a public URL.
+  const appUrl      = env.NEXT_PUBLIC_APP_URL
+  const isLocalhost = appUrl.includes('localhost') || appUrl.includes('127.0.0.1')
   await stripe.accounts.update(accountId, {
     business_profile: {
       mcc: '7999',
-      url: env.NEXT_PUBLIC_APP_URL,
+      ...(!isLocalhost && { url: appUrl }),
     },
   }).catch(err => {
     // Non-fatal — log and continue; the guide can still complete onboarding
@@ -357,4 +365,51 @@ export async function startStripeOnboarding(): Promise<
     console.error('[stripe-connect] accountLinks.create error:', err)
     return { error: msg }
   }
+}
+
+// ─── syncStripeAccountStatus ────────────────────────────────────────────────────
+//
+// Manually pulls the current account status from Stripe and writes it to DB.
+// Useful when the account.updated webhook was missed (wrong secret, cold start, etc.)
+
+export async function syncStripeAccountStatus(): Promise<
+  { success: true; payoutsEnabled: boolean } | { error: string }
+> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const service = createServiceClient()
+  const { data: guide } = await service
+    .from('guides')
+    .select('id, stripe_account_id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!guide) return { error: 'Guide profile not found' }
+  if (!guide.stripe_account_id) return { error: 'No Stripe account linked yet — complete onboarding first' }
+
+  let account: Stripe.Account
+  try {
+    account = await stripe.accounts.retrieve(guide.stripe_account_id)
+  } catch (err) {
+    console.error('[syncStripeAccountStatus] retrieve error:', err)
+    return { error: 'Could not reach Stripe — please try again' }
+  }
+
+  const { error: dbErr } = await service
+    .from('guides')
+    .update({
+      stripe_charges_enabled: account.charges_enabled ?? false,
+      stripe_payouts_enabled: account.payouts_enabled ?? false,
+    })
+    .eq('id', guide.id)
+
+  if (dbErr) {
+    console.error('[syncStripeAccountStatus] DB error:', dbErr)
+    return { error: 'Failed to save status — please try again' }
+  }
+
+  revalidatePath('/dashboard/account')
+  return { success: true, payoutsEnabled: account.payouts_enabled ?? false }
 }

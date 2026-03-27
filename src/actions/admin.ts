@@ -11,7 +11,9 @@
  */
 
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { stripe } from '@/lib/stripe/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -494,6 +496,245 @@ export async function linkGuideAccount(
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('[admin/linkGuideAccount]', err)
     return { error: 'Failed to link account. Please try again.' }
+  }
+}
+
+// ─── Set Guide Status ─────────────────────────────────────────────────────────
+
+/**
+ * Quick status toggle for admin — activate, suspend, or reset to pending.
+ * Sets verified_at on first activation.
+ */
+export async function adminSetGuideStatus(
+  guideId: string,
+  status: 'active' | 'suspended' | 'pending',
+): Promise<AdminDeleteResult> {
+  try {
+    await requireAdmin()
+    const supabase = createServiceClient()
+
+    const { data: current } = await supabase
+      .from('guides')
+      .select('verified_at')
+      .eq('id', guideId)
+      .single()
+
+    const isActivating  = status === 'active'
+    const setVerifiedAt = isActivating && current?.verified_at == null
+
+    const { error } = await supabase
+      .from('guides')
+      .update({
+        status,
+        ...(setVerifiedAt ? { verified_at: new Date().toISOString() } : {}),
+      })
+      .eq('id', guideId)
+
+    if (error != null) return { error: error.message }
+
+    revalidatePath(`/admin/guides/${guideId}`)
+    return { success: true }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
+    console.error('[admin/adminSetGuideStatus]', err)
+    return { error: 'Failed to update status. Please try again.' }
+  }
+}
+
+// ─── Sync Stripe Account Status ───────────────────────────────────────────────
+
+/**
+ * Pulls the current account status from Stripe and syncs to DB.
+ * Useful when account.updated webhook was missed.
+ */
+export async function adminSyncStripeStatus(
+  guideId: string,
+): Promise<{ success: true; chargesEnabled: boolean; payoutsEnabled: boolean } | { error: string }> {
+  try {
+    await requireAdmin()
+    const supabase = createServiceClient()
+
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id, stripe_account_id')
+      .eq('id', guideId)
+      .single()
+
+    if (!guide) return { error: 'Guide not found' }
+    if (!guide.stripe_account_id) return { error: 'No Stripe account linked for this guide' }
+
+    const account = await stripe.accounts.retrieve(guide.stripe_account_id)
+
+    const { error: dbErr } = await supabase
+      .from('guides')
+      .update({
+        stripe_charges_enabled: account.charges_enabled ?? false,
+        stripe_payouts_enabled: account.payouts_enabled ?? false,
+      })
+      .eq('id', guideId)
+
+    if (dbErr != null) return { error: dbErr.message }
+
+    revalidatePath(`/admin/guides/${guideId}`)
+    return {
+      success:        true,
+      chargesEnabled: account.charges_enabled ?? false,
+      payoutsEnabled: account.payouts_enabled ?? false,
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
+    console.error('[admin/adminSyncStripeStatus]', err)
+    return { error: 'Failed to sync Stripe status. Please try again.' }
+  }
+}
+
+// ─── Admin Send Payout ────────────────────────────────────────────────────────
+
+/**
+ * Transfers guide_payout_eur from the platform Stripe account to the guide's
+ * connected account. Only valid when payout_status = 'pending' and the booking
+ * is confirmed or completed.
+ *
+ * Idempotent via Stripe idempotency key — safe to retry on network errors.
+ */
+export async function adminSendPayout(
+  bookingId: string,
+): Promise<AdminDeleteResult> {
+  try {
+    await requireAdmin()
+    const supabase = createServiceClient()
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, status, payout_status, guide_payout_eur, guide_id, guides(stripe_account_id)')
+      .eq('id', bookingId)
+      .single()
+
+    if (!booking) return { error: 'Booking not found.' }
+    if (booking.payout_status === 'sent')     return { error: 'Payout already sent.' }
+    if (booking.payout_status === 'returned') return { error: 'Cannot send payout — booking was refunded.' }
+
+    const guide = booking.guides as unknown as { stripe_account_id: string | null } | null
+    if (!guide?.stripe_account_id) {
+      return { error: 'Guide has no Stripe account linked. Cannot send payout via Stripe.' }
+    }
+
+    if (!['confirmed', 'completed'].includes(booking.status)) {
+      return { error: `Booking must be confirmed or completed to send payout (current: ${booking.status}).` }
+    }
+
+    const transferCents = Math.round(booking.guide_payout_eur * 100)
+    if (transferCents <= 0) return { error: 'Invalid payout amount.' }
+
+    const transfer = await stripe.transfers.create(
+      {
+        amount:      transferCents,
+        currency:    'eur',
+        destination: guide.stripe_account_id,
+        metadata:    { bookingId },
+      },
+      { idempotencyKey: `payout-${bookingId}` },
+    )
+
+    const { error: dbErr } = await supabase
+      .from('bookings')
+      .update({
+        payout_status:      'sent',
+        payout_sent_at:     new Date().toISOString(),
+        stripe_transfer_id: transfer.id,
+      })
+      .eq('id', bookingId)
+
+    if (dbErr != null) return { error: dbErr.message }
+
+    revalidatePath(`/admin/guides/${booking.guide_id}/payouts`)
+    return { success: true }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
+    console.error('[admin/adminSendPayout]', err)
+    return { error: 'Failed to send payout. Please try again.' }
+  }
+}
+
+// ─── Admin Refund Booking ─────────────────────────────────────────────────────
+
+/**
+ * Issues Stripe refunds for the deposit and/or balance payment (if paid),
+ * then marks the booking as refunded + payout_status = 'returned'.
+ *
+ * Only callable when payout_status = 'pending' (i.e. admin has NOT yet sent
+ * the payout). If payout was already sent, the admin must handle it manually.
+ */
+export async function adminRefundBooking(
+  bookingId: string,
+): Promise<AdminDeleteResult> {
+  try {
+    await requireAdmin()
+    const supabase = createServiceClient()
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, status, payout_status, guide_id, stripe_payment_intent_id, balance_stripe_payment_intent_id')
+      .eq('id', bookingId)
+      .single()
+
+    if (!booking) return { error: 'Booking not found.' }
+    if (booking.payout_status === 'returned') return { error: 'Booking already refunded.' }
+    if (booking.payout_status === 'sent') {
+      return { error: 'Payout already sent to guide — cannot auto-refund. Handle manually in Stripe.' }
+    }
+
+    const refundableStatuses = ['confirmed', 'completed', 'accepted']
+    if (!refundableStatuses.includes(booking.status)) {
+      return { error: `Cannot refund a booking with status: ${booking.status}` }
+    }
+
+    // ── Refund deposit ──────────────────────────────────────────────────────
+    if (booking.stripe_payment_intent_id) {
+      try {
+        await stripe.refunds.create({
+          payment_intent: booking.stripe_payment_intent_id,
+          reason:         'requested_by_customer',
+        })
+      } catch (err: unknown) {
+        const e = err as { code?: string }
+        if (e?.code !== 'charge_already_refunded') {
+          console.error('[adminRefundBooking] deposit refund error:', err)
+          return { error: 'Failed to refund deposit. Check Stripe dashboard.' }
+        }
+      }
+    }
+
+    // ── Refund balance (if paid via Stripe) ────────────────────────────────
+    if (booking.balance_stripe_payment_intent_id) {
+      try {
+        await stripe.refunds.create({
+          payment_intent: booking.balance_stripe_payment_intent_id,
+          reason:         'requested_by_customer',
+        })
+      } catch (err: unknown) {
+        const e = err as { code?: string }
+        if (e?.code !== 'charge_already_refunded') {
+          console.error('[adminRefundBooking] balance refund error:', err)
+          // Deposit was already refunded — non-fatal but log prominently
+          return { error: 'Deposit refunded but balance refund failed. Manually refund balance in Stripe.' }
+        }
+      }
+    }
+
+    const { error: dbErr } = await supabase
+      .from('bookings')
+      .update({ payout_status: 'returned', status: 'refunded' })
+      .eq('id', bookingId)
+
+    if (dbErr != null) return { error: dbErr.message }
+
+    revalidatePath(`/admin/guides/${booking.guide_id}/payouts`)
+    return { success: true }
+  } catch (err) {
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
+    console.error('[admin/adminRefundBooking]', err)
+    return { error: 'Failed to refund booking. Please try again.' }
   }
 }
 

@@ -7,6 +7,7 @@ import DeleteExperienceButton from '@/components/admin/delete-experience-button'
 import LinkGuideButton from '@/components/admin/link-guide-button'
 import LinkGuidePanel from '@/components/admin/link-guide-panel'
 import CopyInviteLink from '@/components/admin/copy-invite-link'
+import { AdminGuideActions } from './AdminGuideActions'
 
 /**
  * /admin/guides/[id] — Guide detail page for admin.
@@ -34,7 +35,7 @@ export default async function AdminGuideDetailPage({
   const [{ data: guide }, { data: experiences }] = await Promise.all([
     supabase
       .from('guides')
-      .select('id, user_id, full_name, country, city, status, is_beta_listing, avatar_url, cover_url, fish_expertise, languages, bio, verified_at, invite_email, lead_id, created_at')
+      .select('id, user_id, full_name, country, city, status, is_beta_listing, avatar_url, cover_url, fish_expertise, languages, bio, verified_at, invite_email, lead_id, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
       .eq('id', id)
       .single(),
     supabase
@@ -141,6 +142,16 @@ export default async function AdminGuideDetailPage({
                 </>
               )}
               <Link
+                href={`/admin/guides/${guide.id}/payouts`}
+                className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:brightness-95 f-body"
+                style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
+              >
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+                  <path d="M1 8.5h9M1 6h6M1 3.5h4" />
+                </svg>
+                Payouts
+              </Link>
+              <Link
                 href={`/admin/guides/${guide.id}/trips/new`}
                 className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
                 style={{ background: '#E67E50' }}
@@ -199,6 +210,25 @@ export default async function AdminGuideDetailPage({
             </div>
           )}
         </div>
+      </div>
+
+      {/* ─── Account & Stripe ───────────────────────────────────────── */}
+      <div
+        className="p-7 mb-7 rounded-3xl"
+        style={{
+          background: '#FDFAF7',
+          border: '1px solid rgba(10,46,77,0.07)',
+          boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
+        }}
+      >
+        <h2 className="text-[#0A2E4D] text-base font-bold f-display mb-5">Account & Stripe</h2>
+        <AdminGuideActions
+          guideId={guide.id}
+          currentStatus={guide.status as 'active' | 'pending' | 'suspended' | 'verified'}
+          stripeAccountId={guide.stripe_account_id ?? null}
+          stripePayoutsEnabled={guide.stripe_payouts_enabled}
+          stripeChargesEnabled={guide.stripe_charges_enabled}
+        />
       </div>
 
       {/* ─── Experiences ─────────────────────────────────────────────── */}

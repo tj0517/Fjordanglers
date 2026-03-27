@@ -1,34 +1,37 @@
 # booking-flow-agent — pamięć
 
 ## Status
-Sesja 39 — Desktop UX: respond form jako full-page popup widget (DONE). typecheck ✅ 0 errors.
+Sesja 41 — Manual payout model (DONE). typecheck ✅ 0 errors.
 
 ---
 
-## Finalna architektura płatności (uproszczona)
+## Finalna architektura płatności — MANUAL PAYOUT MODEL
 
-**Jeden flow dla wszystkich booking_type (`direct`, `icelandic`, `both`)**:
+**Angler płaci platformie → admin ręcznie wysyła pieniądze do guide'a.**
 
 ```
-1. Angler wysyła booking     → DB row (status: pending)       — brak płatności
-2. Guide akceptuje           → acceptBooking()                 — Checkout (destination charge)
+1. Angler wysyła booking     → DB row (status: pending)
+2. Guide akceptuje           → acceptBooking()                 — Checkout (NO transfer_data)
                                → status: accepted
-3. Angler widzi banner       → PayDepositBanner               — klik → Stripe Checkout
-4. Angler płaci 30% deposit  → webhook checkout.session.completed
-                               → status: confirmed
+3. Angler płaci 30% deposit  → webhook checkout.session.completed → status: confirmed
+   (pieniądze na koncie platformy)
+4. [opcjonalnie] Angler płaci 70% balance → createBalanceCheckout() → status: completed
+5. Admin widzi payout_status = 'pending' → adminSendPayout()   → Stripe transfer do guide'a
+   OR admin zwraca pieniądze  → adminRefundBooking()            → Stripe refund do anglera
 ```
 
-**Dlaczego**: Trzymanie pieniędzy na platformie przed akceptacją guide'a → EMD2/PSD2 w UE → money transmitter regulations. Prostsze i bezpieczniejsze prawnie: płatność dopiero gdy obie strony się zgodzą.
+**Dlaczego manual**: Upraszcza Stripe Connect setup (brak destination charges / split), admin kontroluje kiedy i czy wyplata jest wysyłana, łatwy zwrot pieniędzy bez auto-reversal transferu.
 
 ---
 
-## Stripe Connect — model
+## Stripe Connect — model (AKTUALNY)
 
 - **Custom accounts** — `type: 'custom'`, capability `transfers` only
-- **Destination charges** — `application_fee_amount` + `transfer_data.destination`
-  - Stripe auto-splits: guide dostaje deposit minus platform fee
-  - Na refundzie: `reverse_transfer: true` → Stripe auto-odwraca transfer
-- **`stripe_payouts_enabled`** — jedyny miarodajny bool dla "account gotowy"
+- **NO destination charges** — brak `application_fee_amount`, brak `transfer_data.destination` w Checkout
+- Wszystkie płatności trafiają na konto platformy
+- Wypłaty dla guide'a: admin wywołuje `adminSendPayout(bookingId)` → `stripe.transfers.create()`
+- Zwroty: `adminRefundBooking(bookingId)` → `stripe.refunds.create()` dla deposit PI i/lub balance PI
+- **`stripe_payouts_enabled`** — NADAL syncowany (do adminSendPayout), ale NIE blokuje tworzenia Checkout
 - **`stripe_charges_enabled`** — dla Custom zwykle `false`, nie blokuj na nim
 
 ---
@@ -357,6 +360,16 @@ Fazy po submit:
 - Inside overlay: `BookingRespondForm mode="page"` — wszystkie 3 fazy renderują się inline w overlaycie (bez double overlay)
 - `BookingRespondForm` — nowy prop `onClose?: () => void`: action phase nie pokazuje "Back to booking" gdy `onClose` defined; review phase "Changed your mind?" → `goBack()` zamiast Link
 - Efekt: czat (prawa kolumna) jest w pełni widoczny bo lewa kolumna nie ma już gigantycznego formularza; form ma pełną szerokość 1040px
+- typecheck ✅ 0 errors
+
+**Sesja 41**: Manual payout model — wypłaty guide'ów przez admina:
+- `createBalanceCheckout()` — usunięto `transfer_data` + `stripe_payouts_enabled` guard; pieniądze zostają na platformie
+- `src/actions/admin.ts` — `adminSendPayout(bookingId)`: stripe.transfers.create() → guide, update payout_status='sent', payout_sent_at, stripe_transfer_id; idempotency key `payout-${bookingId}`
+- `src/actions/admin.ts` — `adminRefundBooking(bookingId)`: refund deposit PI + balance PI (jeśli zapłacony), update payout_status='returned', status='refunded'; tylko gdy payout_status='pending'
+- `src/app/admin/guides/[id]/payouts/page.tsx` — tabela wszystkich bookingów guide'a z summary (pending €, sent count, returned count); dwie kolumny statusów (payout_status + booking status); per-booking `AdminPayoutsActions`
+- `src/app/admin/guides/[id]/payouts/AdminPayoutsActions.tsx` — "Send payout" (zielony) + "Refund" (czerwony) przyciski; optimistic UI — po akcji wyświetla finalne pill; confirm dialog przed refundem
+- `src/app/admin/guides/[id]/page.tsx` — dodano "Payouts" link button w sekcji akcji guide'a
+- DB columns: `payout_status: 'pending'|'sent'|'returned'`, `payout_sent_at`, `stripe_transfer_id` (z migracji 20260327110000)
 - typecheck ✅ 0 errors
 
 **Sesja 40**: Icelandic trip type — calendar widget parity + period picker:
