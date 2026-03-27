@@ -513,30 +513,32 @@ export default async function DashboardHomePage() {
         </div>
       </div>
 
-      {/* ── Quick actions ──────────────────────────────────────────────────── */}
-      <div className="rounded-2xl px-6 py-5"
-        style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-        <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-4"
-           style={{ color: 'rgba(10,46,77,0.38)' }}>Quick actions</p>
-        <div className="flex flex-wrap gap-3">
-          {[
-            { label: '+ New trip',   href: '/dashboard/trips/new',    primary: true  },
-            { label: 'My trips',     href: '/dashboard/trips',        primary: false },
-            { label: 'Calendar',     href: '/dashboard/calendar',     primary: false },
-            { label: 'Bookings',     href: '/dashboard/bookings',     primary: false },
-            { label: 'Inquiries',    href: '/dashboard/inquiries',    primary: false },
-            { label: 'Edit profile', href: '/dashboard/profile/edit', primary: false },
-          ].map(action => (
-            <Link key={action.label} href={action.href}
-              className="text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-all"
-              style={action.primary
-                ? { background: '#E67E50', color: '#fff' }
-                : { background: 'rgba(10,46,77,0.05)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
-              {action.label}
-            </Link>
-          ))}
+      {/* ── Quick actions — only shown when setup incomplete (allDone has shortcuts grid) */}
+      {!allDone && (
+        <div className="rounded-2xl px-6 py-5"
+          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
+          <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-4"
+             style={{ color: 'rgba(10,46,77,0.38)' }}>Quick actions</p>
+          <div className="flex flex-wrap gap-3">
+            {[
+              { label: '+ New trip',   href: '/dashboard/trips/new',    primary: true  },
+              { label: 'My trips',     href: '/dashboard/trips',        primary: false },
+              { label: 'Calendar',     href: '/dashboard/calendar',     primary: false },
+              { label: 'Bookings',     href: '/dashboard/bookings',     primary: false },
+              { label: 'Inquiries',    href: '/dashboard/inquiries',    primary: false },
+              { label: 'Edit profile', href: '/dashboard/profile/edit', primary: false },
+            ].map(action => (
+              <Link key={action.label} href={action.href}
+                className="text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-all"
+                style={action.primary
+                  ? { background: '#E67E50', color: '#fff' }
+                  : { background: 'rgba(10,46,77,0.05)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
+                {action.label}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   )

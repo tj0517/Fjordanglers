@@ -46,7 +46,7 @@ export default async function AdminInquiriesPage() {
   ]
 
   return (
-    <div className="px-10 py-10 max-w-[1100px]">
+    <div className="px-4 sm:px-6 lg:px-10 py-6 lg:py-10 max-w-[1100px]">
 
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
@@ -101,6 +101,7 @@ export default async function AdminInquiriesPage() {
           overflow: 'hidden',
         }}
       >
+        <div className="overflow-x-auto">
         {/* Header */}
         <div
           className="grid px-6 py-3"
@@ -109,6 +110,7 @@ export default async function AdminInquiriesPage() {
             borderBottom: '1px solid rgba(10,46,77,0.07)',
             background: 'rgba(10,46,77,0.02)',
             gap: '12px',
+            minWidth: '780px',
           }}
         >
           {['Angler', 'Dates', 'Species', 'Group', 'Level', 'Status', 'Submitted'].map(col => (
@@ -127,7 +129,7 @@ export default async function AdminInquiriesPage() {
             <p className="text-[#0A2E4D]/30 text-sm f-body">No inquiries yet.</p>
           </div>
         ) : (
-          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
+          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '780px' }}>
             {all.map(inquiry => {
               const s = STATUS_STYLES[inquiry.status]
               const submitted = new Date(inquiry.created_at).toLocaleDateString('en-GB', {
@@ -192,6 +194,7 @@ export default async function AdminInquiriesPage() {
             })}
           </div>
         )}
+        </div>{/* /overflow-x-auto */}
       </div>
     </div>
   )

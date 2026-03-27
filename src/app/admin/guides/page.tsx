@@ -39,7 +39,7 @@ export default async function AdminGuidesPage() {
   const activeCount = allGuides.filter(g => g.status === 'active').length
 
   return (
-    <div className="px-10 py-10 max-w-[1100px]">
+    <div className="px-4 sm:px-6 lg:px-10 py-6 lg:py-10 max-w-[1100px]">
 
       {/* ─── Header ───────────────────────────────────────────────── */}
       <div className="flex items-start justify-between mb-8">
@@ -78,6 +78,7 @@ export default async function AdminGuidesPage() {
           overflow: 'hidden',
         }}
       >
+        <div className="overflow-x-auto">
         {/* Table header */}
         <div
           className="grid px-6 py-3"
@@ -85,6 +86,7 @@ export default async function AdminGuidesPage() {
             gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr',
             borderBottom: '1px solid rgba(10,46,77,0.07)',
             background: 'rgba(10,46,77,0.02)',
+            minWidth: '700px',
           }}
         >
           {['Guide', 'Location', 'Specialty', 'Listings', 'Status', 'Added'].map(col => (
@@ -106,7 +108,7 @@ export default async function AdminGuidesPage() {
             </Link>
           </div>
         ) : (
-          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
+          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '700px' }}>
             {allGuides.map((guide) => {
               const status = guide.status as keyof typeof STATUS_STYLES
               const s = STATUS_STYLES[status] ?? STATUS_STYLES.pending
@@ -218,6 +220,7 @@ export default async function AdminGuidesPage() {
             })}
           </div>
         )}
+        </div>{/* /overflow-x-auto */}
       </div>
     </div>
   )

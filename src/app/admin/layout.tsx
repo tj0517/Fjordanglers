@@ -42,7 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       <AdminSidebar adminName={adminName} newLeadsCount={newLeadsCount ?? 0} />
-      <main style={{ marginLeft: '240px', minHeight: '100vh' }}>
+      <main className="ml-14 lg:ml-60" style={{ minHeight: '100vh' }}>
         {children}
       </main>
     </div>

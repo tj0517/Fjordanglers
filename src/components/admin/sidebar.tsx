@@ -100,9 +100,8 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 flex flex-col"
+      className="fixed inset-y-0 left-0 flex flex-col w-14 lg:w-60"
       style={{
-        width: '240px',
         background: '#07111C',
         borderRight: '1px solid rgba(255,255,255,0.05)',
         zIndex: 40,
@@ -122,10 +121,11 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
 
       {/* Logo + admin badge */}
       <div
-        className="relative px-6 pt-6 pb-5"
+        className="relative px-3 lg:px-6 pt-5 pb-4"
         style={{ zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <Link href="/">
+        {/* Full logo — desktop only */}
+        <Link href="/" className="hidden lg:block">
           <Image
             src="/brand/white-logo.png"
             alt="FjordAnglers"
@@ -135,11 +135,17 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
             style={{ opacity: 0.7 }}
           />
         </Link>
-        <div className="flex items-center gap-2 mt-1.5">
+        {/* Icon dot — mobile only */}
+        <Link href="/" className="lg:hidden flex items-center justify-center">
+          <div
+            className="w-7 h-7 rounded-full"
+            style={{ background: '#E67E50', boxShadow: '0 0 8px rgba(230,126,80,0.5)' }}
+          />
+        </Link>
+        <div className="hidden lg:flex items-center gap-2 mt-1.5">
           <p className="text-[10px] uppercase tracking-[0.22em] f-body" style={{ color: 'rgba(255,255,255,0.22)' }}>
             Admin Panel
           </p>
-          {/* Admin indicator dot */}
           <div
             className="w-1.5 h-1.5 rounded-full"
             style={{ background: '#E67E50', boxShadow: '0 0 6px rgba(230,126,80,0.6)' }}
@@ -147,9 +153,9 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
         </div>
       </div>
 
-      {/* Admin identity card */}
+      {/* Admin identity card — desktop only */}
       <div
-        className="relative px-4 py-3"
+        className="relative hidden lg:block px-4 py-3"
         style={{ zIndex: 1, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
         <div
@@ -175,10 +181,10 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
       </div>
 
       {/* Navigation */}
-      <nav className="relative flex-1 px-3 py-4 flex flex-col gap-0.5 overflow-y-auto" style={{ zIndex: 1 }}>
-        {/* Section label */}
+      <nav className="relative flex-1 px-2 lg:px-3 py-4 flex flex-col gap-0.5 overflow-y-auto" style={{ zIndex: 1 }}>
+        {/* Section label — desktop only */}
         <p
-          className="px-3 pb-2 text-[9px] uppercase tracking-[0.22em] font-semibold f-body"
+          className="hidden lg:block px-3 pb-2 text-[9px] uppercase tracking-[0.22em] font-semibold f-body"
           style={{ color: 'rgba(255,255,255,0.18)' }}
         >
           Management
@@ -195,17 +201,14 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all f-body"
+              title={item.label}
+              className="flex items-center justify-center lg:justify-start gap-3 px-0 lg:px-3 py-2.5 rounded-xl text-sm font-medium transition-all f-body"
               style={
                 isCreateNew
                   ? {
-                      background: isActive
-                        ? 'rgba(230,126,80,0.18)'
-                        : 'rgba(230,126,80,0.08)',
+                      background: isActive ? 'rgba(230,126,80,0.18)' : 'rgba(230,126,80,0.08)',
                       color: '#E67E50',
-                      border: isActive
-                        ? '1px solid rgba(230,126,80,0.25)'
-                        : '1px solid rgba(230,126,80,0.12)',
+                      border: isActive ? '1px solid rgba(230,126,80,0.25)' : '1px solid rgba(230,126,80,0.12)',
                       marginTop: '6px',
                     }
                   : {
@@ -215,12 +218,12 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
                     }
               }
             >
-              <span style={{ opacity: isActive ? 1 : 0.65 }}>{item.icon}</span>
-              <span className="flex-1">{item.label}</span>
-              {/* New leads badge */}
+              <span style={{ opacity: isActive ? 1 : 0.65, flexShrink: 0 }}>{item.icon}</span>
+              <span className="hidden lg:block flex-1">{item.label}</span>
+              {/* New leads badge — desktop only */}
               {item.href === '/admin/leads' && newLeadsCount > 0 && (
                 <span
-                  className="text-[9px] font-bold px-1.5 py-0.5 rounded-full f-body leading-none"
+                  className="hidden lg:inline text-[9px] font-bold px-1.5 py-0.5 rounded-full f-body leading-none"
                   style={{ background: '#E67E50', color: 'white', minWidth: '16px', textAlign: 'center' }}
                 >
                   {newLeadsCount > 99 ? '99+' : newLeadsCount}
@@ -233,27 +236,29 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
 
       {/* Bottom: sign out + back to site */}
       <div
-        className="relative px-4 pb-5 pt-4"
+        className="relative px-2 lg:px-4 pb-5 pt-4"
         style={{ zIndex: 1, borderTop: '1px solid rgba(255,255,255,0.05)' }}
       >
         <form action={signOut}>
           <button
             type="submit"
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.06] mb-0.5"
+            title="Sign out"
+            className="w-full flex items-center justify-center lg:justify-start gap-2 px-0 lg:px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.06] mb-0.5"
             style={{ color: 'rgba(255,255,255,0.35)', cursor: 'pointer', border: 'none', background: 'transparent' }}
           >
             <IconLogout />
-            Sign out
+            <span className="hidden lg:block">Sign out</span>
           </button>
         </form>
 
         <Link
           href="/"
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.04]"
+          title="Back to site"
+          className="flex items-center justify-center lg:justify-start gap-2 px-0 lg:px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.04]"
           style={{ color: 'rgba(255,255,255,0.28)' }}
         >
           <IconArrowLeft />
-          Back to site
+          <span className="hidden lg:block">Back to site</span>
         </Link>
       </div>
     </aside>

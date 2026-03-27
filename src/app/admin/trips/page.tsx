@@ -141,7 +141,7 @@ export default async function AdminExperiencesPage({
   ]
 
   return (
-    <div className="px-10 py-10 max-w-[1200px]">
+    <div className="px-4 sm:px-6 lg:px-10 py-6 lg:py-10 max-w-[1200px]">
 
       {/* ─── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between mb-8">
@@ -238,6 +238,7 @@ export default async function AdminExperiencesPage({
           overflow: 'hidden',
         }}
       >
+        <div className="overflow-x-auto">
         {/* Table header */}
         <div
           className="grid px-6 py-3"
@@ -245,6 +246,7 @@ export default async function AdminExperiencesPage({
             gridTemplateColumns: '2.5fr 1.4fr 1.1fr 0.8fr 0.8fr 0.9fr 1.6fr',
             borderBottom: '1px solid rgba(10,46,77,0.07)',
             background: 'rgba(10,46,77,0.02)',
+            minWidth: '900px',
           }}
         >
           {['Trip', 'Guide', 'Location', 'Price', 'Duration', 'Status', 'Actions'].map((col) => (
@@ -285,7 +287,7 @@ export default async function AdminExperiencesPage({
             )}
           </div>
         ) : (
-          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
+          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '900px' }}>
             {displayed.map((exp) => {
               const duration = exp.duration_hours != null
                 ? `${exp.duration_hours}h`
@@ -424,6 +426,7 @@ export default async function AdminExperiencesPage({
             })}
           </div>
         )}
+        </div>{/* /overflow-x-auto */}
       </div>
 
       {/* ─── Footer info ────────────────────────────────────────────── */}

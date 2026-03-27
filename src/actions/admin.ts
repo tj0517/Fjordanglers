@@ -533,6 +533,8 @@ export async function adminSetGuideStatus(
     if (error != null) return { error: error.message }
 
     revalidatePath(`/admin/guides/${guideId}`)
+    revalidatePath(`/guides/${guideId}`)
+    revalidatePath('/guides')
     return { success: true }
   } catch (err) {
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
@@ -623,17 +625,22 @@ export async function adminSendPayout(
       return { error: `Booking must be confirmed or completed to send payout (current: ${booking.status}).` }
     }
 
-    const transferCents = Math.round(booking.guide_payout_eur * 100)
-    if (transferCents <= 0) return { error: 'Invalid payout amount.' }
+    const payoutCents = Math.round(booking.guide_payout_eur * 100)
+    if (payoutCents <= 0) return { error: 'Invalid payout amount.' }
 
-    const transfer = await stripe.transfers.create(
+    // Destination charges automatically transfer funds to the guide's connected account.
+    // We trigger a payout FROM the connected account TO the guide's bank account.
+    // stripe.payouts.create() is called with stripeAccount header (acts on connected account).
+    const payout = await stripe.payouts.create(
       {
-        amount:      transferCents,
-        currency:    'eur',
-        destination: guide.stripe_account_id,
-        metadata:    { bookingId },
+        amount:   payoutCents,
+        currency: 'eur',
+        metadata: { bookingId },
       },
-      { idempotencyKey: `payout-${bookingId}` },
+      {
+        stripeAccount:  guide.stripe_account_id,
+        idempotencyKey: `payout-${bookingId}`,
+      },
     )
 
     const { error: dbErr } = await supabase
@@ -641,7 +648,7 @@ export async function adminSendPayout(
       .update({
         payout_status:      'sent',
         payout_sent_at:     new Date().toISOString(),
-        stripe_transfer_id: transfer.id,
+        stripe_transfer_id: payout.id,
       })
       .eq('id', bookingId)
 
