@@ -43,6 +43,7 @@ export default function BookingCheckoutForm({
   // Auth fields (login + register)
   const [password, setPassword] = useState('')
 
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
 
   const [error, setError] = useState<string | null>(null)
@@ -96,6 +97,7 @@ export default function BookingCheckoutForm({
         anglerPhone: mode === 'guest' ? (anglerPhone || undefined) : undefined,
         anglerCountry: mode === 'guest' ? (anglerCountry || undefined) : undefined,
         specialRequests: mode === 'guest' ? (specialRequests || undefined) : undefined,
+        marketingConsent,
       })
 
       if ('error' in result) {
@@ -303,6 +305,35 @@ export default function BookingCheckoutForm({
           {error}
         </div>
       )}
+
+      {/* ── Marketing consent (optional) ─────────────────────────────────────── */}
+      <label className="flex items-start gap-3 cursor-pointer select-none">
+        <span className="relative flex-shrink-0 mt-0.5">
+          <input
+            type="checkbox"
+            checked={marketingConsent}
+            onChange={e => setMarketingConsent(e.target.checked)}
+            className="sr-only peer"
+          />
+          <span
+            className="flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-[1.5px] transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-[#E67E50]/40"
+            style={{
+              background:   marketingConsent ? '#E67E50' : '#F3EDE4',
+              borderColor:  marketingConsent ? '#E67E50' : 'rgba(10,46,77,0.2)',
+            }}
+          >
+            {marketingConsent && (
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </span>
+        </span>
+        <span className="text-[12px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          I give FjordAnglers permission to use photos and materials from my trip for promotional purposes on social media and the platform.{' '}
+          <span className="text-[11px]" style={{ color: 'rgba(10,46,77,0.35)' }}>(Optional)</span>
+        </span>
+      </label>
 
       {/* ── Terms acceptance ─────────────────────────────────────────────────── */}
       <label className="flex items-start gap-3 cursor-pointer select-none">

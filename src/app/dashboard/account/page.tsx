@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PasswordResetButton } from './AccountActions'
 import { StripeConnectButton } from './StripeConnectButton'
-import { BalanceMethodForm } from './BalanceMethodForm'
+import { AcceptedPaymentMethodsForm } from './AcceptedPaymentMethodsForm'
 
 export const revalidate = 0
 
@@ -25,7 +25,7 @@ export default async function AccountPage({
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, default_balance_payment_method')
+    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods')
     .eq('user_id', user.id)
     .single()
 
@@ -129,13 +129,20 @@ export default async function AccountPage({
             </div>
           </Row>
 
-          {/* Under review — show reassuring message, no action needed */}
+          {/* Under review — show status + option to resume/complete setup */}
           {hasStripeAccount && !stripePayoutsLive && (
-            <Row label="Status">
-              <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                Stripe is reviewing your account — usually 1–2 business days
-              </span>
-            </Row>
+            <>
+              <Row label="Status">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  {stripeRefresh
+                    ? 'Your session expired — click below to continue setup'
+                    : 'Stripe is reviewing your account — usually 1–2 business days'}
+                </span>
+              </Row>
+              <Row label="Action">
+                <StripeConnectButton label="Resume setup" />
+              </Row>
+            </>
           )}
 
           <Row label="Payout currency">
@@ -152,14 +159,53 @@ export default async function AccountPage({
         {/* ── Bank account setup — only shown before first connection ──────── */}
         {!hasStripeAccount && (
           <Card title="Connect bank account">
-            <div className="px-6 pt-4 pb-2">
+            <div className="px-6 pt-4 pb-6 flex flex-col gap-5">
               <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                Enter your personal details and IBAN to receive weekly payouts from FjordAnglers.
-                Your information is transmitted directly to Stripe — we never store your bank details.
+                Set up your Stripe account to receive weekly payouts from FjordAnglers.
+                You&apos;ll be taken to Stripe&apos;s secure onboarding — it takes about 5 minutes.
+                Your name, email and country will be pre-filled automatically.
+              </p>
+              <StripeConnectButton />
+              <p className="text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                By continuing, you agree to{' '}
+                <a
+                  href="https://stripe.com/legal/connect-account"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                  style={{ color: 'rgba(10,46,77,0.6)' }}
+                >
+                  Stripe&apos;s Connected Account Agreement
+                </a>.
               </p>
             </div>
-            <BankAccountForm initialCountry={guide.country ?? ''} />
           </Card>
+        )}
+
+        {/* ── Return from Stripe — setup submitted ─────────────────────────── */}
+        {stripeDone && stripePayoutsLive === false && (
+          <div
+            className="rounded-2xl px-6 py-4 flex items-start gap-3"
+            style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
+          >
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+              style={{ background: 'rgba(74,222,128,0.15)' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round">
+                <polyline points="2,6.5 5.5,10 11,3" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-bold f-body" style={{ color: '#16A34A' }}>
+                Setup submitted!
+              </p>
+              <p className="text-xs f-body mt-0.5 leading-relaxed" style={{ color: 'rgba(22,163,74,0.8)' }}>
+                Stripe is reviewing your account — this usually takes 1–2 business days.
+                You&apos;ll be notified when payouts are enabled.
+              </p>
+            </div>
+          </div>
         )}
 
         {/* ── Plan ─────────────────────────────────────────────────────────── */}
@@ -206,21 +252,18 @@ export default async function AccountPage({
           </Row>
         </Card>
 
-        {/* ── Balance payment method ────────────────────────────────────────── */}
-        {isCommission && (
-          <Card title="Balance payment">
-            <div className="px-6 pt-4 pb-2">
-              <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                Choose how anglers pay the remaining <strong style={{ color: '#0A2E4D' }}>70% balance</strong> after their deposit.
-                This setting applies to all future bookings you accept.
-                No platform commission is charged on the balance.
-              </p>
-            </div>
-            <BalanceMethodForm
-              current={(guide.default_balance_payment_method ?? 'cash') as 'stripe' | 'cash'}
-            />
-          </Card>
-        )}
+        {/* ── Accepted payment methods ──────────────────────────────────────── */}
+        <Card title="Accepted payment methods">
+          <div className="px-6 pt-4 pb-2">
+            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              Choose which payment methods you accept from anglers.
+              This is shown on your public profile and trip pages so anglers know before they book.
+            </p>
+          </div>
+          <AcceptedPaymentMethodsForm
+            current={(guide.accepted_payment_methods ?? ['cash', 'online']) as ('cash' | 'online')[]}
+          />
+        </Card>
 
       </div>
     </div>

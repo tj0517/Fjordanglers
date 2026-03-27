@@ -149,6 +149,7 @@ export type Database = {
           guide_payout_eur: number
           id: string
           inquiry_id: string | null
+          marketing_consent: boolean
           platform_fee_eur: number
           requested_dates: string[] | null
           special_requests: string | null
@@ -187,6 +188,7 @@ export type Database = {
           inquiry_id?: string | null
           guide_payout_eur: number
           id?: string
+          marketing_consent?: boolean
           platform_fee_eur?: number
           requested_dates?: string[] | null
           special_requests?: string | null
@@ -225,6 +227,7 @@ export type Database = {
           guide_payout_eur?: number
           id?: string
           inquiry_id?: string | null
+          marketing_consent?: boolean
           platform_fee_eur?: number
           requested_dates?: string[] | null
           special_requests?: string | null

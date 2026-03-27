@@ -29,6 +29,7 @@ const createBookingSchema = z.object({
   anglerPhone: z.string().optional(),
   anglerCountry: z.string().optional(),
   specialRequests: z.string().max(1000).optional(),
+  marketingConsent: z.boolean().optional(),
 })
 
 type CreateBookingInput = z.infer<typeof createBookingSchema>
@@ -67,6 +68,7 @@ export async function createBookingCheckout(
     anglerPhone,
     anglerCountry,
     specialRequests,
+    marketingConsent,
   } = parsed.data
 
   // Use explicit numDays (trip duration) if provided; fall back to dates.length
@@ -77,7 +79,7 @@ export async function createBookingCheckout(
   const { data: experience } = await supabase
     .from('experiences')
     .select(
-      'id, title, price_per_person_eur, max_guests, guide_id, guides(id, full_name, stripe_account_id, pricing_model)',
+      'id, title, price_per_person_eur, max_guests, guide_id, guides(id, full_name, stripe_account_id, pricing_model, commission_rate)',
     )
     .eq('id', experienceId)
     .eq('published', true)
@@ -90,6 +92,7 @@ export async function createBookingCheckout(
     full_name: string
     stripe_account_id: string | null
     pricing_model: string
+    commission_rate: number
   } | null
 
   if (!guideRaw) return { error: 'Guide not found.' }
@@ -105,7 +108,7 @@ export async function createBookingCheckout(
   const subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
   const serviceFee = Math.round(subtotal * 0.05 * 100) / 100 // 5% angler-side fee
   const totalEur = Math.round((subtotal + serviceFee) * 100) / 100
-  const commissionRate = env.PLATFORM_COMMISSION_RATE // 0.10 by default
+  const commissionRate = guideRaw.commission_rate ?? env.PLATFORM_COMMISSION_RATE
   const platformFeeEur = Math.round(subtotal * commissionRate * 100) / 100
   const guidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
   const depositEur = Math.round(totalEur * 0.3 * 100) / 100 // 30% deposit now
@@ -133,6 +136,7 @@ export async function createBookingCheckout(
       angler_phone: anglerPhone ?? null,
       special_requests: specialRequests ?? null,
       duration_option: durationOptionLabel ?? null,
+      marketing_consent: marketingConsent ?? false,
       status: 'pending',
     })
     .select('id')
@@ -878,6 +882,43 @@ export async function updateBalancePaymentMethod(
   if (error) {
     console.error('[updateBalancePaymentMethod]', error)
     return { error: 'Failed to update balance payment method.' }
+  }
+
+  revalidatePath('/dashboard/account')
+  return {}
+}
+
+// ─── updateAcceptedPaymentMethods ─────────────────────────────────────────────
+//
+// Guide sets which payment methods they accept from anglers (cash, online/Stripe).
+// Multi-select — at least one must be selected.
+// Shown publicly on guide profile and trip pages.
+
+export async function updateAcceptedPaymentMethods(
+  methods: ('cash' | 'online')[],
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  if (!Array.isArray(methods) || methods.length === 0) {
+    return { error: 'Select at least one accepted payment method.' }
+  }
+
+  const valid = methods.every(m => m === 'cash' || m === 'online')
+  if (!valid) return { error: 'Invalid payment method value.' }
+
+  const serviceClient = createServiceClient()
+  const { error } = await serviceClient
+    .from('guides')
+    .update({ accepted_payment_methods: methods })
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[updateAcceptedPaymentMethods]', error)
+    return { error: 'Failed to save payment methods.' }
   }
 
   revalidatePath('/dashboard/account')

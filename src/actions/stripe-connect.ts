@@ -208,6 +208,34 @@ export async function setupPayoutAccount(data: SetupPayoutInput): Promise<Action
 // ─── Express onboarding (current) ──────────────────────────────────────────────
 
 /**
+ * Normalizes a country value to a 2-letter ISO code.
+ * The DB may store the full name ("Iceland") from older profile edits.
+ * Falls back to 'NO' (most common guide country) if not recognized.
+ */
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  Norway: 'NO', Sweden: 'SE', Finland: 'FI', Denmark: 'DK',
+  Estonia: 'EE', Latvia: 'LV', Lithuania: 'LT', Poland: 'PL', Germany: 'DE',
+  Austria: 'AT', Switzerland: 'CH', Netherlands: 'NL', Belgium: 'BE',
+  France: 'FR', Spain: 'ES', Portugal: 'PT', Italy: 'IT',
+  Slovenia: 'SI', Slovakia: 'SK', 'Czech Republic': 'CZ', Hungary: 'HU',
+  Romania: 'RO', Bulgaria: 'BG', Greece: 'GR', 'United Kingdom': 'GB',
+  Ireland: 'IE',
+}
+
+// Countries not yet supported by Stripe Connect (as of 2026)
+const STRIPE_UNSUPPORTED: Set<string> = new Set(['IS', 'HR'])
+
+function toCountryCode(country: string | null): string | null {
+  if (!country) return null
+  const trimmed = country.trim()
+  // Already a 2-letter code
+  if (/^[A-Z]{2}$/.test(trimmed)) return trimmed
+  // Uppercase first letter and look up
+  const upperFirst = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+  return COUNTRY_NAME_TO_CODE[upperFirst] ?? COUNTRY_NAME_TO_CODE[trimmed] ?? null
+}
+
+/**
  * Creates (or resumes) a Stripe Express account for the authenticated guide,
  * pre-filled with their known data, and returns a one-time hosted onboarding URL.
  *
@@ -241,16 +269,31 @@ export async function startStripeOnboarding(): Promise<
     const firstName = nameParts[0] ?? ''
     const lastName  = nameParts.slice(1).join(' ') || undefined
 
+    // Normalize country — DB may store full name ("Iceland") or ISO code ("IS")
+    const countryCode = toCountryCode(guide.country)
+
+    if (!countryCode) {
+      return { error: `Unrecognised country "${guide.country}" — please contact support@fjordanglers.com` }
+    }
+    if (STRIPE_UNSUPPORTED.has(countryCode)) {
+      return { error: `Stripe payouts are not yet available in your country (${guide.country}). Please contact support@fjordanglers.com to arrange manual payouts.` }
+    }
+
     try {
       const account = await stripe.accounts.create({
         type:          'express',
         email:         user.email,
-        country:       guide.country ?? 'NO',
+        country:       countryCode,
         capabilities:  {
           card_payments: { requested: true },
           transfers:     { requested: true },
         },
         business_type: 'individual',
+        business_profile: {
+          // MCC 7999 — Recreation Services (fishing guides / outdoor activities)
+          mcc: '7999',
+          url: env.NEXT_PUBLIC_APP_URL,
+        },
         individual: {
           email:      user.email,
           ...(firstName && { first_name: firstName }),
@@ -285,7 +328,19 @@ export async function startStripeOnboarding(): Promise<
     }
   }
 
-  // 4. Generate a one-time account link (expires ~10 min)
+  // 4. Patch business_profile on existing accounts (mcc + url may be missing)
+  //    Safe to call even if already set — Stripe ignores no-op updates.
+  await stripe.accounts.update(accountId, {
+    business_profile: {
+      mcc: '7999',
+      url: env.NEXT_PUBLIC_APP_URL,
+    },
+  }).catch(err => {
+    // Non-fatal — log and continue; the guide can still complete onboarding
+    console.warn('[stripe-connect] accounts.update business_profile warning:', err)
+  })
+
+  // 5. Generate a one-time account link (expires ~10 min)
   const baseUrl = env.NEXT_PUBLIC_APP_URL
   try {
     const link = await stripe.accountLinks.create({

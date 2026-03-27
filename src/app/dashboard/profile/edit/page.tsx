@@ -15,28 +15,27 @@ export default async function ProfileEditPage() {
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, country, city, bio, fish_expertise, languages, years_experience, instagram_url, youtube_url, facebook_url, website_url, avatar_url, cover_url, landscape_url, accepted_payment_methods')
+    .select('id, full_name, country, city, bio, fish_expertise, languages, years_experience, instagram_url, youtube_url, facebook_url, website_url, avatar_url, cover_url, landscape_url')
     .eq('user_id', user.id)
     .single()
 
   if (guide == null) redirect('/dashboard')
 
   const defaults: ProfileDefaults = {
-    full_name:                guide.full_name,
-    country:                  guide.country,
-    city:                     guide.city,
-    bio:                      guide.bio,
-    fish_expertise:           guide.fish_expertise,
-    languages:                guide.languages,
-    years_experience:         guide.years_experience,
-    instagram_url:            guide.instagram_url,
-    youtube_url:              guide.youtube_url,
-    facebook_url:             guide.facebook_url,
-    website_url:              guide.website_url,
-    avatar_url:               guide.avatar_url,
-    cover_url:                guide.cover_url,
-    landscape_url:            guide.landscape_url,
-    accepted_payment_methods: (guide.accepted_payment_methods ?? null) as import('@/types').PaymentMethod[] | null,
+    full_name:        guide.full_name,
+    country:          guide.country,
+    city:             guide.city,
+    bio:              guide.bio,
+    fish_expertise:   guide.fish_expertise,
+    languages:        guide.languages,
+    years_experience: guide.years_experience,
+    instagram_url:    guide.instagram_url,
+    youtube_url:      guide.youtube_url,
+    facebook_url:     guide.facebook_url,
+    website_url:      guide.website_url,
+    avatar_url:       guide.avatar_url,
+    cover_url:        guide.cover_url,
+    landscape_url:    guide.landscape_url,
   }
 
   return (

@@ -241,7 +241,7 @@ export async function acceptOffer(
   // Fetch inquiry — verify ownership
   const { data: inquiry } = await serviceClient
     .from('trip_inquiries')
-    .select('*, guides(id, full_name, stripe_account_id, stripe_payouts_enabled)')
+    .select('*, guides(id, full_name, stripe_account_id, stripe_payouts_enabled, commission_rate)')
     .eq('id', inquiryId)
     .single()
 
@@ -267,6 +267,7 @@ export async function acceptOffer(
     full_name: string
     stripe_account_id: string | null
     stripe_payouts_enabled: boolean
+    commission_rate: number
   } | null
 
   // Mark as offer_accepted
@@ -278,7 +279,7 @@ export async function acceptOffer(
   // If guide has Stripe with payouts enabled → create Checkout session (destination charge)
   if (guide?.stripe_account_id && guide.stripe_payouts_enabled) {
     try {
-      const commissionRate = env.PLATFORM_COMMISSION_RATE
+      const commissionRate = guide?.commission_rate ?? env.PLATFORM_COMMISSION_RATE
       const session = await stripe.checkout.sessions.create(
         {
           mode: 'payment',

@@ -25,7 +25,7 @@ import { createClient } from '@/lib/supabase/client'
 import { updateGuideProfile } from '@/actions/dashboard'
 import { FISH_ALL } from '@/lib/fish'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
-import type { CancellationPolicy, BoatType, PaymentMethod } from '@/types'
+import type { CancellationPolicy, BoatType } from '@/types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -59,21 +59,6 @@ const BOAT_TYPE_OPTIONS: BoatTypeOption[] = [
   { value: 'kayak',          label: 'Kayak' },
 ]
 
-type PaymentMethodOption = { value: PaymentMethod; label: string; icon: string; description: string }
-const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
-  {
-    value:       'cash',
-    label:       'Cash',
-    icon:        '💵',
-    description: 'Collected in person at the trip',
-  },
-  {
-    value:       'online',
-    label:       'Online payment',
-    icon:        '💳',
-    description: 'Secure card payment via Stripe',
-  },
-]
 
 const TAGLINE_MAX = 120
 
@@ -107,7 +92,6 @@ export type ProfileDefaults = {
   boat_engine?: string | null
   boat_capacity?: number | null
   landscape_url?: string | null
-  accepted_payment_methods?: PaymentMethod[] | null
 }
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
@@ -217,11 +201,6 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
   const [boatEngine,   setBoatEngine]   = useState(defaults.boat_engine ?? '')
   const [boatCapacity, setBoatCapacity] = useState(defaults.boat_capacity?.toString() ?? '')
 
-  // ── Payment methods ──────────────────────────────────────────────────────────
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(
-    (defaults.accepted_payment_methods ?? ['cash', 'online']) as PaymentMethod[],
-  )
-
   // ── Social ──────────────────────────────────────────────────────────────────
   const [instagram, setInstagram] = useState(defaults.instagram_url ?? '')
   const [youtube,   setYoutube]   = useState(defaults.youtube_url ?? '')
@@ -242,8 +221,6 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
     setLangList(prev => prev.includes(l) ? prev.filter(x => x !== l) : [...prev, l])
   const toggleSpecialty = (s: string) =>
     setSpecialties(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
-  const togglePaymentMethod = (m: PaymentMethod) =>
-    setPaymentMethods(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
 
   // ── Certification helpers ────────────────────────────────────────────────────
   const addCertification = () => {
@@ -263,7 +240,6 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
     if (!fullName.trim())             { setError('Full name is required.'); return }
     if (!country)                     { setError('Country is required.'); return }
     if (tagline.length > TAGLINE_MAX) { setError(`Tagline must be ${TAGLINE_MAX} characters or fewer.`); return }
-    if (paymentMethods.length === 0)  { setError('Select at least one accepted payment method.'); return }
 
     if (googleRating !== '') {
       const r = parseFloat(googleRating)
@@ -298,10 +274,9 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         youtube_url:         youtube.trim() || null,
         facebook_url:        facebook.trim() || null,
         website_url:         website.trim() || null,
-        avatar_url:                avatarUrl,
-        cover_url:                 coverUrl,
-        landscape_url:             landscapeUrl.trim() || null,
-        accepted_payment_methods:  paymentMethods,
+        avatar_url:    avatarUrl,
+        cover_url:     coverUrl,
+        landscape_url: landscapeUrl.trim() || null,
       })
 
       if (!result.success) {
@@ -592,67 +567,6 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
             </div>
             <p className="text-[11px] mt-2 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
               Minimum notice before trip start required for a full refund.
-            </p>
-          </div>
-
-          {/* Accepted payment methods */}
-          <div>
-            <Label>Accepted payment methods</Label>
-            <div className="flex gap-3 flex-wrap" role="group" aria-label="Accepted payment methods">
-              {PAYMENT_METHOD_OPTIONS.map(opt => {
-                const isActive = paymentMethods.includes(opt.value)
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => togglePaymentMethod(opt.value)}
-                    aria-pressed={isActive}
-                    className="flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all f-body"
-                    style={
-                      isActive
-                        ? {
-                            background: '#0A2E4D',
-                            color: '#fff',
-                            border: '1.5px solid #0A2E4D',
-                            boxShadow: '0 2px 8px rgba(10,46,77,0.18)',
-                          }
-                        : {
-                            background: 'rgba(10,46,77,0.04)',
-                            color: 'rgba(10,46,77,0.6)',
-                            border: '1.5px solid rgba(10,46,77,0.12)',
-                          }
-                    }
-                  >
-                    {/* Checkbox indicator */}
-                    <span
-                      className="flex-shrink-0 w-4 h-4 rounded flex items-center justify-center"
-                      style={{
-                        background: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(10,46,77,0.08)',
-                        border: isActive ? '1.5px solid rgba(255,255,255,0.4)' : '1.5px solid rgba(10,46,77,0.2)',
-                      }}
-                    >
-                      {isActive && (
-                        <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                          <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="text-base leading-none">{opt.icon}</span>
-                    <span className="flex flex-col items-start gap-0.5">
-                      <span className="font-semibold leading-none">{opt.label}</span>
-                      <span
-                        className="text-[11px] leading-tight"
-                        style={{ color: isActive ? 'rgba(255,255,255,0.6)' : 'rgba(10,46,77,0.4)' }}
-                      >
-                        {opt.description}
-                      </span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-            <p className="text-[11px] mt-2 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-              Shown to anglers on your profile and trip pages. Select all that apply.
             </p>
           </div>
 
