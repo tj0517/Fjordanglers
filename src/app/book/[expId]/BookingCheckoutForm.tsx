@@ -6,6 +6,8 @@ import { createBookingCheckout } from '@/actions/bookings'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { COUNTRIES } from '@/lib/countries'
+import { FieldTooltip } from '@/components/ui/field-tooltip'
+import { HelpWidget } from '@/components/ui/help-widget'
 
 type Props = {
   expId: string
@@ -135,6 +137,24 @@ export default function BookingCheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
+      {/* ── Step header ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] uppercase tracking-[0.2em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+          Step 2 of 2 — Your details
+        </p>
+        <HelpWidget
+          title="Your booking request"
+          description="No payment is taken now. Your request goes to the guide, who confirms within 24 hours. After confirmation you pay a 30% deposit."
+          items={[
+            { icon: '👤', title: 'Name & email', text: 'Used to send your booking confirmation and to identify you with the guide.' },
+            { icon: '📞', title: 'Phone (optional)', text: 'Useful for last-minute changes or if the guide needs to reach you quickly.' },
+            { icon: '🌍', title: 'Country', text: 'Helps the guide understand where their clients come from.' },
+            { icon: '💬', title: 'Special requests', text: 'Dietary requirements, gear needs, accessibility, or anything the guide should know before your trip.' },
+            { icon: '🔒', title: 'No payment now', text: 'You only pay after the guide confirms. A 30% deposit is charged via Stripe — the balance is due before the trip.' },
+          ]}
+        />
+      </div>
+
       {/* ── Mode toggle — hidden when already logged in ──────────────────────── */}
       {!isLoggedIn && (
         <div
@@ -167,8 +187,9 @@ export default function BookingCheckoutForm({
       {mode === 'guest' && (
         <>
           <div>
-            <label style={labelStyle}>
+            <label style={labelStyle} className="flex items-center gap-1">
               Full name <span style={{ color: '#E67E50' }}>*</span>
+              <FieldTooltip text="Your full name is sent to the guide with your booking request." />
             </label>
             <input
               type="text"
@@ -182,8 +203,9 @@ export default function BookingCheckoutForm({
           </div>
 
           <div>
-            <label style={labelStyle}>
+            <label style={labelStyle} className="flex items-center gap-1">
               Email <span style={{ color: '#E67E50' }}>*</span>
+              <FieldTooltip text="Your booking confirmation and guide's reply are sent here." />
             </label>
             <input
               type="email"
@@ -198,7 +220,10 @@ export default function BookingCheckoutForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label style={labelStyle}>Phone (optional)</label>
+              <label style={labelStyle} className="flex items-center gap-1">
+                Phone (optional)
+                <FieldTooltip text="Helpful for last-minute contact from your guide or changes on the day." />
+              </label>
               <input
                 type="tel"
                 placeholder="+48 600 000 000"
@@ -209,7 +234,10 @@ export default function BookingCheckoutForm({
               />
             </div>
             <div>
-              <label style={labelStyle}>Country</label>
+              <label style={labelStyle} className="flex items-center gap-1">
+                Country
+                <FieldTooltip text="Helps the guide understand where their anglers come from." />
+              </label>
               <select
                 value={anglerCountry}
                 onChange={e => setAnglerCountry(e.target.value)}
@@ -225,7 +253,10 @@ export default function BookingCheckoutForm({
           </div>
 
           <div>
-            <label style={labelStyle}>Special requests (optional)</label>
+            <label style={labelStyle} className="flex items-center gap-1">
+              Special requests (optional)
+              <FieldTooltip text="Dietary needs, gear requirements, physical accessibility, or anything your guide should know before the trip." />
+            </label>
             <textarea
               rows={3}
               placeholder="Dietary requirements, gear preferences, accessibility needs…"

@@ -5,6 +5,8 @@ import { submitInquiry } from '@/actions/inquiries'
 import { type InquiryFormConfig, SPECIES_OPTIONS, resolveFormConfig } from '@/lib/inquiry-form-config'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import { MultiPeriodPicker, type Period, type BlockedRange } from '@/components/trips/multi-period-picker'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { FieldTooltip } from '@/components/ui/field-tooltip'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -692,12 +694,15 @@ function TabBar({
 }
 
 // Tab section title
-function TabHeading({ title, subtitle }: { title: string; subtitle?: string }) {
+function TabHeading({ title, subtitle, help }: { title: string; subtitle?: string; help?: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-        {title}
-      </h3>
+      <div className="flex items-center gap-2">
+        <h3 className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
+          {title}
+        </h3>
+        {help}
+      </div>
       {subtitle != null && (
         <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
           {subtitle}
@@ -972,13 +977,19 @@ export default function InquireForm({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label style={labelCss} className="f-body">Your name *</label>
+            <label style={labelCss} className="f-body flex items-center gap-1">
+              Your name *
+              <FieldTooltip text="Sent to the guide with your inquiry so they know who to reply to." />
+            </label>
             <input value={name} onChange={e => setName(e.target.value)}
               placeholder="John Smith" required disabled={isPending}
               style={inputCss} className="f-body" />
           </div>
           <div>
-            <label style={labelCss} className="f-body">Email *</label>
+            <label style={labelCss} className="f-body flex items-center gap-1">
+              Email *
+              <FieldTooltip text="The guide's reply and any updates are sent to this address." />
+            </label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com" required disabled={isPending}
               style={inputCss} className="f-body" />
@@ -1013,6 +1024,17 @@ export default function InquireForm({
             <TabHeading
               title="When do you want to fish?"
               subtitle="Tell us the timing &mdash; we'll handle the rest."
+              help={
+                <HelpWidget
+                  title="Trip tab — timing"
+                  description="Tell the guide when you'd like to come. You can select multiple periods if your dates are flexible."
+                  items={[
+                    { icon: '🕐', title: 'Trip type', text: 'Half day (~4h), full day (~8h), or multi-day. Guides price these differently.' },
+                    { icon: '📅', title: 'Preferred dates', text: 'Select specific days or ranges. You can add multiple separate periods — the guide picks the best fit.' },
+                    { icon: '🔄', title: 'Flexible dates', text: 'If you can come any time in a month, just select the whole month as a range. The guide will confirm exact dates.' },
+                  ]}
+                />
+              }
             />
 
             {/* Trip type */}
@@ -1085,11 +1107,26 @@ export default function InquireForm({
             <TabHeading
               title="Who's coming?"
               subtitle="Group size and what you're targeting."
+              help={
+                <HelpWidget
+                  title="Group tab — who's fishing"
+                  description="Tell the guide about your group so they can tailor the trip and price it accurately."
+                  items={[
+                    { icon: '👥', title: 'Group size', text: 'Count everyone who will hold a rod. Guides price per person (or per boat for some packages).' },
+                    { icon: '🐠', title: 'Target species', text: 'What fish are you after? The guide prepares the right gear, techniques, and locations based on your preference.' },
+                    { icon: '🎣', title: 'Experience level', text: 'Be honest — guides adapt their coaching and pacing to match your skill. Beginners are always welcome.' },
+                    { icon: '👶', title: 'Beginners / children', text: 'Check these if applicable — guides may need to bring lighter gear or adapt safety measures.' },
+                  ]}
+                />
+              }
             />
 
             {/* Group size */}
             <div>
-              <label style={labelCss} className="f-body">Group size *</label>
+              <label style={labelCss} className="f-body flex items-center gap-1">
+                Group size *
+                <FieldTooltip text="Count every person who will be fishing, including children." />
+              </label>
               <div className="mb-3">
                 <Stepper value={group} onChange={setGroup} min={1} max={50}
                   disabled={isPending} suffix={group === 1 ? 'person' : 'people'} />
@@ -1183,6 +1220,19 @@ export default function InquireForm({
             <TabHeading
               title="What will you need?"
               subtitle="Helps the guide prepare an accurate offer."
+              help={
+                <HelpWidget
+                  title="Needs tab — logistics"
+                  description="These details help the guide price and prepare your offer accurately. All fields marked optional can be skipped."
+                  items={[
+                    { icon: '🎣', title: 'Gear & tackle', text: 'Do you bring your own rods and lures, or do you need the guide to provide everything?' },
+                    { icon: '🏠', title: 'Accommodation', text: 'Some guides offer lodge or cabin packages. Select "Just guiding" if you have your own place to stay.' },
+                    { icon: '🚗', title: 'Transport', text: 'Do you need the guide to pick you up, or will you drive yourself to the meeting point?' },
+                    { icon: '⛵', title: 'Boat preference', text: 'Open boat, inflatable, motorised — if you have a preference or requirement, mention it here.' },
+                    { icon: '🥗', title: 'Dietary needs', text: 'If your guide provides lunch or snacks, let them know about any dietary restrictions or allergies.' },
+                  ]}
+                />
+              }
             />
 
             {(['gear', 'accommodation', 'transport', 'boatPreference', 'dietary'] as const)
@@ -1265,6 +1315,18 @@ export default function InquireForm({
             <TabHeading
               title="Anything else to know?"
               subtitle="Optional details that help personalise your experience."
+              help={
+                <HelpWidget
+                  title="Extras tab — personalisation"
+                  description="All optional. These details help the guide personalise your experience and prepare a more accurate offer."
+                  items={[
+                    { icon: '📸', title: 'Photography / video', text: 'If the guide offers a photography add-on, they can arrange a photographer or film your catches.' },
+                    { icon: '🏨', title: 'Where are you staying?', text: 'Helps the guide suggest nearby rivers, plan pickup logistics, or tailor local recommendations.' },
+                    { icon: '💶', title: 'Budget range', text: 'If you have a specific budget in mind, share it — the guide can customise the package accordingly.' },
+                    { icon: '📝', title: 'Notes', text: 'Anything else the guide should know: specific techniques, health considerations, language preference, etc.' },
+                  ]}
+                />
+              }
             />
 
 

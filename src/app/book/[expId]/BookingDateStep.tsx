@@ -30,6 +30,8 @@ import {
   type Period,
   type BlockedRange,
 } from '@/components/trips/multi-period-picker'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { FieldTooltip } from '@/components/ui/field-tooltip'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -567,12 +569,25 @@ export default function BookingDateStep({
         boxShadow:    '0 4px 24px rgba(10,46,77,0.07)',
       }}
     >
-      <p
-        className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body"
-        style={{ color: 'rgba(10,46,77,0.38)' }}
-      >
-        Step 1 of 2
-      </p>
+      <div className="flex items-center justify-between mb-1">
+        <p
+          className="text-[11px] uppercase tracking-[0.22em] f-body"
+          style={{ color: 'rgba(10,46,77,0.38)' }}
+        >
+          Step 1 of 2
+        </p>
+        <HelpWidget
+          title="Step 1 — Choose your dates"
+          description="Pick how you'd like to book this fishing trip. Either way, there's no payment now — the guide always reviews and confirms first."
+          items={[
+            { icon: '📅', title: 'Book directly', text: 'Select exact date(s) from the calendar. Guide confirms within 24 hours, then you pay a 30% deposit.' },
+            { icon: '✉️', title: 'Send request', text: "Tell the guide a window of availability — they'll schedule the exact dates and confirm. Great if your dates are flexible." },
+            { icon: '📦', title: 'Package', text: 'Each package has a price and duration. Choose the one that fits your trip style.' },
+            { icon: '👥', title: 'Anglers', text: 'How many people are fishing? Price is calculated per angler for most packages.' },
+            { icon: '💶', title: 'Price estimate', text: 'This is an estimate. The guide may adjust the final price based on your request details.' },
+          ]}
+        />
+      </div>
       <h2 className="text-[#0A2E4D] text-2xl font-bold f-display mb-4">
         How would you like to book?
       </h2>
@@ -638,10 +653,11 @@ export default function BookingDateStep({
           {/* ── 1. Package selector ─────────────────────────────────────── */}
           <div className="mb-6">
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+              className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body flex items-center gap-1"
               style={{ color: 'rgba(10,46,77,0.38)' }}
             >
               Package
+              <FieldTooltip text="Select the trip duration and style that suits you. Price updates automatically based on your group size." />
             </p>
             <div className="flex flex-col gap-2">
               {durationOptions.map((opt, idx) => {
@@ -686,10 +702,11 @@ export default function BookingDateStep({
 
           {/* ── 2. Dates calendar (multi-select) ────────────────────────── */}
           <p
-            className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+            className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body flex items-center gap-1"
             style={{ color: 'rgba(10,46,77,0.38)' }}
           >
             Dates
+            <FieldTooltip text="Green dot = available. Strikethrough = guide is closed. Grey = outside booking window." />
           </p>
           <DirectDateCalendar
             selected={directDates}
@@ -729,10 +746,11 @@ export default function BookingDateStep({
           {/* ── 3. Anglers ──────────────────────────────────────────────── */}
           <div className="mt-6">
             <p
-              className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+              className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body flex items-center gap-1"
               style={{ color: 'rgba(10,46,77,0.38)' }}
             >
               Anglers
+              <FieldTooltip text="Total number of people fishing on this trip. Includes all adults and children who will hold a rod." />
             </p>
             <Stepper
               value={groupSize}
@@ -873,10 +891,11 @@ export default function BookingDateStep({
 
           {/* ── 2. Availability window ──────────────────────────────────── */}
           <p
-            className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+            className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body flex items-center gap-1"
             style={{ color: 'rgba(10,46,77,0.38)' }}
           >
             When can you come?
+            <FieldTooltip text="Select one or more date ranges when you could potentially come. The guide will schedule the exact dates within your window." />
           </p>
           <MultiPeriodPicker
             periods={periods}
