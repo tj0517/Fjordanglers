@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { acceptBooking, declineBooking } from '@/actions/bookings'
 import RespondCalendar, { fmtDate, fmtShort } from './RespondCalendar'
 import type { WeeklySchedule, BlockedRange } from './RespondCalendar'
+import { HelpWidget } from '@/components/ui/help-widget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -272,8 +273,20 @@ export default function BookingRespondForm({
         )}
 
         <div className="mb-5">
-          <p className="text-[11px] uppercase tracking-[0.22em] f-body mb-1"
-             style={{ color: 'rgba(10,46,77,0.38)' }}>New booking request</p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="text-[11px] uppercase tracking-[0.22em] f-body"
+               style={{ color: 'rgba(10,46,77,0.38)' }}>New booking request</p>
+            <HelpWidget
+              title="Respond to booking"
+              description="Accept or decline the angler's request. No payment is collected until you accept."
+              items={[
+                { icon: '✅', title: 'Accept', text: 'Confirm you can take the trip. You can select exact dates from the angler\'s window and add a personal message. The angler will be prompted to pay the 30% deposit.' },
+                { icon: '❌', title: 'Decline', text: 'If you cannot take the booking. You can optionally explain why and propose alternative dates when you are available.' },
+                { icon: '📅', title: 'Availability window', text: 'For "Send request" bookings the angler provides a flexible date window. You pick the exact days within that window.' },
+                { icon: '💰', title: 'No payment yet', text: 'No money is collected at this stage. After acceptance, the angler receives a Stripe link for the 30% deposit.' },
+              ]}
+            />
+          </div>
           <h2 className="text-[#0A2E4D] text-xl font-bold f-display">
             {anglerName} wants to book
           </h2>

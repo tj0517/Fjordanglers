@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { HelpWidget } from '@/components/ui/help-widget'
 
 export const revalidate = 0
 
@@ -208,9 +209,21 @@ export default async function EarningsPage() {
       <div className="mb-8">
         <p className="text-[11px] uppercase tracking-[0.22em] font-semibold f-body mb-1"
            style={{ color: 'rgba(10,46,77,0.38)' }}>Guide Dashboard</p>
-        <h1 className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-          Earnings
-        </h1>
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+            Earnings
+          </h1>
+          <HelpWidget
+            title="Earnings"
+            description="Your payout history and upcoming earnings from confirmed bookings."
+            items={[
+              { icon: '✅', title: 'Paid out', text: 'Earnings already transferred to your bank account by FjordAnglers.' },
+              { icon: '⏳', title: 'Awaiting payout', text: 'Trip is confirmed or completed but the admin has not yet sent the transfer. Usually processed within a few business days.' },
+              { icon: '📅', title: 'Upcoming trips', text: 'Earnings from confirmed future trips — the money will be in your account after the trip is completed.' },
+              { icon: '💶', title: 'Your cut', text: 'Your guide payout = total paid by angler minus the platform commission and 5% service fee. The balance payment has no platform fee.' },
+            ]}
+          />
+        </div>
         <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
           Your payout history and upcoming earnings.
         </p>

@@ -5,6 +5,7 @@ import CalendarsPanel from '@/components/dashboard/calendars-panel'
 import { getGuideCalendars, getCalendarExperienceMap } from '@/actions/calendars'
 import { CalendarDisabledToggle } from '@/components/dashboard/calendar-disabled-toggle'
 import type { WeeklySchedule } from '@/actions/weekly-schedules'
+import { HelpWidget } from '@/components/ui/help-widget'
 
 export const revalidate = 0  // always fresh — calendar changes frequently
 
@@ -180,9 +181,21 @@ export default async function CalendarPage({
 
       {/* ─── Header ───────────────────────────────────────────────────────── */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold f-display mb-1" style={{ color: '#0A2E4D' }}>
-          {activeCalendarName != null ? activeCalendarName : 'Availability Calendar'}
-        </h1>
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+            {activeCalendarName != null ? activeCalendarName : 'Availability Calendar'}
+          </h1>
+          <HelpWidget
+            title="Availability Calendar"
+            description="Block dates when you're unavailable — anglers won't see those days in the booking calendar."
+            items={[
+              { icon: '🚫', title: 'Blocking dates', text: 'Click a date and drag to block a range. Blocked dates become unavailable for all your direct-booking experiences.' },
+              { icon: '📋', title: 'Calendars', text: 'Organise your experiences into separate calendars to manage availability for different trip types independently.' },
+              { icon: '🔄', title: 'Disable calendar', text: 'Disabling the calendar switches all your trip pages to inquiry-only mode — anglers send a request instead of booking a specific date.' },
+              { icon: '📅', title: 'Weekly schedule', text: 'Set recurring unavailability by weekday (e.g. Sundays off) within a date range — avoids blocking days one by one.' },
+            ]}
+          />
+        </div>
         <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
           {activeCalendarName != null
             ? `Showing ${expIds.length} listing${expIds.length !== 1 ? 's' : ''} — block dates when you&apos;re unavailable.`

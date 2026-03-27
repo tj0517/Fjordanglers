@@ -9,6 +9,8 @@ import {
   updateAccommodationImages,
 } from '@/actions/accommodations'
 import type { GuideAccommodationRow } from './page'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { FieldTooltip } from '@/components/ui/field-tooltip'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -139,8 +141,9 @@ function AccForm({
       {/* Name + Type row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
             Name *
+            <FieldTooltip text="Display name of this accommodation — shown to anglers on your trip pages." />
           </label>
           <input
             type="text"
@@ -152,8 +155,9 @@ function AccForm({
           />
         </div>
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
             Type *
+            <FieldTooltip text="Category of accommodation — helps anglers understand what kind of lodging to expect." />
           </label>
           <select
             value={form.type}
@@ -170,8 +174,9 @@ function AccForm({
 
       {/* Description */}
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+        <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
           Description
+          <FieldTooltip text="Brief description — bedrooms, facilities, WiFi, kitchen. Shown on the trip page." />
         </label>
         <textarea
           value={form.description}
@@ -186,8 +191,9 @@ function AccForm({
       {/* Max guests + Location note */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
             Max guests
+            <FieldTooltip text="Maximum number of anglers this accommodation can host at once." />
           </label>
           <input
             type="number"
@@ -200,8 +206,9 @@ function AccForm({
           />
         </div>
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
             Location note
+            <FieldTooltip text="Short note about proximity to the fishing location. Example: 5 min walk to river." />
           </label>
           <input
             type="text"
@@ -216,8 +223,9 @@ function AccForm({
 
       {/* Link URL */}
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+        <label className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] mb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
           Booking / website link
+          <FieldTooltip text="Optional direct booking or listing link (Airbnb, Booking.com, your website) — anglers can visit it for details." />
         </label>
         <input
           type="url"
@@ -409,6 +417,25 @@ export default function AccommodationsManager({
           {error}
         </div>
       )}
+
+      {/* Page help */}
+      <div className="flex items-center gap-2">
+        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+          Accommodations linked to your experiences appear on trip pages.
+        </p>
+        <HelpWidget
+          title="Accommodations"
+          description="Add lodging options that you offer as part of your fishing experiences."
+          items={[
+            { icon: '🏠', title: 'Name & type', text: 'Give each accommodation a clear name and category so anglers know what to expect.' },
+            { icon: '📝', title: 'Description', text: 'Describe bedrooms, facilities, kitchen, WiFi. Shown on your trip page when linked to an experience.' },
+            { icon: '👥', title: 'Max guests', text: 'Maximum capacity — helps match accommodation availability with group size.' },
+            { icon: '📍', title: 'Location note', text: 'Short note about distance to the fishing spot — e.g. "5 min walk to river".' },
+            { icon: '🔗', title: 'Booking link', text: 'Optional link to a booking page (Airbnb, Booking.com) so anglers can see full details or reserve directly.' },
+            { icon: '📸', title: 'Photos', text: 'Add photos after saving an accommodation — they appear in a gallery on your trip page.' },
+          ]}
+        />
+      </div>
 
       {/* Add button / form */}
       {showAdd ? (

@@ -6,6 +6,7 @@ import { PasswordResetButton } from './AccountActions'
 import { StripeConnectButton } from './StripeConnectButton'
 import { AcceptedPaymentMethodsForm } from './AcceptedPaymentMethodsForm'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
+import { HelpWidget } from '@/components/ui/help-widget'
 
 export const revalidate = 0
 
@@ -119,7 +120,12 @@ export default async function AccountPage({
       <div className="flex flex-col gap-5">
 
         {/* ── Sign-in ──────────────────────────────────────────────────────── */}
-        <Card title="Sign-in">
+        <Card title="Sign-in" help={
+          <HelpWidget title="Sign-in" items={[
+            { icon: '📧', title: 'Email', text: 'Your login email — contact support if you need to change it.' },
+            { icon: '🔒', title: 'Password', text: 'Click "Reset password" to get a reset link sent to your email. For Google sign-in, manage your password via Google.' },
+          ]} />
+        }>
           <Row label="Email">
             <span className="text-sm f-body font-medium" style={{ color: '#0A2E4D' }}>{email}</span>
           </Row>
@@ -160,7 +166,13 @@ export default async function AccountPage({
         </Card>
 
         {/* ── Payouts ──────────────────────────────────────────────────────── */}
-        <Card title="Payouts">
+        <Card title="Payouts" help={
+          <HelpWidget title="Payouts" description="Your Stripe Connect account receives guide earnings." items={[
+            { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
+            { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
+            { icon: '💱', title: 'Currency', text: 'Payouts are sent in the currency of your bank account (EUR by default).' },
+          ]} />
+        }>
           <Row label="Stripe Connect">
             <div className="flex items-center gap-2">
               <div
@@ -206,7 +218,13 @@ export default async function AccountPage({
 
         {/* ── Bank account setup — only shown before first connection ──────── */}
         {!hasStripeAccount && (
-          <Card title="Connect bank account">
+          <Card title="Connect bank account" help={
+            <HelpWidget title="Connect bank account" items={[
+              { icon: '⏱️', title: 'Takes ~5 minutes', text: 'Complete Stripe onboarding with your personal details, home address, and IBAN. Required to receive payout transfers.' },
+              { icon: '🔒', title: 'Secure', text: 'Your bank details are handled entirely by Stripe — FjordAnglers never stores raw account numbers.' },
+              { icon: '✅', title: 'Verification', text: 'Stripe verifies your identity within 1–2 business days. You will be notified once payouts are enabled.' },
+            ]} />
+          }>
             <div className="px-6 pt-4 pb-6 flex flex-col gap-5">
               <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
                 Set up your Stripe account to receive weekly payouts from FjordAnglers.
@@ -257,7 +275,13 @@ export default async function AccountPage({
         )}
 
         {/* ── Plan ─────────────────────────────────────────────────────────── */}
-        <Card title="Your plan">
+        <Card title="Your plan" help={
+          <HelpWidget title="Your plan" items={[
+            { icon: '💰', title: 'Commission', text: 'FjordAnglers charges a percentage of each confirmed booking total (excluding the 5% service fee). Founding Guides get a lower rate for 24 months.' },
+            { icon: '⭐', title: 'Founding Guide', text: 'Guides who joined within the first 24 months get an 8% commission rate instead of the standard 10%, locked for their first 24 months.' },
+            { icon: '✅', title: 'Account status', text: 'Active: your profile is live and visible to anglers. Pending: under review by FjordAnglers. Suspended: contact support.' },
+          ]} />
+        }>
           <Row label="Plan">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
@@ -301,7 +325,12 @@ export default async function AccountPage({
         </Card>
 
         {/* ── Accepted payment methods ──────────────────────────────────────── */}
-        <Card title="Accepted payment methods">
+        <Card title="Accepted payment methods" help={
+          <HelpWidget title="Accepted payment methods" items={[
+            { icon: '💳', title: 'Online (Stripe)', text: 'Angler pays by card — fully automated. Funds arrive in your Stripe account on the weekly payout schedule.' },
+            { icon: '💵', title: 'Cash', text: 'Angler pays you in cash on the day. You manually mark it as received in the booking details.' },
+          ]} />
+        }>
           <div className="px-6 pt-4 pb-2">
             <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
               Choose which payment methods you accept from anglers.
@@ -314,7 +343,13 @@ export default async function AccountPage({
         </Card>
 
         {/* ── Photo & marketing consent ─────────────────────────────────────── */}
-        <Card title="Photo & marketing consent">
+        <Card title="Photo & marketing consent" help={
+          <HelpWidget title="Photo & marketing consent" items={[
+            { icon: '📸', title: 'What this covers', text: 'Photos and videos from your trips (shared by you or your anglers) used on the FjordAnglers website, Instagram, and ads.' },
+            { icon: '✍️', title: 'Credit', text: 'Your name is always credited as the guide when FjordAnglers uses your content.' },
+            { icon: '🔄', title: 'Can be changed', text: 'You can turn this on or off at any time from this settings page.' },
+          ]} />
+        }>
           <div className="px-6 pt-4 pb-2">
             <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
               Allow FjordAnglers to use your photos for platform promotion (website, Instagram, ads).
@@ -331,20 +366,21 @@ export default async function AccountPage({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, help, children }: { title: string; help?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
       style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
     >
       <div
-        className="px-6 py-3"
+        className="px-6 py-3 flex items-center gap-2"
         style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
            style={{ color: 'rgba(10,46,77,0.38)' }}>
           {title}
         </p>
+        {help}
       </div>
       <div className="flex flex-col">
         {children}
