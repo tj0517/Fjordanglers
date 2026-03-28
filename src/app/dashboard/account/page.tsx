@@ -4,9 +4,9 @@ import { env } from '@/lib/env'
 import { stripe } from '@/lib/stripe/client'
 import { PasswordResetButton } from './AccountActions'
 import { StripeConnectButton } from './StripeConnectButton'
-import { PayPalOnboardingSection } from './PayPalOnboardingSection'
 import { AcceptedPaymentMethodsForm } from './AcceptedPaymentMethodsForm'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
+import { HideListingToggle } from './HideListingToggle'
 import { HelpWidget } from '@/components/ui/help-widget'
 
 export const revalidate = 0
@@ -18,12 +18,11 @@ export const metadata = { title: 'Account — FjordAnglers Dashboard' }
 export default async function AccountPage({
   searchParams,
 }: {
-  searchParams: Promise<{ stripe_done?: string; stripe_refresh?: string; paypal_done?: string }>
+  searchParams: Promise<{ stripe_done?: string; stripe_refresh?: string }>
 }) {
   const params        = await searchParams
   const stripeDone    = params.stripe_done    === '1'
   const stripeRefresh = params.stripe_refresh === '1'
-  const paypalDone    = params.paypal_done    === '1'
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -31,7 +30,7 @@ export default async function AccountPage({
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, created_at, payment_provider, paypal_merchant_id, paypal_onboarding_status')
+    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, is_hidden, created_at')
     .eq('user_id', user.id)
     .single()
 
@@ -100,11 +99,7 @@ export default async function AccountPage({
     ? { label: 'Under review',               dot: '#E67E50', glow: false }
     : { label: 'Not connected',              dot: 'rgba(10,46,77,0.2)', glow: false }
 
-  const isCommission  = guide.pricing_model === 'commission'
-  const isPayPalGuide = (guide as unknown as { payment_provider?: string }).payment_provider === 'paypal'
-
-  const paypalOnboardingStatus = (guide as unknown as { paypal_onboarding_status?: string | null }).paypal_onboarding_status as 'pending' | 'active' | 'suspended' | null
-  const paypalMerchantId = (guide as unknown as { paypal_merchant_id?: string | null }).paypal_merchant_id ?? null
+  const isCommission = guide.pricing_model === 'commission'
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-2xl">
@@ -173,72 +168,57 @@ export default async function AccountPage({
 
         {/* ── Payouts ──────────────────────────────────────────────────────── */}
         <Card title="Payouts" help={
-          isPayPalGuide
-            ? <HelpWidget title="Payouts" description="Your PayPal Business account receives guide earnings." items={[
-                { icon: '🏦', title: 'PayPal Commerce Platform', text: 'FjordAnglers uses PayPal to pay guides in countries not supported by Stripe. Once active, earnings are transferred after trip completion.' },
-                { icon: '🔒', title: 'Secure', text: 'Payments are processed securely via PayPal — FjordAnglers never stores card details.' },
-              ]} />
-            : <HelpWidget title="Payouts" description="Your Stripe Connect account receives guide earnings." items={[
-                { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
-                { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
-                { icon: '💱', title: 'Currency', text: 'Payouts are sent in the currency of your bank account (EUR by default).' },
-              ]} />
+          <HelpWidget title="Payouts" description="Your Stripe Connect account receives guide earnings." items={[
+            { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
+            { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
+            { icon: '💱', title: 'Currency', text: 'Payouts are sent in the currency of your bank account (EUR by default).' },
+          ]} />
         }>
-          {isPayPalGuide ? (
-            <PayPalOnboardingSection
-              onboardingStatus={paypalOnboardingStatus}
-              merchantId={paypalMerchantId}
-              paypalDone={paypalDone}
-            />
-          ) : (
+          <Row label="Stripe Connect">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{
+                  background: stripeStatus.dot,
+                  boxShadow:  stripeStatus.glow ? `0 0 6px ${stripeStatus.dot}` : 'none',
+                }}
+              />
+              <span className="text-sm f-body" style={{ color: '#0A2E4D' }}>
+                {stripeStatus.label}
+              </span>
+            </div>
+          </Row>
+
+          {/* Under review — show status + option to resume/complete setup */}
+          {hasStripeAccount && !stripePayoutsLive && (
             <>
-              <Row label="Stripe Connect">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{
-                      background: stripeStatus.dot,
-                      boxShadow:  stripeStatus.glow ? `0 0 6px ${stripeStatus.dot}` : 'none',
-                    }}
-                  />
-                  <span className="text-sm f-body" style={{ color: '#0A2E4D' }}>
-                    {stripeStatus.label}
-                  </span>
-                </div>
+              <Row label="Status">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  {stripeRefresh
+                    ? 'Your session expired — click below to continue setup'
+                    : 'Stripe is reviewing your account — usually 1–2 business days'}
+                </span>
               </Row>
+              <Row label="Action">
+                <StripeConnectButton label="Resume setup" />
+              </Row>
+            </>
+          )}
 
-              {/* Under review — show status + option to resume/complete setup */}
-              {hasStripeAccount && !stripePayoutsLive && (
-                <>
-                  <Row label="Status">
-                    <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                      {stripeRefresh
-                        ? 'Your session expired — click below to continue setup'
-                        : 'Stripe is reviewing your account — usually 1–2 business days'}
-                    </span>
-                  </Row>
-                  <Row label="Action">
-                    <StripeConnectButton label="Resume setup" />
-                  </Row>
-                </>
-              )}
-
-              {hasStripeAccount && (
-                <>
-                  <Row label="Payout currency">
-                    <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutCurrencyLabel}</span>
-                  </Row>
-                  <Row label="Payout schedule">
-                    <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutScheduleLabel}</span>
-                  </Row>
-                </>
-              )}
+          {hasStripeAccount && (
+            <>
+              <Row label="Payout currency">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutCurrencyLabel}</span>
+              </Row>
+              <Row label="Payout schedule">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutScheduleLabel}</span>
+              </Row>
             </>
           )}
         </Card>
 
-        {/* ── Bank account setup — only shown before first connection (Stripe guides) */}
-        {!isPayPalGuide && !hasStripeAccount && (
+        {/* ── Bank account setup — only shown before first connection ──────── */}
+        {!hasStripeAccount && (
           <Card title="Connect bank account" help={
             <HelpWidget title="Connect bank account" items={[
               { icon: '⏱️', title: 'Takes ~5 minutes', text: 'Complete Stripe onboarding with your personal details, home address, and IBAN. Required to receive payout transfers.' },
@@ -270,7 +250,7 @@ export default async function AccountPage({
         )}
 
         {/* ── Return from Stripe — setup submitted ─────────────────────────── */}
-        {!isPayPalGuide && stripeDone && stripePayoutsLive === false && (
+        {stripeDone && stripePayoutsLive === false && (
           <div
             className="rounded-2xl px-6 py-4 flex items-start gap-3"
             style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
@@ -378,6 +358,22 @@ export default async function AccountPage({
             </p>
           </div>
           <MarketingConsentToggle current={guide.photo_marketing_consent ?? false} />
+        </Card>
+
+        {/* ── Listing visibility ────────────────────────────────────────────── */}
+        <Card title="Listing visibility" help={
+          <HelpWidget title="Listing visibility" items={[
+            { icon: '👁️', title: 'Visible', text: 'Your profile and trips appear in search results. Anglers can find and book you.' },
+            { icon: '🙈', title: 'Hidden', text: 'Your profile and all trips are removed from public listings. Existing bookings are not affected.' },
+            { icon: '🔄', title: 'Can be changed', text: 'Toggle visibility at any time from this page.' },
+          ]} />
+        }>
+          <div className="px-6 pt-4 pb-2">
+            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              Control whether your profile and trips appear in public listings and search results.
+            </p>
+          </div>
+          <HideListingToggle current={guide.is_hidden ?? true} />
         </Card>
 
       </div>

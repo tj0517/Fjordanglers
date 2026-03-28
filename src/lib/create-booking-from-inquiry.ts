@@ -20,7 +20,6 @@ export async function createBookingFromInquiry(
   inquiryId: string,
   db: SupabaseClient<Database>,
   stripePaymentIntentId?: string | null,
-  paypalCaptureId?: string | null,
 ): Promise<string | null> {
   // ── Idempotency: booking already created for this inquiry ─────────────────
   const { data: existing } = await db
@@ -92,9 +91,8 @@ export async function createBookingFromInquiry(
       status:                   'confirmed',
       confirmed_at:             new Date().toISOString(),
 
-      // Payment
+      // Stripe
       stripe_payment_intent_id: stripePaymentIntentId ?? null,
-      paypal_capture_id:        paypalCaptureId ?? null,
     })
     .select('id')
     .single()

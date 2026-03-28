@@ -38,7 +38,7 @@ function sortImages<T extends { sort_order: number }>(images: T[]): T[] {
  * Uses FK-based embedding: guide_id → guides, experience_id → experience_images.
  */
 const EXP_SELECT =
-  '*, guide:guides ( id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages, calendar_disabled ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
+  '*, guide:guides!inner ( id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages, calendar_disabled, is_hidden ), images:experience_images ( id, experience_id, url, is_cover, sort_order, created_at )'
 
 /**
  * Lean select for map data — all columns needed by map pins + card popups,
@@ -49,7 +49,7 @@ const MAP_SELECT =
   'id, title, location_lat, location_lng, location_spots, location_city, location_country, ' +
   'price_per_person_eur, fish_types, booking_type, difficulty, season_from, season_to, ' +
   'duration_hours, duration_days, ' +
-  'guide:guides ( id, full_name, avatar_url ), ' +
+  'guide:guides!inner ( id, full_name, avatar_url, is_hidden ), ' +
   'images:experience_images ( id, url, is_cover, sort_order )'
 
 // ─── Experiences ──────────────────────────────────────────────────────────────
@@ -91,6 +91,7 @@ export async function getExperiences(
         .from('experiences')
         .select(EXP_SELECT, { count: 'exact' })
         .eq('published', true)
+        .eq('guide.is_hidden', false)
 
       if (params.country) {
         const countryList = params.country.split(',').map(c => c.trim()).filter(Boolean)
@@ -188,6 +189,7 @@ export async function getFeaturedExperiences(limit = 4): Promise<ExperienceWithG
         .from('experiences')
         .select(EXP_SELECT)
         .eq('published', true)
+        .eq('guide.is_hidden', false)
         .limit(20)
 
       if (error) {
@@ -225,6 +227,7 @@ export async function getFeaturedGuides(limit = 4): Promise<FeaturedGuide[]> {
         .from('guides')
         .select('id, full_name, avatar_url, cover_url, country, city, average_rating, years_experience, fish_expertise, languages, tagline')
         .eq('status', 'active')
+        .eq('is_hidden', false)
         .not('verified_at', 'is', null)
         .limit(20)
 
@@ -293,6 +296,7 @@ export async function getAllExperiencesWithCoords(
         .from('experiences')
         .select(MAP_SELECT)
         .eq('published', true)
+        .eq('guide.is_hidden', false)
         .or('location_lat.not.is.null,location_spots.not.is.null')
 
       if (params.country) {
@@ -373,6 +377,7 @@ export async function getMoreFromGuide(
         .select(EXP_SELECT)
         .eq('guide_id', guideId)
         .eq('published', true)
+        .eq('guide.is_hidden', false)
         .neq('id', excludeId)
         .order('created_at', { ascending: false })
         .limit(limit)
@@ -411,7 +416,8 @@ export async function getPlatformStats(): Promise<PlatformStats> {
         db
           .from('guides')
           .select('id', { count: 'exact', head: true })
-          .or('status.eq.active,verified_at.not.is.null'),
+          .or('status.eq.active,verified_at.not.is.null')
+          .eq('is_hidden', false),
 
         db
           .from('experiences')
@@ -421,7 +427,8 @@ export async function getPlatformStats(): Promise<PlatformStats> {
         db
           .from('guides')
           .select('country, languages')
-          .or('status.eq.active,verified_at.not.is.null'),
+          .or('status.eq.active,verified_at.not.is.null')
+          .eq('is_hidden', false),
       ])
 
       const activeGuides = guidesRes.data ?? []
@@ -559,6 +566,7 @@ export async function getGuides(
         .from('guides')
         .select('*', { count: 'exact' })
         .or('status.eq.active,verified_at.not.is.null')
+        .eq('is_hidden', false)
         .order('average_rating', { ascending: false, nullsFirst: false })
         .range(from, to)
 
@@ -593,6 +601,7 @@ export async function getGuide(id: string): Promise<GuideWithImages | null> {
         .select('*, images:guide_images ( id, guide_id, url, is_cover, sort_order, created_at )')
         .eq('id', id)
         .eq('status', 'active')
+        .eq('is_hidden', false)
         .single()
 
       if (error) return null
@@ -622,6 +631,7 @@ export async function getGuideExperiences(guideId: string): Promise<ExperienceWi
         .select(EXP_SELECT)
         .eq('guide_id', guideId)
         .eq('published', true)
+        .eq('guide.is_hidden', false)
         .order('created_at', { ascending: false })
 
       if (error) return []

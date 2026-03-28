@@ -156,10 +156,6 @@ export type Database = {
           requested_dates: string[] | null
           special_requests: string | null
           status: Database["public"]["Enums"]["booking_status"]
-          paypal_order_id: string | null
-          paypal_capture_id: string | null
-          balance_paypal_order_id: string | null
-          balance_paypal_capture_id: string | null
           stripe_checkout_id: string | null
           stripe_payment_intent_id: string | null
           stripe_transfer_id: string | null
@@ -175,8 +171,6 @@ export type Database = {
           angler_phone?: string | null
           balance_paid_at?: string | null
           balance_payment_method?: string | null
-          balance_paypal_order_id?: string | null
-          balance_paypal_capture_id?: string | null
           balance_stripe_checkout_id?: string | null
           balance_stripe_payment_intent_id?: string | null
           booking_date: string
@@ -203,8 +197,6 @@ export type Database = {
           requested_dates?: string[] | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
-          paypal_order_id?: string | null
-          paypal_capture_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_transfer_id?: string | null
@@ -220,8 +212,6 @@ export type Database = {
           angler_phone?: string | null
           balance_paid_at?: string | null
           balance_payment_method?: string | null
-          balance_paypal_order_id?: string | null
-          balance_paypal_capture_id?: string | null
           balance_stripe_checkout_id?: string | null
           balance_stripe_payment_intent_id?: string | null
           booking_date?: string
@@ -248,8 +238,6 @@ export type Database = {
           requested_dates?: string[] | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
-          paypal_order_id?: string | null
-          paypal_capture_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent_id?: string | null
           stripe_transfer_id?: string | null
@@ -795,6 +783,7 @@ export type Database = {
           instagram_url: string | null
           invite_email: string | null
           is_beta_listing: boolean
+          is_hidden: boolean
           landscape_url: string | null
           languages: string[]
           lead_id: string | null
@@ -810,10 +799,6 @@ export type Database = {
           updated_at: string
           user_id: string | null
           verified_at: string | null
-          payment_provider: string
-          paypal_merchant_id: string | null
-          paypal_onboarding_status: string | null
-          paypal_email: string | null
           photo_marketing_consent: boolean
           website_url: string | null
           years_experience: number | null
@@ -850,6 +835,7 @@ export type Database = {
           instagram_url?: string | null
           invite_email?: string | null
           is_beta_listing?: boolean
+          is_hidden?: boolean
           landscape_url?: string | null
           languages?: string[]
           lead_id?: string | null
@@ -865,10 +851,6 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
-          payment_provider?: string
-          paypal_merchant_id?: string | null
-          paypal_onboarding_status?: string | null
-          paypal_email?: string | null
           website_url?: string | null
           photo_marketing_consent?: boolean
           years_experience?: number | null
@@ -905,6 +887,7 @@ export type Database = {
           instagram_url?: string | null
           invite_email?: string | null
           is_beta_listing?: boolean
+          is_hidden?: boolean
           landscape_url?: string | null
           languages?: string[]
           lead_id?: string | null
@@ -920,10 +903,6 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
-          payment_provider?: string
-          paypal_merchant_id?: string | null
-          paypal_onboarding_status?: string | null
-          paypal_email?: string | null
           photo_marketing_consent?: boolean
           website_url?: string | null
           years_experience?: number | null
@@ -1099,8 +1078,6 @@ export type Database = {
           offer_price_tiers: Json | null
           preferences: Json
           status: Database["public"]["Enums"]["trip_inquiry_status"]
-          paypal_order_id: string | null
-          paypal_capture_id: string | null
           stripe_checkout_id: string | null
           stripe_payment_intent_id: string | null
           target_species: string[]
@@ -1128,8 +1105,6 @@ export type Database = {
           offer_price_tiers?: Json | null
           preferences?: Json
           status?: Database["public"]["Enums"]["trip_inquiry_status"]
-          paypal_order_id?: string | null
-          paypal_capture_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent_id?: string | null
           target_species?: string[]
@@ -1157,8 +1132,6 @@ export type Database = {
           offer_price_tiers?: Json | null
           preferences?: Json
           status?: Database["public"]["Enums"]["trip_inquiry_status"]
-          paypal_order_id?: string | null
-          paypal_capture_id?: string | null
           stripe_checkout_id?: string | null
           stripe_payment_intent_id?: string | null
           target_species?: string[]

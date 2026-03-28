@@ -22,8 +22,6 @@ import { env } from '@/lib/env'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { resolveProviderForCountry } from '@/lib/payment'
-import { startPayPalOnboarding } from './paypal-connect'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -227,7 +225,8 @@ const COUNTRY_NAME_TO_CODE: Record<string, string> = {
   Ireland: 'IE',
 }
 
-// STRIPE_UNSUPPORTED set removed — routing is now handled by resolveProviderForCountry()
+// Countries not yet supported by Stripe Connect (as of 2026)
+const STRIPE_UNSUPPORTED: Set<string> = new Set(['IS', 'HR'])
 
 function toCountryCode(country: string | null): string | null {
   if (!country) return null
@@ -279,16 +278,8 @@ export async function startStripeOnboarding(): Promise<
     if (!countryCode) {
       return { error: `Unrecognised country "${guide.country}" — please contact support@fjordanglers.com` }
     }
-
-    // Route PayPal countries (IS, etc.) to PayPal onboarding instead of Stripe
-    const paymentProvider = resolveProviderForCountry(countryCode)
-    if (paymentProvider === 'paypal') {
-      // Save provider choice before redirecting
-      await service
-        .from('guides')
-        .update({ payment_provider: 'paypal' })
-        .eq('id', guide.id)
-      return startPayPalOnboarding()
+    if (STRIPE_UNSUPPORTED.has(countryCode)) {
+      return { error: `Stripe payouts are not yet available in your country (${guide.country}). Please contact support@fjordanglers.com to arrange manual payouts.` }
     }
 
     try {
@@ -327,7 +318,7 @@ export async function startStripeOnboarding(): Promise<
 
       const { error: dbErr } = await service
         .from('guides')
-        .update({ stripe_account_id: accountId, payment_provider: 'stripe' })
+        .update({ stripe_account_id: accountId })
         .eq('id', guide.id)
 
       if (dbErr) {
