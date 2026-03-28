@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ProfileEditForm, { type ProfileDefaults } from '@/components/dashboard/profile-edit-form'
+import type { CancellationPolicy, BoatType } from '@/types'
 
 export const metadata = {
   title: 'Edit Profile — Guide Dashboard',
@@ -15,27 +16,46 @@ export default async function ProfileEditPage() {
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, country, city, bio, fish_expertise, languages, years_experience, instagram_url, youtube_url, facebook_url, website_url, avatar_url, cover_url, landscape_url')
+    .select(`
+      id, full_name, country, city, bio, fish_expertise, languages, years_experience,
+      instagram_url, youtube_url, facebook_url, website_url,
+      avatar_url, cover_url, landscape_url,
+      tagline, cancellation_policy, specialties, certifications,
+      google_profile_url, google_rating, google_review_count,
+      boat_name, boat_type, boat_length_m, boat_engine, boat_capacity
+    `)
     .eq('user_id', user.id)
     .single()
 
   if (guide == null) redirect('/dashboard')
 
   const defaults: ProfileDefaults = {
-    full_name:        guide.full_name,
-    country:          guide.country,
-    city:             guide.city,
-    bio:              guide.bio,
-    fish_expertise:   guide.fish_expertise,
-    languages:        guide.languages,
-    years_experience: guide.years_experience,
-    instagram_url:    guide.instagram_url,
-    youtube_url:      guide.youtube_url,
-    facebook_url:     guide.facebook_url,
-    website_url:      guide.website_url,
-    avatar_url:       guide.avatar_url,
-    cover_url:        guide.cover_url,
-    landscape_url:    guide.landscape_url,
+    full_name:           guide.full_name,
+    country:             guide.country,
+    city:                guide.city,
+    bio:                 guide.bio,
+    fish_expertise:      guide.fish_expertise,
+    languages:           guide.languages,
+    years_experience:    guide.years_experience,
+    instagram_url:       guide.instagram_url,
+    youtube_url:         guide.youtube_url,
+    facebook_url:        guide.facebook_url,
+    website_url:         guide.website_url,
+    avatar_url:          guide.avatar_url,
+    cover_url:           guide.cover_url,
+    landscape_url:       guide.landscape_url,
+    tagline:             guide.tagline,
+    cancellation_policy: guide.cancellation_policy as CancellationPolicy | null,
+    specialties:         guide.specialties,
+    certifications:      guide.certifications,
+    google_profile_url:  guide.google_profile_url,
+    google_rating:       guide.google_rating,
+    google_review_count: guide.google_review_count,
+    boat_name:           guide.boat_name,
+    boat_type:           guide.boat_type as BoatType | null,
+    boat_length_m:       guide.boat_length_m,
+    boat_engine:         guide.boat_engine,
+    boat_capacity:       guide.boat_capacity,
   }
 
   return (

@@ -15,6 +15,16 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendEmailVerificationEmail, sendPasswordResetEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 
+/** Returns the canonical app URL.
+ *  On Vercel Preview deployments VERCEL_URL is the actual preview hostname,
+ *  so we use it instead of NEXT_PUBLIC_APP_URL (which may still be localhost). */
+function getAppUrl(): string {
+  if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  return env.NEXT_PUBLIC_APP_URL
+}
+
 // ─── Return type ──────────────────────────────────────────────────────────────
 
 export type AuthResult = { error: string } | { success: true }
@@ -64,7 +74,7 @@ export async function signUp(
       password,
       options: {
         data: { full_name: fullName, role },
-        redirectTo: `${env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+        redirectTo: `${getAppUrl()}/auth/callback`,
       },
     })
 
@@ -119,7 +129,7 @@ export async function resetPassword(email: string): Promise<AuthResult> {
       type: 'recovery',
       email,
       options: {
-        redirectTo: `${env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
+        redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
       },
     })
 

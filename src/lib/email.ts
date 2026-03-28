@@ -10,6 +10,7 @@
  */
 
 import { createElement } from 'react'
+import { render } from '@react-email/components'
 import { Resend } from 'resend'
 import { env } from '@/lib/env'
 import { GuideApplicationEmail } from '@/emails/guide-application'
@@ -36,7 +37,10 @@ async function sendEmail({
   subject: string
   react: React.ReactElement
 }): Promise<void> {
-  const { error } = await resend.emails.send({ from: FROM, to, subject, react })
+  // Render to HTML ourselves — avoids Resend SDK's internal React rendering
+  // which can fail in some Next.js deployment environments.
+  const html = await render(react)
+  const { error } = await resend.emails.send({ from: FROM, to, subject, html })
   if (error) {
     throw new Error(`[email] Resend error: ${error.message}`)
   }

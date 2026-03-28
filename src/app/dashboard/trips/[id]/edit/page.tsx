@@ -71,7 +71,7 @@ export default async function DashboardEditExperiencePage({
     price_per_person_eur: String(exp.price_per_person_eur),
     location_country:     exp.location_country ?? '',
     location_city:        exp.location_city ?? '',
-    meeting_point:        exp.meeting_point ?? '',
+    meeting_point:        exp.meeting_point_address ?? '',
     location_lat:         exp.location_lat ?? null,
     location_lng:         exp.location_lng ?? null,
     what_included:        exp.what_included,

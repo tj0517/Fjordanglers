@@ -870,7 +870,6 @@ export default function ExperienceForm({
       itinerary:                    itinerary.length > 0 ? itinerary.filter(s => s.label.trim() !== '') : null,
       location_description:         locationDescription.trim() || null,
       boat_description:             boatDescription.trim() || null,
-      accommodation_description:    null,
       accommodation_ids:            selectedAccommodationIds,
       food_description:             foodDescription.trim() || null,
       license_description:          licenseDescription.trim() || null,
