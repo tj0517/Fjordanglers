@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import InquireForm from './InquireForm'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import { decodePeriodsParam } from '@/components/trips/multi-period-picker'
+import type { DurationOptionPayload } from '@/actions/experiences'
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ export default async function InquirePage({
   const serviceClient = createServiceClient()
   const { data: experience } = await serviceClient
     .from('experiences')
-    .select('id, title, guide_id, fish_types, inquiry_form_config, guides(id, full_name, avatar_url)')
+    .select('id, title, guide_id, fish_types, inquiry_form_config, price_per_person_eur, duration_options, guides(id, full_name, avatar_url)')
     .eq('id', id)
     .eq('published', true)
     .single()
@@ -70,6 +71,36 @@ export default async function InquirePage({
   const prefilledPeriods = sp.periods ? decodePeriodsParam(sp.periods)      : []
   const prefilledGroup   = sp.group   ? Math.max(1, Math.min(50, Number(sp.group) || 1)) : 1
 
+  // ── Price range (widełki) — shown to angler before they submit ────────────
+  const durationOpts = Array.isArray(experience.duration_options)
+    ? (experience.duration_options as unknown as DurationOptionPayload[])
+    : []
+
+  let priceMin: number | null = null
+  let priceMax: number | null = null
+
+  if (durationOpts.length > 0) {
+    const allPrices = durationOpts.flatMap(o => {
+      if (o.pricing_type === 'per_group' && o.group_prices) {
+        const vals = Object.values(o.group_prices).filter((v): v is number => typeof v === 'number')
+        return vals.length > 0 ? vals : [o.price_eur]
+      }
+      return [o.price_eur]
+    })
+    priceMin = Math.min(...allPrices)
+    priceMax = Math.max(...allPrices)
+  } else if (experience.price_per_person_eur != null) {
+    priceMin = experience.price_per_person_eur
+    priceMax = experience.price_per_person_eur
+  }
+
+  const isRange        = priceMin != null && priceMax != null && priceMin !== priceMax
+  const pricingLabel   = isRange
+    ? `€${priceMin!.toLocaleString('de-DE')} – €${priceMax!.toLocaleString('de-DE')}`
+    : priceMin != null
+    ? `From €${priceMin.toLocaleString('de-DE')}`
+    : null
+
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       <div className="max-w-lg mx-auto px-4 py-12">
@@ -99,6 +130,33 @@ export default async function InquirePage({
             <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
               Guide: {guide.full_name}
             </p>
+          )}
+
+          {/* Price range — visible to angler before submitting */}
+          {pricingLabel != null && (
+            <div
+              className="mt-5 flex items-center justify-between px-4 py-3.5 rounded-2xl"
+              style={{
+                background: 'rgba(230,126,80,0.07)',
+                border:     '1px solid rgba(230,126,80,0.18)',
+              }}
+            >
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-0.5"
+                   style={{ color: 'rgba(10,46,77,0.4)' }}>
+                  {isRange ? 'Price range' : 'Starting price'}
+                </p>
+                <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                  {pricingLabel}
+                </p>
+              </div>
+              <p className="text-[11px] f-body text-right max-w-[130px]"
+                 style={{ color: 'rgba(10,46,77,0.42)', lineHeight: 1.4 }}>
+                {isRange
+                  ? 'depends on group size & package'
+                  : 'per person · guide confirms exact price'}
+              </p>
+            </div>
           )}
         </div>
 

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@react-email/components": "^1.0.10",
     "@stripe/stripe-js": "^8.8.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.98.0",
@@ -29,6 +30,7 @@
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.2",
     "react-leaflet": "^5.0.0",
+    "resend": "^6.9.4",
     "stripe": "^20.4.0",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"

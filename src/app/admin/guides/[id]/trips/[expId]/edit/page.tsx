@@ -104,6 +104,8 @@ export default async function AdminEditExperiencePage({
     license_description:          (exp as Record<string, unknown>).license_description as string ?? null,
     gear_description:             (exp as Record<string, unknown>).gear_description as string ?? null,
     transport_description:        (exp as Record<string, unknown>).transport_description as string ?? null,
+    price_range_min_eur:          (exp as Record<string, unknown>).price_range_min_eur as number ?? null,
+    price_range_max_eur:          (exp as Record<string, unknown>).price_range_max_eur as number ?? null,
   }
 
   return (

@@ -69,7 +69,7 @@ export default async function AdminGuidePayoutsPage({
     .reduce((sum, b) => sum + (b.guide_payout_eur ?? 0), 0)
 
   return (
-    <div className="px-10 py-10 max-w-[960px]">
+    <div className="px-4 sm:px-6 lg:px-10 py-6 lg:py-10 max-w-[960px]">
 
       {/* ─── Breadcrumb ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-8">
@@ -137,6 +137,7 @@ export default async function AdminGuidePayoutsPage({
             overflow: 'hidden',
           }}
         >
+          <div className="overflow-x-auto">
           {/* Table header */}
           <div
             className="grid px-6 py-3"
@@ -144,6 +145,7 @@ export default async function AdminGuidePayoutsPage({
               gridTemplateColumns: '2fr 1.4fr 1fr 1fr 1fr 1.4fr',
               borderBottom: '1px solid rgba(10,46,77,0.07)',
               background: 'rgba(10,46,77,0.02)',
+              minWidth: '820px',
             }}
           >
             {['Booking', 'Angler', 'Amount', 'Guide payout', 'Status', 'Action'].map(col => (
@@ -153,7 +155,7 @@ export default async function AdminGuidePayoutsPage({
             ))}
           </div>
 
-          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
+          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '820px' }}>
             {rows.map(booking => {
               const experienceTitle =
                 (booking.experiences as unknown as { title: string } | null)?.title ?? '—'
@@ -241,6 +243,7 @@ export default async function AdminGuidePayoutsPage({
               )
             })}
           </div>
+          </div>{/* /overflow-x-auto */}
         </div>
       )}
     </div>

@@ -21,6 +21,9 @@ import { cn } from '@/lib/utils'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
 import { ImageCropModal } from '@/components/ui/image-crop'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { FieldTooltip } from '@/components/ui/field-tooltip'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { createClient } from '@/lib/supabase/client'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
 import {
@@ -125,6 +128,8 @@ export type ExperienceFormDefaults = {
   location_area?: GeoJSON.Polygon | null
   location_spots?: LocationSpot[] | null
   booking_type?: 'classic' | 'icelandic'
+  price_range_min_eur?: number | null
+  price_range_max_eur?: number | null
   // Legacy arrays (still accepted for old records)
   what_included?: string[]
   what_excluded?: string[]
@@ -226,12 +231,13 @@ function StyledSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   )
 }
 
-function Field({ label, required, children }: { label: React.ReactNode; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, tooltip, children }: { label: React.ReactNode; required?: boolean; tooltip?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="flex items-center text-xs font-semibold uppercase tracking-[0.16em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
         {label}
         {required === true && <span className="ml-1" style={{ color: '#E67E50' }}>*</span>}
+        {tooltip != null && <FieldTooltip text={tooltip} />}
       </label>
       {children}
     </div>
@@ -266,7 +272,7 @@ function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   )
 }
 
-function SectionCard({ id, title, subtitle, optional, children }: { id?: string; title: string; subtitle?: string; optional?: boolean; children: React.ReactNode }) {
+function SectionCard({ id, title, subtitle, optional, help, children }: { id?: string; title: string; subtitle?: string; optional?: boolean; help?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div
       id={id}
@@ -287,6 +293,7 @@ function SectionCard({ id, title, subtitle, optional, children }: { id?: string;
             Optional
           </span>
         )}
+        {help}
       </div>
       {subtitle != null && (
         <p className="text-[#0A2E4D]/40 text-xs f-body mb-5">{subtitle}</p>
@@ -626,6 +633,8 @@ export default function ExperienceForm({
 
   // ── Booking type ─────────────────────────────────────────────────────────
   const [bookingType, setBookingType] = useState<'classic' | 'icelandic' | 'both'>(dv.booking_type ?? 'classic')
+  const [priceRangeMin, setPriceRangeMin] = useState<string>(dv.price_range_min_eur != null ? String(dv.price_range_min_eur) : '')
+  const [priceRangeMax, setPriceRangeMax] = useState<string>(dv.price_range_max_eur != null ? String(dv.price_range_max_eur) : '')
 
   // ── Form tab ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<FormTabKey>('pricing')
@@ -843,6 +852,8 @@ export default function ExperienceForm({
       location_area:        locationMode === 'area'   ? locationArea  : null,
       location_spots:       locationMode === 'spots'  ? locationSpots : null,
       booking_type:         bookingType,
+      price_range_min_eur:  priceRangeMin !== '' ? parseFloat(priceRangeMin) : null,
+      price_range_max_eur:  priceRangeMax !== '' ? parseFloat(priceRangeMax) : null,
       what_included:        [],
       what_excluded:        [],
       published,
@@ -859,7 +870,6 @@ export default function ExperienceForm({
       itinerary:                    itinerary.length > 0 ? itinerary.filter(s => s.label.trim() !== '') : null,
       location_description:         locationDescription.trim() || null,
       boat_description:             boatDescription.trim() || null,
-      accommodation_description:    null,
       accommodation_ids:            selectedAccommodationIds,
       food_description:             foodDescription.trim() || null,
       license_description:          licenseDescription.trim() || null,
@@ -965,7 +975,8 @@ export default function ExperienceForm({
   // ── Form ──────────────────────────────────────────────────────────────────
   return (
     <>
-    <form onSubmit={handleSubmit} className="max-w-[760px]">
+    <form onSubmit={handleSubmit} className="relative max-w-[760px]">
+      {isPending && <LoadingOverlay rounded="rounded-none" />}
 
       {/* Error banner */}
       {error != null && (
@@ -1018,7 +1029,12 @@ export default function ExperienceForm({
       {activeTab === 'info' && (<>
 
       {/* ── Basic Info ───────────────────────────────────────────────── */}
-      <SectionCard id="form-info" title="Basic Info" subtitle="Write what actually happens — species, method, what's included. No marketing fluff.">
+      <SectionCard id="form-info" title="Basic Info" subtitle="Write what actually happens — species, method, what's included. No marketing fluff." help={
+        <HelpWidget title="Basic Info" items={[
+          { icon: '📌', title: 'Title', text: 'Clear and specific — include species, method, and location. Example: "Atlantic Salmon Fly Fishing on the Gaula River".' },
+          { icon: '📝', title: 'Description', text: 'Describe what actually happens: species, method, gear included, group size. Anglers read this before booking — be honest and specific.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-5">
           <Field label="Title" required>
             <TextInput
@@ -1040,7 +1056,13 @@ export default function ExperienceForm({
       </SectionCard>
 
       {/* ── Section 2: Fishing Details ───────────────────────────────── */}
-      <SectionCard id="form-fishing" title="Fishing Details" subtitle="Target species and difficulty">
+      <SectionCard id="form-fishing" title="Fishing Details" subtitle="Target species and difficulty" help={
+        <HelpWidget title="Fishing Details" items={[
+          { icon: '🐟', title: 'Target species', text: 'Select all species anglers can expect to catch on this experience. Used for search and filtering.' },
+          { icon: '📊', title: 'Difficulty level', text: 'All levels: suitable for beginners · Intermediate: some experience needed · Expert: advanced skills required.' },
+          { icon: '🎣', title: 'Catch & Release', text: 'Enable if this is a C&R experience. Displayed as a badge — many anglers specifically look for this.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-6">
 
           {/* Target species */}
@@ -1108,6 +1130,13 @@ export default function ExperienceForm({
         id="form-booking"
         title="Booking Flow"
         subtitle="Choose how anglers book this experience."
+        help={
+          <HelpWidget title="Booking Flow" items={[
+            { icon: '⚡', title: 'Direct booking', text: 'Anglers pick a date and send a request. You confirm within 24h. They pay a 30% deposit after confirmation.' },
+            { icon: '📩', title: 'Price on request', text: 'Anglers send an inquiry with their dates. You review and send a custom offer with a price. Used for multi-day or complex trips.' },
+            { icon: '🔀', title: 'Both', text: 'Offer both options. Anglers who know the price can book directly; others can inquire.' },
+          ]} />
+        }
       >
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {([
@@ -1171,9 +1200,78 @@ export default function ExperienceForm({
             Since this experience uses the &quot;Price on request&quot; booking flow, pricing is
             set individually per inquiry. No fixed prices are needed here.
           </p>
+
+          {/* Optional price range hint */}
+          <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] mb-3 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+              Price range hint <span className="normal-case tracking-normal font-normal" style={{ color: 'rgba(10,46,77,0.35)' }}>— optional</span>
+            </p>
+            <p className="text-xs f-body mb-3 leading-relaxed" style={{ color: 'rgba(10,46,77,0.45)' }}>
+              Give anglers a ballpark before they inquire. These figures appear on your trip page but do not commit you to a specific price.
+            </p>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="block text-xs font-semibold f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  From (€)
+                </label>
+                <div className="relative">
+                  <span
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}
+                  >€</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 400"
+                    value={priceRangeMin}
+                    onChange={e => setPriceRangeMin(e.target.value)}
+                    className="w-full rounded-xl pl-7 pr-3 py-2 text-sm f-body outline-none"
+                    style={{
+                      background: '#FDFAF7',
+                      border: '1.5px solid rgba(10,46,77,0.12)',
+                      color: '#0A2E4D',
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  To (€)
+                </label>
+                <div className="relative">
+                  <span
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}
+                  >€</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="e.g. 800"
+                    value={priceRangeMax}
+                    onChange={e => setPriceRangeMax(e.target.value)}
+                    className="w-full rounded-xl pl-7 pr-3 py-2 text-sm f-body outline-none"
+                    style={{
+                      background: '#FDFAF7',
+                      border: '1.5px solid rgba(10,46,77,0.12)',
+                      color: '#0A2E4D',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-      {bookingType !== 'icelandic' && <SectionCard id="form-pricing" title="Pricing & Logistics">
+      {bookingType !== 'icelandic' && <SectionCard id="form-pricing" title="Pricing & Logistics" help={
+        <HelpWidget title="Pricing & Logistics" items={[
+          { icon: '📅', title: 'Season', text: 'Months when this experience is available. Anglers see this on your trip page and can filter by availability.' },
+          { icon: '⏱️', title: 'Duration options', text: 'Define one or more duration packages (e.g. Half day / Full day / 3 days). Each can have its own price and logistics.' },
+          { icon: '💶', title: 'Pricing type', text: 'Per person: each angler pays separately · Flat (boat): one price per group · By group: different price depending on how many anglers.' },
+          { icon: '🎣', title: 'Fishing method', text: 'Fly fishing, spinning, trolling, etc. — shown on the trip page to help anglers know what to expect.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-7">
 
           {/* A) Season */}
@@ -1447,6 +1545,13 @@ export default function ExperienceForm({
         id="form-location"
         title="Location"
         subtitle="Fill in the text fields, then pin the exact spot on the map."
+        help={
+          <HelpWidget title="Location" items={[
+            { icon: '🌍', title: 'Country & City', text: 'Used for search filtering — anglers browse by location. Be specific: "Romsdalen, Norway" beats just "Norway".' },
+            { icon: '📍', title: 'Meeting point', text: 'Exact address or description where anglers should arrive. Shown after booking is confirmed.' },
+            { icon: '🗺️', title: 'Map pin', text: 'Drop a pin on the map for the fishing location or meeting point. Helps anglers understand the area before booking.' },
+          ]} />
+        }
       >
         <div className="flex flex-col gap-5">
 
@@ -1658,6 +1763,12 @@ export default function ExperienceForm({
         title="Trip Plan"
         optional
         subtitle="Describe the day step by step. Only shown on the trip page if filled in."
+        help={
+          <HelpWidget title="Trip Plan" items={[
+            { icon: '🕘', title: 'Time + activity', text: 'Add steps with a time and short description. Example: 08:00 — Meet at the harbour, 09:00 — Depart for the fjord.' },
+            { icon: '✅', title: 'Optional', text: 'Leave empty if you prefer a flexible itinerary. The section is hidden on the trip page if not filled in.' },
+          ]} />
+        }
       >
         <div className="flex flex-col gap-2">
           {itinerary.length > 0 && (
@@ -1735,6 +1846,15 @@ export default function ExperienceForm({
         title="Trip Details"
         optional
         subtitle="Fill in only what's relevant — empty sections won't appear on the trip page."
+        help={
+          <HelpWidget title="Trip Details" items={[
+            { icon: '🏠', title: 'Accommodation', text: 'Describe lodging options — or link to accommodations you have set up in your account.' },
+            { icon: '⛵', title: 'Boat', text: 'Describe your vessel — type, size, engine, safety gear. Builds confidence for sea and lake trips.' },
+            { icon: '🍽️', title: 'Food & drink', text: 'What meals or refreshments are included. Helps anglers know what to bring.' },
+            { icon: '🎿', title: 'Gear & tackle', text: 'What equipment is provided and what anglers should bring themselves.' },
+            { icon: '🪪', title: 'Fishing licence', text: 'Explain local licence requirements and whether your price includes one.' },
+          ]} />
+        }
       >
         <div className="flex flex-col gap-5">
 
@@ -1926,6 +2046,12 @@ export default function ExperienceForm({
         id="form-hero"
         title="Hero Background"
         subtitle="Full-width landscape shown behind the experience title. Pick from our library or upload your own."
+        help={
+          <HelpWidget title="Hero Background" items={[
+            { icon: '🖼️', title: 'Library images', text: 'Curated Scandinavian landscapes — pick one and crop to fit your experience page.' },
+            { icon: '📸', title: 'Upload your own', text: 'Use a photo from your own trips. Landscape orientation, min 2400px wide recommended.' },
+          ]} />
+        }
       >
         {/* Tabs */}
         <div className="flex gap-1 mb-5 p-1 rounded-2xl" style={{ background: 'rgba(10,46,77,0.05)', width: 'fit-content' }}>
@@ -2036,7 +2162,12 @@ export default function ExperienceForm({
         />
       )}
 
-      <SectionCard id="form-photos" title="Photos" subtitle="Cover photo is required. Gallery: up to 6 photos, select multiple at once.">
+      <SectionCard id="form-photos" title="Photos" subtitle="Cover photo is required. Gallery: up to 6 photos, select multiple at once." help={
+        <HelpWidget title="Photos" items={[
+          { icon: '📷', title: 'Cover photo', text: 'Required. Shown as the main image in search results and at the top of your trip page. 16:9 ratio, high resolution.' },
+          { icon: '🖼️', title: 'Gallery', text: 'Up to 6 additional photos — show different aspects of the trip: the location, the catch, the gear, happy anglers.' },
+        ]} />
+      }>
         <div className="flex flex-col gap-6">
           {/* Cover — single image with 16:9 crop */}
           <ImageUpload

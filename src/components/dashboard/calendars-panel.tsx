@@ -30,6 +30,8 @@ type Props = {
   activeCalendarId:     string | null
   currentYear:          number
   currentMonth:         number
+  /** When provided, called instead of router.push for calendar switching. */
+  onNavigate?:          (calendarId: string | null) => void
 }
 
 type PanelMode =
@@ -47,6 +49,7 @@ export default function CalendarsPanel({
   activeCalendarId,
   currentYear,
   currentMonth,
+  onNavigate,
 }: Props) {
   const router      = useRouter()
   const createRef   = useRef<HTMLInputElement>(null)
@@ -65,6 +68,10 @@ export default function CalendarsPanel({
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   function navigate(calendarId: string | null) {
+    if (onNavigate != null) {
+      onNavigate(calendarId)
+      return
+    }
     const params = new URLSearchParams({
       year:  String(currentYear),
       month: String(currentMonth),

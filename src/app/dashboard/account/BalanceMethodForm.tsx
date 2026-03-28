@@ -8,6 +8,8 @@
 
 import { useState, useTransition } from 'react'
 import { updateBalancePaymentMethod } from '@/actions/bookings'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 interface Props {
   current: 'stripe' | 'cash'
@@ -54,7 +56,21 @@ export function BalanceMethodForm({ current }: Props) {
   } as const
 
   return (
-    <div className="px-6 py-4 flex flex-col gap-4">
+    <div className="relative px-6 py-4 flex flex-col gap-4">
+      {isPending && <LoadingOverlay />}
+
+      {/* Help */}
+      <div className="flex items-center gap-2">
+        <HelpWidget
+          title="Balance payment method"
+          description="How anglers pay the remaining 70% after confirming their trip."
+          items={[
+            { icon: '💵', title: 'Cash on the day', text: 'Angler brings the balance in cash on arrival. You mark it as received in your dashboard. No card processing fees on the balance.' },
+            { icon: '💳', title: 'Online card payment', text: 'Angler pays the balance by card before the trip via a secure Stripe link. Funds transferred to your account on the weekly payout schedule. No platform fee on the balance.' },
+            { icon: 'ℹ️', title: 'Applied to all bookings', text: 'This setting applies to all new bookings. Existing confirmed bookings keep the method set at the time of acceptance.' },
+          ]}
+        />
+      </div>
 
       {/* Options */}
       <div className="flex flex-col gap-2">

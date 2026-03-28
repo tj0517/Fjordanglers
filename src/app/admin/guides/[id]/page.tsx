@@ -51,7 +51,7 @@ export default async function AdminGuideDetailPage({
   const s = STATUS_STYLES[guide.status as keyof typeof STATUS_STYLES] ?? STATUS_STYLES.pending
 
   return (
-    <div className="px-10 py-10 max-w-[900px]">
+    <div className="px-4 sm:px-6 lg:px-10 py-6 lg:py-10 max-w-[900px]">
 
       {/* ─── Breadcrumb ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 mb-8">
@@ -113,17 +113,30 @@ export default async function AdminGuideDetailPage({
 
             {/* Actions */}
             <div className="flex items-center gap-2 flex-wrap">
-              <Link
-                href={`/guides/${guide.id}`}
-                target="_blank"
-                className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all f-body"
-                style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
-              >
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3">
-                  <path d="M1.5 9.5L9.5 1.5M6 1.5h3.5v3.5" />
-                </svg>
-                Public profile
-              </Link>
+              {guide.status === 'active' || guide.status === 'verified' ? (
+                <Link
+                  href={`/guides/${guide.id}`}
+                  target="_blank"
+                  className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all f-body"
+                  style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3">
+                    <path d="M1.5 9.5L9.5 1.5M6 1.5h3.5v3.5" />
+                  </svg>
+                  Public profile
+                </Link>
+              ) : (
+                <span
+                  title="Guide must be active to view public profile"
+                  className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full cursor-not-allowed f-body"
+                  style={{ background: 'rgba(10,46,77,0.04)', color: 'rgba(10,46,77,0.3)' }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3">
+                    <path d="M1.5 9.5L9.5 1.5M6 1.5h3.5v3.5" />
+                  </svg>
+                  Public profile
+                </span>
+              )}
               <Link
                 href={`/admin/guides/${guide.id}/edit`}
                 className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:brightness-95 f-body"
@@ -273,6 +286,7 @@ export default async function AdminGuideDetailPage({
             overflow: 'hidden',
           }}
         >
+          <div className="overflow-x-auto">
           {/* Table header */}
           <div
             className="grid px-6 py-3"
@@ -280,6 +294,7 @@ export default async function AdminGuideDetailPage({
               gridTemplateColumns: '2fr 1fr 1fr 0.8fr 0.8fr',
               borderBottom: '1px solid rgba(10,46,77,0.07)',
               background: 'rgba(10,46,77,0.02)',
+              minWidth: '560px',
             }}
           >
             {['Trip', 'Location', 'Price', 'Duration', 'Status'].map(col => (
@@ -287,7 +302,7 @@ export default async function AdminGuideDetailPage({
             ))}
           </div>
 
-          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
+          <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '560px' }}>
             {exps.map(exp => {
               const duration = exp.duration_hours != null
                 ? `${exp.duration_hours}h`
@@ -339,6 +354,7 @@ export default async function AdminGuideDetailPage({
               )
             })}
           </div>
+          </div>{/* /overflow-x-auto */}
         </div>
       )}
     </div>

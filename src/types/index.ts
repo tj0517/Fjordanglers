@@ -61,7 +61,7 @@ export type LocationSpot = { lat: number; lng: number; name: string }
 export type ExperienceWithGuide = Omit<Experience, 'images'> & {
   guide: Pick<
     Guide,
-    'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating' | 'cancellation_policy' | 'languages'
+    'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating' | 'cancellation_policy' | 'languages' | 'is_hidden'
   > & { calendar_disabled?: boolean | null }
   images: ExperienceImage[]
   /** Linked accommodations — populated when querying via EXP_SELECT. */

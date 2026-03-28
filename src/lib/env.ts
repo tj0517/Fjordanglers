@@ -20,6 +20,7 @@
  *  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY pk_live_... / pk_test_...
  *  NEXT_PUBLIC_APP_URL                https://fjordanglers.com (or http://localhost:3000)
  *  PLATFORM_COMMISSION_RATE           0.10  (optional, defaults to 10%)
+ *  RESEND_API_KEY                     re_...
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -45,6 +46,9 @@ const envSchema = z.object({
 
   // Commission rate as a decimal (0.10 = 10%). Defaults to 10%.
   PLATFORM_COMMISSION_RATE: z.coerce.number().min(0).max(1).default(0.1),
+
+  // ── Email (Resend) ─────────────────────────────────────────────────────────
+  RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
 
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`

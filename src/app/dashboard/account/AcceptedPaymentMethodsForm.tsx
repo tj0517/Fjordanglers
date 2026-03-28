@@ -9,6 +9,8 @@
 
 import { useState, useTransition } from 'react'
 import { updateAcceptedPaymentMethods } from '@/actions/bookings'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 type Method = 'cash' | 'online'
 
@@ -92,7 +94,21 @@ export function AcceptedPaymentMethodsForm({ current }: Props) {
   } as const
 
   return (
-    <div className="px-6 py-4 flex flex-col gap-4">
+    <div className="relative px-6 py-4 flex flex-col gap-4">
+      {isPending && <LoadingOverlay />}
+
+      {/* Help */}
+      <div className="flex items-center gap-2">
+        <HelpWidget
+          title="Accepted payment methods"
+          description="Choose which payment methods you accept from anglers. Shown publicly on your profile."
+          items={[
+            { icon: '💵', title: 'Cash', text: 'Angler pays you in cash on arrival. No card processing fees. You record receipt manually in your dashboard.' },
+            { icon: '💳', title: 'Online payment', text: 'Angler pays securely by card via Stripe. Funds transferred to your bank account on the weekly payout schedule.' },
+            { icon: '✅', title: 'Both options', text: 'Recommended — gives anglers flexibility. Most European anglers prefer card payment for long-distance bookings.' },
+          ]}
+        />
+      </div>
 
       {/* Options */}
       <div className="flex flex-col gap-2">

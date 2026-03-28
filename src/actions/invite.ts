@@ -12,6 +12,8 @@
  */
 
 import { createServiceClient } from '@/lib/supabase/server'
+import { sendGuideWelcomeEmail } from '@/lib/email'
+import { env } from '@/lib/env'
 
 export type ClaimResult = { success: true } | { error: string }
 
@@ -113,6 +115,15 @@ export async function claimGuideProfile(
       // Admin can fix the profile role manually if needed.
       console.error('[invite/claimGuideProfile] profile upsert error:', profileError.message)
     }
+
+    // Fire-and-forget — email failure must not block dashboard access
+    sendGuideWelcomeEmail({
+      to: email.trim(),
+      name: fullName.trim(),
+      dashboardUrl: `${env.NEXT_PUBLIC_APP_URL}/dashboard`,
+    }).catch((err: unknown) => {
+      console.error('[invite/claimGuideProfile] Email send error:', err)
+    })
 
     return { success: true }
   } catch (err) {

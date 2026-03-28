@@ -1,8 +1,13 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { env } from '@/lib/env'
+import { stripe } from '@/lib/stripe/client'
 import { PasswordResetButton } from './AccountActions'
 import { StripeConnectButton } from './StripeConnectButton'
 import { AcceptedPaymentMethodsForm } from './AcceptedPaymentMethodsForm'
+import { MarketingConsentToggle } from './MarketingConsentToggle'
+import { HideListingToggle } from './HideListingToggle'
+import { HelpWidget } from '@/components/ui/help-widget'
 
 export const revalidate = 0
 
@@ -25,11 +30,74 @@ export default async function AccountPage({
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods')
+    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, is_hidden, created_at')
     .eq('user_id', user.id)
     .single()
 
   if (guide == null) redirect('/dashboard')
+
+  // ── Commission rate — Founding Guide gets 8% for first 24 months ──────────
+  const FOUNDING_RATE    = 0.08
+  const STANDARD_RATE    = env.PLATFORM_COMMISSION_RATE
+  const monthsSinceJoin  = (Date.now() - new Date(guide.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  const isFoundingGuide  = monthsSinceJoin <= 24
+  const commissionRate   = guide.pricing_model === 'commission'
+    ? (isFoundingGuide ? FOUNDING_RATE : STANDARD_RATE)
+    : null
+
+  const commissionLabel  = commissionRate != null
+    ? `${Math.round(commissionRate * 100)}% per confirmed booking${isFoundingGuide ? ' (Founding Guide rate)' : ''}`
+    : '—'
+
+  // ── Stripe account settings — payout schedule, currency, requirements ────
+  let payoutScheduleLabel   = '—'
+  let payoutCurrencyLabel   = 'EUR (€)'
+  let stripeCurrentlyDue:   string[] = []
+  let stripePending:         string[] = []
+  let stripePayoutsLive     = guide.stripe_payouts_enabled
+
+  if (guide.stripe_account_id) {
+    try {
+      const stripeAccount = await stripe.accounts.retrieve(guide.stripe_account_id)
+      const schedule = stripeAccount.settings?.payouts?.schedule
+      const currency = stripeAccount.default_currency?.toUpperCase() ?? 'EUR'
+
+      payoutCurrencyLabel = currency === 'EUR' ? 'EUR (€)'
+        : currency === 'GBP' ? 'GBP (£)'
+        : currency === 'SEK' ? 'SEK (kr)'
+        : currency === 'NOK' ? 'NOK (kr)'
+        : currency
+
+      if (schedule?.interval === 'weekly' && schedule.weekly_anchor) {
+        const day = schedule.weekly_anchor.charAt(0).toUpperCase() + schedule.weekly_anchor.slice(1)
+        payoutScheduleLabel = `Weekly — every ${day}`
+      } else if (schedule?.interval === 'daily') {
+        payoutScheduleLabel = 'Daily'
+      } else if (schedule?.interval === 'monthly') {
+        payoutScheduleLabel = `Monthly — day ${schedule.monthly_anchor ?? 1}`
+      } else if (schedule?.interval === 'manual') {
+        payoutScheduleLabel = 'Manual'
+      }
+
+      // Auto-sync: if Stripe says payouts enabled but our DB is stale, update it
+      // so guides don't need to wait for a webhook or an admin click.
+      if (stripeAccount.payouts_enabled && !stripePayoutsLive) {
+        stripePayoutsLive = true
+        const service = createServiceClient()
+        const { error: syncErr } = await service.from('guides').update({
+          stripe_payouts_enabled: true,
+          stripe_charges_enabled: stripeAccount.charges_enabled ?? false,
+        }).eq('id', guide.id)
+        if (syncErr) console.error('[account/page] auto-sync Stripe status error:', syncErr)
+      }
+
+      // Requirements — used to distinguish "form incomplete" from "under review"
+      stripeCurrentlyDue = (stripeAccount.requirements?.currently_due ?? []) as string[]
+      stripePending      = (stripeAccount.requirements?.pending_verification ?? []) as string[]
+    } catch {
+      // Non-fatal — fall back to DB values and empty requirements
+    }
+  }
 
   const email       = user.email ?? '—'
   const provider    = user.app_metadata?.provider ?? 'email'
@@ -38,11 +106,7 @@ export default async function AccountPage({
     day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  // ── Stripe status — for Custom Connect (transfers-only accounts):
-  //    charges_enabled is always false (we don't request card_payments).
-  //    payouts_enabled becomes true once Stripe verifies the account.
-  const hasStripeAccount  = guide.stripe_account_id != null
-  const stripePayoutsLive = guide.stripe_payouts_enabled
+  const hasStripeAccount = guide.stripe_account_id != null
 
   const stripeStatus = stripePayoutsLive
     ? { label: 'Active — payouts enabled',   dot: '#4ADE80', glow: true  }
@@ -72,7 +136,12 @@ export default async function AccountPage({
       <div className="flex flex-col gap-5">
 
         {/* ── Sign-in ──────────────────────────────────────────────────────── */}
-        <Card title="Sign-in">
+        <Card title="Sign-in" help={
+          <HelpWidget title="Sign-in" items={[
+            { icon: '📧', title: 'Email', text: 'Your login email — contact support if you need to change it.' },
+            { icon: '🔒', title: 'Password', text: 'Click "Reset password" to get a reset link sent to your email. For Google sign-in, manage your password via Google.' },
+          ]} />
+        }>
           <Row label="Email">
             <span className="text-sm f-body font-medium" style={{ color: '#0A2E4D' }}>{email}</span>
           </Row>
@@ -113,7 +182,13 @@ export default async function AccountPage({
         </Card>
 
         {/* ── Payouts ──────────────────────────────────────────────────────── */}
-        <Card title="Payouts">
+        <Card title="Payouts" help={
+          <HelpWidget title="Payouts" description="Your Stripe Connect account receives guide earnings." items={[
+            { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
+            { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
+            { icon: '💱', title: 'Currency', text: 'Payouts are sent in the currency of your bank account (EUR by default).' },
+          ]} />
+        }>
           <Row label="Stripe Connect">
             <div className="flex items-center gap-2">
               <div
@@ -129,36 +204,61 @@ export default async function AccountPage({
             </div>
           </Row>
 
-          {/* Under review — show status + option to resume/complete setup */}
+          {/* Under review — distinguish incomplete form vs awaiting Stripe review */}
           {hasStripeAccount && !stripePayoutsLive && (
-            <>
-              <Row label="Status">
-                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                  {stripeRefresh
-                    ? 'Your session expired — click below to continue setup'
+            stripeCurrentlyDue.length > 0 ? (
+              // Form not complete — show what's missing and let them continue
+              <>
+                <Row label="Missing info">
+                  <div className="flex flex-col items-end gap-1">
+                    {formatStripeRequirements(stripeCurrentlyDue).map(label => (
+                      <span
+                        key={label}
+                        className="text-xs f-body px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </Row>
+                <Row label="Action">
+                  <StripeConnectButton label={stripeRefresh ? 'Renew & complete setup' : 'Complete setup'} />
+                </Row>
+              </>
+            ) : (
+              // Form is complete — Stripe is verifying, nothing for guide to do
+              <Row label="Next step">
+                <span className="text-sm f-body text-right" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  {stripePending.length > 0
+                    ? 'Stripe is verifying your details — usually 1–2 business days'
                     : 'Stripe is reviewing your account — usually 1–2 business days'}
                 </span>
               </Row>
-              <Row label="Action">
-                <StripeConnectButton label="Resume setup" />
-              </Row>
-            </>
+            )
           )}
 
-          <Row label="Payout currency">
-            <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>EUR (€)</span>
-          </Row>
-
           {hasStripeAccount && (
-            <Row label="Payout schedule">
-              <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>Weekly — every Monday</span>
-            </Row>
+            <>
+              <Row label="Payout currency">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutCurrencyLabel}</span>
+              </Row>
+              <Row label="Payout schedule">
+                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutScheduleLabel}</span>
+              </Row>
+            </>
           )}
         </Card>
 
         {/* ── Bank account setup — only shown before first connection ──────── */}
         {!hasStripeAccount && (
-          <Card title="Connect bank account">
+          <Card title="Connect bank account" help={
+            <HelpWidget title="Connect bank account" items={[
+              { icon: '⏱️', title: 'Takes ~5 minutes', text: 'Complete Stripe onboarding with your personal details, home address, and IBAN. Required to receive payout transfers.' },
+              { icon: '🔒', title: 'Secure', text: 'Your bank details are handled entirely by Stripe — FjordAnglers never stores raw account numbers.' },
+              { icon: '✅', title: 'Verification', text: 'Stripe verifies your identity within 1–2 business days. You will be notified once payouts are enabled.' },
+            ]} />
+          }>
             <div className="px-6 pt-4 pb-6 flex flex-col gap-5">
               <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
                 Set up your Stripe account to receive weekly payouts from FjordAnglers.
@@ -209,7 +309,13 @@ export default async function AccountPage({
         )}
 
         {/* ── Plan ─────────────────────────────────────────────────────────── */}
-        <Card title="Your plan">
+        <Card title="Your plan" help={
+          <HelpWidget title="Your plan" items={[
+            { icon: '💰', title: 'Commission', text: 'FjordAnglers charges a percentage of each confirmed booking total (excluding the 5% service fee). Founding Guides get a lower rate for 24 months.' },
+            { icon: '⭐', title: 'Founding Guide', text: 'Guides who joined within the first 24 months get an 8% commission rate instead of the standard 10%, locked for their first 24 months.' },
+            { icon: '✅', title: 'Account status', text: 'Active: your profile is live and visible to anglers. Pending: under review by FjordAnglers. Suspended: contact support.' },
+          ]} />
+        }>
           <Row label="Plan">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
@@ -228,7 +334,7 @@ export default async function AccountPage({
           </Row>
           <Row label="Commission rate">
             <span className="text-sm f-body" style={{ color: '#0A2E4D' }}>
-              {isCommission ? '10% per confirmed booking' : '—'}
+              {commissionLabel}
             </span>
           </Row>
           <Row label="Account status">
@@ -253,7 +359,12 @@ export default async function AccountPage({
         </Card>
 
         {/* ── Accepted payment methods ──────────────────────────────────────── */}
-        <Card title="Accepted payment methods">
+        <Card title="Accepted payment methods" help={
+          <HelpWidget title="Accepted payment methods" items={[
+            { icon: '💳', title: 'Online (Stripe)', text: 'Angler pays by card — fully automated. Funds arrive in your Stripe account on the weekly payout schedule.' },
+            { icon: '💵', title: 'Cash', text: 'Angler pays you in cash on the day. You manually mark it as received in the booking details.' },
+          ]} />
+        }>
           <div className="px-6 pt-4 pb-2">
             <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
               Choose which payment methods you accept from anglers.
@@ -265,27 +376,97 @@ export default async function AccountPage({
           />
         </Card>
 
+        {/* ── Photo & marketing consent ─────────────────────────────────────── */}
+        <Card title="Photo & marketing consent" help={
+          <HelpWidget title="Photo & marketing consent" items={[
+            { icon: '📸', title: 'What this covers', text: 'Photos and videos from your trips (shared by you or your anglers) used on the FjordAnglers website, Instagram, and ads.' },
+            { icon: '✍️', title: 'Credit', text: 'Your name is always credited as the guide when FjordAnglers uses your content.' },
+            { icon: '🔄', title: 'Can be changed', text: 'You can turn this on or off at any time from this settings page.' },
+          ]} />
+        }>
+          <div className="px-6 pt-4 pb-2">
+            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              Allow FjordAnglers to use your photos for platform promotion (website, Instagram, ads).
+              Your name will always be credited as the owner.
+            </p>
+          </div>
+          <MarketingConsentToggle current={guide.photo_marketing_consent ?? false} />
+        </Card>
+
+        {/* ── Listing visibility ────────────────────────────────────────────── */}
+        <Card title="Listing visibility" help={
+          <HelpWidget title="Listing visibility" items={[
+            { icon: '👁️', title: 'Visible', text: 'Your profile and trips appear in search results. Anglers can find and book you.' },
+            { icon: '🙈', title: 'Hidden', text: 'Your profile and all trips are removed from public listings. Existing bookings are not affected.' },
+            { icon: '🔄', title: 'Can be changed', text: 'Toggle visibility at any time from this page.' },
+          ]} />
+        }>
+          <div className="px-6 pt-4 pb-2">
+            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              Control whether your profile and trips appear in public listings and search results.
+            </p>
+          </div>
+          <HideListingToggle current={guide.is_hidden ?? true} />
+        </Card>
+
       </div>
     </div>
   )
 }
 
+// ─── Stripe requirement field → human-readable label ─────────────────────────
+
+const STRIPE_FIELD_LABELS: Record<string, string> = {
+  'individual.first_name':                       'First name',
+  'individual.last_name':                        'Last name',
+  'individual.dob.day':                          'Date of birth',
+  'individual.dob.month':                        'Date of birth',
+  'individual.dob.year':                         'Date of birth',
+  'individual.address.line1':                    'Street address',
+  'individual.address.city':                     'City',
+  'individual.address.postal_code':              'Postal code',
+  'individual.address.state':                    'State / region',
+  'individual.address.country':                  'Country',
+  'individual.id_number':                        'National ID / Tax ID',
+  'individual.ssn_last_4':                       'Last 4 of SSN',
+  'individual.verification.document':            'Government-issued ID',
+  'individual.verification.additional_document': 'Proof of address',
+  'individual.email':                            'Email address',
+  'individual.phone':                            'Phone number',
+  'external_account':                            'Bank account (IBAN)',
+  'tos_acceptance.date':                         'Terms of service',
+  'tos_acceptance.ip':                           'Terms of service',
+  'business_profile.product_description':        'Business description',
+  'business_profile.support_phone':              'Support phone',
+  'business_profile.url':                        'Business website',
+  'business_profile.mcc':                        'Business category',
+}
+
+function formatStripeRequirements(fields: string[]): string[] {
+  const seen = new Set<string>()
+  for (const field of fields) {
+    seen.add(STRIPE_FIELD_LABELS[field] ?? field)
+  }
+  return Array.from(seen)
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, help, children }: { title: string; help?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
       style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
     >
       <div
-        className="px-6 py-3"
+        className="px-6 py-3 flex items-center gap-2"
         style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
            style={{ color: 'rgba(10,46,77,0.38)' }}>
           {title}
         </p>
+        {help}
       </div>
       <div className="flex flex-col">
         {children}

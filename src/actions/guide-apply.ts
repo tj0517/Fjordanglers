@@ -11,6 +11,7 @@
  */
 
 import { createServiceClient } from '@/lib/supabase/server'
+import { sendGuideApplicationEmail } from '@/lib/email'
 import type { ActionResult } from '@/types'
 
 // ─── Payload type ─────────────────────────────────────────────────────────────
@@ -72,6 +73,16 @@ export async function submitGuideApplication(
         error: 'Failed to submit your application. Please try again.',
       }
     }
+
+    // Fire-and-forget — email failure must not break the application submission
+    sendGuideApplicationEmail({
+      to: payload.email,
+      name: payload.full_name,
+      plan: payload.plan,
+      country: payload.country,
+    }).catch((err: unknown) => {
+      console.error('[guide-apply] Email send error:', err)
+    })
 
     return { success: true, data: { id: lead.id } }
   } catch (err) {

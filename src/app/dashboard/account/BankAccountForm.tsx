@@ -4,6 +4,9 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { setupPayoutAccount } from '@/actions/stripe-connect'
 import type { SetupPayoutInput } from '@/actions/stripe-connect'
+import { HelpWidget } from '@/components/ui/help-widget'
+import { FieldTooltip } from '@/components/ui/field-tooltip'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
 
 // ─── Country list (Stripe-supported EEA + UK countries relevant for fishing guides) ─
 
@@ -151,13 +154,24 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
   const currentYear = new Date().getFullYear()
 
   return (
-    <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="relative px-6 py-5 flex flex-col gap-6">
+      {isPending && <LoadingOverlay />}
 
       {/* ── Personal information ──────────────────────────────────────────── */}
       <section>
-        <SectionLabel>Personal information</SectionLabel>
+        <div className="flex items-center gap-2 mb-3">
+          <SectionLabel noMargin>Personal information</SectionLabel>
+          <HelpWidget
+            title="Personal information"
+            description="Required by Stripe to verify your identity as a payout recipient."
+            items={[
+              { icon: '🪪', title: 'Full name', text: 'Must match your government-issued ID exactly — used by Stripe for identity verification.' },
+              { icon: '🎂', title: 'Date of birth', text: 'Required by financial regulations to confirm you are 18 or older.' },
+            ]}
+          />
+        </div>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <Field label="First name">
+          <Field label="First name" tooltip="Must match your government-issued ID exactly — used by Stripe for identity verification.">
             <FInput
               value={f.firstName}
               onChange={set('firstName')}
@@ -166,7 +180,7 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
               required
             />
           </Field>
-          <Field label="Last name">
+          <Field label="Last name" tooltip="Must match your government-issued ID exactly.">
             <FInput
               value={f.lastName}
               onChange={set('lastName')}
@@ -176,7 +190,7 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
             />
           </Field>
         </div>
-        <Field label="Date of birth">
+        <Field label="Date of birth" tooltip="Required by financial regulations to confirm you are 18 or older. Must match your ID.">
           <div className="grid grid-cols-3 gap-2">
             <FSelect value={f.dobDay} onChange={set('dobDay')} required aria-label="Birth day">
               <option value="">Day</option>
@@ -205,7 +219,17 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
 
       {/* ── Address ───────────────────────────────────────────────────────── */}
       <section>
-        <SectionLabel>Home address</SectionLabel>
+        <div className="flex items-center gap-2 mb-3">
+          <SectionLabel noMargin>Home address</SectionLabel>
+          <HelpWidget
+            title="Home address"
+            description="Your legal residential address — required by Stripe for KYC compliance."
+            items={[
+              { icon: '🏠', title: 'Street address', text: 'Your current primary residence — must match the address on your ID documents.' },
+              { icon: '🌍', title: 'Country', text: 'Determines which Stripe entity processes your payouts and which banking rules apply.' },
+            ]}
+          />
+        </div>
         <div className="flex flex-col gap-3">
           <Field label="Street address">
             <FInput
@@ -249,8 +273,19 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
 
       {/* ── Bank account (IBAN) ───────────────────────────────────────────── */}
       <section>
-        <SectionLabel>Bank account</SectionLabel>
-        <Field label="IBAN">
+        <div className="flex items-center gap-2 mb-3">
+          <SectionLabel noMargin>Bank account</SectionLabel>
+          <HelpWidget
+            title="Bank account (IBAN)"
+            description="Your earnings are transferred here every Monday."
+            items={[
+              { icon: '🏦', title: 'IBAN', text: 'International Bank Account Number — 15–34 characters, starts with your country code (e.g. NO, SE, PL). Spaces are added automatically.' },
+              { icon: '📅', title: 'Weekly payouts', text: 'FjordAnglers transfers your guide earnings every Monday for the previous week.' },
+              { icon: '🔒', title: 'Security', text: 'Your bank details are stored and processed securely by Stripe — FjordAnglers never stores raw account numbers.' },
+            ]}
+          />
+        </div>
+        <Field label="IBAN" tooltip="International Bank Account Number — starts with your 2-letter country code, e.g. NO94 8601 1117 947. Spaces are added automatically.">
           <FInput
             value={f.iban}
             onChange={handleIbanChange}
@@ -318,10 +353,10 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children, noMargin }: { children: React.ReactNode; noMargin?: boolean }) {
   return (
     <p
-      className="text-[10px] font-bold uppercase tracking-[0.16em] f-body mb-3"
+      className={`text-[10px] font-bold uppercase tracking-[0.16em] f-body${noMargin ? '' : ' mb-3'}`}
       style={{ color: 'rgba(10,46,77,0.38)' }}
     >
       {children}
@@ -329,14 +364,15 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, tooltip, children }: { label: string; tooltip?: string; children: React.ReactNode }) {
   return (
     <div>
       <label
-        className="block text-xs font-medium f-body mb-1.5"
+        className="flex items-center text-xs font-medium f-body mb-1.5 gap-1"
         style={{ color: 'rgba(10,46,77,0.55)' }}
       >
         {label}
+        {tooltip != null && <FieldTooltip text={tooltip} />}
       </label>
       {children}
     </div>

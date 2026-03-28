@@ -152,7 +152,9 @@ export async function setupPayoutAccount(data: SetupPayoutInput): Promise<Action
       },
       settings: {
         payouts: {
-          schedule:               { interval: 'weekly', weekly_anchor: 'monday' },
+          // Manual — FjordAnglers triggers payout after the trip is completed.
+          // This prevents paying out the guide before the trip happens (cancellation risk).
+          schedule:               { interval: 'manual' },
           debit_negative_balances: true,
         },
       },
@@ -306,7 +308,8 @@ export async function startStripeOnboarding(): Promise<
         },
         settings: {
           payouts: {
-            schedule:               { interval: 'weekly', weekly_anchor: 'monday' },
+            // Manual — FjordAnglers triggers payout after the trip is completed.
+            schedule:               { interval: 'manual' },
             debit_negative_balances: true,
           },
         },

@@ -118,6 +118,7 @@ const IconBed = () => (
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
+  { label: 'Home',           href: '/dashboard',                 icon: <IconOverview />,  exact: true,  soon: false },
   { label: 'Listings',       href: '/dashboard/trips',           icon: <IconCompass />,   exact: false, soon: false },
   { label: 'Bookings',       href: '/dashboard/bookings',        icon: <IconBookings />,  exact: false, soon: false },
   { label: 'Requests',       href: '/dashboard/inquiries',       icon: <IconInquiries />, exact: false, soon: false },

@@ -51,6 +51,12 @@ function toISO(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
+function addDays(isoDate: string, n: number): string {
+  const [yStr, mStr, dStr] = isoDate.split('-')
+  const date = new Date(Number(yStr), Number(mStr) - 1, Number(dStr) + n)
+  return toISO(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 type DayStatus = 'available' | 'selected' | 'booked' | 'blocked' | 'unavailable'
 
 function getDayStatus(
@@ -95,9 +101,15 @@ type CalendarProps = {
   selectedSet: Set<string>
   /** Toggle a date in/out of the selection. */
   onToggle: (iso: string) => void
+  /** When > 1, switches to range-start picker: click = start, N consecutive days highlighted. */
+  numDays?: number
+  /** ISO date currently hovered (for range preview). Only used when numDays > 1. */
+  hoverDate?: string | null
+  /** Fires when the hover date changes. */
+  onHoverChange?: (iso: string | null) => void
 }
 
-function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle }: CalendarProps) {
+function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, numDays, hoverDate, onHoverChange }: CalendarProps) {
   const now = new Date()
   const todayY = now.getFullYear()
   const todayM = now.getMonth()
@@ -118,6 +130,20 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle }
   const firstDayOfMonth = new Date(viewY, viewM, 1)
   const daysInMonth = new Date(viewY, viewM + 1, 0).getDate()
   const startPad = (firstDayOfMonth.getDay() + 6) % 7  // Monday-first offset
+
+  // ── Range-mode helpers ────────────────────────────────────────────────────
+  const nDays      = numDays ?? 1
+  const isRangeCal = nDays > 1
+
+  const rangeStart: string | null = isRangeCal && selectedSet.size > 0
+    ? ([...selectedSet].sort()[0] ?? null)
+    : null
+  const rangeEnd: string | null = rangeStart ? addDays(rangeStart, nDays - 1) : null
+
+  const hoverStart: string | null = isRangeCal && !rangeStart && (hoverDate ?? null)
+    ? hoverDate!
+    : null
+  const hoverEnd: string | null = hoverStart ? addDays(hoverStart, nDays - 1) : null
 
   const canPrev = viewY > todayY || (viewY === todayY && viewM > todayM)
   const canNext = (() => {
@@ -170,6 +196,13 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle }
         </button>
       </div>
 
+      {/* Range-mode hint */}
+      {isRangeCal && (
+        <p className="text-center text-[10px] f-body mb-3" style={{ color: 'rgba(10,46,77,0.45)' }}>
+          Click a start date — {nDays} consecutive days will be selected
+        </p>
+      )}
+
       {/* Weekday headers */}
       <div className="grid grid-cols-7 mb-1">
         {WEEKDAY_LABELS.map(wl => (
@@ -184,7 +217,7 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle }
       </div>
 
       {/* Day grid */}
-      <div className="grid grid-cols-7 gap-y-0.5">
+      <div className="grid grid-cols-7 gap-y-0.5" onMouseLeave={() => onHoverChange?.(null)}>
         {/* Leading empty cells */}
         {Array.from({ length: startPad }).map((_, i) => (
           <div key={`p${i}`} />
@@ -200,28 +233,63 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle }
           const iso = toISO(viewY, viewM, d)
           const clickable = status === 'available' || status === 'selected'
 
+          // ── Range-mode: band position helpers ──────────────────────────
+          const inCommitted    = rangeStart != null && iso >= rangeStart && iso <= rangeEnd!
+          const isRangeStartDay = iso === rangeStart
+          const isRangeEndDay   = iso === rangeEnd
+          const inHover        = hoverStart != null && iso >= hoverStart && iso <= hoverEnd!
+          const isHoverStartDay = iso === hoverStart
+          const isHoverEndDay   = iso === hoverEnd
+
+          // Container div: orange band strip across the range
+          let containerRangeBg: React.CSSProperties = {}
+          if (inCommitted) {
+            containerRangeBg = isRangeStartDay
+              ? { background: 'linear-gradient(to right, transparent 50%, rgba(230,126,80,0.18) 50%)' }
+              : isRangeEndDay
+              ? { background: 'linear-gradient(to left, transparent 50%, rgba(230,126,80,0.18) 50%)' }
+              : { background: 'rgba(230,126,80,0.18)' }
+          } else if (inHover) {
+            containerRangeBg = isHoverStartDay
+              ? { background: 'linear-gradient(to right, transparent 50%, rgba(230,126,80,0.10) 50%)' }
+              : isHoverEndDay
+              ? { background: 'linear-gradient(to left, transparent 50%, rgba(230,126,80,0.10) 50%)' }
+              : { background: 'rgba(230,126,80,0.10)' }
+          }
+
+          // Button styles: range endpoints get filled orange circle; mid cells are transparent on the band
           const bgStyle: React.CSSProperties =
+            isRangeCal && (isRangeStartDay || isRangeEndDay) ? { background: '#E67E50' } :
+            isRangeCal && (isHoverStartDay || isHoverEndDay) ? { background: 'rgba(230,126,80,0.55)' } :
             status === 'selected' ? { background: '#E67E50' } :
             status === 'booked'   ? { background: 'rgba(10,46,77,0.06)' } :
             {}
+
           const textStyle: React.CSSProperties =
+            isRangeCal && (isRangeStartDay || isRangeEndDay) ? { color: '#fff' } :
+            isRangeCal && (isHoverStartDay || isHoverEndDay) ? { color: '#fff' } :
             status === 'selected'    ? { color: '#fff' } :
             status === 'available'   ? { color: '#0A2E4D' } :
             status === 'booked'      ? { color: 'rgba(10,46,77,0.28)', textDecoration: 'line-through' } :
             { color: 'rgba(10,46,77,0.2)' }
 
           return (
-            <div key={d} className="flex items-center justify-center py-0.5">
+            <div
+              key={d}
+              className="flex items-center justify-center py-0.5"
+              style={containerRangeBg}
+            >
               <button
                 type="button"
                 disabled={!clickable}
                 onClick={() => clickable && onToggle(iso)}
+                onMouseEnter={() => isRangeCal && clickable && onHoverChange?.(iso)}
                 aria-label={iso}
-                aria-pressed={status === 'selected'}
+                aria-pressed={status === 'selected' || (isRangeCal && (isRangeStartDay || isRangeEndDay))}
                 className={[
                   'w-8 h-8 rounded-full text-[11px] font-medium f-body flex items-center justify-center transition-all',
                   clickable ? 'cursor-pointer' : 'cursor-default',
-                  status === 'available' ? 'hover:bg-[#E67E50] hover:!text-white' : '',
+                  !isRangeCal && status === 'available' ? 'hover:bg-[#E67E50] hover:!text-white' : '',
                 ].filter(Boolean).join(' ')}
                 style={{ ...bgStyle, ...textStyle }}
               >
@@ -234,21 +302,42 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle }
 
       {/* Legend */}
       <div className="flex items-center gap-3 mt-3 flex-wrap">
-        {([
-          { bg: '#E67E50', border: undefined, label: 'Selected' },
-          { bg: 'transparent', border: 'rgba(10,46,77,0.2)', label: 'Available' },
-          { bg: 'rgba(10,46,77,0.08)', border: undefined, label: 'Booked' },
-        ] as const).map(({ bg, border, label }) => (
-          <div key={label} className="flex items-center gap-1.5">
-            <div
-              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-              style={{ background: bg, border: border ? `1px solid ${border}` : undefined }}
-            />
-            <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              {label}
-            </span>
-          </div>
-        ))}
+        {isRangeCal ? (
+          <>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center h-2.5">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
+                <div className="w-4 h-2.5" style={{ background: 'rgba(230,126,80,0.18)' }} />
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
+              </div>
+              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>Selected range</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'transparent', border: '1px solid rgba(10,46,77,0.2)' }} />
+              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>Available</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'rgba(10,46,77,0.08)' }} />
+              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>Booked</span>
+            </div>
+          </>
+        ) : (
+          ([
+            { bg: '#E67E50', border: undefined, label: 'Selected' },
+            { bg: 'transparent', border: 'rgba(10,46,77,0.2)', label: 'Available' },
+            { bg: 'rgba(10,46,77,0.08)', border: undefined, label: 'Booked' },
+          ] as const).map(({ bg, border, label }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: bg, border: border ? `1px solid ${border}` : undefined }}
+              />
+              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                {label}
+              </span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )
@@ -411,6 +500,8 @@ export function BookingWidget({
   const [selectedDates,  setSelectedDates]  = useState<string[]>([])
   /** Whether the classic calendar dropdown is open. */
   const [calendarOpen,   setCalendarOpen]   = useState(false)
+  /** Hovered ISO date for range preview (only used when pkgDays > 1). */
+  const [hoverDate,      setHoverDate]      = useState<string | null>(null)
   /** Whether the duration option dropdown is open. */
   const [optionOpen,     setOptionOpen]     = useState(false)
   /** Period picker state for icelandic mode. */
@@ -451,6 +542,8 @@ export function BookingWidget({
   function selectOption(idx: number) {
     setSelectedOptIdx(idx)
     setOptionOpen(false)
+    setSelectedDates([])   // clear date selection when package changes (days may differ)
+    setHoverDate(null)
     window.dispatchEvent(
       new CustomEvent(DURATION_EVENT, { detail: { idx, source: 'widget' } }),
     )
@@ -462,6 +555,7 @@ export function BookingWidget({
     function handleOutside(e: MouseEvent) {
       if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
         setCalendarOpen(false)
+        setHoverDate(null)
       }
     }
     document.addEventListener('mousedown', handleOutside)
@@ -515,14 +609,25 @@ export function BookingWidget({
   const selectedSet = useMemo(() => new Set(selectedDates),       [selectedDates])
 
   function handleToggleDate(iso: string) {
-    setSelectedDates(prev =>
-      prev.includes(iso)
-        ? prev.filter(d => d !== iso)
-        : [...prev, iso].sort()          // keep ascending order
-    )
+    const currentPkgDays = (durationOptions[selectedOptIdx] ?? durationOptions[0]).days ?? 1
+    if (currentPkgDays > 1) {
+      // Range-start picker: toggle single start date
+      setSelectedDates(prev => prev.includes(iso) ? [] : [iso])
+    } else {
+      // Multi-select: toggle individual dates
+      setSelectedDates(prev =>
+        prev.includes(iso)
+          ? prev.filter(d => d !== iso)
+          : [...prev, iso].sort()          // keep ascending order
+      )
+    }
   }
 
   const selectedOpt = durationOptions[selectedOptIdx] ?? durationOptions[0]
+
+  /** Day count fixed by the selected package. 1 = individual-date multi-select; >1 = range-start picker. */
+  const pkgDays    = selectedOpt.days ?? 1
+  const isRangeMode = pkgDays > 1
 
   // ── Live price ────────────────────────────────────────────────────────────
   const price = useMemo(
@@ -533,10 +638,25 @@ export function BookingWidget({
   const fromPrice = useMemo(() => globalFromPrice(durationOptions), [durationOptions])
 
   // ── Multi-date price scaling + service fee ────────────────────────────────
-  const tripCount    = selectedDates.length > 0 ? selectedDates.length : 1
+  // Range mode = 1 trip even though N days; pkg price already accounts for the N days.
+  const tripCount    = isRangeMode ? 1 : (selectedDates.length > 0 ? selectedDates.length : 1)
   const subtotal     = Math.round(price.total * tripCount * 100) / 100
   const serviceFee   = Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100
   const grandTotal   = Math.round((subtotal + serviceFee) * 100) / 100
+
+  /** True when the N-day range overlaps a booked or blocked date. Disables the CTA. */
+  const rangeHasBlockedDay = useMemo(() => {
+    if (!isRangeMode || selectedDates.length === 0) return false
+    const start = selectedDates[0]!
+    const end   = addDays(start, pkgDays - 1)
+    for (const b of bookedSet) {
+      if (b >= start && b <= end) return true
+    }
+    for (const r of (blockedDates ?? [])) {
+      if (r.date_start <= end && r.date_end >= start) return true
+    }
+    return false
+  }, [isRangeMode, selectedDates, pkgDays, bookedSet, blockedDates])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const showGroupSelector = selectedOpt.pricing_type !== 'per_boat'
@@ -552,6 +672,21 @@ export function BookingWidget({
     multipleOptions || durationOptions[0].label || durationOptions[0].hours != null || durationOptions[0].days != null
       ? durationLabel(selectedOpt)
       : legacyDuration
+
+  // ── Range display helpers ─────────────────────────────────────────────────
+  const rangeEndISO: string | null = isRangeMode && selectedDates.length > 0
+    ? addDays(selectedDates[0]!, pkgDays - 1)
+    : null
+  const rangeStartFmt = selectedDates.length > 0
+    ? new Date(`${selectedDates[0]}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    : ''
+  const rangeEndFmt = rangeEndISO
+    ? new Date(`${rangeEndISO}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+    : ''
+  /** "5 Jun – 7 Jun (3 days)" — populated only when a range start is selected. */
+  const rangeDateLabel = isRangeMode && rangeEndISO
+    ? `${rangeStartFmt} – ${rangeEndFmt} (${pkgDays} days)`
+    : ''
 
   return (
     <div
@@ -770,9 +905,11 @@ export function BookingWidget({
                 </span>
               ) : (
                 <span className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                  {selectedDates.length === 1
-                    ? new Date(`${selectedDates[0]}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                    : `${selectedDates.length} dates selected`}
+                  {isRangeMode
+                    ? rangeDateLabel
+                    : selectedDates.length === 1
+                      ? new Date(`${selectedDates[0]}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                      : `${selectedDates.length} dates selected`}
                 </span>
               )}
             </div>
@@ -829,12 +966,15 @@ export function BookingWidget({
                 booked={bookedSet}
                 selectedSet={selectedSet}
                 onToggle={iso => { handleToggleDate(iso) }}
+                numDays={pkgDays}
+                hoverDate={hoverDate}
+                onHoverChange={setHoverDate}
               />
 
               {/* Done button */}
               <button
                 type="button"
-                onClick={() => setCalendarOpen(false)}
+                onClick={() => { setCalendarOpen(false); setHoverDate(null) }}
                 className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-[0.14em] f-body transition-opacity hover:opacity-80"
                 style={{ background: '#0A2E4D', color: '#fff' }}
               >
@@ -846,29 +986,60 @@ export function BookingWidget({
           {/* Selected date chips (below trigger, outside dropdown) */}
           {selectedDates.length > 0 && !calendarOpen && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {selectedDates.map(iso => (
+              {isRangeMode ? (
+                /* Single range chip */
                 <span
-                  key={iso}
                   className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
                   style={{
-                    background: 'rgba(230,126,80,0.1)',
-                    color: '#C05A2A',
-                    border: '1px solid rgba(230,126,80,0.2)',
+                    background: rangeHasBlockedDay ? 'rgba(220,38,38,0.08)' : 'rgba(230,126,80,0.1)',
+                    color:      rangeHasBlockedDay ? '#DC2626'               : '#C05A2A',
+                    border:     `1px solid ${rangeHasBlockedDay ? 'rgba(220,38,38,0.2)' : 'rgba(230,126,80,0.2)'}`,
                   }}
                 >
-                  {new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                  {rangeDateLabel}
                   <button
                     type="button"
-                    onClick={() => handleToggleDate(iso)}
-                    aria-label={`Remove ${iso}`}
+                    onClick={() => { setSelectedDates([]); setHoverDate(null) }}
+                    aria-label="Clear range"
                     className="opacity-50 hover:opacity-100 transition-opacity"
                     style={{ lineHeight: 1 }}
                   >
                     ×
                   </button>
                 </span>
-              ))}
+              ) : (
+                /* Individual date chips */
+                selectedDates.map(iso => (
+                  <span
+                    key={iso}
+                    className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
+                    style={{
+                      background: 'rgba(230,126,80,0.1)',
+                      color: '#C05A2A',
+                      border: '1px solid rgba(230,126,80,0.2)',
+                    }}
+                  >
+                    {new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleDate(iso)}
+                      aria-label={`Remove ${iso}`}
+                      className="opacity-50 hover:opacity-100 transition-opacity"
+                      style={{ lineHeight: 1 }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))
+              )}
             </div>
+          )}
+
+          {/* Blocked-range warning */}
+          {isRangeMode && rangeHasBlockedDay && selectedDates.length > 0 && (
+            <p className="mt-2 text-[11px] f-body" style={{ color: '#DC2626' }}>
+              This range includes a booked or blocked date — try a different start date.
+            </p>
           )}
         </div>
       )}
@@ -1296,8 +1467,27 @@ export function BookingWidget({
             >
               Book this trip →
             </Link>
+          ) : bookingType === 'classic' && selectedDates.length > 0 && rangeHasBlockedDay ? (
+            /* range contains unavailable date — disabled CTA */
+            <button
+              type="button"
+              disabled
+              className="w-full text-center font-semibold py-4 rounded-2xl text-sm tracking-wide f-body cursor-not-allowed"
+              style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.3)' }}
+            >
+              Range includes unavailable date
+            </button>
+          ) : bookingType === 'classic' && selectedDates.length > 0 && isRangeMode ? (
+            /* classic + N-day range selected → go to Step 2 with windowFrom/windowTo */
+            <Link
+              href={`/book/${expId}?windowFrom=${selectedDates[0]}&windowTo=${rangeEndISO}&numDays=${pkgDays}&pkgLabel=${encodeURIComponent(durationLabel(selectedOpt) || `${pkgDays} days`)}&guests=${groupSize}`}
+              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              style={{ background: '#E67E50' }}
+            >
+              Book — {rangeStartFmt} – {rangeEndFmt} →
+            </Link>
           ) : bookingType === 'classic' && selectedDates.length > 0 ? (
-            /* classic + dates picked → pre-fill "Book directly" on step 1 */
+            /* classic + individual dates picked → pre-fill "Book directly" on step 1 */
             <Link
               href={`/book/${expId}?prefill=${selectedDates.join(',')}&guests=${groupSize}`}
               className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
@@ -1316,8 +1506,17 @@ export function BookingWidget({
             >
               Book now →
             </Link>
-          ) : selectedDates.length > 0 ? (
-            /* 'both' book-mode with dates picked */
+          ) : selectedDates.length > 0 && isRangeMode && !rangeHasBlockedDay ? (
+            /* 'both' book-mode with N-day range picked */
+            <Link
+              href={`/book/${expId}?windowFrom=${selectedDates[0]}&windowTo=${rangeEndISO}&numDays=${pkgDays}&pkgLabel=${encodeURIComponent(durationLabel(selectedOpt) || `${pkgDays} days`)}&guests=${groupSize}`}
+              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              style={{ background: '#E67E50' }}
+            >
+              Request to Book — {rangeStartFmt} – {rangeEndFmt} →
+            </Link>
+          ) : selectedDates.length > 0 && !isRangeMode ? (
+            /* 'both' book-mode with individual dates picked */
             <Link
               href={`/book/${expId}?dates=${selectedDates.join(',')}&guests=${groupSize}`}
               className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
@@ -1326,7 +1525,7 @@ export function BookingWidget({
               {selectedDates.length === 1 ? 'Request to Book →' : `Request ${selectedDates.length} Dates →`}
             </Link>
           ) : (
-            /* 'both' book-mode — nudge to pick dates */
+            /* 'both' book-mode or blocked range — nudge to pick valid dates */
             <button
               type="button"
               onClick={() => calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}

@@ -475,6 +475,8 @@ export type Database = {
           meeting_point_lng: number | null
           packages: Json | null
           price_per_person_eur: number | null
+          price_range_min_eur: number | null
+          price_range_max_eur: number | null
           published: boolean
           season_from: number | null
           season_to: number | null
@@ -525,6 +527,8 @@ export type Database = {
           meeting_point_lng?: number | null
           packages?: Json | null
           price_per_person_eur?: number | null
+          price_range_min_eur?: number | null
+          price_range_max_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null
@@ -575,6 +579,8 @@ export type Database = {
           meeting_point_lng?: number | null
           packages?: Json | null
           price_per_person_eur?: number | null
+          price_range_min_eur?: number | null
+          price_range_max_eur?: number | null
           published?: boolean
           season_from?: number | null
           season_to?: number | null
@@ -761,6 +767,7 @@ export type Database = {
           cancellation_policy: string
           certifications: string[] | null
           city: string | null
+          commission_rate: number
           country: string
           cover_url: string | null
           created_at: string
@@ -776,6 +783,7 @@ export type Database = {
           instagram_url: string | null
           invite_email: string | null
           is_beta_listing: boolean
+          is_hidden: boolean
           landscape_url: string | null
           languages: string[]
           lead_id: string | null
@@ -791,6 +799,7 @@ export type Database = {
           updated_at: string
           user_id: string | null
           verified_at: string | null
+          photo_marketing_consent: boolean
           website_url: string | null
           years_experience: number | null
           youtube_url: string | null
@@ -810,6 +819,7 @@ export type Database = {
           cancellation_policy?: string
           certifications?: string[] | null
           city?: string | null
+          commission_rate?: number
           country: string
           cover_url?: string | null
           created_at?: string
@@ -825,6 +835,7 @@ export type Database = {
           instagram_url?: string | null
           invite_email?: string | null
           is_beta_listing?: boolean
+          is_hidden?: boolean
           landscape_url?: string | null
           languages?: string[]
           lead_id?: string | null
@@ -841,6 +852,7 @@ export type Database = {
           user_id?: string | null
           verified_at?: string | null
           website_url?: string | null
+          photo_marketing_consent?: boolean
           years_experience?: number | null
           youtube_url?: string | null
         }
@@ -859,6 +871,7 @@ export type Database = {
           cancellation_policy?: string
           certifications?: string[] | null
           city?: string | null
+          commission_rate?: number
           country?: string
           cover_url?: string | null
           created_at?: string
@@ -874,6 +887,7 @@ export type Database = {
           instagram_url?: string | null
           invite_email?: string | null
           is_beta_listing?: boolean
+          is_hidden?: boolean
           landscape_url?: string | null
           languages?: string[]
           lead_id?: string | null
@@ -889,6 +903,7 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
+          photo_marketing_consent?: boolean
           website_url?: string | null
           years_experience?: number | null
           youtube_url?: string | null
@@ -1060,6 +1075,7 @@ export type Database = {
           offer_meeting_lng: number | null
           offer_price_eur: number | null
           offer_price_min_eur: number | null
+          offer_price_tiers: Json | null
           preferences: Json
           status: Database["public"]["Enums"]["trip_inquiry_status"]
           stripe_checkout_id: string | null
@@ -1086,6 +1102,7 @@ export type Database = {
           offer_meeting_lng?: number | null
           offer_price_eur?: number | null
           offer_price_min_eur?: number | null
+          offer_price_tiers?: Json | null
           preferences?: Json
           status?: Database["public"]["Enums"]["trip_inquiry_status"]
           stripe_checkout_id?: string | null
@@ -1112,6 +1129,7 @@ export type Database = {
           offer_meeting_lng?: number | null
           offer_price_eur?: number | null
           offer_price_min_eur?: number | null
+          offer_price_tiers?: Json | null
           preferences?: Json
           status?: Database["public"]["Enums"]["trip_inquiry_status"]
           stripe_checkout_id?: string | null
