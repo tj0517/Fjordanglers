@@ -11,7 +11,6 @@
 
 import { createElement } from 'react'
 import { render } from '@react-email/components'
-import { Resend } from 'resend'
 import { env } from '@/lib/env'
 import { GuideApplicationEmail } from '@/emails/guide-application'
 import { GuideWelcomeEmail } from '@/emails/guide-welcome'
@@ -21,8 +20,6 @@ import type { GuideApplicationEmailProps } from '@/emails/guide-application'
 import type { GuideWelcomeEmailProps } from '@/emails/guide-welcome'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
 import type { EmailVerificationProps } from '@/emails/email-verification'
-
-const resend = new Resend(env.RESEND_API_KEY)
 
 const FROM = 'FjordAnglers <contact@fjordanglers.com>'
 
@@ -37,12 +34,24 @@ async function sendEmail({
   subject: string
   react: React.ReactElement
 }): Promise<void> {
-  // Render to HTML ourselves — avoids Resend SDK's internal React rendering
-  // which can fail in some Next.js deployment environments.
   const html = await render(react)
-  const { error } = await resend.emails.send({ from: FROM, to, subject, html })
-  if (error) {
-    throw new Error(`[email] Resend error: ${error.message}`)
+
+  // Call Resend REST API directly — bypasses the SDK's internal fetch which can
+  // fail silently in Next.js environments where the global fetch is patched with
+  // caching logic. Using cache: 'no-store' ensures every send is a fresh request.
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from: FROM, to, subject, html }),
+    cache: 'no-store',
+  })
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '(no body)')
+    throw new Error(`[email] Resend HTTP ${response.status}: ${body}`)
   }
 }
 
