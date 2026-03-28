@@ -21,7 +21,8 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code        = requestUrl.searchParams.get('code')
-  const next        = requestUrl.searchParams.get('next') ?? '/account'
+  const explicitNext = requestUrl.searchParams.get('next')
+  const next        = explicitNext ?? '/account'
   const origin      = requestUrl.origin
 
   if (code != null) {
@@ -81,9 +82,9 @@ export async function GET(request: NextRequest) {
       // ─────────────────────────────────────────────────────────────────────
 
       // Session established — send to role-appropriate destination.
-      // Guides go straight to the dashboard (setup banners guide them from there).
-      // All other roles use the `next` param (defaults to /account).
-      const destination = metaRole === 'guide' ? '/dashboard' : next
+      // Guides go straight to the dashboard ONLY when no explicit `next` was set
+      // (e.g. password reset passes next=/reset-password and must not be overridden).
+      const destination = (explicitNext == null && metaRole === 'guide') ? '/dashboard' : next
       return NextResponse.redirect(`${origin}${destination}`)
     }
 

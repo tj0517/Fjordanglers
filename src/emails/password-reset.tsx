@@ -28,9 +28,8 @@ export function PasswordResetEmail({ resetUrl }: PasswordResetEmailProps) {
           <Img
             src="https://fjordanglers.com/brand/white-logo.png"
             width={160}
-            height={40}
             alt="FjordAnglers"
-            style={{ display: 'block', margin: '0 auto' }}
+            style={{ display: 'block', margin: '0 auto', width: '160px', height: 'auto' }}
           />
         </Section>
 

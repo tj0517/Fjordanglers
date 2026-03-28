@@ -119,9 +119,9 @@ const IconBed = () => (
 
 const NAV = [
   { label: 'Home',           href: '/dashboard',                 icon: <IconOverview />,  exact: true,  soon: false },
-  { label: 'Listings',       href: '/dashboard/trips',           icon: <IconCompass />,   exact: false, soon: false },
+  { label: 'Trips',          href: '/dashboard/trips',           icon: <IconCompass />,   exact: false, soon: false },
   { label: 'Bookings',       href: '/dashboard/bookings',        icon: <IconBookings />,  exact: false, soon: false },
-  { label: 'Requests',       href: '/dashboard/inquiries',       icon: <IconInquiries />, exact: false, soon: false },
+  { label: 'Inquiries',      href: '/dashboard/inquiries',       icon: <IconInquiries />, exact: false, soon: false },
   { label: 'Calendar',       href: '/dashboard/calendar',        icon: <IconCalendar />,  exact: false, soon: false },
   { label: 'Earnings',       href: '/dashboard/earnings',        icon: <IconTrending />,  exact: false, soon: false },
   { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <IconBed />,       exact: false, soon: false },

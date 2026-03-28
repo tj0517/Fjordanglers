@@ -1,6 +1,7 @@
 import {
   Body,
   Button,
+  Column,
   Container,
   Head,
   Heading,
@@ -8,6 +9,7 @@ import {
   Html,
   Img,
   Preview,
+  Row,
   Section,
   Text,
 } from '@react-email/components'
@@ -29,9 +31,8 @@ export function GuideWelcomeEmail({ name, dashboardUrl }: GuideWelcomeEmailProps
           <Img
             src="https://fjordanglers.com/brand/white-logo.png"
             width={160}
-            height={40}
             alt="FjordAnglers"
-            style={{ display: 'block', margin: '0 auto' }}
+            style={{ display: 'block', margin: '0 auto', width: '160px', height: 'auto' }}
           />
         </Section>
 
@@ -48,35 +49,35 @@ export function GuideWelcomeEmail({ name, dashboardUrl }: GuideWelcomeEmailProps
           <Section style={stepsWrapper}>
             <Text style={stepsHeading}>Get started in 3 steps</Text>
 
-            <Section style={step}>
-              <Section style={stepLeft}>
+            <Row style={step}>
+              <Column style={stepLeft}>
                 <Text style={stepNum}>1</Text>
-              </Section>
-              <Section style={stepRight}>
+              </Column>
+              <Column style={stepRight}>
                 <Text style={stepTitle}>Complete your profile</Text>
                 <Text style={stepDesc}>Add your photo, bio, fish expertise, and languages.</Text>
-              </Section>
-            </Section>
+              </Column>
+            </Row>
 
-            <Section style={step}>
-              <Section style={stepLeft}>
+            <Row style={step}>
+              <Column style={stepLeft}>
                 <Text style={stepNum}>2</Text>
-              </Section>
-              <Section style={stepRight}>
+              </Column>
+              <Column style={stepRight}>
                 <Text style={stepTitle}>Connect Stripe for payouts</Text>
                 <Text style={stepDesc}>Link your bank account so you can receive booking payments.</Text>
-              </Section>
-            </Section>
+              </Column>
+            </Row>
 
-            <Section style={step}>
-              <Section style={stepLeft}>
+            <Row style={step}>
+              <Column style={stepLeft}>
                 <Text style={stepNum}>3</Text>
-              </Section>
-              <Section style={stepRight}>
+              </Column>
+              <Column style={stepRight}>
                 <Text style={stepTitle}>Create your first experience</Text>
                 <Text style={stepDesc}>List your fishing trips and start receiving bookings.</Text>
-              </Section>
-            </Section>
+              </Column>
+            </Row>
           </Section>
 
           {/* CTA */}
@@ -154,13 +155,12 @@ const stepsHeading = {
 }
 
 const step = {
-  display: 'flex' as const,
   marginBottom: '16px',
 }
 
 const stepLeft = {
-  width: '36px',
-  flexShrink: 0,
+  width: '44px',
+  verticalAlign: 'top' as const,
 }
 
 const stepNum = {
@@ -179,6 +179,7 @@ const stepNum = {
 
 const stepRight = {
   paddingLeft: '12px',
+  verticalAlign: 'top' as const,
 }
 
 const stepTitle = {
