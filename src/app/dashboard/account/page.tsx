@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { stripe } from '@/lib/stripe/client'
 import { PasswordResetButton } from './AccountActions'
@@ -49,9 +49,12 @@ export default async function AccountPage({
     ? `${Math.round(commissionRate * 100)}% per confirmed booking${isFoundingGuide ? ' (Founding Guide rate)' : ''}`
     : '—'
 
-  // ── Stripe account settings (payout schedule + currency) ─────────────────
-  let payoutScheduleLabel = '—'
-  let payoutCurrencyLabel = 'EUR (€)'
+  // ── Stripe account settings — payout schedule, currency, requirements ────
+  let payoutScheduleLabel   = '—'
+  let payoutCurrencyLabel   = 'EUR (€)'
+  let stripeCurrentlyDue:   string[] = []
+  let stripePending:         string[] = []
+  let stripePayoutsLive     = guide.stripe_payouts_enabled
 
   if (guide.stripe_account_id) {
     try {
@@ -75,8 +78,24 @@ export default async function AccountPage({
       } else if (schedule?.interval === 'manual') {
         payoutScheduleLabel = 'Manual'
       }
+
+      // Auto-sync: if Stripe says payouts enabled but our DB is stale, update it
+      // so guides don't need to wait for a webhook or an admin click.
+      if (stripeAccount.payouts_enabled && !stripePayoutsLive) {
+        stripePayoutsLive = true
+        const service = createServiceClient()
+        const { error: syncErr } = await service.from('guides').update({
+          stripe_payouts_enabled: true,
+          stripe_charges_enabled: stripeAccount.charges_enabled ?? false,
+        }).eq('id', guide.id)
+        if (syncErr) console.error('[account/page] auto-sync Stripe status error:', syncErr)
+      }
+
+      // Requirements — used to distinguish "form incomplete" from "under review"
+      stripeCurrentlyDue = (stripeAccount.requirements?.currently_due ?? []) as string[]
+      stripePending      = (stripeAccount.requirements?.pending_verification ?? []) as string[]
     } catch {
-      // Non-fatal — fall back to defaults
+      // Non-fatal — fall back to DB values and empty requirements
     }
   }
 
@@ -87,11 +106,7 @@ export default async function AccountPage({
     day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  // ── Stripe status — for Custom Connect (transfers-only accounts):
-  //    charges_enabled is always false (we don't request card_payments).
-  //    payouts_enabled becomes true once Stripe verifies the account.
-  const hasStripeAccount  = guide.stripe_account_id != null
-  const stripePayoutsLive = guide.stripe_payouts_enabled
+  const hasStripeAccount = guide.stripe_account_id != null
 
   const stripeStatus = stripePayoutsLive
     ? { label: 'Active — payouts enabled',   dot: '#4ADE80', glow: true  }
@@ -189,20 +204,38 @@ export default async function AccountPage({
             </div>
           </Row>
 
-          {/* Under review — show status + option to resume/complete setup */}
+          {/* Under review — distinguish incomplete form vs awaiting Stripe review */}
           {hasStripeAccount && !stripePayoutsLive && (
-            <>
-              <Row label="Status">
-                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                  {stripeRefresh
-                    ? 'Your session expired — click below to continue setup'
+            stripeCurrentlyDue.length > 0 ? (
+              // Form not complete — show what's missing and let them continue
+              <>
+                <Row label="Missing info">
+                  <div className="flex flex-col items-end gap-1">
+                    {formatStripeRequirements(stripeCurrentlyDue).map(label => (
+                      <span
+                        key={label}
+                        className="text-xs f-body px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </Row>
+                <Row label="Action">
+                  <StripeConnectButton label={stripeRefresh ? 'Renew & complete setup' : 'Complete setup'} />
+                </Row>
+              </>
+            ) : (
+              // Form is complete — Stripe is verifying, nothing for guide to do
+              <Row label="Next step">
+                <span className="text-sm f-body text-right" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  {stripePending.length > 0
+                    ? 'Stripe is verifying your details — usually 1–2 business days'
                     : 'Stripe is reviewing your account — usually 1–2 business days'}
                 </span>
               </Row>
-              <Row label="Action">
-                <StripeConnectButton label="Resume setup" />
-              </Row>
-            </>
+            )
           )}
 
           {hasStripeAccount && (
@@ -379,6 +412,42 @@ export default async function AccountPage({
       </div>
     </div>
   )
+}
+
+// ─── Stripe requirement field → human-readable label ─────────────────────────
+
+const STRIPE_FIELD_LABELS: Record<string, string> = {
+  'individual.first_name':                       'First name',
+  'individual.last_name':                        'Last name',
+  'individual.dob.day':                          'Date of birth',
+  'individual.dob.month':                        'Date of birth',
+  'individual.dob.year':                         'Date of birth',
+  'individual.address.line1':                    'Street address',
+  'individual.address.city':                     'City',
+  'individual.address.postal_code':              'Postal code',
+  'individual.address.state':                    'State / region',
+  'individual.address.country':                  'Country',
+  'individual.id_number':                        'National ID / Tax ID',
+  'individual.ssn_last_4':                       'Last 4 of SSN',
+  'individual.verification.document':            'Government-issued ID',
+  'individual.verification.additional_document': 'Proof of address',
+  'individual.email':                            'Email address',
+  'individual.phone':                            'Phone number',
+  'external_account':                            'Bank account (IBAN)',
+  'tos_acceptance.date':                         'Terms of service',
+  'tos_acceptance.ip':                           'Terms of service',
+  'business_profile.product_description':        'Business description',
+  'business_profile.support_phone':              'Support phone',
+  'business_profile.url':                        'Business website',
+  'business_profile.mcc':                        'Business category',
+}
+
+function formatStripeRequirements(fields: string[]): string[] {
+  const seen = new Set<string>()
+  for (const field of fields) {
+    seen.add(STRIPE_FIELD_LABELS[field] ?? field)
+  }
+  return Array.from(seen)
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
