@@ -17,7 +17,9 @@ import type { LocationSpot } from '@/types'
  *   /dashboard/trips/[id]/edit    (guide edits own)
  */
 
+import { revalidateTag } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { CACHE_TAG_EXPERIENCES } from '@/lib/supabase/queries'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -388,6 +390,7 @@ export async function createExperience(
     // is no longer valid — reset it so the guide's trip pages work correctly.
     await resetCalendarDisabledIfNeeded(guideId, payload.booking_type ?? 'classic')
 
+    revalidateTag(CACHE_TAG_EXPERIENCES, {})
     return { success: true, data: { id: exp.id } }
   } catch (err) {
     console.error('[createExperience] Unexpected:', err)
@@ -498,6 +501,7 @@ export async function updateExperience(
       await resetCalendarDisabledIfNeeded(perm.guideId, payload.booking_type)
     }
 
+    revalidateTag(CACHE_TAG_EXPERIENCES, {})
     return { success: true }
   } catch (err) {
     console.error('[updateExperience] Unexpected:', err)
@@ -523,6 +527,7 @@ export async function togglePublishExperience(
       .eq('id', expId)
 
     if (error != null) return { success: false, error: error.message }
+    revalidateTag(CACHE_TAG_EXPERIENCES, {})
     return { success: true }
   } catch (err) {
     console.error('[togglePublishExperience]', err)
@@ -547,6 +552,7 @@ export async function deleteExperience(expId: string): Promise<ActionResult> {
       .eq('id', expId)
 
     if (error != null) return { success: false, error: error.message }
+    revalidateTag(CACHE_TAG_EXPERIENCES, {})
     return { success: true }
   } catch (err) {
     console.error('[deleteExperience]', err)

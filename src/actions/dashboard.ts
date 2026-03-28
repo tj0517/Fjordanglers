@@ -7,9 +7,11 @@
  * updateGuideProfile → called from /dashboard/profile/edit
  */
 
+import { revalidateTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import type { CancellationPolicy, BoatType } from '@/types'
+import { CACHE_TAG_GUIDES, CACHE_TAG_EXPERIENCES } from '@/lib/supabase/queries'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -204,6 +206,8 @@ export async function updateGuideProfile(
       return { success: false, error: error.message }
     }
 
+    revalidateTag(CACHE_TAG_GUIDES, {})
+    revalidateTag(CACHE_TAG_EXPERIENCES, {}) // guide data is embedded in experience queries
     return { success: true }
   } catch (err) {
     console.error('[updateGuideProfile] Unexpected:', err)

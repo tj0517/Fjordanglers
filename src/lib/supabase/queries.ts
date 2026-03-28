@@ -13,6 +13,10 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 import type { ExperienceWithGuide, Difficulty } from '@/types'
 
+// Cache tag constants — used here and revalidated from Server Actions.
+export const CACHE_TAG_EXPERIENCES = 'experiences'
+export const CACHE_TAG_GUIDES      = 'guides'
+
 // ─── Client factory ───────────────────────────────────────────────────────────
 
 /**
@@ -172,7 +176,7 @@ export async function getExperiences(
       }
     },
     ['experiences', JSON.stringify(params)],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }
 
@@ -211,7 +215,7 @@ export async function getFeaturedExperiences(limit = 4): Promise<ExperienceWithG
       return all.slice(0, limit)
     },
     ['featured-experiences', String(limit)],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }
 
@@ -245,7 +249,7 @@ export async function getFeaturedGuides(limit = 4): Promise<FeaturedGuide[]> {
       return all.slice(0, limit)
     },
     ['featured-guides', String(limit)],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_GUIDES] },
   )()
 }
 
@@ -274,7 +278,7 @@ export async function getExperience(id: string): Promise<ExperienceWithGuide | n
       }
     },
     ['experience', id],
-    { revalidate: 1800 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }
 
@@ -355,7 +359,7 @@ export async function getAllExperiencesWithCoords(
       }))
     },
     ['map-experiences', JSON.stringify(params)],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }
 
@@ -390,7 +394,7 @@ export async function getMoreFromGuide(
       }))
     },
     ['more-from-guide', guideId, excludeId, String(limit)],
-    { revalidate: 1800 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }
 
@@ -452,7 +456,7 @@ export async function getPlatformStats(): Promise<PlatformStats> {
       }
     },
     ['platform-stats'],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
 }
 
@@ -483,7 +487,7 @@ export async function getSpeciesCounts(): Promise<Record<string, number>> {
       return counts
     },
     ['species-counts'],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }
 
@@ -521,7 +525,7 @@ export async function getExperienceLocations(): Promise<LocationEntry[]> {
       return result.sort((a, b) => a.city.localeCompare(b.city))
     },
     ['experience-locations'],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }
 
@@ -583,7 +587,7 @@ export async function getGuides(
       return { guides: data ?? [], total: count ?? 0 }
     },
     ['guides', JSON.stringify(params)],
-    { revalidate: 3600 },
+    { revalidate: 300, tags: [CACHE_TAG_GUIDES] },
   )()
 }
 
@@ -613,7 +617,7 @@ export async function getGuide(id: string): Promise<GuideWithImages | null> {
       }
     },
     ['guide', id],
-    { revalidate: 1800 },
+    { revalidate: 300, tags: [CACHE_TAG_GUIDES] },
   )()
 }
 
@@ -642,6 +646,6 @@ export async function getGuideExperiences(guideId: string): Promise<ExperienceWi
       }))
     },
     ['guide-experiences', guideId],
-    { revalidate: 1800 },
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
 }
