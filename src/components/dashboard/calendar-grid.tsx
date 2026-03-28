@@ -728,7 +728,7 @@ export default function CalendarGrid({
         )}
         {/* ── Header ──────────────────────────────────────────────────────────── */}
         <div
-          className="flex items-center justify-between px-6 py-4 gap-4"
+          className="flex flex-wrap items-center justify-between px-3 sm:px-6 py-3 sm:py-4 gap-y-2 gap-x-2 sm:gap-4"
           style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}
         >
           {selectionMode ? (
@@ -745,7 +745,7 @@ export default function CalendarGrid({
                     : `${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} selected`}
                 </span>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 flex-shrink-0">
                 {selectedDays.size > 0 && (() => {
                   const blockedCount = Array.from(selectedDays).reduce(
                     (acc, day) => acc + (dayMap[day]?.blockedEntries.length ?? 0), 0
@@ -754,7 +754,7 @@ export default function CalendarGrid({
                     <>
                       <button
                         onClick={() => setSelectedDays(new Set())}
-                        className="text-xs f-body px-3 py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
+                        className="text-xs f-body px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
                         style={{ color: 'rgba(10,46,77,0.45)', cursor: 'pointer', border: '1px solid rgba(10,46,77,0.08)', background: 'transparent' }}
                       >
                         Clear
@@ -763,7 +763,7 @@ export default function CalendarGrid({
                         <button
                           onClick={handleMultiUnblock}
                           disabled={isUnblockingMulti}
-                          className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors f-body"
+                          className="flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors f-body"
                           style={{
                             background: isUnblockingMulti ? 'rgba(10,46,77,0.15)' : 'rgba(10,46,77,0.08)',
                             color:      '#0A2E4D',
@@ -790,7 +790,7 @@ export default function CalendarGrid({
                       )}
                       <button
                         onClick={openMultiModal}
-                        className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition-colors f-body"
+                        className="flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors f-body"
                         style={{ background: '#E67E50', color: 'white', border: 'none', cursor: 'pointer' }}
                       >
                         <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
@@ -804,7 +804,7 @@ export default function CalendarGrid({
                 })()}
                 <button
                   onClick={exitSelectionMode}
-                  className="text-xs f-body px-3 py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
+                  className="text-xs f-body px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
                   style={{ color: 'rgba(10,46,77,0.5)', cursor: 'pointer', border: '1px solid rgba(10,46,77,0.1)', background: 'transparent' }}
                 >
                   Cancel
@@ -822,8 +822,8 @@ export default function CalendarGrid({
                     <polyline points="10,3 6,8 10,13" />
                   </svg>
                 </button>
-                <h2 className="text-lg font-bold f-display px-1"
-                    style={{ color: '#0A2E4D', minWidth: '190px', textAlign: 'center' }}>
+                <h2 className="text-sm sm:text-lg font-bold f-display px-1"
+                    style={{ color: '#0A2E4D', textAlign: 'center', minWidth: '0' }}>
                   {MONTH_NAMES[month - 1]} {year}
                 </h2>
                 <button onClick={nextMonth} disabled={navPending} aria-label="Next month"
@@ -835,15 +835,15 @@ export default function CalendarGrid({
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button onClick={goToday} disabled={navPending}
-                  className="text-xs font-semibold f-body px-3 py-1.5 rounded-lg transition-colors hover:bg-[#0A2E4D]/[0.06]"
+                  className="text-xs font-semibold f-body px-2 sm:px-3 py-1.5 rounded-lg transition-colors hover:bg-[#0A2E4D]/[0.06]"
                   style={{ color: 'rgba(10,46,77,0.55)' }}>
                   Today
                 </button>
                 <button
                   onClick={enterSelectionMode}
-                  className="flex items-center gap-1.5 text-xs font-semibold f-body px-3 py-1.5 rounded-lg transition-colors hover:bg-[#E67E50]/[0.08]"
+                  className="flex items-center gap-1 sm:gap-1.5 text-xs font-semibold f-body px-2 sm:px-3 py-1.5 rounded-lg transition-colors hover:bg-[#E67E50]/[0.08]"
                   style={{ color: '#E67E50', border: '1px solid rgba(230,126,80,0.2)', cursor: 'pointer', background: 'transparent' }}
                 >
                   <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -852,14 +852,15 @@ export default function CalendarGrid({
                     <rect x="0.5" y="6.5" width="4" height="4" rx="0.5" />
                     <rect x="6.5" y="6.5" width="4" height="4" rx="0.5" />
                   </svg>
-                  <span className="hidden sm:inline">Select days</span>
+                  <span className="inline">Select</span>
+                  <span className="hidden sm:inline"> days</span>
                 </button>
 
                 {/* ── Block ▾ dropdown ──────────────────────────────────────── */}
                 <div className="relative" ref={blockMenuRef}>
                   <button
                     onClick={() => setShowBlockMenu(p => !p)}
-                    className="flex items-center gap-1 text-xs font-semibold f-body px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-1 text-xs font-semibold f-body px-2 sm:px-3 py-1.5 rounded-lg transition-colors"
                     style={{
                       color:      '#0A2E4D',
                       border:     '1px solid rgba(10,46,77,0.12)',

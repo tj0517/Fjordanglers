@@ -46,6 +46,14 @@ const envSchema = z.object({
   // Commission rate as a decimal (0.10 = 10%). Defaults to 10%.
   PLATFORM_COMMISSION_RATE: z.coerce.number().min(0).max(1).default(0.1),
 
+  // ── PayPal Commerce Platform ────────────────────────────────────────────────
+  // Required only when guides from PayPal countries (IS, etc.) are active
+  PAYPAL_CLIENT_ID: z.string().optional(),
+  PAYPAL_CLIENT_SECRET: z.string().optional(),
+  PAYPAL_WEBHOOK_ID: z.string().optional(),
+  NEXT_PUBLIC_PAYPAL_CLIENT_ID: z.string().optional(),
+  PAYPAL_SANDBOX: z.string().optional().transform(v => v === 'true'),
+
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`
   SUPABASE_ACCESS_TOKEN: z.string().optional(),

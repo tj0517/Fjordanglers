@@ -13,6 +13,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
+import { getProvider } from '@/lib/payment'
 
 // ─── Input schema ─────────────────────────────────────────────────────────────
 
@@ -237,7 +238,7 @@ export async function acceptBooking(
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, stripe_account_id, stripe_payouts_enabled, default_balance_payment_method')
+    .select('id, stripe_account_id, stripe_payouts_enabled, default_balance_payment_method, payment_provider, paypal_merchant_id, paypal_onboarding_status, commission_rate')
     .eq('user_id', user.id)
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
@@ -282,53 +283,50 @@ export async function acceptBooking(
     }
   }
 
-  // ── Stripe Checkout (destination charge) ─────────────────────────────────
-  let stripeCheckoutId: string | null = null
+  // ── Payment Checkout (provider-agnostic) ─────────────────────────────────
+  const providerName = (guide.payment_provider ?? 'stripe') as 'stripe' | 'paypal'
+  const provider = getProvider(providerName)
+
+  let checkoutExternalId: string | null = null
 
   // Always create a deposit checkout — money collected on platform, guide paid manually by admin.
-  if (!booking.stripe_checkout_id) {
-    try {
-      const depositCents    = Math.round(effectiveTotalEur * 0.3 * 100)
-      const experienceTitle =
-        (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+  const existingCheckoutId = booking.stripe_checkout_id ?? (booking as unknown as { paypal_order_id: string | null }).paypal_order_id
+  if (!existingCheckoutId) {
+    const depositEur      = Math.round(effectiveTotalEur * 0.3 * 100) / 100
+    const experienceTitle =
+      (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+    const commissionRate  = (guide as unknown as { commission_rate: number }).commission_rate ?? env.PLATFORM_COMMISSION_RATE
+    const platformFeeEur  = Math.round(depositEur * commissionRate * 100) / 100
 
-      const session = await stripe.checkout.sessions.create(
-        {
-          mode:                 'payment',
-          payment_method_types: ['card'],
-          customer_email:       booking.angler_email ?? undefined,
-          line_items: [
-            {
-              price_data: {
-                currency:     'eur',
-                product_data: {
-                  name:        `${experienceTitle} — 30% Deposit`,
-                  description: 'Deposit to confirm your booking. Remaining balance is due before the trip.',
-                },
-                unit_amount: depositCents,
-              },
-              quantity: 1,
-            },
-          ],
-          metadata:    { bookingId, guideId: guide.id },
-          success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
-          cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
-          // No transfer_data — full amount stays on platform; admin sends payout manually.
-          payment_intent_data: { metadata: { bookingId } },
-        },
-        { idempotencyKey: `booking-accept-${bookingId}` },
-      )
+    const result = await provider.createCheckout({
+      bookingId,
+      paymentType:    'deposit',
+      amountEur:      depositEur,
+      platformFeeEur: platformFeeEur,
+      anglerEmail:    booking.angler_email,
+      description:    `${experienceTitle} — 30% Deposit`,
+      successUrl:     `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
+      cancelUrl:      `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+      idempotencyKey: `booking-accept-${bookingId}`,
+    })
 
-      stripeCheckoutId = session.id
-    } catch (err) {
-      console.error('[acceptBooking] Stripe Checkout error:', err)
+    if ('externalId' in result) {
+      checkoutExternalId = result.externalId
+    } else {
+      console.error('[acceptBooking] Checkout error:', result.error)
       // Non-fatal: accept without payment link, admin can create checkout manually
     }
   } else {
-    stripeCheckoutId = booking.stripe_checkout_id
+    checkoutExternalId = existingCheckoutId
   }
 
   const balanceMethod = (guide.default_balance_payment_method ?? 'cash') as 'stripe' | 'cash'
+
+  const checkoutUpdate = checkoutExternalId != null
+    ? providerName === 'paypal'
+      ? { paypal_order_id: checkoutExternalId }
+      : { stripe_checkout_id: checkoutExternalId }
+    : {}
 
   const { error } = await serviceClient
     .from('bookings')
@@ -336,7 +334,7 @@ export async function acceptBooking(
       status:                  'accepted',
       accepted_at:             new Date().toISOString(),
       balance_payment_method:  balanceMethod,
-      ...(stripeCheckoutId != null ? { stripe_checkout_id: stripeCheckoutId } : {}),
+      ...checkoutUpdate,
       // Trip start date: first confirmed day takes priority, then legacy confirmedDateFrom
       ...(confirmedDays?.[0]          ? { booking_date: confirmedDays[0] } :
           options?.confirmedDateFrom  ? { booking_date: options.confirmedDateFrom } : {}),
@@ -505,7 +503,7 @@ export async function declineBooking(
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id, stripe_checkout_id, stripe_payment_intent_id')
+    .select('id, status, guide_id, stripe_checkout_id, stripe_payment_intent_id, paypal_order_id, paypal_capture_id, guides(payment_provider)')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
@@ -517,28 +515,25 @@ export async function declineBooking(
     return { error: 'This booking cannot be declined at its current status.' }
   }
 
-  // ── Stripe cleanup ────────────────────────────────────────────────────────
+  // ── Payment cleanup (provider-agnostic) ───────────────────────────────────
+  const guideRecord = booking.guides as unknown as { payment_provider?: string } | null
+  const providerName = (guideRecord?.payment_provider ?? 'stripe') as 'stripe' | 'paypal'
+  const provider = getProvider(providerName)
 
-  if (booking.status === 'accepted' && booking.stripe_checkout_id) {
-    // Icelandic — guide accepted, angler hasn't paid yet → expire so they can't complete
-    try {
-      await stripe.checkout.sessions.expire(booking.stripe_checkout_id)
-    } catch (err) {
-      // Session may already be expired — not fatal
-      console.warn('[declineBooking] Could not expire checkout session:', err)
+  if (booking.status === 'accepted') {
+    const externalId = booking.stripe_checkout_id ?? (booking as unknown as { paypal_order_id: string | null }).paypal_order_id
+    if (externalId) {
+      await provider.voidCheckout(externalId)
     }
   }
 
-  if (booking.status === 'confirmed' && booking.stripe_payment_intent_id) {
-    // Icelandic confirmed (destination charge) — refund auto-reverses the transfer to guide
-    try {
-      await stripe.refunds.create({
-        payment_intent:   booking.stripe_payment_intent_id,
-        reason:           'requested_by_customer',
-        reverse_transfer: true, // explicit for destination charges
-      })
-    } catch (err) {
-      console.error('[declineBooking] Stripe refund error:', err)
+  if (booking.status === 'confirmed') {
+    const refundResult = await provider.refund({
+      stripePaymentIntentId: booking.stripe_payment_intent_id,
+      paypalCaptureId: (booking as unknown as { paypal_capture_id: string | null }).paypal_capture_id,
+    })
+    if ('error' in refundResult) {
+      console.error('[declineBooking] refund error:', refundResult.error)
       return { error: 'Failed to refund payment — please contact support.' }
     }
   }
@@ -616,7 +611,7 @@ export async function createBalanceCheckout(
   const { data: booking } = await serviceClient
     .from('bookings')
     .select(
-      'id, status, angler_id, total_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, experiences(title)',
+      'id, status, angler_id, total_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, balance_paypal_order_id, experiences(title), guides(payment_provider, paypal_merchant_id, paypal_onboarding_status, stripe_payouts_enabled, commission_rate)',
     )
     .eq('id', bookingId)
     .eq('angler_id', user.id)
@@ -627,10 +622,25 @@ export async function createBalanceCheckout(
   if (booking.balance_payment_method !== 'stripe') return { error: 'This booking uses cash payment.' }
   if (booking.balance_paid_at != null) return { error: 'Balance already paid.' }
 
-  // Idempotency: if a Checkout session already exists and is still open, return its URL
-  if (booking.balance_stripe_checkout_id) {
+  const guideRecord = booking.guides as unknown as {
+    payment_provider?: string
+    paypal_merchant_id?: string | null
+    paypal_onboarding_status?: string | null
+    stripe_payouts_enabled?: boolean
+    commission_rate?: number
+  } | null
+
+  const providerName = (guideRecord?.payment_provider ?? 'stripe') as 'stripe' | 'paypal'
+  const provider = getProvider(providerName)
+
+  // Idempotency: if a checkout already exists and is still usable, return its URL
+  const existingExternalId = providerName === 'paypal'
+    ? booking.balance_paypal_order_id
+    : booking.balance_stripe_checkout_id
+
+  if (existingExternalId && providerName === 'stripe') {
     try {
-      const existing = await stripe.checkout.sessions.retrieve(booking.balance_stripe_checkout_id)
+      const existing = await stripe.checkout.sessions.retrieve(existingExternalId)
       if (existing.status === 'open' && existing.url) {
         return { url: existing.url }
       }
@@ -642,48 +652,37 @@ export async function createBalanceCheckout(
   const experienceTitle =
     (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
 
-  const balanceCents = Math.round(booking.total_eur * 0.7 * 100)
+  const balanceEur       = Math.round(booking.total_eur * 0.7 * 100) / 100
+  const commissionRate   = guideRecord?.commission_rate ?? env.PLATFORM_COMMISSION_RATE
+  const platformFeeEur   = Math.round(balanceEur * commissionRate * 100) / 100
 
-  try {
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode:                 'payment',
-        payment_method_types: ['card'],
-        customer_email:       booking.angler_email ?? undefined,
-        line_items: [
-          {
-            price_data: {
-              currency:     'eur',
-              product_data: {
-                name:        `${experienceTitle} — Remaining Balance`,
-                description: 'Remaining 70% balance for your confirmed fishing trip.',
-              },
-              unit_amount: balanceCents,
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: { bookingId, guideId: booking.guide_id, paymentType: 'balance' },
-        success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=balance_paid`,
-        cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
-        // No transfer_data — full amount stays on platform; admin sends payout manually.
-        payment_intent_data: {
-          metadata: { bookingId, paymentType: 'balance' },
-        },
-      },
-      { idempotencyKey: `booking-balance-${bookingId}` },
-    )
+  const result = await provider.createCheckout({
+    bookingId,
+    paymentType:    'balance',
+    amountEur:      balanceEur,
+    platformFeeEur: platformFeeEur,
+    anglerEmail:    booking.angler_email,
+    description:    `${experienceTitle} — Remaining Balance`,
+    successUrl:     `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=balance_paid`,
+    cancelUrl:      `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+    idempotencyKey: `booking-balance-${bookingId}`,
+  })
 
-    await serviceClient
-      .from('bookings')
-      .update({ balance_stripe_checkout_id: session.id })
-      .eq('id', bookingId)
-
-    return { url: session.url! }
-  } catch (err) {
-    console.error('[createBalanceCheckout]', err)
+  if ('error' in result) {
+    console.error('[createBalanceCheckout]', result.error)
     return { error: 'Failed to create payment session — please try again.' }
   }
+
+  const dbUpdate = providerName === 'paypal'
+    ? { balance_paypal_order_id: result.externalId }
+    : { balance_stripe_checkout_id: result.externalId }
+
+  await serviceClient
+    .from('bookings')
+    .update(dbUpdate)
+    .eq('id', bookingId)
+
+  return { url: result.url }
 }
 
 // ─── markBalancePaid ──────────────────────────────────────────────────────────

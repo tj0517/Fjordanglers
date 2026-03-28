@@ -12,9 +12,9 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe/client'
 import { createBookingFromInquiry } from '@/lib/create-booking-from-inquiry'
 import { env } from '@/lib/env'
+import { getProvider } from '@/lib/payment'
 import type { Json } from '@/lib/supabase/database.types'
 import {
   type PriceTier,
@@ -246,7 +246,7 @@ export async function acceptOffer(
   // Fetch inquiry — verify ownership
   const { data: inquiry } = await serviceClient
     .from('trip_inquiries')
-    .select('*, guides(id, full_name, stripe_account_id, stripe_payouts_enabled, commission_rate)')
+    .select('*, guides(id, full_name, stripe_account_id, stripe_payouts_enabled, commission_rate, payment_provider, paypal_merchant_id, paypal_onboarding_status)')
     .eq('id', inquiryId)
     .single()
 
@@ -284,7 +284,23 @@ export async function acceptOffer(
     stripe_account_id: string | null
     stripe_payouts_enabled: boolean
     commission_rate: number
+    payment_provider: string | null
+    paypal_merchant_id: string | null
+    paypal_onboarding_status: string | null
   } | null
+
+  const providerName = (guide?.payment_provider ?? 'stripe') as 'stripe' | 'paypal'
+  const provider = getProvider(providerName)
+
+  const guidePaymentProfile = {
+    id: guide?.id ?? '',
+    payment_provider: providerName,
+    stripe_account_id: guide?.stripe_account_id ?? null,
+    stripe_payouts_enabled: guide?.stripe_payouts_enabled ?? false,
+    paypal_merchant_id: guide?.paypal_merchant_id ?? null,
+    paypal_onboarding_status: (guide?.paypal_onboarding_status ?? null) as 'pending' | 'active' | 'suspended' | null,
+    commission_rate: guide?.commission_rate ?? env.PLATFORM_COMMISSION_RATE,
+  }
 
   // Mark as offer_accepted
   await serviceClient
@@ -292,53 +308,41 @@ export async function acceptOffer(
     .update({ status: 'offer_accepted' })
     .eq('id', inquiryId)
 
-  // If guide has Stripe with payouts enabled → create Checkout session (destination charge)
-  if (guide?.stripe_account_id && guide.stripe_payouts_enabled) {
+  // If guide has a payment provider ready → create Checkout session
+  if (guide && provider.isReady(guidePaymentProfile)) {
     try {
-      const commissionRate = guide?.commission_rate ?? env.PLATFORM_COMMISSION_RATE
-      const session = await stripe.checkout.sessions.create(
-        {
-          mode: 'payment',
-          payment_method_types: ['card'],
-          customer_email: inquiry.angler_email,
-          line_items: [
-            {
-              price_data: {
-                currency: 'eur',
-                product_data: {
-                  name: `Custom Fishing Trip — ${inquiry.dates_from} to ${inquiry.dates_to}`,
-                  description: `Guide: ${guide.full_name}${inquiry.assigned_river ? ` · ${inquiry.assigned_river}` : ''} · ${inquiry.group_size} ${inquiry.group_size === 1 ? 'angler' : 'anglers'}`,
-                },
-                unit_amount: Math.round(effectiveOfferPrice * 100),
-              },
-              quantity: 1,
-            },
-          ],
-          metadata: {
-            inquiryId,
-            guideId: guide.id,
-          },
-          success_url: `${env.NEXT_PUBLIC_APP_URL}/account/trips/${inquiryId}?status=paid`,
-          cancel_url: `${env.NEXT_PUBLIC_APP_URL}/account/trips/${inquiryId}`,
-          payment_intent_data: {
-            application_fee_amount: Math.round(
-              effectiveOfferPrice * commissionRate * 100,
-            ),
-            transfer_data: { destination: guide.stripe_account_id },
-            metadata: { inquiryId },
-          },
-        },
-        { idempotencyKey: `inquiry-checkout-${inquiryId}` },
-      )
+      const commissionRate = guide.commission_rate ?? env.PLATFORM_COMMISSION_RATE
+      const platformFeeEur = Math.round(effectiveOfferPrice * commissionRate * 100) / 100
+      const description    = `Custom Fishing Trip — ${inquiry.dates_from} to ${inquiry.dates_to}`
+
+      const result = await provider.createCheckout({
+        inquiryId,
+        paymentType:    'full',
+        amountEur:      effectiveOfferPrice,
+        platformFeeEur: platformFeeEur,
+        anglerEmail:    inquiry.angler_email,
+        description:    description,
+        successUrl:     `${env.NEXT_PUBLIC_APP_URL}/account/trips/${inquiryId}?status=paid`,
+        cancelUrl:      `${env.NEXT_PUBLIC_APP_URL}/account/trips/${inquiryId}`,
+        idempotencyKey: `inquiry-checkout-${inquiryId}`,
+      })
+
+      if ('error' in result) {
+        throw new Error(result.error)
+      }
+
+      const dbUpdate = providerName === 'paypal'
+        ? { paypal_order_id: result.externalId }
+        : { stripe_checkout_id: result.externalId }
 
       await serviceClient
         .from('trip_inquiries')
-        .update({ stripe_checkout_id: session.id })
+        .update(dbUpdate)
         .eq('id', inquiryId)
 
-      return { checkoutUrl: session.url! }
+      return { checkoutUrl: result.url }
     } catch (err) {
-      console.error('[acceptOffer] Stripe error:', err)
+      console.error('[acceptOffer] payment error:', err)
       // Revert to offer_sent
       await serviceClient
         .from('trip_inquiries')
