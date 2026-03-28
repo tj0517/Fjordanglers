@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   description:
     'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures. Salmon, trout, cod and more.',
   keywords: ['fishing', 'fjord', 'Norway', 'Scandinavia', 'fishing guide', 'salmon fishing'],
+  icons: {
+    icon: '/brand/sygnet.png',
+    apple: '/brand/sygnet.png',
+  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -35,10 +39,12 @@ export const metadata: Metadata = {
     siteName: 'FjordAnglers',
     title: 'FjordAnglers — Epic Fjord Fishing Trips',
     description: 'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures.',
+    images: [{ url: '/brand/dark-logo.png', width: 400, height: 100, alt: 'FjordAnglers' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FjordAnglers — Epic Fjord Fishing Trips',
+    images: ['/brand/dark-logo.png'],
   },
 }
 

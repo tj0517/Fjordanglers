@@ -361,14 +361,14 @@ export default async function AccountPage({
         {/* ── Accepted payment methods ──────────────────────────────────────── */}
         <Card title="Accepted payment methods" help={
           <HelpWidget title="Accepted payment methods" items={[
-            { icon: '💳', title: 'Online (Stripe)', text: 'Angler pays by card — fully automated. Funds arrive in your Stripe account on the weekly payout schedule.' },
-            { icon: '💵', title: 'Cash', text: 'Angler pays you in cash on the day. You manually mark it as received in the booking details.' },
+            { icon: '💳', title: 'Online (Stripe)', text: 'The remaining 70% balance is charged automatically by card before the trip. Funds arrive in your Stripe account on the weekly payout schedule.' },
+            { icon: '💵', title: 'Cash', text: 'The remaining 70% balance is paid to you in cash on the day of the trip. You manually mark it as received in the booking details.' },
           ]} />
         }>
           <div className="px-6 pt-4 pb-2">
             <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              Choose which payment methods you accept from anglers.
-              This is shown on your public profile and trip pages so anglers know before they book.
+              Anglers always pay a <strong style={{ color: '#0A2E4D' }}>30% deposit</strong> online at the time of booking.
+              Choose how you want to collect the <strong style={{ color: '#0A2E4D' }}>remaining 70%</strong> before the trip.
             </p>
           </div>
           <AcceptedPaymentMethodsForm
