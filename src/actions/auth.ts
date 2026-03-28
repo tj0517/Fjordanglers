@@ -129,7 +129,7 @@ export async function resetPassword(email: string): Promise<AuthResult> {
       type: 'recovery',
       email,
       options: {
-        redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
+        redirectTo: `${getAppUrl()}/auth/reset`,
       },
     })
 
