@@ -129,7 +129,9 @@ export async function resetPassword(email: string): Promise<AuthResult> {
       type: 'recovery',
       email,
       options: {
-        redirectTo: `${getAppUrl()}/auth/reset`,
+        // /auth/callback is already in Supabase's allowed redirect URLs (used by signup).
+        // The `next` param tells the callback where to send the user after the code exchange.
+        redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
       },
     })
 
