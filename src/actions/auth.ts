@@ -12,7 +12,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { sendEmailVerificationEmail, sendPasswordResetEmail } from '@/lib/email'
+import { sendPasswordResetEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 
 /** Returns the canonical app URL.
@@ -64,38 +64,41 @@ export async function signUp(
   role: 'angler' | 'guide' = 'angler',
 ): Promise<AuthResult> {
   try {
-    // Use admin.generateLink() to create the account and get a confirmation URL,
-    // then send our branded verification email via Resend instead of Supabase's default.
-    const supabase = createServiceClient()
+    const service = createServiceClient()
 
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'signup',
+    // Create user directly — email_confirm: true skips the verification email
+    // since mailer_autoconfirm is enabled on the Supabase project.
+    const { data, error: createError } = await service.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: { full_name: fullName, role },
-        redirectTo: `${getAppUrl()}/auth/callback`,
-      },
+      email_confirm: true,
+      user_metadata: { full_name: fullName, role },
     })
 
-    if (error != null) {
+    if (createError != null) {
       if (
-        error.message.toLowerCase().includes('user already registered') ||
-        error.message.toLowerCase().includes('already been registered')
+        createError.message.toLowerCase().includes('user already registered') ||
+        createError.message.toLowerCase().includes('already been registered')
       ) {
         return { error: 'An account with this email already exists.' }
       }
-      return { error: error.message }
+      return { error: createError.message }
     }
 
-    // Fire-and-forget — email failure must not block the "check your email" screen
-    sendEmailVerificationEmail({
-      to: email,
-      name: fullName,
-      confirmUrl: data.properties.action_link,
-    }).catch((err: unknown) => {
-      console.error('[auth/signUp] Email send error:', err)
-    })
+    // DB trigger creates the profile row as 'angler' — fix the role if needed.
+    if (data.user != null) {
+      await service
+        .from('profiles')
+        .upsert({ id: data.user.id, role }, { onConflict: 'id' })
+    }
+
+    // Sign in immediately so the user lands on their dashboard.
+    const supabase = await createClient()
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (signInError != null) {
+      console.error('[auth/signUp] Auto sign-in failed:', signInError.message)
+    }
 
     return { success: true }
   } catch (err) {

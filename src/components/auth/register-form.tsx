@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { signUp } from '@/actions/auth'
 import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 
@@ -81,6 +82,7 @@ const ROLES: { key: Role; icon: string; title: string; desc: string }[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function RegisterForm() {
+  const router = useRouter()
   const [role, setRole] = useState<Role>('angler')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -89,7 +91,6 @@ export function RegisterForm() {
   const [errors, setErrors] = useState<FieldErrors>({})
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
 
   function validate(): boolean {
     const next: FieldErrors = {}
@@ -132,59 +133,7 @@ export function RegisterForm() {
       return
     }
 
-    setIsSuccess(true)
-  }
-
-  // ─── Success state ──────────────────────────────────────────────────────────
-
-  if (isSuccess) {
-    return (
-      <div style={{ textAlign: 'center', padding: '8px 0' }}>
-        <div
-          style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: '50%',
-            background: 'rgba(230,126,80,0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 24px',
-          }}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M20 6L9 17L4 12"
-              stroke="#E67E50"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-        <h2
-          style={{ color: '#0A2E4D', fontSize: '22px', fontWeight: 700, marginBottom: '12px', lineHeight: 1.2 }}
-          className="f-display"
-        >
-          Check your email
-        </h2>
-        <p
-          style={{ color: 'rgba(10,46,77,0.55)', fontSize: '15px', lineHeight: 1.6, marginBottom: '32px' }}
-          className="f-body"
-        >
-          We sent a confirmation link to{' '}
-          <strong style={{ color: '#0A2E4D', fontWeight: 600 }}>{email}</strong>.
-          Click it to activate your account.
-        </p>
-        <Link
-          href="/login"
-          style={{ display: 'inline-block', color: '#E67E50', fontSize: '14px', fontWeight: 600, textDecoration: 'none' }}
-          className="f-body"
-        >
-          Back to sign in
-        </Link>
-      </div>
-    )
+    router.push(role === 'guide' ? '/dashboard' : '/account')
   }
 
   // ─── Form state ─────────────────────────────────────────────────────────────
