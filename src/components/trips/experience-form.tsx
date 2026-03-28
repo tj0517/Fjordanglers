@@ -2276,9 +2276,15 @@ export default function ExperienceForm({
     {/* ── Inquiry form config — outside <form> to prevent submit interference ── */}
     {activeTab === 'pricing'
       && (bookingType === 'icelandic' || bookingType === 'both')
-      && inquiryFormConfigSlot != null && (
+      && (
       <div className="mt-4 max-w-[760px]">
-        {inquiryFormConfigSlot}
+        {inquiryFormConfigSlot ?? (
+          <div style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.10)', borderRadius: 12, padding: '20px 24px' }}>
+            <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)', margin: 0 }}>
+              <strong style={{ color: '#0A2E4D' }}>Inquiry form settings</strong> — Save this trip first, then reopen it to configure which fields you want anglers to fill in.
+            </p>
+          </div>
+        )}
       </div>
     )}
     </>
