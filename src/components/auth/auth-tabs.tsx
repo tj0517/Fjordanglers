@@ -91,7 +91,6 @@ export function AuthTabs() {
   const [regErrors, setRegErrors]               = useState<Record<string, string>>({})
   const [regLoading, setRegLoading]             = useState(false)
   const [regFocus, setRegFocus]                 = useState<string | null>(null)
-  const [regSuccess, setRegSuccess]             = useState(false)
 
   // ── Login submit ─────────────────────────────────────────────────────────
   async function handleLogin(e: React.FormEvent) {
@@ -110,7 +109,7 @@ export function AuthTabs() {
       setLoginLoading(false)
       return
     }
-    router.push(nextUrl)
+    window.location.href = nextUrl
   }
 
   // ── Register submit ──────────────────────────────────────────────────────
@@ -133,25 +132,7 @@ export function AuthTabs() {
       setRegLoading(false)
       return
     }
-    setRegSuccess(true)
-  }
-
-  // ─── Register success ─────────────────────────────────────────────────────
-  if (regSuccess) {
-    return (
-      <div style={{ textAlign: 'center', padding: '8px 0' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(230,126,80,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17L4 12" stroke="#E67E50" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </div>
-        <h2 style={{ color: '#0A2E4D', fontSize: '22px', fontWeight: 700, marginBottom: 12 }} className="f-display">Check your email</h2>
-        <p style={{ color: 'rgba(10,46,77,0.55)', fontSize: '15px', lineHeight: 1.6, marginBottom: 32 }} className="f-body">
-          We sent a confirmation link to <strong style={{ color: '#0A2E4D' }}>{regEmail}</strong>. Click it to activate your account.
-        </p>
-        <button type="button" onClick={() => { setRegSuccess(false); setTab('login') }} style={{ color: '#E67E50', fontSize: '14px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: font }} className="f-body">
-          Back to sign in
-        </button>
-      </div>
-    )
+    window.location.href = role === 'guide' ? '/dashboard' : '/account'
   }
 
   // ─── Tab toggle ───────────────────────────────────────────────────────────
