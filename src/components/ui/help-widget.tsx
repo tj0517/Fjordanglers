@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Info } from 'lucide-react'
 
 export type HelpItem = {
   icon: string   // emoji
@@ -54,13 +55,21 @@ export function HelpWidget({ label = 'How does this work?', title, description, 
 
       {/* Modal overlay */}
       {open && (
-        <div
-          className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 sm:p-6"
-          style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(6px)' }}
-          onClick={() => setOpen(false)}
-        >
+        <>
+          {/* Backdrop — separate element so backdropFilter never affects the panel */}
           <div
-            className="w-full max-w-sm rounded-3xl p-6 relative"
+            className="fixed inset-0 z-[199]"
+            style={{ background: 'rgba(7,17,28,0.55)' }}
+            onClick={() => setOpen(false)}
+            aria-hidden="true"
+          />
+
+          {/* Panel — above backdrop, pointer-events-none on wrapper so clicks on empty space hit backdrop */}
+          <div
+            className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 sm:p-6 pointer-events-none"
+          >
+          <div
+            className="w-full max-w-sm rounded-3xl p-6 relative pointer-events-auto"
             style={{
               background: '#FDFAF7',
               boxShadow: '0 24px 64px rgba(10,46,77,0.22)',
@@ -95,11 +104,7 @@ export function HelpWidget({ label = 'How does this work?', title, description, 
                 background: 'rgba(230,126,80,0.12)',
               }}
             >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#E67E50" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="10" cy="10" r="8.5" />
-                <path d="M10 13.5v-4" />
-                <circle cx="10" cy="7" r="0.8" fill="#E67E50" stroke="none" />
-              </svg>
+              <Info size={20} strokeWidth={1.7} style={{ color: '#E67E50' }} />
             </div>
 
             <h3 className="text-[#0A2E4D] text-lg font-bold f-display mb-1 pr-8">{title}</h3>
@@ -142,7 +147,8 @@ export function HelpWidget({ label = 'How does this work?', title, description, 
               Got it
             </button>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   )

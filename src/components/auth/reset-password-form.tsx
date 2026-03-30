@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { Check } from 'lucide-react'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -145,15 +146,7 @@ export function ResetPasswordForm() {
             margin: '0 auto 24px',
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M20 6L9 17L4 12"
-              stroke="#E67E50"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Check size={28} strokeWidth={2.5} aria-hidden="true" style={{ color: '#E67E50' }} />
         </div>
         <h2
           style={{

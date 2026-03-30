@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 
 const SORT_OPTIONS = [
   { value: '',              label: 'Recommended'       },
@@ -55,16 +56,9 @@ export default function SortSelect() {
         {/* Custom chevron */}
         <div
           className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: sort ? '#0A2E4D' : 'rgba(10,46,77,0.4)' }}
         >
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
-            <path
-              d="M1 1l4 4 4-4"
-              stroke={sort ? '#0A2E4D' : 'rgba(10,46,77,0.4)'}
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <ChevronDown size={12} strokeWidth={1.6} />
         </div>
       </div>
     </div>

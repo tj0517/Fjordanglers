@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Check, Share2 } from 'lucide-react'
 
 type Props = {
   guideId: string
@@ -42,9 +43,7 @@ export default function CopyInviteLink({ guideId }: Props) {
         className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full f-body"
         style={{ background: 'rgba(74,222,128,0.12)', color: '#16A34A' }}
       >
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-          <polyline points="2,6 4.5,8.5 9,3" />
-        </svg>
+        <Check size={11} strokeWidth={2.2} aria-hidden="true" />
         Link copied!
       </div>
     )
@@ -58,13 +57,7 @@ export default function CopyInviteLink({ guideId }: Props) {
       style={{ background: 'rgba(230,126,80,0.1)', color: '#C96030' }}
       title={`Copy invite link for /invite/${guideId}`}
     >
-      {/* Share / link icon */}
-      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-        <circle cx="9" cy="2" r="1.5" />
-        <circle cx="2" cy="5.5" r="1.5" />
-        <circle cx="9" cy="9" r="1.5" />
-        <path d="M3.4 4.7L7.6 3M3.4 6.3l4.2 1.7" strokeLinecap="round" />
-      </svg>
+      <Share2 size={11} strokeWidth={1.5} aria-hidden="true" />
       Copy invite link
     </button>
   )

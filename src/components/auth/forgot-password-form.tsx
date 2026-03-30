@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { resetPassword } from '@/actions/auth'
+import { Mail } from 'lucide-react'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -112,15 +113,7 @@ export function ForgotPasswordForm() {
             margin: '0 auto 24px',
           }}
         >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="2" y="4" width="20" height="16" rx="3" stroke="#E67E50" strokeWidth="2" />
-            <path
-              d="M2 8l10 7 10-7"
-              stroke="#E67E50"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
+          <Mail size={28} strokeWidth={2} aria-hidden="true" style={{ color: '#E67E50' }} />
         </div>
         <h2
           style={{

@@ -66,6 +66,8 @@ const submitInquirySchema = z.object({
           to:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         })
       ).optional(),
+      // Selected guide package (direct-mode "message first" path)
+      selectedPackageLabel: z.string().max(200).optional(),
       // Legacy
       riverType:        z.string().optional(),
       notes:            z.string().max(2000).optional(),

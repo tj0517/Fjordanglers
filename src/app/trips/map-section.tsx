@@ -7,6 +7,7 @@ import type { ExperienceWithGuide, LocationSpot } from '@/types'
 import { cardThumb } from '@/lib/image'
 import { CountryFlag } from '@/components/ui/country-flag'
 import MapWrapper from './map-wrapper'
+import { Menu, MapPin } from 'lucide-react'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
 
@@ -298,11 +299,7 @@ export default function MapSection({
           }}
         >
           {/* List icon */}
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <rect x="1" y="2" width="12" height="1.5" rx="0.75" fill="currentColor" />
-            <rect x="1" y="6.25" width="12" height="1.5" rx="0.75" fill="currentColor" />
-            <rect x="1" y="10.5" width="12" height="1.5" rx="0.75" fill="currentColor" />
-          </svg>
+          <Menu size={14} aria-hidden="true" />
           Show list
         </button>
 
@@ -432,11 +429,7 @@ export default function MapSection({
           }}
         >
           {/* Map pin icon */}
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="currentColor" opacity="0.2" />
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-            <circle cx="12" cy="9" r="2.5" fill="currentColor" />
-          </svg>
+          <MapPin size={16} aria-hidden="true" />
           Map
         </button>
       </div>

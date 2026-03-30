@@ -12,6 +12,7 @@
 import { useTransition, useState } from 'react'
 import { acceptBooking, declineBooking } from '@/actions/bookings'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
+import { Loader2, ChevronLeft, CheckCircle, XCircle, Calendar, AlertTriangle } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,16 +55,7 @@ const LABEL: React.CSSProperties = {
 // ─── Spinner ──────────────────────────────────────────────────────────────────
 
 function Spinner() {
-  return (
-    <svg
-      className="animate-spin"
-      width="14" height="14" viewBox="0 0 14 14"
-      fill="none" stroke="currentColor" strokeWidth="2"
-    >
-      <circle cx="7" cy="7" r="5.5" strokeOpacity="0.25" />
-      <path d="M7 1.5a5.5 5.5 0 015.5 5.5" strokeLinecap="round" />
-    </svg>
-  )
+  return <Loader2 className="animate-spin" size={14} strokeWidth={2} />
 }
 
 // ─── Back button ──────────────────────────────────────────────────────────────
@@ -78,9 +70,7 @@ function BackButton({ onClick, label }: { onClick: () => void; label: string }) 
         style={{ background: 'rgba(10,46,77,0.07)' }}
         aria-label="Back"
       >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#0A2E4D" strokeWidth="1.8">
-          <polyline points="7,1 3,5 7,9" />
-        </svg>
+        <ChevronLeft size={10} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
       </button>
       <p
         className="text-[11px] uppercase tracking-[0.2em] f-body"
@@ -145,10 +135,7 @@ export default function BookingActions({ bookingId, windowFrom, durationOption }
         className="flex items-center gap-3 px-4 py-4 rounded-2xl"
         style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)' }}
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round">
-          <circle cx="10" cy="10" r="8.5" />
-          <path d="M6.5 10l2.5 2.5 4.5-4.5" />
-        </svg>
+        <CheckCircle size={20} strokeWidth={1.5} style={{ color: '#16A34A' }} />
         <div>
           <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
             Booking accepted!
@@ -169,10 +156,7 @@ export default function BookingActions({ bookingId, windowFrom, durationOption }
         className="flex items-center gap-3 px-4 py-4 rounded-2xl"
         style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
       >
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round">
-          <circle cx="9" cy="9" r="7.5" />
-          <path d="M6.5 6.5l5 5M11.5 6.5l-5 5" />
-        </svg>
+        <XCircle size={18} strokeWidth={1.5} style={{ color: '#DC2626' }} />
         <div>
           <p className="text-sm font-semibold f-body" style={{ color: '#DC2626' }}>
             Booking declined
@@ -349,14 +333,7 @@ export default function BookingActions({ bookingId, windowFrom, durationOption }
           style={{ background: proposeAlternatives ? 'rgba(37,99,235,0.05)' : 'rgba(10,46,77,0.02)' }}
         >
           <div className="flex items-center gap-2.5">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke={proposeAlternatives ? '#2563EB' : 'rgba(10,46,77,0.45)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
-              <line x1="5" y1="1" x2="5" y2="4" />
-              <line x1="11" y1="1" x2="11" y2="4" />
-              <line x1="2" y1="6.5" x2="14" y2="6.5" />
-              <rect x="5" y="9" width="2" height="2" rx="0.4" fill="currentColor" stroke="none" />
-              <rect x="9" y="9" width="2" height="2" rx="0.4" fill="currentColor" stroke="none" />
-            </svg>
+            <Calendar size={15} strokeWidth={1.5} style={{ color: proposeAlternatives ? '#2563EB' : 'rgba(10,46,77,0.45)' }} />
             <span
               className="text-sm font-semibold f-body"
               style={{ color: proposeAlternatives ? '#1D4ED8' : '#0A2E4D' }}
@@ -462,11 +439,7 @@ export default function BookingActions({ bookingId, windowFrom, durationOption }
         className="flex items-start gap-2.5 px-3 py-3 rounded-xl"
         style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.12)' }}
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" className="mt-0.5 flex-shrink-0">
-          <path d="M7 1L13.06 11H.94L7 1z" />
-          <line x1="7" y1="5.5" x2="7" y2="8" />
-          <circle cx="7" cy="9.5" r="0.5" fill="#DC2626" />
-        </svg>
+        <AlertTriangle size={14} strokeWidth={1.5} className="mt-0.5 flex-shrink-0" style={{ color: '#DC2626' }} />
         <p className="text-[11px] f-body leading-relaxed" style={{ color: 'rgba(180,30,30,0.8)' }}>
           This will notify the angler. No payment will be charged.
         </p>

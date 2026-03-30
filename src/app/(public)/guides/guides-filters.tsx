@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { ChevronDown } from 'lucide-react'
 
 const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Iceland'] as const
 const LANGUAGES = ['English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic', 'German'] as const
@@ -52,13 +53,11 @@ function Dropdown({
         <span style={{ color: active ? '#0A2E4D' : 'rgba(10,46,77,0.4)' }}>
           {value || 'All'}
         </span>
-        <svg
-          width="10" height="6" viewBox="0 0 10 6" fill="none"
+        <ChevronDown
+          width={10} height={6}
           className="transition-transform"
           style={{ transform: open ? 'rotate(180deg)' : 'none', color: active ? '#E67E50' : 'rgba(10,46,77,0.3)' }}
-        >
-          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        />
       </button>
 
       {open && (

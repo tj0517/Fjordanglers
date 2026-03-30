@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation'
 import { blockDates, blockMultipleDates, unblockDates, unblockDaysFromRange } from '@/actions/calendar'
 import { createWeeklySchedule, deleteWeeklySchedule } from '@/actions/weekly-schedules'
 import type { WeeklySchedule } from '@/actions/weekly-schedules'
+import { Calendar, Loader2, Minus, Plus, ChevronLeft, ChevronRight, LayoutGrid, ChevronDown, Clock, User, MessageSquare, X, Check, Info, Trash2 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -636,10 +637,7 @@ export default function CalendarGrid({
       >
         <div className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
              style={{ background: 'rgba(10,46,77,0.06)' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.4)" strokeWidth="1.5">
-            <rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="9" x2="21" y2="9" />
-            <line x1="8" y1="2" x2="8" y2="6" /><line x1="16" y1="2" x2="16" y2="6" />
-          </svg>
+          <Calendar size={24} strokeWidth={1.5} style={{ color: 'rgba(10,46,77,0.4)' }} />
         </div>
         <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>No trips yet</p>
         <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
@@ -716,14 +714,7 @@ export default function CalendarGrid({
             className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl"
             style={{ background: 'rgba(253,250,247,0.75)', backdropFilter: 'blur(2px)' }}
           >
-            <svg
-              className="animate-spin"
-              width="32" height="32" viewBox="0 0 32 32" fill="none"
-              style={{ color: '#E67E50' }}
-            >
-              <circle cx="16" cy="16" r="13" stroke="rgba(10,46,77,0.1)" strokeWidth="3" />
-              <path d="M16 3 A13 13 0 0 1 29 16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
+            <Loader2 className="animate-spin" size={32} strokeWidth={2} style={{ color: '#E67E50' }} />
           </div>
         )}
         {/* ── Header ──────────────────────────────────────────────────────────── */}
@@ -773,16 +764,12 @@ export default function CalendarGrid({
                         >
                           {isUnblockingMulti ? (
                             <>
-                              <svg className="animate-spin" width="10" height="10" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
-                              </svg>
+                              <Loader2 className="animate-spin" size={10} strokeWidth={2} />
                               Unblocking…
                             </>
                           ) : (
                             <>
-                              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                                <line x1="1" y1="5.5" x2="10" y2="5.5" />
-                              </svg>
+                              <Minus size={11} strokeWidth={1.8} />
                               Unblock {selectedDays.size} {selectedDays.size === 1 ? 'day' : 'days'}
                             </>
                           )}
@@ -793,10 +780,7 @@ export default function CalendarGrid({
                         className="flex items-center gap-1 sm:gap-1.5 text-xs font-bold px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors f-body"
                         style={{ background: '#E67E50', color: 'white', border: 'none', cursor: 'pointer' }}
                       >
-                        <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor">
-                          <rect x="4.5" y="0" width="2" height="11" rx="1" />
-                          <rect x="0" y="4.5" width="11" height="2" rx="1" />
-                        </svg>
+                        <Plus size={11} />
                         Block {selectedDays.size} {selectedDays.size === 1 ? 'day' : 'days'}
                       </button>
                     </>
@@ -818,9 +802,7 @@ export default function CalendarGrid({
                 <button onClick={prevMonth} disabled={navPending} aria-label="Previous month"
                   className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06]"
                   style={{ color: 'rgba(10,46,77,0.5)' }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <polyline points="10,3 6,8 10,13" />
-                  </svg>
+                  <ChevronLeft size={16} strokeWidth={1.6} />
                 </button>
                 <h2 className="text-sm sm:text-lg font-bold f-display px-1"
                     style={{ color: '#0A2E4D', textAlign: 'center', minWidth: '0' }}>
@@ -829,9 +811,7 @@ export default function CalendarGrid({
                 <button onClick={nextMonth} disabled={navPending} aria-label="Next month"
                   className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06]"
                   style={{ color: 'rgba(10,46,77,0.5)' }}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-                    <polyline points="6,3 10,8 6,13" />
-                  </svg>
+                  <ChevronRight size={16} strokeWidth={1.6} />
                 </button>
               </div>
 
@@ -846,12 +826,7 @@ export default function CalendarGrid({
                   className="flex items-center gap-1 sm:gap-1.5 text-xs font-semibold f-body px-2 sm:px-3 py-1.5 rounded-lg transition-colors hover:bg-[#E67E50]/[0.08]"
                   style={{ color: '#E67E50', border: '1px solid rgba(230,126,80,0.2)', cursor: 'pointer', background: 'transparent' }}
                 >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="0.5" y="0.5" width="4" height="4" rx="0.5" />
-                    <rect x="6.5" y="0.5" width="4" height="4" rx="0.5" />
-                    <rect x="0.5" y="6.5" width="4" height="4" rx="0.5" />
-                    <rect x="6.5" y="6.5" width="4" height="4" rx="0.5" />
-                  </svg>
+                  <LayoutGrid size={11} strokeWidth={1.5} />
                   <span className="inline">Select</span>
                   <span className="hidden sm:inline"> days</span>
                 </button>
@@ -871,12 +846,7 @@ export default function CalendarGrid({
                     aria-expanded={showBlockMenu}
                   >
                     Block
-                    <svg
-                      width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
-                      style={{ transform: showBlockMenu ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}
-                    >
-                      <polyline points="1.5,3 4.5,6 7.5,3" />
-                    </svg>
+                    <ChevronDown size={9} strokeWidth={1.5} style={{ transform: showBlockMenu ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
                   </button>
 
                   {showBlockMenu && (
@@ -898,12 +868,7 @@ export default function CalendarGrid({
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,46,77,0.05)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                       >
-                        <svg width="13" height="13" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <rect x="0.5" y="2.5" width="10" height="8" rx="1" />
-                          <line x1="0.5" y1="5" x2="10.5" y2="5" />
-                          <line x1="3" y1="0.5" x2="3" y2="3.5" />
-                          <line x1="8" y1="0.5" x2="8" y2="3.5" />
-                        </svg>
+                        <Calendar size={13} strokeWidth={1.5} />
                         Block season
                       </button>
                       <button
@@ -914,14 +879,7 @@ export default function CalendarGrid({
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(230,126,80,0.06)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                       >
-                        <svg width="13" height="13" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <rect x="0.5" y="2.5" width="10" height="8" rx="1" />
-                          <line x1="0.5" y1="5" x2="10.5" y2="5" />
-                          <line x1="3" y1="0.5" x2="3" y2="3.5" />
-                          <line x1="8" y1="0.5" x2="8" y2="3.5" />
-                          <line x1="5.5" y1="7" x2="5.5" y2="9.5" strokeWidth="2" strokeLinecap="round" />
-                          <line x1="4.25" y1="7" x2="6.75" y2="7" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
+                        <Calendar size={13} strokeWidth={1.5} />
                         Block month
                       </button>
                       <div style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }} />
@@ -933,11 +891,7 @@ export default function CalendarGrid({
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.06)' }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                       >
-                        <svg width="13" height="13" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <circle cx="6" cy="6" r="5" />
-                          <line x1="6" y1="3" x2="6" y2="6" strokeLinecap="round" />
-                          <line x1="6" y1="6" x2="8.2" y2="7.8" strokeLinecap="round" />
-                        </svg>
+                        <Clock size={13} strokeWidth={1.5} />
                         Weekly schedule
                         {weeklySchedules.length > 0 && (
                           <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
@@ -1076,10 +1030,7 @@ export default function CalendarGrid({
                             color:      hasConf ? '#1B4F72'              : '#B45309',
                           }}
                         >
-                          <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor" style={{ flexShrink: 0 }}>
-                            <circle cx="4" cy="2.5" r="1.8"/>
-                            <path d="M1 7c0-1.657 1.343-3 3-3s3 1.343 3 3" strokeWidth="0" fillRule="evenodd"/>
-                          </svg>
+                          <User size={7} style={{ flexShrink: 0 }} />
                           <span className="truncate" style={{ maxWidth: 36 }}>
                             {hasConf ? 'Booked' : 'Pending'}
                           </span>
@@ -1113,9 +1064,7 @@ export default function CalendarGrid({
                         className="flex items-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
                         style={{ background: bg, color }}
                       >
-                        <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.4" style={{ flexShrink: 0 }}>
-                          <path d="M7 1H1a.5.5 0 00-.5.5v4A.5.5 0 001 6h2l1.5 1.5L6 6h1a.5.5 0 00.5-.5v-4A.5.5 0 007 1z"/>
-                        </svg>
+                        <MessageSquare size={7} strokeWidth={1.4} style={{ flexShrink: 0 }} />
                         <span>{label}</span>
                       </div>
                     )
@@ -1127,11 +1076,7 @@ export default function CalendarGrid({
                       className="w-full flex items-center justify-center gap-0.5 text-[8px] font-bold f-body leading-none px-1 py-[3px] rounded"
                       style={{ background: 'rgba(99,102,241,0.18)', color: '#4338CA' }}
                     >
-                      <svg width="6" height="6" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.3" style={{ flexShrink: 0 }}>
-                        <circle cx="4" cy="4" r="3.2"/>
-                        <line x1="4" y1="1.8" x2="4" y2="4" strokeLinecap="round"/>
-                        <line x1="4" y1="4" x2="5.4" y2="5.4" strokeLinecap="round"/>
-                      </svg>
+                      <Clock size={6} strokeWidth={1.3} style={{ flexShrink: 0 }} />
                       <span>Weekly off</span>
                     </div>
                   )}
@@ -1181,20 +1126,11 @@ export default function CalendarGrid({
                 <div className="flex items-center gap-0.5 px-1 py-0.5 rounded text-[8px] font-bold f-body"
                      style={{ background: item.chip.bg, color: item.chip.color }}>
                   {item.icon === 'person' ? (
-                    <svg width="7" height="7" viewBox="0 0 8 8" fill="currentColor">
-                      <circle cx="4" cy="2.5" r="1.8"/>
-                      <path d="M1 7c0-1.657 1.343-3 3-3s3 1.343 3 3"/>
-                    </svg>
+                    <User size={7} />
                   ) : item.icon === 'msg' ? (
-                    <svg width="7" height="7" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.4">
-                      <path d="M7 1H1a.5.5 0 00-.5.5v4A.5.5 0 001 6h2l1.5 1.5L6 6h1a.5.5 0 00.5-.5v-4A.5.5 0 007 1z"/>
-                    </svg>
+                    <MessageSquare size={7} strokeWidth={1.4} />
                   ) : item.icon === 'clock' ? (
-                    <svg width="6" height="6" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.3">
-                      <circle cx="4" cy="4" r="3.2"/>
-                      <line x1="4" y1="1.8" x2="4" y2="4" strokeLinecap="round"/>
-                      <line x1="4" y1="4" x2="5.4" y2="5.4" strokeLinecap="round"/>
-                    </svg>
+                    <Clock size={6} strokeWidth={1.3} />
                   ) : (
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'rgba(10,46,77,0.4)', opacity: 0.5 }} />
                   )}
@@ -1217,7 +1153,7 @@ export default function CalendarGrid({
       {/* ─── Single-day modal ─────────────────────────────────────────────────── */}
       {selectedDay != null && (
         <>
-          <div className="fixed inset-0 z-40" style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(2px)' }}
+          <div className="fixed inset-0 z-40" style={{ background: 'rgba(7,17,28,0.55)' }}
                onClick={closeModal} aria-hidden="true" />
 
           <div ref={modalRef} role="dialog" aria-modal="true"
@@ -1245,9 +1181,7 @@ export default function CalendarGrid({
               <button onClick={closeModal} aria-label="Close"
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06] flex-shrink-0"
                 style={{ color: 'rgba(10,46,77,0.4)' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
-                </svg>
+                <X size={14} strokeWidth={1.8} />
               </button>
             </div>
 
@@ -1382,9 +1316,7 @@ export default function CalendarGrid({
                       >
                         {isUnblockingMulti ? (
                           <>
-                            <svg className="animate-spin" width="10" height="10" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                              <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
-                            </svg>
+                            <Loader2 className="animate-spin" size={10} strokeWidth={2} />
                             Unblocking…
                           </>
                         ) : (
@@ -1421,9 +1353,7 @@ export default function CalendarGrid({
                             }}
                           >
                             {isSelected && (
-                              <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="1.5,4.5 3.5,6.5 7.5,2.5"/>
-                              </svg>
+                              <Check size={9} strokeWidth={2} style={{ color: 'white' }} />
                             )}
                           </div>
 
@@ -1467,9 +1397,7 @@ export default function CalendarGrid({
                             >
                               {unblockingId === b.id ? (
                                 <>
-                                  <svg className="animate-spin" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                    <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
-                                  </svg>
+                                  <Loader2 className="animate-spin" size={10} strokeWidth={2} />
                                   Unblocking…
                                 </>
                               ) : 'Unblock'}
@@ -1499,11 +1427,7 @@ export default function CalendarGrid({
                    (dayMap[selectedDay]?.bookingEntries ?? []).length > 0 && (
                     <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg"
                          style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.1)' }}>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="flex-shrink-0">
-                        <circle cx="6" cy="6" r="5" stroke="rgba(10,46,77,0.4)" strokeWidth="1.2"/>
-                        <line x1="6" y1="4" x2="6" y2="6.5" stroke="rgba(10,46,77,0.4)" strokeWidth="1.2" strokeLinecap="round"/>
-                        <circle cx="6" cy="8.5" r="0.6" fill="rgba(10,46,77,0.4)"/>
-                      </svg>
+                      <Info size={12} strokeWidth={1.2} className="flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }} />
                       <p className="text-[11px] f-body leading-snug" style={{ color: 'rgba(10,46,77,0.5)' }}>
                         {Object.entries(calendarExperienceMap).length > 1
                           ? 'Pre-selected trips share a calendar with the existing booking'
@@ -1552,9 +1476,7 @@ export default function CalendarGrid({
                               <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                                     style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
                                 {checked && (
-                                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                    <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                  </svg>
+                                  <Check size={10} strokeWidth={1.5} style={{ color: 'white' }} />
                                 )}
                               </span>
                               <span className="w-2 h-2 rounded-full flex-shrink-0"
@@ -1622,10 +1544,7 @@ export default function CalendarGrid({
                   <button onClick={() => setShowBlockForm(true)}
                     className="flex items-center gap-2 text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-colors hover:bg-[#E67E50]/[0.08]"
                     style={{ color: '#E67E50', border: '1px solid rgba(230,126,80,0.2)', cursor: 'pointer', background: 'transparent' }}>
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
-                      <rect x="5.5" y="0.5" width="2" height="12" rx="1" />
-                      <rect x="0.5" y="5.5" width="12" height="2" rx="1" />
-                    </svg>
+                    <Plus size={13} />
                     Block this day
                   </button>
                   <button onClick={closeModal}
@@ -1643,7 +1562,7 @@ export default function CalendarGrid({
       {/* ─── Multi-pick block modal ───────────────────────────────────────────── */}
       {showMultiModal && (
         <>
-          <div className="fixed inset-0 z-40" style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(2px)' }}
+          <div className="fixed inset-0 z-40" style={{ background: 'rgba(7,17,28,0.55)' }}
                onClick={() => setShowMultiModal(false)} aria-hidden="true" />
 
           <div ref={multiModalRef} role="dialog" aria-modal="true"
@@ -1671,9 +1590,7 @@ export default function CalendarGrid({
               <button onClick={() => setShowMultiModal(false)} aria-label="Close"
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06] flex-shrink-0"
                 style={{ color: 'rgba(10,46,77,0.4)' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
-                </svg>
+                <X size={14} strokeWidth={1.8} />
               </button>
             </div>
 
@@ -1733,9 +1650,7 @@ export default function CalendarGrid({
                           <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                                 style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
                             {checked && (
-                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
+                              <Check size={10} strokeWidth={1.5} style={{ color: 'white' }} />
                             )}
                           </span>
                           <span className="w-2 h-2 rounded-full flex-shrink-0"
@@ -1805,7 +1720,7 @@ export default function CalendarGrid({
         <>
           <div
             className="fixed inset-0 z-40"
-            style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(2px)' }}
+            style={{ background: 'rgba(7,17,28,0.55)' }}
             onClick={() => setShowRangeModal(false)}
             aria-hidden="true"
           />
@@ -1841,9 +1756,7 @@ export default function CalendarGrid({
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06] flex-shrink-0"
                 style={{ color: 'rgba(10,46,77,0.4)' }}
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
-                </svg>
+                <X size={14} strokeWidth={1.8} />
               </button>
             </div>
 
@@ -1954,9 +1867,7 @@ export default function CalendarGrid({
                           <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                                 style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
                             {checked && (
-                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
+                              <Check size={10} strokeWidth={1.5} style={{ color: 'white' }} />
                             )}
                           </span>
                           <span className="w-2 h-2 rounded-full flex-shrink-0"
@@ -2046,7 +1957,7 @@ export default function CalendarGrid({
         <>
           <div
             className="fixed inset-0 z-40"
-            style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(2px)' }}
+            style={{ background: 'rgba(7,17,28,0.55)' }}
             onClick={() => setShowScheduleModal(false)}
             aria-hidden="true"
           />
@@ -2087,9 +1998,7 @@ export default function CalendarGrid({
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06] flex-shrink-0 ml-4"
                 style={{ color: 'rgba(10,46,77,0.4)' }}
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
-                </svg>
+                <X size={14} strokeWidth={1.8} />
               </button>
             </div>
 
@@ -2246,11 +2155,7 @@ export default function CalendarGrid({
                           }}
                         >
                           {/* Clock icon */}
-                          <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="#4F46E5" strokeWidth="1.4" className="flex-shrink-0">
-                            <circle cx="6" cy="6" r="5" />
-                            <line x1="6" y1="3" x2="6" y2="6" strokeLinecap="round" />
-                            <line x1="6" y1="6" x2="8.2" y2="7.8" strokeLinecap="round" />
-                          </svg>
+                          <Clock size={14} strokeWidth={1.4} className="flex-shrink-0" style={{ color: '#4F46E5' }} />
 
                           <div className="min-w-0 flex-1">
                             {s.label != null && s.label !== '' && (
@@ -2280,15 +2185,9 @@ export default function CalendarGrid({
                             }}
                           >
                             {isDeleting ? (
-                              <svg className="animate-spin" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
-                              </svg>
+                              <Loader2 className="animate-spin" size={10} strokeWidth={2} />
                             ) : (
-                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                <polyline points="3,3.5 9,3.5 8.5,10.5 3.5,10.5" />
-                                <line x1="1.5" y1="3.5" x2="10.5" y2="3.5" />
-                                <line x1="4.5" y1="1.5" x2="7.5" y2="1.5" strokeLinecap="round" />
-                              </svg>
+                              <Trash2 size={12} strokeWidth={1.5} />
                             )}
                           </button>
                         </div>
@@ -2340,7 +2239,7 @@ export default function CalendarGrid({
         <>
           <div
             className="fixed inset-0 z-40"
-            style={{ background: 'rgba(7,17,28,0.55)', backdropFilter: 'blur(2px)' }}
+            style={{ background: 'rgba(7,17,28,0.55)' }}
             onClick={() => setShowMonthModal(false)}
             aria-hidden="true"
           />
@@ -2373,9 +2272,7 @@ export default function CalendarGrid({
               <button onClick={() => setShowMonthModal(false)} aria-label="Close"
                 className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-[#0A2E4D]/[0.06] flex-shrink-0"
                 style={{ color: 'rgba(10,46,77,0.4)' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <line x1="2" y1="2" x2="12" y2="12" /><line x1="12" y1="2" x2="2" y2="12" />
-                </svg>
+                <X size={14} strokeWidth={1.8} />
               </button>
             </div>
 
@@ -2385,12 +2282,7 @@ export default function CalendarGrid({
               {/* Date badge — read-only */}
               <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl"
                    style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.18)' }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0">
-                  <rect x="1.5" y="2" width="11" height="10" rx="1.5" />
-                  <line x1="1.5" y1="6" x2="12.5" y2="6" />
-                  <line x1="4.5" y1="2" x2="4.5" y2="6" />
-                  <line x1="9.5" y1="2" x2="9.5" y2="6" />
-                </svg>
+                <Calendar size={14} strokeWidth={1.5} className="flex-shrink-0" style={{ color: '#E67E50' }} />
                 <p className="text-xs f-body font-semibold" style={{ color: '#C96030' }}>
                   {toDateStr(year, month, 1)} → {toDateStr(year, month, new Date(year, month, 0).getDate())}
                   <span className="font-normal ml-2" style={{ color: 'rgba(10,46,77,0.45)' }}>
@@ -2423,9 +2315,7 @@ export default function CalendarGrid({
                           <span className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                                 style={{ background: checked ? '#E67E50' : 'transparent', border: checked ? 'none' : '1.5px solid rgba(10,46,77,0.2)' }}>
                             {checked && (
-                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                                <path d="M2 5l2.5 2.5L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
+                              <Check size={10} strokeWidth={1.5} style={{ color: 'white' }} />
                             )}
                           </span>
                           <span className="w-2 h-2 rounded-full flex-shrink-0"

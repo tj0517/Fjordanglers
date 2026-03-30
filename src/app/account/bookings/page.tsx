@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
+import { Calendar, Clock, Euro, Compass } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,38 +98,21 @@ export default async function AnglerBookingsPage() {
       label: 'Total bookings',
       value: bookings.length.toString(),
       sub: 'all time',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <rect x="2" y="3" width="14" height="12" rx="2" />
-          <line x1="2" y1="7.5" x2="16" y2="7.5" />
-          <line x1="6" y1="1.5" x2="6" y2="5" />
-          <line x1="12" y1="1.5" x2="12" y2="5" />
-        </svg>
-      ),
+      icon: <Calendar width={18} height={18} strokeWidth={1.5} />,
       accent: '#1B4F72',
     },
     {
       label: 'Upcoming trips',
       value: upcoming.length.toString(),
       sub: upcoming.length > 0 ? 'confirmed or pending' : 'none scheduled',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="9" cy="9" r="7" />
-          <path d="M9 5v4l2.5 2.5" strokeLinecap="round" />
-        </svg>
-      ),
+      icon: <Clock width={18} height={18} strokeWidth={1.5} />,
       accent: '#E67E50',
     },
     {
       label: 'Total spent',
       value: `€${totalSpent.toLocaleString()}`,
       sub: 'confirmed bookings',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="9" cy="9" r="7" />
-          <path d="M9 5v1m0 6v1m2.5-5.5a2.5 2.5 0 10-5 0c0 1.5 1 2 2.5 2.5S12 11 12 12.5a2.5 2.5 0 01-5 0" strokeLinecap="round" />
-        </svg>
-      ),
+      icon: <Euro width={18} height={18} strokeWidth={1.5} />,
       accent: '#0A2E4D',
     },
   ]
@@ -157,10 +141,7 @@ export default async function AnglerBookingsPage() {
           className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
           style={{ background: '#E67E50' }}
         >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <circle cx="6.5" cy="6.5" r="5.5" />
-            <path d="M8.5 4.5L6.5 9 4.5 6.5 9 4.5z" fill="currentColor" stroke="none" />
-          </svg>
+          <Compass width={13} height={13} strokeWidth={1.5} />
           Browse Trips
         </Link>
       </div>
@@ -255,12 +236,7 @@ export default async function AnglerBookingsPage() {
                 className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
                 style={{ background: 'rgba(230,126,80,0.08)' }}
               >
-                <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#E67E50" strokeWidth="1.5">
-                  <rect x="3" y="4" width="16" height="14" rx="2" />
-                  <line x1="3" y1="9" x2="19" y2="9" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="14" y1="2" x2="14" y2="6" />
-                </svg>
+                <Calendar width={22} height={22} stroke="#E67E50" strokeWidth={1.5} />
               </div>
               <p className="text-[#0A2E4D]/30 text-sm f-body">No bookings yet.</p>
               <p className="text-[#0A2E4D]/22 text-xs mt-1 f-body">Your fishing adventures will appear here.</p>

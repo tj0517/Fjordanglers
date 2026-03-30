@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ExperienceForm from '@/components/trips/experience-form'
+import { UserPlus } from 'lucide-react'
 
 /**
  * /admin/guides/[id]/trips/new
@@ -56,12 +57,7 @@ export default async function AdminNewExperiencePage({
             className="w-8 h-8 rounded-xl flex items-center justify-center"
             style={{ background: 'rgba(230,126,80,0.12)', border: '1px solid rgba(230,126,80,0.2)' }}
           >
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#E67E50" strokeWidth="1.6">
-              <path d="M2 13C2 9.5 4.5 7 8 7s6 2.5 6 6" />
-              <circle cx="8" cy="4" r="2.5" />
-              <line x1="11.5" y1="1" x2="11.5" y2="5.5" />
-              <line x1="9.5" y1="3" x2="13.5" y2="3" />
-            </svg>
+            <UserPlus width={15} height={15} stroke="#E67E50" strokeWidth={1.6} />
           </div>
           <p className="text-[11px] uppercase tracking-[0.22em] f-body font-semibold" style={{ color: '#E67E50' }}>
             Admin · Creating for guide

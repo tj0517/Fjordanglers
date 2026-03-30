@@ -5,6 +5,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/actions/auth'
+import {
+  LayoutGrid, Compass, Calendar, FileText, TrendingUp,
+  User, Settings, ArrowLeft, LogOut, MessageSquare, BedDouble,
+} from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,112 +26,18 @@ type SidebarGuide = {
 
 const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
 
-// ─── SVG icons ────────────────────────────────────────────────────────────────
-
-const IconOverview = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
-    <rect x="1" y="1" width="5.5" height="5.5" rx="1" />
-    <rect x="8.5" y="1" width="5.5" height="5.5" rx="1" />
-    <rect x="1" y="8.5" width="5.5" height="5.5" rx="1" />
-    <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" />
-  </svg>
-)
-
-const IconCompass = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <circle cx="7.5" cy="7.5" r="6" />
-    <path d="M9.5 5.5L7.5 10 5.5 7.5 10 5.5z" fill="currentColor" stroke="none" />
-  </svg>
-)
-
-
-const IconCalendar = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" />
-    <line x1="1.5" y1="6" x2="13.5" y2="6" />
-    <line x1="4.5" y1="1" x2="4.5" y2="4" />
-    <line x1="10.5" y1="1" x2="10.5" y2="4" />
-  </svg>
-)
-
-const IconBookings = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <rect x="1.5" y="2" width="12" height="11" rx="1.5" />
-    <line x1="4.5" y1="5.5" x2="10.5" y2="5.5" />
-    <line x1="4.5" y1="8"   x2="10.5" y2="8"   />
-    <line x1="4.5" y1="10.5" x2="8"  y2="10.5" />
-  </svg>
-)
-
-const IconTrending = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <polyline points="1,11 4.5,7 7.5,9 13,3.5" />
-    <polyline points="9.5,3.5 13,3.5 13,7" />
-  </svg>
-)
-
-const IconUser = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <circle cx="7.5" cy="5" r="2.5" />
-    <path d="M2 13.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" />
-  </svg>
-)
-
-const IconAccount = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <circle cx="7.5" cy="7.5" r="5.5" />
-    <circle cx="7.5" cy="7.5" r="1.8" fill="currentColor" stroke="none" />
-    <line x1="7.5" y1="2" x2="7.5" y2="4.5" strokeLinecap="round" />
-    <line x1="7.5" y1="10.5" x2="7.5" y2="13" strokeLinecap="round" />
-    <line x1="2" y1="7.5" x2="4.5" y2="7.5" strokeLinecap="round" />
-    <line x1="10.5" y1="7.5" x2="13" y2="7.5" strokeLinecap="round" />
-  </svg>
-)
-
-const IconArrowLeft = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <polyline points="7,2 3,6 7,10" />
-    <line x1="3" y1="6" x2="11" y2="6" />
-  </svg>
-)
-
-const IconLogout = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h3" />
-    <polyline points="9,9 12,6.5 9,4" />
-    <line x1="5" y1="6.5" x2="12" y2="6.5" />
-  </svg>
-)
-
-const IconInquiries = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M1.5 2.5h12a1 1 0 011 1v7a1 1 0 01-1 1H4l-3 2.5V3.5a1 1 0 011-1z" />
-  </svg>
-)
-
-const IconBed = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M1 10.5V7a2 2 0 012-2h9a2 2 0 012 2v3.5" />
-    <line x1="1" y1="10.5" x2="14" y2="10.5" />
-    <line x1="1" y1="13" x2="1" y2="10.5" />
-    <line x1="14" y1="13" x2="14" y2="10.5" />
-    <rect x="4.5" y="6" width="3" height="2" rx="0.5" />
-  </svg>
-)
-
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'Home',           href: '/dashboard',                 icon: <IconOverview />,  exact: true,  soon: false },
-  { label: 'Trips',          href: '/dashboard/trips',           icon: <IconCompass />,   exact: false, soon: false },
-  { label: 'Bookings',       href: '/dashboard/bookings',        icon: <IconBookings />,  exact: false, soon: false },
-  { label: 'Inquiries',      href: '/dashboard/inquiries',       icon: <IconInquiries />, exact: false, soon: false },
-  { label: 'Calendar',       href: '/dashboard/calendar',        icon: <IconCalendar />,  exact: false, soon: false },
-  { label: 'Earnings',       href: '/dashboard/earnings',        icon: <IconTrending />,  exact: false, soon: false },
-  { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <IconBed />,       exact: false, soon: false },
+  { label: 'Home',           href: '/dashboard',                 icon: <LayoutGrid   size={15} strokeWidth={1.5} />, exact: true,  soon: false },
+  { label: 'Trips',          href: '/dashboard/trips',           icon: <Compass      size={15} strokeWidth={1.5} />, exact: false, soon: false },
+  { label: 'Bookings',       href: '/dashboard/bookings',        icon: <FileText     size={15} strokeWidth={1.5} />, exact: false, soon: false },
+  { label: 'Calendar',       href: '/dashboard/calendar',        icon: <Calendar     size={15} strokeWidth={1.5} />, exact: false, soon: false },
+  { label: 'Earnings',       href: '/dashboard/earnings',        icon: <TrendingUp   size={15} strokeWidth={1.5} />, exact: false, soon: false },
+  { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <BedDouble    size={15} strokeWidth={1.5} />, exact: false, soon: false },
   // ─── Guide identity ─────────────────────────────────────────────────────────
-  { label: 'Profile',        href: '/dashboard/profile',         icon: <IconUser />,      exact: false, soon: false },
-  { label: 'Account',        href: '/dashboard/account',         icon: <IconAccount />,   exact: false, soon: false },
+  { label: 'Profile',        href: '/dashboard/profile',         icon: <User         size={15} strokeWidth={1.5} />, exact: false, soon: false },
+  { label: 'Account',        href: '/dashboard/account',         icon: <Settings     size={15} strokeWidth={1.5} />, exact: false, soon: false },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -393,7 +303,7 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.06] mb-0.5"
               style={{ color: 'rgba(255,255,255,0.35)', cursor: 'pointer', border: 'none', background: 'transparent' }}
             >
-              <IconLogout />
+              <LogOut size={13} strokeWidth={1.5} />
               Sign out
             </button>
           </form>
@@ -403,7 +313,7 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.04]"
             style={{ color: 'rgba(255,255,255,0.28)' }}
           >
-            <IconArrowLeft />
+            <ArrowLeft size={12} strokeWidth={1.5} />
             Back to site
           </Link>
         </div>

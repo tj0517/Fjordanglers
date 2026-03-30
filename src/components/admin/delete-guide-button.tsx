@@ -13,6 +13,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteGuide } from '@/actions/admin'
+import { Trash2, AlertTriangle } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,23 +26,9 @@ type Props = {
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
-const IconTrash = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <polyline points="1.5,3 11.5,3" />
-    <path d="M4.5 3V2a1 1 0 011-1h2a1 1 0 011 1v1" />
-    <path d="M2.5 3l.6 8a1 1 0 001 .9h4.8a1 1 0 001-.9l.6-8" />
-    <line x1="5" y1="6" x2="5" y2="9.5" />
-    <line x1="8" y1="6" x2="8" y2="9.5" />
-  </svg>
-)
+const IconTrash = () => <Trash2 size={13} strokeWidth={1.5} />
 
-const IconWarning = () => (
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#DC2626" strokeWidth="1.6">
-    <path d="M10 2.5L1 19h18L10 2.5z" />
-    <line x1="10" y1="9" x2="10" y2="13.5" />
-    <circle cx="10" cy="16" r="0.7" fill="#DC2626" />
-  </svg>
-)
+const IconWarning = () => <AlertTriangle size={22} strokeWidth={1.6} style={{ color: '#DC2626' }} />
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

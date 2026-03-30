@@ -11,6 +11,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import {
   createCalendar,
   updateCalendar,
@@ -168,10 +169,7 @@ export default function CalendarsPanel({
           title="New calendar"
           aria-label="Create new calendar"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <line x1="6" y1="1" x2="6" y2="11" />
-            <line x1="1" y1="6" x2="11" y2="6" />
-          </svg>
+          <Plus size={12} strokeWidth={1.8} />
         </button>
       </div>
 
@@ -276,9 +274,7 @@ export default function CalendarsPanel({
                       title="Assign listings to this calendar"
                       aria-label={`Edit ${cal.name}`}
                     >
-                      <svg width="12" height="12" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M7.5 1.5l2 2L3 10H1V8L7.5 1.5z"/>
-                      </svg>
+                      <Pencil size={12} strokeWidth={1.6} />
                     </button>
                     <button
                       onClick={() => setMode({ type: 'confirming-delete', calendarId: cal.id, calendarName: cal.name })}
@@ -287,13 +283,7 @@ export default function CalendarsPanel({
                       title="Delete calendar"
                       aria-label={`Delete ${cal.name}`}
                     >
-                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                        <polyline points="1,3 10,3"/>
-                        <path d="M3,3V9.5a.5.5 0 00.5.5h4a.5.5 0 00.5-.5V3"/>
-                        <line x1="4" y1="5" x2="4" y2="8"/>
-                        <line x1="7" y1="5" x2="7" y2="8"/>
-                        <path d="M4,3V2a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1"/>
-                      </svg>
+                      <Trash2 size={11} strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
@@ -472,10 +462,7 @@ export default function CalendarsPanel({
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,46,77,0.03)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
           >
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-              <line x1="5.5" y1="1" x2="5.5" y2="10" />
-              <line x1="1" y1="5.5" x2="10" y2="5.5" />
-            </svg>
+            <Plus size={11} strokeWidth={1.6} />
             Create your first calendar
           </button>
         )}

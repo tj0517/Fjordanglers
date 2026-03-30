@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { Check, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
@@ -108,11 +109,7 @@ function MultiDropdown({
                   border: sel ? 'none' : '1.5px solid rgba(255,255,255,0.25)',
                   background: sel ? '#E67E50' : 'transparent',
                 }}>
-                  {sel && (
-                    <svg width="11" height="8" viewBox="0 0 11 8" fill="none">
-                      <path d="M1 4L4 7L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
+                  {sel && <Check size={11} strokeWidth={1.8} style={{ color: 'white' }} />}
                 </span>
                 {renderItem ? renderItem(o) : (
                   <span className="text-[14px] font-medium f-body">{o.label}</span>
@@ -223,9 +220,7 @@ function CalendarDropdown({
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
+              <ChevronLeft size={13} strokeWidth={2.2} />
             </button>
             <span className="text-[14px] font-semibold f-body" style={{ color: 'white' }}>
               {MONTHS[viewM]} {viewY}
@@ -236,9 +231,7 @@ function CalendarDropdown({
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
+              <ChevronRight size={13} strokeWidth={2.2} />
             </button>
           </div>
 
@@ -387,10 +380,7 @@ export function SearchBar() {
             style={{ background: '#E67E50', width: '40px', height: '40px' }}
             aria-label="Search"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <circle cx="11" cy="11" r="8" stroke="white" strokeWidth="2.5" />
-              <path d="M21 21l-4.35-4.35" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
+            <Search size={16} strokeWidth={2.5} style={{ color: 'white' }} />
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { Command } from 'cmdk'
 import type { LocationEntry } from '@/lib/supabase/queries'
 import { COUNTRIES, getCountryFlag } from '@/lib/countries'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
@@ -179,9 +180,7 @@ function CalendarDropdown({
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
+              <ChevronLeft size={13} strokeWidth={2.2} />
             </button>
             <span className="text-[14px] font-semibold f-body" style={{ color: 'white' }}>
               {MONTHS_LONG[viewM]} {viewY}
@@ -192,9 +191,7 @@ function CalendarDropdown({
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)' }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '' }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-                <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
+              <ChevronRight size={13} strokeWidth={2.2} />
             </button>
           </div>
 

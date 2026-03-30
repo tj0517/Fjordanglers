@@ -11,6 +11,7 @@ import { useState, useTransition } from 'react'
 import { updateAcceptedPaymentMethods } from '@/actions/bookings'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
+import { Banknote, CreditCard, Check } from 'lucide-react'
 
 type Method = 'cash' | 'online'
 
@@ -23,25 +24,13 @@ const OPTIONS: { value: Method; label: string; description: string; icon: React.
     value: 'cash',
     label: 'Cash',
     description: 'Collected in person on the day of the trip.',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="6" width="20" height="12" rx="2" />
-        <circle cx="12" cy="12" r="3" />
-        <path d="M6 12h.01M18 12h.01" />
-      </svg>
-    ),
+    icon: <Banknote size={18} strokeWidth={1.6} />,
   },
   {
     value: 'online',
     label: 'Online payment',
     description: 'Secure card payment via Stripe before the trip.',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="5" width="20" height="14" rx="2" />
-        <path d="M2 10h20" />
-        <path d="M6 15h4" />
-      </svg>
-    ),
+    icon: <CreditCard size={18} strokeWidth={1.6} />,
   },
 ]
 
@@ -134,11 +123,7 @@ export function AcceptedPaymentMethodsForm({ current }: Props) {
                   background:   isActive ? '#0A2E4D' : 'transparent',
                 }}
               >
-                {isActive && (
-                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
-                    <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
+                {isActive && <Check size={9} strokeWidth={1.8} style={{ color: 'white' }} />}
               </div>
 
               {/* Icon */}

@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { linkGuideAccount } from '@/actions/admin'
+import { Check, Link2, Loader2 } from 'lucide-react'
 
 type Props = {
   guideId: string
@@ -54,9 +55,7 @@ export default function LinkGuidePanel({ guideId }: Props) {
         className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full f-body"
         style={{ background: 'rgba(74,222,128,0.12)', color: '#16A34A' }}
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.2">
-          <polyline points="2,6.5 4.5,9 10,3" />
-        </svg>
+        <Check size={12} strokeWidth={2.2} />
         Account linked
       </div>
     )
@@ -73,10 +72,7 @@ export default function LinkGuidePanel({ guideId }: Props) {
           style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
         >
           {/* Chain link icon */}
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <path d="M4.5 7.5a3 3 0 004.2 0l1.3-1.3a3 3 0 00-4.2-4.2L5 2.8" strokeLinecap="round" />
-            <path d="M7.5 4.5a3 3 0 00-4.2 0L2 5.8a3 3 0 004.2 4.2L7 9.2" strokeLinecap="round" />
-          </svg>
+          <Link2 size={12} strokeWidth={1.6} />
           Link account
         </button>
       ) : (
@@ -110,10 +106,7 @@ export default function LinkGuidePanel({ guideId }: Props) {
           >
             {isPending ? (
               <>
-                <svg className="animate-spin" width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="5.5" cy="5.5" r="4" strokeOpacity="0.3" />
-                  <path d="M5.5 1.5a4 4 0 014 4" strokeLinecap="round" />
-                </svg>
+                <Loader2 className="animate-spin" size={11} strokeWidth={2} />
                 Linking…
               </>
             ) : 'Link'}

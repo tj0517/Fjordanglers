@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 
 interface TripDetailNavProps {
   backHref?: string
@@ -43,15 +44,7 @@ export function TripDetailNav({ backHref = '/trips' }: TripDetailNavProps) {
           transition: 'color 0.3s ease',
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M19 12H5M5 12l7 7M5 12l7-7"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+        <ArrowLeft size={16} strokeWidth={2.2} />
         Back
       </Link>
 

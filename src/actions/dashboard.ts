@@ -7,7 +7,7 @@
  * updateGuideProfile → called from /dashboard/profile/edit
  */
 
-import { revalidateTag } from 'next/cache'
+import { revalidateTag, revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 import type { CancellationPolicy, BoatType } from '@/types'
@@ -130,6 +130,48 @@ export async function createGuideProfile(
     return { success: true, data: { id: guide.id } }
   } catch (err) {
     console.error('[createGuideProfile] Unexpected:', err)
+    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+  }
+}
+
+// ─── Accept guide terms ───────────────────────────────────────────────────────
+
+/**
+ * Called from the TermsGate modal when the guide accepts Terms of Use + Privacy Policy.
+ * Stamps `terms_accepted_at` with the current UTC time and saves marketing consent.
+ */
+export async function acceptGuideTerms({
+  marketingConsent,
+}: {
+  marketingConsent: boolean
+}): Promise<ActionResult> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (user == null) {
+      return { success: false, error: 'Not authenticated.', code: 'UNAUTHORIZED' }
+    }
+
+    const { error } = await supabase
+      .from('guides')
+      .update({
+        terms_accepted_at:      new Date().toISOString(),
+        photo_marketing_consent: marketingConsent,
+      })
+      .eq('user_id', user.id)
+
+    if (error != null) {
+      console.error('[acceptGuideTerms]', error.message)
+      return { success: false, error: error.message }
+    }
+
+    // Force the dashboard layout to re-fetch fresh guide data on next navigation
+    revalidatePath('/dashboard', 'layout')
+
+    return { success: true }
+  } catch (err) {
+    console.error('[acceptGuideTerms] Unexpected:', err)
     return { success: false, error: 'An unexpected error occurred. Please try again.' }
   }
 }

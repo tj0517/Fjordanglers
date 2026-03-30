@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { adminSetGuideStatus, adminSyncStripeStatus } from '@/actions/admin'
+import { Check, Minus, RefreshCw } from 'lucide-react'
 
 type GuideStatus = 'active' | 'pending' | 'suspended' | 'verified'
 
@@ -77,9 +78,7 @@ export function AdminGuideActions({
               className="f-body"
               style={{ ...btnBase, background: 'rgba(74,222,128,0.12)', color: '#16A34A' }}
             >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <polyline points="1.5,5.5 4,8 9.5,2.5" />
-              </svg>
+              <Check width={11} height={11} strokeWidth={1.8} />
               Accept account
             </button>
           )}
@@ -91,10 +90,7 @@ export function AdminGuideActions({
               className="f-body"
               style={{ ...btnBase, background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
             >
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                <circle cx="5.5" cy="5.5" r="4.5" />
-                <line x1="3.5" y1="5.5" x2="7.5" y2="5.5" />
-              </svg>
+              <Minus width={11} height={11} strokeWidth={1.8} />
               Suspend
             </button>
           )}
@@ -162,10 +158,7 @@ export function AdminGuideActions({
                 </>
               ) : (
                 <>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M23 4v6h-6" /><path d="M1 20v-6h6" />
-                    <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-                  </svg>
+                  <RefreshCw width={11} height={11} strokeWidth={2} />
                   Sync from Stripe
                 </>
               )}

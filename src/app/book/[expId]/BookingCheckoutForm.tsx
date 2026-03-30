@@ -8,6 +8,7 @@ import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { COUNTRIES } from '@/lib/countries'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
 import { HelpWidget } from '@/components/ui/help-widget'
+import { Check, Loader2 } from 'lucide-react'
 
 type Props = {
   expId: string
@@ -354,9 +355,7 @@ export default function BookingCheckoutForm({
             }}
           >
             {marketingConsent && (
-              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <Check width={10} height={8} stroke="white" strokeWidth={2} />
             )}
           </span>
         </span>
@@ -385,15 +384,7 @@ export default function BookingCheckoutForm({
             }}
           >
             {termsAccepted && (
-              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                <path
-                  d="M1 4l2.5 2.5L9 1"
-                  stroke="white"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Check width={10} height={8} stroke="white" strokeWidth={2} />
             )}
           </span>
         </span>
@@ -429,18 +420,7 @@ export default function BookingCheckoutForm({
       >
         {isPending ? (
           <>
-            <svg
-              className="animate-spin"
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="8" cy="8" r="6" strokeOpacity="0.25" />
-              <path d="M8 2a6 6 0 016 6" strokeLinecap="round" />
-            </svg>
+            <Loader2 width={16} height={16} className="animate-spin" />
             Sending request…
           </>
         ) : (

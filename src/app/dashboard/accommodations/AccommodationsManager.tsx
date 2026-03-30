@@ -12,6 +12,7 @@ import type { GuideAccommodationRow } from './page'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
+import { Loader2, Plus, ExternalLink, Pencil, Trash2 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -86,15 +87,10 @@ function ImageStrip({
         aria-label="Add photo"
       >
         {isUploading ? (
-          <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="5" stroke="rgba(10,46,77,0.15)" strokeWidth="2" />
-            <path d="M7 2 A5 5 0 0 1 12 7" stroke="#E67E50" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <Loader2 className="animate-spin" size={14} strokeWidth={2} />
         ) : (
           <>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <line x1="7" y1="1" x2="7" y2="13" /><line x1="1" y1="7" x2="13" y2="7" />
-            </svg>
+            <Plus size={14} strokeWidth={1.8} />
             <span className="text-[8px] font-semibold f-body leading-none">Photo</span>
           </>
         )}
@@ -458,9 +454,7 @@ export default function AccommodationsManager({
             border: '1.5px dashed rgba(230,126,80,0.3)',
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <line x1="7" y1="1" x2="7" y2="13" /><line x1="1" y1="7" x2="13" y2="7" />
-          </svg>
+          <Plus size={14} strokeWidth={1.8} />
           Add accommodation
         </button>
       )}
@@ -533,9 +527,7 @@ export default function AccommodationsManager({
                       className="inline-flex items-center gap-1 text-[10px] f-body mt-0.5 underline underline-offset-2"
                       style={{ color: '#E67E50' }}
                     >
-                      <svg width="9" height="9" viewBox="0 0 9 9" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3.5 1.5H1.5v6h6V5.5" /><path d="M5 1.5h2.5V4" /><line x1="4" y1="5" x2="7.5" y2="1.5" />
-                      </svg>
+                      <ExternalLink size={9} strokeWidth={1.4} />
                       View listing
                     </a>
                   )}
@@ -558,9 +550,7 @@ export default function AccommodationsManager({
                     style={{ color: 'rgba(10,46,77,0.45)' }}
                     aria-label="Edit"
                   >
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9.5 1.5l2 2L4 11H2v-2L9.5 1.5z" />
-                    </svg>
+                    <Pencil size={13} strokeWidth={1.4} />
                   </button>
                   <button
                     type="button"
@@ -570,9 +560,7 @@ export default function AccommodationsManager({
                     style={{ color: 'rgba(220,38,38,0.55)' }}
                     aria-label="Delete"
                   >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-                      <path d="M2 3h8M5 3V2h2v1M10 3l-.8 7.5H2.8L2 3" />
-                    </svg>
+                    <Trash2 size={12} strokeWidth={1.4} />
                   </button>
                 </div>
               </div>

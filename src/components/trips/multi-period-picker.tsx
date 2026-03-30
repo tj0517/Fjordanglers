@@ -18,8 +18,11 @@ import type { AvailConfigRow } from '@/components/trips/booking-widget'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-/** A single selected period — single day has from === to. */
-export type Period = { from: string; to: string }
+// Re-export shared utilities so existing client imports keep working.
+export type { Period } from '@/lib/periods'
+export { encodePeriodsParam, decodePeriodsParam, periodTotalDays } from '@/lib/periods'
+import type { Period } from '@/lib/periods'
+import { periodTotalDays } from '@/lib/periods'
 
 /** Blocked date range from guide's calendar. */
 export type BlockedRange = { date_start: string; date_end: string }
@@ -46,36 +49,7 @@ export type InquiryPeriodEventDetail = {
   source: 'preview' | 'widget'
 }
 
-/** Encode periods array to URL param: "2026-04-01..2026-04-05,2026-04-08" */
-export function encodePeriodsParam(periods: Period[]): string {
-  return periods
-    .map(p => (p.from === p.to ? p.from : `${p.from}..${p.to}`))
-    .join(',')
-}
-
-/** Decode URL param back to periods array. */
-export function decodePeriodsParam(str: string): Period[] {
-  return str
-    .split(',')
-    .filter(Boolean)
-    .map(s => {
-      const parts = s.split('..')
-      const from  = parts[0]?.trim() ?? ''
-      const to    = parts[1]?.trim() ?? from
-      return { from, to }
-    })
-    .filter(p => /^\d{4}-\d{2}-\d{2}$/.test(p.from) && /^\d{4}-\d{2}-\d{2}$/.test(p.to))
-}
-
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-
-export function periodTotalDays(periods: Period[]): number {
-  return periods.reduce((sum, p) => {
-    return sum + Math.round(
-      (new Date(p.to + 'T00:00:00').getTime() - new Date(p.from + 'T00:00:00').getTime()) / 86_400_000
-    ) + 1
-  }, 0)
-}
 
 export function fmtPeriod(p: Period): string {
   const fmt = (d: string) =>

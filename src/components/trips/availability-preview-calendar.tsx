@@ -12,6 +12,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { AvailConfigRow } from './booking-widget'
 import {
   MultiPeriodPicker,
@@ -230,9 +231,7 @@ export function AvailabilityPreviewCalendar({
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(10,46,77,0.07)' }}
                 >
-                  <svg width="6" height="10" viewBox="0 0 6 10" fill="none">
-                    <path d="M5 1L1 5l4 4" stroke="#0A2E4D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <ChevronLeft size={6} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
                 </button>
 
                 <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
@@ -247,9 +246,7 @@ export function AvailabilityPreviewCalendar({
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(10,46,77,0.07)' }}
                 >
-                  <svg width="6" height="10" viewBox="0 0 6 10" fill="none">
-                    <path d="M1 1l4 4-4 4" stroke="#0A2E4D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  <ChevronRight size={6} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
                 </button>
               </div>
 

@@ -20,6 +20,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import ImageUpload from '@/components/admin/image-upload'
+import { Info, Check, Loader2 } from 'lucide-react'
 import { ImageCropModal } from '@/components/ui/image-crop'
 import { createClient } from '@/lib/supabase/client'
 import { updateGuideProfile } from '@/actions/dashboard'
@@ -306,11 +307,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
           className="flex items-start gap-3 px-5 py-4 rounded-2xl mb-5 text-sm f-body"
           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', color: '#DC2626' }}
         >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4" className="flex-shrink-0 mt-0.5">
-            <circle cx="7.5" cy="7.5" r="6" />
-            <line x1="7.5" y1="4.5" x2="7.5" y2="8" />
-            <circle cx="7.5" cy="10.5" r="0.5" fill="currentColor" />
-          </svg>
+          <Info size={15} strokeWidth={1.4} className="flex-shrink-0 mt-0.5" />
           {error}
         </div>
       )}
@@ -321,9 +318,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
           className="flex items-center gap-3 px-5 py-4 rounded-2xl mb-5 text-sm f-body"
           style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', color: '#16A34A' }}
         >
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <polyline points="13,4 6,11 2,7" />
-          </svg>
+          <Check size={15} strokeWidth={1.8} />
           Changes saved successfully.
         </div>
       )}
@@ -374,10 +369,9 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
                   <Image src={url} alt="" fill className="object-cover" />
                   {selected && (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.25)' }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
-                        <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.9)' }}>
+                        <Check size={12} strokeWidth={2.5} style={{ color: 'white' }} />
+                      </div>
                     </div>
                   )}
                   {!selected && (
@@ -959,10 +953,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         >
           {isPending ? (
             <>
-              <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="7" cy="7" r="5" strokeOpacity="0.25" />
-                <path d="M7 2a5 5 0 015 5" strokeLinecap="round" />
-              </svg>
+              <Loader2 className="animate-spin" size={14} strokeWidth={2} />
               Saving…
             </>
           ) : (

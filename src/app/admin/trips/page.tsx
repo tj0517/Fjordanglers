@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import DeleteExperienceButton from '@/components/admin/delete-experience-button'
+import { Calendar, CheckCircle, AlertCircle, Euro } from 'lucide-react'
 
 /**
  * /admin/experiences — Platform-wide experience management.
@@ -92,51 +93,28 @@ export default async function AdminExperiencesPage({
       value: allExps.length.toString(),
       sub: 'all trips',
       accent: '#0A2E4D',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <rect x="2" y="3" width="14" height="12" rx="2" />
-          <line x1="2" y1="7" x2="16" y2="7" />
-          <line x1="6" y1="3" x2="6" y2="7" />
-          <line x1="12" y1="3" x2="12" y2="7" />
-        </svg>
-      ),
+      icon: <Calendar width={18} height={18} />,
     },
     {
       label: 'Live',
       value: liveCount.toString(),
       sub: 'visible to anglers',
       accent: '#16A34A',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="9" cy="9" r="7" />
-          <polyline points="5.5,9 8,11.5 12.5,6.5" />
-        </svg>
-      ),
+      icon: <CheckCircle width={18} height={18} />,
     },
     {
       label: 'Draft',
       value: draftCount.toString(),
       sub: 'not yet published',
       accent: '#D97706',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="9" cy="9" r="7" />
-          <line x1="9" y1="5" x2="9" y2="10" />
-          <circle cx="9" cy="12.5" r="0.8" fill="currentColor" />
-        </svg>
-      ),
+      icon: <AlertCircle width={18} height={18} />,
     },
     {
       label: 'Avg. price',
       value: `€${avgPrice}`,
       sub: `max €${maxPrice} / person`,
       accent: '#E67E50',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="9" cy="9" r="7" />
-          <path d="M11.5 6.5a3 3 0 100 5M6 9h5" />
-        </svg>
-      ),
+      icon: <Euro width={18} height={18} />,
     },
   ]
 
@@ -266,12 +244,7 @@ export default async function AdminExperiencesPage({
               className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
               style={{ background: 'rgba(10,46,77,0.05)' }}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.25)" strokeWidth="1.5">
-                <rect x="3" y="4" width="18" height="16" rx="2" />
-                <line x1="3" y1="9" x2="21" y2="9" />
-                <line x1="8" y1="4" x2="8" y2="9" />
-                <line x1="16" y1="4" x2="16" y2="9" />
-              </svg>
+              <Calendar width={24} height={24} stroke="rgba(10,46,77,0.25)" strokeWidth={1.5} />
             </div>
             <p className="text-[#0A2E4D]/30 text-sm f-body">
               No {currentFilter === 'live' ? 'live' : currentFilter === 'draft' ? 'draft' : ''} trips yet.

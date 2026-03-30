@@ -6,6 +6,7 @@
  * createBookingCheckout — creates a DB row + Stripe Checkout session (30% deposit)
  * acceptBooking         — guide accepts a pending booking
  * declineBooking        — guide declines a pending booking
+ * updateGuideIban       — guide saves IBAN for manual payment model
  */
 
 import { z } from 'zod'
@@ -13,6 +14,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
+import { getPaymentModel } from '@/lib/payment-model'
 
 // ─── Input schema ─────────────────────────────────────────────────────────────
 
@@ -79,7 +81,7 @@ export async function createBookingCheckout(
   const { data: experience } = await supabase
     .from('experiences')
     .select(
-      'id, title, price_per_person_eur, max_guests, guide_id, guides(id, full_name, stripe_account_id, pricing_model, commission_rate)',
+      'id, title, price_per_person_eur, max_guests, guide_id, guides(id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, pricing_model, commission_rate)',
     )
     .eq('id', experienceId)
     .eq('published', true)
@@ -91,6 +93,8 @@ export async function createBookingCheckout(
     id: string
     full_name: string
     stripe_account_id: string | null
+    stripe_charges_enabled: boolean | null
+    stripe_payouts_enabled: boolean | null
     pricing_model: string
     commission_rate: number
   } | null
@@ -103,6 +107,13 @@ export async function createBookingCheckout(
     return { error: `Maximum ${maxGuests} guests allowed for this experience.` }
   }
 
+  // ── Derive payment model ───────────────────────────────────────────────────
+  const paymentModel = getPaymentModel({
+    stripe_account_id:       guideRaw.stripe_account_id,
+    stripe_charges_enabled:  guideRaw.stripe_charges_enabled,
+    stripe_payouts_enabled:  guideRaw.stripe_payouts_enabled,
+  })
+
   // ── Calculate pricing ─────────────────────────────────────────────────────
   const pricePerPerson = experience.price_per_person_eur ?? 0
   const subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
@@ -111,7 +122,11 @@ export async function createBookingCheckout(
   const commissionRate = guideRaw.commission_rate ?? env.PLATFORM_COMMISSION_RATE
   const platformFeeEur = Math.round(subtotal * commissionRate * 100) / 100
   const guidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
-  const depositEur = Math.round(totalEur * 0.3 * 100) / 100 // 30% deposit now
+  // manual: angler pays only platform fee via Stripe, pays guide directly
+  // stripe_connect: angler pays 30% deposit via Stripe (balance due before trip)
+  const depositEur = paymentModel === 'manual'
+    ? Math.round((platformFeeEur + serviceFee) * 100) / 100
+    : Math.round(totalEur * 0.3 * 100) / 100
 
   // ── Insert booking row ────────────────────────────────────────────────────
   const serviceClient = createServiceClient()
@@ -227,6 +242,7 @@ export async function acceptBooking(
     confirmedDateFrom?: string     // legacy / booking-actions fallback
     confirmedDateTo?:   string
     guideNote?:         string
+    customTotalEur?:    number     // guide-set total override (angler-facing, incl. service fee)
   },
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -237,16 +253,23 @@ export async function acceptBooking(
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, stripe_account_id, stripe_payouts_enabled, default_balance_payment_method')
+    .select('id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, default_balance_payment_method')
     .eq('user_id', user.id)
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
+
+  // Derive payment model from guide's current Stripe status
+  const guidePaymentModel = getPaymentModel({
+    stripe_account_id:       guide.stripe_account_id,
+    stripe_charges_enabled:  guide.stripe_charges_enabled,
+    stripe_payouts_enabled:  guide.stripe_payouts_enabled,
+  })
 
   const serviceClient = createServiceClient()
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id, total_eur, guide_payout_eur, angler_email, stripe_checkout_id, guests, commission_rate, experiences(title, price_per_person_eur)')
+    .select('id, status, guide_id, total_eur, platform_fee_eur, guide_payout_eur, angler_email, stripe_checkout_id, guests, commission_rate, experiences(title, price_per_person_eur)')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
@@ -256,13 +279,26 @@ export async function acceptBooking(
     return { error: 'Only pending bookings can be accepted.' }
   }
 
-  // ── Recalculate pricing if guide confirmed specific days ──────────────────
+  // ── Recalculate pricing if guide confirmed specific days or set custom total ─
   const confirmedDays = options?.confirmedDays
   let effectiveTotalEur       = booking.total_eur
   let effectiveGuidePayoutEur = booking.guide_payout_eur
   let pricingUpdate: Partial<{ total_eur: number; guide_payout_eur: number; deposit_eur: number; platform_fee_eur: number }> = {}
 
-  if (confirmedDays && confirmedDays.length > 0) {
+  if (options?.customTotalEur != null && options.customTotalEur > 0) {
+    // Guide manually set the total — back-calculate payout/fee (total includes 5% service fee)
+    effectiveTotalEur       = Math.round(options.customTotalEur * 100) / 100
+    const subtotal          = effectiveTotalEur / 1.05
+    const platformFeeEur    = Math.round(subtotal * booking.commission_rate * 100) / 100
+    effectiveGuidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
+    const depositEur        = Math.round(effectiveTotalEur * 0.3 * 100) / 100
+    pricingUpdate = {
+      total_eur:        effectiveTotalEur,
+      guide_payout_eur: effectiveGuidePayoutEur,
+      deposit_eur:      depositEur,
+      platform_fee_eur: platformFeeEur,
+    }
+  } else if (confirmedDays && confirmedDays.length > 0) {
     const exp = booking.experiences as unknown as { title: string; price_per_person_eur: number | null } | null
     const pricePerPerson = exp?.price_per_person_eur
     if (pricePerPerson != null && booking.guests > 0) {
@@ -282,15 +318,41 @@ export async function acceptBooking(
     }
   }
 
-  // ── Stripe Checkout (destination charge) ─────────────────────────────────
+  // ── Stripe Checkout ────────────────────────────────────────────────────────
+  //
+  // manual model:
+  //   Charge = platformFeeEur + serviceFeeEur (platform's full cut in one go)
+  //   Angler pays guide directly (cash / IBAN) for the remainder
+  //
+  // stripe_connect model:
+  //   Charge = 30% deposit of (tripTotal + serviceFee)
+  //   Remaining 70% collected before the trip
+
   let stripeCheckoutId: string | null = null
 
-  // Always create a deposit checkout — money collected on platform, guide paid manually by admin.
   if (!booking.stripe_checkout_id) {
     try {
-      const depositCents    = Math.round(effectiveTotalEur * 0.3 * 100)
       const experienceTitle =
         (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+
+      let chargeCents: number
+      let lineItemName: string
+      let lineItemDesc: string
+
+      if (guidePaymentModel === 'manual') {
+        // manual: charge platform fee + service fee only
+        const serviceFeeEur = Math.round((effectiveTotalEur - effectiveTotalEur / 1.05) * 100) / 100
+        const platformFeeEur = booking.platform_fee_eur ?? 0
+        const payNowEur = Math.round((platformFeeEur + serviceFeeEur) * 100) / 100
+        chargeCents   = Math.round(payNowEur * 100)
+        lineItemName  = `${experienceTitle} — Platform fee`
+        lineItemDesc  = 'Platform & service fee to confirm your booking. You\'ll pay the guide\'s fee directly (cash or bank transfer).'
+      } else {
+        // stripe_connect: 30% deposit
+        chargeCents   = Math.round(effectiveTotalEur * 0.3 * 100)
+        lineItemName  = `${experienceTitle} — 30% Deposit`
+        lineItemDesc  = 'Deposit to confirm your booking. Remaining balance is due before the trip.'
+      }
 
       const session = await stripe.checkout.sessions.create(
         {
@@ -302,19 +364,18 @@ export async function acceptBooking(
               price_data: {
                 currency:     'eur',
                 product_data: {
-                  name:        `${experienceTitle} — 30% Deposit`,
-                  description: 'Deposit to confirm your booking. Remaining balance is due before the trip.',
+                  name:        lineItemName,
+                  description: lineItemDesc,
                 },
-                unit_amount: depositCents,
+                unit_amount: chargeCents,
               },
               quantity: 1,
             },
           ],
-          metadata:    { bookingId, guideId: guide.id },
+          metadata:    { bookingId, guideId: guide.id, paymentModel: guidePaymentModel },
           success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
           cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
-          // No transfer_data — full amount stays on platform; admin sends payout manually.
-          payment_intent_data: { metadata: { bookingId } },
+          payment_intent_data: { metadata: { bookingId, paymentModel: guidePaymentModel } },
         },
         { idempotencyKey: `booking-accept-${bookingId}` },
       )
@@ -328,7 +389,10 @@ export async function acceptBooking(
     stripeCheckoutId = booking.stripe_checkout_id
   }
 
-  const balanceMethod = (guide.default_balance_payment_method ?? 'cash') as 'stripe' | 'cash'
+  // For manual model, guide collects the balance directly from the angler — set to cash.
+  const balanceMethod = guidePaymentModel === 'manual'
+    ? 'cash'
+    : (guide.default_balance_payment_method ?? 'cash') as 'stripe' | 'cash'
 
   const { error } = await serviceClient
     .from('bookings')
@@ -850,6 +914,52 @@ export async function updateBalancePaymentMethod(
   if (error) {
     console.error('[updateBalancePaymentMethod]', error)
     return { error: 'Failed to update balance payment method.' }
+  }
+
+  revalidatePath('/dashboard/account')
+  return {}
+}
+
+// ─── updateGuideIban ──────────────────────────────────────────────────────────
+//
+// Guide saves their IBAN for the manual payment model.
+// Used when a guide hasn't connected Stripe (or is in an unsupported country).
+// Anglers are shown this IBAN after booking confirmation to pay the guide's net
+// amount directly (the platform fee is collected via Stripe Direct Charge).
+
+const updateGuideIbanSchema = z.object({
+  iban:             z.string().max(34).optional().nullable(),
+  iban_holder_name: z.string().max(100).optional().nullable(),
+  iban_bic:         z.string().max(11).optional().nullable(),
+  iban_bank_name:   z.string().max(100).optional().nullable(),
+})
+
+export async function updateGuideIban(
+  data: z.infer<typeof updateGuideIbanSchema>,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const parsed = updateGuideIbanSchema.safeParse(data)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const serviceClient = createServiceClient()
+  const { error } = await serviceClient
+    .from('guides')
+    .update({
+      iban:             parsed.data.iban             ?? null,
+      iban_holder_name: parsed.data.iban_holder_name ?? null,
+      iban_bic:         parsed.data.iban_bic         ?? null,
+      iban_bank_name:   parsed.data.iban_bank_name   ?? null,
+    })
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('[updateGuideIban]', error)
+    return { error: 'Failed to save bank details.' }
   }
 
   revalidatePath('/dashboard/account')

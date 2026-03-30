@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import { Plus, ExternalLink, Compass } from 'lucide-react'
 import type { Database } from '@/lib/supabase/database.types'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -131,10 +132,7 @@ export default async function ExperiencesPage() {
           className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 sm:px-5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body flex-shrink-0"
           style={{ background: '#E67E50' }}
         >
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
-            <rect x="5.8" y="1" width="1.4" height="11" rx="0.7" />
-            <rect x="1" y="5.8" width="11" height="1.4" rx="0.7" />
-          </svg>
+          <Plus size={13} strokeWidth={2} />
           <span className="hidden sm:inline">New Trip</span>
           <span className="sm:hidden">New</span>
         </Link>
@@ -319,9 +317,7 @@ export default async function ExperiencesPage() {
                           style={{ color: 'rgba(10,46,77,0.55)' }}
                           target="_blank"
                         >
-                          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3">
-                            <path d="M1.5 9.5L9.5 1.5M6 1.5h3.5v3.5" />
-                          </svg>
+                          <ExternalLink size={11} strokeWidth={1.3} />
                           Preview
                         </Link>
                         <Link
@@ -354,10 +350,7 @@ export default async function ExperiencesPage() {
             className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
             style={{ background: 'rgba(230,126,80,0.1)' }}
           >
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#E67E50" strokeWidth="1.5">
-              <circle cx="11" cy="11" r="9" />
-              <path d="M13.5 8.5L11 14 8.5 11 14 8.5z" fill="#E67E50" stroke="none" />
-            </svg>
+            <Compass size={22} strokeWidth={1.5} style={{ color: '#E67E50' }} />
           </div>
           <h3 className="text-[#0A2E4D] text-xl font-bold mb-2 f-display">No trips yet</h3>
           <p className="text-[#0A2E4D]/45 text-sm mb-6 f-body">

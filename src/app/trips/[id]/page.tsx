@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { MapPin, Calendar } from 'lucide-react'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
@@ -19,6 +20,7 @@ import { getLandscapeUrl } from '@/lib/landscapes'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { TripDetailNav } from '@/components/trips/trip-detail-nav'
 import { AvailabilityPreviewCalendar } from '@/components/trips/availability-preview-calendar'
+import { getPaymentModel } from '@/lib/payment-model'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -432,14 +434,19 @@ export default async function ExperienceDetailPage({
       .sort((a, b) => a.sort_order - b.sort_order),
   }
 
-  // calendar_disabled — added in migration 20260320170000.
-  // Queried separately so a missing column never breaks the trip page (falls back to false).
-  const { data: guideCalendarFlags } = await supabase
+  // calendar_disabled + payment model flags — queried separately so a missing
+  // column never breaks the trip page (falls back to safe defaults).
+  const { data: guideFlags } = await supabase
     .from('guides')
-    .select('calendar_disabled')
+    .select('calendar_disabled, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
     .eq('id', exp.guide_id)
     .maybeSingle()
-  const calendarDisabled = guideCalendarFlags?.calendar_disabled ?? false
+  const calendarDisabled = guideFlags?.calendar_disabled ?? false
+  const paymentModel = getPaymentModel({
+    stripe_account_id:      guideFlags?.stripe_account_id      ?? null,
+    stripe_charges_enabled: guideFlags?.stripe_charges_enabled ?? null,
+    stripe_payouts_enabled: guideFlags?.stripe_payouts_enabled ?? null,
+  })
 
   const isDraft = !exp.published
 
@@ -970,10 +977,7 @@ export default async function ExperienceDetailPage({
 
                           {acc.location_note != null && (
                             <div className="flex items-center gap-2">
-                              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                                <path d="M6.5 1C4.29 1 2.5 2.79 2.5 5c0 3 4 7 4 7s4-4 4-7c0-2.21-1.79-4-4-4z" fill="rgba(230,126,80,0.6)" />
-                                <circle cx="6.5" cy="5" r="1.4" fill="#E67E50" />
-                              </svg>
+                              <MapPin size={13} style={{ color: '#E67E50' }} />
                               <p
                                 className="text-xs f-body"
                                 style={{ color: 'rgba(10,46,77,0.5)' }}
@@ -1166,12 +1170,7 @@ export default async function ExperienceDetailPage({
                         className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
                         style={{ background: 'rgba(230,126,80,0.14)' }}
                       >
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E67E50" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="4" width="18" height="16" rx="2" />
-                          <line x1="3" y1="9" x2="21" y2="9" />
-                          <line x1="8" y1="2" x2="8" y2="6" />
-                          <line x1="16" y1="2" x2="16" y2="6" />
-                        </svg>
+                        <Calendar size={17} strokeWidth={1.8} style={{ color: '#E67E50' }} />
                       </div>
                       {/* Text */}
                       <div>
@@ -1313,6 +1312,7 @@ export default async function ExperienceDetailPage({
                 bookedDates={bookedDates}
                 bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
                 calendarDisabled={calendarDisabled}
+                paymentModel={paymentModel}
               />
             </aside>
 
@@ -1331,6 +1331,7 @@ export default async function ExperienceDetailPage({
         durationDays={exp.duration_days}
         bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
         calendarDisabled={calendarDisabled}
+        paymentModel={paymentModel}
       />
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { submitGuideApplication } from '@/actions/guide-apply'
+import { Check } from 'lucide-react'
 import { FISH_ALL } from '@/lib/fish'
 import { COUNTRIES as SCANDI_COUNTRIES } from '@/lib/countries'
 
@@ -183,15 +184,7 @@ export function ApplyForm() {
             }}
           >
             {termsAccepted && (
-              <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                <path
-                  d="M1 4l2.5 2.5L9 1"
-                  stroke="white"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              <Check size={10} strokeWidth={1.8} style={{ color: 'white' }} />
             )}
           </span>
         </span>

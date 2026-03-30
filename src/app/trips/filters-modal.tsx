@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FISH_FILTER } from '@/lib/fish'
+import { X, SlidersHorizontal } from 'lucide-react'
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -270,9 +271,7 @@ export function FiltersModal() {
                 style={{ width: '32px', height: '32px', color: '#0A2E4D' }}
                 aria-label="Close filters"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                <X size={14} strokeWidth={2.5} />
               </button>
             </div>
 
@@ -518,15 +517,7 @@ export function FiltersModal() {
           fontWeight: 600,
         }}
       >
-        {/* Sliders icon */}
-        <svg width="14" height="13" viewBox="0 0 14 13" fill="none">
-          <path d="M1 2.5h3M8 2.5h5"   stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="5.5" cy="2.5" r="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M1 6.5h5M10 6.5h3"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="8.5" cy="6.5" r="1.5" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M1 10.5h2M7 10.5h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="4.5" cy="10.5" r="1.5" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
+        <SlidersHorizontal size={14} strokeWidth={1.5} />
         Filters
         {urlActiveCount > 0 && (
           <span

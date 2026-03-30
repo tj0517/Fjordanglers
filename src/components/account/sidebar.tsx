@@ -4,53 +4,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/actions/auth'
-
-// ─── SVG icons ────────────────────────────────────────────────────────────────
-
-const IconBookings = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <rect x="1.5" y="2.5" width="12" height="10" rx="1.5" />
-    <line x1="1.5" y1="6" x2="13.5" y2="6" />
-    <line x1="4.5" y1="1" x2="4.5" y2="4" />
-    <line x1="10.5" y1="1" x2="10.5" y2="4" />
-  </svg>
-)
-
-const IconCompass = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <circle cx="7.5" cy="7.5" r="6" />
-    <path d="M9.5 5.5L7.5 10 5.5 7.5 10 5.5z" fill="currentColor" stroke="none" />
-  </svg>
-)
-
-const IconMessage = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M13 2H2a1 1 0 00-1 1v7a1 1 0 001 1h3.5l2 2 2-2H13a1 1 0 001-1V3a1 1 0 00-1-1z" />
-  </svg>
-)
-
-
-const IconArrowLeft = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <polyline points="7,2 3,6 7,10" />
-    <line x1="3" y1="6" x2="11" y2="6" />
-  </svg>
-)
-
-const IconLogout = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h3" />
-    <polyline points="9,9 12,6.5 9,4" />
-    <line x1="5" y1="6.5" x2="12" y2="6.5" />
-  </svg>
-)
+import { Calendar, Compass, MessageSquare, ArrowLeft, LogOut } from 'lucide-react'
 
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'My Bookings',  href: '/account/bookings', icon: <IconBookings /> },
-  { label: 'My Requests',  href: '/account/trips',    icon: <IconMessage  /> },
-  { label: 'Browse Trips', href: '/trips',             icon: <IconCompass />, external: true },
+  { label: 'My Bookings',  href: '/account/bookings', icon: <Calendar      size={15} strokeWidth={1.5} /> },
+  { label: 'My Requests',  href: '/account/trips',    icon: <MessageSquare size={15} strokeWidth={1.5} /> },
+  { label: 'Browse Trips', href: '/trips',             icon: <Compass       size={15} strokeWidth={1.5} />, external: true },
 ] as const
 
 
@@ -164,7 +125,7 @@ export default function AccountSidebar({ displayName }: { displayName: string })
             className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.06] mb-0.5"
             style={{ color: 'rgba(255,255,255,0.35)', cursor: 'pointer', border: 'none', background: 'transparent' }}
           >
-            <IconLogout />
+            <LogOut size={13} strokeWidth={1.5} />
             Sign out
           </button>
         </form>
@@ -174,7 +135,7 @@ export default function AccountSidebar({ displayName }: { displayName: string })
           className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.04]"
           style={{ color: 'rgba(255,255,255,0.28)' }}
         >
-          <IconArrowLeft />
+          <ArrowLeft size={12} strokeWidth={1.5} />
           Back to site
         </Link>
       </div>

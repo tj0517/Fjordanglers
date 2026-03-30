@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import CreateGuideForm, { type GuideFormDefaults } from '@/components/admin/create-guide-form'
+import { UserPlus } from 'lucide-react'
 
 /**
  * Admin — Add Guide Profile page.
@@ -151,12 +152,7 @@ export default async function NewBetaListingPage({
             className="w-8 h-8 rounded-xl flex items-center justify-center"
             style={{ background: 'rgba(230,126,80,0.12)', border: '1px solid rgba(230,126,80,0.2)' }}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#E67E50" strokeWidth="1.8">
-              <circle cx="6" cy="5.5" r="2.5" />
-              <path d="M1 13c0-2.8 2.2-5 5-5s5 2.2 5 5" />
-              <line x1="10.5" y1="2" x2="10.5" y2="7" />
-              <line x1="8" y1="4.5" x2="13" y2="4.5" />
-            </svg>
+            <UserPlus width={14} height={14} stroke="#E67E50" strokeWidth={1.8} />
           </div>
           <p className="text-[11px] uppercase tracking-[0.22em] f-body font-semibold" style={{ color: '#E67E50' }}>
             {isFromLead ? 'From Lead Application' : 'Guide Profile'}

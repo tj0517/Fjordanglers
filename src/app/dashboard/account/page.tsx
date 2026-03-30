@@ -3,11 +3,13 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { stripe } from '@/lib/stripe/client'
 import { PasswordResetButton } from './AccountActions'
-import { StripeConnectButton } from './StripeConnectButton'
 import { AcceptedPaymentMethodsForm } from './AcceptedPaymentMethodsForm'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
 import { HideListingToggle } from './HideListingToggle'
+import { PayoutSettingsCard } from './PayoutSettingsCard'
 import { HelpWidget } from '@/components/ui/help-widget'
+import { getPaymentModel } from '@/lib/payment-model'
+import { Lock, Check } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -30,7 +32,7 @@ export default async function AccountPage({
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, is_hidden, created_at')
+    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, is_hidden, created_at, iban, iban_holder_name, iban_bic, iban_bank_name')
     .eq('user_id', user.id)
     .single()
 
@@ -108,6 +110,14 @@ export default async function AccountPage({
 
   const hasStripeAccount = guide.stripe_account_id != null
 
+  // Payment model — derived from Stripe status, never stored
+  const paymentModel = getPaymentModel({
+    stripe_account_id:      guide.stripe_account_id,
+    stripe_charges_enabled: guide.stripe_charges_enabled,
+    stripe_payouts_enabled: guide.stripe_payouts_enabled,
+  })
+  const isManualModel = paymentModel === 'manual'
+
   const stripeStatus = stripePayoutsLive
     ? { label: 'Active — payouts enabled',   dot: '#4ADE80', glow: true  }
     : hasStripeAccount
@@ -115,6 +125,10 @@ export default async function AccountPage({
     : { label: 'Not connected',              dot: 'rgba(10,46,77,0.2)', glow: false }
 
   const isCommission = guide.pricing_model === 'commission'
+
+  // Pre-format Stripe requirement labels so PayoutSettingsCard (Client Component) gets plain data
+  const requirementLabels   = formatStripeRequirements(stripeCurrentlyDue)
+  const hasPendingVerification = stripePending.length > 0
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-2xl">
@@ -162,10 +176,7 @@ export default async function AccountPage({
                 </>
               ) : (
                 <>
-                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="1" y="5" width="10" height="6.5" rx="1.2" />
-                    <path d="M3.5 5V3.5a2.5 2.5 0 015 0V5" />
-                  </svg>
+                  <Lock size={10} strokeWidth={1.5} />
                   Email & password
                 </>
               )}
@@ -181,106 +192,35 @@ export default async function AccountPage({
           )}
         </Card>
 
-        {/* ── Payouts ──────────────────────────────────────────────────────── */}
-        <Card title="Payouts" help={
-          <HelpWidget title="Payouts" description="Your Stripe Connect account receives guide earnings." items={[
-            { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
-            { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
-            { icon: '💱', title: 'Currency', text: 'Payouts are sent in the currency of your bank account (EUR by default).' },
-          ]} />
-        }>
-          <Row label="Stripe Connect">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{
-                  background: stripeStatus.dot,
-                  boxShadow:  stripeStatus.glow ? `0 0 6px ${stripeStatus.dot}` : 'none',
-                }}
-              />
-              <span className="text-sm f-body" style={{ color: '#0A2E4D' }}>
-                {stripeStatus.label}
-              </span>
-            </div>
-          </Row>
-
-          {/* Under review — distinguish incomplete form vs awaiting Stripe review */}
-          {hasStripeAccount && !stripePayoutsLive && (
-            stripeCurrentlyDue.length > 0 ? (
-              // Form not complete — show what's missing and let them continue
-              <>
-                <Row label="Missing info">
-                  <div className="flex flex-col items-end gap-1">
-                    {formatStripeRequirements(stripeCurrentlyDue).map(label => (
-                      <span
-                        key={label}
-                        className="text-xs f-body px-2 py-0.5 rounded-full"
-                        style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}
-                      >
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                </Row>
-                <Row label="Action">
-                  <StripeConnectButton label={stripeRefresh ? 'Renew & complete setup' : 'Complete setup'} />
-                </Row>
-              </>
-            ) : (
-              // Form is complete — Stripe is verifying, nothing for guide to do
-              <Row label="Next step">
-                <span className="text-sm f-body text-right" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                  {stripePending.length > 0
-                    ? 'Stripe is verifying your details — usually 1–2 business days'
-                    : 'Stripe is reviewing your account — usually 1–2 business days'}
-                </span>
-              </Row>
-            )
-          )}
-
-          {hasStripeAccount && (
-            <>
-              <Row label="Payout currency">
-                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutCurrencyLabel}</span>
-              </Row>
-              <Row label="Payout schedule">
-                <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{payoutScheduleLabel}</span>
-              </Row>
-            </>
-          )}
-        </Card>
-
-        {/* ── Bank account setup — only shown before first connection ──────── */}
-        {!hasStripeAccount && (
-          <Card title="Connect bank account" help={
-            <HelpWidget title="Connect bank account" items={[
-              { icon: '⏱️', title: 'Takes ~5 minutes', text: 'Complete Stripe onboarding with your personal details, home address, and IBAN. Required to receive payout transfers.' },
-              { icon: '🔒', title: 'Secure', text: 'Your bank details are handled entirely by Stripe — FjordAnglers never stores raw account numbers.' },
-              { icon: '✅', title: 'Verification', text: 'Stripe verifies your identity within 1–2 business days. You will be notified once payouts are enabled.' },
-            ]} />
-          }>
-            <div className="px-6 pt-4 pb-6 flex flex-col gap-5">
-              <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                Set up your Stripe account to receive weekly payouts from FjordAnglers.
-                You&apos;ll be taken to Stripe&apos;s secure onboarding — it takes about 5 minutes.
-                Your name, email and country will be pre-filled automatically.
-              </p>
-              <StripeConnectButton />
-              <p className="text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                By continuing, you agree to{' '}
-                <a
-                  href="https://stripe.com/legal/connect-account"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                  style={{ color: 'rgba(10,46,77,0.6)' }}
-                >
-                  Stripe&apos;s Connected Account Agreement
-                </a>.
-              </p>
-            </div>
-          </Card>
-        )}
+        {/* ── Payouts — unified Stripe Connect / IBAN card ─────────────────── */}
+        <PayoutSettingsCard
+          defaultTab={isManualModel ? 'iban' : 'stripe'}
+          hasStripeAccount={hasStripeAccount}
+          stripePayoutsLive={stripePayoutsLive}
+          stripeStatus={stripeStatus}
+          requirementLabels={requirementLabels}
+          hasPendingVerification={hasPendingVerification}
+          stripeRefresh={stripeRefresh}
+          payoutCurrencyLabel={payoutCurrencyLabel}
+          payoutScheduleLabel={payoutScheduleLabel}
+          ibanData={{
+            iban:             guide.iban             ?? null,
+            iban_holder_name: guide.iban_holder_name ?? null,
+            iban_bic:         guide.iban_bic         ?? null,
+            iban_bank_name:   guide.iban_bank_name   ?? null,
+          }}
+          helpWidget={
+            <HelpWidget
+              title="Payouts"
+              description="Choose how you receive guide earnings — via Stripe Connect or direct bank transfer."
+              items={[
+                { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
+                { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
+                { icon: '🏧', title: 'Bank transfer (IBAN)', text: 'Without Stripe Connect, anglers pay your fee directly to your bank account. FjordAnglers collects only the platform fee online.' },
+              ]}
+            />
+          }
+        />
 
         {/* ── Return from Stripe — setup submitted ─────────────────────────── */}
         {stripeDone && stripePayoutsLive === false && (
@@ -292,9 +232,7 @@ export default async function AccountPage({
               className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
               style={{ background: 'rgba(74,222,128,0.15)' }}
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round">
-                <polyline points="2,6.5 5.5,10 11,3" />
-              </svg>
+              <Check size={13} strokeWidth={2} style={{ color: '#16A34A' }} />
             </div>
             <div>
               <p className="text-sm font-bold f-body" style={{ color: '#16A34A' }}>
@@ -358,17 +296,26 @@ export default async function AccountPage({
           </Row>
         </Card>
 
-        {/* ── Accepted payment methods ──────────────────────────────────────── */}
+        {/* ── Accepted payment methods — shown for all guides ───────────────── */}
         <Card title="Accepted payment methods" help={
           <HelpWidget title="Accepted payment methods" items={[
-            { icon: '💳', title: 'Online (Stripe)', text: 'The remaining 70% balance is charged automatically by card before the trip. Funds arrive in your Stripe account on the weekly payout schedule.' },
-            { icon: '💵', title: 'Cash', text: 'The remaining 70% balance is paid to you in cash on the day of the trip. You manually mark it as received in the booking details.' },
+            { icon: '💵', title: 'Cash', text: 'Collected in person on the day of the trip. You manually mark it as received in the booking details.' },
+            { icon: '💳', title: 'Online (Stripe)', text: 'Secure card payment via Stripe. Funds arrive in your Stripe account on the weekly payout schedule.' },
           ]} />
         }>
           <div className="px-6 pt-4 pb-2">
             <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              Anglers always pay a <strong style={{ color: '#0A2E4D' }}>30% deposit</strong> online at the time of booking.
-              Choose how you want to collect the <strong style={{ color: '#0A2E4D' }}>remaining 70%</strong> before the trip.
+              {isManualModel ? (
+                <>
+                  Anglers pay a small <strong style={{ color: '#0A2E4D' }}>platform fee</strong> online when the guide confirms.
+                  Choose how you want anglers to pay your <strong style={{ color: '#0A2E4D' }}>guide&apos;s fee</strong> directly.
+                </>
+              ) : (
+                <>
+                  Anglers always pay a <strong style={{ color: '#0A2E4D' }}>30% deposit</strong> online at the time of booking.
+                  Choose how you want to collect the <strong style={{ color: '#0A2E4D' }}>remaining 70%</strong> before the trip.
+                </>
+              )}
             </p>
           </div>
           <AcceptedPaymentMethodsForm

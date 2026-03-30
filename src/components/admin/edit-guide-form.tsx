@@ -8,6 +8,7 @@ import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload from '@/components/admin/multi-image-upload'
 import { ImageCropModal } from '@/components/ui/image-crop'
 import { createClient } from '@/lib/supabase/client'
+import { Check, ExternalLink, Info, Loader2 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -259,9 +260,7 @@ export default function EditGuideForm({ guide }: Props) {
           className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
           style={{ background: 'rgba(74,222,128,0.1)', border: '1.5px solid rgba(74,222,128,0.25)' }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
-            <polyline points="20,6 9,17 4,12" />
-          </svg>
+          <Check size={24} strokeWidth={2.5} style={{ color: '#16A34A' }} />
         </div>
 
         <p className="text-[11px] uppercase tracking-[0.22em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
@@ -290,9 +289,7 @@ export default function EditGuideForm({ guide }: Props) {
             className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-95 f-body"
             style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6">
-              <path d="M2 2h8M10 2v8M10 2L2 10" />
-            </svg>
+            <ExternalLink size={12} strokeWidth={1.6} />
             Public profile
           </a>
           <button
@@ -318,11 +315,7 @@ export default function EditGuideForm({ guide }: Props) {
           className="flex items-start gap-3 px-5 py-4 rounded-2xl mb-6 f-body text-sm"
           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', color: '#DC2626' }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="flex-shrink-0 mt-0.5">
-            <circle cx="8" cy="8" r="6.5" />
-            <line x1="8" y1="5" x2="8" y2="8.5" />
-            <circle cx="8" cy="11" r="0.6" fill="currentColor" />
-          </svg>
+          <Info size={16} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
           {error}
         </div>
       )}
@@ -571,10 +564,9 @@ export default function EditGuideForm({ guide }: Props) {
                   <Image src={url} alt="" fill className="object-cover" />
                   {selected && (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.25)' }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
-                        <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.9)' }}>
+                        <Check size={13} strokeWidth={2.5} style={{ color: 'white' }} />
+                      </div>
                     </div>
                   )}
                   {!selected && (
@@ -758,17 +750,12 @@ export default function EditGuideForm({ guide }: Props) {
         >
           {isPending ? (
             <>
-              <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="7" cy="7" r="5" strokeOpacity="0.25" />
-                <path d="M7 2a5 5 0 015 5" strokeLinecap="round" />
-              </svg>
+              <Loader2 className="animate-spin" size={14} strokeWidth={2} />
               Saving…
             </>
           ) : (
             <>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="1.5,7 5,10.5 11.5,3" />
-              </svg>
+              <Check size={13} strokeWidth={2} />
               Save changes
             </>
           )}

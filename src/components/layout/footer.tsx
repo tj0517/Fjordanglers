@@ -155,6 +155,13 @@ export function Footer() {
             >
               Cookie Policy
             </Link>
+            <Link
+              href="/legal/legal-notice"
+              className="text-[12px] f-body transition-colors hover:text-white/40"
+              style={{ color: 'rgba(255,255,255,0.22)' }}
+            >
+              Legal Notice
+            </Link>
             <p className="hidden md:block text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.14)' }}>
               Norway · Sweden · Finland · Iceland · Denmark
             </p>

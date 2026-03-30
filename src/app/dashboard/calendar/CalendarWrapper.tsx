@@ -10,6 +10,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { Loader2, Calendar } from 'lucide-react'
 import CalendarsPanel from '@/components/dashboard/calendars-panel'
 import CalendarGrid from '@/components/dashboard/calendar-grid'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
@@ -112,14 +113,7 @@ export function CalendarWrapper({
             className="absolute inset-0 z-20 flex items-center justify-center"
             style={{ background: 'rgba(243,237,228,0.7)', backdropFilter: 'blur(2px)' }}
           >
-            <svg
-              className="animate-spin"
-              width="32" height="32" viewBox="0 0 32 32" fill="none"
-              style={{ color: '#E67E50' }}
-            >
-              <circle cx="16" cy="16" r="13" stroke="rgba(10,46,77,0.1)" strokeWidth="3" />
-              <path d="M16 3 A13 13 0 0 1 29 16" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-            </svg>
+            <Loader2 className="animate-spin" size={32} style={{ color: '#E67E50' }} />
           </div>
         )}
 
@@ -180,14 +174,7 @@ export function CalendarWrapper({
                 className="w-12 h-12 rounded-2xl flex items-center justify-center"
                 style={{ background: 'rgba(10,46,77,0.07)' }}
               >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.5">
-                  <rect x="3" y="4" width="14" height="12" rx="2" />
-                  <line x1="3" y1="8.5" x2="17" y2="8.5" />
-                  <line x1="7" y1="2" x2="7" y2="6" />
-                  <line x1="13" y1="2" x2="13" y2="6" />
-                  <line x1="6" y1="13" x2="14" y2="13" strokeOpacity="0.4" />
-                  <line x1="6" y1="11" x2="14" y2="11" strokeOpacity="0.4" />
-                </svg>
+                <Calendar size={20} strokeWidth={1.5} style={{ color: 'rgba(10,46,77,0.45)' }} />
               </div>
               <div>
                 <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
@@ -211,12 +198,7 @@ export function CalendarWrapper({
                 className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
                 style={{ background: 'rgba(10,46,77,0.06)' }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.4)" strokeWidth="1.5">
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <line x1="3" y1="9" x2="21" y2="9" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                </svg>
+                <Calendar size={20} strokeWidth={1.5} style={{ color: 'rgba(10,46,77,0.4)' }} />
               </div>
               <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>
                 No listings assigned

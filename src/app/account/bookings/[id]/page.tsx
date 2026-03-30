@@ -7,6 +7,7 @@ import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import PayDepositBanner from '@/components/booking/pay-deposit-banner'
 import PayBalanceBanner from '@/components/booking/pay-balance-banner'
 import type { Database } from '@/lib/supabase/database.types'
+import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -140,10 +141,7 @@ export default async function AnglerBookingDetailPage({
         className="inline-flex items-center gap-1.5 text-xs f-body mb-7 transition-opacity hover:opacity-70"
         style={{ color: 'rgba(10,46,77,0.45)' }}
       >
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <polyline points="7,2 3,6 7,10" />
-          <line x1="3" y1="6" x2="11" y2="6" />
-        </svg>
+        <ArrowLeft width={12} height={12} strokeWidth={1.5} />
         My Bookings
       </Link>
 
@@ -208,13 +206,7 @@ export default async function AnglerBookingDetailPage({
                     className="flex items-center gap-3 px-4 py-3 rounded-2xl"
                     style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-                      <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
-                      <line x1="5" y1="1" x2="5" y2="4" />
-                      <line x1="11" y1="1" x2="11" y2="4" />
-                      <line x1="2" y1="6.5" x2="14" y2="6.5" />
-                      <path d="M5.5 10l2 2 3.5-3" strokeWidth="1.6" />
-                    </svg>
+                    <Calendar width={16} height={16} stroke="#16A34A" strokeWidth={1.5} className="flex-shrink-0" />
                     <div>
                       <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(22,163,74,0.65)' }}>
                         Trip confirmed for
@@ -272,10 +264,7 @@ export default async function AnglerBookingDetailPage({
                     className="flex items-center gap-2.5 px-3.5 py-3 rounded-2xl"
                     style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.15)' }}
                   >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#E67E50" strokeWidth="1.5" strokeLinecap="round" className="flex-shrink-0">
-                      <circle cx="7" cy="7" r="6" />
-                      <path d="M7 4v3.5l2 2" />
-                    </svg>
+                    <Clock width={14} height={14} stroke="#E67E50" strokeWidth={1.5} className="flex-shrink-0" />
                     <p className="text-xs f-body" style={{ color: '#C46030' }}>
                       Waiting for your guide to confirm dates and accept the booking.
                     </p>
@@ -313,10 +302,7 @@ export default async function AnglerBookingDetailPage({
                   className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
                   style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round">
-                    <circle cx="9" cy="9" r="7.5" />
-                    <path d="M6 9l2 2 4-4" />
-                  </svg>
+                  <Check width={18} height={18} stroke="#16A34A" strokeWidth={1.5} />
                   <div>
                     <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
                       Deposit received!
@@ -334,10 +320,7 @@ export default async function AnglerBookingDetailPage({
                   className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
                   style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
                 >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round">
-                    <circle cx="9" cy="9" r="7.5" />
-                    <path d="M6 9l2 2 4-4" />
-                  </svg>
+                  <Check width={18} height={18} stroke="#16A34A" strokeWidth={1.5} />
                   <div>
                     <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
                       Balance paid — you&apos;re all set!
@@ -408,9 +391,7 @@ export default async function AnglerBookingDetailPage({
                     className="inline-flex items-center gap-1.5 text-xs f-body font-medium transition-opacity hover:opacity-70"
                     style={{ color: 'rgba(10,46,77,0.5)' }}
                   >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path d="M10 2H2a1 1 0 00-1 1v6a1 1 0 001 1h2.5l1.5 1.5 1.5-1.5H10a1 1 0 001-1V3a1 1 0 00-1-1z" />
-                    </svg>
+                    <MessageSquare width={12} height={12} strokeWidth={1.5} />
                     View original request →
                   </Link>
                 </div>
@@ -424,10 +405,7 @@ export default async function AnglerBookingDetailPage({
                     className="flex items-start gap-3 px-4 py-4 rounded-2xl"
                     style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
                   >
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round" className="flex-shrink-0 mt-0.5">
-                      <circle cx="9" cy="9" r="7.5" />
-                      <path d="M6.5 6.5l5 5M11.5 6.5l-5 5" />
-                    </svg>
+                    <X width={18} height={18} stroke="#DC2626" strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold f-body mb-1" style={{ color: '#DC2626' }}>
                         Guide couldn&apos;t accept this booking
@@ -450,12 +428,7 @@ export default async function AnglerBookingDetailPage({
                       style={{ background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.18)' }}
                     >
                       <div className="flex items-center gap-2">
-                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="2" y="2.5" width="12" height="11" rx="1.5" />
-                          <line x1="5" y1="1" x2="5" y2="4" />
-                          <line x1="11" y1="1" x2="11" y2="4" />
-                          <line x1="2" y1="6.5" x2="14" y2="6.5" />
-                        </svg>
+                        <Calendar width={14} height={14} stroke="#2563EB" strokeWidth={1.5} />
                         <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body" style={{ color: '#2563EB' }}>
                           Message from {guide?.full_name ?? 'guide'}
                         </p>
@@ -469,9 +442,7 @@ export default async function AnglerBookingDetailPage({
                           className="inline-flex items-center gap-1.5 text-xs font-semibold f-body transition-opacity hover:opacity-75"
                           style={{ color: '#2563EB' }}
                         >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
-                            <path d="M3 6h6M7 4l2 2-2 2" />
-                          </svg>
+                          <ArrowRight width={12} height={12} strokeWidth={1.7} />
                           Book new dates for this experience →
                         </a>
                       )}

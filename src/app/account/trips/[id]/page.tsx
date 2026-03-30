@@ -5,6 +5,7 @@ import type { Database } from '@/lib/supabase/database.types'
 import AcceptOfferButton from './AcceptOfferButton'
 import InquiryChat, { type ChatMessage } from '@/components/inquiry-chat'
 import { type PriceTier, findApplicableTierPrice } from '@/lib/inquiry-pricing'
+import { Info, Check } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -120,17 +121,7 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
               border: '1px solid rgba(74,222,128,0.2)',
             }}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="#16A34A"
-              strokeWidth="2"
-            >
-              <circle cx="10" cy="10" r="9" />
-              <polyline points="6,10 9,13 14,7" />
-            </svg>
+            <Check width={20} height={20} stroke="#16A34A" strokeWidth={2} />
             <p className="text-sm f-body font-semibold" style={{ color: '#16A34A' }}>
               Payment confirmed! Your trip is booked.
             </p>
@@ -464,19 +455,7 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
               border: '1px solid rgba(59,130,246,0.15)',
             }}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              stroke="#3B82F6"
-              strokeWidth="1.5"
-              className="flex-shrink-0 mt-0.5"
-            >
-              <circle cx="9" cy="9" r="8" />
-              <line x1="9" y1="5" x2="9" y2="9.5" />
-              <circle cx="9" cy="12.5" r="0.5" fill="#3B82F6" />
-            </svg>
+            <Info width={18} height={18} stroke="#3B82F6" strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm f-body font-semibold" style={{ color: '#3B82F6' }}>
                 {inquiry.status === 'inquiry' ? 'Your request is under review' : 'Finding the best guide for you'}
@@ -498,17 +477,7 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
               border: '1px solid rgba(74,222,128,0.2)',
             }}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              stroke="#16A34A"
-              strokeWidth="2"
-            >
-              <circle cx="9" cy="9" r="8" />
-              <polyline points="5.5,9 8,11.5 13,6.5" />
-            </svg>
+            <Check width={18} height={18} stroke="#16A34A" strokeWidth={2} />
             <div>
               <p className="text-sm f-body font-semibold" style={{ color: '#16A34A' }}>
                 {inquiry.status === 'completed' ? 'Trip completed!' : 'Trip confirmed — see you there!'}

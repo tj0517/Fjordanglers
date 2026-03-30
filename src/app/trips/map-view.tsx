@@ -1,13 +1,22 @@
 'use client'
 
-import { useEffect, useCallback, useRef, useState } from 'react'
+import { useEffect, useCallback, useRef, useState, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
+import Supercluster from 'supercluster'
 import 'leaflet/dist/leaflet.css'
 import type { ExperienceWithGuide, LocationSpot } from '@/types'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
 
+// ─── Supercluster point properties ────────────────────────────────────────────
+type PointProps = {
+  expId: string
+  price: number | null
+  bookingType: string | null
+}
+
+// ─── BoundsTracker ────────────────────────────────────────────────────────────
 function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: MapBounds) => void }) {
   const fire = useCallback(
     (map: ReturnType<typeof useMap>) => {
@@ -22,43 +31,13 @@ function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: MapBounds) => v
     zoomend()  { fire(map) },
   })
 
-  // Fire initial bounds so the card list is immediately in sync with the map
-  // viewport — without this, bounds stays null until the first user interaction.
   useEffect(() => { fire(map) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
 }
 
-function getCoords(exp: ExperienceWithGuide): [number, number] | null {
-  if (exp.location_lat != null && exp.location_lng != null) {
-    return [exp.location_lat, exp.location_lng]
-  }
-  return null
-}
+// ─── Icon factory functions ────────────────────────────────────────────────────
 
-function priceIcon(price: number) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      background: white;
-      color: #0A2E4D;
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-weight: 700;
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(0,0,0,0.07);
-      white-space: nowrap;
-      cursor: pointer;
-      line-height: 1.2;
-    ">€${price}</div>`,
-    iconSize: [68, 28],
-    iconAnchor: [34, 14],
-    popupAnchor: [0, -18],
-  })
-}
-
-// Single-pin variant — plain white pill, no orange border
 function singlePriceIcon(price: number) {
   return L.divIcon({
     className: '',
@@ -71,29 +50,6 @@ function singlePriceIcon(price: number) {
       font-size: 13px;
       font-family: 'DM Sans', sans-serif;
       box-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(0,0,0,0.07);
-      white-space: nowrap;
-      cursor: pointer;
-      line-height: 1.2;
-    ">€${price}</div>`,
-    iconSize: [68, 28],
-    iconAnchor: [34, 14],
-    popupAnchor: [0, -18],
-  })
-}
-
-// Area variant — white bg + subtle salmon ring signals "this covers a territory"
-function areaPriceIcon(price: number) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      background: white;
-      color: #0A2E4D;
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-weight: 700;
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.14), 0 0 0 2px rgba(230,126,80,0.35);
       white-space: nowrap;
       cursor: pointer;
       line-height: 1.2;
@@ -126,8 +82,6 @@ function popupIcon(price: number) {
   })
 }
 
-
-// ─── Inquiry pill for "price on request" experiences ─────────────────────────
 function inquiryIcon() {
   return L.divIcon({
     className: '',
@@ -172,7 +126,6 @@ function inquiryIconHover() {
   })
 }
 
-// ─── Small dot icon for secondary spots ───────────────────────────────────────
 function dotIcon() {
   return L.divIcon({
     className: '',
@@ -189,153 +142,58 @@ function dotIcon() {
   })
 }
 
-// ─── Area polygon overlay — hidden by default, shown only on marker hover ─────
-function AreaOverlay({ exp, visible }: { exp: ExperienceWithGuide; visible: boolean }) {
-  const map  = useMap()
-  const layerRef = useRef<L.GeoJSON | null>(null)
-
-  // Create the layer once, initially fully transparent
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const area = exp.location_area as any
-    if (area == null) return
-    const layer = L.geoJSON(area, {
-      style: { color: '#E67E50', fillColor: '#E67E50', fillOpacity: 0, weight: 0, opacity: 0 },
-    })
-    layer.addTo(map)
-    layerRef.current = layer
-    return () => {
-      map.removeLayer(layer)
-      layerRef.current = null
-    }
-  }, [exp.id, map])
-
-  // Toggle visibility whenever `visible` changes — no re-mount needed
-  useEffect(() => {
-    const layer = layerRef.current
-    if (layer == null) return
-    if (visible) {
-      layer.setStyle({ fillOpacity: 0.11, weight: 1.5, opacity: 0.5 })
-    } else {
-      layer.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 })
-    }
-  }, [visible])
-
-  return null
+// ─── Cluster icon — dark Fjord Blue pill with count ────────────────────────────
+function clusterIcon(count: number) {
+  // Scale the pill slightly for larger clusters
+  const big = count >= 10
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background: #0A2E4D;
+      color: white;
+      border-radius: 20px;
+      padding: ${big ? '6px 14px' : '5px 12px'};
+      font-weight: 700;
+      font-size: ${big ? '14px' : '13px'};
+      font-family: 'DM Sans', sans-serif;
+      box-shadow: 0 2px 16px rgba(10,46,77,0.35), 0 0 0 3px rgba(10,46,77,0.12);
+      white-space: nowrap;
+      cursor: pointer;
+      line-height: 1.2;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    ">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="4" cy="4" r="2" fill="rgba(255,255,255,0.55)"/>
+        <circle cx="9" cy="4" r="1.5" fill="rgba(255,255,255,0.38)"/>
+        <circle cx="6" cy="8.5" r="1.5" fill="rgba(255,255,255,0.38)"/>
+      </svg>
+      ${count}
+    </div>`,
+    iconSize: [big ? 54 : 46, 28],
+    iconAnchor: [big ? 27 : 23, 14],
+  })
 }
 
-// ─── Hint control — "hover / click a pin to see fishing area" ─────────────────
-function AreaHoverHint() {
-  const map = useMap()
-  useEffect(() => {
-    const container = L.DomUtil.create('div', '')
-    container.innerHTML = `
-      <div style="
-        background: rgba(255,255,255,0.93);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border-radius: 12px;
-        padding: 7px 11px;
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.10), 0 0 0 1px rgba(10,46,77,0.06);
-        pointer-events: none;
-        user-select: none;
-      ">
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M7.5 1.5L13 4.75V10.25L7.5 13.5L2 10.25V4.75L7.5 1.5Z"
-            stroke="#E67E50" stroke-width="1.4" stroke-linejoin="round"
-            fill="rgba(230,126,80,0.12)" stroke-dasharray="2.5 1.5"/>
-        </svg>
-        <span style="
-          font-family: 'DM Sans', sans-serif;
-          font-size: 11.5px;
-          font-weight: 500;
-          color: rgba(10,46,77,0.65);
-          white-space: nowrap;
-          line-height: 1;
-        ">Hover to preview area · click pin to lock it</span>
-      </div>
-    `
-    L.DomEvent.disableClickPropagation(container)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const HintControl = L.Control.extend({ onAdd: () => container }) as any
-    const ctrl = new HintControl({ position: 'bottomleft' })
-    ctrl.addTo(map)
-    return () => { ctrl.remove() }
-  }, [map])
-  return null
-}
-
-// ─── Clears pinnedAreaId when user clicks the map background ──────────────────
-function MapClickClearer({ onClear }: { onClear: () => void }) {
-  useMapEvents({ click: onClear })
-  return null
-}
-
-// ─── Filled polygon overlay for multi-spot experiences ────────────────────────
-function SpotsAreaOverlay({ spots, visible }: { spots: LocationSpot[]; visible: boolean }) {
-  const map = useMap()
-  const layerRef = useRef<L.Polygon | null>(null)
-
-  useEffect(() => {
-    if (spots.length < 2) return
-    const poly = L.polygon(
-      spots.map(s => [s.lat, s.lng] as [number, number]),
-      { color: '#E67E50', fillColor: '#E67E50', fillOpacity: 0, weight: 0, opacity: 0 },
-    )
-    poly.addTo(map)
-    layerRef.current = poly
-    return () => { map.removeLayer(poly); layerRef.current = null }
-  }, [spots, map])
-
-  useEffect(() => {
-    const p = layerRef.current
-    if (p == null) return
-    if (visible) {
-      p.setStyle({ fillOpacity: 0.10, weight: 1.5, opacity: 0.45 })
-    } else {
-      p.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 })
-    }
-  }, [visible])
-
-  return null
-}
-
-type Props = {
-  experiences: ExperienceWithGuide[]
-  onBoundsChange?: (bounds: MapBounds) => void
-  /** ID of the experience card being hovered in the listing panel */
-  hoveredExpId?: string | null
-  /** Called when a price pin is tapped/clicked — used on mobile to sync bottom sheet */
-  onPinClick?: (id: string) => void
-  /** Whether to show popup cards on pin click. Pass false on mobile. */
-  showPopups?: boolean
-}
-
-// ─── Icon resolver — single source of truth ───────────────────────────────────
-// Both card-hover (hoveredExpId from parent) and map-hover (mapHoveredId local)
-// flow through here so the icon is always consistent.
-// isSingle = true  → transparent pill with orange border (no background)
-// isSingle = false → white pill with orange ring (area / multi-spot)
-function resolveIcon(
-  exp: ExperienceWithGuide,
-  highlighted: boolean,
-  isSingle: boolean,
-): L.DivIcon {
+// ─── Icon resolver ─────────────────────────────────────────────────────────────
+function resolveIcon(exp: ExperienceWithGuide, highlighted: boolean): L.DivIcon {
   if (highlighted) {
     return exp.booking_type === 'icelandic'
       ? inquiryIconHover()
       : popupIcon(exp.price_per_person_eur ?? 0)
   }
   if (exp.booking_type === 'icelandic') return inquiryIcon()
-  return isSingle
-    ? singlePriceIcon(exp.price_per_person_eur ?? 0)
-    : areaPriceIcon(exp.price_per_person_eur ?? 0)
+  return singlePriceIcon(exp.price_per_person_eur ?? 0)
 }
 
-// Shared popup content
+// ─── Map click clearer ─────────────────────────────────────────────────────────
+function MapClickClearer({ onClear }: { onClear: () => void }) {
+  useMapEvents({ click: onClear })
+  return null
+}
+
+// ─── Popup card ────────────────────────────────────────────────────────────────
 function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
   return (
     <div style={{ width: '220px', fontFamily: 'DM Sans, sans-serif' }}>
@@ -379,42 +237,200 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
   )
 }
 
-export default function MapView({ experiences, onBoundsChange, hoveredExpId, onPinClick, showPopups = true }: Props) {
-  // mapHoveredId — tracks which pin the mouse is over on the map.
-  // Combined with hoveredExpId (card hover) via isHighlighted() below.
-  // Replaces all previous direct e.target.setIcon() calls — icon is now
-  // fully reactive so both hover sources work through a single code path.
-  const [mapHoveredId,  setMapHoveredId]  = useState<string | null>(null)
-  // pinnedAreaId — ID of the area-type experience whose polygon is "locked"
-  // visible after a click. Stays until the same pin is clicked again or the
-  // user clicks the map background.
-  const [pinnedAreaId,  setPinnedAreaId]  = useState<string | null>(null)
+// ─── Build supercluster GeoJSON points from experiences ────────────────────────
+function buildPoints(
+  experiences: ExperienceWithGuide[],
+): Supercluster.PointFeature<PointProps>[] {
+  const points: Supercluster.PointFeature<PointProps>[] = []
 
-  // An experience pin is visually highlighted if:
-  //   • hovered on map, OR
-  //   • its card is hovered in the listing panel, OR
-  //   • its area has been pinned by a click
-  const isHighlighted = (id: string) =>
-    mapHoveredId === id ||
-    (hoveredExpId != null && hoveredExpId === id) ||
-    pinnedAreaId === id
+  for (const exp of experiences) {
+    const spots = (exp.location_spots as unknown as LocationSpot[] | null) ?? []
+    let lat: number | null = null
+    let lng: number | null = null
 
+    if (spots.length > 0) {
+      lat = spots[0].lat
+      lng = spots[0].lng
+    } else if (exp.location_lat != null && exp.location_lng != null) {
+      lat = exp.location_lat
+      lng = exp.location_lng
+    }
+
+    if (lat == null || lng == null) continue
+
+    points.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [lng, lat] },
+      properties: {
+        expId: exp.id,
+        price: exp.price_per_person_eur,
+        bookingType: exp.booking_type,
+      },
+    })
+  }
+
+  return points
+}
+
+// ─── Cluster layer — primary markers + supercluster ────────────────────────────
+// Owns supercluster index + cluster state.
+// Re-clusters on map move/zoom and when experiences prop changes.
+
+type ClusterLayerProps = {
+  experiences: ExperienceWithGuide[]
+  isHighlighted: (id: string) => boolean
+  setMapHoveredId: (id: string | null) => void
+  onMarkerClick: (e: L.LeafletMouseEvent, expId: string) => void
+  showPopups: boolean
+}
+
+function ClusterLayer({
+  experiences,
+  isHighlighted,
+  setMapHoveredId,
+  onMarkerClick,
+  showPopups,
+}: ClusterLayerProps) {
+  const map = useMap()
+
+  // ClusterFeature uses AnyProps for its own cluster-level properties (from @types/supercluster)
+  type AnyFeature =
+    | Supercluster.ClusterFeature<Supercluster.AnyProps>
+    | Supercluster.PointFeature<PointProps>
+
+  const [clusters, setClusters] = useState<AnyFeature[]>([])
+  const indexRef = useRef<Supercluster<PointProps> | null>(null)
+
+  // O(1) lookup: expId → ExperienceWithGuide
+  const expById = useMemo(
+    () => new Map(experiences.map(e => [e.id, e])),
+    [experiences],
+  )
+
+  // Re-query the current viewport from the index
+  const updateClusters = useCallback(() => {
+    const idx = indexRef.current
+    if (idx == null) return
+    const bounds = map.getBounds()
+    const zoom   = Math.floor(map.getZoom())
+    const bbox: [number, number, number, number] = [
+      bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth(),
+    ]
+    setClusters(idx.getClusters(bbox, zoom))
+  }, [map])
+
+  // Rebuild the index whenever experiences change
+  useEffect(() => {
+    const points = buildPoints(experiences)
+    const idx = new Supercluster<PointProps>({ radius: 60, maxZoom: 14 })
+    idx.load(points)
+    indexRef.current = idx
+    updateClusters()
+  }, [experiences, updateClusters])
+
+  // Re-cluster on map pan/zoom
+  useMapEvents({ moveend: updateClusters, zoomend: updateClusters })
+
+  return (
+    <>
+      {clusters.map(feature => {
+        const [lng, lat] = feature.geometry.coordinates
+        const props = feature.properties as (Supercluster.ClusterProperties & PointProps)
+
+        // ── Cluster bubble ──────────────────────────────────────────────────
+        if (props.cluster === true) {
+          const clusterId = (feature as Supercluster.ClusterFeature<PointProps>).id as number
+          return (
+            <Marker
+              key={`cluster-${clusterId}`}
+              position={[lat, lng]}
+              icon={clusterIcon(props.point_count)}
+              eventHandlers={{
+                click: () => {
+                  const zoom = Math.min(
+                    indexRef.current!.getClusterExpansionZoom(clusterId),
+                    16,
+                  )
+                  map.flyTo([lat, lng], zoom, { duration: 0.35 })
+                },
+              }}
+            />
+          )
+        }
+
+        // ── Individual price pill ───────────────────────────────────────────
+        const { expId } = props
+        const exp = expById.get(expId)
+        if (exp == null) return null
+
+        const highlighted = isHighlighted(expId)
+
+        return (
+          <Marker
+            key={expId}
+            position={[lat, lng]}
+            icon={resolveIcon(exp, highlighted)}
+            eventHandlers={{
+              mouseover: () => setMapHoveredId(expId),
+              mouseout:  () => setMapHoveredId(null),
+              click:     (e) => onMarkerClick(e, expId),
+            }}
+          >
+            {showPopups && (
+              <Popup closeButton={false} className="fjord-popup">
+                <ExpPopup exp={exp} />
+              </Popup>
+            )}
+          </Marker>
+        )
+      })}
+    </>
+  )
+}
+
+// ─── Props ─────────────────────────────────────────────────────────────────────
+type Props = {
+  experiences: ExperienceWithGuide[]
+  onBoundsChange?: (bounds: MapBounds) => void
+  hoveredExpId?: string | null
+  onPinClick?: (id: string) => void
+  showPopups?: boolean
+}
+
+// ─── Main MapView ──────────────────────────────────────────────────────────────
+export default function MapView({
+  experiences,
+  onBoundsChange,
+  hoveredExpId,
+  onPinClick,
+  showPopups = true,
+}: Props) {
+  const [mapHoveredId, setMapHoveredId] = useState<string | null>(null)
+  const [pinnedAreaId, setPinnedAreaId] = useState<string | null>(null)
+
+  // Memoised so ClusterLayer only re-renders when highlight state actually changes
+  const isHighlighted = useCallback(
+    (id: string) =>
+      mapHoveredId === id ||
+      (hoveredExpId != null && hoveredExpId === id) ||
+      pinnedAreaId === id,
+    [mapHoveredId, hoveredExpId, pinnedAreaId],
+  )
+
+  // Stable click handler: toggle pinnedAreaId + propagate to parent
+  const handleMarkerClick = useCallback(
+    (e: L.LeafletMouseEvent, expId: string) => {
+      L.DomEvent.stopPropagation(e.originalEvent)
+      setPinnedAreaId(prev => prev === expId ? null : expId)
+      onPinClick?.(expId)
+    },
+    [onPinClick],
+  )
+
+  // Multi-spot experiences — secondary dots shown on hover
   const multiSpot = experiences
     .map(exp => ({ exp, spots: (exp.location_spots as unknown as LocationSpot[] | null) ?? [] }))
-    .filter(x => x.spots.length > 0)
-
-  const withArea = experiences.filter(exp => {
-    const spots = (exp.location_spots as unknown as LocationSpot[] | null) ?? []
-    return spots.length === 0 && exp.location_area != null
-  })
-
-  const singlePin = experiences
-    .filter(exp => {
-      const spots = (exp.location_spots as unknown as LocationSpot[] | null) ?? []
-      return spots.length === 0 && exp.location_area == null
-    })
-    .map(exp => ({ exp, coords: getCoords(exp) }))
-    .filter((x): x is { exp: ExperienceWithGuide; coords: [number, number] } => x.coords != null)
+    .filter(x => x.spots.length > 1)
 
   return (
     <MapContainer
@@ -426,116 +442,39 @@ export default function MapView({ experiences, onBoundsChange, hoveredExpId, onP
     >
       {onBoundsChange != null && <BoundsTracker onBoundsChange={onBoundsChange} />}
 
-      {/* Clears pinned area when user clicks map background */}
+      {/* Clears pinned highlight when user clicks map background */}
       <MapClickClearer onClear={() => setPinnedAreaId(null)} />
 
-      {/* Hint badge */}
-      {experiences.length > 0 && <AreaHoverHint />}
-
-      {/* CartoDB Voyager — free, modern, no API key */}
+      {/* CartoDB Voyager tile layer */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         maxZoom={19}
       />
 
-      {/* ─── Area experiences — polygon hidden until highlighted ────────── */}
-      {withArea.map(exp => {
-        const coords  = getCoords(exp)
-        const highlighted = isHighlighted(exp.id)
-        return (
-          <span key={exp.id}>
-            {/* Area overlay visible when this experience is highlighted from
-                either the map marker hover OR a card hover in the listing */}
-            <AreaOverlay exp={exp} visible={highlighted} />
-            {coords != null && (
-              <Marker
-                position={coords}
-                icon={resolveIcon(exp, highlighted, false)}
-                eventHandlers={{
-                  mouseover: () => setMapHoveredId(exp.id),
-                  mouseout:  () => setMapHoveredId(null),
-                  // Toggle pinned area: click same pin to unpin, click another to switch
-                  click: (e) => {
-                    L.DomEvent.stopPropagation(e.originalEvent)
-                    setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
-                    onPinClick?.(exp.id)
-                  },
-                }}
-              >
+      {/* ── Secondary spot dots — shown on hover, no polygon connecting them ── */}
+      {multiSpot.flatMap(({ exp, spots }) =>
+        isHighlighted(exp.id)
+          ? spots.slice(1).map((s, i) => (
+              <Marker key={`${exp.id}-dot-${i}`} position={[s.lat, s.lng]} icon={dotIcon()}>
                 {showPopups && (
                   <Popup closeButton={false} className="fjord-popup">
                     <ExpPopup exp={exp} />
                   </Popup>
                 )}
               </Marker>
-            )}
-          </span>
-        )
-      })}
+            ))
+          : [],
+      )}
 
-      {/* ─── Single-pin experiences ─────────────────────────────────────── */}
-      {singlePin.map(({ exp, coords }) => (
-        <span key={exp.id}>
-          <Marker
-            position={coords}
-            icon={resolveIcon(exp, isHighlighted(exp.id), true)}
-            eventHandlers={{
-              mouseover: () => setMapHoveredId(exp.id),
-              mouseout:  () => setMapHoveredId(null),
-              click: (e) => {
-                L.DomEvent.stopPropagation(e.originalEvent)
-                setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
-                onPinClick?.(exp.id)
-              },
-            }}
-          >
-            {showPopups && (
-              <Popup closeButton={false} className="fjord-popup">
-                <ExpPopup exp={exp} />
-              </Popup>
-            )}
-          </Marker>
-        </span>
-      ))}
-
-      {/* ─── Multi-spot experiences ─────────────────────────────────────── */}
-      {multiSpot.map(({ exp, spots }) => (
-        <span key={exp.id}>
-          <SpotsAreaOverlay spots={spots} visible={isHighlighted(exp.id)} />
-          {/* Primary spot — price bubble, highlights from both hover sources */}
-          <Marker
-            position={[spots[0].lat, spots[0].lng]}
-            icon={resolveIcon(exp, isHighlighted(exp.id), false)}
-            eventHandlers={{
-              mouseover: () => setMapHoveredId(exp.id),
-              mouseout:  () => setMapHoveredId(null),
-              click: (e) => {
-                L.DomEvent.stopPropagation(e.originalEvent)
-                setPinnedAreaId(prev => prev === exp.id ? null : exp.id)
-                onPinClick?.(exp.id)
-              },
-            }}
-          >
-            {showPopups && (
-              <Popup closeButton={false} className="fjord-popup">
-                <ExpPopup exp={exp} />
-              </Popup>
-            )}
-          </Marker>
-          {/* Secondary spots — dots visible only when price pin is hovered/highlighted */}
-          {isHighlighted(exp.id) && spots.slice(1).map((s, i) => (
-            <Marker key={i} position={[s.lat, s.lng]} icon={dotIcon()}>
-              {showPopups && (
-                <Popup closeButton={false} className="fjord-popup">
-                  <ExpPopup exp={exp} />
-                </Popup>
-              )}
-            </Marker>
-          ))}
-        </span>
-      ))}
-
+      {/* ── Clustered primary markers — one per experience ── */}
+      <ClusterLayer
+        experiences={experiences}
+        isHighlighted={isHighlighted}
+        setMapHoveredId={setMapHoveredId}
+        onMarkerClick={handleMarkerClick}
+        showPopups={showPopups}
+      />
     </MapContainer>
   )
 }

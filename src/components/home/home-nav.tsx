@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { User as UserIcon } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
 
 const NAV_LINKS = [
@@ -246,10 +247,7 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
                   className="text-[14px] font-semibold px-4 py-3 rounded-xl text-white text-center f-body transition-all hover:brightness-110 flex items-center justify-center gap-2"
                   style={{ background: '#0A2E4D' }}
                 >
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-                    <circle cx="7.5" cy="5" r="2.5" />
-                    <path d="M2.5 13c0-2.76 2.24-5 5-5s5 2.24 5 5" />
-                  </svg>
+                  <UserIcon size={15} strokeWidth={1.5} aria-hidden="true" />
                   My Dashboard
                 </Link>
               )}

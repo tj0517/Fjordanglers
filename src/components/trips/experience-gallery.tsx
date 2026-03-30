@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useState, useEffect, useCallback } from 'react'
 import { heroFull, cardThumb, gallerySlide } from '@/lib/image'
+import { LayoutGrid, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface GalleryImage {
   id: string
@@ -103,10 +104,7 @@ export function ExperienceGallery({ images, title }: Props) {
                   <div className="absolute inset-0 flex items-center justify-center"
                     style={{ background: 'rgba(10,46,77,0.55)', backdropFilter: 'blur(2px)' }}>
                     <span className="flex items-center gap-2 text-white font-semibold text-[13px] f-body">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-                      </svg>
+                      <LayoutGrid size={16} strokeWidth={2} />
                       All {sorted.length} photos
                     </span>
                   </div>
@@ -145,7 +143,7 @@ export function ExperienceGallery({ images, title }: Props) {
                 style={{ background: 'rgba(255,255,255,0.92)', color: '#0A2E4D' }}
                 aria-label="Previous photo"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                <ChevronLeft size={14} strokeWidth={2.5} />
               </button>
               <button
                 onClick={e => { e.stopPropagation(); slideNext() }}
@@ -153,7 +151,7 @@ export function ExperienceGallery({ images, title }: Props) {
                 style={{ background: 'rgba(255,255,255,0.92)', color: '#0A2E4D' }}
                 aria-label="Next photo"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                <ChevronRight size={14} strokeWidth={2.5} />
               </button>
             </>
           )}
@@ -204,9 +202,7 @@ export function ExperienceGallery({ images, title }: Props) {
             className="absolute top-5 right-5 w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
             style={{ color: 'rgba(255,255,255,0.6)' }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
+            <X size={18} strokeWidth={2} />
           </button>
 
           {sorted.length > 1 && (
@@ -215,7 +211,7 @@ export function ExperienceGallery({ images, title }: Props) {
               className="absolute left-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
               style={{ color: 'rgba(255,255,255,0.6)' }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+              <ChevronLeft size={22} strokeWidth={2} />
             </button>
           )}
 
@@ -237,7 +233,7 @@ export function ExperienceGallery({ images, title }: Props) {
               className="absolute right-4 w-11 h-11 rounded-full flex items-center justify-center transition-colors hover:bg-white/10"
               style={{ color: 'rgba(255,255,255,0.6)' }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              <ChevronRight size={22} strokeWidth={2} />
             </button>
           )}
 

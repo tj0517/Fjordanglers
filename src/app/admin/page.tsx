@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { Plus, AlertCircle, ArrowRight } from 'lucide-react'
 
 export const metadata = {
   title: 'Admin — FjordAnglers',
@@ -106,10 +107,7 @@ export default async function AdminPage() {
           className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 f-body"
           style={{ background: '#E67E50' }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-            <rect x="5.3" y="1" width="1.4" height="10" rx="0.7"/>
-            <rect x="1" y="5.3" width="10" height="1.4" rx="0.7"/>
-          </svg>
+          <Plus width={12} height={12} />
           Add Guide
         </Link>
       </div>
@@ -151,11 +149,7 @@ export default async function AdminPage() {
             className="px-6 py-4 flex items-center gap-3"
             style={{ borderBottom: '1px solid rgba(10,46,77,0.07)', background: 'rgba(230,126,80,0.04)' }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#E67E50" strokeWidth="1.6" aria-hidden="true">
-              <circle cx="8" cy="8" r="6.5"/>
-              <line x1="8" y1="5" x2="8" y2="8.5"/>
-              <circle cx="8" cy="11" r="0.8" fill="#E67E50" stroke="none"/>
-            </svg>
+            <AlertCircle width={16} height={16} stroke="#E67E50" strokeWidth={1.6} aria-hidden="true" />
             <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Needs Attention</h2>
             <span
               className="text-[10px] font-bold f-body px-2 py-0.5 rounded-full"
@@ -180,9 +174,7 @@ export default async function AdminPage() {
                 <span className="text-sm f-body flex-1" style={{ color: 'rgba(10,46,77,0.7)' }}>
                   {item.label}
                 </span>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="rgba(10,46,77,0.28)" strokeWidth="1.5" aria-hidden="true">
-                  <path d="M3 7h8M8 4l3 3-3 3"/>
-                </svg>
+                <ArrowRight width={14} height={14} stroke="rgba(10,46,77,0.28)" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             ))}
           </div>

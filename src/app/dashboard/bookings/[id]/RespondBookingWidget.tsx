@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import BookingRespondForm, { type BookingRespondFormProps } from './respond/BookingRespondForm'
 import { fmtShort } from './respond/RespondCalendar'
+import { Info, X } from 'lucide-react'
 
 type Props = Omit<BookingRespondFormProps, 'mode'>
 
@@ -10,7 +11,20 @@ export default function RespondBookingWidget(props: Props) {
   const [open, setOpen] = useState(false)
   const { anglerName, anglerCountry, guests, totalEur, windowFrom, anglerRequestedDates, durationOption } = props
 
-  // Derive window-to date (request booking) if encoded in requested_dates[1]
+  // Lock body scroll when open
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
   const windowTo =
     anglerRequestedDates && anglerRequestedDates.length === 2 && anglerRequestedDates[1] !== windowFrom
       ? anglerRequestedDates[1]
@@ -24,7 +38,7 @@ export default function RespondBookingWidget(props: Props) {
 
   return (
     <>
-      {/* ── Compact trigger banner ──────────────────────────────────────────── */}
+      {/* ── Trigger banner ──────────────────────────────────────────────────── */}
       <div
         style={{
           background:   '#FDFAF7',
@@ -34,7 +48,6 @@ export default function RespondBookingWidget(props: Props) {
           overflow:     'hidden',
         }}
       >
-        {/* Orange header */}
         <div
           className="px-5 py-4 flex items-center justify-between gap-4"
           style={{ background: 'rgba(230,126,80,0.08)', borderBottom: '1px solid rgba(230,126,80,0.15)' }}
@@ -44,12 +57,7 @@ export default function RespondBookingWidget(props: Props) {
               className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgba(230,126,80,0.18)' }}
             >
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none"
-                   stroke="#E67E50" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M7.5 1.5C4.186 1.5 1.5 4.186 1.5 7.5S4.186 13.5 7.5 13.5 13.5 10.814 13.5 7.5 10.814 1.5 7.5 1.5z"/>
-                <line x1="7.5" y1="5" x2="7.5" y2="8.5"/>
-                <circle cx="7.5" cy="10.5" r="0.6" fill="#E67E50" stroke="none"/>
-              </svg>
+              <Info size={15} strokeWidth={1.8} style={{ color: '#E67E50' }} />
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
@@ -69,7 +77,6 @@ export default function RespondBookingWidget(props: Props) {
           </button>
         </div>
 
-        {/* Summary row */}
         <div className="px-5 py-3 flex items-center gap-3 flex-wrap">
           <span className="text-[12px] f-body font-semibold" style={{ color: '#0A2E4D' }}>
             {anglerName}
@@ -92,56 +99,59 @@ export default function RespondBookingWidget(props: Props) {
         </div>
       </div>
 
-      {/* ── Full-page overlay ───────────────────────────────────────────────── */}
+      {/* ── Modal dialog ────────────────────────────────────────────────────── */}
       {open && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50 }}>
-          {/* Blurred backdrop — click to close */}
+        <>
+          {/* Backdrop — separate element, no backdropFilter to avoid blur bleeding onto the panel */}
           <div
-            style={{
-              position: 'absolute', inset: 0,
-              background: 'rgba(10,46,77,0.6)',
-              backdropFilter: 'blur(8px)',
-            }}
+            className="fixed inset-0 z-50"
+            style={{ background: 'rgba(7,17,28,0.65)' }}
             onClick={() => setOpen(false)}
             aria-hidden="true"
           />
 
-          {/* Scrollable wrapper */}
+          {/* Dialog panel — above backdrop, pointer-events-none wrapper centres it without catching clicks */}
           <div
-            style={{
-              position: 'relative', zIndex: 1,
-              height: '100%', overflowY: 'auto',
-              display: 'flex', justifyContent: 'center',
-              padding: '28px 16px 80px',
-            }}
+            className="fixed inset-0 z-[51] flex items-center justify-center p-4 sm:p-6 pointer-events-none"
           >
-            {/* Modal card — stop backdrop-click propagation */}
+          <div
+            className="relative w-full sm:max-w-3xl max-h-[92dvh] flex flex-col pointer-events-auto"
+            style={{
+              background:   '#FDFAF7',
+              borderRadius: 28,
+              overflow:     'hidden',
+              boxShadow:    '0 24px 80px rgba(10,46,77,0.28)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Sticky header */}
             <div
-              style={{
-                width: '100%', maxWidth: '1040px',
-                background: '#FDFAF7',
-                borderRadius: '28px',
-                boxShadow: '0 40px 120px rgba(10,46,77,0.3), 0 8px 32px rgba(10,46,77,0.12)',
-                height: 'fit-content',
-                position: 'relative',
-              }}
-              onClick={e => e.stopPropagation()}
+              className="flex items-center justify-between px-6 pt-5 pb-4 flex-shrink-0"
+              style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
             >
-              {/* ✕ Close button */}
+              <div>
+                <p
+                  className="text-[10px] font-bold uppercase tracking-[0.2em] f-body"
+                  style={{ color: 'rgba(10,46,77,0.38)' }}
+                >
+                  Respond to booking
+                </p>
+                <h2 className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>
+                  {anglerName}
+                </h2>
+              </div>
               <button
                 onClick={() => setOpen(false)}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition-all hover:opacity-70 hover:scale-105 z-10"
-                style={{ background: 'rgba(10,46,77,0.08)' }}
-                aria-label="Close respond panel"
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-black/[0.06]"
+                aria-label="Close"
+                style={{ color: 'rgba(10,46,77,0.5)' }}
               >
-                <svg width="11" height="11" viewBox="0 0 11 11" fill="none"
-                     stroke="#0A2E4D" strokeWidth="1.8" strokeLinecap="round">
-                  <line x1="1" y1="1" x2="10" y2="10" />
-                  <line x1="10" y1="1" x2="1" y2="10" />
-                </svg>
+                <X size={14} strokeWidth={2} />
               </button>
+            </div>
 
-              {/* The form itself — mode="page" so all phases render inline (no double overlay) */}
+            {/* Scrollable body — min-h-0 is required for overflow-y to work in flex */}
+            <div className="overflow-y-auto flex-1 min-h-0">
               <BookingRespondForm
                 {...props}
                 mode="page"
@@ -149,7 +159,8 @@ export default function RespondBookingWidget(props: Props) {
               />
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </>
   )

@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRef, useCallback } from 'react'
 import { FISH_CATALOG } from '@/lib/fish'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 type SpeciesItem = (typeof FISH_CATALOG)[number] & { count: number }
 
@@ -39,12 +40,10 @@ export function SpeciesSlider({ species }: { species: SpeciesItem[] }) {
       className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-all hover:opacity-80"
       style={{ background: 'transparent', border: '1px solid rgba(10,46,77,0.15)' }}
     >
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-        {dir === 'left'
-          ? <path d="M10 12L6 8l4-4" stroke="#0A2E4D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          : <path d="M6 4l4 4-4 4" stroke="#0A2E4D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        }
-      </svg>
+      {dir === 'left'
+        ? <ChevronLeft size={12} strokeWidth={1.5} style={{ color: '#0A2E4D' }} />
+        : <ChevronRight size={12} strokeWidth={1.5} style={{ color: '#0A2E4D' }} />
+      }
     </button>
   )
 

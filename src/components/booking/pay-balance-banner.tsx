@@ -11,6 +11,7 @@
 
 import { useState, useTransition } from 'react'
 import { createBalanceCheckout, mockCompleteBalance } from '@/actions/bookings'
+import { Banknote, XCircle, Check, X, Lock } from 'lucide-react'
 
 interface PayBalanceBannerProps {
   bookingId:     string
@@ -48,12 +49,7 @@ export default function PayBalanceBanner({
           className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
           style={{ background: 'rgba(10,46,77,0.07)' }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#0A2E4D" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.6">
-            <rect x="1" y="4" width="14" height="9" rx="1.5" />
-            <circle cx="8" cy="8.5" r="2" />
-            <line x1="4" y1="4" x2="4" y2="2.5" />
-            <line x1="12" y1="4" x2="12" y2="2.5" />
-          </svg>
+          <Banknote size={16} strokeWidth={1.5} style={{ color: '#0A2E4D', opacity: 0.6 }} />
         </div>
         <div>
           <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>
@@ -117,10 +113,7 @@ function MockBalanceBanner({
           border:       '1px solid rgba(239,68,68,0.18)',
         }}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#DC2626" strokeWidth="1.5">
-          <circle cx="8" cy="8" r="6.5" />
-          <path d="M10 6l-4 4M6 6l4 4" strokeLinecap="round" />
-        </svg>
+        <XCircle size={16} strokeWidth={1.5} style={{ color: '#DC2626' }} />
         <p className="text-sm f-body" style={{ color: '#DC2626' }}>
           Payment skipped — you can pay later.
         </p>
@@ -193,9 +186,7 @@ function MockBalanceBanner({
             </>
           ) : (
             <>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <path d="M2.5 7l3.5 3.5 5.5-6" />
-              </svg>
+              <Check size={14} strokeWidth={2} />
               Yes — Simulate Payment
             </>
           )}
@@ -212,9 +203,7 @@ function MockBalanceBanner({
             color:      '#DC2626',
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M9 3L3 9M3 3l6 6" />
-          </svg>
+          <X size={12} strokeWidth={1.8} />
           No — Skip
         </button>
       </div>
@@ -265,10 +254,7 @@ function StripeBalanceBanner({
           className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
           style={{ background: 'rgba(37,99,235,0.1)' }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round">
-            <rect x="1" y="4.5" width="14" height="9" rx="1.5" />
-            <path d="M4 4.5V3.5a4 4 0 018 0v1" />
-          </svg>
+          <Lock size={16} strokeWidth={1.5} style={{ color: '#2563EB' }} />
         </div>
         <div>
           <p className="text-sm font-bold f-body" style={{ color: '#1D4ED8' }}>
@@ -307,10 +293,7 @@ function StripeBalanceBanner({
           </>
         ) : (
           <>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="1" y="4.5" width="12" height="8" rx="1.5" />
-              <path d="M4 4.5V3.5a3 3 0 016 0v1" />
-            </svg>
+            <Lock size={14} strokeWidth={1.5} />
             Pay €{balanceAmount} balance — secure by Stripe
           </>
         )}

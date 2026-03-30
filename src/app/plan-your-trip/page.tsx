@@ -12,6 +12,7 @@ import { useState, useTransition, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { submitInquiry } from '@/actions/inquiries'
+import { CheckCircle, Minus, Plus, Loader2 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -156,19 +157,7 @@ function PlanYourTripForm() {
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
             style={{ background: 'rgba(74,222,128,0.12)' }}
           >
-            <svg
-              width="36"
-              height="36"
-              viewBox="0 0 36 36"
-              fill="none"
-              stroke="#16A34A"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="18" cy="18" r="16" />
-              <polyline points="11,18 16,23 25,13" />
-            </svg>
+            <CheckCircle size={36} strokeWidth={2.5} style={{ color: '#16A34A' }} />
           </div>
           <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-3">
             Request Received!
@@ -351,9 +340,7 @@ function PlanYourTripForm() {
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}
                 >
-                  <svg width="12" height="2" viewBox="0 0 12 2" fill="none">
-                    <rect x="0" y="0.5" width="12" height="1.2" rx="0.6" fill="currentColor" />
-                  </svg>
+                  <Minus size={12} strokeWidth={2} />
                 </button>
                 <div className="flex items-center gap-2 select-none">
                   <span className="text-lg font-bold f-display" style={{ color: '#0A2E4D', lineHeight: '1' }}>
@@ -370,10 +357,7 @@ function PlanYourTripForm() {
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed"
                   style={{ background: '#E67E50', color: '#fff' }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <rect x="5.1" y="0" width="1.8" height="12" rx="0.9" fill="currentColor" />
-                    <rect x="0" y="5.1" width="12" height="1.8" rx="0.9" fill="currentColor" />
-                  </svg>
+                  <Plus size={12} strokeWidth={2} />
                 </button>
               </div>
             </div>
@@ -648,18 +632,7 @@ function PlanYourTripForm() {
             >
               {isPending ? (
                 <>
-                  <svg
-                    className="animate-spin"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="8" cy="8" r="6" strokeOpacity="0.25" />
-                    <path d="M8 2a6 6 0 016 6" strokeLinecap="round" />
-                  </svg>
+                  <Loader2 className="animate-spin" size={16} strokeWidth={2} />
                   Sending…
                 </>
               ) : (

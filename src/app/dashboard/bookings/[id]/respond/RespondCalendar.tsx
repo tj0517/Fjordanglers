@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -207,13 +208,7 @@ export default function RespondCalendar({
         {hasAnglerWindow && (
           <div className="flex items-center gap-2.5 mb-3 px-3 py-2.5 rounded-xl"
                style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.16)' }}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0"
-                 stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1" y="1.5" width="11" height="10" rx="1.5" />
-              <line x1="1" y1="5" x2="12" y2="5" />
-              <line x1="4" y1="0.5" x2="4" y2="3" />
-              <line x1="9" y1="0.5" x2="9" y2="3" />
-            </svg>
+            <Calendar size={13} strokeWidth={1.5} className="shrink-0" style={{ color: '#2563EB' }} />
             <div className="min-w-0">
               <p className="text-[11px] font-bold f-body" style={{ color: '#2563EB' }}>
                 Angler&apos;s availability window
@@ -236,9 +231,7 @@ export default function RespondCalendar({
             aria-label="Previous month"
             className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
             style={{ background: 'rgba(10,46,77,0.07)' }}>
-            <svg width="5" height="9" viewBox="0 0 5 9" fill="none">
-              <path d="M4 1L1 4.5 4 8" stroke="#0A2E4D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ChevronLeft size={9} strokeWidth={1.6} style={{ color: '#0A2E4D' }} />
           </button>
           <span className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
             {MONTH_NAMES[viewM]} {viewY}
@@ -247,9 +240,7 @@ export default function RespondCalendar({
             aria-label="Next month"
             className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
             style={{ background: 'rgba(10,46,77,0.07)' }}>
-            <svg width="5" height="9" viewBox="0 0 5 9" fill="none">
-              <path d="M1 1L4 4.5 1 8" stroke="#0A2E4D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <ChevronRight size={9} strokeWidth={1.6} style={{ color: '#0A2E4D' }} />
           </button>
         </div>
 

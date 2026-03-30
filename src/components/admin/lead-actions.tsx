@@ -16,6 +16,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { updateLeadStatus, deleteLead, type LeadStatus } from '@/actions/admin'
+import { Plus } from 'lucide-react'
 
 type Props = {
   leadId: string
@@ -67,10 +68,7 @@ export default function LeadActions({ leadId, status }: Props) {
           className="flex items-center gap-1.5 text-white text-[11px] font-semibold px-3.5 py-1.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body whitespace-nowrap"
           style={{ background: '#E67E50' }}
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-            <rect x="4.3" y="0.5" width="1.4" height="9" rx="0.7" />
-            <rect x="0.5" y="4.3" width="9" height="1.4" rx="0.7" />
-          </svg>
+          <Plus size={10} />
           Create Listing
         </Link>
       )}

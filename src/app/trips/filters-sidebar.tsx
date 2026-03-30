@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { FISH_FILTER as SPECIES } from '@/lib/fish'
 import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { Check } from 'lucide-react'
 
 
 // ─── Static data ──────────────────────────────────────────────────────────────
@@ -63,11 +64,7 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 function CheckIcon() {
-  return (
-    <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
-      <path d="M1 3.5L3 5.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
+  return <Check size={9} strokeWidth={1.5} style={{ color: 'white' }} />
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

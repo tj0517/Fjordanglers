@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { startStripeOnboarding } from '@/actions/stripe-connect'
+import { CreditCard } from 'lucide-react'
 
 export function StripeConnectButton({ label = 'Connect with Stripe' }: { label?: string }) {
   const [isPending, startTransition] = useTransition()
@@ -36,10 +37,7 @@ export function StripeConnectButton({ label = 'Connect with Stripe' }: { label?:
           'Opening Stripe…'
         ) : (
           <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="2" y="5" width="20" height="15" rx="2" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M2 10h20" stroke="currentColor" strokeWidth="1.8" />
-            </svg>
+            <CreditCard size={14} strokeWidth={1.8} aria-hidden="true" />
             {label}
           </>
         )}

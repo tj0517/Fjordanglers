@@ -10,6 +10,7 @@ import {
   resolveFormConfig,
 } from '@/lib/inquiry-form-config'
 import { updateInquiryFormConfig } from '@/actions/inquiry-form-config'
+import { Info, Check } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -194,11 +195,7 @@ export default function InquiryFormConfigEditor({ expId, initialConfig }: Props)
         className="flex items-start gap-2.5 px-4 py-3 rounded-xl mb-6"
         style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="rgba(10,46,77,0.4)" strokeWidth="1.6" className="mt-0.5 flex-shrink-0">
-          <circle cx="7" cy="7" r="6" />
-          <line x1="7" y1="5" x2="7" y2="7.5" />
-          <circle cx="7" cy="9.5" r="0.8" fill="rgba(10,46,77,0.4)" />
-        </svg>
+        <Info size={14} strokeWidth={1.6} className="mt-0.5 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }} />
         <p className="text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.5)' }}>
           <strong style={{ color: '#0A2E4D' }}>Always required</strong> (not configurable):&nbsp;
           preferred dates / period &bull; group size &bull; target species
@@ -259,9 +256,7 @@ export default function InquiryFormConfigEditor({ expId, initialConfig }: Props)
         <div className="flex items-center gap-3">
           {saved && (
             <span className="flex items-center gap-1.5 text-xs font-semibold f-body" style={{ color: '#059669' }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="2 7 6 11 12 4" />
-              </svg>
+              <Check size={14} strokeWidth={2} style={{ color: '#059669' }} />
               Saved
             </span>
           )}

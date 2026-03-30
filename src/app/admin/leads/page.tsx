@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import LeadActions from '@/components/admin/lead-actions'
 import type { LeadStatus } from '@/actions/admin'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { Inbox, Info } from 'lucide-react'
 
 /**
  * /admin/leads — Lead pipeline page.
@@ -161,10 +162,7 @@ export default async function AdminLeadsPage() {
               className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
               style={{ background: 'rgba(10,46,77,0.05)' }}
             >
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="rgba(10,46,77,0.3)" strokeWidth="1.4">
-                <rect x="2" y="2" width="18" height="18" rx="3" />
-                <path d="M2 13h4.5l1.5 3h6l1.5-3H20" />
-              </svg>
+              <Inbox width={22} height={22} stroke="rgba(10,46,77,0.3)" strokeWidth={1.4} />
             </div>
             <p className="text-[#0A2E4D]/30 text-sm f-body">No applications yet.</p>
             <p className="text-[#0A2E4D]/22 text-xs f-body mt-1">
@@ -254,11 +252,7 @@ export default async function AdminLeadsPage() {
         className="mt-5 px-5 py-4 rounded-2xl flex items-start gap-3"
         style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}
       >
-        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="rgba(10,46,77,0.35)" strokeWidth="1.4" className="flex-shrink-0 mt-0.5">
-          <circle cx="7.5" cy="7.5" r="6" />
-          <line x1="7.5" y1="5" x2="7.5" y2="8" />
-          <circle cx="7.5" cy="10.5" r="0.5" fill="rgba(10,46,77,0.35)" />
-        </svg>
+        <Info width={15} height={15} stroke="rgba(10,46,77,0.35)" strokeWidth={1.4} className="flex-shrink-0 mt-0.5" />
         <p className="text-[11px] leading-relaxed f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
           <strong style={{ color: 'rgba(10,46,77,0.65)' }}>Lead pipeline:</strong>{' '}
           "Create Listing" pre-fills the guide form with this application&apos;s data.

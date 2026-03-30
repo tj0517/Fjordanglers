@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { acceptBooking, declineBooking } from '@/actions/bookings'
@@ -8,6 +8,7 @@ import RespondCalendar, { fmtDate, fmtShort } from './RespondCalendar'
 import type { WeeklySchedule, BlockedRange } from './RespondCalendar'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
+import { Calendar, ArrowLeft, Check, X } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -122,13 +123,7 @@ function BookingSummaryCard({ anglerName, anglerCountry, experienceTitle, window
           <div className="flex flex-col gap-1">
             <div className="flex items-start gap-2 px-3 py-2 rounded-xl"
                  style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.14)' }}>
-              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" className="shrink-0 mt-0.5"
-                   stroke="#2563EB" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="0.5" y="1" width="10" height="9" rx="1" />
-                <line x1="0.5" y1="4" x2="10.5" y2="4" />
-                <line x1="3.5" y1="0" x2="3.5" y2="2" />
-                <line x1="7.5" y1="0" x2="7.5" y2="2" />
-              </svg>
+              <Calendar size={11} strokeWidth={1.4} className="shrink-0 mt-0.5" style={{ color: '#2563EB' }} />
               <div>
                 <p className="text-[10px] font-bold f-body uppercase tracking-[0.12em]"
                    style={{ color: 'rgba(37,99,235,0.7)' }}>
@@ -183,9 +178,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
     <button type="button" onClick={onClick}
       className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-opacity hover:opacity-70"
       style={{ background: 'rgba(10,46,77,0.07)' }} aria-label="Go back">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#0A2E4D" strokeWidth="1.5">
-        <polyline points="7,2 3,6 7,10" /><line x1="3" y1="6" x2="11" y2="6" />
-      </svg>
+      <ArrowLeft size={12} strokeWidth={1.5} style={{ color: '#0A2E4D' }} />
     </button>
   )
 }
@@ -220,6 +213,26 @@ export default function BookingRespondForm({
   const [altTo,         setAltTo]         = useState<string | null>(null)
   const [error,         setError]         = useState<string | null>(null)
 
+  // ── Price (editable, auto-calculated from pricePerPersonEur × guests × days) ─
+  const computeDefaultPrice = (numDays: number) => {
+    if (pricePerPersonEur != null && pricePerPersonEur > 0 && guests > 0) {
+      return Math.round(pricePerPersonEur * guests * numDays * 1.05)
+    }
+    return totalEur
+  }
+  const initialDays = effectiveNumDays ?? 1
+  const [priceInput, setPriceInput]         = useState<string>(String(computeDefaultPrice(initialDays)))
+  const priceManuallyEdited                  = useRef(false)
+
+  // Auto-update price as days are selected on calendar (unless guide edited manually)
+  useEffect(() => {
+    if (priceManuallyEdited.current) return
+    if (confirmedDays.length > 0) {
+      setPriceInput(String(computeDefaultPrice(confirmedDays.length)))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmedDays.length])
+
   function selectAction(a: Action) { setAction(a); setPhase('form'); setError(null) }
   function goBack() { setError(null); setPhase(phase === 'review' ? 'form' : 'action') }
   function closeOverlay() { setError(null); setPhase('action') }
@@ -237,9 +250,11 @@ export default function BookingRespondForm({
     setError(null)
     startTransition(async () => {
       if (action === 'accept') {
+        const parsedPrice = parseFloat(priceInput)
         const r = await acceptBooking(bookingId, {
-          confirmedDays: confirmedDays.length > 0 ? confirmedDays : undefined,
-          guideNote:     guideNote.trim() || undefined,
+          confirmedDays:  confirmedDays.length > 0 ? confirmedDays : undefined,
+          guideNote:      guideNote.trim() || undefined,
+          customTotalEur: !isNaN(parsedPrice) && parsedPrice > 0 ? parsedPrice : undefined,
         })
         if (r.error) { setError(r.error); setPhase('form'); return }
       } else {
@@ -261,14 +276,12 @@ export default function BookingRespondForm({
 
   if (phase === 'action') {
     return (
-      <div className={mode === 'page' ? 'px-4 py-8 sm:px-8 sm:py-12 max-w-[720px] mx-auto' : 'pt-5'}>
+      <div className={onClose ? 'px-5 py-5' : mode === 'page' ? 'px-4 py-8 sm:px-8 sm:py-12 max-w-[720px] mx-auto' : 'pt-5'}>
         {mode === 'page' && !onClose && (
           <Link href={`/dashboard/bookings/${bookingId}`}
             className="inline-flex items-center gap-1.5 text-xs f-body mb-8 transition-opacity hover:opacity-70"
             style={{ color: 'rgba(10,46,77,0.45)' }}>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <polyline points="7,2 3,6 7,10" /><line x1="3" y1="6" x2="11" y2="6" />
-            </svg>
+            <ArrowLeft size={12} strokeWidth={1.5} />
             Back to booking
           </Link>
         )}
@@ -307,13 +320,7 @@ export default function BookingRespondForm({
         {isRequestBooking && (
           <div className="mb-5 flex items-center gap-2 px-3.5 py-2.5 rounded-xl"
                style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.16)' }}>
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" className="shrink-0"
-                 stroke="#2563EB" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="1" y="1.5" width="11" height="10" rx="1.5" />
-              <line x1="1" y1="5" x2="12" y2="5" />
-              <line x1="4" y1="0.5" x2="4" y2="3" />
-              <line x1="9" y1="0.5" x2="9" y2="3" />
-            </svg>
+            <Calendar size={13} strokeWidth={1.5} className="shrink-0" style={{ color: '#2563EB' }} />
             <p className="text-[12px] f-body" style={{ color: '#2563EB' }}>
               <span className="font-bold">Available:</span>{' '}
               {fmtShort(windowFrom)} – {fmtShort(effectiveWindowTo!)}
@@ -360,7 +367,7 @@ export default function BookingRespondForm({
   if (phase === 'form') {
     const isAcc = action === 'accept'
     const formContent = (
-      <div className="px-6 py-6 sm:px-8 sm:py-8">
+      <div className={onClose ? 'px-5 py-5' : 'px-6 py-6 sm:px-8 sm:py-8'}>
         <div className="flex items-center gap-4 mb-6">
           <BackBtn onClick={goBack} />
           <div>
@@ -400,33 +407,41 @@ export default function BookingRespondForm({
                     onMultiChange={setConfirmedDays}
                     disabled={isPending}
                   />
-                  {confirmedDays.length > 0 && (() => {
-                    const n = confirmedDays.length
-                    const computedTotal = pricePerPersonEur != null
-                      ? Math.round(pricePerPersonEur * guests * n * 1.05 * 100) / 100
-                      : null
-                    return (
-                      <div className="mt-3 px-4 py-3 rounded-xl flex items-center justify-between gap-3"
-                           style={{ background: 'rgba(22,163,74,0.07)', border: '1px solid rgba(22,163,74,0.2)' }}>
-                        <div className="flex items-center gap-2">
-                          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
-                               stroke="#16A34A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="1.5,6.5 5.5,10.5 11.5,2.5" />
-                          </svg>
-                          <span className="text-sm f-body font-semibold" style={{ color: '#16A34A' }}>
-                            {n} day{n !== 1 ? 's' : ''} selected
-                          </span>
-                        </div>
-                        {computedTotal != null && (
-                          <div className="text-right">
-                            <span className="text-[10px] f-body block" style={{ color: 'rgba(10,46,77,0.45)' }}>Updated total</span>
-                            <span className="text-base f-display font-bold" style={{ color: '#0A2E4D' }}>€{computedTotal}</span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })()}
+                  {confirmedDays.length > 0 && (
+                    <div className="mt-2 flex items-center gap-1.5 text-xs f-body font-semibold px-2.5 py-1 rounded-full w-fit"
+                         style={{ background: 'rgba(22,163,74,0.1)', color: '#16A34A' }}>
+                      <Check size={10} strokeWidth={1.8} />
+                      {confirmedDays.length} day{confirmedDays.length !== 1 ? 's' : ''} selected
+                    </div>
+                  )}
                 </div>
+                <div>
+                  <label style={labelStyle}>Total price (angler pays) *</label>
+                  <div className="relative">
+                    <span
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm f-body pointer-events-none"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}
+                    >€</span>
+                    <input
+                      type="number" step="1" min="1"
+                      value={priceInput}
+                      onChange={e => {
+                        setPriceInput(e.target.value)
+                        priceManuallyEdited.current = true
+                      }}
+                      disabled={isPending}
+                      className="f-body"
+                      style={{ ...inputStyle, paddingLeft: '26px' }}
+                      aria-label="Total price in EUR"
+                    />
+                  </div>
+                  {pricePerPersonEur != null && confirmedDays.length > 0 && (
+                    <p className="mt-1.5 text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      Based on {confirmedDays.length} day{confirmedDays.length !== 1 ? 's' : ''} × €{pricePerPersonEur}/person × {guests} pax (+5% fee)
+                    </p>
+                  )}
+                </div>
+
                 <div>
                   <label style={labelStyle}>
                     Message to angler
@@ -579,15 +594,9 @@ export default function BookingRespondForm({
           <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
                style={{ background: isAccept ? 'rgba(22,163,74,0.15)' : 'rgba(239,68,68,0.12)' }}>
             {isAccept ? (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-                   stroke="#16A34A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="2.5,10 8,15.5 17.5,5.5" />
-              </svg>
+              <Check size={20} strokeWidth={2.2} style={{ color: '#16A34A' }} />
             ) : (
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-                   stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round">
-                <line x1="4" y1="4" x2="16" y2="16" /><line x1="16" y1="4" x2="4" y2="16" />
-              </svg>
+              <X size={20} strokeWidth={2.2} style={{ color: '#DC2626' }} />
             )}
           </div>
           <div>
@@ -630,15 +639,16 @@ export default function BookingRespondForm({
                 }
                 highlight={confirmedDays.length > 0}
               />
-              {confirmedDays.length > 0 && pricePerPersonEur != null && (() => {
-                const computedTotal = Math.round(pricePerPersonEur * guests * confirmedDays.length * 1.05 * 100) / 100
-                return computedTotal !== totalEur ? (
+              {(() => {
+                const parsed = parseFloat(priceInput)
+                if (isNaN(parsed) || parsed <= 0) return null
+                return (
                   <ReviewRow
-                    label="Updated total"
-                    value={`€${computedTotal} (${confirmedDays.length} days × €${pricePerPersonEur}/person × ${guests} pax)`}
+                    label="Agreed total"
+                    value={`€${parsed}`}
                     accent
                   />
-                ) : null
+                )
               })()}
               {guideNote.trim() !== '' && (
                 <div className="pt-4 mt-1" style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}>
@@ -720,15 +730,9 @@ function ActionCard({ variant, title, description, cta, onClick }: {
       <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
            style={{ background: isAcc ? 'rgba(22,163,74,0.12)' : 'rgba(239,68,68,0.1)' }}>
         {isAcc ? (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-               stroke="#16A34A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="2.5,10 8,15.5 17.5,5.5" />
-          </svg>
+          <Check size={20} strokeWidth={2.2} style={{ color: '#16A34A' }} />
         ) : (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-               stroke="#DC2626" strokeWidth="2.2" strokeLinecap="round">
-            <line x1="4" y1="4" x2="16" y2="16" /><line x1="16" y1="4" x2="4" y2="16" />
-          </svg>
+          <X size={20} strokeWidth={2.2} style={{ color: '#DC2626' }} />
         )}
       </div>
       <h3 className="text-base font-bold f-display mb-1.5"

@@ -1,39 +1,26 @@
-'use client'
-
 /**
- * InquiryDetailTabs — tabbed display of an angler's inquiry data.
- *
- * Tabs:
- *   - Request  — angler info + trip details (always shown)
- *   - Logistics — gear, accommodation, transport, budget (hidden when empty)
- *   - Context  — photography, notes, region (hidden when empty)
- *
- * All values are pre-computed strings passed from the Server Component —
- * this component is purely presentational and has no data-fetching logic.
+ * InquiryDetailTabs — flat display of all angler inquiry data (no tabs).
+ * All sections are always visible: Angler, Trip Details, Logistics, Context.
  */
 
-import { useState } from 'react'
-
 // ─── Types ─────────────────────────────────────────────────────────────────────
-
-type TabKey = 'request' | 'logistics' | 'context'
 
 export type InquiryDetailTabsProps = {
   // ── Angler ────────────────────────────────────────────────────────────────
   anglerName:  string
   anglerEmail: string
 
-  // ── Request tab ────────────────────────────────────────────────────────────
-  tripTypeLabel?:   string     // e.g. "Full day (~8 hrs)"
-  tripDays:         string     // e.g. "3 days"
-  datesLabel:       string     // "Preferred window" | "Dates"
-  datesValue:       string     // "2026-07-01 → 2026-07-31"
-  preferredMonths?: string     // "Jul 2026, Aug 2026"
-  groupValue:       string     // "3 anglers · incl. beginners"
-  experienceLabel?: string     // "Intermediate"
-  speciesValue:     string     // "Salmon, Brown Trout"
+  // ── Request ────────────────────────────────────────────────────────────────
+  tripTypeLabel?:   string
+  tripDays:         string
+  datesLabel:       string
+  datesValue:       string
+  preferredMonths?: string
+  groupValue:       string
+  experienceLabel?: string
+  speciesValue:     string
 
-  // ── Logistics tab ──────────────────────────────────────────────────────────
+  // ── Logistics ──────────────────────────────────────────────────────────────
   gearValue?:          string
   accommodationValue?: string
   transportValue?:     string
@@ -42,9 +29,8 @@ export type InquiryDetailTabsProps = {
   budgetValue?:        string
   riverType?:          string
 
-  // ── Context tab ────────────────────────────────────────────────────────────
+  // ── Context ────────────────────────────────────────────────────────────────
   stayingAt?:         string
-
   photographyValue?:  string
   regionExperience?:  string
   notes?:             string
@@ -63,101 +49,51 @@ export default function InquiryDetailTabs(props: InquiryDetailTabsProps) {
     props.regionExperience || props.notes
   )
 
-  const tabs: { key: TabKey; label: string }[] = [
-    { key: 'request',   label: 'Request'   },
-    ...(hasLogistics ? [{ key: 'logistics' as const, label: 'Logistics' }] : []),
-    ...(hasContext   ? [{ key: 'context'   as const, label: 'Context'   }] : []),
-  ]
-
-  const [active, setActive] = useState<TabKey>('request')
-
-  // If only one tab, render without the tab bar
-  const showTabBar = tabs.length > 1
-
   return (
     <div className="flex flex-col gap-4">
 
-      {/* ── Tab bar ──────────────────────────────────────────────────────── */}
-      {showTabBar && (
-        <div
-          className="flex gap-1 p-1"
-          style={{
-            background:   'rgba(10,46,77,0.05)',
-            borderRadius: '14px',
-            width:        'fit-content',
-          }}
-        >
-          {tabs.map(tab => {
-            const isActive = active === tab.key
-            return (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActive(tab.key)}
-                className="px-4 py-2 rounded-[10px] text-sm f-body transition-all"
-                style={{
-                  background: isActive ? 'white' : 'transparent',
-                  color:      isActive ? '#0A2E4D' : 'rgba(10,46,77,0.5)',
-                  fontWeight: isActive ? 600 : 400,
-                  boxShadow:  isActive ? '0 1px 4px rgba(10,46,77,0.1)' : 'none',
-                  border:     'none',
-                  cursor:     'pointer',
-                }}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {/* ── Angler ───────────────────────────────────────────────────────── */}
+      <TabCard title="Angler">
+        <InfoRow label="Name" value={props.anglerName} />
+        <InfoRow label="Email">
+          <a
+            href={`mailto:${props.anglerEmail}`}
+            className="text-sm f-body font-medium hover:underline"
+            style={{ color: '#E67E50' }}
+          >
+            {props.anglerEmail}
+          </a>
+        </InfoRow>
+      </TabCard>
 
-      {/* ── Request ──────────────────────────────────────────────────────── */}
-      {active === 'request' && (
-        <div className="flex flex-col gap-5">
-
-          <TabCard title="Angler">
-            <InfoRow label="Name" value={props.anglerName} />
-            <InfoRow label="Email">
-              <a
-                href={`mailto:${props.anglerEmail}`}
-                className="text-sm f-body font-medium hover:underline"
-                style={{ color: '#E67E50' }}
-              >
-                {props.anglerEmail}
-              </a>
-            </InfoRow>
-          </TabCard>
-
-          <TabCard title="Trip Details">
-            {props.tripTypeLabel != null && (
-              <InfoRow label="Trip type"  value={props.tripTypeLabel} />
-            )}
-            <InfoRow label="Duration"    value={props.tripDays} />
-            <InfoRow label={props.datesLabel} value={props.datesValue} />
-            {props.preferredMonths != null && (
-              <InfoRow label="Preferred months" value={props.preferredMonths} />
-            )}
-            <InfoRow label="Group"       value={props.groupValue} />
-            {props.experienceLabel != null && (
-              <InfoRow label="Experience" value={props.experienceLabel} />
-            )}
-            <InfoRow label="Target species" value={props.speciesValue} />
-          </TabCard>
-
-        </div>
-      )}
+      {/* ── Trip Details ─────────────────────────────────────────────────── */}
+      <TabCard title="Trip Details">
+        {props.tripTypeLabel != null && (
+          <InfoRow label="Trip type"      value={props.tripTypeLabel} />
+        )}
+        <InfoRow label="Duration"         value={props.tripDays} />
+        <InfoRow label={props.datesLabel} value={props.datesValue} />
+        {props.preferredMonths != null && (
+          <InfoRow label="Preferred months" value={props.preferredMonths} />
+        )}
+        <InfoRow label="Group"            value={props.groupValue} />
+        {props.experienceLabel != null && (
+          <InfoRow label="Experience"     value={props.experienceLabel} />
+        )}
+        <InfoRow label="Target species"   value={props.speciesValue} />
+      </TabCard>
 
       {/* ── Logistics ────────────────────────────────────────────────────── */}
-      {active === 'logistics' && hasLogistics && (
+      {hasLogistics && (
         <TabCard title="Logistics & Pricing Info">
           {props.gearValue != null && (
-            <InfoRow label="Gear" value={props.gearValue} />
+            <InfoRow label="Gear"            value={props.gearValue} />
           )}
           {props.accommodationValue != null && (
-            <InfoRow label="Accommodation" value={props.accommodationValue} />
+            <InfoRow label="Accommodation"   value={props.accommodationValue} />
           )}
           {props.transportValue != null && (
-            <InfoRow label="Transport" value={props.transportValue} />
+            <InfoRow label="Transport"       value={props.transportValue} />
           )}
           {props.boatPreference != null && props.boatPreference.length > 0 && (
             <InfoRow label="Boat preference" value={props.boatPreference} />
@@ -166,21 +102,20 @@ export default function InquiryDetailTabs(props: InquiryDetailTabsProps) {
             <InfoRow label="Dietary / lunch" value={props.dietaryValue} />
           )}
           {props.budgetValue != null && (
-            <InfoRow label="Budget" value={props.budgetValue} />
+            <InfoRow label="Budget"          value={props.budgetValue} />
           )}
           {props.riverType != null && props.riverType.length > 0 && (
-            <InfoRow label="Water type" value={props.riverType} />
+            <InfoRow label="Water type"      value={props.riverType} />
           )}
         </TabCard>
       )}
 
       {/* ── Context ──────────────────────────────────────────────────────── */}
-      {active === 'context' && hasContext && (
+      {hasContext && (
         <TabCard title="Context">
           {props.stayingAt != null && props.stayingAt.length > 0 && (
             <InfoRow label="Staying at" value={props.stayingAt} />
           )}
-
           {props.photographyValue != null && (
             <InfoRow label="Photography" value={props.photographyValue} />
           )}

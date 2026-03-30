@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import LinkGuideButton from '@/components/admin/link-guide-button'
 import { QuickApproveButton } from '@/components/admin/quick-approve-button'
 import { CountryFlag } from '@/components/ui/country-flag'
+import { Plus } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -109,10 +110,7 @@ export default async function AdminGuidesPage({
           className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 f-body"
           style={{ background: '#E67E50' }}
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
-            <rect x="5.3" y="1" width="1.4" height="10" rx="0.7"/>
-            <rect x="1" y="5.3" width="10" height="1.4" rx="0.7"/>
-          </svg>
+          <Plus width={12} height={12} />
           Add Guide
         </Link>
       </div>

@@ -24,6 +24,10 @@ import {
   type InquiryPeriodEventDetail,
   encodePeriodsParam,
 } from '@/components/trips/multi-period-picker'
+import {
+  ChevronLeft, ChevronRight, ChevronDown,
+  Calendar, Clock, Info, Check, Minus, Plus, MessageSquare, ArrowDown,
+} from 'lucide-react'
 
 // ─── Availability types ───────────────────────────────────────────────────────
 
@@ -175,9 +179,7 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, 
           className="w-7 h-7 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ background: 'rgba(10,46,77,0.08)' }}
         >
-          <svg width="6" height="10" viewBox="0 0 6 10" fill="none">
-            <path d="M5 1L1 5l4 4" stroke="#0A2E4D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <ChevronLeft size={12} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
         </button>
         <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
           {MONTH_NAMES[viewM]} {viewY}
@@ -190,9 +192,7 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, 
           className="w-7 h-7 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
           style={{ background: 'rgba(10,46,77,0.08)' }}
         >
-          <svg width="6" height="10" viewBox="0 0 6 10" fill="none">
-            <path d="M1 1l4 4-4 4" stroke="#0A2E4D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <ChevronRight size={12} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
         </button>
       </div>
 
@@ -369,6 +369,12 @@ type BookingWidgetProps = {
    * regardless of the individual experience's booking_type.
    */
   calendarDisabled?: boolean
+  /**
+   * Payment model derived from guide's Stripe status.
+   * stripe_connect — angler pays 30% deposit via Stripe; balance before trip.
+   * manual         — angler pays platform fee via Stripe + guide fee directly (cash/IBAN).
+   */
+  paymentModel?: 'stripe_connect' | 'manual'
 }
 
 // ─── Platform fee ─────────────────────────────────────────────────────────────
@@ -471,6 +477,7 @@ export function BookingWidget({
   bookedDates,
   bookingType = 'classic',
   calendarDisabled = false,
+  paymentModel = 'stripe_connect',
 }: BookingWidgetProps) {
 
   // ── Parse duration options ────────────────────────────────────────────────
@@ -690,7 +697,7 @@ export function BookingWidget({
 
   return (
     <div
-      className="p-6"
+      className="p-5"
       style={{
         borderRadius: '28px',
         border: '1px solid rgba(10,46,77,0.1)',
@@ -704,14 +711,10 @@ export function BookingWidget({
         calendarDisabled ? (
           /* Guide is inquiry-only — simple notice, no calendar */
           <div
-            className="mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
+            className="mb-4 rounded-2xl px-4 py-3 flex items-start gap-3"
             style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
+            <Info size={15} strokeWidth={1.8} className="flex-shrink-0 mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }} />
             <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
               <span className="font-semibold" style={{ color: '#0A2E4D' }}>Booking by request only.</span>
               {' '}This guide is currently taking bookings through personal inquiry — send a request and they&apos;ll confirm dates directly.
@@ -719,14 +722,14 @@ export function BookingWidget({
           </div>
         ) : (
           /* Interactive period picker — same layout as classic date dropdown */
-          <div className="mb-5" ref={inquiryCalendarRef} style={{ position: 'relative' }}>
+          <div className="mb-4" ref={inquiryCalendarRef} style={{ position: 'relative' }}>
 
             {/* Trigger row */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setInquiryCalendarOpen(o => !o)}
-                className="flex-1 flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all"
+                className="flex-1 flex items-center justify-between px-4 py-3 rounded-2xl transition-all"
                 style={{
                   background: '#F3EDE4',
                   border: `1.5px solid ${inquiryCalendarOpen ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}`,
@@ -736,12 +739,7 @@ export function BookingWidget({
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {/* Calendar icon */}
-                  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.45 }}>
-                    <rect x="1" y="2.5" width="13" height="11.5" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                    <line x1="1" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.4" />
-                    <line x1="4.5" y1="1" x2="4.5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                    <line x1="10.5" y1="1" x2="10.5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                  </svg>
+                  <Calendar size={15} strokeWidth={1.4} className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.45 }} />
 
                   {inquiryPeriods.length === 0 ? (
                     <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -768,16 +766,14 @@ export function BookingWidget({
                       Clear
                     </span>
                   )}
-                  <svg
-                    width="10" height="6" viewBox="0 0 10 6" fill="none"
+                  <ChevronDown
+                    size={12} strokeWidth={1.6}
                     className="transition-transform"
                     style={{
                       transform: inquiryCalendarOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                       color: 'rgba(10,46,77,0.35)',
                     }}
-                  >
-                    <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  />
                 </div>
               </button>
 
@@ -788,9 +784,7 @@ export function BookingWidget({
                 style={{ background: '#0A2E4D' }}
                 title="Go to request button"
               >
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M6.5 2v9M2.5 7.5l4 4 4-4" />
-                </svg>
+                <ArrowDown size={13} strokeWidth={1.8} style={{ color: 'white' }} />
               </a>
             </div>
 
@@ -858,15 +852,10 @@ export function BookingWidget({
       {/* ── Classic+disabled banner — calendar is off, dates on the booking page */}
       {!isDraft && bookingType === 'classic' && calendarDisabled && (
         <div
-          className="mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
+          className="mb-4 rounded-2xl px-4 py-3 flex items-start gap-3"
           style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(10,46,77,0.45)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
-            <rect x="3" y="4" width="18" height="16" rx="2" />
-            <line x1="3" y1="9" x2="21" y2="9" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-          </svg>
+          <Calendar size={15} strokeWidth={1.8} className="flex-shrink-0 mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }} />
           <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
             <span className="font-semibold" style={{ color: '#0A2E4D' }}>Pick your dates in the next step.</span>
             {' '}Choose your trip dates and group size on the booking page — no payment until your guide confirms.
@@ -877,14 +866,14 @@ export function BookingWidget({
       {/* ── Date picker (dropdown) — classic + both in book sub-mode ───────── */}
       {/* Classic shows the picker here when calendar is enabled (not disabled)*/}
       {!isDraft && effectiveType === 'classic' && (
-        <div className="mb-5" ref={calendarRef} style={{ position: 'relative' }}>
+        <div className="mb-4" ref={calendarRef} style={{ position: 'relative' }}>
 
           {/* Trigger row: date picker + quick-book circle */}
           <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setCalendarOpen(o => !o)}
-            className="flex-1 flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all"
+            className="flex-1 flex items-center justify-between px-4 py-3 rounded-2xl transition-all"
             style={{
               background: '#F3EDE4',
               border: `1.5px solid ${calendarOpen ? '#E67E50' : 'rgba(10,46,77,0.12)'}`,
@@ -892,12 +881,7 @@ export function BookingWidget({
           >
             <div className="flex items-center gap-3 min-w-0">
               {/* Calendar icon */}
-              <svg width="15" height="15" viewBox="0 0 15 15" fill="none" className="flex-shrink-0" style={{ color: '#E67E50' }}>
-                <rect x="1" y="2.5" width="13" height="11.5" rx="2" stroke="currentColor" strokeWidth="1.4" />
-                <line x1="1" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.4" />
-                <line x1="4.5" y1="1" x2="4.5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                <line x1="10.5" y1="1" x2="10.5" y2="4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              </svg>
+              <Calendar size={15} strokeWidth={1.4} className="flex-shrink-0" style={{ color: '#E67E50' }} />
 
               {selectedDates.length === 0 ? (
                 <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -926,13 +910,11 @@ export function BookingWidget({
                   Clear
                 </span>
               )}
-              <svg
-                width="10" height="6" viewBox="0 0 10 6" fill="none"
+              <ChevronDown
+                size={12} strokeWidth={1.6}
                 className="transition-transform"
                 style={{ transform: calendarOpen ? 'rotate(180deg)' : 'rotate(0deg)', color: 'rgba(10,46,77,0.35)' }}
-              >
-                <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              />
             </div>
           </button>
 
@@ -943,9 +925,7 @@ export function BookingWidget({
             style={{ background: '#E67E50' }}
             title="Check Availability"
           >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6.5 2v9M2.5 7.5l4 4 4-4" />
-            </svg>
+            <ArrowDown size={13} strokeWidth={1.8} style={{ color: 'white' }} />
           </a>
           </div>{/* end trigger row */}
 
@@ -1049,13 +1029,13 @@ export function BookingWidget({
         effectiveType === 'classic' ||
         (effectiveType === 'icelandic' && bookingType !== 'classic' && !calendarDisabled)
       ) && (
-        <div className="mb-5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
+        <div className="mb-4" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
       )}
 
       {/* ── "Both" mode — two-path selector banner ─────────────────────────── */}
       {bookingType === 'both' && !isDraft && (
         <div
-          className="flex gap-2 mb-5 p-1 rounded-2xl"
+          className="flex gap-2 mb-4 p-1 rounded-2xl"
           style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.08)' }}
         >
           {([
@@ -1079,42 +1059,10 @@ export function BookingWidget({
         </div>
       )}
 
-      {/* ── Price header ───────────────────────────────────────────────────── */}
-      <div className="mb-5">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-1 f-body"
-          style={{ color: 'rgba(10,46,77,0.38)' }}
-        >
-          {effectiveType === 'icelandic' ? 'Price' : 'From'}
-        </p>
-        {effectiveType === 'icelandic' ? (
-          <>
-            <p className="font-bold f-display" style={{ fontSize: '32px', color: '#0A2E4D', lineHeight: 1 }}>
-              On request
-            </p>
-            <p className="text-xs f-body mt-1.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              Guide sets up your trip offer
-            </p>
-          </>
-        ) : (
-          <div className="flex items-end gap-2">
-            <span
-              className="font-bold f-display"
-              style={{ fontSize: '44px', color: '#0A2E4D', lineHeight: 1 }}
-            >
-              €{fromPrice}
-            </span>
-            <span className="text-sm pb-1.5 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              {durationOptions[0].pricing_type === 'per_boat' ? 'flat rate' : '/ person'}
-            </span>
-          </div>
-        )}
-      </div>
-
       {/* ── Duration option dropdown (hidden for icelandic — price is on request) */}
-      {effectiveType !== 'icelandic' && <div className="mb-5" ref={optionRef} style={{ position: 'relative' }}>
+      {effectiveType !== 'icelandic' && <div className="mb-4" ref={optionRef} style={{ position: 'relative' }}>
         <label
-          className="block text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 f-body"
+          className="block text-[10px] font-semibold uppercase tracking-[0.2em] mb-1.5 f-body"
           style={{ color: 'rgba(10,46,77,0.38)' }}
         >
           Duration
@@ -1124,7 +1072,7 @@ export function BookingWidget({
         <button
           type="button"
           onClick={() => setOptionOpen(o => !o)}
-          className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all"
+          className="w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all"
           style={{
             background: '#F3EDE4',
             border: `1.5px solid ${optionOpen ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}`,
@@ -1134,10 +1082,7 @@ export function BookingWidget({
         >
           <div className="flex items-center gap-3 min-w-0">
             {/* Clock icon */}
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.5 }}>
-              <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3" />
-              <polyline points="7,3.5 7,7 9.5,9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Clock size={14} strokeWidth={1.3} className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.5 }} />
 
             <div className="min-w-0">
               <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
@@ -1155,23 +1100,21 @@ export function BookingWidget({
             {/* Selected option price */}
             <span className="text-sm font-bold f-body" style={{ color: '#E67E50' }}>
               {selectedOpt.pricing_type === 'per_boat'
-                ? `€${selectedOpt.price_eur}`
+                ? `€${selectedOpt.price_eur} flat`
                 : selectedOpt.pricing_type === 'per_group'
                 ? `From €${calcPrice(selectedOpt, groupSize).fromPrice}`
-                : `€${selectedOpt.price_eur}/pp`}
+                : `€${selectedOpt.price_eur} per person`}
             </span>
 
             {multipleOptions && (
-              <svg
-                width="10" height="6" viewBox="0 0 10 6" fill="none"
+              <ChevronDown
+                size={12} strokeWidth={1.6}
                 className="transition-transform"
                 style={{
                   transform: optionOpen ? 'rotate(180deg)' : 'rotate(0deg)',
                   color: 'rgba(10,46,77,0.35)',
                 }}
-              >
-                <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              />
             )}
           </div>
         </button>
@@ -1192,10 +1135,10 @@ export function BookingWidget({
               const optPrice  = calcPrice(opt, groupSize)
               const isSel     = i === selectedOptIdx
               const priceStr  = opt.pricing_type === 'per_boat'
-                ? `€${opt.price_eur}`
+                ? `€${opt.price_eur} flat`
                 : opt.pricing_type === 'per_group'
                 ? `From €${optPrice.fromPrice}`
-                : `€${opt.price_eur}/pp`
+                : `€${opt.price_eur} per person`
 
               return (
                 <button
@@ -1212,9 +1155,7 @@ export function BookingWidget({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       {isSel && (
-                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none" className="flex-shrink-0">
-                          <polyline points="1,4 3.5,6.5 9,1" stroke="#0A2E4D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
+                        <Check size={10} strokeWidth={1.8} className="flex-shrink-0" style={{ color: '#0A2E4D' }} />
                       )}
                       <p
                         className="text-sm font-semibold f-body"
@@ -1244,12 +1185,12 @@ export function BookingWidget({
 
       {/* ── Divider ────────────────────────────────────────────────────────── */}
       <div
-        className="mb-5"
+        className="mb-4"
         style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }}
       />
 
       {/* ── Meta row (duration / group / level) ────────────────────────────── */}
-      <div className="flex gap-5 mb-5 flex-wrap">
+      <div className="flex gap-4 mb-4 flex-wrap">
         {selectedDurationLabel != null && (
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
@@ -1282,15 +1223,15 @@ export function BookingWidget({
 
       {/* ── Group size stepper ──────────────────────────────────────────────── */}
       {!isDraft && showGroupSelector && (
-        <div className="mb-5">
+        <div className="mb-4">
           <p
-            className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-3 f-body"
+            className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 f-body"
             style={{ color: 'rgba(10,46,77,0.38)' }}
           >
             Anglers
           </p>
           <div
-            className="flex items-center justify-between px-4 py-3 rounded-2xl"
+            className="flex items-center justify-between px-4 py-2.5 rounded-2xl"
             style={{
               background: '#F3EDE4',
               border: '1.5px solid rgba(10,46,77,0.12)',
@@ -1305,9 +1246,7 @@ export function BookingWidget({
               className="w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed"
               style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}
             >
-              <svg width="12" height="2" viewBox="0 0 12 2" fill="none">
-                <rect x="0" y="0.5" width="12" height="1.2" rx="0.6" fill="currentColor" />
-              </svg>
+              <Minus size={12} strokeWidth={2} />
             </button>
 
             {/* Count */}
@@ -1335,10 +1274,7 @@ export function BookingWidget({
               className="w-8 h-8 rounded-full flex items-center justify-center transition-all disabled:opacity-25 disabled:cursor-not-allowed"
               style={{ background: '#E67E50', color: '#fff' }}
             >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <rect x="5.1" y="0" width="1.8" height="12" rx="0.9" fill="currentColor" />
-                <rect x="0" y="5.1" width="12" height="1.8" rx="0.9" fill="currentColor" />
-              </svg>
+              <Plus size={12} strokeWidth={2} />
             </button>
           </div>
         </div>
@@ -1347,7 +1283,7 @@ export function BookingWidget({
       {/* ── Live price breakdown ────────────────────────────────────────────── */}
       {!isDraft && effectiveType !== 'icelandic' && (
         <div
-          className="mb-5 px-4 py-4 rounded-2xl"
+          className="mb-4 px-4 py-3 rounded-2xl"
           style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
         >
           {/* Per-trip line */}
@@ -1376,7 +1312,7 @@ export function BookingWidget({
           <div className="my-2.5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
 
           {/* Service fee */}
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
               Service fee (5%)
             </span>
@@ -1396,7 +1332,7 @@ export function BookingWidget({
             <div className="text-right">
               <p
                 className="font-bold f-display"
-                style={{ fontSize: '32px', color: '#0A2E4D', lineHeight: 1 }}
+                style={{ fontSize: '28px', color: '#0A2E4D', lineHeight: 1 }}
               >
                 €{grandTotal}
               </p>
@@ -1405,6 +1341,18 @@ export function BookingWidget({
               </p>
             </div>
           </div>
+
+          {/* Manual payment model note */}
+          {paymentModel === 'manual' && (
+            <>
+              <div className="my-2.5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
+              <p className="text-[10px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.42)' }}>
+                💳 <span className="font-semibold" style={{ color: '#0A2E4D' }}>Small platform fee</span> charged
+                via card after guide confirms.{' '}
+                Guide&apos;s fee paid directly — by cash or bank transfer.
+              </p>
+            </>
+          )}
         </div>
       )}
 
@@ -1413,21 +1361,17 @@ export function BookingWidget({
       {isDraft ? (
         <>
           <div
-            className="flex items-start gap-3 px-4 py-4 rounded-2xl mb-5"
+            className="flex items-start gap-3 px-4 py-3 rounded-2xl mb-4"
             style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.18)' }}
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#E67E50" strokeWidth="1.5" className="flex-shrink-0 mt-0.5">
-              <circle cx="8" cy="8" r="6.5" />
-              <line x1="8" y1="5" x2="8" y2="8.5" />
-              <circle cx="8" cy="11" r="0.6" fill="#E67E50" />
-            </svg>
+            <Info size={16} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" style={{ color: '#E67E50' }} />
             <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
               This experience is a draft. Publish it from your dashboard to accept bookings.
             </p>
           </div>
           <Link
             href={`/dashboard/trips/${expId}/edit`}
-            className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+            className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
             style={{ background: '#E67E50' }}
           >
             Edit &amp; Publish →
@@ -1442,7 +1386,7 @@ export function BookingWidget({
                 ? `?periods=${encodePeriodsParam(inquiryPeriods)}&group=${groupSize}`
                 : `?group=${groupSize}`
             }`}
-            className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+            className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
             style={{ background: '#0A2E4D' }}
           >
             {inquiryPeriods.length > 0
@@ -1451,7 +1395,7 @@ export function BookingWidget({
                 : `Request trip — ${inquiryPeriods.length} periods →`
               : 'Request this trip →'}
           </Link>
-          <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
+          <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
             Guide reviews your request and sets up a custom offer — no payment until confirmed.
           </p>
         </>
@@ -1462,7 +1406,7 @@ export function BookingWidget({
             /* calendar off → just send to /book/ which redirects to inquiry */
             <Link
               href={`/book/${expId}?guests=${groupSize}`}
-              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >
               Book this trip →
@@ -1472,7 +1416,7 @@ export function BookingWidget({
             <button
               type="button"
               disabled
-              className="w-full text-center font-semibold py-4 rounded-2xl text-sm tracking-wide f-body cursor-not-allowed"
+              className="w-full text-center font-semibold py-3.5 rounded-2xl text-sm tracking-wide f-body cursor-not-allowed"
               style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.3)' }}
             >
               Range includes unavailable date
@@ -1481,7 +1425,7 @@ export function BookingWidget({
             /* classic + N-day range selected → go to Step 2 with windowFrom/windowTo */
             <Link
               href={`/book/${expId}?windowFrom=${selectedDates[0]}&windowTo=${rangeEndISO}&numDays=${pkgDays}&pkgLabel=${encodeURIComponent(durationLabel(selectedOpt) || `${pkgDays} days`)}&guests=${groupSize}`}
-              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >
               Book — {rangeStartFmt} – {rangeEndFmt} →
@@ -1490,7 +1434,7 @@ export function BookingWidget({
             /* classic + individual dates picked → pre-fill "Book directly" on step 1 */
             <Link
               href={`/book/${expId}?prefill=${selectedDates.join(',')}&guests=${groupSize}`}
-              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >
               {selectedDates.length === 1
@@ -1501,7 +1445,7 @@ export function BookingWidget({
             /* classic + no dates → open on "Send request" tab */
             <Link
               href={`/book/${expId}?guests=${groupSize}&mode=request`}
-              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >
               Book now →
@@ -1510,7 +1454,7 @@ export function BookingWidget({
             /* 'both' book-mode with N-day range picked */
             <Link
               href={`/book/${expId}?windowFrom=${selectedDates[0]}&windowTo=${rangeEndISO}&numDays=${pkgDays}&pkgLabel=${encodeURIComponent(durationLabel(selectedOpt) || `${pkgDays} days`)}&guests=${groupSize}`}
-              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >
               Request to Book — {rangeStartFmt} – {rangeEndFmt} →
@@ -1519,7 +1463,7 @@ export function BookingWidget({
             /* 'both' book-mode with individual dates picked */
             <Link
               href={`/book/${expId}?dates=${selectedDates.join(',')}&guests=${groupSize}`}
-              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >
               {selectedDates.length === 1 ? 'Request to Book →' : `Request ${selectedDates.length} Dates →`}
@@ -1529,33 +1473,59 @@ export function BookingWidget({
             <button
               type="button"
               onClick={() => calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-              className="block w-full text-center text-white font-semibold py-4 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >
               Check Availability →
             </button>
           )}
-          <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            {selectedDates.length > 0
-              ? 'No payment now — guide confirms and you pay a 30% deposit.'
-              : 'No payment now — guide confirms within 24 hours.'}
+          <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
+            {paymentModel === 'manual'
+              ? 'No payment now — guide confirms, then you pay a small platform fee online and the guide\'s fee directly.'
+              : selectedDates.length > 0
+                ? 'No payment now — guide confirms and you pay a 30% deposit.'
+                : 'No payment now — guide confirms within 24 hours.'}
           </p>
+
+          {/* ── "Message first" secondary path (classic only) ─────────────── */}
+          {bookingType === 'classic' && (
+            <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+              <p
+                className="text-center text-[11px] f-body mb-1.5"
+                style={{ color: 'rgba(10,46,77,0.38)' }}
+              >
+                Have a question or want to discuss first?
+              </p>
+              <Link
+                href={`/trips/${expId}/inquire?group=${groupSize}&mode=direct`}
+                className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-semibold f-body transition-all hover:brightness-95 active:scale-[0.98]"
+                style={{
+                  background: 'rgba(10,46,77,0.05)',
+                  color: '#0A2E4D',
+                  border: '1px solid rgba(10,46,77,0.1)',
+                }}
+              >
+                <MessageSquare size={12} strokeWidth={1.8} style={{ opacity: 0.7 }} />
+                Message the guide first
+              </Link>
+            </div>
+          )}
         </>
       )}
 
       {/* ── Divider ────────────────────────────────────────────────────────── */}
-      <div className="my-5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
+      <div className="my-4" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
 
       {/* ── Trust micro-signals ─────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
         {[
           { icon: '✓', text: 'Guide verified by FjordAnglers' },
           { icon: '🔒', text: 'Secure payment via Stripe' },
           { icon: '⌚', text: 'Guide confirms within 24 hours' },
         ].map(item => (
-          <div key={item.text} className="flex items-center gap-3">
+          <div key={item.text} className="flex items-center gap-2.5">
             <span
-              className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold"
+              className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-bold"
               style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}
             >
               {item.icon}
@@ -1644,7 +1614,7 @@ export function MobileBookingBar({
           <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
             €{fromPrice}
             <span className="text-sm font-normal ml-1" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              {firstOpt.pricing_type === 'per_boat' ? 'flat' : '/pp'}
+              {firstOpt.pricing_type === 'per_boat' ? 'flat' : 'p.p.'}
             </span>
           </p>
         </div>
@@ -1670,31 +1640,46 @@ export function MobileBookingBar({
 
   return (
     <div
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between px-6 py-4"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center justify-between px-5 py-3 gap-3"
       style={{
         background: '#FDFAF7',
         borderTop: '1px solid rgba(10,46,77,0.08)',
         boxShadow: '0 -8px 32px rgba(10,46,77,0.1)',
       }}
     >
-      <div>
+      <div className="flex-shrink-0">
         <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           From
         </p>
-        <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+        <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
           €{fromPrice}
           <span className="text-sm font-normal ml-1" style={{ color: 'rgba(10,46,77,0.38)' }}>
-            {firstOpt.pricing_type === 'per_boat' ? 'flat' : '/pp'}
+            {firstOpt.pricing_type === 'per_boat' ? 'flat' : 'p.p.'}
           </span>
         </p>
       </div>
-      <Link
-        href={`/book/${expId}`}
-        className="text-white font-semibold px-8 py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-        style={{ background: '#E67E50' }}
-      >
-        Book this trip →
-      </Link>
+      <div className="flex gap-2 flex-1 min-w-0">
+        <Link
+          href={`/trips/${expId}/inquire`}
+          className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold f-body transition-all hover:brightness-95 active:scale-[0.98] flex-shrink-0"
+          style={{
+            background: 'rgba(10,46,77,0.06)',
+            color: '#0A2E4D',
+            border: '1px solid rgba(10,46,77,0.1)',
+          }}
+          aria-label="Message the guide first"
+        >
+          <MessageSquare size={13} strokeWidth={1.8} />
+          Message
+        </Link>
+        <Link
+          href={`/book/${expId}`}
+          className="flex-1 text-center text-white font-semibold py-3 rounded-xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+          style={{ background: '#E67E50' }}
+        >
+          Book now →
+        </Link>
+      </div>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import DashboardSidebar from '@/components/dashboard/sidebar'
+import { TermsGate } from '@/components/dashboard/terms-gate'
 
 /**
  * Dashboard layout — server component.
@@ -41,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // ── Fetch guide profile ───────────────────────────────────────────────────
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status')
+    .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent')
     .eq('user_id', user.id)
     .single()
 
@@ -67,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         stripe_payouts_enabled: false,
         total_reviews:          0,
       })
-      .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status')
+      .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent')
       .single()
 
     if (insertErr != null) {
@@ -75,7 +76,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       console.warn('[layout] guide auto-create failed, re-fetching:', insertErr.message)
       const { data: refetched } = await service
         .from('guides')
-        .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status')
+        .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent')
         .eq('user_id', user.id)
         .single()
       resolvedGuide = refetched
@@ -101,6 +102,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="lg:ml-[240px] pt-14 lg:pt-0" style={{ minHeight: '100vh' }}>
         {children}
       </main>
+      <TermsGate
+        termsAccepted={resolvedGuide.terms_accepted_at != null}
+        initialMarketingConsent={resolvedGuide.photo_marketing_consent ?? false}
+      />
     </div>
   )
 }

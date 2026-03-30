@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toggleCalendarDisabled } from '@/actions/calendar'
+import { Loader2 } from 'lucide-react'
 
 export function CalendarDisabledToggle({
   currentlyDisabled,
@@ -50,10 +51,7 @@ export function CalendarDisabledToggle({
         }}
       >
         {isPending ? (
-          <svg className="animate-spin" width="13" height="13" viewBox="0 0 11 11" fill="none"
-               stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M5.5 1.5 A4 4 0 0 1 9.5 5.5" />
-          </svg>
+          <Loader2 className="animate-spin" size={13} />
         ) : localDisabled ? (
           /* Toggle-on icon */
           <svg width="14" height="14" viewBox="0 0 20 12" fill="none">

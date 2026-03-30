@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { adminSendPayout, adminRefundBooking } from '@/actions/admin'
+import { Send } from 'lucide-react'
 
 interface Props {
   bookingId: string
@@ -109,10 +110,7 @@ export function AdminPayoutsActions({
               </>
             ) : (
               <>
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
+                <Send width={10} height={10} strokeWidth={2} />
                 Send payout
               </>
             )}

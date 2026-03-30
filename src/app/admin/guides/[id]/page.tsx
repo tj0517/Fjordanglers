@@ -8,6 +8,7 @@ import LinkGuideButton from '@/components/admin/link-guide-button'
 import LinkGuidePanel from '@/components/admin/link-guide-panel'
 import CopyInviteLink from '@/components/admin/copy-invite-link'
 import { AdminGuideActions } from './AdminGuideActions'
+import { ExternalLink, Pencil, Mail, Plus } from 'lucide-react'
 
 const STATUS_STYLES = {
   active:    { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Active'    },
@@ -220,12 +221,12 @@ export default async function AdminGuideDetailPage({
                     className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all f-body"
                     style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
                   >
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M1.5 9.5L9.5 1.5M6 1.5h3.5v3.5" /></svg>
+                    <ExternalLink width={11} height={11} strokeWidth={1.3} />
                     Public profile
                   </Link>
                 ) : (
                   <span className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full f-body cursor-not-allowed" style={{ background: 'rgba(10,46,77,0.04)', color: 'rgba(10,46,77,0.3)' }}>
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M1.5 9.5L9.5 1.5M6 1.5h3.5v3.5" /></svg>
+                    <ExternalLink width={11} height={11} strokeWidth={1.3} />
                     Public profile
                   </span>
                 )}
@@ -233,7 +234,7 @@ export default async function AdminGuideDetailPage({
                   className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:brightness-95 f-body"
                   style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
                 >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M7.5 1.5l2 2-6 6H1.5v-2l6-6z" /></svg>
+                  <Pencil width={11} height={11} strokeWidth={1.3} />
                   Edit guide
                 </Link>
                 {guide.user_id == null && (
@@ -246,14 +247,14 @@ export default async function AdminGuideDetailPage({
                   className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:brightness-95 f-body"
                   style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
                 >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"><path d="M1 8.5h9M1 6h6M1 3.5h4" /></svg>
+                  <Mail width={11} height={11} strokeWidth={1.3} />
                   Payouts
                 </Link>
                 <Link href={`/admin/guides/${guide.id}/trips/new`}
                   className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
                   style={{ background: '#E67E50' }}
                 >
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor"><rect x="4.5" y="0.5" width="2" height="10" rx="1" /><rect x="0.5" y="4.5" width="10" height="2" rx="1" /></svg>
+                  <Plus width={11} height={11} />
                   Add Trip
                 </Link>
                 <DeleteGuideButton guideId={guide.id} guideName={guide.full_name} hasAuthUser={guide.user_id != null} />
@@ -273,7 +274,7 @@ export default async function AdminGuideDetailPage({
             {/* Invite email badge */}
             {guide.invite_email != null && (
               <div className="mt-4 px-4 py-2.5 rounded-xl flex items-center gap-2" style={{ background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.1)' }}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#2563EB" strokeWidth="1.3" className="flex-shrink-0"><rect x="1" y="3.5" width="10" height="7" rx="1.5" /><path d="M1 6l5 3 5-3" /></svg>
+                <Mail width={12} height={12} stroke="#2563EB" strokeWidth={1.3} className="flex-shrink-0" />
                 <p className="text-[11px] f-body" style={{ color: '#1D4ED8' }}>
                   <strong>Invite email:</strong> {guide.invite_email}
                   {guide.user_id != null ? (
@@ -544,7 +545,7 @@ export default async function AdminGuideDetailPage({
           className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
           style={{ background: '#E67E50' }}
         >
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor"><rect x="4.5" y="0.5" width="2" height="10" rx="1" /><rect x="0.5" y="4.5" width="10" height="2" rx="1" /></svg>
+          <Plus size={11} />
           Add Trip
         </Link>
       </div>

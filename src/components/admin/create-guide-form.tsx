@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createBetaGuide, type BetaGuidePayload, type GuideGalleryImage } from '@/actions/admin'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload from '@/components/admin/multi-image-upload'
+import { Check, ExternalLink, Info, Loader2, Plus } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -271,9 +272,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
           className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
           style={{ background: 'rgba(74,222,128,0.1)', border: '1.5px solid rgba(74,222,128,0.25)' }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
-            <polyline points="20,6 9,17 4,12" />
-          </svg>
+          <Check size={24} strokeWidth={2.5} style={{ color: '#16A34A' }} />
         </div>
 
         <p className="text-[11px] uppercase tracking-[0.22em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
@@ -294,9 +293,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
             className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 f-body"
             style={{ background: '#E67E50' }}
           >
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M2 2h9M11 2v9M11 2L2 11" />
-            </svg>
+            <ExternalLink size={13} strokeWidth={1.8} />
             View public listing
           </a>
           <button
@@ -330,11 +327,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
           className="flex items-start gap-3 px-5 py-4 rounded-2xl mb-6 f-body text-sm"
           style={{ background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)', color: '#1D4ED8' }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="flex-shrink-0 mt-0.5">
-            <circle cx="8" cy="8" r="6.5" />
-            <line x1="8" y1="5" x2="8" y2="8.5" />
-            <circle cx="8" cy="11" r="0.6" fill="currentColor" />
-          </svg>
+          <Info size={16} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
           <span>
             <strong>Pre-filled from lead application.</strong>{' '}
             Review and complete the form, then click &ldquo;Create Beta Listing&rdquo;.
@@ -350,11 +343,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
           className="flex items-start gap-3 px-5 py-4 rounded-2xl mb-6 f-body text-sm"
           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)', color: '#DC2626' }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="flex-shrink-0 mt-0.5">
-            <circle cx="8" cy="8" r="6.5" />
-            <line x1="8" y1="5" x2="8" y2="8.5" />
-            <circle cx="8" cy="11" r="0.6" fill="currentColor" />
-          </svg>
+          <Info size={16} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
           {error}
         </div>
       )}
@@ -598,10 +587,9 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
                   <Image src={url} alt="" fill className="object-cover" />
                   {selected && (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.25)' }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <circle cx="12" cy="12" r="10" fill="rgba(230,126,80,0.9)" />
-                        <path d="M8 12l3 3 5-5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <div className="w-[22px] h-[22px] rounded-full flex items-center justify-center" style={{ background: 'rgba(230,126,80,0.9)' }}>
+                        <Check size={13} strokeWidth={2.5} style={{ color: 'white' }} />
+                      </div>
                     </div>
                   )}
                 </button>
@@ -699,9 +687,7 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
               }}
             >
               {termsConfirmed && (
-                <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                  <path d="M1 4l2.5 2.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <Check size={10} strokeWidth={1.8} style={{ color: 'white' }} />
               )}
             </span>
           </span>
@@ -745,18 +731,12 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
         >
           {isPending ? (
             <>
-              <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="7" cy="7" r="5" strokeOpacity="0.25" />
-                <path d="M7 2a5 5 0 015 5" strokeLinecap="round" />
-              </svg>
+              <Loader2 className="animate-spin" size={14} strokeWidth={2} />
               Creating listing…
             </>
           ) : (
             <>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor">
-                <rect x="5.8" y="1" width="1.4" height="11" rx="0.7" />
-                <rect x="1" y="5.8" width="11" height="1.4" rx="0.7" />
-              </svg>
+              <Plus size={13} />
               Create Beta Listing
             </>
           )}

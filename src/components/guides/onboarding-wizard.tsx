@@ -13,6 +13,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
+import { Check } from 'lucide-react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { submitGuideApplication } from '@/actions/guide-apply'
@@ -1104,15 +1105,7 @@ export function OnboardingWizard() {
                     }}
                   >
                     {termsAccepted && (
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path
-                          d="M1 4l2.5 2.5L9 1"
-                          stroke="white"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                      <Check size={10} strokeWidth={1.8} style={{ color: 'white' }} />
                     )}
                   </span>
                 </span>

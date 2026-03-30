@@ -19,6 +19,7 @@ import { createGuideProfile } from '@/actions/dashboard'
 import { signOut } from '@/actions/auth'
 import { COUNTRIES as COUNTRY_LIST } from '@/lib/countries'
 import { FISH_ALL } from '@/lib/fish'
+import { Check, LogOut, Loader2, Info } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -165,9 +166,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
             style={{ background: 'rgba(74,222,128,0.1)', border: '1.5px solid rgba(74,222,128,0.25)' }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
-              <polyline points="20,6 9,17 4,12" />
-            </svg>
+            <Check size={24} strokeWidth={2.5} style={{ color: '#16A34A' }} />
           </div>
           <p className="text-[11px] uppercase tracking-[0.22em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.38)' }}>
             You&apos;re all set
@@ -242,11 +241,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
               className="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full transition-all f-body hover:bg-[rgba(10,46,77,0.06)]"
               style={{ color: 'rgba(10,46,77,0.4)' }}
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M5 2H2.5A1.5 1.5 0 001 3.5v6A1.5 1.5 0 002.5 11H5" />
-                <path d="M8.5 9l3-2.5-3-2.5" strokeLinecap="round" strokeLinejoin="round" />
-                <line x1="5" y1="6.5" x2="11.5" y2="6.5" strokeLinecap="round" />
-              </svg>
+              <LogOut size={13} strokeWidth={1.5} />
               Sign out
             </button>
           </form>
@@ -508,11 +503,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
                 className="px-5 py-4 rounded-2xl mb-6 flex items-start gap-3"
                 style={{ background: 'rgba(27,79,114,0.06)', border: '1px solid rgba(27,79,114,0.12)' }}
               >
-                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="#1B4F72" strokeWidth="1.4" className="flex-shrink-0 mt-0.5">
-                  <circle cx="7.5" cy="7.5" r="6" />
-                  <line x1="7.5" y1="4.5" x2="7.5" y2="8" />
-                  <circle cx="7.5" cy="10.5" r="0.5" fill="#1B4F72" />
-                </svg>
+                <Info size={15} strokeWidth={1.4} className="flex-shrink-0 mt-0.5" style={{ color: '#1B4F72' }} />
                 <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(27,79,114,0.8)' }}>
                   <strong>Founding Guide offer:</strong> First 50 guides get 3 months free + 8% commission for life.
                   We&apos;ll reach out to confirm your spot after reviewing your profile.
@@ -538,10 +529,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
                 >
                   {isPending ? (
                     <>
-                      <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="7" cy="7" r="5" strokeOpacity="0.25" />
-                        <path d="M7 2a5 5 0 015 5" strokeLinecap="round" />
-                      </svg>
+                      <Loader2 className="animate-spin" size={14} strokeWidth={2} />
                       Setting up…
                     </>
                   ) : (

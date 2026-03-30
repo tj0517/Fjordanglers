@@ -25,7 +25,7 @@ export default function InquiryDeclineButton({ inquiryId }: { inquiryId: string 
         setError(result.error)
         setConfirm(false)
       } else {
-        router.push('/dashboard/inquiries')
+        router.push('/dashboard/bookings?view=requests')
       }
     })
   }

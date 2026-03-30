@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { Check, ArrowRight, User, AlignLeft, Image as ImageIcon, Anchor, CreditCard, PlusCircle, Calendar, FileText, MessageSquare, Pencil } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -262,9 +263,7 @@ export default async function DashboardHomePage() {
                 <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
                   style={{ background: item.done ? 'rgba(74,222,128,0.12)' : 'rgba(230,126,80,0.1)' }}>
                   {item.done ? (
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round">
-                      <polyline points="2,6 5,9 10,3" />
-                    </svg>
+                    <Check size={12} strokeWidth={2} style={{ color: '#16A34A' }} />
                   ) : (
                     <SetupIcon name={item.icon} />
                   )}
@@ -278,9 +277,7 @@ export default async function DashboardHomePage() {
                     className="flex-shrink-0 flex items-center gap-1 text-xs font-bold f-body px-3.5 py-2 rounded-xl transition-all"
                     style={{ background: 'rgba(230,126,80,0.1)', color: '#C96030', border: '1px solid rgba(230,126,80,0.2)' }}>
                     {item.cta}
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                      <path d="M2 5h6M5.5 2.5L8 5l-2.5 2.5" />
-                    </svg>
+                    <ArrowRight size={10} strokeWidth={1.6} />
                   </Link>
                 )}
               </div>
@@ -296,9 +293,7 @@ export default async function DashboardHomePage() {
             style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderBottom: 'none' }}>
             <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
               style={{ background: 'rgba(74,222,128,0.15)' }}>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round">
-                <polyline points="2,6.5 5.5,10 11,3" />
-              </svg>
+              <Check size={13} strokeWidth={2} style={{ color: '#16A34A' }} />
             </div>
             <div>
               <p className="text-sm font-bold f-body" style={{ color: '#16A34A' }}>Profile complete — you&apos;re live!</p>
@@ -308,12 +303,12 @@ export default async function DashboardHomePage() {
           <div className="rounded-b-2xl p-5 grid grid-cols-2 sm:grid-cols-3 gap-3"
             style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', borderTop: 'none' }}>
             {[
-              { label: 'My public profile', sub: 'See how anglers find you',   href: guide.slug ? `/guides/${guide.slug}` : '/dashboard/profile', icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="5.5" r="2.5" /><path d="M2.5 13.5c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5" /></svg>, primary: true  },
-              { label: '+ New trip listing', sub: 'Add a new fishing trip',    href: '/dashboard/trips/new',    icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="8" cy="8" r="6.5" /><line x1="8" y1="5" x2="8" y2="11" /><line x1="5" y1="8" x2="11" y2="8" /></svg>, primary: false },
-              { label: 'Manage calendar',   sub: 'Set availability & blocks', href: '/dashboard/calendar',     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="3" width="13" height="10.5" rx="1.5" /><line x1="1.5" y1="6.5" x2="14.5" y2="6.5" /><line x1="5" y1="1.5" x2="5" y2="4.5" /><line x1="11" y1="1.5" x2="11" y2="4.5" /></svg>, primary: false },
-              { label: 'Bookings',          sub: `${pendingCount} pending`,   href: '/dashboard/bookings',     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="1.5" y="2" width="13" height="12" rx="1.5" /><line x1="5" y1="6" x2="11" y2="6" /><line x1="5" y1="8.5" x2="11" y2="8.5" /><line x1="5" y1="11" x2="8.5" y2="11" /></svg>, primary: false },
-              { label: 'Requests',          sub: `${requestCount} open`,       href: '/dashboard/inquiries',   icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1.5 2.5h13a1 1 0 011 1v8a1 1 0 01-1 1H4.5l-3.5 3V3.5a1 1 0 011-1z" /></svg>, primary: false },
-              { label: 'Edit profile',      sub: 'Update info & photos',       href: '/dashboard/profile/edit', icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M11 2.5l2.5 2.5-8 8H3v-2.5l8-8z" /></svg>, primary: false },
+              { label: 'My public profile', sub: 'See how anglers find you',   href: guide.slug ? `/guides/${guide.slug}` : '/dashboard/profile', icon: <User size={16} strokeWidth={1.5} />, primary: true  },
+              { label: '+ New trip listing', sub: 'Add a new fishing trip',    href: '/dashboard/trips/new',    icon: <PlusCircle size={16} strokeWidth={1.5} />, primary: false },
+              { label: 'Manage calendar',   sub: 'Set availability & blocks', href: '/dashboard/calendar',     icon: <Calendar size={16} strokeWidth={1.5} />, primary: false },
+              { label: 'Bookings',          sub: `${pendingCount} pending`,   href: '/dashboard/bookings',     icon: <FileText size={16} strokeWidth={1.5} />, primary: false },
+              { label: 'Requests',          sub: `${requestCount} open`,       href: '/dashboard/bookings?view=requests',   icon: <MessageSquare size={16} strokeWidth={1.5} />, primary: false },
+              { label: 'Edit profile',      sub: 'Update info & photos',       href: '/dashboard/profile/edit', icon: <Pencil size={16} strokeWidth={1.5} />, primary: false },
             ].map(sc => (
               <Link key={sc.label} href={sc.href}
                 className="flex items-start gap-3 px-4 py-3.5 rounded-xl transition-all hover:scale-[1.01]"
@@ -337,7 +332,7 @@ export default async function DashboardHomePage() {
           { label: 'Active trips',        value: String(publishedTrips),  sub: totalTrips > 0 ? `${totalTrips} total` : 'No trips yet',    href: '/dashboard/trips'    },
           { label: 'Earnings this month', value: fmtEur(monthEarnings),   sub: 'confirmed bookings',                                        href: '/dashboard/earnings' },
           { label: 'Pending bookings',    value: String(pendingCount),    sub: 'awaiting confirmation',                                     href: '/dashboard/bookings' },
-          { label: 'Open requests',       value: String(requestCount),    sub: 'trip inquiries',                                            href: '/dashboard/inquiries'},
+          { label: 'Open requests',       value: String(requestCount),    sub: 'trip inquiries',                                            href: '/dashboard/bookings?view=requests'},
         ].map(stat => (
           <Link key={stat.label} href={stat.href}
             className="rounded-2xl px-4 py-4 transition-all hover:scale-[1.01]"
@@ -525,7 +520,7 @@ export default async function DashboardHomePage() {
               { label: 'My trips',     href: '/dashboard/trips',        primary: false },
               { label: 'Calendar',     href: '/dashboard/calendar',     primary: false },
               { label: 'Bookings',     href: '/dashboard/bookings',     primary: false },
-              { label: 'Inquiries',    href: '/dashboard/inquiries',    primary: false },
+              { label: 'Requests',     href: '/dashboard/bookings?view=requests', primary: false },
               { label: 'Edit profile', href: '/dashboard/profile/edit', primary: false },
             ].map(action => (
               <Link key={action.label} href={action.href}
@@ -547,13 +542,13 @@ export default async function DashboardHomePage() {
 // ─── Setup icon helper ────────────────────────────────────────────────────────
 
 function SetupIcon({ name }: { name: string }) {
-  const s = { width: 12, height: 12, fill: 'none', stroke: '#E67E50', strokeWidth: 1.6, strokeLinecap: 'round' as const }
+  const props = { size: 12, strokeWidth: 1.6, style: { color: '#E67E50' } } as const
   switch (name) {
-    case 'person': return (<svg {...s} viewBox="0 0 12 12"><circle cx="6" cy="4" r="2.2" /><path d="M1.5 11c0-2.485 2.015-4.5 4.5-4.5s4.5 2.015 4.5 4.5" /></svg>)
-    case 'text':   return (<svg {...s} viewBox="0 0 12 12"><line x1="2" y1="3.5" x2="10" y2="3.5" /><line x1="2" y1="6" x2="10" y2="6" /><line x1="2" y1="8.5" x2="7" y2="8.5" /></svg>)
-    case 'photo':  return (<svg {...s} viewBox="0 0 12 12"><rect x="1" y="2.5" width="10" height="7" rx="1.5" /><circle cx="6" cy="6" r="1.8" /></svg>)
-    case 'trip':   return (<svg {...s} viewBox="0 0 12 12"><path d="M2 10 L6 2 L10 10" /><line x1="3.5" y1="7" x2="8.5" y2="7" /></svg>)
-    case 'stripe': return (<svg {...s} viewBox="0 0 12 12"><rect x="1" y="3" width="10" height="6.5" rx="1.2" /><line x1="1" y1="5.5" x2="11" y2="5.5" /><line x1="3.5" y1="7.8" x2="5.5" y2="7.8" strokeWidth="2" /></svg>)
-    default:       return (<svg {...s} viewBox="0 0 12 12"><circle cx="6" cy="6" r="4" /></svg>)
+    case 'person': return <User {...props} />
+    case 'text':   return <AlignLeft {...props} />
+    case 'photo':  return <ImageIcon {...props} />
+    case 'trip':   return <Anchor {...props} />
+    case 'stripe': return <CreditCard {...props} />
+    default:       return <User {...props} />
   }
 }

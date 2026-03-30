@@ -50,7 +50,7 @@ const EXP_SELECT =
  * guide embedding to just the 3 fields the card actually renders.
  */
 const MAP_SELECT =
-  'id, title, location_lat, location_lng, location_spots, location_city, location_country, ' +
+  'id, title, location_lat, location_lng, location_spots, location_area, location_city, location_country, ' +
   'price_per_person_eur, fish_types, booking_type, difficulty, season_from, season_to, ' +
   'duration_hours, duration_days, ' +
   'guide:guides!inner ( id, full_name, avatar_url, is_hidden ), ' +

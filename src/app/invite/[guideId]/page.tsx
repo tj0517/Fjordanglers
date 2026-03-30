@@ -21,6 +21,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { ClaimGuideForm } from '@/components/auth/claim-guide-form'
+import { User, Check } from 'lucide-react'
 
 export async function generateMetadata({
   params,
@@ -104,11 +105,7 @@ export default async function GuideInvitePage({
               }}
             >
               {/* Pin / anchor icon */}
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#E67E50" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="11" cy="7" r="3" />
-                <path d="M11 10v8M7 18h8" />
-                <path d="M8 10a3 3 0 006 0" />
-              </svg>
+              <User size={22} strokeWidth={1.8} aria-hidden="true" style={{ color: '#E67E50' }} />
             </div>
             <h1
               className="f-display"
@@ -233,9 +230,7 @@ export default async function GuideInvitePage({
                   fontFamily: 'var(--font-dm-sans, DM Sans, sans-serif)',
                 }}
               >
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-                  <path d="M1 4.5L3 6.5L7 2" />
-                </svg>
+                <Check size={8} strokeWidth={1.5} aria-hidden="true" />
                 Verified
               </div>
             </div>

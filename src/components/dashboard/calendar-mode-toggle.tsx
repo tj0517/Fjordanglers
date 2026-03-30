@@ -12,6 +12,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { updateCalendarMode } from '@/actions/calendar'
+import { User, Columns, Loader2, Info } from 'lucide-react'
 
 export type CalendarMode = 'per_listing' | 'shared'
 
@@ -30,27 +31,13 @@ const OPTIONS: Array<{
     value: 'shared',
     label: 'Per guide',
     description: 'One calendar for you as a guide — blocking a date makes all your trips unavailable.',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="9" cy="6" r="3" />
-        <path d="M3 15c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-      </svg>
-    ),
+    icon: <User size={18} strokeWidth={1.5} />,
   },
   {
     value: 'per_listing',
     label: 'Per trip',
     description: 'Each trip has its own separate calendar. Useful if your trips run independently.',
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <rect x="1" y="3" width="7" height="12" rx="1.5" />
-        <rect x="10" y="3" width="7" height="12" rx="1.5" />
-        <line x1="3" y1="7" x2="6" y2="7" />
-        <line x1="3" y1="10" x2="6" y2="10" />
-        <line x1="12" y1="7" x2="15" y2="7" />
-        <line x1="12" y1="10" x2="15" y2="10" />
-      </svg>
-    ),
+    icon: <Columns size={18} strokeWidth={1.5} />,
   },
 ]
 
@@ -94,10 +81,7 @@ export default function CalendarModeToggle({ current, tripCount }: Props) {
         {isPending && (
           <span className="text-[10px] f-body flex items-center gap-1.5"
                 style={{ color: 'rgba(10,46,77,0.38)' }}>
-            <svg className="animate-spin" width="11" height="11" viewBox="0 0 11 11" fill="none"
-                 stroke="currentColor" strokeWidth="1.5">
-              <circle cx="5.5" cy="5.5" r="4" strokeDasharray="20" strokeDashoffset="5" />
-            </svg>
+            <Loader2 className="animate-spin" size={11} strokeWidth={1.5} />
             Saving…
           </span>
         )}
@@ -158,12 +142,7 @@ export default function CalendarModeToggle({ current, tripCount }: Props) {
         className="mt-3 flex items-start gap-2.5 px-3 py-2.5 rounded-lg"
         style={{ background: 'rgba(27,79,114,0.05)', border: '1px solid rgba(27,79,114,0.1)' }}
       >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#1B4F72"
-             strokeWidth="1.5" className="flex-shrink-0 mt-0.5">
-          <circle cx="7" cy="7" r="6" />
-          <line x1="7" y1="5" x2="7" y2="7.5" />
-          <circle cx="7" cy="9.5" r="0.6" fill="#1B4F72" />
-        </svg>
+        <Info size={14} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" style={{ color: '#1B4F72' }} />
         <p className="text-xs f-body leading-relaxed" style={{ color: '#1B4F72' }}>
           {optimistic === 'shared'
             ? <>Blocking a date makes <strong>all {tripCount} trip{tripCount !== 1 ? 's' : ''}</strong> unavailable at once — one calendar for you as a guide.</>

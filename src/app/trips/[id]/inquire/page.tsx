@@ -2,8 +2,9 @@ import { notFound } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import InquireForm from './InquireForm'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
-import { decodePeriodsParam } from '@/components/trips/multi-period-picker'
+import { decodePeriodsParam } from '@/lib/periods'
 import type { DurationOptionPayload } from '@/actions/experiences'
+import { ChevronLeft } from 'lucide-react'
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
@@ -12,7 +13,7 @@ export default async function InquirePage({
   searchParams,
 }: {
   params:       Promise<{ id: string }>
-  searchParams: Promise<{ dates?: string; group?: string; periods?: string }>
+  searchParams: Promise<{ dates?: string; group?: string; periods?: string; mode?: string }>
 }) {
   const { id } = await params
   const sp     = await searchParams
@@ -70,6 +71,7 @@ export default async function InquirePage({
   const prefilledDates   = sp.dates   ? sp.dates.split(',').filter(Boolean) : []
   const prefilledPeriods = sp.periods ? decodePeriodsParam(sp.periods)      : []
   const prefilledGroup   = sp.group   ? Math.max(1, Math.min(50, Number(sp.group) || 1)) : 1
+  const isDirectMode     = sp.mode === 'direct'
 
   // ── Price range (widełki) — shown to angler before they submit ────────────
   const durationOpts = Array.isArray(experience.duration_options)
@@ -111,9 +113,7 @@ export default async function InquirePage({
           className="inline-flex items-center gap-1.5 text-sm f-body mb-8 transition-colors"
           style={{ color: 'rgba(10,46,77,0.5)' }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <polyline points="9,2 5,7 9,12" />
-          </svg>
+          <ChevronLeft size={14} strokeWidth={1.6} />
           Back to trip
         </a>
 
@@ -121,7 +121,7 @@ export default async function InquirePage({
         <div className="mb-8">
           <p className="text-xs uppercase tracking-[0.18em] font-semibold f-body mb-2"
              style={{ color: '#E67E50' }}>
-            Send a request
+            {isDirectMode ? 'Message the guide' : 'Send a request'}
           </p>
           <h1 className="text-3xl font-bold f-display mb-1" style={{ color: '#0A2E4D' }}>
             {experience.title}
@@ -129,6 +129,11 @@ export default async function InquirePage({
           {guide != null && (
             <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
               Guide: {guide.full_name}
+            </p>
+          )}
+          {isDirectMode && (
+            <p className="text-sm f-body mt-2 leading-relaxed" style={{ color: 'rgba(10,46,77,0.52)' }}>
+              Have questions before booking? Ask the guide directly — no payment required.
             </p>
           )}
 
@@ -172,6 +177,8 @@ export default async function InquirePage({
           availabilityConfig={availabilityConfig}
           blockedDates={blockedDates}
           fishTypes={experience.fish_types ?? []}
+          isDirectMode={isDirectMode}
+          durationOptions={durationOpts}
         />
 
       </div>

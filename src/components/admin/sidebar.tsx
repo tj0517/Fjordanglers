@@ -4,6 +4,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/actions/auth'
+import {
+  LayoutGrid, Users, Plus, Inbox, List, MessageSquare,
+  ArrowLeft, LogOut,
+} from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,81 +20,15 @@ type AdminSidebarProps = {
 
 const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
-
-const IconGrid = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
-    <rect x="1" y="1" width="5.5" height="5.5" rx="1" />
-    <rect x="8.5" y="1" width="5.5" height="5.5" rx="1" />
-    <rect x="1" y="8.5" width="5.5" height="5.5" rx="1" />
-    <rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" />
-  </svg>
-)
-
-const IconUsers = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <circle cx="5.5" cy="5" r="2.5" />
-    <path d="M1 13c0-2.5 2-4 4.5-4S10 10.5 10 13" />
-    <circle cx="11" cy="5" r="2" />
-    <path d="M11 9c1.5 0 3 1 3 3" />
-  </svg>
-)
-
-const IconPlus = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
-    <rect x="6.5" y="1" width="2" height="13" rx="1" />
-    <rect x="1" y="6.5" width="13" height="2" rx="1" />
-  </svg>
-)
-
-const IconInbox = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <rect x="1" y="1" width="13" height="13" rx="2" />
-    <path d="M1 9h3.5l1 2h4l1-2H14" />
-  </svg>
-)
-
-const IconList = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <line x1="5.5" y1="4" x2="14" y2="4" />
-    <line x1="5.5" y1="7.5" x2="14" y2="7.5" />
-    <line x1="5.5" y1="11" x2="14" y2="11" />
-    <circle cx="2.5" cy="4" r="1" fill="currentColor" stroke="none" />
-    <circle cx="2.5" cy="7.5" r="1" fill="currentColor" stroke="none" />
-    <circle cx="2.5" cy="11" r="1" fill="currentColor" stroke="none" />
-  </svg>
-)
-
-const IconChat = () => (
-  <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M2 2h11a1 1 0 011 1v7a1 1 0 01-1 1H5l-3 3V3a1 1 0 011-1z" />
-  </svg>
-)
-
-const IconArrowLeft = () => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <polyline points="7,2 3,6 7,10" />
-    <line x1="3" y1="6" x2="11" y2="6" />
-  </svg>
-)
-
-const IconLogout = () => (
-  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.4">
-    <path d="M5 2H2a1 1 0 00-1 1v7a1 1 0 001 1h3" />
-    <polyline points="9,9 12,6.5 9,4" />
-    <line x1="5" y1="6.5" x2="12" y2="6.5" />
-  </svg>
-)
-
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'Overview',         href: '/admin',              icon: <IconGrid />,  exact: true  },
-  { label: 'Guides',           href: '/admin/guides',       icon: <IconUsers />, exact: false },
-  { label: 'Trips',      href: '/admin/trips',  icon: <IconList />,  exact: false },
-  { label: 'Leads',            href: '/admin/leads',        icon: <IconInbox />, exact: false },
-  { label: 'Inquiries',        href: '/admin/inquiries',   icon: <IconChat />,  exact: false },
-  { label: 'Add Guide Profile', href: '/admin/guides/new',  icon: <IconPlus />,  exact: false },
+  { label: 'Overview',          href: '/admin',             icon: <LayoutGrid    size={15} strokeWidth={1.5} />, exact: true  },
+  { label: 'Guides',            href: '/admin/guides',      icon: <Users         size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Trips',             href: '/admin/trips',       icon: <List          size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Leads',             href: '/admin/leads',       icon: <Inbox         size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Inquiries',         href: '/admin/inquiries',   icon: <MessageSquare size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Add Guide Profile', href: '/admin/guides/new',  icon: <Plus          size={15} strokeWidth={1.5} />, exact: false },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -246,7 +184,7 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
             className="w-full flex items-center justify-center lg:justify-start gap-2 px-0 lg:px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.06] mb-0.5"
             style={{ color: 'rgba(255,255,255,0.35)', cursor: 'pointer', border: 'none', background: 'transparent' }}
           >
-            <IconLogout />
+            <LogOut size={13} strokeWidth={1.5} />
             <span className="hidden lg:block">Sign out</span>
           </button>
         </form>
@@ -257,7 +195,7 @@ export default function AdminSidebar({ adminName, newLeadsCount = 0 }: AdminSide
           className="flex items-center justify-center lg:justify-start gap-2 px-0 lg:px-3 py-2 rounded-xl text-xs transition-all f-body hover:bg-white/[0.04]"
           style={{ color: 'rgba(255,255,255,0.28)' }}
         >
-          <IconArrowLeft />
+          <ArrowLeft size={12} strokeWidth={1.5} />
           <span className="hidden lg:block">Back to site</span>
         </Link>
       </div>

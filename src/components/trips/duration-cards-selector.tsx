@@ -15,6 +15,7 @@
 
 import { useState, useEffect } from 'react'
 import type { DurationOptionPayload } from '@/actions/experiences'
+import { Check } from 'lucide-react'
 
 // ─── Custom event name (shared contract with BookingWidget) ────────────────────
 
@@ -137,15 +138,7 @@ export default function DurationCardsSelector({ options }: Props) {
                   className="absolute top-4 right-4 w-6 h-6 rounded-full flex items-center justify-center"
                   style={{ background: '#0A2E4D' }}
                 >
-                  <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                    <polyline
-                      points="1,4 4,7 9,1"
-                      stroke="white"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                  <Check size={10} strokeWidth={1.8} style={{ color: 'white' }} />
                 </span>
               )}
 

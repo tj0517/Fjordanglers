@@ -13,6 +13,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { markBalancePaid } from '@/actions/bookings'
+import { CheckCircle, Check, Loader2 } from 'lucide-react'
 
 interface Props {
   bookingId: string
@@ -44,10 +45,7 @@ export default function MarkBalancePaidButton({ bookingId, balanceAmount }: Prop
         className="flex items-center gap-2 px-4 py-3 rounded-2xl"
         style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round">
-          <circle cx="8" cy="8" r="6.5" />
-          <path d="M5 8l2 2 4-4" />
-        </svg>
+        <CheckCircle size={16} strokeWidth={1.5} style={{ color: '#16A34A' }} />
         <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
           Balance received — booking completed
         </p>
@@ -75,18 +73,12 @@ export default function MarkBalancePaidButton({ bookingId, balanceAmount }: Prop
         >
           {isPending ? (
             <>
-              <span
-                className="w-3 h-3 border-2 rounded-full animate-spin"
-                style={{ borderColor: 'rgba(22,163,74,0.3)', borderTopColor: '#16A34A' }}
-              />
+              <Loader2 className="animate-spin" size={13} strokeWidth={2} style={{ color: '#16A34A' }} />
               Saving…
             </>
           ) : (
             <>
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <circle cx="6.5" cy="6.5" r="5.5" />
-                <path d="M4 6.5l1.8 1.8 3.2-3.6" />
-              </svg>
+              <Check size={13} strokeWidth={1.5} />
               Mark balance received
             </>
           )}

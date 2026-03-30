@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { Calendar, Users, SlidersHorizontal, FileText, Check, CheckCircle } from 'lucide-react'
 import { submitInquiry } from '@/actions/inquiries'
 import { type InquiryFormConfig, SPECIES_OPTIONS, resolveFormConfig } from '@/lib/inquiry-form-config'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import { MultiPeriodPicker, type Period, type BlockedRange } from '@/components/trips/multi-period-picker'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
+import type { DurationOptionPayload } from '@/actions/experiences'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +42,10 @@ type Props = {
   availabilityConfig?: AvailConfigRow | null
   blockedDates?:       BlockedRange[]
   fishTypes?:          string[]
+  /** When true (direct booking ?mode=direct), show guide's real packages instead of generic duration picker. */
+  isDirectMode?:       boolean
+  /** Guide's configured duration/pricing options — shown as package cards in direct mode. */
+  durationOptions?:    DurationOptionPayload[]
 }
 
 // ─── Tabs metadata ────────────────────────────────────────────────────────────
@@ -486,49 +492,19 @@ const labelCss: React.CSSProperties = {
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
 function IconCalendar({ size = 15 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="3" width="12" height="11" rx="1.5" />
-      <line x1="5" y1="1.5" x2="5" y2="4.5" />
-      <line x1="11" y1="1.5" x2="11" y2="4.5" />
-      <line x1="2" y1="7" x2="14" y2="7" />
-    </svg>
-  )
+  return <Calendar size={size} strokeWidth={1.5} />
 }
 
 function IconPeople({ size = 15 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="6" cy="5" r="2.5" />
-      <path d="M1 13.5c0-2.76 2.24-5 5-5s5 2.24 5 5" />
-      <circle cx="12" cy="5" r="2" opacity="0.55" />
-      <path d="M15 13.5c0-1.93-1.34-3.55-3.14-3.96" opacity="0.55" />
-    </svg>
-  )
+  return <Users size={size} strokeWidth={1.5} />
 }
 
 function IconSliders({ size = 15 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <line x1="2" y1="4" x2="14" y2="4" />
-      <line x1="2" y1="8" x2="14" y2="8" />
-      <line x1="2" y1="12" x2="14" y2="12" />
-      <circle cx="5"  cy="4"  r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="11" cy="8"  r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="7"  cy="12" r="1.5" fill="currentColor" stroke="none" />
-    </svg>
-  )
+  return <SlidersHorizontal size={size} strokeWidth={1.5} />
 }
 
 function IconNotes({ size = 15 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 2h6l4 4v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" />
-      <polyline points="10,2 10,6 14,6" opacity="0.5" />
-      <line x1="5" y1="9"  x2="11" y2="9"  />
-      <line x1="5" y1="12" x2="9"  y2="12" />
-    </svg>
-  )
+  return <FileText size={size} strokeWidth={1.5} />
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -714,6 +690,27 @@ function TabHeading({ title, subtitle, help }: { title: string; subtitle?: strin
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// ─── Direct-mode package helpers ─────────────────────────────────────────────
+
+function fmtPkgPrice(opt: DurationOptionPayload): string {
+  if (opt.pricing_type === 'per_boat') return `€${opt.price_eur} flat`
+  if (opt.pricing_type === 'per_group') {
+    const prices = opt.group_prices
+      ? Object.values(opt.group_prices).filter((v): v is number => typeof v === 'number')
+      : [opt.price_eur]
+    return `from €${Math.min(...prices)}/group`
+  }
+  return `€${opt.price_eur}/pp`
+}
+
+function fmtPkgDuration(opt: DurationOptionPayload): string {
+  if (opt.days != null && opt.days >= 1) return `${opt.days} day${opt.days > 1 ? 's' : ''}`
+  if (opt.hours != null) return `~${opt.hours}h`
+  return ''
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function InquireForm({
   guideId,
   prefilledDates,
@@ -725,6 +722,8 @@ export default function InquireForm({
   availabilityConfig,
   blockedDates = [],
   fishTypes,
+  isDirectMode = false,
+  durationOptions = [],
 }: Props) {
   const cfg = resolveFormConfig(rawConfig)
 
@@ -749,8 +748,23 @@ export default function InquireForm({
   const [email, setEmail] = useState(anglerEmail ?? '')
 
   // ── Trip type & duration
-  const [durationType,     setDurationType]     = useState<DurationType>('full_day')
-  const [numDays,          setNumDays]          = useState(3)
+  const [durationType,        setDurationType]        = useState<DurationType>('full_day')
+  const [numDays,             setNumDays]             = useState(3)
+  // Direct-mode: selected guide package label (null = nothing picked yet)
+  const [selectedPackageLabel, setSelectedPackageLabel] = useState<string | null>(null)
+
+  // When a guide package is selected, derive durationType + numDays automatically
+  function handlePackageSelect(opt: DurationOptionPayload) {
+    setSelectedPackageLabel(opt.label)
+    if (opt.days != null && opt.days >= 2) {
+      setDurationType('multi_day')
+      setNumDays(opt.days)
+    } else if (opt.hours != null && opt.hours <= 5) {
+      setDurationType('half_day')
+    } else {
+      setDurationType('full_day')
+    }
+  }
 
   // ── Multi-period date selection (replaces single from/to range)
   // prefilledPeriods (from ?periods= param) takes priority over prefilledDates
@@ -909,6 +923,8 @@ export default function InquireForm({
           notes:               notes.trim()              || undefined,
           // Full multi-period selection preserved for guide review
           allDatePeriods:      periods.length > 1 ? periods : undefined,
+          // Direct-mode: which of the guide's packages the angler selected
+          selectedPackageLabel: selectedPackageLabel ?? undefined,
         },
         guideId: guideId ?? undefined,
       })
@@ -931,9 +947,7 @@ export default function InquireForm({
       >
         <div className="w-14 h-14 rounded-full flex items-center justify-center"
           style={{ background: 'rgba(5,150,105,0.1)' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
+          <Check size={24} strokeWidth={2} style={{ color: '#059669' }} />
         </div>
         <div>
           <h2 className="text-xl font-bold f-display mb-1" style={{ color: '#0A2E4D' }}>
@@ -1037,8 +1051,61 @@ export default function InquireForm({
               }
             />
 
-            {/* Trip type */}
-            {isVisible('tripType') && (
+            {/* ── Trip / Package picker ────────────────────────────────────── */}
+            {isDirectMode && durationOptions.length > 0 ? (
+              /* Direct mode — show the guide's real packages */
+              <div>
+                <label style={labelCss} className="f-body">
+                  Which package interests you?
+                  <span style={{ color: 'rgba(10,46,77,0.35)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+                    (optional — ask anything even without picking)
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {durationOptions.map((opt, i) => {
+                    const on  = selectedPackageLabel === opt.label
+                    const dur = fmtPkgDuration(opt)
+                    const prc = fmtPkgPrice(opt)
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => on ? setSelectedPackageLabel(null) : handlePackageSelect(opt)}
+                        disabled={isPending}
+                        className="flex flex-col items-start px-3.5 py-3 rounded-xl transition-all text-left"
+                        style={{
+                          background: on ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
+                          border:     on ? '1.5px solid #0A2E4D' : '1px solid rgba(10,46,77,0.1)',
+                          cursor:     isPending ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <span className="text-[13px] font-bold f-body leading-snug"
+                          style={{ color: on ? 'white' : '#0A2E4D' }}>
+                          {opt.label || `Option ${i + 1}`}
+                        </span>
+                        {dur !== '' && (
+                          <span className="text-[10px] f-body mt-0.5"
+                            style={{ color: on ? 'rgba(255,255,255,0.5)' : 'rgba(10,46,77,0.4)' }}>
+                            {dur}
+                          </span>
+                        )}
+                        <span className="text-[12px] font-semibold f-body mt-1"
+                          style={{ color: on ? 'rgba(255,255,255,0.85)' : '#E67E50' }}>
+                          {prc}
+                        </span>
+                        {opt.includes_lodging && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider f-body mt-1.5 px-1.5 py-0.5 rounded-md"
+                            style={{ background: on ? 'rgba(255,255,255,0.12)' : 'rgba(5,150,105,0.1)', color: on ? 'rgba(255,255,255,0.7)' : '#059669' }}>
+                            incl. lodging
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : isVisible('tripType') ? (
+              /* Standard mode — generic half / full / multi-day picker */
               <div>
                 <label style={labelCss} className="f-body">
                   Trip type{isRequired('tripType') && ' *'}
@@ -1069,10 +1136,10 @@ export default function InquireForm({
                   })}
                 </div>
               </div>
-            )}
+            ) : null}
 
-            {/* Days stepper */}
-            {isVisible('numDays') && durationType === 'multi_day' && (
+            {/* Days stepper — only in standard mode */}
+            {!isDirectMode && isVisible('numDays') && durationType === 'multi_day' && (
               <div>
                 <label style={labelCss} className="f-body">
                   How many days?{isRequired('numDays') && ' *'}
@@ -1238,10 +1305,7 @@ export default function InquireForm({
             {(['gear', 'accommodation', 'transport', 'boatPreference', 'dietary'] as const)
               .every(k => !isVisible(k)) ? (
               <div className="flex-1 flex flex-col items-center justify-center py-8 text-center gap-2">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="1.5">
-                  <circle cx="12" cy="12" r="10" />
-                  <polyline points="9 12 11 14 15 10" />
-                </svg>
+                <CheckCircle size={32} strokeWidth={1.5} style={{ color: '#059669' }} />
                 <p className="text-sm font-semibold f-body" style={{ color: '#059669' }}>
                   Nothing to fill here
                 </p>

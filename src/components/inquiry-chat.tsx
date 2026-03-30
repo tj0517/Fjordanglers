@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { sendInquiryMessage } from '@/actions/inquiry-messages'
+import { MessageSquare, Loader2, ArrowRight } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -164,15 +165,7 @@ export default function InquiryChat({
       >
         <div className="flex items-center gap-2.5">
           {/* Chat icon */}
-          <svg
-            width="16" height="16" viewBox="0 0 16 16" fill="none"
-            stroke="#E67E50" strokeWidth="1.7" strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M14 2H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3l2 2 2-2h5a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z" />
-            <line x1="4" y1="6" x2="12" y2="6" />
-            <line x1="4" y1="9" x2="8"  y2="9" />
-          </svg>
+          <MessageSquare size={16} strokeWidth={1.7} style={{ color: '#E67E50' }} />
           <h3
             className="text-sm font-semibold f-body"
             style={{ color: '#0A2E4D' }}
@@ -198,12 +191,7 @@ export default function InquiryChat({
       >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 gap-2">
-            <svg
-              width="28" height="28" viewBox="0 0 28 28" fill="none"
-              stroke="rgba(10,46,77,0.2)" strokeWidth="1.4"
-            >
-              <path d="M24 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6l4 4 4-4h6a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
-            </svg>
+            <MessageSquare size={28} strokeWidth={1.4} style={{ color: 'rgba(10,46,77,0.2)' }} />
             <p
               className="text-xs f-body text-center"
               style={{ color: 'rgba(10,46,77,0.35)' }}
@@ -329,27 +317,9 @@ export default function InquiryChat({
               }}
             >
               {isPending ? (
-                // Spinner
-                <svg
-                  width="14" height="14" viewBox="0 0 14 14"
-                  stroke="rgba(10,46,77,0.5)" strokeWidth="2"
-                  fill="none"
-                  className="animate-spin"
-                >
-                  <circle cx="7" cy="7" r="5" strokeOpacity=".3" />
-                  <path d="M7 2a5 5 0 0 1 5 5" />
-                </svg>
+                <Loader2 className="animate-spin" size={14} strokeWidth={2} style={{ color: 'rgba(10,46,77,0.5)' }} />
               ) : (
-                // Send arrow
-                <svg
-                  width="14" height="14" viewBox="0 0 14 14"
-                  fill="none"
-                  stroke={draft.trim() ? '#fff' : 'rgba(10,46,77,0.4)'}
-                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                >
-                  <line x1="2" y1="7" x2="12" y2="7" />
-                  <polyline points="8,3 12,7 8,11" />
-                </svg>
+                <ArrowRight size={14} strokeWidth={2} style={{ color: draft.trim() ? '#fff' : 'rgba(10,46,77,0.4)' }} />
               )}
             </button>
           </div>

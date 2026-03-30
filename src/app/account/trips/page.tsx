@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
+import { MessageSquare } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -143,9 +144,7 @@ export default async function AnglerTripsPage() {
             className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
             style={{ background: 'rgba(230,126,80,0.1)' }}
           >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E67E50" strokeWidth="1.5">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-            </svg>
+            <MessageSquare width={24} height={24} stroke="#E67E50" strokeWidth={1.5} />
           </div>
           <h3 className="text-[#0A2E4D] text-xl font-bold mb-2 f-display">No requests yet</h3>
           <p className="text-[#0A2E4D]/45 text-sm f-body mb-6">

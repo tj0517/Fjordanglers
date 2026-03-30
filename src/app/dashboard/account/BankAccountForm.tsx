@@ -7,6 +7,7 @@ import type { SetupPayoutInput } from '@/actions/stripe-connect'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { FieldTooltip } from '@/components/ui/field-tooltip'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
+import { Check } from 'lucide-react'
 
 // ─── Country list (Stripe-supported EEA + UK countries relevant for fishing guides) ─
 
@@ -134,9 +135,7 @@ export function BankAccountForm({ initialCountry }: { initialCountry: string }) 
           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
           style={{ background: 'rgba(74,222,128,0.12)' }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round">
-            <polyline points="2,7 6,11 12,3" />
-          </svg>
+          <Check size={14} strokeWidth={2} style={{ color: '#16A34A' }} />
         </div>
         <div>
           <p className="text-sm font-bold f-body" style={{ color: '#16A34A' }}>

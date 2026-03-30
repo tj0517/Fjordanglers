@@ -18,6 +18,7 @@ import { useRef, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { ImageCropModal } from '@/components/ui/image-crop'
+import { Crop, X, Loader2, ImageIcon } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -228,9 +229,7 @@ export default function MultiImageUpload({
                   style={{ color: '#fff' }}
                   aria-label="Crop photo"
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                    <path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/>
-                  </svg>
+                  <Crop size={10} strokeWidth={2.2} />
                   Crop
                 </button>
               )}
@@ -241,10 +240,7 @@ export default function MultiImageUpload({
                 style={{ color: 'rgba(255,255,255,0.8)' }}
                 aria-label="Remove photo"
               >
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <line x1="1.5" y1="1.5" x2="6.5" y2="6.5" />
-                  <line x1="6.5" y1="1.5" x2="1.5" y2="6.5" />
-                </svg>
+                <X size={8} strokeWidth={1.8} />
                 Remove
               </button>
             </div>
@@ -270,10 +266,7 @@ export default function MultiImageUpload({
               className="absolute inset-0 flex flex-col items-center justify-center gap-2"
               style={{ background: 'rgba(7,17,28,0.45)' }}
             >
-              <svg className="animate-spin" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#E67E50" strokeWidth="2.2">
-                <circle cx="10" cy="10" r="7" strokeOpacity="0.2" />
-                <path d="M10 3a7 7 0 017 7" strokeLinecap="round" />
-              </svg>
+              <Loader2 className="animate-spin" size={20} strokeWidth={2.2} style={{ color: '#E67E50' }} />
               <div className="rounded-full overflow-hidden" style={{ width: 40, height: 3, background: 'rgba(255,255,255,0.2)' }}>
                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${item.progress}%`, background: '#E67E50' }} />
               </div>
@@ -297,11 +290,7 @@ export default function MultiImageUpload({
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(10,46,77,0.15)'; e.currentTarget.style.color = 'rgba(10,46,77,0.4)' }}
             aria-label="Add photos"
           >
-            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="2" y="5" width="18" height="13" rx="2.5" />
-              <circle cx="7.5" cy="10" r="1.5" />
-              <path d="M2 15l5-5 3.5 3.5 3-3 5.5 5.5" />
-            </svg>
+            <ImageIcon size={22} strokeWidth={1.5} />
             <span className="text-[10px] font-medium">Add photos</span>
           </button>
         )}

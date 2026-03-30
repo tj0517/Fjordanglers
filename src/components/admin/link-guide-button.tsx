@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { linkGuideAccount } from '@/actions/admin'
+import { Check, Loader2, Link2 } from 'lucide-react'
 
 type Props = {
   guideId: string
@@ -39,9 +40,7 @@ export default function LinkGuideButton({ guideId, inviteEmail }: Props) {
   if (state === 'success') {
     return (
       <div className="flex items-center gap-1.5 text-[11px] font-semibold f-body" style={{ color: '#16A34A' }}>
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="2.2">
-          <polyline points="2,7 5,10 11,3" />
-        </svg>
+        <Check size={13} strokeWidth={2.2} />
         Linked — dashboard unlocked
       </div>
     )
@@ -58,23 +57,13 @@ export default function LinkGuideButton({ guideId, inviteEmail }: Props) {
       >
         {isPending ? (
           <>
-            <svg
-              className="animate-spin"
-              width="11" height="11" viewBox="0 0 11 11"
-              fill="none" stroke="currentColor" strokeWidth="2"
-            >
-              <circle cx="5.5" cy="5.5" r="4" strokeOpacity="0.25" />
-              <path d="M5.5 1.5a4 4 0 014 4" strokeLinecap="round" />
-            </svg>
+            <Loader2 className="animate-spin" size={11} strokeWidth={2} />
             Linking…
           </>
         ) : (
           <>
             {/* Link / chain icon */}
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M4.2 6.8a2.5 2.5 0 003.6 0l1.5-1.5a2.5 2.5 0 00-3.5-3.5L5 2.6" />
-              <path d="M6.8 4.2a2.5 2.5 0 00-3.6 0L1.7 5.7a2.5 2.5 0 003.5 3.5L6 8.4" />
-            </svg>
+            <Link2 size={11} strokeWidth={1.5} />
             Link account
           </>
         )}

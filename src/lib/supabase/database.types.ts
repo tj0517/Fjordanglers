@@ -800,9 +800,14 @@ export type Database = {
           user_id: string | null
           verified_at: string | null
           photo_marketing_consent: boolean
+          terms_accepted_at: string | null
           website_url: string | null
           years_experience: number | null
           youtube_url: string | null
+          iban: string | null
+          iban_holder_name: string | null
+          iban_bic: string | null
+          iban_bank_name: string | null
         }
         Insert: {
           accepted_payment_methods?: string[] | null
@@ -853,8 +858,13 @@ export type Database = {
           verified_at?: string | null
           website_url?: string | null
           photo_marketing_consent?: boolean
+          terms_accepted_at?: string | null
           years_experience?: number | null
           youtube_url?: string | null
+          iban?: string | null
+          iban_holder_name?: string | null
+          iban_bic?: string | null
+          iban_bank_name?: string | null
         }
         Update: {
           accepted_payment_methods?: string[] | null
@@ -904,9 +914,14 @@ export type Database = {
           user_id?: string | null
           verified_at?: string | null
           photo_marketing_consent?: boolean
+          terms_accepted_at?: string | null
           website_url?: string | null
           years_experience?: number | null
           youtube_url?: string | null
+          iban?: string | null
+          iban_holder_name?: string | null
+          iban_bic?: string | null
+          iban_bank_name?: string | null
         }
         Relationships: [
           {

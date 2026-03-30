@@ -1,6 +1,7 @@
 // preview/main
 import Image from 'next/image'
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { getFeaturedExperiences, getPlatformStats, getSpeciesCounts, getFeaturedGuides, getExperienceLocations } from '@/lib/supabase/queries'
 import type { FeaturedGuide } from '@/lib/supabase/queries'
 import { FISH_CATALOG } from '@/lib/fish'
@@ -311,9 +312,7 @@ export default async function HomePage() {
                 style={{ background: '#0A2E4D', color: '#fff' }}
               >
                 Browse all trips
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
+                <ArrowRight size={14} strokeWidth={2.5} />
               </Link>
             </div>
           )}
