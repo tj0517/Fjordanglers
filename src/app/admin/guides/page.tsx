@@ -21,6 +21,7 @@ const FILTER_TABS = [
   { key: 'active',       label: 'Active'       },
   { key: 'pending',      label: 'Pending'      },
   { key: 'no_trips',     label: 'No Trips'     },
+  { key: 'no_payment',   label: 'No Payment'   },
   { key: 'no_stripe',    label: 'No Stripe'    },
   { key: 'unclaimed',    label: 'Unclaimed'    },
   { key: 'incomplete',   label: 'Incomplete'   },
@@ -39,7 +40,7 @@ export default async function AdminGuidesPage({
   const [{ data: guides }, { data: expCounts }] = await Promise.all([
     supabase
       .from('guides')
-      .select('id, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
+      .select('id, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, payment_ready')
       .order('created_at', { ascending: false }),
     supabase
       .from('experiences')
@@ -78,6 +79,7 @@ export default async function AdminGuidesPage({
   const filteredGuides = (() => {
     if (filter === 'pending')      return allGuides.filter(g => g.status === 'pending')
     if (filter === 'active')       return allGuides.filter(g => g.status === 'active')
+    if (filter === 'no_payment')   return allGuides.filter(g => !g.payment_ready)
     if (filter === 'no_stripe')    return allGuides.filter(g => g.status === 'active' && g.user_id != null && g.stripe_account_id == null)
     if (filter === 'no_trips')     return allGuides.filter(g => g.status === 'active' && g.user_id != null && (tripCountByGuide[g.id] ?? 0) === 0)
     if (filter === 'unclaimed')    return allGuides.filter(g => g.user_id == null)
@@ -157,7 +159,7 @@ export default async function AdminGuidesPage({
               minWidth: '1020px',
             }}
           >
-            {['Guide', 'Status', 'Account', 'Stripe', 'Profile', 'Trips', 'Actions'].map(col => (
+            {['Guide', 'Status', 'Account', 'Payment', 'Profile', 'Trips', 'Actions'].map(col => (
               <p key={col} className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
                 {col}
               </p>
@@ -182,12 +184,23 @@ export default async function AdminGuidesPage({
                   ? { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Claimed'   }
                   : { bg: 'rgba(217,119,6,0.1)',   color: '#D97706', label: 'Unclaimed' }
 
-                const stripeStyle = (() => {
-                  if (guide.stripe_account_id == null)
-                    return { bg: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.4)', label: 'None'   }
-                  if (guide.stripe_charges_enabled && guide.stripe_payouts_enabled)
-                    return { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Ready'  }
-                  return { bg: 'rgba(217,119,6,0.1)',   color: '#D97706', label: 'Setup…' }
+                const stripeActive = guide.stripe_account_id != null && guide.stripe_charges_enabled && guide.stripe_payouts_enabled
+                const stripeStarted = guide.stripe_account_id != null && !stripeActive
+                const hasIban = guide.iban != null && guide.iban !== ''
+
+                const paymentStyle = (() => {
+                  if (!guide.payment_ready)
+                    return { bg: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.4)', label: 'None' }
+                  if (stripeActive && hasIban)
+                    return { bg: 'rgba(74,222,128,0.15)', color: '#15803D', label: 'Stripe + IBAN' }
+                  if (stripeActive)
+                    return { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Stripe' }
+                  if (hasIban && stripeStarted)
+                    return { bg: 'rgba(217,119,6,0.1)',   color: '#D97706', label: 'IBAN · Stripe…' }
+                  if (hasIban)
+                    return { bg: 'rgba(99,102,241,0.1)',  color: '#4F46E5', label: 'IBAN' }
+                  // stripe started but no IBAN
+                  return { bg: 'rgba(217,119,6,0.1)',   color: '#D97706', label: 'Stripe…' }
                 })()
 
                 const missingProfile = getMissingProfile(guide)
@@ -251,12 +264,12 @@ export default async function AdminGuidesPage({
                       {accountStyle.label}
                     </span>
 
-                    {/* Stripe */}
+                    {/* Payment */}
                     <span
                       className="text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full f-body self-start"
-                      style={{ background: stripeStyle.bg, color: stripeStyle.color }}
+                      style={{ background: paymentStyle.bg, color: paymentStyle.color }}
                     >
-                      {stripeStyle.label}
+                      {paymentStyle.label}
                     </span>
 
                     {/* Profile completeness */}

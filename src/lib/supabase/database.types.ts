@@ -808,6 +808,8 @@ export type Database = {
           iban_holder_name: string | null
           iban_bic: string | null
           iban_bank_name: string | null
+          /** Auto-computed generated column. true = Stripe Connect active OR IBAN saved. Read-only. */
+          payment_ready: boolean
         }
         Insert: {
           accepted_payment_methods?: string[] | null

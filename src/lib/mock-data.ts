@@ -93,6 +93,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     iban_holder_name: null,
     iban_bic: null,
     iban_bank_name: null,
+    payment_ready: false,
     // ──────────────────────────────────────────────────────────────────────────
     created_at: '2023-01-15T00:00:00Z',
     updated_at: '2023-01-15T00:00:00Z',
@@ -152,6 +153,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     iban_holder_name: null,
     iban_bic: null,
     iban_bank_name: null,
+    payment_ready: false,
     created_at: '2023-03-20T00:00:00Z',
     updated_at: '2023-03-20T00:00:00Z',
     experience_count: 3,
@@ -210,6 +212,7 @@ export const MOCK_GUIDES: MockGuide[] = [
     iban_holder_name: null,
     iban_bic: null,
     iban_bank_name: null,
+    payment_ready: false,
     created_at: '2023-06-10T00:00:00Z',
     updated_at: '2023-06-10T00:00:00Z',
     experience_count: 2,
