@@ -6,20 +6,23 @@ import RespondBookingWidget from './RespondBookingWidget'
 import MarkBalancePaidButton from '@/components/dashboard/mark-balance-paid-button'
 import { CountryFlag } from '@/components/ui/country-flag'
 import type { Database } from '@/lib/supabase/database.types'
-import { ArrowLeft, Check, Mail, Phone, MessageSquare } from 'lucide-react'
+import { ChevronLeft, Check, Mail, Phone, MessageSquare } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type BookingStatus = Database['public']['Enums']['booking_status']
 
 const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
-  confirmed: { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Confirmed' },
-  pending:   { bg: 'rgba(230,126,80,0.12)', color: '#E67E50', label: 'Pending'   },
-  cancelled: { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Cancelled' },
-  completed: { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Completed' },
-  refunded:  { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Refunded'  },
-  accepted:  { bg: 'rgba(59,130,246,0.1)',  color: '#2563EB', label: 'Accepted'  },
-  declined:  { bg: 'rgba(239,68,68,0.08)', color: '#B91C1C', label: 'Declined'  },
+  pending:        { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'        },
+  reviewing:      { bg: 'rgba(139,92,246,0.1)',   color: '#7C3AED', label: 'Reviewing'      },
+  offer_sent:     { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Offer sent'     },
+  offer_accepted: { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Offer accepted' },
+  accepted:       { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'       },
+  confirmed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed'      },
+  completed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed'      },
+  cancelled:      { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled'      },
+  refunded:       { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'       },
+  declined:       { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'       },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -98,7 +101,7 @@ export default async function GuideBookingDetailPage({
       ? `${requestedDates.length} day${requestedDates.length !== 1 ? 's' : ''}`
       : '1 day')
 
-  const depositEur = booking.deposit_eur ?? Math.round(booking.total_eur * 0.3)
+  const depositEur = booking.deposit_eur ?? Math.round(booking.total_eur * 0.4)
   const balanceEur = Math.round(booking.total_eur - depositEur)
 
   const confirmedDate = ['accepted', 'confirmed', 'completed'].includes(booking.status)
@@ -111,167 +114,174 @@ export default async function GuideBookingDetailPage({
     day: 'numeric', month: 'short', year: 'numeric',
   })
 
-  const bookingRef      = id.slice(-8).toUpperCase()
-  const cashBalanceDue  =
+  const bookingRef     = id.slice(-8).toUpperCase()
+  const cashBalanceDue =
     booking.status === 'confirmed' &&
     booking.balance_payment_method === 'cash' &&
     booking.balance_paid_at == null
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1000px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
 
-      {/* ── Back nav ────────────────────────────────────────────────────────── */}
+      {/* ── Back nav ─────────────────────────────────────────────────────── */}
       <Link
         href="/dashboard/bookings"
-        className="inline-flex items-center gap-1.5 text-xs f-body mb-7 transition-opacity hover:opacity-70"
+        className="inline-flex items-center gap-1.5 text-xs f-body mb-6 transition-colors hover:text-[#E67E50]"
         style={{ color: 'rgba(10,46,77,0.45)' }}
       >
-        <ArrowLeft size={12} strokeWidth={1.5} />
+        <ChevronLeft size={12} strokeWidth={1.8} />
         All Bookings
       </Link>
 
-      {/* ── Two-column layout ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-6 items-start">
-
-        {/* ════════════════════════════════════════════════════════════════════
-            LEFT — booking data
-        ════════════════════════════════════════════════════════════════════ */}
-        <div
-          className="p-6"
-          style={{
-            background:   '#FDFAF7',
-            borderRadius: '24px',
-            border:       '1px solid rgba(10,46,77,0.07)',
-            boxShadow:    '0 2px 16px rgba(10,46,77,0.05)',
-          }}
+      {/* ── Page header ───────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-8">
+        <div>
+          <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
+            {exp?.title ?? 'Fishing trip'}
+          </h1>
+          <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
+            #{bookingRef} · Booked {createdFormatted}
+          </p>
+        </div>
+        <span
+          className="text-[11px] font-bold uppercase tracking-[0.12em] px-3 py-1.5 rounded-full f-body mt-1 flex-shrink-0"
+          style={{ background: s.bg, color: s.color }}
         >
-          {/* Header row */}
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-[11px] uppercase tracking-[0.22em] f-body"
-                   style={{ color: 'rgba(10,46,77,0.38)' }}>
-                  #{bookingRef}
-                </p>
-                <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: 10 }}>·</span>
-                <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                  {createdFormatted}
-                </p>
-              </div>
-              <h1 className="text-[#0A2E4D] text-xl font-bold f-display leading-snug truncate">
-                {exp?.title ?? 'Fishing trip'}
-              </h1>
+          {s.label}
+        </span>
+      </div>
 
-              {/* Dates */}
-              <div className="mt-2">
-                {confirmedDate != null && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <div
-                      className="flex items-center gap-1.5 text-xs font-semibold f-body px-2.5 py-1 rounded-full"
-                      style={{ background: 'rgba(74,222,128,0.12)', color: '#16A34A', border: '1px solid rgba(74,222,128,0.25)' }}
+      {/* ── Two-column layout ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-6 items-start">
+
+        {/* ══ LEFT — booking details (stacked cards) ═════════════════════════ */}
+        <div className="flex flex-col gap-4">
+
+          {/* ── Trip details ──────────────────────────────────────────────── */}
+          <SectionCard title="Trip Details">
+
+            {/* Confirmed / accepted date badge */}
+            {confirmedDate != null && (
+              <div>
+                <div
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold f-body px-2.5 py-1 rounded-full"
+                  style={{
+                    background: 'rgba(74,222,128,0.12)',
+                    color: '#16A34A',
+                    border: '1px solid rgba(74,222,128,0.25)',
+                  }}
+                >
+                  <Check size={10} strokeWidth={1.6} />
+                  Trip starts: {confirmedDate}
+                </div>
+              </div>
+            )}
+
+            {/* Multi-day angler-requested dates */}
+            {hasMultiDates && (
+              <div>
+                <p
+                  className="text-[10px] uppercase tracking-[0.15em] mb-1.5 f-body"
+                  style={{ color: 'rgba(10,46,77,0.35)' }}
+                >
+                  Angler requested
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {requestedDates!.map(d => (
+                    <span
+                      key={d}
+                      className="text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
+                      style={{
+                        background: 'rgba(10,46,77,0.06)',
+                        color: 'rgba(10,46,77,0.6)',
+                        border: '1px solid rgba(10,46,77,0.1)',
+                      }}
                     >
-                      <Check size={10} strokeWidth={1.6} />
-                      Trip starts: {confirmedDate}
-                    </div>
-                  </div>
-                )}
-                {hasMultiDates ? (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.15em] mb-1.5 f-body"
-                       style={{ color: 'rgba(10,46,77,0.35)' }}>
-                      Angler requested
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {requestedDates!.map(d => (
-                        <span
-                          key={d}
-                          className="text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
-                          style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.6)', border: '1px solid rgba(10,46,77,0.1)' }}
-                        >
-                          {new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  confirmedDate == null && (
-                    <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                      {new Date(booking.booking_date + 'T12:00:00').toLocaleDateString('en-GB', {
-                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                      {new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', {
+                        weekday: 'short', day: 'numeric', month: 'short',
                       })}
-                    </p>
-                  )
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Single date (only when not confirmed and not multi-day) */}
+            {!hasMultiDates && confirmedDate == null && (
+              <InfoRow
+                label="Date"
+                value={new Date(booking.booking_date + 'T12:00:00').toLocaleDateString('en-GB', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                })}
+              />
+            )}
+
+            <InfoRow
+              label="Anglers"
+              value={`${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`}
+            />
+            <InfoRow label="Duration" value={durationLabel} />
+          </SectionCard>
+
+          {/* ── Payment ───────────────────────────────────────────────────── */}
+          <SectionCard title="Payment">
+            <InfoRow label="Total"       value={`€${booking.total_eur}`} />
+            <InfoRow label="Your payout" value={`€${booking.guide_payout_eur}`} highlight />
+
+            {/* Deposit / balance split tracker */}
+            <div
+              className="flex items-center gap-4 px-4 py-3 rounded-2xl"
+              style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}
+            >
+              {/* Deposit */}
+              <div className="flex items-center gap-2 flex-1">
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{
+                    background:
+                      booking.status === 'confirmed' || booking.status === 'completed'
+                        ? '#16A34A'
+                        : 'rgba(10,46,77,0.2)',
+                  }}
+                />
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.12em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                    Deposit (40%)
+                  </p>
+                  <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>€{depositEur}</p>
+                </div>
+                {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                  <span className="text-[10px] font-bold f-body ml-auto" style={{ color: '#16A34A' }}>Paid ✓</span>
+                )}
+              </div>
+
+              <div style={{ width: 1, height: 32, background: 'rgba(10,46,77,0.08)' }} />
+
+              {/* Balance */}
+              <div className="flex items-center gap-2 flex-1">
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: booking.balance_paid_at != null ? '#16A34A' : 'rgba(10,46,77,0.2)' }}
+                />
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.12em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                    Balance (60%)
+                  </p>
+                  <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>€{balanceEur}</p>
+                </div>
+                {booking.balance_paid_at != null && (
+                  <span className="text-[10px] font-bold f-body ml-auto" style={{ color: '#16A34A' }}>Paid ✓</span>
+                )}
+                {booking.status === 'confirmed' && booking.balance_paid_at == null && (
+                  <span className="text-[10px] f-body ml-auto" style={{ color: 'rgba(10,46,77,0.4)' }}>Due before trip</span>
                 )}
               </div>
             </div>
+          </SectionCard>
 
-            <span
-              className="flex-shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] px-3 py-1.5 rounded-full f-body"
-              style={{ background: s.bg, color: s.color }}
-            >
-              {s.label}
-            </span>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-            <InfoCard label="Anglers"    value={`${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`} />
-            <InfoCard label="Duration"   value={durationLabel} />
-            <InfoCard label="Total"      value={`€${booking.total_eur}`} />
-            <InfoCard label="Your payout" value={`€${booking.guide_payout_eur}`} accent />
-          </div>
-
-          {/* Deposit / balance split */}
-          <div
-            className="flex items-center gap-4 px-4 py-3 rounded-2xl mb-5"
-            style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}
-          >
-            <div className="flex items-center gap-2 flex-1">
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: booking.status === 'confirmed' || booking.status === 'completed' ? '#16A34A' : 'rgba(10,46,77,0.2)' }}
-              />
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.12em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                  Deposit (30%)
-                </p>
-                <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
-                  €{depositEur}
-                </p>
-              </div>
-              {(booking.status === 'confirmed' || booking.status === 'completed') && (
-                <span className="text-[10px] font-bold f-body ml-auto" style={{ color: '#16A34A' }}>Paid ✓</span>
-              )}
-            </div>
-            <div style={{ width: 1, height: 32, background: 'rgba(10,46,77,0.08)' }} />
-            <div className="flex items-center gap-2 flex-1">
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: booking.balance_paid_at != null ? '#16A34A' : 'rgba(10,46,77,0.2)' }}
-              />
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.12em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                  Balance (70%)
-                </p>
-                <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
-                  €{balanceEur}
-                </p>
-              </div>
-              {booking.balance_paid_at != null && (
-                <span className="text-[10px] font-bold f-body ml-auto" style={{ color: '#16A34A' }}>Paid ✓</span>
-              )}
-              {booking.status === 'confirmed' && booking.balance_paid_at == null && (
-                <span className="text-[10px] f-body ml-auto" style={{ color: 'rgba(10,46,77,0.4)' }}>Due before trip</span>
-              )}
-            </div>
-          </div>
-
-          {/* Angler card */}
-          <div
-            className="rounded-2xl overflow-hidden"
-            style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}
-          >
-            <div className="flex items-center gap-3 p-4">
+          {/* ── Angler ────────────────────────────────────────────────────── */}
+          <SectionCard title="Angler">
+            <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                 style={{ background: '#0A2E4D' }}
@@ -292,8 +302,12 @@ export default async function GuideBookingDetailPage({
                 )}
               </div>
             </div>
+
             {(booking.angler_email != null || booking.angler_phone != null) && (
-              <div className="flex" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+              <div
+                className="flex rounded-xl overflow-hidden"
+                style={{ border: '1px solid rgba(10,46,77,0.08)' }}
+              >
                 {booking.angler_email != null && (
                   <a
                     href={`mailto:${booking.angler_email}`}
@@ -308,7 +322,10 @@ export default async function GuideBookingDetailPage({
                   <a
                     href={`tel:${booking.angler_phone}`}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs f-body font-medium transition-opacity hover:opacity-70"
-                    style={{ color: '#0A2E4D', borderLeft: booking.angler_email ? '1px solid rgba(10,46,77,0.06)' : 'none' }}
+                    style={{
+                      color: '#0A2E4D',
+                      borderLeft: booking.angler_email != null ? '1px solid rgba(10,46,77,0.08)' : 'none',
+                    }}
                   >
                     <Phone size={12} strokeWidth={1.4} />
                     {booking.angler_phone}
@@ -316,42 +333,36 @@ export default async function GuideBookingDetailPage({
                 )}
               </div>
             )}
-          </div>
+          </SectionCard>
 
-          {/* Special requests */}
+          {/* ── Special requests (conditional) ────────────────────────────── */}
           {booking.special_requests != null && (
-            <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-              <p className="text-[10px] uppercase tracking-[0.18em] mb-1.5 f-body"
-                 style={{ color: 'rgba(10,46,77,0.38)' }}>
-                Special requests
-              </p>
-              <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+            <SectionCard title="Special Requests">
+              <p
+                className="text-sm f-body whitespace-pre-wrap leading-relaxed"
+                style={{ color: 'rgba(10,46,77,0.65)' }}
+              >
                 {booking.special_requests}
               </p>
-            </div>
+            </SectionCard>
           )}
 
-          {/* Link to original inquiry */}
-          {booking.inquiry_id != null && (
-            <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-              <Link
-                href={`/dashboard/inquiries/${booking.inquiry_id}`}
-                className="inline-flex items-center gap-1.5 text-xs f-body font-medium transition-opacity hover:opacity-70"
-                style={{ color: 'rgba(10,46,77,0.5)' }}
-              >
-                <MessageSquare size={12} strokeWidth={1.5} />
-                View original inquiry →
-              </Link>
-            </div>
+          {/* ── Link to inquiry detail (inquiry-sourced bookings) ─────────── */}
+          {booking.source === 'inquiry' && (
+            <Link
+              href={`/dashboard/inquiries/${booking.id}`}
+              className="inline-flex items-center gap-1.5 text-xs f-body font-medium px-1 transition-colors hover:text-[#E67E50]"
+              style={{ color: 'rgba(10,46,77,0.45)' }}
+            >
+              <MessageSquare size={12} strokeWidth={1.5} />
+              View inquiry detail →
+            </Link>
           )}
         </div>
 
-        {/* ════════════════════════════════════════════════════════════════════
-            RIGHT — chat + action widget (sticky)
-        ════════════════════════════════════════════════════════════════════ */}
-        <div className="lg:sticky lg:top-6 flex flex-col gap-4">
+        {/* ══ RIGHT — chat + action widget (sticky) ══════════════════════════ */}
+        <div className="xl:sticky xl:top-6 flex flex-col gap-4">
 
-          {/* Chat */}
           <BookingChat
             bookingId={id}
             currentUserId={user.id}
@@ -360,9 +371,7 @@ export default async function GuideBookingDetailPage({
             initialMessages={initialMessages}
           />
 
-          {/* ── Action widget — varies by status ────────────────────────── */}
-
-          {/* Pending → respond form trigger */}
+          {/* Pending → respond modal trigger */}
           {booking.status === 'pending' && (
             <RespondBookingWidget
               bookingId={id}
@@ -385,34 +394,33 @@ export default async function GuideBookingDetailPage({
             />
           )}
 
-          {/* Accepted → awaiting deposit */}
           {booking.status === 'accepted' && (
             <ActionStatusCard
               color="blue"
               title="Accepted — awaiting deposit"
-              body="The angler will pay the 30% deposit to confirm the trip. You'll be notified when payment arrives."
+              body="The angler will pay the 40% deposit to confirm the trip. You'll be notified when payment arrives."
             />
           )}
 
-          {/* Confirmed + cash balance outstanding */}
           {cashBalanceDue && (
             <div
               className="p-5 rounded-2xl"
               style={{
-                background:   '#FDFAF7',
-                border:       '1px solid rgba(10,46,77,0.08)',
-                boxShadow:    '0 2px 8px rgba(10,46,77,0.05)',
+                background: '#FDFAF7',
+                border:     '1px solid rgba(10,46,77,0.08)',
+                boxShadow:  '0 2px 8px rgba(10,46,77,0.05)',
               }}
             >
-              <p className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
-                 style={{ color: 'rgba(10,46,77,0.38)' }}>
+              <p
+                className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
+                style={{ color: 'rgba(10,46,77,0.38)' }}
+              >
                 Cash balance due
               </p>
               <MarkBalancePaidButton bookingId={id} balanceAmount={balanceEur} />
             </div>
           )}
 
-          {/* Confirmed + no cash action needed */}
           {booking.status === 'confirmed' && !cashBalanceDue && (
             <ActionStatusCard
               color="green"
@@ -425,7 +433,6 @@ export default async function GuideBookingDetailPage({
             />
           )}
 
-          {/* Completed */}
           {booking.status === 'completed' && (
             <ActionStatusCard
               color="green"
@@ -434,7 +441,6 @@ export default async function GuideBookingDetailPage({
             />
           )}
 
-          {/* Declined */}
           {booking.status === 'declined' && (
             <ActionStatusCard
               color="red"
@@ -443,16 +449,14 @@ export default async function GuideBookingDetailPage({
             />
           )}
 
-          {/* Cancelled */}
           {booking.status === 'cancelled' && (
             <ActionStatusCard
               color="red"
               title="Booking cancelled"
-              body={booking.cancelled_reason ?? undefined}
+              body={booking.declined_reason ?? undefined}
             />
           )}
 
-          {/* Refunded */}
           {booking.status === 'refunded' && (
             <ActionStatusCard
               color="red"
@@ -460,7 +464,6 @@ export default async function GuideBookingDetailPage({
               body="The booking was cancelled and the angler has been refunded."
             />
           )}
-
         </div>
       </div>
     </div>
@@ -469,28 +472,47 @@ export default async function GuideBookingDetailPage({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function InfoCard({
-  label,
-  value,
-  accent = false,
-}: {
-  label: string
-  value: string
-  accent?: boolean
-}) {
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div
-      className="px-4 py-3 rounded-2xl"
-      style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.06)' }}
+      className="p-6"
+      style={{
+        background:   '#FDFAF7',
+        borderRadius: '20px',
+        border:       '1px solid rgba(10,46,77,0.08)',
+      }}
     >
-      <p className="text-[10px] uppercase tracking-[0.15em] mb-1 f-body"
-         style={{ color: 'rgba(10,46,77,0.38)' }}>
+      <p
+        className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 f-body"
+        style={{ color: 'rgba(10,46,77,0.38)' }}
+      >
+        {title}
+      </p>
+      <div className="flex flex-col gap-3.5">{children}</div>
+    </div>
+  )
+}
+
+function InfoRow({
+  label,
+  value,
+  highlight = false,
+}: {
+  label:      string
+  value:      string
+  highlight?: boolean
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <dt className="text-xs f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.45)', width: 130 }}>
         {label}
-      </p>
-      <p className="text-base font-bold f-display"
-         style={{ color: accent ? '#16A34A' : '#0A2E4D' }}>
+      </dt>
+      <dd
+        className="text-sm f-body text-right"
+        style={{ color: highlight ? '#E67E50' : '#0A2E4D', fontWeight: highlight ? 700 : 500 }}
+      >
         {value}
-      </p>
+      </dd>
     </div>
   )
 }

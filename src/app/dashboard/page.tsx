@@ -140,8 +140,8 @@ export default async function DashboardHomePage() {
     supabase.from('bookings').select('guide_payout_eur').eq('guide_id', guide.id)
       .in('status', ['confirmed', 'completed']).gte('booking_date', monthStart),
     supabase.from('bookings').select('id').eq('guide_id', guide.id).eq('status', 'pending'),
-    service.from('trip_inquiries').select('id').eq('assigned_guide_id', guide.id)
-      .in('status', ['inquiry', 'reviewing', 'offer_sent']),
+    service.from('bookings').select('id').eq('guide_id', guide.id).eq('source', 'inquiry')
+      .in('status', ['pending', 'reviewing', 'offer_sent']),
     // 6-month chart data
     supabase.from('bookings').select('booking_date, guide_payout_eur').eq('guide_id', guide.id)
       .in('status', ['confirmed', 'completed']).gte('booking_date', sixMonthsAgoStr),

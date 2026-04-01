@@ -48,7 +48,7 @@ export default async function AdminGuidePayoutsPage({
     supabase
       .from('bookings')
       .select(
-        'id, status, payout_status, payout_sent_at, total_eur, deposit_eur, guide_payout_eur, platform_fee_eur, booking_date, created_at, confirmed_at, angler_full_name, angler_email, stripe_payment_intent_id, stripe_transfer_id, experiences(title)',
+        'id, status, payout_status, payout_sent_at, total_eur, deposit_eur, guide_payout_eur, platform_fee_eur, booking_date, created_at, confirmed_at, angler_full_name, angler_email, stripe_payment_intent_id, experiences(title)',
       )
       .eq('guide_id', id)
       .order('created_at', { ascending: false }),
@@ -175,9 +175,9 @@ export default async function AdminGuidePayoutsPage({
                     <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
                       {fmt(booking.booking_date)}
                     </p>
-                    {booking.stripe_transfer_id && (
+                    {booking.stripe_payment_intent_id != null && (
                       <p className="text-[10px] font-mono mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
-                        {booking.stripe_transfer_id.slice(0, 16)}…
+                        {booking.stripe_payment_intent_id.slice(0, 16)}…
                       </p>
                     )}
                   </div>

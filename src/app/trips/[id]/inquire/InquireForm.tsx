@@ -921,8 +921,9 @@ export default function InquireForm({
           budgetMin:           budgetMin ? Number(budgetMin) : undefined,
           budgetMax:           budgetMax ? Number(budgetMax) : undefined,
           notes:               notes.trim()              || undefined,
-          // Full multi-period selection preserved for guide review
-          allDatePeriods:      periods.length > 1 ? periods : undefined,
+          // Full period selection preserved — used by server to expand into
+          // individual requested_dates (prevents envelope problem).
+          allDatePeriods:      periods.length > 0 ? periods : undefined,
           // Direct-mode: which of the guide's packages the angler selected
           selectedPackageLabel: selectedPackageLabel ?? undefined,
         },

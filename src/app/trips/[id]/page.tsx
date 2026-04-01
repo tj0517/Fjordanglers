@@ -450,7 +450,18 @@ export default async function ExperienceDetailPage({
 
   const isDraft = !exp.published
 
-  const [moreFromGuide, availConfigRes, blockedDatesRes, bookedDatesRes] = await Promise.all([
+  // ── Blocked dates: check calendar membership first ─────────────────────────
+  // If experience is in a named calendar → read calendar_blocked_dates (one row
+  // per calendar block, shared by all experiences in the calendar).
+  // Otherwise → read experience_blocked_dates (per-listing blocks).
+  const svcClient = createServiceClient()
+  const { data: calExp } = await svcClient
+    .from('calendar_experiences')
+    .select('calendar_id')
+    .eq('experience_id', id)
+    .maybeSingle()
+
+  const [moreFromGuide, availConfigRes, blockedDatesRes] = await Promise.all([
     getMoreFromGuide(exp.guide_id, exp.id, 3),
     // Availability schedule set by the guide
     supabase
@@ -458,22 +469,20 @@ export default async function ExperienceDetailPage({
       .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
       .eq('experience_id', id)
       .maybeSingle(),
-    // Specific blocked date ranges
-    supabase
-      .from('experience_blocked_dates')
-      .select('date_start, date_end')
-      .eq('experience_id', id),
-    // Existing pending/confirmed bookings
-    supabase
-      .from('bookings')
-      .select('booking_date')
-      .eq('experience_id', id)
-      .in('status', ['pending', 'confirmed']),
+    // Blocked dates: calendar-scoped or per-experience depending on membership.
+    calExp != null
+      ? svcClient
+          .from('calendar_blocked_dates')
+          .select('date_start, date_end')
+          .eq('calendar_id', calExp.calendar_id)
+      : svcClient
+          .from('experience_blocked_dates')
+          .select('date_start, date_end')
+          .eq('experience_id', id),
   ])
 
   const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
   const blockedDates = blockedDatesRes.data ?? []
-  const bookedDates  = (bookedDatesRes.data ?? []).map(b => b.booking_date)
 
   const coverUrl = heroFull(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
   const landscapeUrl = exp.landscape_url ?? getLandscapeUrl(exp.location_country, exp.id)
@@ -1190,7 +1199,6 @@ export default async function ExperienceDetailPage({
                     expId={exp.id}
                     availabilityConfig={availabilityConfig}
                     blockedDates={blockedDates}
-                    bookedDates={bookedDates}
                     bookingType={exp.booking_type as 'classic' | 'icelandic' | 'both'}
                   />
                 )
@@ -1309,7 +1317,6 @@ export default async function ExperienceDetailPage({
                 durationDays={exp.duration_days}
                 availabilityConfig={availabilityConfig}
                 blockedDates={blockedDates}
-                bookedDates={bookedDates}
                 bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
                 calendarDisabled={calendarDisabled}
                 paymentModel={paymentModel}

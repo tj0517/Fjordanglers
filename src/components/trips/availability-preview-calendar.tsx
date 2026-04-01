@@ -30,7 +30,8 @@ type Props = {
   expId:                string
   availabilityConfig:   AvailConfigRow | null
   blockedDates:         BlockedRange[]
-  bookedDates:          string[]
+  /** @deprecated booking-based blocks are now in blockedDates via experience_blocked_dates */
+  bookedDates?:         string[]
   bookingType:          'classic' | 'icelandic' | 'both'
 }
 

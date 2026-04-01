@@ -79,7 +79,7 @@ export function IbanForm({ current }: Props) {
 
       {/* Info banner */}
       <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
-        Anglers pay the guide&apos;s fee directly to your bank account after booking.
+        Anglers pay the rest directly to your bank account after booking.
         FjordAnglers will show them these details alongside their booking confirmation.
       </p>
 

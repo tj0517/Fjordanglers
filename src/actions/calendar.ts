@@ -3,18 +3,24 @@
 /**
  * Calendar Server Actions — guide manages availability / blocked dates.
  *
- * Uses the `experience_blocked_dates` table (date ranges per experience).
- * A unique index on (experience_id, date_start, date_end) prevents duplicates.
+ * As of 2026-04-02, blocking operates at TWO levels:
+ *   • calendar_blocked_dates  — when a calendarId is provided (named calendar)
+ *   • experience_blocked_dates — when individual experienceIds are provided
+ *     (All Trips view / guides without named calendars)
+ *
+ * Unblocking checks both tables so old rows (migrated from the previous schema)
+ * are handled transparently.
  *
  * All inserts use upsert with ignoreDuplicates: true — blocking the same range
  * twice is a no-op (idempotent), not an error.
  *
- * RLS on `experience_blocked_dates` ensures a guide can only read/write rows
- * that belong to their own experiences.
+ * RLS ensures a guide can only read/write rows that belong to their own
+ * calendars / experiences.
  */
 
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { blockBookingDates, expandBookingDateRange } from '@/lib/booking-blocks'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,18 +50,22 @@ async function requireGuide() {
 // ─── Block dates ──────────────────────────────────────────────────────────────
 
 /**
- * Inserts one `experience_blocked_dates` row per experience for the given range.
- * Passing all experience IDs = blocks the guide's full calendar for that period.
+ * Blocks a date range.
  *
- * Overlap guard — for each experience we first check if any existing block already
- * covers any part of [dateStart, dateEnd].  An existing block overlaps when:
- *   existing.date_start ≤ new.date_end  AND  existing.date_end ≥ new.date_start
- * If overlap is found the experience is skipped — preventing a day from ever being
- * covered by two separate block records.
+ * Two modes:
+ *   • calendarId provided → writes to `calendar_blocked_dates` (calendar-scoped)
+ *   • experienceIds provided → writes to `experience_blocked_dates` (per-listing)
+ *
+ * For calendar mode, ownership is verified via guide_calendars.guide_id.
+ * For experience mode, ownership is verified via experiences.guide_id.
+ *
+ * Overlap guard prevents a day from being covered by two separate block records.
  */
 export async function blockDates(opts: {
-  /** Experience IDs to block — must all belong to the authenticated guide. */
-  experienceIds: string[]
+  /** Calendar ID — when set, writes a single calendar-level block. */
+  calendarId?: string
+  /** Experience IDs — used for All Trips / per-listing mode (legacy). */
+  experienceIds?: string[]
   /** First blocked date, inclusive. YYYY-MM-DD */
   dateStart: string
   /** Last blocked date, inclusive. Must be >= dateStart. YYYY-MM-DD */
@@ -66,43 +76,132 @@ export async function blockDates(opts: {
   try {
     const { supabase, guideId } = await requireGuide()
 
-    if (opts.experienceIds.length === 0) {
-      return { error: 'Select at least one experience to block.' }
-    }
     if (opts.dateEnd < opts.dateStart) {
       return { error: 'End date must be on or after the start date.' }
     }
 
-    // Ownership check — verify all supplied IDs actually belong to this guide
+    // ── Calendar-scoped mode ────────────────────────────────────────────────
+    if (opts.calendarId != null) {
+      // Verify ownership
+      const { data: cal } = await supabase
+        .from('guide_calendars')
+        .select('id')
+        .eq('id', opts.calendarId)
+        .eq('guide_id', guideId)
+        .single()
+
+      if (cal == null) return { error: 'Calendar not found.' }
+
+      // Find all existing blocks that overlap with the new range.
+      // Overlap condition: existing.date_start <= newEnd AND existing.date_end >= newStart
+      const { data: overlapping } = await supabase
+        .from('calendar_blocked_dates')
+        .select('id, date_start, date_end')
+        .eq('calendar_id', opts.calendarId)
+        .lte('date_start', opts.dateEnd)
+        .gte('date_end', opts.dateStart)
+
+      const existing = overlapping ?? []
+
+      // If a single existing block already fully contains the new range → nothing to do.
+      const fullyCovered = existing.some(
+        b => b.date_start <= opts.dateStart && b.date_end >= opts.dateEnd
+      )
+      if (fullyCovered) return { success: true }
+
+      if (existing.length > 0) {
+        // Merge: compute union of the new range + all overlapping blocks so we end up
+        // with a single wider block instead of overlapping/adjacent ones.
+        const mergedStart = existing.reduce(
+          (min, b) => b.date_start < min ? b.date_start : min,
+          opts.dateStart
+        )
+        const mergedEnd = existing.reduce(
+          (max, b) => b.date_end > max ? b.date_end : max,
+          opts.dateEnd
+        )
+
+        // Delete the absorbed blocks first, then insert the merged range.
+        const { error: delErr } = await supabase
+          .from('calendar_blocked_dates')
+          .delete()
+          .eq('calendar_id', opts.calendarId)
+          .in('id', existing.map(b => b.id))
+
+        if (delErr != null) {
+          console.error('[calendar/blockDates calendar merge delete]', delErr.message)
+          return { error: 'Failed to block dates. Please try again.' }
+        }
+
+        const { error: insErr } = await supabase
+          .from('calendar_blocked_dates')
+          .insert({
+            calendar_id: opts.calendarId,
+            date_start:  mergedStart,
+            date_end:    mergedEnd,
+            reason:      opts.reason?.trim() || null,
+          })
+
+        if (insErr != null) {
+          console.error('[calendar/blockDates calendar merge insert]', insErr.message)
+          return { error: 'Failed to block dates. Please try again.' }
+        }
+
+        return { success: true }
+      }
+
+      // No overlap → simple insert.
+      const { error } = await supabase
+        .from('calendar_blocked_dates')
+        .insert({
+          calendar_id: opts.calendarId,
+          date_start:  opts.dateStart,
+          date_end:    opts.dateEnd,
+          reason:      opts.reason?.trim() || null,
+        })
+
+      if (error != null) {
+        console.error('[calendar/blockDates calendar]', error.message)
+        return { error: 'Failed to block dates. Please try again.' }
+      }
+
+      return { success: true }
+    }
+
+    // ── Per-experience mode ─────────────────────────────────────────────────
+    const expIds = opts.experienceIds ?? []
+    if (expIds.length === 0) {
+      return { error: 'Select at least one experience to block.' }
+    }
+
+    // Ownership check
     const { data: owned } = await supabase
       .from('experiences')
       .select('id')
       .eq('guide_id', guideId)
-      .in('id', opts.experienceIds)
+      .in('id', expIds)
 
-    if ((owned?.length ?? 0) !== opts.experienceIds.length) {
+    if ((owned?.length ?? 0) !== expIds.length) {
       return { error: 'One or more experiences not found.' }
     }
 
-    // Overlap guard — fetch experiences that already have a block touching the range
+    // Overlap guard
     const { data: overlapping } = await supabase
       .from('experience_blocked_dates')
       .select('experience_id')
-      .in('experience_id', opts.experienceIds)
-      .lte('date_start', opts.dateEnd)   // existing block starts before new range ends
-      .gte('date_end',   opts.dateStart) // existing block ends after new range starts
+      .in('experience_id', expIds)
+      .lte('date_start', opts.dateEnd)
+      .gte('date_end', opts.dateStart)
 
     const alreadyCovered = new Set((overlapping ?? []).map(b => b.experience_id))
-    const toInsert = opts.experienceIds.filter(id => !alreadyCovered.has(id))
+    const toInsert = expIds.filter(id => !alreadyCovered.has(id))
 
-    // All experiences already covered by an existing block — nothing to do
     if (toInsert.length === 0) return { success: true }
 
-    // upsert with ignoreDuplicates as a safety net against concurrent calls
     const { error } = await supabase
       .from('experience_blocked_dates')
       .upsert(
-        toInsert.map((experienceId) => ({
+        toInsert.map(experienceId => ({
           experience_id: experienceId,
           date_start:    opts.dateStart,
           date_end:      opts.dateEnd,
@@ -112,7 +211,7 @@ export async function blockDates(opts: {
       )
 
     if (error != null) {
-      console.error('[calendar/blockDates]', error.message)
+      console.error('[calendar/blockDates experience]', error.message)
       return { error: 'Failed to block dates. Please try again.' }
     }
 
@@ -127,15 +226,17 @@ export async function blockDates(opts: {
 // ─── Block multiple individual dates (multi-pick) ────────────────────────────
 
 /**
- * Inserts one row per (date × experience) — used by the multi-day picker.
- * Each row has date_start = date_end = the individual date (single-day block).
+ * Blocks multiple individual dates (non-contiguous multi-pick).
+ * Each date becomes a separate row (date_start = date_end = individual date).
  *
- * Max 60 dates × experiences in one call to keep payload reasonable.
+ * Same routing as blockDates: calendarId or experienceIds.
  */
 export async function blockMultipleDates(opts: {
-  /** Experience IDs to block. Must all belong to the authenticated guide. */
-  experienceIds: string[]
-  /** Individual YYYY-MM-DD dates to block (non-contiguous is fine). */
+  /** Calendar ID — when set, writes calendar-level blocks. */
+  calendarId?: string
+  /** Experience IDs — per-listing mode. */
+  experienceIds?: string[]
+  /** Individual YYYY-MM-DD dates to block. */
   dates: string[]
   /** Optional internal note. */
   reason?: string
@@ -143,13 +244,72 @@ export async function blockMultipleDates(opts: {
   try {
     const { supabase, guideId } = await requireGuide()
 
-    if (opts.experienceIds.length === 0) {
-      return { error: 'Select at least one experience to block.' }
-    }
     if (opts.dates.length === 0) {
       return { error: 'No dates selected.' }
     }
-    if (opts.dates.length * opts.experienceIds.length > 300) {
+
+    // ── Calendar-scoped mode ────────────────────────────────────────────────
+    if (opts.calendarId != null) {
+      // Verify ownership
+      const { data: cal } = await supabase
+        .from('guide_calendars')
+        .select('id')
+        .eq('id', opts.calendarId)
+        .eq('guide_id', guideId)
+        .single()
+
+      if (cal == null) return { error: 'Calendar not found.' }
+
+      const sortedDates = [...opts.dates].sort()
+      const minDate = sortedDates[0]!
+      const maxDate = sortedDates[sortedDates.length - 1]!
+
+      // Overlap guard — find which dates are already covered
+      const { data: existing } = await supabase
+        .from('calendar_blocked_dates')
+        .select('date_start, date_end')
+        .eq('calendar_id', opts.calendarId)
+        .lte('date_start', maxDate)
+        .gte('date_end', minDate)
+
+      const covered = new Set<string>()
+      for (const block of (existing ?? [])) {
+        for (const date of sortedDates) {
+          if (date >= block.date_start && date <= block.date_end) {
+            covered.add(date)
+          }
+        }
+      }
+
+      const rows = opts.dates
+        .filter(d => !covered.has(d))
+        .map(d => ({
+          calendar_id: opts.calendarId!,
+          date_start:  d,
+          date_end:    d,
+          reason:      opts.reason?.trim() || null,
+        }))
+
+      if (rows.length === 0) return { success: true }
+
+      const { error } = await supabase
+        .from('calendar_blocked_dates')
+        .upsert(rows, { ignoreDuplicates: true })
+
+      if (error != null) {
+        console.error('[calendar/blockMultipleDates calendar]', error.message)
+        return { error: 'Failed to block dates. Please try again.' }
+      }
+
+      return { success: true }
+    }
+
+    // ── Per-experience mode ─────────────────────────────────────────────────
+    const expIds = opts.experienceIds ?? []
+    if (expIds.length === 0) {
+      return { error: 'Select at least one experience to block.' }
+    }
+    if (opts.dates.length * expIds.length > 300) {
       return { error: 'Too many date/experience combinations. Select fewer days.' }
     }
 
@@ -158,15 +318,12 @@ export async function blockMultipleDates(opts: {
       .from('experiences')
       .select('id')
       .eq('guide_id', guideId)
-      .in('id', opts.experienceIds)
+      .in('id', expIds)
 
-    if ((owned?.length ?? 0) !== opts.experienceIds.length) {
+    if ((owned?.length ?? 0) !== expIds.length) {
       return { error: 'One or more experiences not found.' }
     }
 
-    // Overlap guard — fetch all existing blocks that touch ANY of the selected dates
-    // for the relevant experiences, then compute a Set of already-covered (expId, date)
-    // pairs so we never insert a row that would make a day have two block records.
     const sortedDates  = [...opts.dates].sort()
     const minDate      = sortedDates[0]!
     const maxDate      = sortedDates[sortedDates.length - 1]!
@@ -174,11 +331,10 @@ export async function blockMultipleDates(opts: {
     const { data: existingBlocks } = await supabase
       .from('experience_blocked_dates')
       .select('experience_id, date_start, date_end')
-      .in('experience_id', opts.experienceIds)
+      .in('experience_id', expIds)
       .lte('date_start', maxDate)
       .gte('date_end',   minDate)
 
-    // Build a covered set — O(existing × dates) but both are small (≤ 60 dates, few blocks)
     const covered = new Set<string>()
     for (const block of (existingBlocks ?? [])) {
       for (const date of sortedDates) {
@@ -188,11 +344,10 @@ export async function blockMultipleDates(opts: {
       }
     }
 
-    // One row per (date × experience) — skip pairs already covered by an existing block
-    const rows = opts.dates.flatMap((date) =>
-      opts.experienceIds
+    const rows = opts.dates.flatMap(date =>
+      expIds
         .filter(expId => !covered.has(`${expId}::${date}`))
-        .map((experienceId) => ({
+        .map(experienceId => ({
           experience_id: experienceId,
           date_start:    date,
           date_end:      date,
@@ -200,16 +355,14 @@ export async function blockMultipleDates(opts: {
         }))
     )
 
-    // Nothing new to insert — all days already blocked
     if (rows.length === 0) return { success: true }
 
-    // upsert with ignoreDuplicates as safety net for concurrent calls
     const { error } = await supabase
       .from('experience_blocked_dates')
       .upsert(rows, { onConflict: 'experience_id,date_start,date_end', ignoreDuplicates: true })
 
     if (error != null) {
-      console.error('[calendar/blockMultipleDates]', error.message)
+      console.error('[calendar/blockMultipleDates experience]', error.message)
       return { error: 'Failed to block dates. Please try again.' }
     }
 
@@ -223,11 +376,6 @@ export async function blockMultipleDates(opts: {
 
 // ─── Update calendar mode ─────────────────────────────────────────────────────
 
-/**
- * Saves the guide's calendar mode preference.
- *   'per_listing' — each experience has its own availability calendar (default).
- *   'shared'      — one unified calendar; blocks always apply to ALL experiences.
- */
 export async function updateCalendarMode(
   mode: 'per_listing' | 'shared',
 ): Promise<CalendarActionResult> {
@@ -258,22 +406,13 @@ export async function updateCalendarMode(
 
 // ─── Toggle calendar_disabled ─────────────────────────────────────────────────
 
-/**
- * Toggles the guide's `calendar_disabled` flag.
- * When true, trip pages show inquiry-only booking (no date picker / instant checkout).
- * Only meaningful for guides whose listings are all `icelandic` booking type.
- *
- * Uses service client for the UPDATE — the user-scoped client may be blocked by
- * RLS column restrictions on the guides table, causing a silent 0-row update.
- * The guide's identity is already verified by `requireGuide()` before we proceed.
- */
 export async function toggleCalendarDisabled(
   disabled: boolean,
 ): Promise<CalendarActionResult> {
   try {
-    const { guideId } = await requireGuide()  // auth check — throws redirect if not guide
+    const { guideId } = await requireGuide()
 
-    // Service client bypasses RLS; auth is already confirmed above
+    // Service client bypasses RLS; auth already confirmed above
     const service = createServiceClient()
 
     const { data: updated, error } = await service
@@ -292,11 +431,8 @@ export async function toggleCalendarDisabled(
       return { error: 'Could not update calendar setting — guide not found.' }
     }
 
-    // When disabling the calendar, wipe ALL calendar data for this guide.
-    // The guide starts fresh when they re-enable. All operations are non-fatal —
-    // the flag is already saved, so we just log any cleanup failures.
+    // ── DISABLE: wipe ALL calendar data ───────────────────────────────────────
     if (disabled) {
-      // ── Fetch IDs needed for child-table deletes ──────────────────────────
       const [expsRes, calsRes] = await Promise.all([
         service.from('experiences').select('id').eq('guide_id', guideId),
         service.from('guide_calendars').select('id').eq('guide_id', guideId),
@@ -305,7 +441,7 @@ export async function toggleCalendarDisabled(
       const expIds = (expsRes.data ?? []).map(e => e.id)
       const calIds = (calsRes.data ?? []).map(c => c.id)
 
-      // ── Step 1: delete calendar_experiences (FK → guide_calendars) ────────
+      // Step 1: delete calendar_experiences (FK → guide_calendars)
       if (calIds.length > 0) {
         const { error: e1 } = await service
           .from('calendar_experiences')
@@ -314,18 +450,48 @@ export async function toggleCalendarDisabled(
         if (e1) console.error('[toggleCalendarDisabled] calendar_experiences:', e1.message)
       }
 
-      // ── Step 2: delete guide_calendars + weekly_schedules in parallel ─────
+      // Step 2: delete calendars + weekly schedules + ALL blocked dates (both tables)
       await Promise.all([
         service.from('guide_calendars').delete().eq('guide_id', guideId)
           .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] guide_calendars:', e.message) }),
         service.from('guide_weekly_schedules').delete().eq('guide_id', guideId)
           .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] weekly_schedules:', e.message) }),
-        // blocked dates keyed on experience_id
+        // calendar_blocked_dates cascade-deleted via guide_calendars FK above
         ...(expIds.length > 0
           ? [service.from('experience_blocked_dates').delete().in('experience_id', expIds)
-              .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] blocked_dates:', e.message) })]
+              .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] experience_blocked_dates:', e.message) })]
           : []),
       ])
+    }
+
+    // ── ENABLE: re-block dates from all active upcoming bookings ───────────
+    if (!disabled) {
+      const today = new Date().toISOString().slice(0, 10)
+
+      const { data: activeBookings } = await service
+        .from('bookings')
+        .select('id, status, experience_id, booking_date, date_to, requested_dates, offer_days, offer_date_from, offer_date_to')
+        .eq('guide_id', guideId)
+        .in('status', ['accepted', 'confirmed', 'offer_sent', 'offer_accepted'])
+        .gte('booking_date', today)
+
+      for (const b of (activeBookings ?? [])) {
+        let dates: string[] = []
+
+        if (b.status === 'offer_sent' || b.status === 'offer_accepted') {
+          dates = (b.offer_days as string[] | null) ??
+            expandBookingDateRange(b.offer_date_from, b.offer_date_to)
+        } else {
+          dates = (b.requested_dates as string[] | null) ??
+            expandBookingDateRange(b.booking_date as string | null, (b as { date_to?: string | null }).date_to ?? null)
+          if (dates.length === 0 && b.booking_date) dates = [b.booking_date as string]
+        }
+
+        if (dates.length > 0) {
+          blockBookingDates(service, b.id, guideId, dates, b.experience_id ?? undefined)
+            .catch(e => console.error('[toggleCalendarDisabled] blockBookingDates:', e))
+        }
+      }
     }
 
     return { success: true }
@@ -339,8 +505,9 @@ export async function toggleCalendarDisabled(
 // ─── Unblock dates ────────────────────────────────────────────────────────────
 
 /**
- * Deletes a single `experience_blocked_dates` row by ID.
- * RLS guarantees guides can only delete rows for their own experiences.
+ * Deletes a single blocked-date row by ID.
+ * Checks both `calendar_blocked_dates` and `experience_blocked_dates` —
+ * whichever table the row lives in will be cleaned up.
  *
  * Use this only for single-day blocks (date_start === date_end).
  * For range blocks use `unblockDaysFromRange` to avoid wiping the whole range.
@@ -349,13 +516,33 @@ export async function unblockDates(blockId: string): Promise<CalendarActionResul
   try {
     const { supabase } = await requireGuide()
 
+    // Try calendar_blocked_dates first (new schema)
+    const { data: calRow } = await supabase
+      .from('calendar_blocked_dates')
+      .select('id')
+      .eq('id', blockId)
+      .maybeSingle()
+
+    if (calRow != null) {
+      const { error } = await supabase
+        .from('calendar_blocked_dates')
+        .delete()
+        .eq('id', blockId)
+      if (error != null) {
+        console.error('[calendar/unblockDates calendar]', error.message)
+        return { error: error.message }
+      }
+      return { success: true }
+    }
+
+    // Fall back to experience_blocked_dates (legacy / uncalendared)
     const { error } = await supabase
       .from('experience_blocked_dates')
       .delete()
       .eq('id', blockId)
 
     if (error != null) {
-      console.error('[calendar/unblockDates]', error.message)
+      console.error('[calendar/unblockDates experience]', error.message)
       return { error: error.message }
     }
 
@@ -370,25 +557,17 @@ export async function unblockDates(blockId: string): Promise<CalendarActionResul
 // ─── Unblock specific days from a range block ─────────────────────────────────
 
 /**
- * Removes specific days from an existing range block WITHOUT deleting the
- * rest of the range.
+ * Removes specific days from an existing range block without deleting the rest.
+ *
+ * Checks both `calendar_blocked_dates` and `experience_blocked_dates`.
+ * The segment-splitting algorithm is applied to whichever table holds the row.
  *
  * Algorithm:
- *   1. Fetch the target block record.
- *   2. Filter `daysToRemove` to only those that fall within [date_start, date_end].
- *   3. Walk the sorted list of removed days and compute the remaining segments
- *      (the contiguous sub-ranges that are NOT being unblocked).
+ *   1. Fetch the target block (try calendar table, then experience table).
+ *   2. Filter daysToRemove to those within [date_start, date_end].
+ *   3. Compute remaining segments (contiguous sub-ranges NOT being unblocked).
  *   4. Delete the original record.
- *   5. Re-insert one record per remaining segment (same experience_id + reason).
- *
- * Example — removing Apr 10 from a Jan 1–Dec 31 range:
- *   → inserts  Jan 1–Apr 9   +   Apr 11–Dec 31
- *
- * Example — removing Mar 10 and Mar 15 from Jan 1–Dec 31:
- *   → inserts  Jan 1–Mar 9   +   Mar 11–Mar 14   +   Mar 16–Dec 31
- *
- * If all days in the range are removed, the record is simply deleted.
- * Days outside [date_start, date_end] are silently ignored.
+ *   5. Re-insert remaining segments with the same calendar_id / experience_id + reason.
  */
 export async function unblockDaysFromRange(
   blockId:      string,
@@ -397,70 +576,93 @@ export async function unblockDaysFromRange(
   try {
     const { supabase } = await requireGuide()
 
-    // Fetch the block (RLS scoped to this guide's own experiences)
-    const { data: block, error: fetchErr } = await supabase
+    // ── Try calendar_blocked_dates first ──────────────────────────────────
+    const { data: calBlock } = await supabase
+      .from('calendar_blocked_dates')
+      .select('id, calendar_id, date_start, date_end, reason')
+      .eq('id', blockId)
+      .maybeSingle()
+
+    if (calBlock != null) {
+      const relevant = daysToRemove
+        .filter(d => d >= calBlock.date_start && d <= calBlock.date_end)
+        .sort()
+
+      if (relevant.length === 0) return { success: true }
+
+      const segments = buildSegments(calBlock.date_start, calBlock.date_end, relevant)
+
+      const { error: deleteErr } = await supabase
+        .from('calendar_blocked_dates')
+        .delete()
+        .eq('id', blockId)
+
+      if (deleteErr != null) {
+        console.error('[calendar/unblockDaysFromRange] calendar delete:', deleteErr.message)
+        return { error: 'Failed to unblock. Please try again.' }
+      }
+
+      if (segments.length > 0) {
+        const { error: insertErr } = await supabase
+          .from('calendar_blocked_dates')
+          .insert(
+            segments.map(s => ({
+              calendar_id: calBlock.calendar_id,
+              date_start:  s.date_start,
+              date_end:    s.date_end,
+              reason:      calBlock.reason,
+            }))
+          )
+        if (insertErr != null) {
+          console.error('[calendar/unblockDaysFromRange] calendar insert segments:', insertErr.message)
+        }
+      }
+
+      return { success: true }
+    }
+
+    // ── Fall back to experience_blocked_dates ──────────────────────────────
+    const { data: expBlock, error: fetchErr } = await supabase
       .from('experience_blocked_dates')
       .select('id, experience_id, date_start, date_end, reason')
       .eq('id', blockId)
       .single()
 
-    if (fetchErr != null || block == null) {
+    if (fetchErr != null || expBlock == null) {
       return { error: 'Block not found.' }
     }
 
-    // Only act on days that actually fall within this block's range
     const relevant = daysToRemove
-      .filter(d => d >= block.date_start && d <= block.date_end)
+      .filter(d => d >= expBlock.date_start && d <= expBlock.date_end)
       .sort()
 
-    if (relevant.length === 0) {
-      // None of the requested days are in this range — nothing to do
-      return { success: true }
-    }
+    if (relevant.length === 0) return { success: true }
 
-    // Build remaining segments by walking the sorted removed-days list
-    const segments: Array<{ date_start: string; date_end: string }> = []
-    let cursor = block.date_start
+    const segments = buildSegments(expBlock.date_start, expBlock.date_end, relevant)
 
-    for (const day of relevant) {
-      if (cursor < day) {
-        segments.push({ date_start: cursor, date_end: shiftDay(day, -1) })
-      }
-      cursor = shiftDay(day, 1)
-    }
-    // Tail segment after the last removed day
-    if (cursor <= block.date_end) {
-      segments.push({ date_start: cursor, date_end: block.date_end })
-    }
-
-    // Delete the original range record
     const { error: deleteErr } = await supabase
       .from('experience_blocked_dates')
       .delete()
       .eq('id', blockId)
 
     if (deleteErr != null) {
-      console.error('[calendar/unblockDaysFromRange] delete:', deleteErr.message)
+      console.error('[calendar/unblockDaysFromRange] experience delete:', deleteErr.message)
       return { error: 'Failed to unblock. Please try again.' }
     }
 
-    // Re-insert the remaining segments (if any)
     if (segments.length > 0) {
       const { error: insertErr } = await supabase
         .from('experience_blocked_dates')
         .insert(
           segments.map(s => ({
-            experience_id: block.experience_id,
+            experience_id: expBlock.experience_id,
             date_start:    s.date_start,
             date_end:      s.date_end,
-            reason:        block.reason,
+            reason:        expBlock.reason,
           }))
         )
-
       if (insertErr != null) {
-        // Original already deleted — log but don't surface as a hard error since
-        // the targeted days are unblocked even if the surrounding segments failed.
-        console.error('[calendar/unblockDaysFromRange] insert segments:', insertErr.message)
+        console.error('[calendar/unblockDaysFromRange] experience insert segments:', insertErr.message)
       }
     }
 
@@ -479,4 +681,30 @@ function shiftDay(dateStr: string, n: number): string {
   const dt = new Date(Date.UTC(y, m - 1, d))
   dt.setUTCDate(dt.getUTCDate() + n)
   return dt.toISOString().slice(0, 10)
+}
+
+/**
+ * Given a block range [rangeStart, rangeEnd] and a sorted list of days to
+ * remove, returns the remaining contiguous segments.
+ */
+function buildSegments(
+  rangeStart: string,
+  rangeEnd:   string,
+  sortedRemovedDays: string[],
+): Array<{ date_start: string; date_end: string }> {
+  const segments: Array<{ date_start: string; date_end: string }> = []
+  let cursor = rangeStart
+
+  for (const day of sortedRemovedDays) {
+    if (cursor < day) {
+      segments.push({ date_start: cursor, date_end: shiftDay(day, -1) })
+    }
+    cursor = shiftDay(day, 1)
+  }
+
+  if (cursor <= rangeEnd) {
+    segments.push({ date_start: cursor, date_end: rangeEnd })
+  }
+
+  return segments
 }

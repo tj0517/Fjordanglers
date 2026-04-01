@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
-import { Calendar, Clock, Euro, Compass } from 'lucide-react'
+import { Calendar, Clock, Euro } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ type AnglerBooking = {
   total_eur: number
   status: BookingStatus
   experience_id: string | null
-  inquiry_id: string | null
+  source: string | null
   experience: { id: string; title: string } | null
   guide: { full_name: string } | null
   experience_image: string | null
@@ -25,13 +25,16 @@ type AnglerBooking = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
-  confirmed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed'  },
-  pending:    { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'    },
-  cancelled:  { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled'  },
-  completed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed'  },
-  refunded:   { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'   },
-  accepted:   { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'   },
-  declined:   { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'   },
+  pending:        { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'        },
+  reviewing:      { bg: 'rgba(139,92,246,0.1)',   color: '#7C3AED', label: 'Reviewing'      },
+  offer_sent:     { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Offer sent'     },
+  offer_accepted: { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Offer accepted' },
+  accepted:       { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'       },
+  confirmed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed'      },
+  completed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed'      },
+  cancelled:      { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled'      },
+  refunded:       { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'       },
+  declined:       { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'       },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -46,13 +49,14 @@ export default async function AnglerBookingsPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
-  // ── Fetch all bookings (regular + inquiry-derived with experience_id=null) ──
+  // ── Fetch all bookings ───────────────────────────────────────────────────
   const { data: rawBookings } = await supabase
     .from('bookings')
     .select(
-      'id, booking_date, guests, total_eur, status, experience_id, inquiry_id, experiences(id, title, experience_images(url, is_cover, sort_order)), guides(full_name)',
+      'id, booking_date, guests, total_eur, status, experience_id, source, experiences(id, title, experience_images(url, is_cover, sort_order)), guides(full_name)',
     )
     .eq('angler_id', user.id)
+    .eq('source', 'direct')
     .order('booking_date', { ascending: false })
 
   const bookings: AnglerBooking[] = (rawBookings ?? []).map(b => {
@@ -74,7 +78,7 @@ export default async function AnglerBookingsPage() {
       total_eur:      b.total_eur,
       status:         b.status,
       experience_id:  b.experience_id,
-      inquiry_id:     b.inquiry_id,
+      source:         b.source,
       experience:     exp ? { id: exp.id, title: exp.title } : null,
       guide:          b.guides as unknown as { full_name: string } | null,
       experience_image: cover?.url ?? null,
@@ -121,10 +125,10 @@ export default async function AnglerBookingsPage() {
   const nextTrip = upcoming[0] ?? null
 
   return (
-    <div className="px-10 py-10 max-w-[1100px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[900px]">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between mb-10">
+      <div className="flex items-start justify-between mb-8">
         <div>
           <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
             {today}
@@ -136,14 +140,6 @@ export default async function AnglerBookingsPage() {
             Track your fishing adventures.
           </p>
         </div>
-        <Link
-          href="/trips"
-          className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
-          style={{ background: '#E67E50' }}
-        >
-          <Compass width={13} height={13} strokeWidth={1.5} />
-          Browse Trips
-        </Link>
       </div>
 
       {/* ── Stats row ───────────────────────────────────────────────────────── */}
@@ -201,191 +197,137 @@ export default async function AnglerBookingsPage() {
                   )}
                 </p>
               </div>
-              <div className="text-4xl flex-shrink-0">🎣</div>
+              <div className="flex-shrink-0">
+                <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.55 }}>
+                  <path d="M6 28C10 20 20 16 30 20" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                  <path d="M28 18L32 22L28 26" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="10" cy="10" r="3" stroke="white" strokeWidth="1.8"/>
+                  <path d="M10 7V4" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                  <path d="M10 13C10 13 14 17 18 16" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+              </div>
             </div>
           </Link>
         )
       })()}
 
-      {/* ── Main grid ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
-
-        {/* Bookings panel */}
+      {/* ── Bookings panel ───────────────────────────────────────────────────── */}
+      <div
+        style={{
+          background: '#FDFAF7',
+          borderRadius: '24px',
+          border: '1px solid rgba(10,46,77,0.07)',
+          boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
+          overflow: 'hidden',
+        }}
+      >
         <div
-          style={{
-            background: '#FDFAF7',
-            borderRadius: '24px',
-            border: '1px solid rgba(10,46,77,0.07)',
-            boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
-            overflow: 'hidden',
-          }}
+          className="px-6 py-5 flex items-center justify-between"
+          style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
         >
-          <div
-            className="px-7 py-5 flex items-center justify-between"
-            style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
-          >
-            <div>
-              <h2 className="text-[#0A2E4D] text-base font-bold f-display">All Bookings</h2>
-              <p className="text-[#0A2E4D]/38 text-xs mt-0.5 f-body">{bookings.length} total</p>
-            </div>
+          <div>
+            <h2 className="text-[#0A2E4D] text-base font-bold f-display">All Bookings</h2>
+            <p className="text-[#0A2E4D]/38 text-xs mt-0.5 f-body">{bookings.length} total</p>
           </div>
-
-          {bookings.length === 0 ? (
-            <div className="px-7 py-16 flex flex-col items-center text-center">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-                style={{ background: 'rgba(230,126,80,0.08)' }}
-              >
-                <Calendar width={22} height={22} stroke="#E67E50" strokeWidth={1.5} />
-              </div>
-              <p className="text-[#0A2E4D]/30 text-sm f-body">No bookings yet.</p>
-              <p className="text-[#0A2E4D]/22 text-xs mt-1 f-body">Your fishing adventures will appear here.</p>
-              <Link
-                href="/trips"
-                className="mt-5 text-sm font-semibold f-body transition-colors hover:opacity-70"
-                style={{ color: '#E67E50' }}
-              >
-                Browse experiences →
-              </Link>
-            </div>
-          ) : (
-            <div className="divide-y" style={{ '--tw-divide-opacity': 1 } as React.CSSProperties}>
-              {bookings.map(booking => {
-                const s            = STATUS_STYLES[booking.status]
-                const isCustomTrip = booking.experience_id == null
-                const title        = booking.experience?.title ?? (isCustomTrip ? 'Custom Trip' : 'Fishing trip')
-                const dateFormatted = new Date(`${booking.booking_date}T12:00:00`).toLocaleDateString(
-                  'en-GB',
-                  { day: 'numeric', month: 'short', year: 'numeric' },
-                )
-
-                return (
-                  <Link
-                    key={booking.id}
-                    href={`/account/bookings/${booking.id}`}
-                    className="block hover:bg-[#F8F4EF] transition-colors"
-                  >
-                    <div className="px-7 py-4 flex items-center gap-4">
-                      {/* Thumbnail */}
-                      <div
-                        className="flex-shrink-0 rounded-xl overflow-hidden"
-                        style={{ width: 48, height: 48, background: 'rgba(10,46,77,0.06)' }}
-                      >
-                        {booking.experience_image != null ? (
-                          <Image
-                            src={booking.experience_image}
-                            alt={title}
-                            width={48}
-                            height={48}
-                            className="object-cover w-full h-full"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-lg">🎣</div>
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-[#0A2E4D] text-sm font-semibold f-body leading-snug truncate">
-                            {title}
-                          </p>
-                          {isCustomTrip && (
-                            <span
-                              className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full flex-shrink-0 f-body"
-                              style={{ background: 'rgba(59,130,246,0.1)', color: '#2563EB' }}
-                            >
-                              Custom
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[#0A2E4D]/42 text-xs f-body truncate">
-                          {booking.guide?.full_name ?? 'Guide'}
-                        </p>
-                      </div>
-
-                      {/* Date */}
-                      <div className="text-right flex-shrink-0 hidden sm:block">
-                        <p className="text-[#0A2E4D] text-xs font-medium f-body">{dateFormatted}</p>
-                        <p className="text-[#0A2E4D]/38 text-xs f-body">
-                          {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
-                        </p>
-                      </div>
-
-                      {/* Amount */}
-                      <div className="text-right flex-shrink-0 w-14">
-                        <p className="text-[#0A2E4D] text-sm font-bold f-display">€{booking.total_eur}</p>
-                      </div>
-
-                      {/* Status */}
-                      <span
-                        className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full flex-shrink-0 f-body"
-                        style={{ background: s.bg, color: s.color }}
-                      >
-                        {s.label}
-                      </span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
         </div>
 
-        {/* Right column */}
-        <div className="flex flex-col gap-4">
-
-          {/* Discover CTA */}
-          <div
-            className="relative overflow-hidden px-6 py-7 flex flex-col"
-            style={{
-              background: 'linear-gradient(135deg, #E67E50 0%, #c95e30 100%)',
-              borderRadius: '24px',
-            }}
-          >
-            <span className="text-3xl mb-3">🎣</span>
-            <h3 className="text-white text-base font-bold f-display mb-1">
-              Find your next trip
-            </h3>
-            <p className="f-body text-sm mb-5" style={{ color: 'rgba(255,255,255,0.72)' }}>
-              Browse experiences led by Scandinavia&apos;s best guides.
-            </p>
+        {bookings.length === 0 ? (
+          <div className="px-6 py-16 flex flex-col items-center text-center">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+              style={{ background: 'rgba(230,126,80,0.08)' }}
+            >
+              <Calendar width={22} height={22} stroke="#E67E50" strokeWidth={1.5} />
+            </div>
+            <p className="text-[#0A2E4D]/30 text-sm f-body">No bookings yet.</p>
+            <p className="text-[#0A2E4D]/22 text-xs mt-1 f-body">Your fishing adventures will appear here.</p>
             <Link
               href="/trips"
-              className="inline-flex items-center gap-1.5 self-start text-sm font-bold px-5 py-2.5 rounded-full f-body transition-all hover:brightness-105"
-              style={{ background: '#fff', color: '#E67E50' }}
+              className="mt-5 text-sm font-semibold f-body transition-colors hover:opacity-70"
+              style={{ color: '#E67E50' }}
             >
-              Browse →
+              Browse experiences →
             </Link>
           </div>
+        ) : (
+          <div className="divide-y" style={{ '--tw-divide-opacity': 1 } as React.CSSProperties}>
+            {bookings.map(booking => {
+              const s            = STATUS_STYLES[booking.status]
+              const isCustomTrip = booking.experience_id == null || booking.source === 'inquiry'
+              const title        = booking.experience?.title ?? (isCustomTrip ? 'Custom Trip' : 'Fishing trip')
+              const dateFormatted = new Date(`${booking.booking_date}T12:00:00`).toLocaleDateString(
+                'en-GB',
+                { day: 'numeric', month: 'short', year: 'numeric' },
+              )
 
-          {/* Custom trip CTA */}
-          <div
-            className="px-6 py-6 flex flex-col"
-            style={{
-              background: '#FDFAF7',
-              borderRadius: '24px',
-              border: '1px solid rgba(10,46,77,0.07)',
-            }}
-          >
-            <p className="text-[10px] uppercase tracking-[0.18em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-              Custom trips
-            </p>
-            <h3 className="text-[#0A2E4D] text-sm font-bold f-display mb-1">
-              Need something tailored?
-            </h3>
-            <p className="f-body text-xs mb-4" style={{ color: 'rgba(10,46,77,0.5)' }}>
-              Request a custom itinerary from our expert guides.
-            </p>
-            <Link
-              href="/account/trips"
-              className="inline-flex items-center gap-1 self-start text-xs font-semibold f-body transition-opacity hover:opacity-70"
-              style={{ color: '#2563EB' }}
-            >
-              View trip requests →
-            </Link>
+              return (
+                <Link
+                  key={booking.id}
+                  href={`/account/bookings/${booking.id}`}
+                  className="block hover:bg-[#F8F4EF] transition-colors"
+                >
+                  <div className="px-6 py-5 flex items-center gap-4">
+                    {/* Thumbnail */}
+                    <div
+                      className="flex-shrink-0 rounded-2xl overflow-hidden"
+                      style={{ width: 68, height: 68, background: 'rgba(10,46,77,0.06)' }}
+                    >
+                      {booking.experience_image != null ? (
+                        <Image
+                          src={booking.experience_image}
+                          alt={title}
+                          width={68}
+                          height={68}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ color: 'rgba(10,46,77,0.25)' }}>
+                          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 20C8 13 16 10 24 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            <path d="M22 12L26 16L22 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+                            <path d="M8 5.5V3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-[#0A2E4D] text-sm font-semibold f-body leading-snug truncate">
+                          {title}
+                        </p>
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full flex-shrink-0 f-body"
+                          style={{ background: s.bg, color: s.color }}
+                        >
+                          {s.label}
+                        </span>
+                        {isCustomTrip && (
+                          <span
+                            className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full flex-shrink-0 f-body"
+                            style={{ background: 'rgba(59,130,246,0.1)', color: '#2563EB' }}
+                          >
+                            Custom
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[#0A2E4D]/45 text-xs f-body mt-1">
+                        {booking.guide?.full_name ?? 'Guide'} · {dateFormatted} · {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
+                      </p>
+                    </div>
+
+                    {/* Amount */}
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-[#0A2E4D] text-sm font-bold f-display">€{booking.total_eur}</p>
+                    </div>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

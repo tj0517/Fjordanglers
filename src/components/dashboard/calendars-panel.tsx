@@ -3,15 +3,20 @@
 /**
  * CalendarsPanel — left sidebar for managing named calendar groups.
  *
- * Allows the guide to:
- *   • Create / rename / delete named calendars
- *   • Assign any subset of their experiences to each calendar
- *   • Switch between calendars (navigates via URL ?calendarId=)
+ * Enforced invariants:
+ *   • An experience can belong to AT MOST ONE calendar.
+ *     The server auto-removes it from its old calendar when added to a new one
+ *     (setCalendarExperiences). The UI shows "(from: X)" when a move will occur.
+ *
+ *   • After any assignment change, the server returns the list of experiences
+ *     that are now in NO calendar.  The panel shows a persistent orange warning
+ *     as long as any experience is unassigned, and a dismissible callout right
+ *     after a save that caused the unassignment.
  */
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, AlertTriangle, X } from 'lucide-react'
 import {
   createCalendar,
   updateCalendar,
@@ -52,20 +57,37 @@ export default function CalendarsPanel({
   currentMonth,
   onNavigate,
 }: Props) {
-  const router      = useRouter()
-  const createRef   = useRef<HTMLInputElement>(null)
-  const editRef     = useRef<HTMLInputElement>(null)
+  const router     = useRouter()
+  const createRef  = useRef<HTMLInputElement>(null)
+  const editRef    = useRef<HTMLInputElement>(null)
 
-  const [mode,        setMode]        = useState<PanelMode>({ type: 'idle' })
-  const [createName,  setCreateName]  = useState('')
-  const [editName,    setEditName]    = useState('')
-  const [editExpIds,  setEditExpIds]  = useState<Set<string>>(new Set())
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error,       setError]       = useState<string | null>(null)
+  const [mode,          setMode]          = useState<PanelMode>({ type: 'idle' })
+  const [createName,    setCreateName]    = useState('')
+  const [editName,      setEditName]      = useState('')
+  const [editExpIds,    setEditExpIds]    = useState<Set<string>>(new Set())
+  const [isSubmitting,  setIsSubmitting]  = useState(false)
+  const [error,         setError]         = useState<string | null>(null)
+
+  // IDs of experiences that became unassigned after the last save.
+  // Shown as a dismissible callout; cleared on dismiss or next save.
+  const [savedUnassigned, setSavedUnassigned] = useState<string[]>([])
 
   // Focus input when form opens
   useEffect(() => { if (mode.type === 'creating') createRef.current?.focus() }, [mode.type])
   useEffect(() => { if (mode.type === 'editing')  editRef.current?.focus()   }, [mode.type])
+
+  // ── Derived: which experiences are currently unassigned ────────────────────
+  const assignedExpIds = new Set(Object.values(calendarExperienceMap).flat())
+  const unassignedExps = allExperiences.filter(e => !assignedExpIds.has(e.id))
+
+  // ── Derived: reverse map  expId → { calendarId, calendarName } ─────────────
+  // Used in the edit form to show "(from: CalendarX)" when a move will happen.
+  const expOriginMap: Record<string, { id: string; name: string }> = {}
+  for (const cal of calendars) {
+    for (const expId of (calendarExperienceMap[cal.id] ?? [])) {
+      expOriginMap[expId] = { id: cal.id, name: cal.name }
+    }
+  }
 
   // ── Navigation ──────────────────────────────────────────────────────────────
   function navigate(calendarId: string | null) {
@@ -85,6 +107,7 @@ export default function CalendarsPanel({
   function startCreate() {
     setCreateName('')
     setError(null)
+    setSavedUnassigned([])
     setMode({ type: 'creating' })
   }
 
@@ -96,7 +119,6 @@ export default function CalendarsPanel({
     if ('error' in result) { setError(result.error); return }
     setMode({ type: 'idle' })
     router.refresh()
-    // Navigate to newly created calendar
     if (result.id) navigate(result.id)
   }
 
@@ -105,19 +127,29 @@ export default function CalendarsPanel({
     setEditName(cal.name)
     setEditExpIds(new Set(calendarExperienceMap[cal.id] ?? []))
     setError(null)
+    setSavedUnassigned([])
     setMode({ type: 'editing', calendarId: cal.id })
   }
 
   async function handleSaveEdit(calendarId: string) {
     if (!editName.trim() || isSubmitting) return
     setIsSubmitting(true); setError(null)
+
     const [nameResult, expResult] = await Promise.all([
       updateCalendar(calendarId, editName),
       setCalendarExperiences(calendarId, Array.from(editExpIds)),
     ])
+
     setIsSubmitting(false)
     if ('error' in nameResult) { setError(nameResult.error); return }
     if ('error' in expResult)  { setError(expResult.error);  return }
+
+    // Surface any experiences that became unassigned as a result
+    const unassigned = ('unassignedExpIds' in expResult && expResult.unassignedExpIds != null)
+      ? expResult.unassignedExpIds
+      : []
+    setSavedUnassigned(unassigned)
+
     setMode({ type: 'idle' })
     router.refresh()
   }
@@ -129,7 +161,6 @@ export default function CalendarsPanel({
     setIsSubmitting(false)
     if ('error' in result) { setError(result.error); return }
     setMode({ type: 'idle' })
-    // If deleted the active calendar, go back to "All"
     if (activeCalendarId === calendarId) navigate(null)
     else router.refresh()
   }
@@ -175,9 +206,34 @@ export default function CalendarsPanel({
 
       {/* ── Error ──────────────────────────────────────────────────────────── */}
       {error != null && (
-        <div className="mx-3 mt-2 px-3 py-2 rounded-xl text-xs f-body"
-             style={{ background: 'rgba(220,38,38,0.07)', color: '#B91C1C' }}>
+        <div
+          className="mx-3 mt-2 px-3 py-2 rounded-xl text-xs f-body"
+          style={{ background: 'rgba(220,38,38,0.07)', color: '#B91C1C' }}
+        >
           {error}
+        </div>
+      )}
+
+      {/* ── Post-save unassigned callout (dismissible) ─────────────────────── */}
+      {savedUnassigned.length > 0 && (
+        <div
+          className="mx-3 mt-2 px-3 py-2.5 rounded-xl flex items-start gap-2"
+          style={{ background: 'rgba(230,126,80,0.10)', border: '1px solid rgba(230,126,80,0.2)' }}
+        >
+          <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" style={{ color: '#E67E50' }} />
+          <p className="text-[11px] f-body flex-1 leading-relaxed" style={{ color: '#C96030' }}>
+            {savedUnassigned.length === 1
+              ? '1 listing is no longer in any calendar — its dates may be unavailable to anglers.'
+              : `${savedUnassigned.length} listings are no longer in any calendar — their dates may be unavailable to anglers.`}
+          </p>
+          <button
+            onClick={() => setSavedUnassigned([])}
+            className="flex-shrink-0 mt-0.5"
+            style={{ color: 'rgba(201,96,48,0.6)', cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+            aria-label="Dismiss"
+          >
+            <X size={11} />
+          </button>
         </div>
       )}
 
@@ -235,7 +291,6 @@ export default function CalendarsPanel({
                     if (!isActive) e.currentTarget.style.background = 'transparent'
                   }}
                 >
-                  {/* Calendar name (clickable area) */}
                   <button
                     onClick={() => navigate(cal.id)}
                     className="flex items-center gap-2.5 flex-1 min-w-0 text-sm font-semibold f-body text-left"
@@ -245,7 +300,6 @@ export default function CalendarsPanel({
                     <span className="truncate">{cal.name}</span>
                   </button>
 
-                  {/* Experience count badge */}
                   <span
                     className="text-[10px] font-bold f-body px-1.5 py-0.5 rounded-full flex-shrink-0"
                     style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.38)' }}
@@ -253,7 +307,6 @@ export default function CalendarsPanel({
                     {expCount}
                   </span>
 
-                  {/* Action buttons — pencil always visible, delete on hover */}
                   <div className="flex items-center gap-0.5 flex-shrink-0">
                     <button
                       onClick={() => startEdit(cal)}
@@ -295,9 +348,17 @@ export default function CalendarsPanel({
                   className="px-3 py-3 rounded-xl flex flex-col gap-2"
                   style={{ background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.12)' }}
                 >
-                  <p className="text-xs f-body" style={{ color: '#B91C1C' }}>
+                  <p className="text-xs f-body font-semibold" style={{ color: '#B91C1C' }}>
                     Delete &ldquo;{mode.calendarName}&rdquo;?
                   </p>
+                  {/* Warn if deleting will leave some trips unassigned */}
+                  {(calendarExperienceMap[cal.id] ?? []).length > 0 && (
+                    <p className="text-[11px] f-body leading-relaxed" style={{ color: 'rgba(185,28,28,0.75)' }}>
+                      {(calendarExperienceMap[cal.id] ?? []).length} listing
+                      {(calendarExperienceMap[cal.id] ?? []).length !== 1 ? 's' : ''} will
+                      have no calendar and become unavailable for direct booking.
+                    </p>
+                  )}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleDelete(cal.id)}
@@ -333,11 +394,7 @@ export default function CalendarsPanel({
                     placeholder="Calendar name"
                     maxLength={80}
                     className="w-full text-sm f-body px-3 py-2 rounded-lg outline-none"
-                    style={{
-                      background:  'white',
-                      border:      '1px solid rgba(10,46,77,0.18)',
-                      color:       '#0A2E4D',
-                    }}
+                    style={{ background: 'white', border: '1px solid rgba(10,46,77,0.18)', color: '#0A2E4D' }}
                   />
 
                   {/* Experience assignment */}
@@ -349,31 +406,51 @@ export default function CalendarsPanel({
                       >
                         Listings
                       </p>
-                      {allExperiences.map(exp => (
-                        <label
-                          key={exp.id}
-                          className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors"
-                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,46,77,0.04)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={editExpIds.has(exp.id)}
-                            onChange={() => toggleEditExp(exp.id)}
-                            className="w-3.5 h-3.5 rounded flex-shrink-0"
-                            style={{ accentColor: '#0A2E4D', cursor: 'pointer' }}
-                          />
-                          <span
-                            className="text-xs f-body truncate flex-1"
-                            style={{ color: editExpIds.has(exp.id) ? '#0A2E4D' : 'rgba(10,46,77,0.45)' }}
+                      {allExperiences.map(exp => {
+                        const isChecked = editExpIds.has(exp.id)
+                        // Origin calendar — only relevant if it's a DIFFERENT calendar
+                        const origin = expOriginMap[exp.id]
+                        const comingFrom = isChecked && origin != null && origin.id !== cal.id
+                          ? origin.name
+                          : null
+
+                        return (
+                          <label
+                            key={exp.id}
+                            className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors"
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,46,77,0.04)' }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
                           >
-                            {exp.title}
-                            {!exp.published && (
-                              <span style={{ color: 'rgba(10,46,77,0.3)' }}> (draft)</span>
-                            )}
-                          </span>
-                        </label>
-                      ))}
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleEditExp(exp.id)}
+                              className="w-3.5 h-3.5 rounded flex-shrink-0 mt-0.5"
+                              style={{ accentColor: '#0A2E4D', cursor: 'pointer' }}
+                            />
+                            <span className="flex flex-col min-w-0">
+                              <span
+                                className="text-xs f-body truncate"
+                                style={{ color: isChecked ? '#0A2E4D' : 'rgba(10,46,77,0.45)' }}
+                              >
+                                {exp.title}
+                                {!exp.published && (
+                                  <span style={{ color: 'rgba(10,46,77,0.3)' }}> (draft)</span>
+                                )}
+                              </span>
+                              {/* "Moves from X" hint — shown when checked and in a different calendar */}
+                              {comingFrom != null && (
+                                <span
+                                  className="text-[10px] f-body leading-tight mt-0.5"
+                                  style={{ color: '#E67E50' }}
+                                >
+                                  moves from {comingFrom}
+                                </span>
+                              )}
+                            </span>
+                          </label>
+                        )
+                      })}
                     </div>
                   )}
 
@@ -421,11 +498,7 @@ export default function CalendarsPanel({
               placeholder="Calendar name…"
               maxLength={80}
               className="w-full text-sm f-body px-3 py-2 rounded-lg outline-none"
-              style={{
-                background: 'white',
-                border:     '1px solid rgba(10,46,77,0.18)',
-                color:      '#0A2E4D',
-              }}
+              style={{ background: 'white', border: '1px solid rgba(10,46,77,0.18)', color: '#0A2E4D' }}
             />
             <div className="flex items-center gap-2">
               <button
@@ -453,7 +526,7 @@ export default function CalendarsPanel({
           </div>
         )}
 
-        {/* ── Empty state ────────────────────────────────────────────────── */}
+        {/* ── Empty state ─────────────────────────────────────────────────── */}
         {calendars.length === 0 && mode.type === 'idle' && (
           <button
             onClick={startCreate}
@@ -467,6 +540,23 @@ export default function CalendarsPanel({
           </button>
         )}
       </div>
+
+      {/* ── Persistent unassigned warning ──────────────────────────────────── */}
+      {/* Shown as long as ANY experience is not in any calendar.             */}
+      {/* Separate from the post-save callout above — updates after refresh.  */}
+      {unassignedExps.length > 0 && savedUnassigned.length === 0 && (
+        <div
+          className="mx-3 mb-3 px-3 py-2.5 rounded-xl flex items-start gap-2"
+          style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.16)' }}
+        >
+          <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" style={{ color: '#E67E50' }} />
+          <p className="text-[11px] f-body leading-relaxed" style={{ color: '#C96030' }}>
+            {unassignedExps.length === 1
+              ? `"${unassignedExps[0]!.title}" has no calendar — assign it to one to enable booking.`
+              : `${unassignedExps.length} listings have no calendar and can't be booked directly.`}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

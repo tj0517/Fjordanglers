@@ -9,18 +9,18 @@ import { Info, Check } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type InquiryStatus = Database['public']['Enums']['trip_inquiry_status']
+type BookingStatus = Database['public']['Enums']['booking_status']
 
 // ─── Status timeline steps ────────────────────────────────────────────────────
 
-const TIMELINE_STEPS: { key: InquiryStatus[]; label: string }[] = [
-  { key: ['inquiry'],                       label: 'Inquiry sent'     },
-  { key: ['reviewing'],                     label: 'Under review'     },
-  { key: ['offer_sent', 'offer_accepted'],  label: 'Offer ready'      },
-  { key: ['confirmed', 'completed'],        label: 'Confirmed'        },
+const TIMELINE_STEPS: { key: BookingStatus[]; label: string }[] = [
+  { key: ['pending'],                              label: 'Inquiry sent'     },
+  { key: ['reviewing'],                            label: 'Under review'     },
+  { key: ['offer_sent', 'offer_accepted'],         label: 'Offer ready'      },
+  { key: ['confirmed', 'completed'],               label: 'Confirmed'        },
 ]
 
-function getTimelineIndex(status: InquiryStatus): number {
+function getTimelineIndex(status: BookingStatus): number {
   return TIMELINE_STEPS.findIndex(s => s.key.includes(status))
 }
 
@@ -47,38 +47,59 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
   // Service client bypasses RLS — ownership verified manually below
   const serviceClient = createServiceClient()
 
-  const [inquiryResult, messagesResult] = await Promise.all([
+  const [bookingResult, messagesResult] = await Promise.all([
     serviceClient
-      .from('trip_inquiries')
+      .from('bookings')
       .select('*, guides(full_name, country, avatar_url)')
       .eq('id', id)
+      .eq('source', 'inquiry')
       .single(),
     serviceClient
-      .from('inquiry_messages')
+      .from('booking_messages')
       .select('id, sender_id, sender_role, body, created_at, read_at')
-      .eq('inquiry_id', id)
+      .eq('booking_id', id)
       .order('created_at', { ascending: true }),
   ])
 
-  const inquiry = inquiryResult.data
+  // Cast to access all inquiry-specific fields
+  const booking = bookingResult.data as unknown as {
+    id: string
+    status: BookingStatus
+    source: string
+    angler_id: string | null
+    angler_email: string | null
+    angler_full_name: string | null
+    guests: number
+    // inquiry date range: booking_date = start, date_to = end
+    booking_date: string
+    date_to: string | null
+    target_species: string[] | null
+    experience_level: string | null
+    assigned_river: string | null
+    offer_price_eur: number | null
+    offer_price_min_eur: number | null
+    offer_price_tiers: unknown | null
+    offer_date_from: string | null
+    offer_date_to: string | null
+    offer_details: string | null
+    preferences: unknown | null
+    guides: { full_name: string; country: string; avatar_url: string | null } | null
+  } | null
+
   const initialMessages = (messagesResult.data ?? []) as ChatMessage[]
 
-  if (!inquiry) notFound()
+  if (!booking) notFound()
 
   // Ownership check: angler_id match OR email match (for non-linked inquiries)
   const isOwner =
-    inquiry.angler_id === user.id ||
-    (user.email != null && inquiry.angler_email === user.email)
+    booking.angler_id === user.id ||
+    (user.email != null && booking.angler_email === user.email)
 
   if (!isOwner) notFound()
 
-  const assignedGuide = inquiry.guides as unknown as {
-    full_name: string
-    country: string
-    avatar_url: string | null
-  } | null
+  const assignedGuide = booking.guides
 
-  const prefs = (inquiry.preferences ?? {}) as {
+  const prefs = (booking.preferences ?? {}) as {
     budgetMin?: number
     budgetMax?: number
     accommodation?: boolean
@@ -86,31 +107,26 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
     notes?: string
   }
 
-  const currentStepIdx = getTimelineIndex(inquiry.status)
+  const groupSize  = booking.guests
+  const datesFrom  = booking.booking_date ?? ''
+  const datesTo    = booking.date_to ?? ''
+
+  const currentStepIdx = getTimelineIndex(booking.status)
   const paidSuccessfully = sp.status === 'paid' || sp.status === 'accepted'
 
   return (
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[720px]">
 
-      {/* Nav bar */}
-      <div
-        className="sticky top-0 z-20 flex items-center justify-between px-6 py-4"
-        style={{
-          background: 'rgba(243,237,228,0.92)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(10,46,77,0.06)',
-        }}
+      {/* Back link */}
+      <Link
+        href="/account/trips"
+        className="inline-flex items-center gap-1.5 text-sm f-body mb-6 transition-opacity hover:opacity-70"
+        style={{ color: 'rgba(10,46,77,0.5)' }}
       >
-        <Link href="/account/bookings" className="f-body text-sm" style={{ color: 'rgba(10,46,77,0.5)' }}>
-          ← My Bookings
-        </Link>
-        <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-          Trip Request
-        </p>
-        <div className="w-24" />
-      </div>
+        ← My Requests
+      </Link>
 
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div>
 
         {/* ── Paid success banner ─────────────────────────────────────────────── */}
         {paidSuccessfully && (
@@ -137,11 +153,13 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
             Custom Trip
           </p>
           <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-2">
-            {inquiry.dates_from} — {inquiry.dates_to}
+            {datesFrom} {datesTo && datesTo !== datesFrom ? `— ${datesTo}` : ''}
           </h1>
           <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-            {inquiry.group_size} {inquiry.group_size === 1 ? 'angler' : 'anglers'} ·{' '}
-            {inquiry.target_species?.join(', ')}
+            {groupSize} {groupSize === 1 ? 'angler' : 'anglers'}
+            {booking.target_species != null && booking.target_species.length > 0 && (
+              <> · {booking.target_species.join(', ')}</>
+            )}
           </p>
         </div>
 
@@ -164,7 +182,6 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
             {TIMELINE_STEPS.map((step, idx) => {
               const isPast    = idx < currentStepIdx
               const isCurrent = idx === currentStepIdx
-              const isFuture  = idx > currentStepIdx
               const isLast    = idx === TIMELINE_STEPS.length - 1
 
               return (
@@ -218,25 +235,24 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
         </div>
 
         {/* ── Offer card (if offer_sent) ──────────────────────────────────────── */}
-        {inquiry.status === 'offer_sent' &&
-          (inquiry.offer_price_eur != null || inquiry.offer_price_tiers != null) && (() => {
-          const priceTiers = Array.isArray(inquiry.offer_price_tiers)
-            ? (inquiry.offer_price_tiers as PriceTier[])
+        {booking.status === 'offer_sent' &&
+          (booking.offer_price_eur != null || booking.offer_price_tiers != null) && (() => {
+          const priceTiers = Array.isArray(booking.offer_price_tiers)
+            ? (booking.offer_price_tiers as PriceTier[])
             : null
           const hasTiers       = priceTiers != null && priceTiers.length > 0
           const sortedTiers    = hasTiers
             ? [...priceTiers!].sort((a, b) => a.anglers - b.anglers)
             : null
           const effectivePrice = hasTiers
-            ? findApplicableTierPrice(priceTiers!, inquiry.group_size)
-            : inquiry.offer_price_eur
+            ? findApplicableTierPrice(priceTiers!, groupSize)
+            : booking.offer_price_eur
 
-          // Highlight the tier row that applies to this angler's group size
           const activeTierAnglers: number | null = (() => {
             if (!hasTiers || !sortedTiers) return null
             let match = sortedTiers[0]
             for (const t of sortedTiers) {
-              if (t.anglers <= inquiry.group_size) match = t
+              if (t.anglers <= groupSize) match = t
             }
             return match.anglers
           })()
@@ -279,9 +295,9 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
               )}
 
               {/* River */}
-              {inquiry.assigned_river != null && (
+              {booking.assigned_river != null && (
                 <p className="text-sm f-body mb-4" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                  📍 {inquiry.assigned_river}
+                  📍 {booking.assigned_river}
                 </p>
               )}
 
@@ -353,7 +369,7 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
                     style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.18)' }}
                   >
                     <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                      Your total ({inquiry.group_size} {inquiry.group_size === 1 ? 'angler' : 'anglers'})
+                      Your total ({groupSize} {groupSize === 1 ? 'angler' : 'anglers'})
                     </p>
                     <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
                       €{effectivePrice}
@@ -367,18 +383,18 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
                   style={{ borderTop: '1px solid rgba(10,46,77,0.07)', borderBottom: '1px solid rgba(10,46,77,0.07)' }}
                 >
                   <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                    {inquiry.offer_price_min_eur != null ? 'Price range' : 'Offer price'}
+                    {booking.offer_price_min_eur != null ? 'Price range' : 'Offer price'}
                   </p>
                   <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                    {inquiry.offer_price_min_eur != null
-                      ? `€${inquiry.offer_price_min_eur} – €${inquiry.offer_price_eur}`
-                      : `€${inquiry.offer_price_eur}`}
+                    {booking.offer_price_min_eur != null
+                      ? `€${booking.offer_price_min_eur} – €${booking.offer_price_eur}`
+                      : `€${booking.offer_price_eur}`}
                   </p>
                 </div>
               )}
 
               {/* Offer details */}
-              {inquiry.offer_details != null && (
+              {booking.offer_details != null && (
                 <div className="mb-5">
                   <p
                     className="text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body"
@@ -390,12 +406,12 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
                     className="text-sm f-body whitespace-pre-wrap leading-relaxed"
                     style={{ color: 'rgba(10,46,77,0.65)' }}
                   >
-                    {inquiry.offer_details}
+                    {booking.offer_details}
                   </p>
                 </div>
               )}
 
-              <AcceptOfferButton inquiryId={id} />
+              <AcceptOfferButton bookingId={id} />
             </div>
           )
         })()}
@@ -416,23 +432,27 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
             Request Summary
           </p>
           <div className="flex flex-col gap-3">
-            <InfoRow label="Dates" value={`${inquiry.dates_from} to ${inquiry.dates_to}`} />
+            {datesFrom && <InfoRow label="Dates" value={`${datesFrom}${datesTo && datesTo !== datesFrom ? ` to ${datesTo}` : ''}`} />}
             <InfoRow
               label="Group size"
-              value={`${inquiry.group_size} ${inquiry.group_size === 1 ? 'angler' : 'anglers'}`}
+              value={`${groupSize} ${groupSize === 1 ? 'angler' : 'anglers'}`}
             />
-            <InfoRow
-              label="Level"
-              value={
-                { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[
-                  inquiry.experience_level
-                ] ?? inquiry.experience_level
-              }
-            />
-            <InfoRow
-              label="Species"
-              value={inquiry.target_species?.join(', ') ?? '—'}
-            />
+            {booking.experience_level != null && (
+              <InfoRow
+                label="Level"
+                value={
+                  { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[
+                    booking.experience_level
+                  ] ?? booking.experience_level
+                }
+              />
+            )}
+            {booking.target_species != null && booking.target_species.length > 0 && (
+              <InfoRow
+                label="Species"
+                value={booking.target_species.join(', ')}
+              />
+            )}
             {prefs.budgetMin != null && (
               <InfoRow
                 label="Budget"
@@ -447,7 +467,7 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
         </div>
 
         {/* ── Waiting / no offer yet ──────────────────────────────────────────── */}
-        {(inquiry.status === 'inquiry' || inquiry.status === 'reviewing') && (
+        {(booking.status === 'pending' || booking.status === 'reviewing') && (
           <div
             className="mt-6 p-5 rounded-2xl flex items-start gap-3"
             style={{
@@ -458,18 +478,18 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
             <Info width={18} height={18} stroke="#3B82F6" strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm f-body font-semibold" style={{ color: '#3B82F6' }}>
-                {inquiry.status === 'inquiry' ? 'Your request is under review' : 'Finding the best guide for you'}
+                {booking.status === 'pending' ? 'Your request is under review' : 'Finding the best guide for you'}
               </p>
               <p className="text-xs f-body mt-1" style={{ color: 'rgba(10,46,77,0.5)' }}>
                 Our team will send you an offer within 48 hours. Check your email:{' '}
-                <span className="font-semibold">{inquiry.angler_email}</span>
+                <span className="font-semibold">{booking.angler_email}</span>
               </p>
             </div>
           </div>
         )}
 
         {/* Confirmed state */}
-        {(inquiry.status === 'confirmed' || inquiry.status === 'completed') && (
+        {(booking.status === 'confirmed' || booking.status === 'completed') && (
           <div
             className="mt-6 p-5 rounded-2xl flex items-start gap-3"
             style={{
@@ -480,7 +500,7 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
             <Check width={18} height={18} stroke="#16A34A" strokeWidth={2} />
             <div>
               <p className="text-sm f-body font-semibold" style={{ color: '#16A34A' }}>
-                {inquiry.status === 'completed' ? 'Trip completed!' : 'Trip confirmed — see you there!'}
+                {booking.status === 'completed' ? 'Trip completed!' : 'Trip confirmed — see you there!'}
               </p>
               <p className="text-xs f-body mt-1" style={{ color: 'rgba(10,46,77,0.5)' }}>
                 Your guide will be in touch with final details closer to the trip date.
@@ -490,10 +510,10 @@ export default async function AnglerTripPage({ params, searchParams }: Props) {
         )}
 
         {/* ── Chat with guide ─────────────────────────────────────────────── */}
-        {inquiry.status !== 'cancelled' && (
+        {booking.status !== 'cancelled' && booking.status !== 'declined' && (
           <div className="mt-6">
             <InquiryChat
-              inquiryId={id}
+              bookingId={id}
               currentUserId={user.id}
               currentUserRole="angler"
               initialMessages={initialMessages}

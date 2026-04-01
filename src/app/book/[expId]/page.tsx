@@ -6,6 +6,8 @@ import { getExperience } from '@/lib/supabase/queries'
 import BookingCheckoutForm from './BookingCheckoutForm'
 import BookingDateStep from './BookingDateStep'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
+import { decodePeriodsParam } from '@/lib/periods'
+import { expandBookingDateRange } from '@/lib/booking-blocks'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -38,6 +40,9 @@ type Props = {
     prefill?:      string
     // force initial tab on step 1: 'direct' | 'request'
     mode?:         string
+    // Individual period boundaries — only present when angler picked multiple
+    // non-contiguous ranges in request mode (encodePeriodsParam format).
+    periods?:      string
   }>
 }
 
@@ -72,8 +77,28 @@ export default async function BookPage({ params, searchParams }: Props) {
 
   const initialMode = sp.mode === 'request' ? 'request' : prefillDates.length > 0 ? 'direct' : 'direct'
 
-  // Normalise: prefer window-based; fall back to legacy
-  const dates     = windowFrom != null ? [windowFrom, ...(windowTo && windowTo !== windowFrom ? [windowTo] : [])] : legacyDates
+  // Normalise: expand every date in the selected window so `requested_dates`
+  // in the DB contains ALL individual days — not just the envelope start/end.
+  // This ensures calendar blocking works correctly for the full range.
+  //
+  // Priority:
+  //   1. `periods` param (request mode, non-contiguous selections) → expand each
+  //      period individually then merge, preserving gaps between periods.
+  //   2. `windowFrom`/`windowTo` (direct multi-day or single contiguous window)
+  //      → expand the full range from first to last day.
+  //   3. Legacy `dates` param (old single-date flow) → use as-is.
+  const decodedPeriods = sp.periods ? decodePeriodsParam(sp.periods) : []
+
+  const dates: string[] = windowFrom != null
+    ? decodedPeriods.length > 1
+      // Multiple non-contiguous periods: expand each, deduplicate, sort.
+      ? [...new Set(
+          decodedPeriods.flatMap(p => expandBookingDateRange(p.from, p.to))
+        )].sort()
+      // Single period or direct multi-day booking: expand the contiguous range.
+      : expandBookingDateRange(windowFrom, windowTo ?? windowFrom)
+    : legacyDates
+
   const effectiveNumDays = windowFrom != null ? numDays : legacyDates.length
 
   // ── Always fetch experience ────────────────────────────────────────────────
@@ -115,16 +140,31 @@ export default async function BookPage({ params, searchParams }: Props) {
   if (windowFrom == null && dates.length === 0) {
     // Fetch availability data (public — use service client)
     const serviceClient = createServiceClient()
+
+    // Check if experience belongs to a named calendar for calendar-scoped blocking
+    const { data: calExpRow } = await serviceClient
+      .from('calendar_experiences')
+      .select('calendar_id')
+      .eq('experience_id', expId)
+      .maybeSingle()
+
     const [availConfigRes, blockedDatesRes] = await Promise.all([
       serviceClient
         .from('experience_availability_config')
         .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
         .eq('experience_id', expId)
         .maybeSingle(),
-      serviceClient
-        .from('experience_blocked_dates')
-        .select('date_start, date_end')
-        .eq('experience_id', expId),
+      // Blocked dates: calendar-scoped (calendar_blocked_dates) or per-listing
+      // (experience_blocked_dates) depending on whether experience is in a calendar.
+      calExpRow != null
+        ? serviceClient
+            .from('calendar_blocked_dates')
+            .select('date_start, date_end')
+            .eq('calendar_id', calExpRow.calendar_id)
+        : serviceClient
+            .from('experience_blocked_dates')
+            .select('date_start, date_end')
+            .eq('experience_id', expId),
     ])
 
     const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
@@ -369,8 +409,6 @@ export default async function BookPage({ params, searchParams }: Props) {
                 label={`€${pricePerPerson} × ${guests} ${guests === 1 ? 'angler' : 'anglers'} × ${effectiveNumDays} ${effectiveNumDays === 1 ? 'day' : 'days'}`}
                 value={`€${subtotal}`}
               />
-              <PriceLine label="Service fee (5%)" value={`€${serviceFee}`} muted />
-
               <div className="my-1" style={{ height: '1px', background: 'rgba(10,46,77,0.08)' }} />
               <PriceLine label="Total" value={`€${totalEur}`} bold />
               <div className="my-1" style={{ height: '1px', background: 'rgba(10,46,77,0.08)' }} />
@@ -381,7 +419,7 @@ export default async function BookPage({ params, searchParams }: Props) {
                     Due today
                   </p>
                   <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                    30% deposit via Stripe after guide confirmation
+                    40% deposit via Stripe after guide confirmation
                   </p>
                 </div>
                 <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>€0</p>
@@ -401,7 +439,7 @@ export default async function BookPage({ params, searchParams }: Props) {
             {[
               { icon: '🛡️', text: 'No payment required to send a request' },
               { icon: '⏰', text: 'Guide confirms within 24 hours' },
-              { icon: '🔒', text: '30% deposit via Stripe after confirmation — balance before the trip' },
+              { icon: '🔒', text: '40% deposit via Stripe after confirmation — balance before the trip' },
             ].map(item => (
               <div key={item.text} className="flex items-center gap-3 mb-2.5 last:mb-0">
                 <span className="text-base leading-none">{item.icon}</span>

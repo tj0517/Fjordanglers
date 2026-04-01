@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Bell, Calendar, Archive } from 'lucide-react'
@@ -7,29 +7,16 @@ import { Bell, Calendar, Archive } from 'lucide-react'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type BookingStatus = Database['public']['Enums']['booking_status']
-type InquiryStatus = Database['public']['Enums']['trip_inquiry_status']
 
 type BookingRow = Database['public']['Tables']['bookings']['Row'] & {
   experience: { title: string } | null
-}
-
-type InquiryRow = {
-  id:             string
-  angler_name:    string
-  angler_email:   string
-  dates_from:     string | null
-  dates_to:       string | null
-  target_species: unknown
-  group_size:     number | null
-  status:         InquiryStatus
-  created_at:     string
 }
 
 type TabKey = 'action' | 'upcoming' | 'past'
 
 type UnifiedItem = {
   id:             string
-  itemType:       'inquiry' | 'booking'
+  source:         'direct' | 'inquiry'
   anglerName:     string
   anglerEmail:    string
   anglerCountry:  string | null
@@ -48,24 +35,17 @@ type UnifiedItem = {
 
 // ─── Status maps ──────────────────────────────────────────────────────────────
 
-const BOOKING_STATUS: Record<BookingStatus, { bg: string; color: string; label: string }> = {
-  confirmed: { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Confirmed' },
-  pending:   { bg: 'rgba(230,126,80,0.12)', color: '#E67E50', label: 'Pending'   },
-  cancelled: { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Cancelled' },
-  completed: { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Completed' },
-  refunded:  { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Refunded'  },
-  accepted:  { bg: 'rgba(59,130,246,0.1)',  color: '#2563EB', label: 'Accepted'  },
-  declined:  { bg: 'rgba(239,68,68,0.08)', color: '#B91C1C', label: 'Declined'  },
-}
-
-const INQUIRY_STATUS: Record<InquiryStatus, { bg: string; color: string; label: string }> = {
-  inquiry:        { bg: 'rgba(230,126,80,0.12)', color: '#E67E50', label: 'New'        },
-  reviewing:      { bg: 'rgba(139,92,246,0.1)',  color: '#7C3AED', label: 'Reviewing'  },
-  offer_sent:     { bg: 'rgba(59,130,246,0.1)',  color: '#2563EB', label: 'Offer Sent' },
-  offer_accepted: { bg: 'rgba(59,130,246,0.1)',  color: '#2563EB', label: 'Accepted'   },
-  confirmed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Confirmed'  },
-  completed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Completed'  },
-  cancelled:      { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Cancelled'  },
+const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
+  pending:        { bg: 'rgba(230,126,80,0.12)', color: '#E67E50', label: 'New'          },
+  reviewing:      { bg: 'rgba(139,92,246,0.1)',  color: '#7C3AED', label: 'Reviewing'    },
+  offer_sent:     { bg: 'rgba(59,130,246,0.1)',  color: '#2563EB', label: 'Offer Sent'   },
+  offer_accepted: { bg: 'rgba(59,130,246,0.1)',  color: '#2563EB', label: 'Accepted'     },
+  accepted:       { bg: 'rgba(59,130,246,0.1)',  color: '#2563EB', label: 'Accepted'     },
+  confirmed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Confirmed'    },
+  completed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Completed'    },
+  cancelled:      { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Cancelled'    },
+  refunded:       { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Refunded'     },
+  declined:       { bg: 'rgba(239,68,68,0.08)',  color: '#B91C1C', label: 'Declined'     },
 }
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
@@ -84,8 +64,7 @@ export default async function BookingsPage({
     view === 'upcoming' ? 'upcoming' :
     view === 'past'     ? 'past'     : 'action'
 
-  const supabase      = await createClient()
-  const serviceClient = createServiceClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user == null) {
@@ -114,123 +93,106 @@ export default async function BookingsPage({
     )
   }
 
-  // ── Fetch data ─────────────────────────────────────────────────────────────
-  const [bookingsRes, assignedRes, unassignedRes] = await Promise.all([
-    supabase
-      .from('bookings')
-      .select('*, experience:experiences(title)')
-      .eq('guide_id', guide.id)
-      .order('booking_date', { ascending: true }),
+  // ── Fetch all bookings for this guide (unified table) ──────────────────────
+  const { data: rawBookings } = await supabase
+    .from('bookings')
+    .select('*, experience:experiences(title)')
+    .eq('guide_id', guide.id)
+    .order('booking_date', { ascending: true, nullsFirst: false })
 
-    serviceClient
-      .from('trip_inquiries')
-      .select('id, angler_name, angler_email, dates_from, dates_to, target_species, group_size, status, created_at')
-      .eq('assigned_guide_id', guide.id)
-      .order('created_at', { ascending: false }),
+  const bookings = (rawBookings ?? []) as unknown as BookingRow[]
 
-    serviceClient
-      .from('trip_inquiries')
-      .select('id, angler_name, angler_email, dates_from, dates_to, target_species, group_size, status, created_at')
-      .is('assigned_guide_id', null)
-      .in('status', ['inquiry', 'reviewing'])
-      .order('created_at', { ascending: false }),
-  ])
-
-  const bookings = (bookingsRes.data ?? []) as unknown as BookingRow[]
-
-  // Merge & deduplicate inquiries
-  const seen = new Set<string>()
-  const inquiries = [...(assignedRes.data ?? []), ...(unassignedRes.data ?? [])]
-    .filter(i => { if (seen.has(i.id)) return false; seen.add(i.id); return true })
-    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1)) as InquiryRow[]
-
-  // ── Map to unified items ───────────────────────────────────────────────────
+  // ── Map to unified display items ───────────────────────────────────────────
 
   function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   }
 
-  function mapInquiry(i: InquiryRow): UnifiedItem {
-    const s = INQUIRY_STATUS[i.status]
-    const dateLabel =
-      i.dates_from != null
-        ? `${fmtDate(i.dates_from)} – ${i.dates_to != null ? fmtDate(i.dates_to) : '?'}`
-        : '—'
-    return {
-      id:             i.id,
-      itemType:       'inquiry',
-      anglerName:     i.angler_name,
-      anglerEmail:    i.angler_email,
-      anglerCountry:  null,
-      tripTitle:      'Custom inquiry',
-      dateLabel,
-      guests:         i.group_size,
-      totalEur:       null,
-      guidePayoutEur: null,
-      statusBg:       s.bg,
-      statusColor:    s.color,
-      statusLabel:    s.label,
-      href:           `/dashboard/inquiries/${i.id}`,
-      isPrimary:      i.status === 'inquiry' || i.status === 'reviewing',
-      sortDate:       i.dates_from ?? i.created_at,
-    }
-  }
-
   function mapBooking(b: BookingRow): UnifiedItem {
-    const s      = BOOKING_STATUS[b.status]
-    const isCustom = b.experience_id == null
+    const s      = STATUS_STYLES[b.status]
+    const source = (b.source ?? 'direct') as 'direct' | 'inquiry'
+
+    // Date label: inquiry bookings may have offer_date_from/to, else booking_date/date_to
+    let dateLabel = '—'
+    const offerFrom = b.offer_date_from
+    const offerTo   = b.offer_date_to
+    // `date_to` is the end date for both inquiry date ranges and multi-day direct bookings
+    const dateTo    = b.date_to
+
+    if (offerFrom != null) {
+      dateLabel = offerFrom === offerTo || offerTo == null
+        ? fmtDate(offerFrom)
+        : `${fmtDate(offerFrom)} – ${fmtDate(offerTo)}`
+    } else if (b.booking_date != null) {
+      dateLabel = dateTo != null && dateTo !== b.booking_date
+        ? `${fmtDate(b.booking_date)} – ${fmtDate(dateTo)}`
+        : new Date(b.booking_date + 'T12:00:00').toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'short', year: 'numeric',
+          })
+    }
+
+    // Sort date — prefer offer date, then booking_date
+    const sortDate = offerFrom ?? b.booking_date ?? b.created_at
+
+    // Action flag: guide needs to respond
+    const isPrimary =
+      b.status === 'pending' ||
+      b.status === 'reviewing'
+
+    // Revenue shown only when an offer/amount is set
+    const displayTotal   = (b.offer_price_eur ?? b.total_eur) as number | null
+    const displayPayout  = b.guide_payout_eur as number | null
+
+    // Trip title
+    const isCustom  = b.experience_id == null
+    const tripTitle =
+      b.experience?.title ??
+      (isCustom ? (source === 'inquiry' ? 'Custom inquiry' : 'Custom Trip') : '—')
+
+    // Link: inquiry bookings go to /dashboard/inquiries/[id] (same page, different URL)
+    const href = source === 'inquiry'
+      ? `/dashboard/inquiries/${b.id}`
+      : `/dashboard/bookings/${b.id}`
+
     return {
       id:             b.id,
-      itemType:       'booking',
+      source,
       anglerName:     b.angler_full_name ?? 'Guest',
       anglerEmail:    b.angler_email ?? '',
       anglerCountry:  b.angler_country,
-      tripTitle:      b.experience?.title ?? (isCustom ? 'Custom Trip' : '—'),
-      dateLabel:      new Date(b.booking_date + 'T12:00:00').toLocaleDateString('en-GB', {
-        day: 'numeric', month: 'short', year: 'numeric',
-      }),
+      tripTitle,
+      dateLabel,
       guests:         b.guests,
-      totalEur:       b.total_eur,
-      guidePayoutEur: b.guide_payout_eur,
+      totalEur:       displayTotal,
+      guidePayoutEur: displayPayout,
       statusBg:       s.bg,
       statusColor:    s.color,
       statusLabel:    s.label,
-      href:           `/dashboard/bookings/${b.id}`,
-      isPrimary:      b.status === 'pending',
-      sortDate:       b.booking_date,
+      href,
+      isPrimary,
+      sortDate:       sortDate ?? b.created_at,
     }
   }
 
-  // Tab 1 — guide must respond/act
-  const actionItems: UnifiedItem[] = [
-    ...inquiries.filter(i => i.status === 'inquiry' || i.status === 'reviewing').map(mapInquiry),
-    ...bookings.filter(b => b.status === 'pending').map(mapBooking),
-  ].sort((a, b) => (a.sortDate < b.sortDate ? -1 : 1))
+  // Tab filtering
+  const ACTION_STATUSES   = new Set<BookingStatus>(['pending', 'reviewing'])
+  const UPCOMING_STATUSES = new Set<BookingStatus>(['offer_sent', 'offer_accepted', 'accepted', 'confirmed'])
+  const PAST_STATUSES     = new Set<BookingStatus>(['completed', 'cancelled', 'refunded', 'declined'])
 
-  // Tab 2 — confirmed / in-progress trips
-  const upcomingItems: UnifiedItem[] = [
-    ...inquiries
-      .filter(i => i.status === 'offer_sent' || i.status === 'offer_accepted' || i.status === 'confirmed')
-      .map(mapInquiry),
-    ...bookings
-      .filter(b => b.status === 'accepted' || b.status === 'confirmed')
-      .map(mapBooking),
-  ].sort((a, b) => (a.sortDate < b.sortDate ? -1 : 1))
+  const actionItems: UnifiedItem[] = bookings
+    .filter(b => ACTION_STATUSES.has(b.status))
+    .map(mapBooking)
+    .sort((a, b) => (a.sortDate < b.sortDate ? -1 : 1))
 
-  // Tab 3 — ended / archived
-  const pastItems: UnifiedItem[] = [
-    ...inquiries
-      .filter(i => i.status === 'completed' || i.status === 'cancelled')
-      .map(mapInquiry),
-    ...bookings
-      .filter(b =>
-        b.status === 'completed' ||
-        b.status === 'cancelled'  ||
-        b.status === 'refunded'   ||
-        b.status === 'declined',
-      )
-      .map(mapBooking),
-  ].sort((a, b) => (a.sortDate > b.sortDate ? -1 : 1))
+  const upcomingItems: UnifiedItem[] = bookings
+    .filter(b => UPCOMING_STATUSES.has(b.status))
+    .map(mapBooking)
+    .sort((a, b) => (a.sortDate < b.sortDate ? -1 : 1))
+
+  const pastItems: UnifiedItem[] = bookings
+    .filter(b => PAST_STATUSES.has(b.status))
+    .map(mapBooking)
+    .sort((a, b) => (a.sortDate > b.sortDate ? -1 : 1))
 
   const activeItems =
     activeTab === 'action'   ? actionItems   :
@@ -239,13 +201,17 @@ export default async function BookingsPage({
   // ── Stats ──────────────────────────────────────────────────────────────────
   const totalRevenue = bookings
     .filter(b => b.status === 'confirmed' || b.status === 'completed')
-    .reduce((sum, b) => sum + b.guide_payout_eur, 0)
+    .reduce((sum, b) => sum + (b.guide_payout_eur ?? 0), 0)
+
+  const newInquiries = bookings.filter(
+    b => b.source === 'inquiry' && b.status === 'pending',
+  ).length
 
   const STATS = [
-    { label: 'Needs action',  value: actionItems.length,                                sub: 'require your response'  },
-    { label: 'Upcoming',      value: upcomingItems.length,                              sub: 'confirmed trips'        },
-    { label: 'New inquiries', value: inquiries.filter(i => i.status === 'inquiry').length, sub: 'unread requests'     },
-    { label: 'Total earned',  value: `€${Math.round(totalRevenue).toLocaleString()}`,   sub: 'guide payout'          },
+    { label: 'Needs action',  value: actionItems.length,                        sub: 'require your response'  },
+    { label: 'Upcoming',      value: upcomingItems.length,                      sub: 'confirmed trips'        },
+    { label: 'New inquiries', value: newInquiries,                              sub: 'unread requests'        },
+    { label: 'Total earned',  value: `€${Math.round(totalRevenue).toLocaleString()}`, sub: 'guide payout'    },
   ]
 
   const TABS = [
@@ -381,12 +347,12 @@ export default async function BookingsPage({
                     style={{
                       background: item.isPrimary
                         ? 'rgba(230,126,80,0.14)'
-                        : item.itemType === 'inquiry'
+                        : item.source === 'inquiry'
                         ? 'rgba(139,92,246,0.1)'
                         : 'rgba(59,130,246,0.1)',
                       color: item.isPrimary
                         ? '#E67E50'
-                        : item.itemType === 'inquiry'
+                        : item.source === 'inquiry'
                         ? '#7C3AED'
                         : '#2563EB',
                     }}
@@ -397,7 +363,7 @@ export default async function BookingsPage({
                         style={{ background: '#E67E50' }}
                       />
                     )}
-                    {item.itemType === 'inquiry' ? 'Request' : 'Booking'}
+                    {item.source === 'inquiry' ? 'Request' : 'Booking'}
                   </span>
                 </div>
 

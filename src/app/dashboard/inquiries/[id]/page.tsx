@@ -10,16 +10,22 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-type InquiryStatus = Database['public']['Enums']['trip_inquiry_status']
+type BookingStatus = Database['public']['Enums']['booking_status']
 
-const STATUS_STYLES: Record<InquiryStatus, { bg: string; color: string; label: string }> = {
-  inquiry:        { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'New'        },
+// Statuses that show the OfferModal (guide hasn't sent an offer yet)
+const OFFER_SENDABLE: BookingStatus[] = ['pending', 'reviewing']
+// Statuses where guide can still decline
+const DECLINABLE: BookingStatus[] = ['pending', 'reviewing', 'offer_sent']
+
+const STATUS_STYLES: Partial<Record<BookingStatus, { bg: string; color: string; label: string }>> = {
+  pending:        { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'New'        },
   reviewing:      { bg: 'rgba(139,92,246,0.1)',   color: '#7C3AED', label: 'Reviewing'  },
   offer_sent:     { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Offer Sent' },
   offer_accepted: { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'   },
   confirmed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed'  },
   completed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed'  },
   cancelled:      { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled'  },
+  declined:       { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'   },
 }
 
 type StatusColor = 'blue' | 'green' | 'orange' | 'red'
@@ -51,76 +57,66 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
   const serviceClient = createServiceClient()
 
   const [
-    inquiryResult,
-    navAssignedResult,
-    navUnassignedResult,
+    bookingResult,
+    navResult,
     guideSchedulesResult,
     messagesResult,
   ] = await Promise.all([
+    // Main inquiry booking
     serviceClient
-      .from('trip_inquiries')
+      .from('bookings')
       .select('*')
       .eq('id', id)
+      .eq('source', 'inquiry')
       .single(),
 
+    // All inquiry bookings for navigation (guide's own + unassigned pending)
     serviceClient
-      .from('trip_inquiries')
-      .select('id, angler_name, created_at')
-      .eq('assigned_guide_id', guide.id)
+      .from('bookings')
+      .select('id, angler_full_name, created_at, guide_id, status')
+      .eq('source', 'inquiry')
+      .or(`guide_id.eq.${guide.id},and(guide_id.is.null,status.in.(pending,reviewing))`)
       .order('created_at', { ascending: false }),
 
-    serviceClient
-      .from('trip_inquiries')
-      .select('id, angler_name, created_at')
-      .is('assigned_guide_id', null)
-      .in('status', ['inquiry', 'reviewing'])
-      .order('created_at', { ascending: false }),
-
+    // Guide's weekly schedules (for the offer date picker)
     serviceClient
       .from('guide_weekly_schedules')
       .select('period_from, period_to, blocked_weekdays')
       .eq('guide_id', guide.id),
 
+    // Chat messages
     serviceClient
-      .from('inquiry_messages')
+      .from('booking_messages')
       .select('id, sender_id, sender_role, body, created_at, read_at')
-      .eq('inquiry_id', id)
+      .eq('booking_id', id)
       .order('created_at', { ascending: true }),
   ])
 
-  const inquiry         = inquiryResult.data
-  const guideSchedules  = guideSchedulesResult.data ?? []
+  const booking        = bookingResult.data
+  const guideSchedules = guideSchedulesResult.data ?? []
   const initialMessages = (messagesResult.data ?? []) as ChatMessage[]
-  if (!inquiry) notFound()
+  if (!booking) notFound()
 
+  // Ownership check: either assigned to this guide, or unassigned and still open
   if (
-    inquiry.assigned_guide_id !== null &&
-    inquiry.assigned_guide_id !== guide.id
+    booking.guide_id !== null &&
+    booking.guide_id !== guide.id
   ) {
     notFound()
   }
 
-  // Auto-mark as reviewing on first open
-  let displayStatus = inquiry.status
-  if (inquiry.status === 'inquiry') {
+  // Auto-mark as reviewing on first open (pending → reviewing)
+  let displayStatus = booking.status
+  if (booking.status === 'pending') {
     await serviceClient
-      .from('trip_inquiries')
+      .from('bookings')
       .update({ status: 'reviewing' })
       .eq('id', id)
     displayStatus = 'reviewing'
   }
 
   // ── Navigation list ────────────────────────────────────────────────────────
-  const navSeen = new Set<string>()
-  const navList = [
-    ...(navAssignedResult.data ?? []),
-    ...(navUnassignedResult.data ?? []),
-  ]
-    .filter(r => {
-      if (navSeen.has(r.id)) return false
-      navSeen.add(r.id)
-      return true
-    })
+  const navList = (navResult.data ?? [])
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 
   const currentNavIdx = navList.findIndex(r => r.id === id)
@@ -134,7 +130,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
 
   // ── Derived display values ─────────────────────────────────────────────────
 
-  const prefs = (inquiry.preferences ?? {}) as {
+  const prefs = ((booking as unknown as { preferences?: unknown }).preferences ?? {}) as {
     durationType?:        'half_day' | 'full_day' | 'multi_day'
     numDays?:             number
     flexibleDates?:       boolean
@@ -156,23 +152,56 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
     allDatePeriods?:      { from: string; to: string }[]
   }
 
-  const s = STATUS_STYLES[displayStatus as InquiryStatus]
+  // Cast booking to access nullable inquiry fields added in the migration
+  const b = booking as unknown as {
+    id: string
+    status: BookingStatus
+    source: string
+    angler_full_name: string | null
+    angler_email: string | null
+    angler_country: string | null
+    guests: number
+    // inquiry start/end dates (stored in booking_date + date_to)
+    booking_date: string
+    date_to: string | null
+    target_species: string[] | null
+    experience_level: string | null
+    assigned_river: string | null
+    offer_price_eur: number | null
+    offer_date_from: string | null
+    offer_date_to: string | null
+    offer_meeting_lat: number | null
+    offer_meeting_lng: number | null
+    offer_details: string | null
+    offer_price_tiers: unknown | null
+    created_at: string
+    preferences: unknown | null
+  }
 
-  const submittedDate = new Date(inquiry.created_at).toLocaleDateString('en-GB', {
+  const anglerName  = b.angler_full_name ?? 'Guest'
+  const anglerEmail = b.angler_email ?? ''
+  const groupSize   = b.guests
+  const datesFrom   = b.booking_date ?? ''
+  const datesTo     = b.date_to ?? ''
+
+  const s = STATUS_STYLES[displayStatus as BookingStatus] ?? { bg: 'rgba(10,46,77,0.08)', color: '#0A2E4D', label: displayStatus }
+
+  const submittedDate = new Date(b.created_at).toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
   const levelLabel =
-    inquiry.experience_level != null
+    b.experience_level != null
       ? ({ beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[
-          inquiry.experience_level
-        ] ?? inquiry.experience_level)
+          b.experience_level
+        ] ?? b.experience_level)
       : null
 
   const tripDays = (() => {
     if (prefs.numDays != null) return `${prefs.numDays} days`
-    const from = new Date(inquiry.dates_from)
-    const to   = new Date(inquiry.dates_to)
+    if (!datesFrom || !datesTo) return '1 day'
+    const from = new Date(datesFrom)
+    const to   = new Date(datesTo)
     const diff = Math.round((to.getTime() - from.getTime()) / 86_400_000)
     return diff > 0 ? `${diff + 1} days` : '1 day'
   })()
@@ -219,7 +248,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
       : undefined
 
   const groupParts = [
-    `${inquiry.group_size} ${inquiry.group_size === 1 ? 'angler' : 'anglers'}`,
+    `${groupSize} ${groupSize === 1 ? 'angler' : 'anglers'}`,
     prefs.hasBeginners === true && 'incl. beginners',
     prefs.hasChildren  === true && 'incl. children',
   ].filter(Boolean) as string[]
@@ -230,16 +259,16 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
   ].filter(Boolean) as string[]
 
   const tabProps: InquiryDetailTabsProps = {
-    anglerName:   inquiry.angler_name,
-    anglerEmail:  inquiry.angler_email,
+    anglerName,
+    anglerEmail,
     tripTypeLabel:   prefs.durationType ? durationTypeLabel[prefs.durationType] : undefined,
     tripDays,
     datesLabel:      prefs.flexibleDates === true ? 'Preferred window' : 'Dates',
-    datesValue:      `${inquiry.dates_from} → ${inquiry.dates_to}`,
+    datesValue:      datesFrom && datesTo ? `${datesFrom} → ${datesTo}` : datesFrom || '—',
     preferredMonths: preferredMonthsStr,
     groupValue:      groupParts.join(' · '),
     experienceLabel: levelLabel ?? undefined,
-    speciesValue:    (inquiry.target_species as string[] | null)?.join(', ') ?? '—',
+    speciesValue:    (b.target_species as string[] | null)?.join(', ') ?? '—',
     gearValue:          prefs.gearNeeded ? gearLabel[prefs.gearNeeded] : undefined,
     accommodationValue: accommodationLabel,
     transportValue:     prefs.transport ? transportLabel[prefs.transport] : undefined,
@@ -265,13 +294,13 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
   }
 
   const anglerBrief: AnglerBrief = {
-    anglerName:        inquiry.angler_name,
-    anglerEmail:       inquiry.angler_email,
-    datesValue:        `${fmtBriefDate(inquiry.dates_from)} – ${fmtBriefDate(inquiry.dates_to)}`,
+    anglerName,
+    anglerEmail,
+    datesValue:        datesFrom && datesTo ? `${fmtBriefDate(datesFrom)} – ${fmtBriefDate(datesTo)}` : datesFrom ? fmtBriefDate(datesFrom) : '—',
     tripDays,
     allPeriods:        prefs.allDatePeriods,
     groupLabel:        groupParts.join(' · '),
-    species:           (inquiry.target_species as string[] | null) ?? [],
+    species:           (b.target_species as string[] | null) ?? [],
     durationTypeLabel: prefs.durationType != null ? durationTypeLabel[prefs.durationType] : undefined,
     experienceLabel:   levelLabel ?? undefined,
     gearLabel:         prefs.gearNeeded != null ? gearLabel[prefs.gearNeeded] : undefined,
@@ -282,11 +311,14 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
     boatPref:          prefs.boatPreference,
   }
 
-  const canSendOffer = displayStatus === 'inquiry' || displayStatus === 'reviewing'
-  const canDecline   = ['inquiry', 'reviewing', 'offer_sent'].includes(displayStatus)
-  const hasOffer     = !canSendOffer && displayStatus !== 'cancelled'
+  const canSendOffer = OFFER_SENDABLE.includes(displayStatus as BookingStatus)
+  const canDecline   = DECLINABLE.includes(displayStatus as BookingStatus)
+  const hasOffer     = !canSendOffer && displayStatus !== 'cancelled' && displayStatus !== 'declined'
 
   // ─────────────────────────────────────────────────────────────────────────────
+
+  const navAnglerName = (item: { angler_full_name?: string | null; angler_name?: string | null }) =>
+    item.angler_full_name ?? item.angler_name ?? 'Guest'
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1100px]">
@@ -322,7 +354,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                   <ChevronLeft size={10} strokeWidth={1.8} />
                 </span>
                 <span className="max-w-[90px] truncate hidden sm:inline" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                  {prevItem.angler_name}
+                  {navAnglerName(prevItem)}
                 </span>
               </Link>
             ) : (
@@ -344,7 +376,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                 style={{ color: 'rgba(10,46,77,0.45)' }}
               >
                 <span className="max-w-[90px] truncate hidden sm:inline" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                  {nextItem.angler_name}
+                  {navAnglerName(nextItem)}
                 </span>
                 <span
                   className="w-6 h-6 rounded-full flex items-center justify-center"
@@ -364,7 +396,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
       <div className="flex items-start justify-between gap-4 flex-wrap mb-8">
         <div>
           <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
-            {inquiry.angler_name}
+            {anglerName}
           </h1>
           <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
             Submitted {submittedDate}
@@ -393,12 +425,12 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
 
           {/* Chat */}
           <InquiryChat
-            inquiryId={id}
+            bookingId={id}
             currentUserId={user.id}
             currentUserRole="guide"
             initialMessages={initialMessages}
-            otherPartyName={inquiry.angler_name}
-            readOnly={displayStatus === 'cancelled'}
+            otherPartyName={anglerName}
+            readOnly={displayStatus === 'cancelled' || displayStatus === 'declined'}
           />
 
           {/* ── Action widget — varies by status ──────────────────────────── */}
@@ -415,11 +447,11 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
             >
               <OfferModal
                 inquiryId={id}
-                anglerDatesFrom={inquiry.dates_from}
-                anglerDatesTo={inquiry.dates_to}
+                anglerDatesFrom={datesFrom || new Date().toISOString().slice(0, 10)}
+                anglerDatesTo={datesTo || new Date().toISOString().slice(0, 10)}
                 anglerAllPeriods={prefs.allDatePeriods}
                 guideWeeklySchedules={guideSchedules}
-                groupSize={inquiry.group_size}
+                groupSize={groupSize}
                 canDecline={canDecline}
                 anglerBrief={anglerBrief}
               />
@@ -462,17 +494,17 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
             />
           )}
 
-          {/* Cancelled */}
-          {displayStatus === 'cancelled' && (
+          {/* Cancelled / declined */}
+          {(displayStatus === 'cancelled' || displayStatus === 'declined') && (
             <ActionStatusCard
               color="red"
               title="Request declined"
-              body="This request has been cancelled."
+              body="This request has been declined."
             />
           )}
 
           {/* Offer recap (when offer was sent) */}
-          {hasOffer && <OfferRecap inquiry={inquiry} />}
+          {hasOffer && <OfferRecap booking={b} />}
 
           {/* Keyboard hint */}
           {navList.length > 1 && (
@@ -519,9 +551,9 @@ function ActionStatusCard({
 // ─── OfferRecap ────────────────────────────────────────────────────────────────
 
 function OfferRecap({
-  inquiry,
+  booking,
 }: {
-  inquiry: {
+  booking: {
     assigned_river:    string | null
     offer_price_eur:   number | null
     offer_details:     string | null
@@ -531,25 +563,25 @@ function OfferRecap({
     offer_meeting_lng: number | null
   }
 }) {
-  if (inquiry.offer_price_eur == null) return null
+  if (booking.offer_price_eur == null) return null
 
   const mapsHref =
-    inquiry.offer_meeting_lat != null && inquiry.offer_meeting_lng != null
-      ? `https://www.google.com/maps?q=${inquiry.offer_meeting_lat},${inquiry.offer_meeting_lng}`
+    booking.offer_meeting_lat != null && booking.offer_meeting_lng != null
+      ? `https://www.google.com/maps?q=${booking.offer_meeting_lat},${booking.offer_meeting_lng}`
       : null
 
   const rows: { label: string; value: React.ReactNode }[] = []
 
-  if (inquiry.offer_date_from != null && inquiry.offer_date_to != null) {
+  if (booking.offer_date_from != null && booking.offer_date_to != null) {
     rows.push({
       label: 'Dates',
-      value: inquiry.offer_date_from === inquiry.offer_date_to
-        ? inquiry.offer_date_from
-        : `${inquiry.offer_date_from} – ${inquiry.offer_date_to}`,
+      value: booking.offer_date_from === booking.offer_date_to
+        ? booking.offer_date_from
+        : `${booking.offer_date_from} – ${booking.offer_date_to}`,
     })
   }
-  if (inquiry.assigned_river != null) {
-    rows.push({ label: 'Location', value: inquiry.assigned_river })
+  if (booking.assigned_river != null) {
+    rows.push({ label: 'Location', value: booking.assigned_river })
   }
   if (mapsHref != null) {
     rows.push({
@@ -557,7 +589,7 @@ function OfferRecap({
       value: (
         <a href={mapsHref} target="_blank" rel="noopener noreferrer"
            className="hover:underline" style={{ color: '#E67E50' }}>
-          {inquiry.offer_meeting_lat!.toFixed(4)}, {inquiry.offer_meeting_lng!.toFixed(4)} ↗
+          {booking.offer_meeting_lat!.toFixed(4)}, {booking.offer_meeting_lng!.toFixed(4)} ↗
         </a>
       ),
     })
@@ -589,11 +621,11 @@ function OfferRecap({
           Total price
         </span>
         <span className="text-base f-display font-bold" style={{ color: '#E67E50' }}>
-          €{inquiry.offer_price_eur}
+          €{booking.offer_price_eur}
         </span>
       </div>
 
-      {inquiry.offer_details != null && inquiry.offer_details.length > 0 && (
+      {booking.offer_details != null && booking.offer_details.length > 0 && (
         <div className="pt-2" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-1.5 f-body"
              style={{ color: 'rgba(10,46,77,0.38)' }}>
@@ -601,7 +633,7 @@ function OfferRecap({
           </p>
           <p className="text-xs f-body whitespace-pre-wrap leading-relaxed"
              style={{ color: 'rgba(10,46,77,0.65)' }}>
-            {inquiry.offer_details}
+            {booking.offer_details}
           </p>
         </div>
       )}

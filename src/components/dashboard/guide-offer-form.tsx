@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { sendOfferByGuide } from '@/actions/inquiries'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
-import { ChevronLeft, ChevronRight, Clock, MapPin } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, MapPin, X } from 'lucide-react'
 
 // ─── Dynamic map import (Leaflet needs browser DOM) ───────────────────────────
 
@@ -44,17 +44,6 @@ export type GuideOfferFormProps = {
   hideAnglerDates?:      boolean
 }
 
-type DayCellState =
-  | 'past'
-  | 'available'
-  | 'angler_window'
-  | 'angler_period'
-  | 'guide_blocked'
-  | 'selected_start'
-  | 'selected_end'
-  | 'selected_both'
-  | 'selected_range'
-
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
 const MONTH_NAMES = [
@@ -67,45 +56,10 @@ function toISO(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
-function getOfferDayCellState(
-  iso:             string,
-  todayISO:        string,
-  anglerFrom:      string,
-  anglerTo:        string,
-  anglerPeriods:   Period[],
-  weeklySchedules: WeeklySchedule[],
-  selectedFrom:    string | null,
-  selectedTo:      string | null,
-  hoveredISO:      string | null,
-): DayCellState {
-  if (iso < todayISO) return 'past'
-
-  const effectiveEnd = selectedTo ?? (selectedFrom != null ? hoveredISO : null)
-
-  if (selectedFrom != null) {
-    const s = effectiveEnd != null && effectiveEnd < selectedFrom ? effectiveEnd : selectedFrom
-    const e = effectiveEnd != null && effectiveEnd < selectedFrom ? selectedFrom : (effectiveEnd ?? selectedFrom)
-    if (iso === s && iso === e) return 'selected_both'
-    if (iso === s)              return 'selected_start'
-    if (iso === e)              return 'selected_end'
-    if (iso > s && iso < e)    return 'selected_range'
-  }
-
-  const jsDay = new Date(iso + 'T12:00:00').getDay()
-  const isoWd = jsDay === 0 ? 6 : jsDay - 1
-  for (const sched of weeklySchedules) {
-    if (iso >= sched.period_from && iso <= sched.period_to) {
-      if (sched.blocked_weekdays.includes(isoWd)) return 'guide_blocked'
-    }
-  }
-
-  for (const p of anglerPeriods) {
-    if (iso >= p.from && iso <= p.to) return 'angler_period'
-  }
-
-  if (iso >= anglerFrom && iso <= anglerTo) return 'angler_window'
-
-  return 'available'
+function fmtDay(iso: string): string {
+  return new Date(iso + 'T12:00:00').toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short',
+  })
 }
 
 // ─── Shared field styles ──────────────────────────────────────────────────────
@@ -131,15 +85,16 @@ const labelStyle: React.CSSProperties = {
   marginBottom:  '6px',
 }
 
-// ─── OfferDatePicker ──────────────────────────────────────────────────────────
+// ─── OfferDatePicker — multi-day toggle ───────────────────────────────────────
+// Guide clicks individual days to add/remove them from the offer.
+// 1–3 days is the typical case; no range-drag, just tap each day.
 
 function OfferDatePicker({
   anglerDatesFrom,
   anglerDatesTo,
   anglerAllPeriods,
   guideWeeklySchedules,
-  selectedFrom,
-  selectedTo,
+  selectedDays,
   onChange,
   disabled,
 }: {
@@ -147,15 +102,15 @@ function OfferDatePicker({
   anglerDatesTo:        string
   anglerAllPeriods:     Period[]
   guideWeeklySchedules: WeeklySchedule[]
-  selectedFrom:         string | null
-  selectedTo:           string | null
-  onChange:             (from: string | null, to: string | null) => void
+  selectedDays:         string[]
+  onChange:             (days: string[]) => void
   disabled:             boolean
 }) {
   const now      = new Date()
   const todayISO = toISO(now.getFullYear(), now.getMonth(), now.getDate())
 
-  const anglerDate = new Date(anglerDatesFrom + 'T12:00:00')
+  // Open to the month containing the angler's first date (or current month)
+  const anglerDate   = new Date(anglerDatesFrom + 'T12:00:00')
   const aY = anglerDate.getFullYear()
   const aM = anglerDate.getMonth()
   const afterToday = aY > now.getFullYear() || (aY === now.getFullYear() && aM >= now.getMonth())
@@ -164,10 +119,11 @@ function OfferDatePicker({
 
   const [viewY, setViewY] = useState(initY)
   const [viewM, setViewM] = useState(initM)
-  const [hoveredISO, setHoveredISO] = useState<string | null>(null)
 
   const daysInMonth = new Date(viewY, viewM + 1, 0).getDate()
   const startPad    = (new Date(viewY, viewM, 1).getDay() + 6) % 7
+
+  const selectedSet = useMemo(() => new Set(selectedDays), [selectedDays])
 
   const canPrev =
     viewY > now.getFullYear() ||
@@ -184,22 +140,31 @@ function OfferDatePicker({
 
   function handleDayClick(iso: string) {
     if (disabled || iso < todayISO) return
-    if (selectedFrom === null) {
-      onChange(iso, null)
-    } else if (selectedTo === null) {
-      if (iso < selectedFrom) onChange(iso, selectedFrom)
-      else                    onChange(selectedFrom, iso)
+    if (selectedSet.has(iso)) {
+      onChange(selectedDays.filter(d => d !== iso))
     } else {
-      onChange(iso, null)
+      onChange([...selectedDays, iso].sort())
     }
   }
 
-  const selectedSummary = useMemo(() => {
-    if (selectedFrom == null) return null
-    if (selectedTo == null)   return `${selectedFrom} → pick end date…`
-    if (selectedFrom === selectedTo) return selectedFrom
-    return `${selectedFrom} → ${selectedTo}`
-  }, [selectedFrom, selectedTo])
+  function isGuideBlocked(iso: string): boolean {
+    const jsDay = new Date(iso + 'T12:00:00').getDay()
+    const isoWd = jsDay === 0 ? 6 : jsDay - 1
+    return guideWeeklySchedules.some(
+      sched =>
+        iso >= sched.period_from &&
+        iso <= sched.period_to &&
+        sched.blocked_weekdays.includes(isoWd),
+    )
+  }
+
+  function isAnglerPeriod(iso: string): boolean {
+    return anglerAllPeriods.some(p => iso >= p.from && iso <= p.to)
+  }
+
+  function isAnglerWindow(iso: string): boolean {
+    return iso >= anglerDatesFrom && iso <= anglerDatesTo
+  }
 
   return (
     <div
@@ -208,6 +173,7 @@ function OfferDatePicker({
     >
       <div className="px-4 pt-4 pb-3">
 
+        {/* Month nav */}
         <div className="flex items-center justify-between mb-3">
           <button
             type="button" onClick={goPrev}
@@ -232,61 +198,56 @@ function OfferDatePicker({
           </button>
         </div>
 
+        {/* Weekday headers */}
         <div className="grid grid-cols-7 mb-1">
           {WEEKDAY_LABELS.map(wl => (
-            <p key={wl} className="text-center text-[9px] font-bold f-body tracking-wide uppercase"
-               style={{ color: 'rgba(10,46,77,0.28)' }}>
+            <p
+              key={wl}
+              className="text-center text-[9px] font-bold f-body tracking-wide uppercase"
+              style={{ color: 'rgba(10,46,77,0.28)' }}
+            >
               {wl}
             </p>
           ))}
         </div>
 
+        {/* Day grid */}
         <div className="grid grid-cols-7">
           {Array.from({ length: startPad }).map((_, i) => <div key={`pad${i}`} />)}
 
           {Array.from({ length: daysInMonth }).map((_, i) => {
-            const d       = i + 1
-            const iso     = toISO(viewY, viewM, d)
+            const d      = i + 1
+            const iso    = toISO(viewY, viewM, d)
+            const isPast = iso < todayISO
+            const isSel  = selectedSet.has(iso)
             const isToday = iso === todayISO
+            const blocked = !isPast && isGuideBlocked(iso)
+            const inAnglerPeriod = !isPast && isAnglerPeriod(iso)
+            const inAnglerWindow = !isPast && !inAnglerPeriod && isAnglerWindow(iso)
 
-            const state = getOfferDayCellState(
-              iso, todayISO,
-              anglerDatesFrom, anglerDatesTo,
-              anglerAllPeriods, guideWeeklySchedules,
-              selectedFrom, selectedTo, hoveredISO,
-            )
-
-            const isPast     = state === 'past'
-            const isSelected = (
-              state === 'selected_start' ||
-              state === 'selected_end'   ||
-              state === 'selected_both'
-            )
-
+            // Background tint on the outer cell (angler's dates hint)
             let outerBg = 'transparent'
-            if      (state === 'selected_range')  outerBg = 'rgba(230,126,80,0.1)'
-            else if (state === 'selected_start')  outerBg = 'linear-gradient(to right, transparent 50%, rgba(230,126,80,0.1) 50%)'
-            else if (state === 'selected_end')    outerBg = 'linear-gradient(to left,  transparent 50%, rgba(230,126,80,0.1) 50%)'
-            else if (state === 'angler_period')   outerBg = 'rgba(59,130,246,0.09)'
-            else if (state === 'angler_window')   outerBg = 'rgba(59,130,246,0.04)'
+            if (inAnglerPeriod) outerBg = 'rgba(59,130,246,0.09)'
+            else if (inAnglerWindow) outerBg = 'rgba(59,130,246,0.04)'
 
+            // Inner circle
             let innerBg: string | undefined
-            if      (isSelected)          innerBg = '#E67E50'
-            else if (isToday && !isPast)  innerBg = 'rgba(10,46,77,0.07)'
+            if (isSel)                 innerBg = '#E67E50'
+            else if (isToday && !isPast) innerBg = 'rgba(10,46,77,0.07)'
 
-            let textColor   = '#0A2E4D'
-            let textWeight  = isToday ? 700 : 400
-            let textDeco    = 'none'
+            let textColor  = '#0A2E4D'
+            let textWeight = isToday ? 700 : 400
+            let textDeco   = 'none'
 
-            if (isPast)                     { textColor = 'rgba(10,46,77,0.2)' }
-            if (isSelected)                 { textColor = 'white'; textWeight = 700 }
-            if (state === 'guide_blocked')  { textColor = 'rgba(239,68,68,0.5)'; textDeco = 'line-through' }
-            if (state === 'angler_period')  textWeight = 600
+            if (isPast)    { textColor = 'rgba(10,46,77,0.2)' }
+            if (isSel)     { textColor = 'white'; textWeight = 700 }
+            if (blocked)   { textColor = 'rgba(239,68,68,0.5)'; textDeco = 'line-through' }
+            if (inAnglerPeriod) textWeight = 600
 
             const tooltipTitle =
-              state === 'guide_blocked' ? 'Your off-day — click to override' :
-              state === 'angler_period' ? "Angler's requested date" :
-              state === 'angler_window' ? "Within angler's window" :
+              blocked        ? 'Your off-day — click to override' :
+              inAnglerPeriod ? "Angler's requested date" :
+              inAnglerWindow ? "Within angler's window" :
               undefined
 
             return (
@@ -299,16 +260,16 @@ function OfferDatePicker({
                   type="button"
                   disabled={isPast || disabled}
                   onClick={() => handleDayClick(iso)}
-                  onMouseEnter={() => !isPast && !disabled && setHoveredISO(iso)}
-                  onMouseLeave={() => setHoveredISO(null)}
                   title={tooltipTitle}
-                  className="w-7 h-7 rounded-full flex items-center justify-center transition-all text-[12px] f-body disabled:cursor-not-allowed"
+                  aria-pressed={isSel}
+                  aria-label={`${d} ${MONTH_NAMES[viewM]}${isSel ? ' (selected)' : ''}`}
+                  className="w-7 h-7 rounded-full flex items-center justify-center transition-all text-[12px] f-body disabled:cursor-not-allowed hover:brightness-90"
                   style={{
-                    background:      innerBg,
-                    color:           textColor,
-                    fontWeight:      textWeight,
-                    textDecoration:  textDeco,
-                    opacity:         isPast ? 0.4 : 1,
+                    background:     innerBg,
+                    color:          textColor,
+                    fontWeight:     textWeight,
+                    textDecoration: textDeco,
+                    opacity:        isPast ? 0.4 : 1,
                   }}
                 >
                   {d}
@@ -319,15 +280,15 @@ function OfferDatePicker({
         </div>
       </div>
 
-      {/* Legend + summary */}
+      {/* Legend */}
       <div
         className="px-4 pb-3 pt-1"
         style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}
       >
-        <div className="flex items-center gap-3 flex-wrap mb-2">
+        <div className="flex items-center gap-3 flex-wrap">
           {[
             { color: 'rgba(59,130,246,0.5)', label: "Angler's dates" },
-            { color: '#E67E50',              label: 'Your confirmed dates' },
+            { color: '#E67E50',              label: 'Your selected days' },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: l.color }} />
@@ -335,23 +296,6 @@ function OfferDatePicker({
             </div>
           ))}
         </div>
-
-        {selectedSummary != null && (
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs f-body font-medium truncate" style={{ color: '#0A2E4D' }}>
-              {selectedSummary}
-            </span>
-            <button
-              type="button"
-              onClick={() => onChange(null, null)}
-              disabled={disabled}
-              className="text-[10px] f-body flex-shrink-0 hover:opacity-70 transition-opacity"
-              style={{ color: 'rgba(10,46,77,0.45)' }}
-            >
-              Clear
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
@@ -373,9 +317,8 @@ export default function GuideOfferForm({
   const [error,   setError]   = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  // Date picker
-  const [offerDateFrom, setOfferDateFrom] = useState<string | null>(null)
-  const [offerDateTo,   setOfferDateTo]   = useState<string | null>(null)
+  // Multi-day selection — array of ISO date strings, sorted asc
+  const [selectedDays, setSelectedDays] = useState<string[]>([])
   const [singleDayDuration, setSingleDayDuration] = useState<'half_day' | 'full_day'>('full_day')
 
   // Fields
@@ -393,14 +336,12 @@ export default function GuideOfferForm({
   const [meetLat, setMeetLat] = useState<number | null>(null)
   const [meetLng, setMeetLng] = useState<number | null>(null)
 
-  const confirmedDays = useMemo(() => {
-    if (offerDateFrom == null || offerDateTo == null) return null
-    const from = new Date(offerDateFrom + 'T12:00:00')
-    const to   = new Date(offerDateTo   + 'T12:00:00')
-    return Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1
-  }, [offerDateFrom, offerDateTo])
+  const numSelectedDays = selectedDays.length
+  const isSingleDay     = numSelectedDays === 1
 
-  const isSingleDay = confirmedDays === 1
+  // Derive from/to for the action (min/max of selected days)
+  const offerDateFrom = selectedDays.length > 0 ? selectedDays[0]! : null
+  const offerDateTo   = selectedDays.length > 0 ? selectedDays[selectedDays.length - 1]! : null
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -419,17 +360,16 @@ export default function GuideOfferForm({
       return
     }
 
-    const offerPriceEur = priceNum
-
     startTransition(async () => {
       const result = await sendOfferByGuide(inquiryId, {
         assignedRiver:   assignedRiver.trim(),
         offerDetails:    offerDetails.trim(),
-        offerPriceEur,
-        offerDateFrom:   offerDateFrom   ?? undefined,
-        offerDateTo:     offerDateTo     ?? undefined,
-        offerMeetingLat: meetLat         ?? undefined,
-        offerMeetingLng: meetLng         ?? undefined,
+        offerPriceEur:   priceNum,
+        offerDateFrom:   offerDateFrom              ?? undefined,
+        offerDateTo:     offerDateTo                ?? undefined,
+        offerDays:       selectedDays.length > 0 ? selectedDays : undefined,
+        offerMeetingLat: meetLat                    ?? undefined,
+        offerMeetingLng: meetLng                    ?? undefined,
       })
       if (result.error != null) {
         setError(result.error)
@@ -496,30 +436,67 @@ export default function GuideOfferForm({
         <p style={labelStyle}>
           Confirm trip dates
           <span className="ml-1 normal-case tracking-normal" style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>
-            (optional)
+            (optional) — tap to select days
           </span>
         </p>
+
         <OfferDatePicker
           anglerDatesFrom={anglerDatesFrom}
           anglerDatesTo={anglerDatesTo}
           anglerAllPeriods={anglerAllPeriods}
           guideWeeklySchedules={guideWeeklySchedules}
-          selectedFrom={offerDateFrom}
-          selectedTo={offerDateTo}
-          onChange={(from, to) => { setOfferDateFrom(from); setOfferDateTo(to) }}
+          selectedDays={selectedDays}
+          onChange={setSelectedDays}
           disabled={isPending}
         />
 
-        {confirmedDays != null && (
+        {/* Selected days chips + clear */}
+        {numSelectedDays > 0 && (
           <div className="mt-2.5 flex flex-col gap-2">
+
+            {/* Chips row */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {selectedDays.map(iso => (
+                <span
+                  key={iso}
+                  className="inline-flex items-center gap-1 text-[11px] f-body font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background: 'rgba(230,126,80,0.12)', color: '#C4622A', border: '1px solid rgba(230,126,80,0.25)' }}
+                >
+                  {fmtDay(iso)}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDays(prev => prev.filter(d => d !== iso))}
+                    disabled={isPending}
+                    aria-label={`Remove ${fmtDay(iso)}`}
+                    className="ml-0.5 opacity-50 hover:opacity-100 transition-opacity"
+                  >
+                    <X size={9} strokeWidth={2} />
+                  </button>
+                </span>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setSelectedDays([])}
+                disabled={isPending}
+                className="text-[10px] f-body hover:opacity-70 transition-opacity ml-1"
+                style={{ color: 'rgba(10,46,77,0.38)' }}
+              >
+                Clear all
+              </button>
+            </div>
+
+            {/* Duration badge */}
             <div className="flex items-center gap-2">
               <span
                 className="inline-flex items-center gap-1.5 text-xs f-body font-semibold px-2.5 py-1 rounded-full"
                 style={{ background: 'rgba(230,126,80,0.1)', color: '#C4622A' }}
               >
                 <Clock size={10} strokeWidth={1.6} />
-                {confirmedDays === 1 ? '1 day' : `${confirmedDays} days`}
+                {numSelectedDays === 1 ? '1 day' : `${numSelectedDays} days`}
               </span>
+
+              {/* Half/full day selector only for single-day picks */}
               {isSingleDay && (
                 <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
                   — select duration:

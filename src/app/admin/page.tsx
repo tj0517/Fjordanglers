@@ -10,7 +10,7 @@ export const metadata = {
 // ─── Status style maps ────────────────────────────────────────────────────────
 
 const INQUIRY_STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  inquiry:   { label: 'New',       color: '#E67E50', bg: 'rgba(230,126,80,0.1)' },
+  pending:   { label: 'New',       color: '#E67E50', bg: 'rgba(230,126,80,0.1)' },
   reviewing: { label: 'Reviewing', color: '#D97706', bg: 'rgba(217,119,6,0.1)'  },
 }
 
@@ -39,9 +39,10 @@ export default async function AdminPage() {
       .select('id', { count: 'exact', head: true })
       .in('status', ['new', 'contacted']),
     supabase
-      .from('trip_inquiries')
+      .from('bookings')
       .select('id', { count: 'exact', head: true })
-      .in('status', ['inquiry', 'reviewing']),
+      .eq('source', 'inquiry')
+      .in('status', ['pending', 'reviewing']),
     supabase
       .from('leads')
       .select('id, name, country, status, created_at')
@@ -49,9 +50,10 @@ export default async function AdminPage() {
       .order('created_at', { ascending: false })
       .limit(5),
     supabase
-      .from('trip_inquiries')
-      .select('id, angler_name, target_species, status, created_at')
-      .in('status', ['inquiry', 'reviewing'])
+      .from('bookings')
+      .select('id, angler_full_name, target_species, status, created_at')
+      .eq('source', 'inquiry')
+      .in('status', ['pending', 'reviewing'])
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -245,12 +247,13 @@ export default async function AdminPage() {
           ) : (
             <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
               {(recentInquiries ?? []).map((inq) => {
-                const is = INQUIRY_STATUS[inq.status] ?? INQUIRY_STATUS.inquiry
-                const species = inq.target_species.slice(0, 2).join(', ')
+                const is = INQUIRY_STATUS[inq.status] ?? INQUIRY_STATUS.pending
+                const speciesArr = (inq.target_species ?? []) as string[]
+                const species = speciesArr.slice(0, 2).join(', ')
                 return (
                   <div key={inq.id} className="flex items-center gap-3 px-5 py-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold f-body text-[#0A2E4D] truncate">{inq.angler_name}</p>
+                      <p className="text-sm font-semibold f-body text-[#0A2E4D] truncate">{inq.angler_full_name ?? '—'}</p>
                       <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.4)' }}>
                         {species !== '' ? species : '—'} · {new Date(inq.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </p>

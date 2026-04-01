@@ -33,21 +33,31 @@ type BookingEntry = {
   id:               string
   experience_id:    string
   booking_date:     string
+  /** All individual dates selected by the angler. When present, the booking
+   *  is rendered on every one of these days — not just booking_date. */
+  requested_dates:  string[] | null
   guests:           number
   status:           string
   angler_full_name: string | null
 }
 
 type InquiryEntry = {
-  id:             string
-  dates_from:     string
-  dates_to:       string
-  /** Confirmed dates set by guide in offer — used for calendar display once accepted */
+  id:              string
+  dates_from:      string
+  dates_to:        string
+  /** All individual dates the angler selected (expanded from their period picks).
+   *  Used in the pre-offer stage to render only actually-selected days instead
+   *  of expanding the full envelope dates_from → dates_to. */
+  requested_dates: string[] | null
   offer_date_from: string | null
   offer_date_to:   string | null
-  angler_name:    string
-  group_size:     number
-  status:         string
+  /** Individual days the guide confirmed in the offer.
+   *  When present, the calendar renders only these days — not a continuous
+   *  range from offer_date_from to offer_date_to. */
+  offer_days:      string[] | null
+  angler_name:     string
+  group_size:      number
+  status:          string
 }
 
 type DayData = {
@@ -55,6 +65,9 @@ type DayData = {
   bookingEntries:  BookingEntry[]
   blockedExpIds:   Set<string>
   inquiryEntries:  InquiryEntry[]
+  /** True when at least one active offer (offer_sent+) covers this day.
+   *  Used to mark the day as fully unavailable on the calendar. */
+  inquiryBlocked:  boolean
 }
 
 export type CalendarGridProps = {
@@ -75,6 +88,12 @@ export type CalendarGridProps = {
    * all experiences are selected (original behaviour).
    */
   calendarExperienceMap?: Record<string, string[]>
+  /**
+   * When provided, all block actions write to `calendar_blocked_dates` for this
+   * calendar instead of `experience_blocked_dates` per experience.
+   * Null / undefined = per-experience mode (All Trips view or guides without calendars).
+   */
+  activeCalendarId?: string | null
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -120,12 +139,25 @@ function formatDayLong(dateStr: string): string {
   })
 }
 
+/** Expand a date range into an array of ISO date strings (inclusive). */
+function expandDateRange(from: string, to: string): string[] {
+  const days: string[] = []
+  let cur = parseUTC(from)
+  const end = parseUTC(to)
+  while (cur <= end) {
+    days.push(cur.toISOString().slice(0, 10))
+    cur = new Date(cur.getTime() + 86_400_000)
+  }
+  return days
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function CalendarGrid({
   year, month, experiences, blocked, bookings, inquiries, calendarMode,
   weeklySchedules = [],
   calendarExperienceMap = {},
+  activeCalendarId = null,
 }: CalendarGridProps) {
   const isShared = calendarMode === 'shared'
   const router = useRouter()
@@ -228,6 +260,11 @@ export default function CalendarGrid({
     [experiences]
   )
 
+  // ── Read-only mode — "All Trips" overview (no calendar selected) ───────────
+  // Blocking is calendar-scoped. Without a target calendar, no write operations
+  // are available — the view is informational only.
+  const isReadOnly = activeCalendarId == null
+
   // ── Visible trips (view filter) ────────────────────────────────────────────
   const visibleExps = useMemo(
     () => experiences.filter(e => visibleExpIds.has(e.id)),
@@ -274,7 +311,7 @@ export default function CalendarGrid({
   const dayMap = useMemo((): Record<string, DayData> => {
     const map: Record<string, DayData> = {}
     function get(key: string): DayData {
-      if (map[key] == null) map[key] = { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [] }
+      if (map[key] == null) map[key] = { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [], inquiryBlocked: false }
       return map[key]!
     }
     // Apply view filter (visibleExpIds) on top of per_listing / shared mode filter
@@ -297,29 +334,57 @@ export default function CalendarGrid({
         cur = new Date(cur.getTime() + 86_400_000)
       }
     }
-    for (const bk of filteredBookings) get(bk.booking_date).bookingEntries.push(bk)
+    // Place each booking on all of its selected dates.
+    // requested_dates = individual dates angler picked (never an envelope).
+    // Falls back to [booking_date] for legacy rows without requested_dates.
+    for (const bk of filteredBookings) {
+      const dates = (bk.requested_dates != null && bk.requested_dates.length > 0)
+        ? bk.requested_dates
+        : [bk.booking_date]
+      for (const d of dates) {
+        const day = get(d)
+        if (!day.bookingEntries.some(e => e.id === bk.id)) day.bookingEntries.push(bk)
+      }
+    }
 
-    // Expand inquiry date ranges into every day they cover.
-    // For confirmed/accepted inquiries that have offer dates, use those instead
-    // of the original (wider) request window — so the calendar shows only the
-    // actual booked days, not the whole "July–September" the angler requested.
-    const CONFIRMED_STATUSES = new Set(['offer_accepted', 'confirmed', 'completed'])
+    // Map inquiry dates onto calendar days.
+    //
+    // Once a guide has sent an offer (offer_sent+), we show only the days they
+    // actually selected — not the full angler-request window:
+    //   1. offer_days present → use those exact ISO dates (no range expansion)
+    //   2. offer_days absent but offer_date_from/to present → expand that range
+    //      (legacy data: offer sent before this column existed)
+    //   3. Pre-offer (inquiry / reviewing) → expand the angler's dates_from→to window
+    //
+    // Additionally, any day covered by an active offer (offer_sent+) is flagged
+    // as inquiryBlocked so the calendar cell renders as fully unavailable.
+    const OFFER_STATUSES = new Set(['offer_sent', 'offer_accepted', 'confirmed', 'completed'])
+
     for (const inq of inquiries) {
-      const useOfferDates =
-        CONFIRMED_STATUSES.has(inq.status) &&
-        inq.offer_date_from != null &&
-        inq.offer_date_to   != null
+      const isOffer = OFFER_STATUSES.has(inq.status)
 
-      const fromStr = useOfferDates ? inq.offer_date_from! : inq.dates_from
-      const toStr   = useOfferDates ? inq.offer_date_to!   : inq.dates_to
+      let daysToMark: string[]
+      if (isOffer && inq.offer_days != null && inq.offer_days.length > 0) {
+        // Exact days the guide selected — no range fill
+        daysToMark = inq.offer_days
+      } else if (isOffer && inq.offer_date_from != null && inq.offer_date_to != null) {
+        // Legacy: guide sent offer before offer_days existed → expand min/max range
+        daysToMark = expandDateRange(inq.offer_date_from, inq.offer_date_to)
+      } else if (inq.requested_dates != null && inq.requested_dates.length > 0) {
+        // Angler's individually selected dates — use as-is (no envelope expansion).
+        // This correctly handles non-contiguous period selections (e.g. May 3–5 AND
+        // May 10–12) without erroneously highlighting the gap days in between.
+        daysToMark = inq.requested_dates
+      } else {
+        // Legacy fallback: no requested_dates stored → expand the envelope.
+        daysToMark = expandDateRange(inq.dates_from, inq.dates_to)
+      }
 
-      let cur = parseUTC(fromStr)
-      const end = parseUTC(toStr)
-      while (cur <= end) {
-        const key = cur.toISOString().slice(0, 10)
+      for (const key of daysToMark) {
         const day = get(key)
         if (!day.inquiryEntries.some(e => e.id === inq.id)) day.inquiryEntries.push(inq)
-        cur = new Date(cur.getTime() + 86_400_000)
+        // Block the day once guide has committed a date in their offer
+        if (isOffer) day.inquiryBlocked = true
       }
     }
 
@@ -334,7 +399,9 @@ export default function CalendarGrid({
 
   // ── Month navigation ───────────────────────────────────────────────────────
   function navigate(y: number, m: number) {
-    startNav(() => router.push(`/dashboard/calendar?year=${y}&month=${m}`, { scroll: false }))
+    const params = new URLSearchParams({ year: String(y), month: String(m) })
+    if (activeCalendarId != null) params.set('calendarId', activeCalendarId)
+    startNav(() => router.push(`/dashboard/calendar?${params}`, { scroll: false }))
   }
   function prevMonth() { navigate(month === 1  ? year - 1 : year, month === 1  ? 12 : month - 1) }
   function nextMonth() { navigate(month === 12 ? year + 1 : year, month === 12 ? 1  : month + 1) }
@@ -436,16 +503,15 @@ export default function CalendarGrid({
   }
 
   async function handleRangeBlock() {
-    const expIds = rangeExpIds
-    if (expIds.length === 0 || rangeStart === '') return
+    if (rangeStart === '') return
+    if (activeCalendarId == null && rangeExpIds.length === 0) return
     setIsSubmitting(true); setActionError(null)
     const end    = rangeEnd >= rangeStart ? rangeEnd : rangeStart
-    const result = await blockDates({
-      experienceIds: expIds,
-      dateStart:     rangeStart,
-      dateEnd:       end,
-      reason:        rangeReason.trim() || undefined,
-    })
+    const result = await blockDates(
+      activeCalendarId != null
+        ? { calendarId: activeCalendarId, dateStart: rangeStart, dateEnd: end, reason: rangeReason.trim() || undefined }
+        : { experienceIds: rangeExpIds, dateStart: rangeStart, dateEnd: end, reason: rangeReason.trim() || undefined }
+    )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     setShowRangeModal(false)
@@ -461,16 +527,15 @@ export default function CalendarGrid({
   }
 
   async function handleMonthBlock() {
-    if (monthBlockExpIds.length === 0) return
+    if (activeCalendarId == null && monthBlockExpIds.length === 0) return
     const firstDay = toDateStr(year, month, 1)
     const lastDay  = toDateStr(year, month, new Date(year, month, 0).getDate())
     setIsSubmitting(true); setActionError(null)
-    const result = await blockDates({
-      experienceIds: monthBlockExpIds,
-      dateStart:     firstDay,
-      dateEnd:       lastDay,
-      reason:        monthBlockReason.trim() || undefined,
-    })
+    const result = await blockDates(
+      activeCalendarId != null
+        ? { calendarId: activeCalendarId, dateStart: firstDay, dateEnd: lastDay, reason: monthBlockReason.trim() || undefined }
+        : { experienceIds: monthBlockExpIds, dateStart: firstDay, dateEnd: lastDay, reason: monthBlockReason.trim() || undefined }
+    )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     setShowMonthModal(false)
@@ -533,16 +598,14 @@ export default function CalendarGrid({
   // ── Actions ────────────────────────────────────────────────────────────────
   async function handleBlock() {
     if (selectedDay == null) return
-    const expIds = blockExpIds
-    if (expIds.length === 0) return
     setIsSubmitting(true); setActionError(null)
     const end = blockEndDate >= selectedDay ? blockEndDate : selectedDay
-    const result = await blockDates({
-      experienceIds: expIds,
-      dateStart:     selectedDay,
-      dateEnd:       end,
-      reason:        blockReason.trim() || undefined,
-    })
+    // Calendar-scoped mode: pass calendarId; legacy mode: pass experienceIds
+    const result = await blockDates(
+      activeCalendarId != null
+        ? { calendarId: activeCalendarId, dateStart: selectedDay, dateEnd: end, reason: blockReason.trim() || undefined }
+        : { experienceIds: blockExpIds, dateStart: selectedDay, dateEnd: end, reason: blockReason.trim() || undefined }
+    )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     closeModal()
@@ -552,14 +615,13 @@ export default function CalendarGrid({
   async function handleMultiBlock() {
     const dates = Array.from(selectedDays).sort()
     if (dates.length === 0) return
-    const expIds = multiBlockExpIds
-    if (expIds.length === 0) return
     setIsSubmitting(true); setActionError(null)
-    const result = await blockMultipleDates({
-      experienceIds: expIds,
-      dates,
-      reason:        multiBlockReason.trim() || undefined,
-    })
+    // Calendar-scoped mode: pass calendarId; legacy mode: pass experienceIds
+    const result = await blockMultipleDates(
+      activeCalendarId != null
+        ? { calendarId: activeCalendarId, dates, reason: multiBlockReason.trim() || undefined }
+        : { experienceIds: multiBlockExpIds, dates, reason: multiBlockReason.trim() || undefined }
+    )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
     exitSelectionMode()
@@ -622,9 +684,10 @@ export default function CalendarGrid({
     () => Object.fromEntries(experiences.map(e => [e.id, e])),
     [experiences],
   )
+  const EMPTY_DAY_DATA: DayData = { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [], inquiryBlocked: false }
   const selData: DayData = selectedDay != null
-    ? (dayMap[selectedDay] ?? { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [] })
-    : { blockedEntries: [], bookingEntries: [], blockedExpIds: new Set(), inquiryEntries: [] }
+    ? (dayMap[selectedDay] ?? EMPTY_DAY_DATA)
+    : EMPTY_DAY_DATA
 
   const sortedSelectedDays = useMemo(() => Array.from(selectedDays).sort(), [selectedDays])
 
@@ -651,7 +714,7 @@ export default function CalendarGrid({
   return (
     <>
       {/* ─── Listings filter pills ───────────────────────────────────────────── */}
-      {experiences.length > 1 && (
+      {experiences.length > 0 && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
           {/* "All" pill */}
           <button
@@ -697,6 +760,19 @@ export default function CalendarGrid({
               </button>
             )
           })}
+        </div>
+      )}
+
+      {/* ─── All Trips hint banner (read-only) ───────────────────────────────── */}
+      {isReadOnly && (
+        <div
+          className="mb-3 flex items-center gap-2.5 px-4 py-3 rounded-xl"
+          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.09)' }}
+        >
+          <Info size={13} strokeWidth={1.5} style={{ color: 'rgba(10,46,77,0.4)', flexShrink: 0 }} />
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+            <strong style={{ color: '#0A2E4D' }}>Overview mode</strong> — to block dates, select a calendar from the left panel.
+          </p>
         </div>
       )}
 
@@ -821,6 +897,10 @@ export default function CalendarGrid({
                   style={{ color: 'rgba(10,46,77,0.55)' }}>
                   Today
                 </button>
+
+                {/* Select + Block actions — hidden in All Trips read-only view */}
+                {!isReadOnly && (
+                  <>
                 <button
                   onClick={enterSelectionMode}
                   className="flex items-center gap-1 sm:gap-1.5 text-xs font-semibold f-body px-2 sm:px-3 py-1.5 rounded-lg transition-colors hover:bg-[#E67E50]/[0.08]"
@@ -903,6 +983,8 @@ export default function CalendarGrid({
                     </div>
                   )}
                 </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -936,11 +1018,16 @@ export default function CalendarGrid({
             const isPast       = dayStr < todayStr
             const isSelected   = selectionMode && selectedDays.has(dayStr)
             const blockedCount  = data?.blockedExpIds.size ?? 0
+            // A day with an active offer is treated as fully unavailable, just like
+            // a manually blocked day — the guide has already committed those dates.
+            const inquiryBlocked = data?.inquiryBlocked ?? false
+
             // Per-trip mode: day is simply blocked or not for this one trip.
             // Shared / "all trips" mode: partial = some but not all visible trips blocked.
-            const fullyBlocked = !isShared && activeTripId != null
+            const manuallyBlocked = !isShared && activeTripId != null
               ? (data?.blockedExpIds.has(activeTripId) ?? false)
               : (blockedCount >= visibleExps.length && blockedCount > 0)
+            const fullyBlocked = manuallyBlocked || inquiryBlocked
             const partBlocked  = !isShared && activeTripId != null
               ? false
               : (blockedCount > 0 && !fullyBlocked)
@@ -967,6 +1054,8 @@ export default function CalendarGrid({
             let bg = '#FDFAF7'
             if (isSelected)               bg = 'rgba(230,126,80,0.13)'
             else if (fullyBlocked)        bg = 'rgba(230,126,80,0.08)'
+            else if (hasConfirmed)        bg = 'rgba(230,126,80,0.08)'
+            else if (hasPending)          bg = 'rgba(230,126,80,0.04)'
             else if (partBlocked)         bg = 'rgba(230,126,80,0.04)'
             else if (isScheduleBlocked)   bg = schedStripe
 
@@ -985,11 +1074,12 @@ export default function CalendarGrid({
                 }}
                 onMouseEnter={e => {
                   e.currentTarget.style.background =
-                    isSelected        ? 'rgba(230,126,80,0.2)'  :
-                    isToday           ? 'rgba(10,46,77,0.07)'   :
-                    fullyBlocked      ? 'rgba(230,126,80,0.14)' :
-                    isScheduleBlocked ? schedStripeHov          :
-                                        'rgba(10,46,77,0.04)'
+                    isSelected                   ? 'rgba(230,126,80,0.2)'  :
+                    isToday                      ? 'rgba(10,46,77,0.07)'   :
+                    fullyBlocked || hasConfirmed ? 'rgba(230,126,80,0.14)' :
+                    hasPending || partBlocked    ? 'rgba(230,126,80,0.08)' :
+                    isScheduleBlocked            ? schedStripeHov          :
+                                                   'rgba(10,46,77,0.04)'
                 }}
                 onMouseLeave={e => { e.currentTarget.style.background = bg }}
                 aria-label={`${dayStr}${isSelected ? ', selected' : ''}${hasConfirmed ? ', booked' : hasPending ? ', pending booking' : ''}${fullyBlocked ? ', fully blocked' : partBlocked ? ', partially blocked' : ''}`}
@@ -1289,7 +1379,8 @@ export default function CalendarGrid({
                        style={{ color: 'rgba(10,46,77,0.38)' }}>
                       Blocked ({selData.blockedEntries.length})
                     </p>
-                    {selData.blockedEntries.length > 1 && (
+                    {/* Unblock controls hidden in All Trips read-only view */}
+                    {!isReadOnly && selData.blockedEntries.length > 1 && (
                       <button
                         onClick={() => {
                           const allIds = new Set(selData.blockedEntries.map(b => b.id))
@@ -1302,7 +1393,7 @@ export default function CalendarGrid({
                         {selData.blockedEntries.every(b => selectedBlockIds.has(b.id)) ? 'Deselect all' : 'Select all'}
                       </button>
                     )}
-                    {selectedBlockIds.size > 0 && (
+                    {!isReadOnly && selectedBlockIds.size > 0 && (
                       <button
                         onClick={handleUnblockSelected}
                         disabled={isUnblockingMulti}
@@ -1328,34 +1419,37 @@ export default function CalendarGrid({
 
                   <div className="flex flex-col gap-2">
                     {selData.blockedEntries.map(b => {
-                      const isSelected = selectedBlockIds.has(b.id)
-                      const isBusy = unblockingId === b.id || isUnblockingMulti
+                      const isSelected = !isReadOnly && selectedBlockIds.has(b.id)
+                      const isBusy = !isReadOnly && (unblockingId === b.id || isUnblockingMulti)
                       return (
                         <div
                           key={b.id}
-                          className="flex items-start gap-3 px-4 py-3 rounded-xl cursor-pointer"
+                          className="flex items-start gap-3 px-4 py-3 rounded-xl"
                           style={{
                             background:    isSelected ? 'rgba(230,126,80,0.1)' : 'rgba(230,126,80,0.06)',
                             border:        isSelected ? '1px solid rgba(230,126,80,0.3)' : '1px solid rgba(230,126,80,0.12)',
                             opacity:       isBusy ? 0.45 : 1,
                             transition:    'all 0.15s',
                             pointerEvents: isBusy ? 'none' : 'auto',
+                            cursor:        isReadOnly ? 'default' : 'pointer',
                           }}
-                          onClick={() => toggleBlockSelect(b.id)}
+                          onClick={() => !isReadOnly && toggleBlockSelect(b.id)}
                         >
-                          {/* Checkbox */}
-                          <div
-                            className="flex-shrink-0 w-4 h-4 rounded flex items-center justify-center mt-0.5"
-                            style={{
-                              background: isSelected ? '#E67E50' : 'transparent',
-                              border:     isSelected ? 'none' : '1.5px solid rgba(10,46,77,0.2)',
-                              transition: 'all 0.12s',
-                            }}
-                          >
-                            {isSelected && (
-                              <Check size={9} strokeWidth={2} style={{ color: 'white' }} />
-                            )}
-                          </div>
+                          {/* Checkbox — hidden in read-only mode */}
+                          {!isReadOnly && (
+                            <div
+                              className="flex-shrink-0 w-4 h-4 rounded flex items-center justify-center mt-0.5"
+                              style={{
+                                background: isSelected ? '#E67E50' : 'transparent',
+                                border:     isSelected ? 'none' : '1.5px solid rgba(10,46,77,0.2)',
+                                transition: 'all 0.12s',
+                              }}
+                            >
+                              {isSelected && (
+                                <Check size={9} strokeWidth={2} style={{ color: 'white' }} />
+                              )}
+                            </div>
+                          )}
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
@@ -1382,8 +1476,8 @@ export default function CalendarGrid({
                             )}
                           </div>
 
-                          {/* Single unblock button (only when nothing selected) */}
-                          {selectedBlockIds.size === 0 && (
+                          {/* Single unblock button — hidden in All Trips read-only view */}
+                          {!isReadOnly && selectedBlockIds.size === 0 && (
                             <button
                               onClick={e => { e.stopPropagation(); void handleUnblock(b.id) }}
                               disabled={unblockingId === b.id || unblockPending}
@@ -1452,8 +1546,17 @@ export default function CalendarGrid({
                         style={{ background: '#fff', border: '1px solid rgba(10,46,77,0.15)', color: '#0A2E4D' }} />
                     </div>
                   </div>
-                  {/* Which trips to block */}
-                  {experiences.length > 1 ? (
+                  {/* Which trips to block — hidden in calendar mode (whole calendar is blocked) */}
+                  {activeCalendarId != null ? (
+                    <div className="mb-4 flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                         style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                      <span className="text-sm">📅</span>
+                      <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                        Will block <strong>entire calendar</strong>
+                        {experiences.length > 0 && ` (${experiences.length} trip${experiences.length !== 1 ? 's' : ''})`}
+                      </p>
+                    </div>
+                  ) : experiences.length > 1 ? (
                     <div className="mb-4">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
                          style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</p>
@@ -1510,17 +1613,19 @@ export default function CalendarGrid({
                   <div className="flex gap-2">
                     <button
                       onClick={handleBlock}
-                      disabled={isSubmitting || blockExpIds.length === 0}
+                      disabled={isSubmitting || (activeCalendarId == null && blockExpIds.length === 0)}
                       className="flex-1 text-sm font-semibold f-body py-2.5 rounded-xl transition-opacity"
                       style={{
                         background: '#E67E50',
                         color:      'white',
-                        opacity:    isSubmitting || blockExpIds.length === 0 ? 0.55 : 1,
-                        cursor:     isSubmitting || blockExpIds.length === 0 ? 'not-allowed' : 'pointer',
+                        opacity:    isSubmitting || (activeCalendarId == null && blockExpIds.length === 0) ? 0.55 : 1,
+                        cursor:     isSubmitting || (activeCalendarId == null && blockExpIds.length === 0) ? 'not-allowed' : 'pointer',
                         border:     'none',
                       }}>
                       {isSubmitting
                         ? 'Blocking…'
+                        : activeCalendarId != null
+                        ? 'Block calendar'
                         : blockExpIds.length === experiences.length
                         ? 'Block all trips'
                         : `Block ${blockExpIds.length} trip${blockExpIds.length !== 1 ? 's' : ''}`}
@@ -1541,12 +1646,15 @@ export default function CalendarGrid({
                    style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
                 {actionError != null && <p className="text-xs f-body" style={{ color: '#DC2626' }}>{actionError}</p>}
                 <div className="flex gap-2 ml-auto">
-                  <button onClick={() => setShowBlockForm(true)}
-                    className="flex items-center gap-2 text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-colors hover:bg-[#E67E50]/[0.08]"
-                    style={{ color: '#E67E50', border: '1px solid rgba(230,126,80,0.2)', cursor: 'pointer', background: 'transparent' }}>
-                    <Plus size={13} />
-                    Block this day
-                  </button>
+                  {/* Block this day — hidden in All Trips read-only view */}
+                  {!isReadOnly && (
+                    <button onClick={() => setShowBlockForm(true)}
+                      className="flex items-center gap-2 text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-colors hover:bg-[#E67E50]/[0.08]"
+                      style={{ color: '#E67E50', border: '1px solid rgba(230,126,80,0.2)', cursor: 'pointer', background: 'transparent' }}>
+                      <Plus size={13} />
+                      Block this day
+                    </button>
+                  )}
                   <button onClick={closeModal}
                     className="text-sm f-body px-4 py-2.5 rounded-xl transition-colors hover:bg-[#0A2E4D]/[0.06]"
                     style={{ color: 'rgba(10,46,77,0.45)', cursor: 'pointer', border: '1px solid rgba(10,46,77,0.08)', background: 'transparent' }}>
@@ -1626,8 +1734,18 @@ export default function CalendarGrid({
                 </div>
               </div>
 
-              {/* Which trips to block */}
-              {experiences.length > 1 ? (
+              {/* Which trips to block — hidden in calendar mode */}
+              {activeCalendarId != null ? (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                     style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                  <span className="text-sm">📅</span>
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    Will block <strong>entire calendar</strong>
+                    {experiences.length > 0 && ` (${experiences.length} trip${experiences.length !== 1 ? 's' : ''})`}
+                    {' '}for {selectedDays.size} day{selectedDays.size !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              ) : experiences.length > 1 ? (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
                      style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</p>
@@ -1691,17 +1809,19 @@ export default function CalendarGrid({
                  style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
               <button
                 onClick={handleMultiBlock}
-                disabled={isSubmitting || selectedDays.size === 0 || multiBlockExpIds.length === 0}
+                disabled={isSubmitting || selectedDays.size === 0 || (activeCalendarId == null && multiBlockExpIds.length === 0)}
                 className="flex-1 text-sm font-semibold f-body py-3 rounded-xl transition-opacity"
                 style={{
                   background: '#E67E50',
                   color:      'white',
                   border:     'none',
-                  cursor:     isSubmitting || multiBlockExpIds.length === 0 ? 'not-allowed' : 'pointer',
-                  opacity:    isSubmitting || multiBlockExpIds.length === 0 ? 0.55 : 1,
+                  cursor:     isSubmitting || (activeCalendarId == null && multiBlockExpIds.length === 0) ? 'not-allowed' : 'pointer',
+                  opacity:    isSubmitting || (activeCalendarId == null && multiBlockExpIds.length === 0) ? 0.55 : 1,
                 }}>
                 {isSubmitting
                   ? 'Blocking…'
+                  : activeCalendarId != null
+                  ? `Block calendar for ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''}`
                   : multiBlockExpIds.length === experiences.length
                   ? `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for all trips`
                   : `Block ${selectedDays.size} day${selectedDays.size !== 1 ? 's' : ''} for ${multiBlockExpIds.length} trip${multiBlockExpIds.length !== 1 ? 's' : ''}`}
@@ -1843,8 +1963,17 @@ export default function CalendarGrid({
                 </div>
               </div>
 
-              {/* ── Which trips to block ──────────────────────────────── */}
-              {experiences.length > 1 ? (
+              {/* ── Which trips to block — hidden in calendar mode ───── */}
+              {activeCalendarId != null ? (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
+                     style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                  <span className="text-sm">📅</span>
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    Will block <strong>entire calendar</strong>
+                    {experiences.length > 0 && ` (${experiences.length} trip${experiences.length !== 1 ? 's' : ''})`}
+                  </p>
+                </div>
+              ) : experiences.length > 1 ? (
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-2"
                      style={{ color: 'rgba(10,46,77,0.5)' }}>Block for</p>
@@ -1923,18 +2052,20 @@ export default function CalendarGrid({
             >
               <button
                 onClick={handleRangeBlock}
-                disabled={isSubmitting || rangeStart === '' || rangeEnd === '' || rangeExpIds.length === 0}
+                disabled={isSubmitting || rangeStart === '' || rangeEnd === '' || (activeCalendarId == null && rangeExpIds.length === 0)}
                 className="flex-1 text-sm font-semibold f-body py-3 rounded-xl transition-opacity"
                 style={{
                   background: '#E67E50',
                   color:      'white',
                   border:     'none',
-                  opacity: isSubmitting || rangeStart === '' || rangeExpIds.length === 0 ? 0.55 : 1,
-                  cursor:  isSubmitting || rangeStart === '' || rangeExpIds.length === 0 ? 'not-allowed' : 'pointer',
+                  opacity: isSubmitting || rangeStart === '' || (activeCalendarId == null && rangeExpIds.length === 0) ? 0.55 : 1,
+                  cursor:  isSubmitting || rangeStart === '' || (activeCalendarId == null && rangeExpIds.length === 0) ? 'not-allowed' : 'pointer',
                 }}
               >
                 {isSubmitting
                   ? 'Blocking…'
+                  : activeCalendarId != null
+                  ? 'Block calendar dates'
                   : rangeExpIds.length === experiences.length
                   ? 'Block dates for all trips'
                   : `Block dates for ${rangeExpIds.length} trip${rangeExpIds.length !== 1 ? 's' : ''}`}

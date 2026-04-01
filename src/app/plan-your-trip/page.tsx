@@ -132,7 +132,7 @@ function PlanYourTripForm() {
         return
       }
 
-      setInquiryId(result.inquiryId)
+      setInquiryId(result.bookingId)
       setSubmitted(true)
     })
   }

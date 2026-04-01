@@ -1,19 +1,23 @@
 /**
- * Stripe webhook handler — Wave 4B.
+ * Stripe webhook handler — unified booking model.
+ *
+ * After the DB unification (2026-04-01), all bookings (direct + inquiry)
+ * live in the bookings table. Webhooks only need bookingId — no more
+ * separate inquiryId branch.
  *
  * Handles:
- *   checkout.session.completed → confirm booking or inquiry
+ *   checkout.session.completed → confirm booking (deposit OR balance OR offer)
  *   charge.refunded            → mark booking refunded
+ *   account.updated            → sync guide Stripe flags
  *
- * Always return 200 to prevent infinite Stripe retries.
- * Verify signature before processing any event.
+ * Always returns 200 to prevent infinite Stripe retries.
  */
 
 import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
-import { createBookingFromInquiry } from '@/lib/create-booking-from-inquiry'
+import { unblockBookingDates } from '@/lib/booking-blocks'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,7 +25,7 @@ export const dynamic = 'force-dynamic'
 // ─── Handler ──────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request): Promise<Response> {
-  const rawBody = await req.text()
+  const rawBody  = await req.text()
   const signature = req.headers.get('stripe-signature')
 
   if (!signature) {
@@ -36,7 +40,7 @@ export async function POST(req: Request): Promise<Response> {
     return new Response('Invalid signature', { status: 400 })
   }
 
-  // Always return 200 — log errors internally, do not let Stripe retry logic issues
+  // Always return 200 — log errors internally
   try {
     switch (event.type) {
       case 'checkout.session.completed':
@@ -46,17 +50,13 @@ export async function POST(req: Request): Promise<Response> {
         await handleChargeRefunded(event.data.object as Stripe.Charge)
         break
       case 'account.updated':
-        // Fires when a Custom Connect account's verification status changes.
-        // Syncs stripe_charges_enabled + stripe_payouts_enabled to DB.
         await handleAccountUpdated(event.data.object as Stripe.Account)
         break
       default:
-        // Unknown event type — ignore silently
         break
     }
   } catch (err) {
     console.error(`[webhook] Error processing ${event.type}:`, err)
-    // Return 200 anyway — Stripe should not endlessly retry logic errors
   }
 
   return new Response('OK', { status: 200 })
@@ -66,13 +66,18 @@ export async function POST(req: Request): Promise<Response> {
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const db = createServiceClient()
-  const { bookingId, inquiryId, paymentType } = session.metadata ?? {}
+  const { bookingId, paymentType } = session.metadata ?? {}
+
+  if (!bookingId) {
+    console.warn('[webhook] checkout.session.completed with no bookingId in metadata')
+    return
+  }
+
+  const paymentIntentId =
+    typeof session.payment_intent === 'string' ? session.payment_intent : null
 
   // ── Balance payment (70% remaining, Stripe path) ───────────────────────────
-  if (bookingId && paymentType === 'balance') {
-    const paymentIntentId =
-      typeof session.payment_intent === 'string' ? session.payment_intent : null
-
+  if (paymentType === 'balance') {
     const { data: existing } = await db
       .from('bookings')
       .select('id, status, balance_paid_at')
@@ -84,9 +89,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       return
     }
 
-    // Idempotency: already completed → skip
+    // Idempotency
     if (existing.status === 'completed' || existing.balance_paid_at != null) {
-      console.log(`[webhook] Balance for booking ${bookingId} already recorded — skipping`)
+      console.log(`[webhook] Balance for ${bookingId} already recorded — skipping`)
       return
     }
 
@@ -103,105 +108,57 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
-  // ── Classic booking (30% deposit) ─────────────────────────────────────────
-  if (bookingId) {
-    const paymentIntentId =
-      typeof session.payment_intent === 'string' ? session.payment_intent : null
+  // ── Deposit / full offer payment ───────────────────────────────────────────
+  //
+  // Covers both:
+  //   - Direct flow:  40% deposit (status: accepted → confirmed)
+  //   - Inquiry flow: full offer amount (status: offer_accepted → confirmed)
+  //
+  const { data: existing } = await db
+    .from('bookings')
+    .select('id, status, stripe_payment_intent_id, source')
+    .eq('id', bookingId)
+    .single()
 
-    const { data: existing } = await db
-      .from('bookings')
-      .select('id, status, stripe_payment_intent_id')
-      .eq('id', bookingId)
-      .single()
-
-    if (!existing) {
-      console.error(`[webhook] Booking ${bookingId} not found`)
-      return
-    }
-
-    // Idempotency: already confirmed → skip
-    if (existing.status === 'confirmed') {
-      console.log(`[webhook] Booking ${bookingId} already confirmed — skipping`)
-      return
-    }
-
-    // Angler paid after guide accepted (destination charge) → confirm immediately.
-    await db
-      .from('bookings')
-      .update({
-        status:                   'confirmed',
-        confirmed_at:             new Date().toISOString(),
-        stripe_payment_intent_id: paymentIntentId,
-      })
-      .eq('id', bookingId)
-
-    console.log(`[webhook] Booking ${bookingId} confirmed — sending emails`)
-    // TODO: sendBookingConfirmationEmail(bookingId)
+  if (!existing) {
+    console.error(`[webhook] Booking ${bookingId} not found`)
     return
   }
 
-  // ── Inquiry / Icelandic flow ───────────────────────────────────────────────
-  if (inquiryId) {
-    const { data: existing } = await db
-      .from('trip_inquiries')
-      .select('id, status')
-      .eq('id', inquiryId)
-      .single()
-
-    if (!existing) {
-      console.error(`[webhook] Inquiry ${inquiryId} not found`)
-      return
-    }
-
-    if (existing.status === 'confirmed') {
-      console.log(`[webhook] Inquiry ${inquiryId} already confirmed — skipping`)
-      return
-    }
-
-    const paymentIntentId =
-      typeof session.payment_intent === 'string' ? session.payment_intent : null
-
-    await db
-      .from('trip_inquiries')
-      .update({
-        status: 'confirmed',
-        stripe_payment_intent_id: paymentIntentId,
-      })
-      .eq('id', inquiryId)
-
-    // Create a real booking record so the chat & booking dashboard work
-    await createBookingFromInquiry(inquiryId, db, paymentIntentId)
-
-    console.log(`[webhook] Inquiry ${inquiryId} confirmed — booking created, sending emails`)
-    // TODO: sendInquiryConfirmationEmail(inquiryId)
+  // Idempotency
+  if (existing.status === 'confirmed') {
+    console.log(`[webhook] Booking ${bookingId} already confirmed — skipping`)
     return
   }
 
-  console.warn('[webhook] checkout.session.completed with no bookingId or inquiryId in metadata')
+  await db
+    .from('bookings')
+    .update({
+      status:                   'confirmed',
+      confirmed_at:             new Date().toISOString(),
+      stripe_payment_intent_id: paymentIntentId,
+    })
+    .eq('id', bookingId)
+
+  console.log(`[webhook] Booking ${bookingId} confirmed (source: ${existing.source})`)
+  // TODO: sendBookingConfirmationEmail(bookingId)
 }
 
 // ─── account.updated ──────────────────────────────────────────────────────────
-// Stripe fires this for Custom Connect accounts when KYC verification changes.
-// For transfers-only accounts, payouts_enabled becomes true once Stripe approves.
 
 async function handleAccountUpdated(account: Stripe.Account) {
   const db = createServiceClient()
 
-  // Idempotency: only update if there's actually a change to record
   const { data: guide } = await db
     .from('guides')
     .select('id, stripe_charges_enabled, stripe_payouts_enabled')
     .eq('stripe_account_id', account.id)
     .single()
 
-  if (!guide) {
-    // Account not yet linked to a guide (race condition during setup) — safe to ignore
-    return
-  }
+  if (!guide) return
 
   const chargesChanged = guide.stripe_charges_enabled !== account.charges_enabled
   const payoutsChanged = guide.stripe_payouts_enabled !== account.payouts_enabled
-
   if (!chargesChanged && !payoutsChanged) return
 
   await db
@@ -214,7 +171,6 @@ async function handleAccountUpdated(account: Stripe.Account) {
 
   if (account.payouts_enabled && payoutsChanged) {
     console.log(`[webhook] Guide ${guide.id} Stripe account verified — payouts enabled`)
-    // TODO: send "your account is ready" email to guide
   }
 }
 
@@ -227,7 +183,6 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
 
   const db = createServiceClient()
 
-  // Find by payment_intent_id
   const { data: booking } = await db
     .from('bookings')
     .select('id, status')
@@ -235,23 +190,18 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     .single()
 
   if (!booking) {
-    // Try inquiries
-    const { data: inquiry } = await db
-      .from('trip_inquiries')
-      .select('id, status')
-      .eq('stripe_payment_intent_id', paymentIntentId)
-      .single()
-
-    if (inquiry && inquiry.status !== 'cancelled') {
-      await db
-        .from('trip_inquiries')
-        .update({ status: 'cancelled' })
-        .eq('id', inquiry.id)
-    }
+    console.warn(`[webhook] charge.refunded: no booking found for payment_intent ${paymentIntentId}`)
     return
   }
 
   if (booking.status !== 'refunded') {
-    await db.from('bookings').update({ status: 'refunded' }).eq('id', booking.id)
+    await db
+      .from('bookings')
+      .update({ status: 'refunded' })
+      .eq('id', booking.id)
+
+    // Remove blocked dates created when this booking was accepted
+    unblockBookingDates(db, booking.id)
+      .catch(e => console.error('[webhook] unblockBookingDates:', e))
   }
 }

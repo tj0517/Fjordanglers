@@ -145,13 +145,13 @@ export default function BookingCheckoutForm({
         </p>
         <HelpWidget
           title="Your booking request"
-          description="No payment is taken now. Your request goes to the guide, who confirms within 24 hours. After confirmation you pay a 30% deposit."
+          description="No payment is taken now. Your request goes to the guide, who confirms within 24 hours. After confirmation you pay a 40% deposit."
           items={[
             { icon: '👤', title: 'Name & email', text: 'Used to send your booking confirmation and to identify you with the guide.' },
             { icon: '📞', title: 'Phone (optional)', text: 'Useful for last-minute changes or if the guide needs to reach you quickly.' },
             { icon: '🌍', title: 'Country', text: 'Helps the guide understand where their clients come from.' },
             { icon: '💬', title: 'Special requests', text: 'Dietary requirements, gear needs, accessibility, or anything the guide should know before your trip.' },
-            { icon: '🔒', title: 'No payment now', text: 'You only pay after the guide confirms. A 30% deposit is charged via Stripe — the balance is due before the trip.' },
+            { icon: '🔒', title: 'No payment now', text: 'You only pay after the guide confirms. A 40% deposit is charged via Stripe — the balance is due before the trip.' },
           ]}
         />
       </div>
@@ -432,7 +432,7 @@ export default function BookingCheckoutForm({
         className="text-center text-xs f-body"
         style={{ color: 'rgba(10,46,77,0.38)' }}
       >
-        No payment now. Guide confirms within 24h — then 30% deposit via Stripe.
+        No payment now. Guide confirms within 24h — then 40% deposit via Stripe.
       </p>
     </form>
   )

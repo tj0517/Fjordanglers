@@ -21,7 +21,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
   const { data: booking } = await service
     .from('bookings')
-    .select('id, booking_date, guests, total_eur, platform_fee_eur, angler_full_name, angler_email, status, experiences(title), guides(full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, iban_holder_name, iban_bic, iban_bank_name)')
+    .select('id, booking_date, guests, total_eur, platform_fee_eur, angler_full_name, angler_email, status, experiences(title), guides(full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled)')
     .eq('id', bookingId)
     .single()
 
@@ -33,10 +33,6 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
     stripe_account_id:      string | null
     stripe_charges_enabled: boolean | null
     stripe_payouts_enabled: boolean | null
-    iban:                   string | null
-    iban_holder_name:       string | null
-    iban_bic:               string | null
-    iban_bank_name:         string | null
   } | null
 
   const guideName    = guideData?.full_name ?? 'your guide'
@@ -52,8 +48,6 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
   const platformFeeEur = booking.platform_fee_eur ?? 0
   const payNowEur      = Math.round((platformFeeEur + serviceFeeEur) * 100) / 100
   const payGuideEur    = Math.round((subtotalEur - platformFeeEur) * 100) / 100
-
-  const hasIban = !!guideData?.iban
 
   const dateFormatted = new Date(`${booking.booking_date}T12:00:00`).toLocaleDateString('en-GB', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -129,7 +123,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.14)' }}
             >
               <p className="text-xs f-body font-semibold mb-0.5" style={{ color: '#0A2E4D' }}>
-                💳 Platform fee — €{payNowEur} via Stripe
+                💳 Deposit — €{payNowEur}
               </p>
               <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
                 Charged securely online once the guide confirms your booking.
@@ -142,43 +136,11 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.08)' }}
             >
               <p className="text-xs f-body font-semibold mb-0.5" style={{ color: '#0A2E4D' }}>
-                🏦 Guide&apos;s fee — €{payGuideEur} directly
+                🏦 Rest — €{payGuideEur}
               </p>
               <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
                 Pay the guide directly by cash or bank transfer before your trip.
               </p>
-              {/* Show IBAN if guide has saved it */}
-              {hasIban && (
-                <div
-                  className="mt-2 p-3 rounded-xl"
-                  style={{ background: '#F3EDE4', border: '1px solid rgba(10,46,77,0.08)' }}
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                    Bank transfer details
-                  </p>
-                  {guideData?.iban_holder_name && (
-                    <p className="text-[11px] f-body" style={{ color: '#0A2E4D' }}>
-                      <span style={{ color: 'rgba(10,46,77,0.45)' }}>Name:</span>{' '}
-                      {guideData.iban_holder_name}
-                    </p>
-                  )}
-                  <p className="text-[11px] f-body" style={{ color: '#0A2E4D' }}>
-                    <span style={{ color: 'rgba(10,46,77,0.45)' }}>IBAN:</span>{' '}
-                    <span className="font-mono">{guideData?.iban}</span>
-                  </p>
-                  {guideData?.iban_bic && (
-                    <p className="text-[11px] f-body" style={{ color: '#0A2E4D' }}>
-                      <span style={{ color: 'rgba(10,46,77,0.45)' }}>BIC:</span>{' '}
-                      {guideData.iban_bic}
-                    </p>
-                  )}
-                  {guideData?.iban_bank_name && (
-                    <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                      {guideData.iban_bank_name}
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         ) : (
@@ -187,7 +149,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
             style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.14)' }}
           >
             <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              💳 Once the guide confirms, you&apos;ll pay a 30% deposit securely via Stripe. The remaining balance is due before the trip.
+              💳 Once the guide confirms, you&apos;ll pay a 40% deposit securely via Stripe. The remaining balance is due before the trip.
             </p>
           </div>
         )}

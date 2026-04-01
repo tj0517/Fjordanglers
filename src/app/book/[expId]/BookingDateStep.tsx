@@ -27,6 +27,7 @@ import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import type { DurationOptionPayload } from '@/actions/experiences'
 import {
   MultiPeriodPicker,
+  encodePeriodsParam,
   type Period,
   type BlockedRange,
 } from '@/components/trips/multi-period-picker'
@@ -489,14 +490,6 @@ function PriceEstimate({
           €{subtotal}
         </span>
       </div>
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-          Service fee (5%)
-        </span>
-        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-          €{fee}
-        </span>
-      </div>
       <div style={{ height: '1px', background: 'rgba(10,46,77,0.07)', marginBottom: '10px' }} />
       <div className="flex items-baseline justify-between">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
@@ -508,7 +501,7 @@ function PriceEstimate({
             €{total}
           </p>
           <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
-            incl. fees · no payment now
+            no payment now
           </p>
         </div>
       </div>
@@ -663,6 +656,11 @@ export default function BookingDateStep({
       pkgLabel:   requestDurationLabel,
       guests:     String(groupSize),
     })
+    // Preserve individual period boundaries so the booking stores every selected
+    // date — not just the envelope start/end. Needed for correct calendar blocking.
+    if (periods.length > 1) {
+      params.set('periods', encodePeriodsParam(periods))
+    }
     router.push(`/book/${expId}?${params.toString()}`)
   }
 
@@ -711,7 +709,7 @@ export default function BookingDateStep({
           title="Step 1 — Choose your dates"
           description="Pick how you'd like to book this fishing trip. Either way, there's no payment now — the guide always reviews and confirms first."
           items={[
-            { icon: '📅', title: 'Book directly', text: 'Select exact date(s) from the calendar. Guide confirms within 24 hours, then you pay a 30% deposit.' },
+            { icon: '📅', title: 'Book directly', text: 'Select exact date(s) from the calendar. Guide confirms within 24 hours, then you pay a 40% deposit.' },
             { icon: '✉️', title: 'Send request', text: "Tell the guide a window of availability — they'll schedule the exact dates and confirm. Great if your dates are flexible." },
             { icon: '📦', title: 'Package', text: 'Each package has a price and duration. Choose the one that fits your trip style.' },
             { icon: '👥', title: 'Anglers', text: 'How many people are fishing? Price is calculated per angler for most packages.' },
@@ -951,14 +949,6 @@ export default function BookingDateStep({
                   €{directSubtotal}
                 </span>
               </div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-                  Service fee (5%)
-                </span>
-                <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-                  €{directFee}
-                </span>
-              </div>
               <div style={{ height: '1px', background: 'rgba(10,46,77,0.07)', marginBottom: '10px' }} />
               <div className="flex items-baseline justify-between">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
@@ -970,7 +960,7 @@ export default function BookingDateStep({
                     €{directTotal}
                   </p>
                   <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                    incl. fees · no payment now
+                    no payment now
                   </p>
                 </div>
               </div>
@@ -1175,14 +1165,6 @@ export default function BookingDateStep({
                         €{subtotal}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-                        Service fee (5%)
-                      </span>
-                      <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-                        €{fee}
-                      </span>
-                    </div>
                     <div style={{ height: '1px', background: 'rgba(10,46,77,0.07)', marginBottom: '10px' }} />
                     <div className="flex items-baseline justify-between">
                       <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
@@ -1194,7 +1176,7 @@ export default function BookingDateStep({
                           €{total}
                         </p>
                         <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                          incl. fees · no payment now
+                          no payment now
                         </p>
                       </div>
                     </div>
@@ -1225,7 +1207,7 @@ export default function BookingDateStep({
           </button>
 
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            No payment now — guide confirms exact dates &amp; you pay a 30% deposit.
+            No payment now — guide confirms exact dates &amp; you pay a 40% deposit.
           </p>
         </>
       )}

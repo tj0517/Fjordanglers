@@ -1,20 +1,23 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type InquiryStatus = Database['public']['Enums']['trip_inquiry_status']
+type BookingStatus = Database['public']['Enums']['booking_status']
 
-const STATUS_STYLES: Record<InquiryStatus, { bg: string; color: string; label: string }> = {
-  inquiry:        { bg: 'rgba(230,126,80,0.12)', color: '#E67E50',  label: 'New'            },
+const STATUS_STYLES: Partial<Record<BookingStatus, { bg: string; color: string; label: string }>> = {
+  pending:        { bg: 'rgba(230,126,80,0.12)', color: '#E67E50',  label: 'New'            },
   reviewing:      { bg: 'rgba(59,130,246,0.1)',  color: '#3B82F6',  label: 'Reviewing'      },
   offer_sent:     { bg: 'rgba(139,92,246,0.1)',  color: '#7C3AED',  label: 'Offer Sent'     },
   offer_accepted: { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A',  label: 'Offer Accepted' },
   confirmed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A',  label: 'Confirmed'      },
   completed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A',  label: 'Completed'      },
   cancelled:      { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626',  label: 'Cancelled'      },
+  declined:       { bg: 'rgba(239,68,68,0.08)',  color: '#B91C1C',  label: 'Declined'       },
 }
+
+const DEFAULT_STATUS = { bg: 'rgba(10,46,77,0.07)', color: '#0A2E4D', label: '—' }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -23,18 +26,22 @@ export const metadata = {
 }
 
 export default async function AdminInquiriesPage() {
-  const supabase = await createClient()
+  // Use service client — admin bypasses RLS
+  const supabase = createServiceClient()
 
   const { data: inquiries } = await supabase
-    .from('trip_inquiries')
-    .select('id, angler_name, angler_email, dates_from, dates_to, target_species, group_size, experience_level, status, created_at')
+    .from('bookings')
+    .select(
+      'id, angler_full_name, angler_email, booking_date, date_to, target_species, guests, experience_level, status, created_at',
+    )
+    .eq('source', 'inquiry')
     .order('created_at', { ascending: false })
 
   const all = inquiries ?? []
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const total       = all.length
-  const pending     = all.filter(i => i.status === 'inquiry' || i.status === 'reviewing').length
+  const pending     = all.filter(i => i.status === 'pending' || i.status === 'reviewing').length
   const offerSent   = all.filter(i => i.status === 'offer_sent').length
   const confirmed   = all.filter(i => i.status === 'confirmed' || i.status === 'offer_accepted').length
 
@@ -131,13 +138,21 @@ export default async function AdminInquiriesPage() {
         ) : (
           <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '780px' }}>
             {all.map(inquiry => {
-              const s = STATUS_STYLES[inquiry.status]
+              const s = STATUS_STYLES[inquiry.status as BookingStatus] ?? DEFAULT_STATUS
               const submitted = new Date(inquiry.created_at).toLocaleDateString('en-GB', {
                 day: 'numeric', month: 'short',
               })
-              const speciesShort = (inquiry.target_species ?? []).slice(0, 2).join(', ')
-              const speciesMore = Math.max(0, (inquiry.target_species ?? []).length - 2)
-              const levelLabel = { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[inquiry.experience_level] ?? inquiry.experience_level
+              const speciesArr  = (inquiry.target_species ?? []) as string[]
+              const speciesShort = speciesArr.slice(0, 2).join(', ')
+              const speciesMore  = Math.max(0, speciesArr.length - 2)
+              const levelLabel   = ({
+                beginner:     'Beginner',
+                intermediate: 'Intermediate',
+                expert:       'Expert',
+              } as Record<string, string>)[inquiry.experience_level ?? ''] ?? (inquiry.experience_level ?? '—')
+
+              const datesFrom = inquiry.booking_date ?? '—'
+              const datesTo   = inquiry.date_to ?? datesFrom
 
               return (
                 <Link
@@ -153,27 +168,27 @@ export default async function AdminInquiriesPage() {
                   {/* Angler */}
                   <div className="min-w-0">
                     <p className="text-[#0A2E4D] text-sm font-semibold f-body truncate">
-                      {inquiry.angler_name}
+                      {inquiry.angler_full_name ?? '—'}
                     </p>
                     <p className="text-[#0A2E4D]/40 text-xs f-body truncate">
-                      {inquiry.angler_email}
+                      {inquiry.angler_email ?? '—'}
                     </p>
                   </div>
 
                   {/* Dates */}
                   <p className="text-[#0A2E4D]/65 text-xs f-body">
-                    {inquiry.dates_from} – {inquiry.dates_to}
+                    {datesFrom} – {datesTo}
                   </p>
 
                   {/* Species */}
                   <p className="text-[#0A2E4D]/65 text-xs f-body truncate">
-                    {speciesShort}
+                    {speciesShort || '—'}
                     {speciesMore > 0 && ` +${speciesMore}`}
                   </p>
 
                   {/* Group */}
                   <p className="text-[#0A2E4D]/65 text-sm font-medium f-body">
-                    {inquiry.group_size}
+                    {inquiry.guests ?? '—'}
                   </p>
 
                   {/* Level */}

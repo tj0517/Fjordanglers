@@ -21,7 +21,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       <AccountSidebar displayName={displayName} />
-      <main style={{ marginLeft: '240px', minHeight: '100vh' }}>
+      <main className="lg:ml-[240px] pt-14 lg:pt-0" style={{ minHeight: '100vh' }}>
         {children}
       </main>
     </div>

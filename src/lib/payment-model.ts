@@ -24,6 +24,12 @@ import { env } from '@/lib/env'
 
 export type PaymentModel = 'stripe_connect' | 'manual'
 
+// ─── Fee constants ─────────────────────────────────────────────────────────────
+
+const SERVICE_FEE_RATE    = 0.05
+const SERVICE_FEE_CAP_EUR = 50          // max €50 service fee
+const DEPOSIT_RATE_SC     = 0.40        // Stripe Connect deposit rate
+
 // ─── Derivation ───────────────────────────────────────────────────────────────
 
 /**
@@ -67,8 +73,8 @@ export type DepositBreakdown = {
  * Calculates how the trip total is split across payment channels.
  *
  * stripe_connect:
- *   payNow = 30% deposit of (tripTotal + serviceFee)
- *   (balance = remaining 70%, charged later before trip)
+ *   payNow = 40% deposit of (tripTotal + serviceFee)
+ *   (balance = remaining 60%, charged later before trip)
  *
  * manual:
  *   payNow  = commissionEur + serviceFeeEur  (goes to FjordAnglers via Direct Charge)
@@ -79,13 +85,12 @@ export function calcDepositBreakdown(
   commissionRate: number,
   paymentModel:   PaymentModel,
 ): DepositBreakdown {
-  const SERVICE_FEE_RATE = 0.05
-  const serviceFeeEur  = Math.round(tripTotalEur * SERVICE_FEE_RATE * 100) / 100
+  const serviceFeeEur  = Math.min(Math.round(tripTotalEur * SERVICE_FEE_RATE * 100) / 100, SERVICE_FEE_CAP_EUR)
   const commissionEur  = Math.round(tripTotalEur * commissionRate  * 100) / 100
   const grandTotalEur  = Math.round((tripTotalEur + serviceFeeEur) * 100) / 100
 
   if (paymentModel === 'stripe_connect') {
-    const depositEur = Math.round(grandTotalEur * 0.30 * 100) / 100
+    const depositEur = Math.round(grandTotalEur * DEPOSIT_RATE_SC * 100) / 100
     return {
       tripTotalEur,
       serviceFeeEur,
@@ -110,6 +115,29 @@ export function calcDepositBreakdown(
     grandTotalEur,
     paymentModel,
   }
+}
+
+/**
+ * Returns the deposit amount the angler pays now (EUR).
+ *
+ * stripe_connect: (subtotal + capped service fee) × 40%
+ * manual:         subtotal × commissionRate + capped service fee
+ *
+ * @param subtotalEur  Trip price before service fee (price_per_person × guests × days)
+ */
+export function calcDepositEur(
+  subtotalEur:    number,
+  commissionRate: number,
+  paymentModel:   PaymentModel,
+): number {
+  const serviceFeeEur = Math.min(Math.round(subtotalEur * SERVICE_FEE_RATE * 100) / 100, SERVICE_FEE_CAP_EUR)
+  if (paymentModel === 'stripe_connect') {
+    const grandTotal = Math.round((subtotalEur + serviceFeeEur) * 100) / 100
+    return Math.round(grandTotal * DEPOSIT_RATE_SC * 100) / 100
+  }
+  // manual: commission + service fee = platform's take
+  const commissionEur = Math.round(subtotalEur * commissionRate * 100) / 100
+  return Math.round((commissionEur + serviceFeeEur) * 100) / 100
 }
 
 /**

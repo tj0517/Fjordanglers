@@ -6,7 +6,7 @@
  */
 
 import { useState, useTransition } from 'react'
-import { updateInquiryStatus, sendOffer } from '@/actions/inquiries'
+import { markBookingReviewing, sendOffer } from '@/actions/bookings'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,12 +35,8 @@ export default function AdminInquiryActions({ inquiryId, status, guides }: Props
   function handleMarkReviewing() {
     setError(null)
     startTransition(async () => {
-      const result = await updateInquiryStatus(inquiryId, 'reviewing')
-      if (result.error) {
-        setError(result.error)
-      } else {
-        setSuccess('Marked as reviewing.')
-      }
+      await markBookingReviewing(inquiryId)
+      setSuccess('Marked as reviewing.')
     })
   }
 
@@ -58,11 +54,10 @@ export default function AdminInquiryActions({ inquiryId, status, guides }: Props
 
     startTransition(async () => {
       const result = await sendOffer(inquiryId, {
-        assignedGuideId,
-        assignedRiver: assignedRiver.trim(),
+        assignedRiver:    assignedRiver.trim(),
         offerPriceMinEur: priceMinNum,
-        offerPriceEur: priceNum,
-        offerDetails: offerDetails.trim(),
+        offerPriceEur:    priceNum,
+        offerDetails:     offerDetails.trim(),
       })
       if (result.error) {
         setError(result.error)

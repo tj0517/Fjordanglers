@@ -1,22 +1,27 @@
 'use client'
 
 import { useTransition, useState } from 'react'
-import { acceptOffer } from '@/actions/inquiries'
+import { acceptBookingOffer } from '@/actions/bookings'
 import { Loader2 } from 'lucide-react'
 
-export default function AcceptOfferButton({ inquiryId }: { inquiryId: string }) {
+export default function AcceptOfferButton({ bookingId }: { bookingId: string }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   function handleAccept() {
     setError(null)
     startTransition(async () => {
-      const result = await acceptOffer(inquiryId)
+      const result = await acceptBookingOffer(bookingId)
       if ('error' in result) {
         setError(result.error)
         return
       }
-      window.location.href = result.checkoutUrl
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl
+      } else {
+        // Manual payment model — booking confirmed without Stripe
+        window.location.href = `/account/trips/${bookingId}?status=accepted`
+      }
     })
   }
 

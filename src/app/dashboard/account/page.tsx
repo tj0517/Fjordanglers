@@ -307,13 +307,13 @@ export default async function AccountPage({
             <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
               {isManualModel ? (
                 <>
-                  Anglers pay a small <strong style={{ color: '#0A2E4D' }}>platform fee</strong> online when the guide confirms.
-                  Choose how you want anglers to pay your <strong style={{ color: '#0A2E4D' }}>guide&apos;s fee</strong> directly.
+                  Anglers pay a <strong style={{ color: '#0A2E4D' }}>deposit</strong> online when the guide confirms.
+                  Choose how anglers pay the <strong style={{ color: '#0A2E4D' }}>rest</strong> directly to you.
                 </>
               ) : (
                 <>
-                  Anglers always pay a <strong style={{ color: '#0A2E4D' }}>30% deposit</strong> online at the time of booking.
-                  Choose how you want to collect the <strong style={{ color: '#0A2E4D' }}>remaining 70%</strong> before the trip.
+                  Anglers always pay a <strong style={{ color: '#0A2E4D' }}>40% deposit</strong> online at the time of booking.
+                  Choose how you want to collect the <strong style={{ color: '#0A2E4D' }}>remaining 60%</strong> before the trip.
                 </>
               )}
             </p>

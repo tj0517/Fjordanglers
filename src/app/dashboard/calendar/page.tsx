@@ -103,65 +103,157 @@ export default async function CalendarPage({
   const expIds = experiences.map(e => e.id)
 
   // ── Blocked ranges overlapping the viewed month ───────────────────────────────
-  const blockedQuery = expIds.length > 0
-    ? supabase
-        .from('experience_blocked_dates')
-        .select('id, experience_id, date_start, date_end, reason')
-        .in('experience_id', expIds)
-        .lte('date_start', lastDay)
-        .gte('date_end', firstDay)
-        .order('date_start')
-    : null
+  //
+  // Calendar-level blocking (2026-04-02):
+  //
+  //   Named calendar view (activeCalendarId != null):
+  //     Read from `calendar_blocked_dates` for this calendar.
+  //     Expand each row to one BlockedEntry per experience in the calendar so
+  //     CalendarGrid (which expects experience_id-keyed entries) works unchanged.
+  //     All expanded entries from the same calendar block share the same `id` so
+  //     the unblock UI shows one button per block — correct: one click removes
+  //     the whole calendar block (all experiences unblocked together).
+  //
+  //   All Trips view (no calendarId):
+  //     • calendar_blocked_dates for all guide calendars (expanded per experience)
+  //     • experience_blocked_dates for uncalendared experiences
+  //     Both merged into one `blocked` array.
 
-  // ── Bookings in the viewed month ─────────────────────────────────────────────
-  const bookingsQuery = expIds.length > 0
-    ? supabase
-        .from('bookings')
-        .select('id, experience_id, booking_date, guests, status, angler_full_name')
-        .in('experience_id', expIds)
-        .gte('booking_date', firstDay)
-        .lte('booking_date', lastDay)
-        .in('status', ['pending', 'confirmed', 'accepted'])
-        .order('booking_date')
-    : null
+  // Which experience IDs belong to named calendars (all guide calendars, not just active)
+  const allCalendarIds = calendars.map(c => c.id)
+  const calendaredExpIds = new Set(Object.values(calendarExperienceMap).flat())
+  const uncalendaredExpIds = expIds.filter(id => !calendaredExpIds.has(id))
 
-  // ── Trip inquiries assigned to this guide, overlapping the viewed month ──────
-  // Service client needed — RLS blocks user-scoped reads on trip_inquiries
+  // Fetch blocked data in parallel (both tables + bookings + inquiries + schedules)
   const serviceClient = createServiceClient()
-  const inquiriesQuery = serviceClient
-    .from('trip_inquiries')
-    .select('id, dates_from, dates_to, offer_date_from, offer_date_to, angler_name, group_size, status')
-    .eq('assigned_guide_id', guide.id)
-    .neq('status', 'cancelled')
-    .lte('dates_from', lastDay)
-    .gte('dates_to', firstDay)
-    .order('dates_from')
 
-  // ── Weekly schedules ─────────────────────────────────────────────────────────
-  const weeklySchedulesQuery = supabase
-    .from('guide_weekly_schedules')
-    .select('id, guide_id, label, period_from, period_to, blocked_weekdays, created_at')
-    .eq('guide_id', guide.id)
-    .order('period_from')
+  const fetchFrom = (() => {
+    const d = new Date(`${firstDay}T12:00:00`)
+    d.setDate(d.getDate() - 30)
+    return d.toISOString().slice(0, 10)
+  })()
 
-  const [blockedResult, bookingsResult, inquiriesResult, weeklySchedulesResult] = await Promise.all([
-    blockedQuery  ?? Promise.resolve({ data: [] }),
-    bookingsQuery ?? Promise.resolve({ data: [] }),
-    inquiriesQuery,
-    weeklySchedulesQuery,
+  const [
+    calendarBlockedResult,
+    expBlockedResult,
+    bookingsResult,
+    inquiriesResult,
+    weeklySchedulesResult,
+  ] = await Promise.all([
+    // calendar_blocked_dates — named calendar(s)
+    activeCalendarId != null
+      ? supabase
+          .from('calendar_blocked_dates')
+          .select('id, calendar_id, date_start, date_end, reason')
+          .eq('calendar_id', activeCalendarId)
+          .lte('date_start', lastDay)
+          .gte('date_end', firstDay)
+          .order('date_start')
+      : allCalendarIds.length > 0
+          ? supabase
+              .from('calendar_blocked_dates')
+              .select('id, calendar_id, date_start, date_end, reason')
+              .in('calendar_id', allCalendarIds)
+              .lte('date_start', lastDay)
+              .gte('date_end', firstDay)
+              .order('date_start')
+          : Promise.resolve({ data: [] as Array<{ id: string; calendar_id: string; date_start: string; date_end: string; reason: string | null }> }),
+
+    // experience_blocked_dates — uncalendared experiences only (All Trips view)
+    // Named calendar view: no need, calendar_blocked_dates covers everything
+    activeCalendarId == null && uncalendaredExpIds.length > 0
+      ? supabase
+          .from('experience_blocked_dates')
+          .select('id, experience_id, date_start, date_end, reason')
+          .in('experience_id', uncalendaredExpIds)
+          .lte('date_start', lastDay)
+          .gte('date_end', firstDay)
+          .order('date_start')
+      : Promise.resolve({ data: [] as Array<{ id: string; experience_id: string; date_start: string; date_end: string; reason: string | null }> }),
+
+    // Direct bookings overlapping the month
+    expIds.length > 0
+      ? supabase
+          .from('bookings')
+          .select('id, experience_id, booking_date, requested_dates, guests, status, angler_full_name')
+          .in('experience_id', expIds)
+          .gte('booking_date', fetchFrom)
+          .lte('booking_date', lastDay)
+          .in('status', ['pending', 'confirmed', 'accepted'])
+          .order('booking_date')
+      : Promise.resolve({ data: [] as Array<{ id: string; experience_id: string; booking_date: string; requested_dates: string[] | null; guests: number; status: string; angler_full_name: string | null }> }),
+
+    // Inquiry bookings for this guide
+    serviceClient
+      .from('bookings')
+      .select('id, booking_date, date_to, requested_dates, offer_date_from, offer_date_to, offer_days, angler_full_name, guests, status')
+      .eq('source', 'inquiry')
+      .eq('guide_id', guide.id)
+      .not('status', 'in', '(cancelled,declined,refunded)')
+      .lte('booking_date', lastDay)
+      .order('booking_date'),
+
+    // Weekly schedules
+    supabase
+      .from('guide_weekly_schedules')
+      .select('id, guide_id, label, period_from, period_to, blocked_weekdays, created_at')
+      .eq('guide_id', guide.id)
+      .order('period_from'),
   ])
 
-  const blocked = (blockedResult.data ?? []) as Array<{
-    id: string; experience_id: string; date_start: string; date_end: string; reason: string | null
+  // ── Expand calendar blocks → BlockedEntry[] ──────────────────────────────────
+  // For CalendarGrid: BlockedEntry needs experience_id.
+  // Multiple expanded entries from the same calendar block share the same `id`
+  // so the unblock UI deduplicates them into one action (correct behaviour).
+
+  type BlockedEntry = { id: string; experience_id: string; date_start: string; date_end: string; reason: string | null }
+
+  const calendarBlocks = (calendarBlockedResult.data ?? []) as Array<{
+    id: string; calendar_id: string; date_start: string; date_end: string; reason: string | null
   }>
+
+  const expandedCalendarBlocks: BlockedEntry[] = calendarBlocks.flatMap(block => {
+    const blockExpIds = calendarExperienceMap[block.calendar_id] ?? []
+    // In named-calendar view, filter to only the experiences currently shown
+    const targetExpIds = activeCalendarId != null
+      ? blockExpIds.filter(id => expIds.includes(id))
+      : blockExpIds
+    return targetExpIds.map(expId => ({
+      id:            block.id,
+      experience_id: expId,
+      date_start:    block.date_start,
+      date_end:      block.date_end,
+      reason:        block.reason,
+    }))
+  })
+
+  const expBlocks = (expBlockedResult.data ?? []) as BlockedEntry[]
+
+  // After migration 20260402200000 all experiences are assigned to a calendar,
+  // so expBlocks is always empty in normal operation. Kept as a graceful fallback
+  // for edge cases (e.g. a newly created experience not yet assigned).
+  const blocked: BlockedEntry[] = [...expandedCalendarBlocks, ...expBlocks]
+
   const bookings = (bookingsResult.data ?? []) as Array<{
-    id: string; experience_id: string; booking_date: string; guests: number; status: string; angler_full_name: string | null
+    id: string; experience_id: string; booking_date: string; requested_dates: string[] | null; guests: number; status: string; angler_full_name: string | null
   }>
-  const inquiries = (inquiriesResult.data ?? []) as Array<{
-    id: string; dates_from: string; dates_to: string
-    offer_date_from: string | null; offer_date_to: string | null
-    angler_name: string; group_size: number; status: string
-  }>
+
+  // Normalize inquiry rows → CalendarGrid's InquiryEntry shape
+  const inquiries = (inquiriesResult.data ?? [])
+    .filter(r => r.booking_date != null)
+    .map(r => ({
+      id:               r.id,
+      dates_from:       r.booking_date as string,
+      dates_to:         (r as unknown as { date_to?: string | null }).date_to ?? (r.booking_date as string),
+      requested_dates:  (r as unknown as { requested_dates?: string[] | null }).requested_dates ?? null,
+      offer_date_from:  r.offer_date_from ?? null,
+      offer_date_to:    r.offer_date_to ?? null,
+      offer_days:       r.offer_days ?? null,
+      angler_name:      (r as unknown as { angler_full_name?: string | null }).angler_full_name ?? 'Guest',
+      group_size:       r.guests ?? 1,
+      status:           r.status,
+    }))
+
   const weeklySchedules = (weeklySchedulesResult.data ?? []) as WeeklySchedule[]
 
   // ── Stats (scoped to active calendar / all) ───────────────────────────────────

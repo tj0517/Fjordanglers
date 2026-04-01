@@ -14,13 +14,16 @@ import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 
 type BookingStatus = Database['public']['Enums']['booking_status']
 
 const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
-  confirmed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed'  },
-  pending:    { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'    },
-  cancelled:  { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled'  },
-  completed:  { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed'  },
-  refunded:   { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'   },
-  accepted:   { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'   },
-  declined:   { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'   },
+  pending:        { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'        },
+  reviewing:      { bg: 'rgba(139,92,246,0.1)',   color: '#7C3AED', label: 'Reviewing'      },
+  offer_sent:     { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Offer sent'     },
+  offer_accepted: { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Offer accepted' },
+  accepted:       { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'       },
+  confirmed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed'      },
+  completed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed'      },
+  cancelled:      { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled'      },
+  refunded:       { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'       },
+  declined:       { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'       },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -87,8 +90,6 @@ export default async function AnglerBookingDetailPage({
     id: string; full_name: string; user_id: string; stripe_payouts_enabled: boolean | null
   } | null
 
-  const guideHasStripe = guide?.stripe_payouts_enabled === true
-
   // Guide's decline message (if they proposed alternatives)
   const guideDeclineMessage =
     booking.status === 'declined' && guide != null
@@ -123,7 +124,7 @@ export default async function AnglerBookingDetailPage({
       : '1 day')
 
   // Financials
-  const depositEur = booking.deposit_eur ?? Math.round(booking.total_eur * 0.3)
+  const depositEur = booking.deposit_eur ?? Math.round(booking.total_eur * 0.4)
   const balanceEur = Math.round(booking.total_eur - depositEur)
 
   const createdFormatted = new Date(booking.created_at).toLocaleDateString('en-GB', {
@@ -283,13 +284,13 @@ export default async function AnglerBookingDetailPage({
                   value={durationLabel}
                 />
                 <InfoCard
-                  label="Deposit (30%)"
+                  label="Deposit (40%)"
                   value={`€${depositEur}`}
                   subValue={booking.status === 'confirmed' || booking.status === 'completed' ? 'Paid ✓' : undefined}
                   subColor="#16A34A"
                 />
                 <InfoCard
-                  label="Balance (70%)"
+                  label="Balance (60%)"
                   value={`€${balanceEur}`}
                   subValue={booking.balance_paid_at != null ? 'Paid ✓' : booking.status === 'confirmed' ? 'Due before trip' : undefined}
                   subColor={booking.balance_paid_at != null ? '#16A34A' : undefined}
@@ -339,7 +340,7 @@ export default async function AnglerBookingDetailPage({
                     bookingId={id}
                     initialCheckoutUrl={depositCheckoutUrl}
                     totalEur={booking.total_eur}
-                    testMode={!guideHasStripe}
+                    testMode={false}
                   />
                 </div>
               )}
@@ -352,7 +353,7 @@ export default async function AnglerBookingDetailPage({
                     totalEur={booking.total_eur}
                     paymentMethod={(booking.balance_payment_method ?? 'cash') as 'stripe' | 'cash'}
                     guideName={guide?.full_name ?? 'Your guide'}
-                    testMode={!guideHasStripe}
+                    testMode={false}
                   />
                 </div>
               )}
@@ -383,16 +384,16 @@ export default async function AnglerBookingDetailPage({
                 </div>
               )}
 
-              {/* ── Link to original inquiry ────────────────────────────────── */}
-              {booking.inquiry_id != null && (
+              {/* ── Link to inquiry view (inquiry-sourced bookings) ─────────── */}
+              {booking.source === 'inquiry' && (
                 <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
                   <Link
-                    href={`/account/trips/${booking.inquiry_id}`}
+                    href={`/account/trips/${booking.id}`}
                     className="inline-flex items-center gap-1.5 text-xs f-body font-medium transition-opacity hover:opacity-70"
                     style={{ color: 'rgba(10,46,77,0.5)' }}
                   >
                     <MessageSquare width={12} height={12} strokeWidth={1.5} />
-                    View original request →
+                    View trip request →
                   </Link>
                 </div>
               )}

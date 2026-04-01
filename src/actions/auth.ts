@@ -132,9 +132,10 @@ export async function resetPassword(email: string): Promise<AuthResult> {
       type: 'recovery',
       email,
       options: {
-        // /auth/callback is already in Supabase's allowed redirect URLs (used by signup).
-        // The `next` param tells the callback where to send the user after the code exchange.
-        redirectTo: `${getAppUrl()}/auth/callback?next=/reset-password`,
+        // /auth/reset is a dedicated no-query-param callback for password recovery.
+        // It exchanges the code and redirects straight to /reset-password.
+        // (Simpler to whitelist in Supabase than /auth/callback?next=...)
+        redirectTo: `${getAppUrl()}/auth/reset`,
       },
     })
 

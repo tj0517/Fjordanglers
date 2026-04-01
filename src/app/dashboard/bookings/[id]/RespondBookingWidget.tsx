@@ -25,16 +25,18 @@ export default function RespondBookingWidget(props: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
+  // `requested_dates` now contains ALL expanded individual dates in the window.
+  // The last element is the window end — same logic as BookingRespondForm.deriveWindowTo.
   const windowTo =
-    anglerRequestedDates && anglerRequestedDates.length === 2 && anglerRequestedDates[1] !== windowFrom
-      ? anglerRequestedDates[1]
+    anglerRequestedDates && anglerRequestedDates.length > 1
+      ? anglerRequestedDates[anglerRequestedDates.length - 1] !== windowFrom
+          ? anglerRequestedDates[anglerRequestedDates.length - 1]
+          : null
       : null
 
   const dateLabel = windowTo
     ? `${fmtShort(windowFrom)} – ${fmtShort(windowTo)}`
-    : anglerRequestedDates && anglerRequestedDates.length > 1
-      ? `${anglerRequestedDates.length} dates from ${fmtShort(windowFrom)}`
-      : `${fmtShort(windowFrom)}${durationOption ? ` · ${durationOption}` : ''}`
+    : `${fmtShort(windowFrom)}${durationOption ? ` · ${durationOption}` : ''}`
 
   return (
     <>
@@ -115,7 +117,7 @@ export default function RespondBookingWidget(props: Props) {
             className="fixed inset-0 z-[51] flex items-center justify-center p-4 sm:p-6 pointer-events-none"
           >
           <div
-            className="relative w-full sm:max-w-3xl max-h-[92dvh] flex flex-col pointer-events-auto"
+            className="relative w-full max-w-[960px] max-h-[92dvh] flex flex-col pointer-events-auto"
             style={{
               background:   '#FDFAF7',
               borderRadius: 28,

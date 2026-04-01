@@ -381,9 +381,9 @@ export default async function HomePage() {
             {/* Steps */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { step: '01', title: 'Find your trip', desc: 'Filter by country, species, and duration. Real prices, no hidden fees.' },
-                { step: '02', title: 'Book with the guide', desc: 'Pick your date and book instantly. Confirmed within 24 hours. Pay securely through the platform.' },
-                { step: '03', title: 'Show up and fish', desc: 'Your guide handles everything. You just need to show up ready to cast.' },
+                { step: '01', title: 'Find your obsession', desc: 'Filter by species, country, and duration. Every guide lives for their fish — and they know exactly where it hides.' },
+                { step: '02', title: 'Your guide takes it from here', desc: 'Tell them when you\'re coming and what you\'re after. They\'ll plan the spots, the conditions, the technique — built around your group and no one else\'s.' },
+                { step: '03', title: 'Fish water you\'d never find alone', desc: 'Spots you wouldn\'t discover in a lifetime. Local knowledge passed down through seasons. You just show up and cast.' },
               ].map((item) => (
                 <div
                   key={item.step}

@@ -55,6 +55,7 @@ export type Database = {
           id: string
           read_at: string | null
           sender_id: string
+          sender_role: string | null
         }
         Insert: {
           body: string
@@ -63,6 +64,7 @@ export type Database = {
           id?: string
           read_at?: string | null
           sender_id: string
+          sender_role?: string | null
         }
         Update: {
           body?: string
@@ -71,6 +73,7 @@ export type Database = {
           id?: string
           read_at?: string | null
           sender_id?: string
+          sender_role?: string | null
         }
         Relationships: [
           {
@@ -82,59 +85,26 @@ export type Database = {
           },
         ]
       }
-      inquiry_messages: {
-        Row: {
-          id: string
-          inquiry_id: string
-          sender_id: string
-          sender_role: string
-          body: string
-          created_at: string
-          read_at: string | null
-        }
-        Insert: {
-          id?: string
-          inquiry_id: string
-          sender_id: string
-          sender_role: string
-          body: string
-          created_at?: string
-          read_at?: string | null
-        }
-        Update: {
-          id?: string
-          inquiry_id?: string
-          sender_id?: string
-          sender_role?: string
-          body?: string
-          created_at?: string
-          read_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inquiry_messages_inquiry_id_fkey"
-            columns: ["inquiry_id"]
-            isOneToOne: false
-            referencedRelation: "trip_inquiries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       bookings: {
         Row: {
+          // ── Origin ──────────────────────────────────────────────
+          source: 'direct' | 'inquiry'
+          // ── Participants ────────────────────────────────────────
           accepted_at: string | null
           angler_country: string | null
           angler_email: string | null
           angler_full_name: string | null
           angler_id: string | null
           angler_phone: string | null
+          // ── Balance ─────────────────────────────────────────────
           balance_paid_at: string | null
           balance_payment_method: string | null
           balance_stripe_checkout_id: string | null
           balance_stripe_payment_intent_id: string | null
+          // ── Dates ───────────────────────────────────────────────
           booking_date: string
-          cancelled_at: string | null
-          cancelled_reason: string | null
+          date_to: string | null
+          // ── Financials ──────────────────────────────────────────
           commission_rate: number
           completed_at: string | null
           confirmed_at: string | null
@@ -145,10 +115,9 @@ export type Database = {
           duration_option: string | null
           experience_id: string | null
           guests: number
-          guide_id: string
+          guide_id: string | null
           guide_payout_eur: number
           id: string
-          inquiry_id: string | null
           marketing_consent: boolean
           payout_sent_at: string | null
           payout_status: string
@@ -158,11 +127,30 @@ export type Database = {
           status: Database["public"]["Enums"]["booking_status"]
           stripe_checkout_id: string | null
           stripe_payment_intent_id: string | null
-          stripe_transfer_id: string | null
           total_eur: number
           updated_at: string
+          // ── Inquiry request data ────────────────────────────────
+          target_species: string[] | null
+          experience_level: string | null
+          preferences: import('@/lib/supabase/database.types').Json | null
+          assigned_river: string | null
+          // ── Offer (guide → angler) ──────────────────────────────
+          offer_price_eur: number | null
+          offer_price_min_eur: number | null
+          offer_price_tiers: import('@/lib/supabase/database.types').Json | null
+          offer_details: string | null
+          offer_date_from: string | null
+          offer_date_to: string | null
+          offer_days: string[] | null
+          offer_meeting_lat: number | null
+          offer_meeting_lng: number | null
+          // ── Confirmed trip dates ────────────────────────────────
+          confirmed_days: string[] | null
+          confirmed_date_from: string | null
+          confirmed_date_to: string | null
         }
         Insert: {
+          source?: 'direct' | 'inquiry'
           accepted_at?: string | null
           angler_country?: string | null
           angler_email?: string | null
@@ -174,8 +162,7 @@ export type Database = {
           balance_stripe_checkout_id?: string | null
           balance_stripe_payment_intent_id?: string | null
           booking_date: string
-          cancelled_at?: string | null
-          cancelled_reason?: string | null
+          date_to?: string | null
           commission_rate?: number
           completed_at?: string | null
           confirmed_at?: string | null
@@ -186,8 +173,7 @@ export type Database = {
           duration_option?: string | null
           experience_id?: string | null
           guests?: number
-          guide_id: string
-          inquiry_id?: string | null
+          guide_id?: string | null
           guide_payout_eur: number
           id?: string
           marketing_consent?: boolean
@@ -199,11 +185,27 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           stripe_checkout_id?: string | null
           stripe_payment_intent_id?: string | null
-          stripe_transfer_id?: string | null
           total_eur: number
           updated_at?: string
+          target_species?: string[] | null
+          experience_level?: string | null
+          preferences?: import('@/lib/supabase/database.types').Json | null
+          assigned_river?: string | null
+          offer_price_eur?: number | null
+          offer_price_min_eur?: number | null
+          offer_price_tiers?: import('@/lib/supabase/database.types').Json | null
+          offer_details?: string | null
+          offer_date_from?: string | null
+          offer_date_to?: string | null
+          offer_days?: string[] | null
+          offer_meeting_lat?: number | null
+          offer_meeting_lng?: number | null
+          confirmed_days?: string[] | null
+          confirmed_date_from?: string | null
+          confirmed_date_to?: string | null
         }
         Update: {
+          source?: 'direct' | 'inquiry'
           accepted_at?: string | null
           angler_country?: string | null
           angler_email?: string | null
@@ -215,8 +217,7 @@ export type Database = {
           balance_stripe_checkout_id?: string | null
           balance_stripe_payment_intent_id?: string | null
           booking_date?: string
-          cancelled_at?: string | null
-          cancelled_reason?: string | null
+          date_to?: string | null
           commission_rate?: number
           completed_at?: string | null
           confirmed_at?: string | null
@@ -227,10 +228,9 @@ export type Database = {
           duration_option?: string | null
           experience_id?: string | null
           guests?: number
-          guide_id?: string
+          guide_id?: string | null
           guide_payout_eur?: number
           id?: string
-          inquiry_id?: string | null
           marketing_consent?: boolean
           payout_sent_at?: string | null
           payout_status?: string
@@ -240,9 +240,24 @@ export type Database = {
           status?: Database["public"]["Enums"]["booking_status"]
           stripe_checkout_id?: string | null
           stripe_payment_intent_id?: string | null
-          stripe_transfer_id?: string | null
           total_eur?: number
           updated_at?: string
+          target_species?: string[] | null
+          experience_level?: string | null
+          preferences?: import('@/lib/supabase/database.types').Json | null
+          assigned_river?: string | null
+          offer_price_eur?: number | null
+          offer_price_min_eur?: number | null
+          offer_price_tiers?: import('@/lib/supabase/database.types').Json | null
+          offer_details?: string | null
+          offer_date_from?: string | null
+          offer_date_to?: string | null
+          offer_days?: string[] | null
+          offer_meeting_lat?: number | null
+          offer_meeting_lng?: number | null
+          confirmed_days?: string[] | null
+          confirmed_date_from?: string | null
+          confirmed_date_to?: string | null
         }
         Relationships: [
           {
@@ -257,6 +272,41 @@ export type Database = {
             columns: ["guide_id"]
             isOneToOne: false
             referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      calendar_blocked_dates: {
+        Row: {
+          calendar_id: string
+          created_at:  string
+          date_end:    string
+          date_start:  string
+          id:          string
+          reason:      string | null
+        }
+        Insert: {
+          calendar_id: string
+          created_at?: string
+          date_end:    string
+          date_start:  string
+          id?:         string
+          reason?:     string | null
+        }
+        Update: {
+          calendar_id?: string
+          created_at?:  string
+          date_end?:    string
+          date_start?:  string
+          id?:          string
+          reason?:      string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_blocked_dates_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "guide_calendars"
             referencedColumns: ["id"]
           },
         ]
@@ -1072,98 +1122,7 @@ export type Database = {
         }
         Relationships: []
       }
-      trip_inquiries: {
-        Row: {
-          angler_email: string
-          angler_id: string | null
-          angler_name: string
-          assigned_guide_id: string | null
-          assigned_river: string | null
-          created_at: string
-          dates_from: string
-          dates_to: string
-          experience_level: string
-          group_size: number
-          id: string
-          offer_date_from: string | null
-          offer_date_to: string | null
-          offer_details: string | null
-          offer_meeting_lat: number | null
-          offer_meeting_lng: number | null
-          offer_price_eur: number | null
-          offer_price_min_eur: number | null
-          offer_price_tiers: Json | null
-          preferences: Json
-          status: Database["public"]["Enums"]["trip_inquiry_status"]
-          stripe_checkout_id: string | null
-          stripe_payment_intent_id: string | null
-          target_species: string[]
-          updated_at: string
-        }
-        Insert: {
-          angler_email: string
-          angler_id?: string | null
-          angler_name: string
-          assigned_guide_id?: string | null
-          assigned_river?: string | null
-          created_at?: string
-          dates_from: string
-          dates_to: string
-          experience_level: string
-          group_size: number
-          id?: string
-          offer_date_from?: string | null
-          offer_date_to?: string | null
-          offer_details?: string | null
-          offer_meeting_lat?: number | null
-          offer_meeting_lng?: number | null
-          offer_price_eur?: number | null
-          offer_price_min_eur?: number | null
-          offer_price_tiers?: Json | null
-          preferences?: Json
-          status?: Database["public"]["Enums"]["trip_inquiry_status"]
-          stripe_checkout_id?: string | null
-          stripe_payment_intent_id?: string | null
-          target_species?: string[]
-          updated_at?: string
-        }
-        Update: {
-          angler_email?: string
-          angler_id?: string | null
-          angler_name?: string
-          assigned_guide_id?: string | null
-          assigned_river?: string | null
-          created_at?: string
-          dates_from?: string
-          dates_to?: string
-          experience_level?: string
-          group_size?: number
-          id?: string
-          offer_date_from?: string | null
-          offer_date_to?: string | null
-          offer_details?: string | null
-          offer_meeting_lat?: number | null
-          offer_meeting_lng?: number | null
-          offer_price_eur?: number | null
-          offer_price_min_eur?: number | null
-          offer_price_tiers?: Json | null
-          preferences?: Json
-          status?: Database["public"]["Enums"]["trip_inquiry_status"]
-          stripe_checkout_id?: string | null
-          stripe_payment_intent_id?: string | null
-          target_species?: string[]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "trip_inquiries_assigned_guide_id_fkey"
-            columns: ["assigned_guide_id"]
-            isOneToOne: false
-            referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      // trip_inquiries table removed — unified into bookings (source='inquiry')
     }
     Views: {
       geography_columns: {
@@ -2154,23 +2113,19 @@ export type Database = {
     Enums: {
       booking_status:
         | "pending"
-        | "confirmed"
-        | "cancelled"
-        | "completed"
-        | "refunded"
+        | "reviewing"
+        | "offer_sent"
+        | "offer_accepted"
         | "accepted"
+        | "confirmed"
+        | "completed"
+        | "cancelled"
+        | "refunded"
         | "declined"
       guide_status: "pending" | "verified" | "active" | "suspended"
       payment_status: "pending" | "paid" | "failed" | "refunded"
       pricing_model: "flat_fee" | "commission"
-      trip_inquiry_status:
-        | "inquiry"
-        | "reviewing"
-        | "offer_sent"
-        | "offer_accepted"
-        | "confirmed"
-        | "completed"
-        | "cancelled"
+      // trip_inquiry_status removed — statuses merged into booking_status
     }
     CompositeTypes: {
       geometry_dump: {

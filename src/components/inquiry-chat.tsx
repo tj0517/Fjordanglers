@@ -1,19 +1,19 @@
 'use client'
 
 /**
- * InquiryChat — real-time chat panel for a trip inquiry.
+ * InquiryChat — real-time chat panel for a booking / inquiry.
  *
  * Works on both sides:
- *   - Guide dashboard  /dashboard/inquiries/[id]
+ *   - Guide dashboard  /dashboard/inquiries/[id]  (now /dashboard/bookings/[id])
  *   - Angler account   /account/trips/[id]
  *
- * Renders initial messages (SSR-fetched) then subscribes to new ones via
- * Supabase Realtime. Sends via the sendInquiryMessage server action.
+ * After DB unification (2026-04-01) all messages live in booking_messages.
+ * Prop renamed: inquiryId → bookingId (inquiryId kept as deprecated alias).
  */
 
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { sendInquiryMessage } from '@/actions/inquiry-messages'
+import { sendBookingMessage } from '@/actions/bookings'
 import { MessageSquare, Loader2, ArrowRight } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -28,13 +28,16 @@ export type ChatMessage = {
 }
 
 type Props = {
-  inquiryId: string
+  /** Unified booking ID (replaces the old inquiryId) */
+  bookingId: string
+  /** @deprecated Use bookingId. Kept for backward compat during transition. */
+  inquiryId?: string
   currentUserId: string
   currentUserRole: 'angler' | 'guide' | 'admin'
   initialMessages: ChatMessage[]
   /** Display name of the other party */
   otherPartyName: string
-  /** true = inquiry is closed, input is disabled */
+  /** true = booking is closed, input is disabled */
   readOnly?: boolean
 }
 
@@ -61,6 +64,7 @@ function formatTime(iso: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function InquiryChat({
+  bookingId,
   inquiryId,
   currentUserId,
   currentUserRole,
@@ -68,6 +72,8 @@ export default function InquiryChat({
   otherPartyName,
   readOnly = false,
 }: Props) {
+  // Resolve ID — prefer bookingId, fall back to deprecated inquiryId
+  const chatId = bookingId ?? inquiryId ?? ''
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -79,15 +85,16 @@ export default function InquiryChat({
 
   // ── Realtime subscription ──────────────────────────────────────────────────
   useEffect(() => {
+    if (!chatId) return
     const channel = supabase
-      .channel(`inquiry-chat-${inquiryId}`)
+      .channel(`booking-chat-${chatId}`)
       .on(
         'postgres_changes',
         {
           event:  'INSERT',
           schema: 'public',
-          table:  'inquiry_messages',
-          filter: `inquiry_id=eq.${inquiryId}`,
+          table:  'booking_messages',
+          filter: `booking_id=eq.${chatId}`,
         },
         (payload) => {
           const msg = payload.new as ChatMessage
@@ -101,7 +108,7 @@ export default function InquiryChat({
       .subscribe()
 
     return () => { void supabase.removeChannel(channel) }
-  }, [inquiryId, supabase])
+  }, [chatId, supabase])
 
   // ── Auto-scroll to bottom on new messages ─────────────────────────────────
   useEffect(() => {
@@ -129,7 +136,7 @@ export default function InquiryChat({
     textareaRef.current?.focus()
 
     startTransition(async () => {
-      const result = await sendInquiryMessage(inquiryId, trimmed)
+      const result = await sendBookingMessage(chatId, trimmed)
       if (result.error) {
         // Rollback optimistic message
         setMessages(prev => prev.filter(m => m.id !== optimistic.id))

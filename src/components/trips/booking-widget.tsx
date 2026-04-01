@@ -371,7 +371,7 @@ type BookingWidgetProps = {
   calendarDisabled?: boolean
   /**
    * Payment model derived from guide's Stripe status.
-   * stripe_connect — angler pays 30% deposit via Stripe; balance before trip.
+   * stripe_connect — angler pays 40% deposit via Stripe; balance before trip.
    * manual         — angler pays platform fee via Stripe + guide fee directly (cash/IBAN).
    */
   paymentModel?: 'stripe_connect' | 'manual'
@@ -1189,37 +1189,6 @@ export function BookingWidget({
         style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }}
       />
 
-      {/* ── Meta row (duration / group / level) ────────────────────────────── */}
-      <div className="flex gap-4 mb-4 flex-wrap">
-        {selectedDurationLabel != null && (
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-              Duration
-            </p>
-            <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-              {selectedDurationLabel}
-            </p>
-          </div>
-        )}
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-            Group
-          </p>
-          <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-            Max {maxGuests}
-          </p>
-        </div>
-        {diffLabel != null && (
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-              Level
-            </p>
-            <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-              {diffLabel}
-            </p>
-          </div>
-        )}
-      </div>
 
       {/* ── Group size stepper ──────────────────────────────────────────────── */}
       {!isDraft && showGroupSelector && (
@@ -1311,16 +1280,6 @@ export function BookingWidget({
           {/* Divider */}
           <div className="my-2.5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
 
-          {/* Service fee */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-              Service fee (5%)
-            </span>
-            <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
-              €{serviceFee}
-            </span>
-          </div>
-
           {/* Grand total */}
           <div className="flex items-baseline justify-between">
             <p
@@ -1337,7 +1296,7 @@ export function BookingWidget({
                 €{grandTotal}
               </p>
               <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                {tripCount > 1 ? `for ${tripCount} dates · incl. fees` : `${price.suffix} · incl. fees`}
+                {tripCount > 1 ? `for ${tripCount} dates` : price.suffix}
               </p>
             </div>
           </div>
@@ -1347,9 +1306,9 @@ export function BookingWidget({
             <>
               <div className="my-2.5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
               <p className="text-[10px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.42)' }}>
-                💳 <span className="font-semibold" style={{ color: '#0A2E4D' }}>Small platform fee</span> charged
+                💳 <span className="font-semibold" style={{ color: '#0A2E4D' }}>Deposit</span> charged
                 via card after guide confirms.{' '}
-                Guide&apos;s fee paid directly — by cash or bank transfer.
+                Rest paid directly to the guide.
               </p>
             </>
           )}
@@ -1483,7 +1442,7 @@ export function BookingWidget({
             {paymentModel === 'manual'
               ? 'No payment now — guide confirms, then you pay a small platform fee online and the guide\'s fee directly.'
               : selectedDates.length > 0
-                ? 'No payment now — guide confirms and you pay a 30% deposit.'
+                ? 'No payment now — guide confirms and you pay a 40% deposit.'
                 : 'No payment now — guide confirms within 24 hours.'}
           </p>
 

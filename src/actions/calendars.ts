@@ -5,6 +5,19 @@
  *
  * A guide can create multiple calendars and assign any subset of their
  * experiences to each. Used by the CalendarsPanel component.
+ *
+ * Blocking model (as of 2026-04-02):
+ *   Availability blocks are stored in `calendar_blocked_dates` at the calendar
+ *   level — one row per (calendar × date), not per experience.  All experiences
+ *   in a calendar automatically inherit the same unavailability.
+ *
+ *   When an experience moves between calendars (or is added/removed from one),
+ *   NO per-experience block sync is needed.  The angler date picker always reads
+ *   from the experience's current calendar.
+ *
+ *   setCalendarExperiences() only needs to clean up per-experience booking blocks
+ *   in `experience_blocked_dates` for experiences that are being assigned to a
+ *   calendar (transitioning from guide-wide → calendar-scoped blocking).
  */
 
 import { redirect } from 'next/navigation'
@@ -21,7 +34,7 @@ export type GuideCalendar = {
 
 export type CalendarActionResult =
   | { error: string }
-  | { success: true; id?: string }
+  | { success: true; id?: string; unassignedExpIds?: string[] }
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 
@@ -128,6 +141,25 @@ export async function deleteCalendar(id: string): Promise<CalendarActionResult> 
 /**
  * Replaces all experience assignments for a calendar.
  * Passing an empty array removes all experiences from the calendar.
+ *
+ * Block migration rules when moving an experience between calendars:
+ *
+ *   • Booking blocks  (reason = 'booking:<id>')
+ *       → Follow the experience to the destination calendar.
+ *         The blocks are COPIED (not moved) — the source calendar keeps them
+ *         so its remaining experiences stay correctly blocked for the same
+ *         guide-busy periods.
+ *
+ *   • Manual blocks (reason IS NULL)
+ *       → Stay in the source calendar.  They represent availability decisions
+ *         tied to that calendar/group of trips, not to the specific experience.
+ *
+ * Step order matters:
+ *   1. Detect newExpIds BEFORE modifying calendar_experiences (need to look up
+ *      source calendar, which is queryable as long as we haven't changed this
+ *      calendar's assignments yet — other calendars are untouched).
+ *   2. Copy booking blocks from source → destination.
+ *   3. Replace calendar_experiences assignments.
  */
 export async function setCalendarExperiences(
   calendarId:    string,
@@ -159,7 +191,112 @@ export async function setCalendarExperiences(
       }
     }
 
-    // Replace: delete all then insert new
+    // Snapshot current assignments to detect newly added experiences.
+    // Must happen BEFORE the DELETE below — source calendar lookups rely on
+    // the current state of calendar_experiences for *other* calendars, which
+    // this DELETE doesn't touch, so the order is safe.
+    const { data: currentAssignments } = await supabase
+      .from('calendar_experiences')
+      .select('experience_id')
+      .eq('calendar_id', calendarId)
+    const previousIds = new Set((currentAssignments ?? []).map(r => r.experience_id))
+    const newExpIds   = experienceIds.filter(id => !previousIds.has(id))
+
+    // ── Copy booking blocks from source calendar → this calendar ──────────────
+    //
+    // For each experience being moved INTO this calendar:
+    //   1. Find its current (source) calendar.
+    //   2. Fetch all booking blocks (reason LIKE 'booking:%') from that calendar.
+    //   3. Filter to blocks whose booking.experience_id matches this experience.
+    //   4. Upsert those blocks into this calendar (ignoreDuplicates = idempotent).
+    //
+    // Manual blocks (reason IS NULL) are deliberately excluded — they remain
+    // in the source calendar and do NOT follow the experience.
+    if (newExpIds.length > 0) {
+      for (const expId of newExpIds) {
+        // Step 1 — source calendar (first assignment found; experiences should
+        // be in at most one calendar, so maybeSingle() is correct here)
+        const { data: sourceCalRow } = await supabase
+          .from('calendar_experiences')
+          .select('calendar_id')
+          .eq('experience_id', expId)
+          .limit(1)
+          .maybeSingle()
+
+        // Skip: coming from no calendar (first-time assignment) or same calendar
+        if (sourceCalRow == null || sourceCalRow.calendar_id === calendarId) continue
+
+        // Step 2 — all booking blocks in the source calendar
+        const { data: sourceBlocks } = await supabase
+          .from('calendar_blocked_dates')
+          .select('date_start, date_end, reason')
+          .eq('calendar_id', sourceCalRow.calendar_id)
+          .like('reason', 'booking:%')
+
+        if (!sourceBlocks || sourceBlocks.length === 0) continue
+
+        // Step 3 — filter to blocks whose underlying booking is for this experience
+        const bookingIds = sourceBlocks.map(b => b.reason!.replace('booking:', ''))
+
+        const { data: expBookings } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('experience_id', expId)
+          .in('id', bookingIds)
+
+        const expBookingIdSet = new Set((expBookings ?? []).map(b => b.id))
+        const blocksToCarry   = sourceBlocks.filter(
+          b => expBookingIdSet.has(b.reason!.replace('booking:', ''))
+        )
+
+        if (blocksToCarry.length === 0) continue
+
+        // Step 4 — copy to destination calendar
+        const { error: copyErr } = await supabase
+          .from('calendar_blocked_dates')
+          .upsert(
+            blocksToCarry.map(b => ({
+              calendar_id: calendarId,
+              date_start:  b.date_start,
+              date_end:    b.date_end,
+              reason:      b.reason,
+            })),
+            { ignoreDuplicates: true }
+          )
+
+        if (copyErr != null) {
+          console.error('[setCalendarExperiences] block copy failed:', copyErr.message)
+          // Non-fatal: log and continue — availability may be incomplete but
+          // the assignment change itself should succeed.
+        } else {
+          console.log(
+            `[setCalendarExperiences] copied ${blocksToCarry.length} booking block(s)` +
+            ` for exp ${expId} from cal ${sourceCalRow.calendar_id} → ${calendarId}`
+          )
+        }
+      }
+    }
+
+    // ── Auto-remove newly-added experiences from any other calendar ───────────
+    // An experience can belong to AT MOST ONE calendar.  If E1 is being added
+    // here and it was previously in Calendar A, remove it from A so it doesn't
+    // appear in two calendars simultaneously.
+    // We do this AFTER copying blocks (above) so the source calendar is still
+    // queryable.
+    if (newExpIds.length > 0) {
+      const { error: evictErr } = await supabase
+        .from('calendar_experiences')
+        .delete()
+        .in('experience_id', newExpIds)
+        .neq('calendar_id', calendarId)   // remove from ALL other calendars
+
+      if (evictErr != null) {
+        console.error('[setCalendarExperiences] evict from old calendars:', evictErr.message)
+        // Non-fatal — log only
+      }
+    }
+
+    // ── Replace assignments for THIS calendar ─────────────────────────────────
     await supabase
       .from('calendar_experiences')
       .delete()
@@ -181,7 +318,37 @@ export async function setCalendarExperiences(
       }
     }
 
-    return { success: true }
+    // ── Clean up legacy experience_blocked_dates ───────────────────────────────
+    if (newExpIds.length > 0) {
+      await supabase
+        .from('experience_blocked_dates')
+        .delete()
+        .in('experience_id', newExpIds)
+        .like('reason', 'booking:%')
+    }
+
+    // ── Compute unassigned experiences ────────────────────────────────────────
+    // After all assignment changes, find guide experiences that are no longer
+    // in any calendar.  Returned to the client so it can show a warning.
+    const { data: allGuideExps } = await supabase
+      .from('experiences')
+      .select('id')
+      .eq('guide_id', guideId)
+
+    const allExpIds = (allGuideExps ?? []).map(e => e.id)
+    let unassignedExpIds: string[] = []
+
+    if (allExpIds.length > 0) {
+      const { data: assigned } = await supabase
+        .from('calendar_experiences')
+        .select('experience_id')
+        .in('experience_id', allExpIds)
+
+      const assignedSet = new Set((assigned ?? []).map(r => r.experience_id))
+      unassignedExpIds = allExpIds.filter(id => !assignedSet.has(id))
+    }
+
+    return { success: true, unassignedExpIds }
   } catch (err) {
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('[setCalendarExperiences] Unexpected:', err)

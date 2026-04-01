@@ -17,7 +17,7 @@ interface PayDepositBannerProps {
   bookingId: string
   /** Pre-fetched checkout URL — null if the session was expired/missing */
   initialCheckoutUrl: string | null
-  /** Full booking total in EUR — used to calculate the 30% deposit display */
+  /** Full booking total in EUR — used to calculate the deposit display */
   totalEur: number
   /**
    * When true, shows a mock YES / NO panel instead of Stripe.
@@ -126,7 +126,7 @@ export default function PayDepositBanner({
             </div>
             <p className="text-xs f-body" style={{ color: 'rgba(146,64,14,0.7)' }}>
               Guide accepted your request. Simulate paying the{' '}
-              <strong>€{depositAmount}</strong> deposit (30%).
+              <strong>€{depositAmount}</strong> deposit (40%).
               Balance of <strong>€{balanceAmount}</strong> due before the trip.
             </p>
           </div>
@@ -213,7 +213,7 @@ export default function PayDepositBanner({
             Your guide accepted — pay deposit to confirm
           </p>
           <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(29,78,216,0.65)' }}>
-            30% deposit of <strong>€{depositAmount}</strong> secures your booking.
+            40% deposit of <strong>€{depositAmount}</strong> secures your booking.
             Balance of <strong>€{balanceAmount}</strong> is due before the trip.
           </p>
         </div>

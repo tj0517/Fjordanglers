@@ -4,8 +4,11 @@
  * SeasonShortcuts — one-click blocking of predefined Scandinavian fishing seasons.
  *
  * Each preset maps to a fixed date range within the selected year.
- * Clicking "Block" calls blockDates() for ALL guide experiences with that range.
  * Year picker lets guides set up next season in advance.
+ *
+ * Two modes (mirrors CalendarGrid's dual-table routing):
+ *   • activeCalendarId set  → writes ONE calendar_blocked_dates row (calendar-level)
+ *   • activeCalendarId null → writes to experience_blocked_dates for each experienceId
  */
 
 import { useState } from 'react'
@@ -15,8 +18,14 @@ import { blockDates } from '@/actions/calendar'
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Props = {
-  experienceIds: string[]
-  initialYear:   number
+  experienceIds:    string[]
+  initialYear:      number
+  /**
+   * When provided, block writes go to `calendar_blocked_dates` for this calendar
+   * (one row shared by all experiences in the calendar).
+   * When null/undefined, falls back to per-experience `experience_blocked_dates`.
+   */
+  activeCalendarId?: string | null
 }
 
 type SeasonPreset = {
@@ -105,7 +114,7 @@ function toDateStr(y: number, m: number, d: number): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function SeasonShortcuts({ experienceIds, initialYear }: Props) {
+export default function SeasonShortcuts({ experienceIds, initialYear, activeCalendarId = null }: Props) {
   const router = useRouter()
   const [year, setYear]     = useState(initialYear)
   const [states, setStates] = useState<Record<string, SeasonState>>({})
@@ -122,7 +131,10 @@ export default function SeasonShortcuts({ experienceIds, initialYear }: Props) {
   }
 
   async function applyBlock(season: SeasonPreset) {
-    if (experienceIds.length === 0) return
+    // Guard: need either a calendarId (calendar mode) or at least one experience (per-listing mode)
+    const canBlock = activeCalendarId != null || experienceIds.length > 0
+    if (!canBlock) return
+
     const current = states[season.id] ?? 'idle'
     if (current === 'loading' || current === 'done') return
 
@@ -132,7 +144,12 @@ export default function SeasonShortcuts({ experienceIds, initialYear }: Props) {
     const dateStart = toDateStr(year, season.startMD[0], season.startMD[1])
     const dateEnd   = toDateStr(year, season.endMD[0],   season.endMD[1])
 
-    const result = await blockDates({ experienceIds, dateStart, dateEnd, reason: season.reason })
+    // Route to calendar_blocked_dates (one row) OR experience_blocked_dates (one row per listing)
+    const result = await blockDates(
+      activeCalendarId != null
+        ? { calendarId: activeCalendarId, dateStart, dateEnd, reason: season.reason }
+        : { experienceIds, dateStart, dateEnd, reason: season.reason }
+    )
 
     if ('error' in result) {
       setSeasonState(season.id, 'error')
@@ -198,7 +215,7 @@ export default function SeasonShortcuts({ experienceIds, initialYear }: Props) {
       </div>
 
       {/* ── Empty state ───────────────────────────────────────────────────── */}
-      {experienceIds.length === 0 ? (
+      {activeCalendarId == null && experienceIds.length === 0 ? (
         <p
           className="text-xs f-body text-center py-5"
           style={{ color: 'rgba(10,46,77,0.35)' }}

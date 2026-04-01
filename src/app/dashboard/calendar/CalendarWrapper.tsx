@@ -26,11 +26,16 @@ type BlockedEntry = {
   id: string; experience_id: string; date_start: string; date_end: string; reason: string | null
 }
 type BookingEntry = {
-  id: string; experience_id: string; booking_date: string; guests: number; status: string; angler_full_name: string | null
+  id: string; experience_id: string; booking_date: string; requested_dates: string[] | null; guests: number; status: string; angler_full_name: string | null
 }
 type InquiryEntry = {
   id: string; dates_from: string; dates_to: string
+  /** All individual dates the angler selected (expanded from their period choices).
+   *  When present, pre-offer calendar rendering uses these instead of the envelope
+   *  dates_from → dates_to, avoiding false highlights on non-selected days. */
+  requested_dates: string[] | null
   offer_date_from: string | null; offer_date_to: string | null
+  offer_days: string[] | null
   angler_name: string; group_size: number; status: string
 }
 
@@ -209,6 +214,7 @@ export function CalendarWrapper({
             </div>
           ) : (
             <CalendarGrid
+              key={activeCalendarId ?? 'all'}
               year={safeYear}
               month={safeMonth}
               experiences={experiences}
@@ -218,6 +224,7 @@ export function CalendarWrapper({
               calendarMode="shared"
               weeklySchedules={weeklySchedules}
               calendarExperienceMap={calendarExperienceMap}
+              activeCalendarId={activeCalendarId}
             />
           )}
         </div>

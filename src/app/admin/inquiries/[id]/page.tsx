@@ -1,22 +1,25 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 import AdminInquiryActions from './AdminInquiryActions'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type InquiryStatus = Database['public']['Enums']['trip_inquiry_status']
+type BookingStatus = Database['public']['Enums']['booking_status']
 
-const STATUS_STYLES: Record<InquiryStatus, { bg: string; color: string; label: string }> = {
-  inquiry:        { bg: 'rgba(230,126,80,0.12)', color: '#E67E50', label: 'New'            },
+const STATUS_STYLES: Partial<Record<BookingStatus, { bg: string; color: string; label: string }>> = {
+  pending:        { bg: 'rgba(230,126,80,0.12)', color: '#E67E50', label: 'New'            },
   reviewing:      { bg: 'rgba(59,130,246,0.1)',  color: '#3B82F6', label: 'Reviewing'      },
   offer_sent:     { bg: 'rgba(139,92,246,0.1)',  color: '#7C3AED', label: 'Offer Sent'     },
   offer_accepted: { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Offer Accepted' },
   confirmed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Confirmed'      },
   completed:      { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Completed'      },
   cancelled:      { bg: 'rgba(239,68,68,0.1)',   color: '#DC2626', label: 'Cancelled'      },
+  declined:       { bg: 'rgba(239,68,68,0.08)',  color: '#B91C1C', label: 'Declined'       },
 }
+
+const DEFAULT_STATUS = { bg: 'rgba(10,46,77,0.07)', color: '#0A2E4D', label: '—' }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -26,31 +29,34 @@ type Props = {
 
 export default async function AdminInquiryDetailPage({ params }: Props) {
   const { id } = await params
-  const supabase = await createClient()
 
-  // Fetch inquiry
-  const { data: inquiry } = await supabase
-    .from('trip_inquiries')
+  // Use service client — admin bypasses RLS
+  const supabase = createServiceClient()
+
+  // Fetch booking (inquiry-sourced)
+  const { data: booking } = await supabase
+    .from('bookings')
     .select('*, guides(id, full_name, country)')
     .eq('id', id)
+    .eq('source', 'inquiry')
     .single()
 
-  if (!inquiry) notFound()
+  if (!booking) notFound()
 
-  // Fetch all active guides for the offer form
+  // Fetch all active guides for the offer/assignment form
   const { data: allGuides } = await supabase
     .from('guides')
     .select('id, full_name, country')
     .eq('status', 'active')
     .order('full_name')
 
-  const assignedGuide = inquiry.guides as unknown as {
+  const assignedGuide = booking.guides as unknown as {
     id: string
     full_name: string
     country: string
   } | null
 
-  const prefs = (inquiry.preferences ?? {}) as {
+  const prefs = (booking.preferences ?? {}) as {
     budgetMin?: number
     budgetMax?: number
     accommodation?: boolean
@@ -58,9 +64,9 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
     notes?: string
   }
 
-  const s = STATUS_STYLES[inquiry.status]
+  const s = STATUS_STYLES[booking.status as BookingStatus] ?? DEFAULT_STATUS
 
-  const submittedDate = new Date(inquiry.created_at).toLocaleDateString('en-GB', {
+  const submittedDate = new Date(booking.created_at).toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -74,6 +80,14 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
     full_name: g.full_name,
     country: g.country,
   }))
+
+  const anglerName     = booking.angler_full_name ?? '—'
+  const anglerEmail    = booking.angler_email ?? '—'
+  const datesFrom      = booking.booking_date ?? '—'
+  const datesTo        = booking.date_to ?? datesFrom
+  const groupSize      = booking.guests
+  const expLevel       = booking.experience_level ?? '—'
+  const targetSpecies  = booking.target_species ?? []
 
   return (
     <div className="px-10 py-10 max-w-[1100px]">
@@ -89,7 +103,7 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
         </Link>
         <div className="flex items-center gap-4">
           <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
-            {inquiry.angler_name}
+            {anglerName}
           </h1>
           <span
             className="text-[11px] font-bold uppercase tracking-[0.12em] px-3 py-1.5 rounded-full f-body"
@@ -106,36 +120,38 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
       {/* Two-panel layout */}
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
 
-        {/* ── LEFT: Inquiry details ─────────────────────────────────────────── */}
+        {/* ── LEFT: Booking details ─────────────────────────────────────────── */}
         <div className="flex flex-col gap-5">
 
           {/* Contact */}
           <Section title="Angler">
-            <InfoRow label="Name"  value={inquiry.angler_name} />
-            <InfoRow label="Email" value={inquiry.angler_email} />
+            <InfoRow label="Name"  value={anglerName} />
+            <InfoRow label="Email" value={anglerEmail} />
           </Section>
 
           {/* Trip info */}
           <Section title="Trip Details">
             <InfoRow
               label="Dates"
-              value={`${inquiry.dates_from} to ${inquiry.dates_to}`}
+              value={`${datesFrom} to ${datesTo}`}
             />
             <InfoRow
               label="Group size"
-              value={`${inquiry.group_size} ${inquiry.group_size === 1 ? 'angler' : 'anglers'}`}
+              value={`${groupSize} ${groupSize === 1 ? 'angler' : 'anglers'}`}
             />
             <InfoRow
               label="Experience level"
               value={
-                { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }[
-                  inquiry.experience_level
-                ] ?? inquiry.experience_level
+                ({
+                  beginner:     'Beginner',
+                  intermediate: 'Intermediate',
+                  expert:       'Expert',
+                } as Record<string, string>)[expLevel] ?? expLevel
               }
             />
             <InfoRow
               label="Target species"
-              value={inquiry.target_species?.join(', ') ?? '—'}
+              value={targetSpecies.length > 0 ? targetSpecies.join(', ') : '—'}
             />
           </Section>
 
@@ -165,22 +181,24 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
               }
             />
             <InfoRow label="Water type" value={prefs.riverType ?? 'Any'} />
-            {prefs.notes && <InfoRow label="Notes" value={prefs.notes} />}
+            {prefs.notes != null && prefs.notes.length > 0 && (
+              <InfoRow label="Notes" value={prefs.notes} />
+            )}
           </Section>
 
           {/* Offer details (if sent) */}
-          {inquiry.status !== 'inquiry' && inquiry.status !== 'reviewing' && (
+          {booking.status !== 'pending' && booking.status !== 'reviewing' && (
             <Section title="Offer Sent">
-              {assignedGuide && (
+              {assignedGuide != null && (
                 <InfoRow label="Guide" value={`${assignedGuide.full_name} (${assignedGuide.country})`} />
               )}
-              {inquiry.assigned_river && (
-                <InfoRow label="River / Location" value={inquiry.assigned_river} />
+              {booking.assigned_river != null && (
+                <InfoRow label="River / Location" value={booking.assigned_river} />
               )}
-              {inquiry.offer_price_eur != null && (
-                <InfoRow label="Offer price" value={`€${inquiry.offer_price_eur}`} highlight />
+              {booking.offer_price_eur != null && (
+                <InfoRow label="Offer price" value={`€${booking.offer_price_eur}`} highlight />
               )}
-              {inquiry.offer_details && (
+              {booking.offer_details != null && booking.offer_details.length > 0 && (
                 <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
                   <p
                     className="text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body"
@@ -189,7 +207,7 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
                     Offer details
                   </p>
                   <p className="text-sm f-body whitespace-pre-wrap" style={{ color: 'rgba(10,46,77,0.7)' }}>
-                    {inquiry.offer_details}
+                    {booking.offer_details}
                   </p>
                 </div>
               )}
@@ -217,7 +235,7 @@ export default async function AdminInquiryDetailPage({ params }: Props) {
 
             <AdminInquiryActions
               inquiryId={id}
-              status={inquiry.status}
+              status={booking.status}
               guides={guideOptions}
             />
           </div>

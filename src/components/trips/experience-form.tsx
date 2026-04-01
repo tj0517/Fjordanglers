@@ -807,10 +807,12 @@ export default function ExperienceForm({
 
     if (bookingType !== 'icelandic') {
       durationOptionsPayload = durationOptions.map(opt => {
+        const _h = parseInt(opt.hours, 10)
+        const _d = parseInt(opt.days,  10)
         const base = {
           label:            opt.label.trim(),
-          hours:            opt.hours !== '' ? parseInt(opt.hours, 10) : null,
-          days:             opt.days  !== '' ? parseInt(opt.days,  10) : null,
+          hours:            !isNaN(_h) && _h > 0 ? _h : null,
+          days:             !isNaN(_d) && _d > 0 ? _d : null,
           pricing_type:     opt.pricing_type,
           includes_lodging: opt.includes_lodging,
         }
@@ -828,8 +830,10 @@ export default function ExperienceForm({
 
       // Derive backward-compat scalars from first duration option
       const firstOpt = durationOptions[0]
-      durationHours  = firstOpt.hours !== '' ? parseInt(firstOpt.hours, 10) : null
-      durationDays   = firstOpt.days  !== '' ? parseInt(firstOpt.days,  10) : null
+      const _fh = parseInt(firstOpt.hours, 10)
+      const _fd = parseInt(firstOpt.days,  10)
+      durationHours  = !isNaN(_fh) && _fh > 0 ? _fh : null
+      durationDays   = !isNaN(_fd) && _fd > 0 ? _fd : null
       pricePerPerson = durationOptionsPayload[0].price_eur
     }
 
@@ -1132,7 +1136,7 @@ export default function ExperienceForm({
         subtitle="Choose how anglers book this experience."
         help={
           <HelpWidget title="Booking Flow" items={[
-            { icon: '⚡', title: 'Direct booking', text: 'Anglers pick a date and send a request. You confirm within 24h. They pay a 30% deposit after confirmation.' },
+            { icon: '⚡', title: 'Direct booking', text: 'Anglers pick a date and send a request. You confirm within 24h. They pay a 40% deposit after confirmation.' },
             { icon: '📩', title: 'Price on request', text: 'Anglers send an inquiry with their dates. You review and send a custom offer with a price. Used for multi-day or complex trips.' },
             { icon: '🔀', title: 'Both', text: 'Offer both options. Anglers who know the price can book directly; others can inquire.' },
           ]} />
@@ -1143,7 +1147,7 @@ export default function ExperienceForm({
             {
               value: 'classic' as const,
               label: 'Classic Booking',
-              desc: 'Angler picks dates and requests a trip. You confirm within 24h. 30% deposit via Stripe, balance before the trip.',
+              desc: 'Angler picks dates and requests a trip. You confirm within 24h. 40% deposit via Stripe, balance before the trip.',
             },
             {
               value: 'icelandic' as const,
