@@ -617,10 +617,16 @@ export default function TermsOfServicePage() {
 
             <SubHeading>10.3 Guide Cancellations</SubHeading>
             <Prose>
-              If a Guide cancels a confirmed Booking, the Angler receives a full refund. Repeated cancellations
-              by a Guide may result in account penalties, reduced search visibility, or account suspension.
-              Weather-related cancellations initiated by the Guide in good faith will not count toward
-              cancellation penalties.
+              If a Guide cancels a confirmed Booking due to reasons attributable to the Guide, the Angler is
+              entitled to a refund of the funds held by the Fjordanglers Platform — that is, the Platform
+              Commission paid by the Angler (excluding the non-refundable Service Fee). The Guide is
+              obligated to return all funds received directly from the Angler (e.g. the Guide&apos;s fee paid
+              by cash or bank transfer) in a manner agreed upon directly between the Guide and the Angler.
+            </Prose>
+            <Prose>
+              Repeated cancellations by a Guide may result in account penalties, reduced search visibility,
+              or account suspension. Weather-related cancellations initiated by the Guide in good faith will
+              not count toward cancellation penalties.
             </Prose>
 
             <SubHeading>10.4 Major Disruptive Events (Force Majeure)</SubHeading>

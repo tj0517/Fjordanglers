@@ -6,6 +6,7 @@ import { stripe } from '@/lib/stripe/client'
 import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import PayDepositBanner from '@/components/booking/pay-deposit-banner'
 import PayBalanceBanner from '@/components/booking/pay-balance-banner'
+import { getPaymentModel } from '@/lib/payment-model'
 import type { Database } from '@/lib/supabase/database.types'
 import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
 
@@ -45,7 +46,7 @@ export default async function AnglerBookingDetailPage({
   const { data: booking } = await supabase
     .from('bookings')
     .select(
-      '*, experience:experiences(id, title, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_payouts_enabled)',
+      '*, experience:experiences(id, title, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled)',
     )
     .eq('id', id)
     .eq('angler_id', user.id)
@@ -87,8 +88,17 @@ export default async function AnglerBookingDetailPage({
     experience_images: { url: string; is_cover: boolean; sort_order: number }[]
   } | null
   const guide = booking.guide as unknown as {
-    id: string; full_name: string; user_id: string; stripe_payouts_enabled: boolean | null
+    id: string; full_name: string; user_id: string
+    stripe_account_id: string | null
+    stripe_charges_enabled: boolean | null
+    stripe_payouts_enabled: boolean | null
   } | null
+
+  const paymentModel = getPaymentModel({
+    stripe_account_id:      guide?.stripe_account_id ?? null,
+    stripe_charges_enabled: guide?.stripe_charges_enabled ?? null,
+    stripe_payouts_enabled: guide?.stripe_payouts_enabled ?? null,
+  })
 
   // Guide's decline message (if they proposed alternatives)
   const guideDeclineMessage =
@@ -284,16 +294,24 @@ export default async function AnglerBookingDetailPage({
                   value={durationLabel}
                 />
                 <InfoCard
-                  label="Deposit (40%)"
+                  label={paymentModel === 'manual' ? 'Booking fee' : 'Deposit (40%)'}
                   value={`€${depositEur}`}
                   subValue={booking.status === 'confirmed' || booking.status === 'completed' ? 'Paid ✓' : undefined}
                   subColor="#16A34A"
                 />
                 <InfoCard
-                  label="Balance (60%)"
+                  label={paymentModel === 'manual' ? 'Guide direct' : 'Balance (60%)'}
                   value={`€${balanceEur}`}
-                  subValue={booking.balance_paid_at != null ? 'Paid ✓' : booking.status === 'confirmed' ? 'Due before trip' : undefined}
-                  subColor={booking.balance_paid_at != null ? '#16A34A' : undefined}
+                  subValue={
+                    paymentModel === 'manual'
+                      ? 'Paid directly to guide'
+                      : booking.balance_paid_at != null
+                        ? 'Paid ✓'
+                        : booking.status === 'confirmed'
+                          ? 'Due before trip'
+                          : undefined
+                  }
+                  subColor={booking.balance_paid_at != null ? '#16A34A' : 'rgba(10,46,77,0.45)'}
                 />
               </div>
 
@@ -339,8 +357,9 @@ export default async function AnglerBookingDetailPage({
                   <PayDepositBanner
                     bookingId={id}
                     initialCheckoutUrl={depositCheckoutUrl}
-                    totalEur={booking.total_eur}
-                    testMode={false}
+                    depositEur={depositEur}
+                    balanceEur={balanceEur}
+                    paymentModel={paymentModel}
                   />
                 </div>
               )}
@@ -350,10 +369,9 @@ export default async function AnglerBookingDetailPage({
                 <div className="mb-4">
                   <PayBalanceBanner
                     bookingId={id}
-                    totalEur={booking.total_eur}
+                    balanceEur={balanceEur}
                     paymentMethod={(booking.balance_payment_method ?? 'cash') as 'stripe' | 'cash'}
                     guideName={guide?.full_name ?? 'Your guide'}
-                    testMode={false}
                   />
                 </div>
               )}

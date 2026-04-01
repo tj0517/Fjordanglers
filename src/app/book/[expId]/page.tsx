@@ -8,6 +8,7 @@ import BookingDateStep from './BookingDateStep'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import { decodePeriodsParam } from '@/lib/periods'
 import { expandBookingDateRange } from '@/lib/booking-blocks'
+import { getPaymentModel } from '@/lib/payment-model'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,19 @@ export default async function BookPage({ params, searchParams }: Props) {
   if (experience.guide.calendar_disabled) {
     redirect(`/trips/${expId}/inquire`)
   }
+
+  // Derive payment model to show correct copy (deposit vs. booking fee)
+  const bookPageClient = createServiceClient()
+  const { data: guideStripe } = await bookPageClient
+    .from('guides')
+    .select('stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
+    .eq('id', experience.guide.id)
+    .single()
+  const guidePaymentModel = getPaymentModel({
+    stripe_account_id:      guideStripe?.stripe_account_id      ?? null,
+    stripe_charges_enabled: guideStripe?.stripe_charges_enabled ?? null,
+    stripe_payouts_enabled: guideStripe?.stripe_payouts_enabled ?? null,
+  })
 
   const pricePerPerson = experience.price_per_person_eur ?? 0
   const maxGuests      = experience.max_guests ?? 20
@@ -419,7 +433,9 @@ export default async function BookPage({ params, searchParams }: Props) {
                     Due today
                   </p>
                   <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                    40% deposit via Stripe after guide confirmation
+                    {guidePaymentModel === 'manual'
+                      ? 'Booking fee via Stripe after guide confirmation'
+                      : '40% deposit via Stripe after guide confirmation'}
                   </p>
                 </div>
                 <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>€0</p>
@@ -439,7 +455,9 @@ export default async function BookPage({ params, searchParams }: Props) {
             {[
               { icon: '🛡️', text: 'No payment required to send a request' },
               { icon: '⏰', text: 'Guide confirms within 24 hours' },
-              { icon: '🔒', text: '40% deposit via Stripe after confirmation — balance before the trip' },
+              { icon: '🔒', text: guidePaymentModel === 'manual'
+                  ? 'Booking fee via Stripe after confirmation — pay guide directly for the rest'
+                  : '40% deposit via Stripe after confirmation — balance before the trip' },
             ].map(item => (
               <div key={item.text} className="flex items-center gap-3 mb-2.5 last:mb-0">
                 <span className="text-base leading-none">{item.icon}</span>

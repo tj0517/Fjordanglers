@@ -21,6 +21,14 @@ import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getPaymentModel, calcDepositEur } from '@/lib/payment-model'
 import type { Json } from '@/lib/supabase/database.types'
+
+/** Returns the correct base URL — preview deployments use VERCEL_URL, not NEXT_PUBLIC_APP_URL. */
+function getAppUrl(): string {
+  if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+  return env.NEXT_PUBLIC_APP_URL
+}
 import {
   type PriceTier,
   findApplicableTierPrice,
@@ -404,8 +412,8 @@ export async function acceptBooking(
               },
             ],
             metadata:    { bookingId, guideId: guide.id, paymentModel: guidePaymentModel },
-            success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
-            cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+            success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+            cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
             payment_intent_data: { metadata: { bookingId, paymentModel: guidePaymentModel } },
           },
           { idempotencyKey: `booking-accept-${bookingId}` },
@@ -585,8 +593,8 @@ export async function renewDepositCheckout(
         },
       ],
       metadata:            { bookingId, guideId: booking.guide_id },
-      success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
-      cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+      success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+      cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
       // No transfer_data — full amount stays on platform; admin sends payout manually.
       payment_intent_data: {
         metadata:               { bookingId },
@@ -805,8 +813,8 @@ export async function createBalanceCheckout(
           },
         ],
         metadata: { bookingId, guideId: booking.guide_id, paymentType: 'balance' },
-        success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=balance_paid`,
-        cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+        success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=balance_paid`,
+        cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
         // No transfer_data — full amount stays on platform; admin sends payout manually.
         payment_intent_data: {
           metadata: { bookingId, paymentType: 'balance' },
@@ -1374,8 +1382,8 @@ export async function acceptBookingOffer(
             quantity: 1,
           }],
           metadata: { bookingId, guideId: guide.id },
-          success_url: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=paid`,
-          cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}`,
+          success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+          cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
           payment_intent_data: {
             application_fee_amount: Math.round(effectiveOfferPrice * commissionRate * 100),
             transfer_data:          { destination: guide.stripe_account_id },
@@ -1421,7 +1429,7 @@ export async function acceptBookingOffer(
     .eq('id', bookingId)
 
   return {
-    checkoutUrl: `${env.NEXT_PUBLIC_APP_URL}/account/bookings/${bookingId}?status=accepted`,
+    checkoutUrl: `${getAppUrl()}/account/bookings/${bookingId}?status=accepted`,
   }
 }
 
