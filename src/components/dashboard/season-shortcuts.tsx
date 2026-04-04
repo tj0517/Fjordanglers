@@ -5,10 +5,7 @@
  *
  * Each preset maps to a fixed date range within the selected year.
  * Year picker lets guides set up next season in advance.
- *
- * Two modes (mirrors CalendarGrid's dual-table routing):
- *   • activeCalendarId set  → writes ONE calendar_blocked_dates row (calendar-level)
- *   • activeCalendarId null → writes to experience_blocked_dates for each experienceId
+ * Requires activeCalendarId — no-ops when null (All Trips read-only view).
  */
 
 import { useState } from 'react'
@@ -20,11 +17,7 @@ import { blockDates } from '@/actions/calendar'
 type Props = {
   experienceIds:    string[]
   initialYear:      number
-  /**
-   * When provided, block writes go to `calendar_blocked_dates` for this calendar
-   * (one row shared by all experiences in the calendar).
-   * When null/undefined, falls back to per-experience `experience_blocked_dates`.
-   */
+  /** Active calendar — blocks written here. Null = read-only, no blocking. */
   activeCalendarId?: string | null
 }
 
@@ -144,11 +137,9 @@ export default function SeasonShortcuts({ experienceIds, initialYear, activeCale
     const dateStart = toDateStr(year, season.startMD[0], season.startMD[1])
     const dateEnd   = toDateStr(year, season.endMD[0],   season.endMD[1])
 
-    // Route to calendar_blocked_dates (one row) OR experience_blocked_dates (one row per listing)
+    if (activeCalendarId == null) return
     const result = await blockDates(
-      activeCalendarId != null
-        ? { calendarId: activeCalendarId, dateStart, dateEnd, reason: season.reason }
-        : { experienceIds, dateStart, dateEnd, reason: season.reason }
+      { calendarId: activeCalendarId, dateStart, dateEnd, reason: season.reason }
     )
 
     if ('error' in result) {

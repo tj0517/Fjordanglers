@@ -3,15 +3,20 @@
 import { useState, useEffect } from 'react'
 import BookingRespondForm, { type BookingRespondFormProps } from './respond/BookingRespondForm'
 import { fmtShort } from './respond/RespondCalendar'
-import { Info, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 type Props = Omit<BookingRespondFormProps, 'mode'>
 
 export default function RespondBookingWidget(props: Props) {
   const [open, setOpen] = useState(false)
-  const { anglerName, anglerCountry, guests, totalEur, windowFrom, anglerRequestedDates, durationOption } = props
+  const [initialAction, setInitialAction] = useState<'accept' | 'decline' | null>(null)
 
-  // Lock body scroll when open
+  const {
+    anglerName, anglerCountry, guests, totalEur,
+    windowFrom, anglerRequestedDates, durationOption, specialRequests,
+  } = props
+
+  // Lock body scroll when modal is open
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
@@ -25,8 +30,14 @@ export default function RespondBookingWidget(props: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  // `requested_dates` now contains ALL expanded individual dates in the window.
-  // The last element is the window end — same logic as BookingRespondForm.deriveWindowTo.
+  /** Open modal pre-seeded to the chosen action — skips the two-card choice phase. */
+  function openWith(action: 'accept' | 'decline') {
+    setInitialAction(action)
+    setOpen(true)
+  }
+
+  // `requested_dates` holds all expanded individual dates in the angler's window.
+  // Last element = window end — same logic as BookingRespondForm.deriveWindowTo.
   const windowTo =
     anglerRequestedDates && anglerRequestedDates.length > 1
       ? anglerRequestedDates[anglerRequestedDates.length - 1] !== windowFrom
@@ -38,70 +49,88 @@ export default function RespondBookingWidget(props: Props) {
     ? `${fmtShort(windowFrom)} – ${fmtShort(windowTo)}`
     : `${fmtShort(windowFrom)}${durationOption ? ` · ${durationOption}` : ''}`
 
+  // Modal header label reflects which button opened it.
+  // (If user clicks Back inside the form the label stays — that's intentional:
+  //  the two ActionCards below let them switch to the other action.)
+  const modalSubLabel =
+    initialAction === 'accept' ? 'Accept booking'
+    : initialAction === 'decline' ? 'Decline booking'
+    : 'Respond to booking'
+
   return (
     <>
-      {/* ── Trigger banner ──────────────────────────────────────────────────── */}
+      {/* ── Trigger card ──────────────────────────────────────────────────────── */}
       <div
         style={{
-          background:   '#FDFAF7',
+          background:   '#E67E50',
           borderRadius: '20px',
-          border:       '1.5px solid rgba(230,126,80,0.28)',
-          boxShadow:    '0 2px 16px rgba(10,46,77,0.06)',
           overflow:     'hidden',
+          boxShadow:    '0 4px 20px rgba(230,126,80,0.35)',
         }}
       >
-        <div
-          className="px-5 py-4 flex items-center justify-between gap-4"
-          style={{ background: 'rgba(230,126,80,0.08)', borderBottom: '1px solid rgba(230,126,80,0.15)' }}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'rgba(230,126,80,0.18)' }}
-            >
-              <Info size={15} strokeWidth={1.8} style={{ color: '#E67E50' }} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
-                New booking request — awaiting your response
-              </p>
-              <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                Accept or decline to notify the angler
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setOpen(true)}
-            className="px-5 py-2.5 rounded-xl text-sm font-bold f-body text-white flex-shrink-0 transition-all hover:brightness-110 active:scale-95"
-            style={{ background: '#E67E50' }}
+        {/* Label + summary */}
+        <div className="px-5 pt-4 pb-4">
+          <p
+            className="text-[10px] uppercase tracking-[0.22em] font-bold f-body mb-2"
+            style={{ color: 'rgba(255,255,255,0.6)' }}
           >
-            Respond →
-          </button>
-        </div>
+            New booking request
+          </p>
 
-        <div className="px-5 py-3 flex items-center gap-3 flex-wrap">
-          <span className="text-[12px] f-body font-semibold" style={{ color: '#0A2E4D' }}>
+          <p className="text-sm font-semibold f-body leading-snug" style={{ color: '#fff' }}>
             {anglerName}
             {anglerCountry ? (
-              <span className="font-normal" style={{ color: 'rgba(10,46,77,0.5)' }}> · {anglerCountry}</span>
+              <span className="font-normal" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                {' · '}{anglerCountry}
+              </span>
             ) : null}
-          </span>
-          <Dot />
-          <span className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+          </p>
+
+          <p className="text-[12px] f-body mt-0.5" style={{ color: 'rgba(255,255,255,0.75)' }}>
             {guests} {guests === 1 ? 'guest' : 'guests'}
-          </span>
-          <Dot />
-          <span className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-            {dateLabel}
-          </span>
-          <Dot />
-          <span className="text-[12px] f-body font-bold" style={{ color: '#16A34A' }}>
-            €{totalEur}
-          </span>
+            {' · '}{dateLabel}
+            {' · '}<span className="font-semibold" style={{ color: '#fff' }}>€{totalEur}</span>
+          </p>
+
+          {specialRequests != null && specialRequests.length > 0 && (
+            <p
+              className="mt-2 text-[11px] f-body leading-snug line-clamp-2"
+              style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}
+            >
+              &ldquo;{specialRequests}&rdquo;
+            </p>
+          )}
+        </div>
+
+        {/* Hairline separator */}
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.15)' }} />
+
+        {/* Action row */}
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => openWith('accept')}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3.5 text-sm font-bold f-body transition-all hover:bg-white/10 active:scale-[0.98]"
+            style={{
+              color:       '#fff',
+              borderRight: '1px solid rgba(255,255,255,0.15)',
+            }}
+          >
+            <Check size={13} strokeWidth={2.5} />
+            Accept
+          </button>
+          <button
+            type="button"
+            onClick={() => openWith('decline')}
+            className="flex-1 flex items-center justify-center py-3.5 text-sm font-semibold f-body transition-all hover:bg-white/10 active:scale-[0.98]"
+            style={{ color: 'rgba(255,255,255,0.7)' }}
+          >
+            Decline
+          </button>
         </div>
       </div>
 
-      {/* ── Modal dialog ────────────────────────────────────────────────────── */}
+      {/* ── Modal dialog ──────────────────────────────────────────────────────── */}
       {open && (
         <>
           {/* Backdrop — separate element, no backdropFilter to avoid blur bleeding onto the panel */}
@@ -112,64 +141,57 @@ export default function RespondBookingWidget(props: Props) {
             aria-hidden="true"
           />
 
-          {/* Dialog panel — above backdrop, pointer-events-none wrapper centres it without catching clicks */}
-          <div
-            className="fixed inset-0 z-[51] flex items-center justify-center p-4 sm:p-6 pointer-events-none"
-          >
-          <div
-            className="relative w-full max-w-[960px] max-h-[92dvh] flex flex-col pointer-events-auto"
-            style={{
-              background:   '#FDFAF7',
-              borderRadius: 28,
-              overflow:     'hidden',
-              boxShadow:    '0 24px 80px rgba(10,46,77,0.28)',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Sticky header */}
+          {/* Dialog panel — pointer-events-none wrapper centres it without catching clicks */}
+          <div className="fixed inset-0 z-[51] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
             <div
-              className="flex items-center justify-between px-6 pt-5 pb-4 flex-shrink-0"
-              style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
+              className="relative w-full max-w-[960px] max-h-[92dvh] flex flex-col pointer-events-auto"
+              style={{
+                background:   '#FDFAF7',
+                borderRadius: 28,
+                overflow:     'hidden',
+                boxShadow:    '0 24px 80px rgba(10,46,77,0.28)',
+              }}
+              onClick={e => e.stopPropagation()}
             >
-              <div>
-                <p
-                  className="text-[10px] font-bold uppercase tracking-[0.2em] f-body"
-                  style={{ color: 'rgba(10,46,77,0.38)' }}
-                >
-                  Respond to booking
-                </p>
-                <h2 className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>
-                  {anglerName}
-                </h2>
-              </div>
-              <button
-                onClick={() => setOpen(false)}
-                className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-black/[0.06]"
-                aria-label="Close"
-                style={{ color: 'rgba(10,46,77,0.5)' }}
+              {/* Sticky header */}
+              <div
+                className="flex items-center justify-between px-6 pt-5 pb-4 flex-shrink-0"
+                style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
               >
-                <X size={14} strokeWidth={2} />
-              </button>
-            </div>
+                <div>
+                  <p
+                    className="text-[10px] font-bold uppercase tracking-[0.2em] f-body"
+                    style={{ color: 'rgba(10,46,77,0.38)' }}
+                  >
+                    {modalSubLabel}
+                  </p>
+                  <h2 className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>
+                    {anglerName}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-black/[0.06]"
+                  aria-label="Close"
+                  style={{ color: 'rgba(10,46,77,0.5)' }}
+                >
+                  <X size={14} strokeWidth={2} />
+                </button>
+              </div>
 
-            {/* Scrollable body — min-h-0 is required for overflow-y to work in flex */}
-            <div className="overflow-y-auto flex-1 min-h-0">
-              <BookingRespondForm
-                {...props}
-                mode="page"
-                onClose={() => setOpen(false)}
-              />
+              {/* Scrollable body — min-h-0 is required for overflow-y to work in flex */}
+              <div className="overflow-y-auto flex-1 min-h-0">
+                <BookingRespondForm
+                  {...props}
+                  initialAction={initialAction}
+                  mode="page"
+                  onClose={() => setOpen(false)}
+                />
+              </div>
             </div>
-          </div>
           </div>
         </>
       )}
     </>
-  )
-}
-
-function Dot() {
-  return (
-    <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: 9, lineHeight: 1 }}>●</span>
   )
 }

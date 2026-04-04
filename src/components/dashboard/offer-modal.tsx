@@ -67,8 +67,85 @@ export default function OfferModal({
 
   return (
     <>
-      {/* ── Trigger buttons ────────────────────────────────────────────────── */}
+      {/* ── Trigger area ───────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
+
+        {/* Mini brief — shows context when anglerBrief is available */}
+        {anglerBrief != null && (
+          <div
+            className="rounded-2xl p-4 flex flex-col gap-2.5"
+            style={{
+              background: 'rgba(10,46,77,0.03)',
+              border:     '1px solid rgba(10,46,77,0.07)',
+            }}
+          >
+            <p
+              className="text-[9px] uppercase tracking-[0.24em] font-bold f-body"
+              style={{ color: 'rgba(10,46,77,0.3)' }}
+            >
+              Request summary
+            </p>
+
+            {/* Dates + duration */}
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <span
+                className="text-sm font-bold f-display"
+                style={{ color: '#0A2E4D' }}
+              >
+                {anglerBrief.allPeriods != null && anglerBrief.allPeriods.length > 1
+                  ? `${anglerBrief.allPeriods.length} date windows`
+                  : anglerBrief.datesValue}
+              </span>
+              <span
+                className="text-[11px] f-body"
+                style={{ color: 'rgba(10,46,77,0.45)' }}
+              >
+                · {anglerBrief.tripDays}
+                {anglerBrief.durationTypeLabel != null && ` · ${anglerBrief.durationTypeLabel}`}
+              </span>
+            </div>
+
+            {/* Group */}
+            <p
+              className="text-[12px] f-body"
+              style={{ color: 'rgba(10,46,77,0.6)' }}
+            >
+              {anglerBrief.groupLabel}
+              {anglerBrief.experienceLabel != null && (
+                <span style={{ color: 'rgba(10,46,77,0.38)' }}> · {anglerBrief.experienceLabel}</span>
+              )}
+            </p>
+
+            {/* Species chips */}
+            {anglerBrief.species.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {anglerBrief.species.slice(0, 4).map(sp => (
+                  <span
+                    key={sp}
+                    className="text-[10px] f-body font-medium px-2 py-0.5 rounded-full"
+                    style={{
+                      background: 'rgba(230,126,80,0.1)',
+                      color:      '#C4622A',
+                    }}
+                  >
+                    {sp}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Budget (if set) */}
+            {anglerBrief.budgetLabel != null && (
+              <p
+                className="text-[12px] f-body font-semibold"
+                style={{ color: '#16A34A' }}
+              >
+                💰 {anglerBrief.budgetLabel}
+              </p>
+            )}
+          </div>
+        )}
+
         <button
           onClick={() => setOpen(true)}
           className="w-full py-3.5 rounded-2xl text-sm font-bold f-body transition-all hover:brightness-105 flex items-center justify-center gap-2"

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,8 +62,6 @@ export function fmtShort(iso: string): string {
 export default function RespondCalendar({
   calMode,
   anglerWindowFrom,
-  anglerWindowTo,
-  anglerNumDays,
   anglerDates,
   weeklySchedules,
   blockedDates,
@@ -80,14 +78,6 @@ export default function RespondCalendar({
   calMode:          'single' | 'range' | 'multi'
   /** First/primary angler date — used for calendar month initialisation */
   anglerWindowFrom: string
-  /**
-   * Last date of the angler's availability window.
-   * When provided, all days from anglerWindowFrom → anglerWindowTo are
-   * highlighted as a continuous blue range (instead of individual dots).
-   */
-  anglerWindowTo?:  string | null
-  /** How many fishing days the angler wants within the window */
-  anglerNumDays?:   number | null
   /** All dates the angler selected — highlighted blue on the calendar */
   anglerDates?:     string[]
   weeklySchedules:  WeeklySchedule[]
@@ -103,33 +93,16 @@ export default function RespondCalendar({
   const now      = new Date()
   const todayISO = toISO(now.getFullYear(), now.getMonth(), now.getDate())
 
-  // True when we have a proper window range (not just a single date)
-  const hasAnglerWindow = anglerWindowTo != null && anglerWindowTo !== anglerWindowFrom
-
-  // Set of all angler-requested dates for O(1) lookup (used in non-window mode)
+  // Exact dates the angler selected — used for blue highlighting.
+  // Never use a range envelope: angler may have picked non-contiguous individual dates.
   const anglerDatesSet = useMemo(
     () => new Set(anglerDates && anglerDates.length > 0 ? anglerDates : [anglerWindowFrom]),
     [anglerDates, anglerWindowFrom],
   )
 
-  /** Is this ISO date within the angler's availability? */
+  /** Is this ISO date one of the angler's actually selected dates? */
   function isInAnglerAvailability(iso: string): boolean {
-    if (hasAnglerWindow) return iso >= anglerWindowFrom && iso <= anglerWindowTo!
     return anglerDatesSet.has(iso)
-  }
-
-  /**
-   * Outer-div background creating a continuous range band for angler window.
-   * Only active when hasAnglerWindow; individual-date mode keeps transparent.
-   */
-  function getAnglerWindowOuterBg(iso: string): string {
-    if (!hasAnglerWindow) return 'transparent'
-    if (!isInAnglerAvailability(iso)) return 'transparent'
-    if (iso === anglerWindowFrom)
-      return 'linear-gradient(to right, transparent 50%, rgba(59,130,246,0.1) 50%)'
-    if (iso === anglerWindowTo)
-      return 'linear-gradient(to left,  transparent 50%, rgba(59,130,246,0.1) 50%)'
-    return 'rgba(59,130,246,0.1)'
   }
 
   const anglerDate = new Date(anglerWindowFrom + 'T12:00:00')
@@ -197,33 +170,13 @@ export default function RespondCalendar({
     calMode === 'multi'  ? (rangeLabel ?? 'Selected days') :
     (rangeLabel ?? 'Your available dates')
 
-  const legendBlueLabel = hasAnglerWindow ? 'Availability window' : "Angler's dates"
+  const legendBlueLabel = "Angler's dates"
 
   return (
     <div className="rounded-2xl overflow-hidden"
          style={{ background: '#FDFAF7', border: '1.5px solid rgba(10,46,77,0.12)' }}>
       <div className="px-4 pt-4 pb-3">
 
-        {/* Angler availability window info banner */}
-        {hasAnglerWindow && (
-          <div className="flex items-center gap-2.5 mb-3 px-3 py-2.5 rounded-xl"
-               style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.16)' }}>
-            <Calendar size={13} strokeWidth={1.5} className="shrink-0" style={{ color: '#2563EB' }} />
-            <div className="min-w-0">
-              <p className="text-[11px] font-bold f-body" style={{ color: '#2563EB' }}>
-                Angler&apos;s availability window
-              </p>
-              <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(37,99,235,0.7)' }}>
-                {fmtShort(anglerWindowFrom)} – {fmtShort(anglerWindowTo!)}
-                {anglerNumDays != null && (
-                  <span className="font-semibold">
-                    {' '}· wants {anglerNumDays} {anglerNumDays === 1 ? 'day' : 'days'}
-                  </span>
-                )}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Month nav */}
         <div className="flex items-center justify-between mb-3">
@@ -270,12 +223,9 @@ export default function RespondCalendar({
             if (calMode === 'multi') {
               const isSel  = selectedDays.includes(iso)
               const inWin  = isInAnglerAvailability(iso)
-              // continuous band background for the angler's window
-              const outerBg = getAnglerWindowOuterBg(iso)
 
               return (
-                <div key={d} className="h-9 flex items-center justify-center"
-                     style={{ background: outerBg }}>
+                <div key={d} className="h-9 flex items-center justify-center">
                   <button
                     type="button"
                     disabled={!clickable || disabled}
@@ -291,9 +241,7 @@ export default function RespondCalendar({
                     title={
                       isEBlk ? 'Experience unavailable on this date' :
                       isGBlk ? 'Your off-day — you can still select' :
-                      inWin  ? hasAnglerWindow
-                                 ? 'Within angler\'s availability window'
-                                 : "Angler's requested start date" :
+                      inWin  ? "Angler's requested date" :
                       undefined
                     }
                   >
@@ -337,17 +285,8 @@ export default function RespondCalendar({
             else if (isSelStart)   outerBg = 'linear-gradient(to right, transparent 50%, rgba(230,126,80,0.1) 50%)'
             else if (isSelEnd)     outerBg = 'linear-gradient(to left,  transparent 50%, rgba(230,126,80,0.1) 50%)'
             else if (inWin && !isSelected) {
-              if (hasAnglerWindow) {
-                // continuous range band for window mode
-                if (iso === anglerWindowFrom)
-                  outerBg = 'linear-gradient(to right, transparent 50%, rgba(59,130,246,0.1) 50%)'
-                else if (iso === anglerWindowTo)
-                  outerBg = 'linear-gradient(to left,  transparent 50%, rgba(59,130,246,0.1) 50%)'
-                else
-                  outerBg = 'rgba(59,130,246,0.1)'
-              } else {
-                outerBg = 'rgba(59,130,246,0.12)' // individual-date mode (legacy)
-              }
+              // individual angler date — subtle cell tint; circle colour from innerBg
+              outerBg = 'rgba(59,130,246,0.08)'
             }
 
             let innerBg: string | undefined
@@ -379,9 +318,7 @@ export default function RespondCalendar({
                   title={
                     isEBlk ? 'Experience unavailable on this date' :
                     isGBlk ? 'Your off-day — you can still select' :
-                    inWin  ? hasAnglerWindow
-                               ? 'Within angler\'s availability window'
-                               : "Angler's requested date" :
+                    inWin  ? "Angler's requested date" :
                     undefined
                   }
                 >

@@ -33,17 +33,25 @@ export default async function InquirePage({
     ? experience.guides[0]
     : experience.guides
 
-  // Fetch guide availability config + blocked dates in parallel
+  // Fetch availability config + blocked dates (always from calendar_blocked_dates)
+  const { data: calExp } = await serviceClient
+    .from('calendar_experiences')
+    .select('calendar_id')
+    .eq('experience_id', id)
+    .maybeSingle()
+
   const [availConfigRes, blockedDatesRes] = await Promise.all([
     serviceClient
       .from('experience_availability_config')
       .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
       .eq('experience_id', id)
       .maybeSingle(),
-    serviceClient
-      .from('experience_blocked_dates')
-      .select('date_start, date_end')
-      .eq('experience_id', id),
+    calExp != null
+      ? serviceClient
+          .from('calendar_blocked_dates')
+          .select('date_start, date_end')
+          .eq('calendar_id', calExp.calendar_id)
+      : Promise.resolve({ data: [] as Array<{ date_start: string; date_end: string }> }),
   ])
 
   const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null

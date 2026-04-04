@@ -120,6 +120,41 @@ export async function signOut(): Promise<never> {
   redirect('/login')
 }
 
+// ─── Update password ──────────────────────────────────────────────────────────
+
+export async function updatePassword(newPassword: string): Promise<{ error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) return { error: error.message }
+    return {}
+  } catch (err) {
+    console.error('[auth/updatePassword] Unexpected error:', err)
+    return { error: 'An unexpected error occurred. Please try again.' }
+  }
+}
+
+// ─── Delete account ───────────────────────────────────────────────────────────
+
+export async function deleteAccount(): Promise<{ error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Not signed in.' }
+
+    const service = createServiceClient()
+    const { error } = await service.auth.admin.deleteUser(user.id)
+    if (error) return { error: error.message }
+
+    redirect('/')
+  } catch (err) {
+    // redirect() throws — let it propagate
+    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
+    console.error('[auth/deleteAccount] Unexpected error:', err)
+    return { error: 'An unexpected error occurred. Please try again.' }
+  }
+}
+
 // ─── Reset password ───────────────────────────────────────────────────────────
 
 export async function resetPassword(email: string): Promise<AuthResult> {

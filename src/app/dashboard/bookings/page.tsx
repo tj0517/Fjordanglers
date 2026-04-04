@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 import { CountryFlag } from '@/components/ui/country-flag'
@@ -50,7 +51,7 @@ const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: s
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
-const GRID = '88px 2fr 1.5fr 1.4fr 55px 120px 100px 70px'
+const GRID_CLASS = 'grid-cols-[88px_2fr_1.5fr_1.4fr_55px_120px_100px_70px]'
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -68,15 +69,7 @@ export default async function BookingsPage({
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user == null) {
-    return (
-      <div className="px-4 py-6 sm:px-8 sm:py-10">
-        <p className="text-[#0A2E4D]/55 f-body text-sm">
-          Please{' '}
-          <Link href="/login" className="text-[#E67E50] underline underline-offset-2">sign in</Link>
-          {' '}to view your bookings.
-        </p>
-      </div>
-    )
+    redirect('/login?next=/dashboard/bookings')
   }
 
   const { data: guide } = await supabase
@@ -139,9 +132,13 @@ export default async function BookingsPage({
       b.status === 'pending' ||
       b.status === 'reviewing'
 
-    // Revenue shown only when an offer/amount is set
-    const displayTotal   = (b.offer_price_eur ?? b.total_eur) as number | null
-    const displayPayout  = b.guide_payout_eur as number | null
+    // Revenue shown only when a real price exists.
+    // For inquiry bookings, total_eur starts at 0 until guide sends a priced offer.
+    // Treat 0 (and anything ≤ 0) as "not yet set" — show a placeholder instead of €0.
+    const rawTotal      = b.offer_price_eur != null ? b.offer_price_eur : b.total_eur
+    const displayTotal  = rawTotal != null && rawTotal > 0 ? rawTotal : null
+    const rawPayout     = b.guide_payout_eur
+    const displayPayout = rawPayout != null && rawPayout > 0 ? rawPayout : null
 
     // Trip title
     const isCustom  = b.experience_id == null
@@ -325,18 +322,15 @@ export default async function BookingsPage({
         <TableCard>
           <TableHeader
             columns={['Type', 'Angler', 'Trip', 'Date', 'Guests', 'Amount', 'Status', '']}
-            grid={GRID}
+            gridClass={GRID_CLASS}
           />
           <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
             {activeItems.map(item => (
               <Link
                 key={item.id}
                 href={item.href}
-                className="grid items-center px-6 py-4 transition-colors hover:bg-[#F8F4EE]"
+                className={`grid ${GRID_CLASS} items-center gap-3 px-6 py-4 transition-colors hover:bg-[#F8F4EE]`}
                 style={{
-                  gridTemplateColumns: GRID,
-                  gap:        '12px',
-                  display:    'grid',
                   background: item.isPrimary ? 'rgba(230,126,80,0.02)' : undefined,
                 }}
               >
@@ -405,6 +399,14 @@ export default async function BookingsPage({
                         <p className="text-[#16A34A] text-xs f-body">€{item.guidePayoutEur} you</p>
                       )}
                     </>
+                  ) : item.source === 'inquiry' ? (
+                    /* Inquiry with no offer price yet — waiting for guide to send offer */
+                    <p
+                      className="text-[11px] font-semibold f-body px-2 py-0.5 rounded-full inline-block"
+                      style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.38)' }}
+                    >
+                      Custom
+                    </p>
                   ) : (
                     <p className="text-[#0A2E4D]/28 text-sm f-body">—</p>
                   )}
@@ -448,20 +450,20 @@ function TableCard({ children }: { children: React.ReactNode }) {
         overflow:     'hidden',
       }}
     >
-      {children}
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: '860px' }}>
+          {children}
+        </div>
+      </div>
     </div>
   )
 }
 
-function TableHeader({ columns, grid }: { columns: string[]; grid: string }) {
+function TableHeader({ columns, gridClass }: { columns: string[]; gridClass: string }) {
   return (
     <div
-      className="grid px-6 py-3"
-      style={{
-        gridTemplateColumns: grid,
-        borderBottom: '1px solid rgba(10,46,77,0.07)',
-        gap: '12px',
-      }}
+      className={`grid ${gridClass} gap-3 px-6 py-3`}
+      style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
     >
       {columns.map((col, i) => (
         <p key={i} className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>

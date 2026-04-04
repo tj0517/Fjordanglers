@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
 import OfferModal, { type AnglerBrief } from '@/components/dashboard/offer-modal'
@@ -49,7 +49,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id')
+    .select('id, country')
     .eq('user_id', user.id)
     .single()
   if (!guide) notFound()
@@ -113,6 +113,13 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
       .update({ status: 'reviewing' })
       .eq('id', id)
     displayStatus = 'reviewing'
+  }
+
+  // Once the offer is accepted / trip confirmed / completed, redirect to the booking
+  // detail page — it uses the same SectionCards layout as direct bookings, ensuring
+  // a consistent guide experience regardless of how the booking was created.
+  if (['offer_accepted', 'confirmed', 'completed'].includes(displayStatus)) {
+    redirect(`/dashboard/bookings/${id}`)
   }
 
   // ── Navigation list ────────────────────────────────────────────────────────
@@ -198,11 +205,30 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
       : null
 
   const tripDays = (() => {
-    if (prefs.numDays != null) return `${prefs.numDays} days`
+    // Single-day session types — angler wants 1 day within their availability window.
+    // Don't show the window length here; the guide sees the duration type in Preferences.
+    if (prefs.durationType === 'half_day' || prefs.durationType === 'full_day') return '1 day'
+
+    // When angler explicitly chose a number of fishing days, mark it clearly
+    // so the guide understands it's the desired trip length, not the window length.
+    if (prefs.numDays != null) return `wants ${prefs.numDays} days`
+
+    // When multiple non-contiguous periods exist, sum actual days from each period
+    // (not the span from first to last which includes the gaps between periods).
+    if (prefs.allDatePeriods != null && prefs.allDatePeriods.length > 0) {
+      const total = prefs.allDatePeriods.reduce((acc, p) => {
+        const diff = Math.round(
+          (new Date(p.to + 'T12:00:00').getTime() - new Date(p.from + 'T12:00:00').getTime()) / 86_400_000,
+        )
+        return acc + diff + 1
+      }, 0)
+      return `${total} day${total !== 1 ? 's' : ''}`
+    }
+
     if (!datesFrom || !datesTo) return '1 day'
-    const from = new Date(datesFrom)
-    const to   = new Date(datesTo)
-    const diff = Math.round((to.getTime() - from.getTime()) / 86_400_000)
+    const diff = Math.round(
+      (new Date(datesTo + 'T12:00:00').getTime() - new Date(datesFrom + 'T12:00:00').getTime()) / 86_400_000,
+    )
     return diff > 0 ? `${diff + 1} days` : '1 day'
   })()
 
@@ -285,6 +311,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
         : undefined,
     regionExperience: prefs.regionExperience ?? undefined,
     notes:            prefs.notes ?? undefined,
+    allDatePeriods:   prefs.allDatePeriods,
   }
 
   // ── Angler brief — for the offer modal left panel ─────────────────────────
@@ -398,7 +425,31 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
           <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
             {anglerName}
           </h1>
-          <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
+
+          {/* Quick-scan summary: group · dates · duration · species */}
+          {(() => {
+            const parts: string[] = [
+              `${groupSize} ${groupSize === 1 ? 'angler' : 'anglers'}`,
+            ]
+            if (datesFrom && datesTo) {
+              parts.push(`${fmtBriefDate(datesFrom)} – ${fmtBriefDate(datesTo)}`)
+            } else if (datesFrom) {
+              parts.push(fmtBriefDate(datesFrom))
+            }
+            if (tripDays !== '1 day') parts.push(tripDays)
+            const species = (b.target_species as string[] | null) ?? []
+            species.slice(0, 2).forEach(sp => parts.push(sp))
+            return (
+              <p
+                className="text-sm font-medium f-body mt-1.5"
+                style={{ color: 'rgba(10,46,77,0.6)' }}
+              >
+                {parts.join(' · ')}
+              </p>
+            )
+          })()}
+
+          <p className="text-[#0A2E4D]/38 text-xs mt-0.5 f-body">
             Submitted {submittedDate}
           </p>
         </div>
@@ -454,6 +505,7 @@ export default async function GuideInquiryDetailPage({ params }: Props) {
                 groupSize={groupSize}
                 canDecline={canDecline}
                 anglerBrief={anglerBrief}
+                guideCountry={guide.country}
               />
             </div>
           )}

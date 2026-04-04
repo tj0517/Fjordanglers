@@ -141,7 +141,7 @@ export async function createBookingCheckout(
   // ── Calculate pricing ─────────────────────────────────────────────────────
   const pricePerPerson = experience.price_per_person_eur ?? 0
   const subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
-  const serviceFee = Math.round(subtotal * 0.05 * 100) / 100 // 5% angler-side fee
+  const serviceFee = Math.min(Math.round(subtotal * 0.05 * 100) / 100, 50) // 5% capped at €50
   const totalEur = Math.round((subtotal + serviceFee) * 100) / 100
   const commissionRate = guideRaw.commission_rate ?? env.PLATFORM_COMMISSION_RATE
   const platformFeeEur = Math.round(subtotal * commissionRate * 100) / 100
@@ -272,6 +272,9 @@ export async function acceptBooking(
     confirmedDateTo?:   string
     guideNote?:         string
     customTotalEur?:    number     // guide-set total override (angler-facing, incl. service fee)
+    locationText?:      string     // river / location name set by guide when accepting
+    meetingLat?:        number     // optional meeting point pin
+    meetingLng?:        number
   },
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -315,9 +318,13 @@ export async function acceptBooking(
   let pricingUpdate: Partial<{ total_eur: number; guide_payout_eur: number; deposit_eur: number; platform_fee_eur: number }> = {}
 
   if (options?.customTotalEur != null && options.customTotalEur > 0) {
-    // Guide manually set the total — back-calculate payout/fee (total includes 5% service fee)
+    // Guide manually set the total — back-calculate payout/fee.
+    // total = subtotal + min(subtotal × 5%, €50)
+    // Cap threshold: subtotal > €1000 → total > €1050. Reverse accordingly.
     effectiveTotalEur       = Math.round(options.customTotalEur * 100) / 100
-    const subtotal          = effectiveTotalEur / 1.05
+    const subtotal          = effectiveTotalEur > 1050
+      ? Math.round((effectiveTotalEur - 50) * 100) / 100
+      : Math.round((effectiveTotalEur / 1.05) * 100) / 100
     const platformFeeEur    = Math.round(subtotal * booking.commission_rate * 100) / 100
     effectiveGuidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
     const depositEur        = calcDepositEur(subtotal, booking.commission_rate, guidePaymentModel)
@@ -369,16 +376,20 @@ export async function acceptBooking(
       let lineItemDesc: string
 
       if (guidePaymentModel === 'manual') {
-        // manual: charge platform fee + service fee only
-        const serviceFeeEur = Math.round((effectiveTotalEur - effectiveTotalEur / 1.05) * 100) / 100
-        const platformFeeEur = booking.platform_fee_eur ?? 0
-        const payNowEur = Math.round((platformFeeEur + serviceFeeEur) * 100) / 100
+        // manual: charge platform fee + service fee only.
+        // payNow = total − guide_payout = (commission + service fee). This avoids any
+        // reverse-1.05 calculation and uses the already-correct effectiveGuidePayoutEur.
+        const payNowEur = Math.round((effectiveTotalEur - effectiveGuidePayoutEur) * 100) / 100
         chargeCents   = Math.round(payNowEur * 100)
         lineItemName  = `${experienceTitle} — Platform fee`
         lineItemDesc  = 'Platform & service fee to confirm your booking. You\'ll pay the guide\'s fee directly (cash or bank transfer).'
       } else {
-        // stripe_connect: 40% deposit
-        chargeCents   = Math.round(calcDepositEur(effectiveTotalEur / 1.05, booking.commission_rate, 'stripe_connect') * 100)
+        // stripe_connect: 40% deposit.
+        // Reverse-derive subtotal respecting the €50 service fee cap.
+        const scSubtotal = effectiveTotalEur > 1050
+          ? Math.round((effectiveTotalEur - 50) * 100) / 100
+          : Math.round((effectiveTotalEur / 1.05) * 100) / 100
+        chargeCents   = Math.round(calcDepositEur(scSubtotal, booking.commission_rate, 'stripe_connect') * 100)
         lineItemName  = `${experienceTitle} — Deposit`
         lineItemDesc  = 'Deposit to confirm your booking. Remaining balance is due before the trip.'
       }
@@ -414,7 +425,20 @@ export async function acceptBooking(
             metadata:    { bookingId, guideId: guide.id, paymentModel: guidePaymentModel },
             success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
             cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
-            payment_intent_data: { metadata: { bookingId, paymentModel: guidePaymentModel } },
+            payment_intent_data: {
+              // stripe_connect: destination charge — platform takes full application_fee on deposit,
+              // balance payment transfers 100% to guide (no second fee).
+              // manual: no transfer_data — money stays on platform, guide paid directly by angler.
+              ...(guidePaymentModel === 'stripe_connect' && guide.stripe_account_id
+                ? {
+                    application_fee_amount: Math.round(
+                      (pricingUpdate.platform_fee_eur ?? booking.platform_fee_eur ?? 0) * 100,
+                    ),
+                    transfer_data: { destination: guide.stripe_account_id },
+                  }
+                : {}),
+              metadata: { bookingId, paymentModel: guidePaymentModel },
+            },
           },
           { idempotencyKey: `booking-accept-${bookingId}` },
         )
@@ -429,10 +453,11 @@ export async function acceptBooking(
     stripeCheckoutId = booking.stripe_checkout_id
   }
 
-  // For manual model, guide collects the balance directly from the angler — set to cash.
+  // manual: guide collects balance directly (cash/IBAN) — set to cash.
+  // stripe_connect: balance charged via Stripe by default; guide can override to cash if they prefer on-site collection.
   const balanceMethod = guidePaymentModel === 'manual'
     ? 'cash'
-    : (guide.default_balance_payment_method ?? 'cash') as 'stripe' | 'cash'
+    : (guide.default_balance_payment_method ?? 'stripe') as 'stripe' | 'cash'
 
   const { error } = await serviceClient
     .from('bookings')
@@ -441,17 +466,27 @@ export async function acceptBooking(
       accepted_at:             new Date().toISOString(),
       balance_payment_method:  balanceMethod,
       ...(stripeCheckoutId != null ? { stripe_checkout_id: stripeCheckoutId } : {}),
-      // Trip start date: first confirmed day takes priority, then legacy confirmedDateFrom
-      ...(confirmedDays?.[0]          ? { booking_date: confirmedDays[0] } :
-          options?.confirmedDateFrom  ? { booking_date: options.confirmedDateFrom } : {}),
-      // Overwrite requested_dates with guide-confirmed days so the calendar always
-      // shows the actual confirmed dates — not the angler's original availability window.
-      // Only applied when guide explicitly picked days; otherwise leave angler dates intact.
-      ...(confirmedDays != null && confirmedDays.length > 0
-        ? { requested_dates: confirmedDays }
-        : {}),
+      // Confirmed trip dates.
+      // confirmed_days  = canonical array of SPECIFIC days (non-consecutive safe).
+      // confirmed_date_from/to = first/last day — envelope for display/sorting ONLY.
+      //
+      // INVARIANT: booking_date and requested_dates are NEVER mutated after INSERT.
+      // They always represent the angler's original request, not the guide's confirmation.
+      ...(confirmedDays != null && confirmedDays.length > 0 ? {
+        confirmed_days:      confirmedDays,
+        confirmed_date_from: confirmedDays[0],
+        confirmed_date_to:   confirmedDays[confirmedDays.length - 1],
+      } : options?.confirmedDateFrom ? {
+        confirmed_date_from: options.confirmedDateFrom,
+        confirmed_date_to:   options.confirmedDateTo ?? options.confirmedDateFrom,
+      } : {}),
       // Updated pricing when guide confirmed specific days
       ...pricingUpdate,
+      // Location set by guide when accepting
+      ...(options?.locationText ? { assigned_river: options.locationText } : {}),
+      ...(options?.meetingLat != null && options?.meetingLng != null
+        ? { offer_meeting_lat: options.meetingLat, offer_meeting_lng: options.meetingLng }
+        : {}),
     })
     .eq('id', bookingId)
 
@@ -461,7 +496,7 @@ export async function acceptBooking(
   }
 
   // ── Block calendar dates ───────────────────────────────────────────────────
-  // Write rows to experience_blocked_dates so all calendars use one source of truth.
+  // Writes to calendar_blocked_dates (single source of truth, post-migration 20260402200000).
   //
   // Fallback priority (most → least specific):
   //   1. confirmedDays   — guide explicitly picked days in the accept form
@@ -560,17 +595,25 @@ export async function renewDepositCheckout(
   const { data: booking } = await serviceClient
     .from('bookings')
     .select(
-      'id, status, angler_id, total_eur, deposit_eur, guide_payout_eur, angler_email, guide_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
+      'id, status, angler_id, total_eur, deposit_eur, platform_fee_eur, guide_payout_eur, angler_email, guide_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
     )
     .eq('id', bookingId)
     .eq('angler_id', user.id)
-    .eq('status', 'accepted')
+    .in('status', ['accepted', 'offer_accepted'])
     .single()
 
   if (!booking) return { error: 'Booking not found or not ready for payment.' }
 
   const experienceTitle =
     (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+
+  const guide = booking.guides as unknown as {
+    stripe_account_id:    string | null
+    stripe_payouts_enabled: boolean | null
+  } | null
+
+  const isStripeConnect =
+    guide?.stripe_account_id != null && guide.stripe_payouts_enabled === true
 
   const depositCents = Math.round((booking.deposit_eur ?? Math.round(booking.total_eur * 0.4)) * 100)
 
@@ -584,8 +627,12 @@ export async function renewDepositCheckout(
           price_data: {
             currency:     'eur',
             product_data: {
-              name:        `${experienceTitle} — Deposit`,
-              description: 'Deposit to confirm your booking. Remaining balance is due before the trip.',
+              name: isStripeConnect
+                ? `${experienceTitle} — Deposit`
+                : `Booking fee — ${experienceTitle}`,
+              description: isStripeConnect
+                ? 'Deposit to confirm your booking. Remaining balance is due before the trip.'
+                : 'Platform booking fee. Remaining trip cost is paid directly to your guide.',
             },
             unit_amount: depositCents,
           },
@@ -595,9 +642,14 @@ export async function renewDepositCheckout(
       metadata:            { bookingId, guideId: booking.guide_id },
       success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
       cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
-      // No transfer_data — full amount stays on platform; admin sends payout manually.
       payment_intent_data: {
-        metadata:               { bookingId },
+        ...(isStripeConnect && guide?.stripe_account_id != null && booking.platform_fee_eur != null
+          ? {
+              application_fee_amount: Math.round(booking.platform_fee_eur * 100),
+              transfer_data:          { destination: guide.stripe_account_id },
+            }
+          : {}),
+        metadata: { bookingId },
       },
     })
 
@@ -670,13 +722,17 @@ export async function declineBooking(
     }
   }
 
-  if (booking.status === 'confirmed' && booking.stripe_payment_intent_id) {
-    // Icelandic confirmed (destination charge) — refund auto-reverses the transfer to guide
+  // Track whether we issue a refund — determines the final booking status.
+  const didRefund = booking.status === 'confirmed' && booking.stripe_payment_intent_id != null
+
+  if (didRefund) {
+    // Angler has paid — refund the Stripe charge.
+    // No reverse_transfer: current Checkout sessions have no transfer_data
+    // (full amount stays on platform), so reverse_transfer would error.
     try {
       await stripe.refunds.create({
-        payment_intent:   booking.stripe_payment_intent_id,
-        reason:           'requested_by_customer',
-        reverse_transfer: true, // explicit for destination charges
+        payment_intent: booking.stripe_payment_intent_id!,
+        reason:         'requested_by_customer',
       })
     } catch (err) {
       console.error('[declineBooking] Stripe refund error:', err)
@@ -687,7 +743,9 @@ export async function declineBooking(
   const { error } = await serviceClient
     .from('bookings')
     .update({
-      status:          'declined',
+      // Use 'refunded' when money was returned so the angler sees the correct state.
+      // The charge.refunded webhook will also fire; idempotency guard there handles that.
+      status:          didRefund ? 'refunded' : 'declined',
       declined_at:     new Date().toISOString(),
       declined_reason: reason ?? null,
     })
@@ -761,7 +819,7 @@ export async function createBalanceCheckout(
   const { data: booking } = await serviceClient
     .from('bookings')
     .select(
-      'id, status, angler_id, total_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, experiences(title)',
+      'id, status, angler_id, total_eur, deposit_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
     )
     .eq('id', bookingId)
     .eq('angler_id', user.id)
@@ -787,7 +845,20 @@ export async function createBalanceCheckout(
   const experienceTitle =
     (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
 
-  const balanceCents = Math.round(booking.total_eur * 0.7 * 100)
+  const guideStripe = booking.guides as unknown as {
+    stripe_account_id:    string | null
+    stripe_payouts_enabled: boolean | null
+  } | null
+
+  // Guide has active Stripe Connect → balance goes directly to guide (application_fee
+  // was already taken in full on the deposit payment, so no second fee here).
+  const isStripeConnect =
+    guideStripe?.stripe_account_id != null && guideStripe.stripe_payouts_enabled === true
+
+  // Use the stored deposit amount — NOT a hardcoded percentage.
+  // deposit_eur is written at booking creation; fall back to 40% only for legacy rows.
+  const depositEur   = booking.deposit_eur ?? Math.round(booking.total_eur * 0.4 * 100) / 100
+  const balanceCents = Math.round((booking.total_eur - depositEur) * 100)
 
   if (balanceCents < 100) {
     return { error: 'Balance amount is too small to process via Stripe — please collect payment directly.' }
@@ -805,7 +876,7 @@ export async function createBalanceCheckout(
               currency:     'eur',
               product_data: {
                 name:        `${experienceTitle} — Remaining Balance`,
-                description: 'Remaining 70% balance for your confirmed fishing trip.',
+                description: 'Remaining balance for your confirmed fishing trip.',
               },
               unit_amount: balanceCents,
             },
@@ -815,8 +886,14 @@ export async function createBalanceCheckout(
         metadata: { bookingId, guideId: booking.guide_id, paymentType: 'balance' },
         success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=balance_paid`,
         cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
-        // No transfer_data — full amount stays on platform; admin sends payout manually.
         payment_intent_data: {
+          // stripe_connect: full balance → guide directly (platform fee already taken on deposit).
+          // manual: full amount stays on platform; guide was paid directly by angler already.
+          ...(isStripeConnect && guideStripe?.stripe_account_id
+            ? {
+                transfer_data: { destination: guideStripe.stripe_account_id },
+              }
+            : {}),
           metadata: { bookingId, paymentType: 'balance' },
         },
       },
@@ -1100,7 +1177,11 @@ const createInquirySchema = z.object({
     riverType:            z.string().optional(),
     notes:                z.string().max(2000).optional(),
   }).default({}),
-  guideId: z.string().uuid().optional(),
+  guideId:      z.string().uuid().optional(),
+  // When inquiry is started from a specific trip page ("Message the guide first"
+  // or Icelandic flow), pin the booking to that experience so calendar blocking
+  // stays scoped to the right calendar and the angler sees trip details.
+  experienceId: z.string().uuid().optional(),
 })
 
 export async function createInquiryBooking(
@@ -1111,7 +1192,7 @@ export async function createInquiryBooking(
 
   const {
     anglerName, anglerEmail, datesFrom, datesTo,
-    targetSpecies, experienceLevel, groupSize, preferences, guideId,
+    targetSpecies, experienceLevel, groupSize, preferences, guideId, experienceId,
   } = parsed.data
 
   if (datesFrom > datesTo) return { error: 'Start date must be before end date.' }
@@ -1146,7 +1227,8 @@ export async function createInquiryBooking(
       target_species:    targetSpecies,
       experience_level:  experienceLevel,
       preferences:       preferences as unknown as Json,
-      guide_id:          guideId ?? null,
+      guide_id:          guideId      ?? null,
+      experience_id:     experienceId ?? null,
       status:            'pending',
       total_eur:         0,
       platform_fee_eur:  0,
@@ -1279,24 +1361,10 @@ export async function sendOffer(
     return { error: 'Failed to send offer. Please try again.' }
   }
 
-  // ── Block calendar dates ───────────────────────────────────────────────────
-  // Priority: guide's exact offer_days > guide's date range > angler's
-  // requested_dates (the individual dates they said they're available).
-  // Using requested_dates as last resort avoids the "envelope" problem where
-  // datesFrom/datesTo would block the full span including non-selected days.
-  // If guide set no dates at all and angler has no requested_dates, nothing blocked.
-  {
-    const daysToBlock =
-      offer.offerDays != null && offer.offerDays.length > 0
-        ? offer.offerDays
-        : offer.offerDateFrom != null
-          ? expandBookingDateRange(offer.offerDateFrom, offer.offerDateTo)
-          : (booking.requested_dates as string[] | null) ?? []
-    if (daysToBlock.length > 0) {
-      blockBookingDates(serviceClient, bookingId, guide.id, daysToBlock)
-        .catch(e => console.error('[sendOffer] blockBookingDates:', e))
-    }
-  }
+  // NOTE: calendar blocking happens at acceptBookingOffer() when the angler confirms —
+  // the same as acceptBooking() for direct bookings. Sending an offer is not yet a
+  // commitment — the angler may decline. Blocking at this stage would cause false
+  // unavailability on the calendar.
 
   console.log(`[sendOffer] Offer sent for booking ${bookingId} — €${effectivePriceEur}`)
   revalidatePath('/dashboard/bookings')
@@ -1355,37 +1423,123 @@ export async function acceptBookingOffer(
     commission_rate: number
   } | null
 
+  // ── Compute confirmed days from offer (before Stripe, before blocking) ───────
+  //
+  // offer_days  = guide explicitly picked individual days (non-consecutive safe).
+  // offer_date_from/to = envelope dates (may span non-trip days).
+  //
+  // Rule: always prefer the specific days array over the envelope.
+  // confirmedDaysForOffer is the canonical array written to confirmed_days column.
+  const offerDaysRaw = booking.offer_days as string[] | null
+  const confirmedDaysForOffer: string[] =
+    offerDaysRaw != null && offerDaysRaw.length > 0
+      ? offerDaysRaw
+      : expandBookingDateRange(
+          booking.offer_date_from as string | null,
+          booking.offer_date_to   as string | null,
+        )
+
+  const confirmedFromOffer = confirmedDaysForOffer[0]                               ?? booking.offer_date_from ?? null
+  const confirmedToOffer   = confirmedDaysForOffer[confirmedDaysForOffer.length - 1] ?? booking.offer_date_to   ?? null
+
   // Mark as offer_accepted
   await serviceClient
     .from('bookings')
     .update({ status: 'offer_accepted' })
     .eq('id', bookingId)
 
-  // Guide has Stripe → destination charge (platform takes commission automatically)
+  // ── Block calendar dates ───────────────────────────────────────────────────
+  // Exact same trigger as acceptBooking() for direct bookings.
+  // Angler accepted the offer → dates are committed → block the calendar.
+  // Inquiry bookings have no experience_id → blockBookingDates blocks ALL guide calendars.
+  {
+    const offerDays   = booking.offer_days as string[] | null
+    const daysToBlock =
+      offerDays != null && offerDays.length > 0
+        ? offerDays
+        : expandBookingDateRange(
+            booking.offer_date_from as string | null,
+            booking.offer_date_to   as string | null,
+          )
+
+    const guideIdForBlock = (booking.guide_id as string | null) ?? guide?.id ?? ''
+    if (daysToBlock.length > 0 && guideIdForBlock) {
+      blockBookingDates(
+        serviceClient,
+        bookingId,
+        guideIdForBlock,
+        daysToBlock,
+        (booking.experience_id as string | null) ?? undefined,
+      ).catch(e => console.error('[acceptBookingOffer] blockBookingDates:', e))
+    }
+  }
+
+  // Guide has Stripe → destination charge (platform takes commission + service fee automatically)
+  //
+  // Fee model:
+  //   - Guide quoted price (effectiveOfferPrice) → guide receives this minus commission
+  //   - Service fee (5%, capped €50) → added ON TOP for angler, NOT deducted from guide
+  //   - Angler pays: guide_price + service_fee
+  //   - Platform application_fee = commission + service_fee
+  //   - Guide receives: guide_price - commission  (service fee never touches guide's earnings)
   if (guide?.stripe_account_id && guide.stripe_payouts_enabled) {
     try {
-      const commissionRate = guide.commission_rate ?? env.PLATFORM_COMMISSION_RATE
+      const commissionRate   = guide.commission_rate ?? env.PLATFORM_COMMISSION_RATE
+      const SERVICE_FEE_CAP  = 50
+      const serviceFeeEur    = Math.min(
+        Math.round(effectiveOfferPrice * 0.05 * 100) / 100,
+        SERVICE_FEE_CAP,
+      )
+      const commissionEur    = Math.round(effectiveOfferPrice * commissionRate * 100) / 100
+      const totalChargeEur   = Math.round((effectiveOfferPrice + serviceFeeEur) * 100) / 100
+      const appFeeEur        = Math.round((commissionEur + serviceFeeEur) * 100) / 100
+      // Guide receives their full quoted price minus platform commission only.
+      // Service fee is purely an angler-side charge.
+      const guidePayoutEur   = Math.round((effectiveOfferPrice - commissionEur) * 100) / 100
+
       const session = await stripe.checkout.sessions.create(
         {
           mode:                 'payment',
           payment_method_types: ['card'],
           customer_email:       booking.angler_email ?? undefined,
-          line_items: [{
-            price_data: {
-              currency:     'eur',
-              product_data: {
-                name:        `Custom Fishing Trip — ${booking.booking_date} to ${booking.date_to ?? booking.booking_date}`,
-                description: `Guide: ${guide.full_name}${booking.assigned_river ? ` · ${booking.assigned_river}` : ''} · ${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`,
+          line_items: [
+            {
+              price_data: {
+                currency:     'eur',
+                product_data: {
+                  name: booking.assigned_river
+                    ? `Fishing Trip — ${booking.assigned_river}`
+                    : 'Custom Fishing Trip',
+                  description: [
+                    `Guide: ${guide.full_name}`,
+                    booking.assigned_river ? booking.assigned_river : null,
+                    `${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`,
+                    confirmedDaysForOffer.length > 0
+                      ? `${confirmedDaysForOffer.length} day${confirmedDaysForOffer.length !== 1 ? 's' : ''}`
+                      : null,
+                  ].filter(Boolean).join(' · '),
+                },
+                unit_amount: Math.round(effectiveOfferPrice * 100),
               },
-              unit_amount: Math.round(effectiveOfferPrice * 100),
+              quantity: 1,
             },
-            quantity: 1,
-          }],
+            {
+              price_data: {
+                currency:     'eur',
+                product_data: {
+                  name:        'FjordAnglers service fee',
+                  description: 'Booking & service fee',
+                },
+                unit_amount: Math.round(serviceFeeEur * 100),
+              },
+              quantity: 1,
+            },
+          ],
           metadata: { bookingId, guideId: guide.id },
           success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
           cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
           payment_intent_data: {
-            application_fee_amount: Math.round(effectiveOfferPrice * commissionRate * 100),
+            application_fee_amount: Math.round(appFeeEur * 100),
             transfer_data:          { destination: guide.stripe_account_id },
             metadata:               { bookingId },
           },
@@ -1396,12 +1550,17 @@ export async function acceptBookingOffer(
       await serviceClient
         .from('bookings')
         .update({
-          stripe_checkout_id: session.id,
-          total_eur:          effectiveOfferPrice,
-          deposit_eur:        effectiveOfferPrice,
-          platform_fee_eur:   Math.round(effectiveOfferPrice * (guide.commission_rate ?? env.PLATFORM_COMMISSION_RATE) * 100) / 100,
-          guide_payout_eur:   Math.round(effectiveOfferPrice * (1 - (guide.commission_rate ?? env.PLATFORM_COMMISSION_RATE)) * 100) / 100,
-          commission_rate:    guide.commission_rate ?? env.PLATFORM_COMMISSION_RATE,
+          stripe_checkout_id:  session.id,
+          total_eur:           totalChargeEur,   // total angler pays (guide price + service fee)
+          deposit_eur:         totalChargeEur,   // paid in full upfront
+          platform_fee_eur:    appFeeEur,        // commission + service fee
+          guide_payout_eur:    guidePayoutEur,   // guide price − commission
+          commission_rate:     commissionRate,
+          // Canonical confirmed days array — non-consecutive safe.
+          // from/to = first/last (envelope for display only).
+          confirmed_days:      confirmedDaysForOffer.length > 0 ? confirmedDaysForOffer : null,
+          confirmed_date_from: confirmedFromOffer,
+          confirmed_date_to:   confirmedToOffer,
         })
         .eq('id', bookingId)
 
@@ -1417,20 +1576,125 @@ export async function acceptBookingOffer(
     }
   }
 
-  // Guide without Stripe → confirm directly (no payment)
-  await serviceClient
+  // Guide without Stripe Connect → manual model.
+  // Angler pays the platform fee (commission + service fee) via Stripe Direct Charge.
+  // The remainder is paid by the angler directly to the guide (cash / IBAN).
+  const manualCommissionRate = guide?.commission_rate ?? env.PLATFORM_COMMISSION_RATE
+  const SERVICE_FEE_RATE     = 0.05
+  const SERVICE_FEE_CAP_EUR  = 50
+
+  const commissionEur  = Math.round(effectiveOfferPrice * manualCommissionRate * 100) / 100
+  const serviceFeeEur  = Math.min(
+    Math.round(effectiveOfferPrice * SERVICE_FEE_RATE * 100) / 100,
+    SERVICE_FEE_CAP_EUR,
+  )
+  const bookingFeeEur  = Math.round((commissionEur + serviceFeeEur) * 100) / 100
+  const guidePayoutEur = Math.round((effectiveOfferPrice - commissionEur) * 100) / 100
+
+  try {
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode:                 'payment',
+        payment_method_types: ['card'],
+        customer_email:       booking.angler_email ?? undefined,
+        line_items: [{
+          price_data: {
+            currency:     'eur',
+            product_data: {
+              name: booking.assigned_river
+                ? `Booking fee — ${booking.assigned_river}`
+                : `Booking fee — ${guide?.full_name ?? 'Fishing Trip'}`,
+              description: [
+                confirmedDaysForOffer.length > 0
+                  ? `${confirmedDaysForOffer.length} day${confirmedDaysForOffer.length !== 1 ? 's' : ''}`
+                  : (confirmedFromOffer ?? null),
+                `${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`,
+                `Remaining €${guidePayoutEur} paid directly to guide`,
+              ].filter(Boolean).join(' · '),
+            },
+            unit_amount: Math.round(bookingFeeEur * 100),
+          },
+          quantity: 1,
+        }],
+        metadata: { bookingId, guideId: guide?.id ?? '' },
+        success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+        cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
+      },
+      { idempotencyKey: `offer-accept-${bookingId}` },
+    )
+
+    await serviceClient
+      .from('bookings')
+      .update({
+        stripe_checkout_id:  session.id,
+        // total_eur = full angler cost (guide price + service fee) so that
+        // balanceEur (total - deposit) = guide_payout_eur on the booking detail page
+        total_eur:           Math.round((effectiveOfferPrice + serviceFeeEur) * 100) / 100,
+        deposit_eur:         bookingFeeEur,        // platform fee charged via Stripe
+        platform_fee_eur:    bookingFeeEur,        // commission + service fee (total platform take)
+        guide_payout_eur:    guidePayoutEur,       // guide price − commission
+        commission_rate:     manualCommissionRate,
+        // Canonical confirmed days array — non-consecutive safe.
+        confirmed_days:      confirmedDaysForOffer.length > 0 ? confirmedDaysForOffer : null,
+        confirmed_date_from: confirmedFromOffer,
+        confirmed_date_to:   confirmedToOffer,
+      })
+      .eq('id', bookingId)
+
+    return { checkoutUrl: session.url! }
+  } catch (err) {
+    console.error('[acceptBookingOffer] Stripe error (manual):', err)
+    await serviceClient
+      .from('bookings')
+      .update({ status: 'offer_sent' })
+      .eq('id', bookingId)
+    return { error: 'Payment setup failed. Please try again.' }
+  }
+}
+
+export async function declineBookingOffer(
+  bookingId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Please sign in.' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select('id, status, angler_id, angler_email')
+    .eq('id', bookingId)
+    .eq('source', 'inquiry')
+    .single()
+
+  if (!booking) return { error: 'Booking not found.' }
+
+  const isOwner =
+    booking.angler_id === user.id ||
+    (user.email != null && booking.angler_email === user.email)
+  if (!isOwner) return { error: 'Unauthorized.' }
+
+  if (booking.status !== 'offer_sent') return { error: 'No active offer to decline.' }
+
+  const { error } = await serviceClient
     .from('bookings')
     .update({
-      status:       'confirmed',
-      confirmed_at: new Date().toISOString(),
-      total_eur:    effectiveOfferPrice,
-      deposit_eur:  effectiveOfferPrice,
+      status:            'declined',
+      cancelled_by:      'angler',
+      cancelled_at:      new Date().toISOString(),
+      updated_at:        new Date().toISOString(),
     })
     .eq('id', bookingId)
 
-  return {
-    checkoutUrl: `${getAppUrl()}/account/bookings/${bookingId}?status=accepted`,
-  }
+  if (error) return { error: 'Failed to decline offer. Please try again.' }
+
+  // ── Unblock calendar dates ─────────────────────────────────────────────────
+  // Mirrors declineBooking() — angler declined, dates are no longer committed.
+  unblockBookingDates(serviceClient, bookingId)
+    .catch(e => console.error('[declineBookingOffer] unblockBookingDates:', e))
+
+  return {}
 }
 
 export async function updateAcceptedPaymentMethods(

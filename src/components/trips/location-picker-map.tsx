@@ -160,6 +160,8 @@ export type LocationPickerMapProps = {
   lat: number | null
   lng: number | null
   onChange: (lat: number, lng: number) => void
+  /** Initial map centre when no pin is placed yet (no marker rendered at this position). */
+  defaultCenter?: [number, number]
   // Area mode
   area?: GeoJSON.Polygon | null
   onAreaChange?: (area: GeoJSON.Polygon | null) => void
@@ -169,13 +171,16 @@ export type LocationPickerMapProps = {
 }
 
 function LocationPickerMap({
-  mode, lat, lng, onChange, area, onAreaChange, spots = [], onSpotsChange,
+  mode, lat, lng, onChange, defaultCenter, area, onAreaChange, spots = [], onSpotsChange,
 }: LocationPickerMapProps) {
   const center: [number, number] =
     spots.length > 0
       ? [spots[0].lat, spots[0].lng]
-      : lat != null && lng != null ? [lat, lng] : [63.5, 14.0]
-  const zoom = mode === 'spots' ? (spots.length > 0 ? 10 : 5) : (lat != null ? 12 : 5)
+      : lat != null && lng != null ? [lat, lng]
+      : defaultCenter ?? [63.5, 14.0]
+  const zoom = mode === 'spots'
+    ? (spots.length > 0 ? 10 : 5)
+    : (lat != null ? 12 : defaultCenter != null ? 6 : 5)
 
   const markerEventHandlers = useMemo(() => ({
     dragend(e: L.LeafletEvent) {

@@ -25,6 +25,10 @@ import {
   encodePeriodsParam,
 } from '@/components/trips/multi-period-picker'
 import {
+  CLASSIC_DATE_EVENT,
+  type ClassicDateEventDetail,
+} from '@/components/trips/availability-preview-calendar'
+import {
   ChevronLeft, ChevronRight, ChevronDown,
   Calendar, Clock, Info, Check, Minus, Plus, MessageSquare, ArrowDown,
 } from 'lucide-react'
@@ -358,7 +362,7 @@ type BookingWidgetProps = {
   durationDays?: number | null
   /** From experience_availability_config — null if guide hasn't configured it. */
   availabilityConfig?: AvailConfigRow | null
-  /** Blocked date ranges from experience_blocked_dates. */
+  /** Blocked date ranges from calendar_blocked_dates. */
   blockedDates?: BlockedRange[]
   /** ISO booking_date strings of pending/confirmed bookings (already taken). */
   bookedDates?: string[]
@@ -554,6 +558,12 @@ export function BookingWidget({
     window.dispatchEvent(
       new CustomEvent(DURATION_EVENT, { detail: { idx, source: 'widget' } }),
     )
+    // Clear preview calendar selection too
+    window.dispatchEvent(
+      new CustomEvent<ClassicDateEventDetail>(CLASSIC_DATE_EVENT, {
+        detail: { date: null, source: 'widget' },
+      }),
+    )
   }
 
   // Close calendar on outside click
@@ -603,6 +613,21 @@ export function BookingWidget({
     return () => window.removeEventListener(INQUIRY_PERIOD_EVENT, handler)
   }, [])
 
+  // Sync classic date selection with AvailabilityPreviewCalendar via custom event.
+  // When the main-content calendar selects/deselects a date we mirror it here so the
+  // sidebar widget always reflects the same selection state (and vice-versa).
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent<ClassicDateEventDetail>).detail
+      if (detail.source !== 'widget') {
+        // Preview calendar changed — update widget selection to match
+        setSelectedDates(detail.date != null ? [detail.date] : [])
+      }
+    }
+    window.addEventListener(CLASSIC_DATE_EVENT, handler)
+    return () => window.removeEventListener(CLASSIC_DATE_EVENT, handler)
+  }, [])
+
   function handleInquiryPeriodsChange(periods: Period[]) {
     setInquiryPeriods(periods)
     window.dispatchEvent(
@@ -617,17 +642,23 @@ export function BookingWidget({
 
   function handleToggleDate(iso: string) {
     const currentPkgDays = (durationOptions[selectedOptIdx] ?? durationOptions[0]).days ?? 1
+    let next: string[]
     if (currentPkgDays > 1) {
       // Range-start picker: toggle single start date
-      setSelectedDates(prev => prev.includes(iso) ? [] : [iso])
+      next = selectedDates.includes(iso) ? [] : [iso]
     } else {
       // Multi-select: toggle individual dates
-      setSelectedDates(prev =>
-        prev.includes(iso)
-          ? prev.filter(d => d !== iso)
-          : [...prev, iso].sort()          // keep ascending order
-      )
+      next = selectedDates.includes(iso)
+        ? selectedDates.filter(d => d !== iso)
+        : [...selectedDates, iso].sort()   // keep ascending order
     }
+    setSelectedDates(next)
+    // Sync with AvailabilityPreviewCalendar — send first selected date (or null to clear)
+    window.dispatchEvent(
+      new CustomEvent<ClassicDateEventDetail>(CLASSIC_DATE_EVENT, {
+        detail: { date: next[0] ?? null, source: 'widget' },
+      }),
+    )
   }
 
   const selectedOpt = durationOptions[selectedOptIdx] ?? durationOptions[0]
@@ -1431,7 +1462,17 @@ export function BookingWidget({
             /* 'both' book-mode or blocked range — nudge to pick valid dates */
             <button
               type="button"
-              onClick={() => calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+              onClick={() => {
+                // Open the widget date picker
+                setCalendarOpen(true)
+                // Scroll to the full availability calendar at the top of the page
+                const topCal = document.getElementById('availability-calendar')
+                if (topCal != null) {
+                  topCal.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                } else {
+                  calendarRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }
+              }}
               className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}
             >

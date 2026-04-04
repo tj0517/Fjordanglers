@@ -43,6 +43,10 @@ type BookingEntry = {
 
 type InquiryEntry = {
   id:              string
+  /** Null for guide-initiated or legacy inquiries not pinned to a specific trip.
+   *  When present, the entry is hidden when that experience is toggled off in the
+   *  listings filter chips (same as direct bookings). */
+  experience_id:   string | null
   dates_from:      string
   dates_to:        string
   /** All individual dates the angler selected (expanded from their period picks).
@@ -89,9 +93,8 @@ export type CalendarGridProps = {
    */
   calendarExperienceMap?: Record<string, string[]>
   /**
-   * When provided, all block actions write to `calendar_blocked_dates` for this
-   * calendar instead of `experience_blocked_dates` per experience.
-   * Null / undefined = per-experience mode (All Trips view or guides without calendars).
+   * The active calendar ID. When provided, block actions write to
+   * `calendar_blocked_dates` for this calendar. Null = All Trips read-only view.
    */
   activeCalendarId?: string | null
 }
@@ -358,9 +361,17 @@ export default function CalendarGrid({
     //
     // Additionally, any day covered by an active offer (offer_sent+) is flagged
     // as inquiryBlocked so the calendar cell renders as fully unavailable.
+    //
+    // Listings filter: when an experience is toggled off via the filter chips, hide
+    // its inquiries too (same behaviour as direct bookings). Inquiries without an
+    // experience_id (legacy / guide-initiated) are always shown.
     const OFFER_STATUSES = new Set(['offer_sent', 'offer_accepted', 'confirmed', 'completed'])
 
-    for (const inq of inquiries) {
+    const filteredInquiries = inquiries.filter(
+      inq => inq.experience_id == null || visibleExpIds.has(inq.experience_id)
+    )
+
+    for (const inq of filteredInquiries) {
       const isOffer = OFFER_STATUSES.has(inq.status)
 
       let daysToMark: string[]
@@ -503,14 +514,11 @@ export default function CalendarGrid({
   }
 
   async function handleRangeBlock() {
-    if (rangeStart === '') return
-    if (activeCalendarId == null && rangeExpIds.length === 0) return
+    if (rangeStart === '' || activeCalendarId == null) return
     setIsSubmitting(true); setActionError(null)
     const end    = rangeEnd >= rangeStart ? rangeEnd : rangeStart
     const result = await blockDates(
-      activeCalendarId != null
-        ? { calendarId: activeCalendarId, dateStart: rangeStart, dateEnd: end, reason: rangeReason.trim() || undefined }
-        : { experienceIds: rangeExpIds, dateStart: rangeStart, dateEnd: end, reason: rangeReason.trim() || undefined }
+      { calendarId: activeCalendarId, dateStart: rangeStart, dateEnd: end, reason: rangeReason.trim() || undefined }
     )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
@@ -527,14 +535,12 @@ export default function CalendarGrid({
   }
 
   async function handleMonthBlock() {
-    if (activeCalendarId == null && monthBlockExpIds.length === 0) return
+    if (activeCalendarId == null) return
     const firstDay = toDateStr(year, month, 1)
     const lastDay  = toDateStr(year, month, new Date(year, month, 0).getDate())
     setIsSubmitting(true); setActionError(null)
     const result = await blockDates(
-      activeCalendarId != null
-        ? { calendarId: activeCalendarId, dateStart: firstDay, dateEnd: lastDay, reason: monthBlockReason.trim() || undefined }
-        : { experienceIds: monthBlockExpIds, dateStart: firstDay, dateEnd: lastDay, reason: monthBlockReason.trim() || undefined }
+      { calendarId: activeCalendarId, dateStart: firstDay, dateEnd: lastDay, reason: monthBlockReason.trim() || undefined }
     )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
@@ -597,14 +603,11 @@ export default function CalendarGrid({
 
   // ── Actions ────────────────────────────────────────────────────────────────
   async function handleBlock() {
-    if (selectedDay == null) return
+    if (selectedDay == null || activeCalendarId == null) return
     setIsSubmitting(true); setActionError(null)
     const end = blockEndDate >= selectedDay ? blockEndDate : selectedDay
-    // Calendar-scoped mode: pass calendarId; legacy mode: pass experienceIds
     const result = await blockDates(
-      activeCalendarId != null
-        ? { calendarId: activeCalendarId, dateStart: selectedDay, dateEnd: end, reason: blockReason.trim() || undefined }
-        : { experienceIds: blockExpIds, dateStart: selectedDay, dateEnd: end, reason: blockReason.trim() || undefined }
+      { calendarId: activeCalendarId, dateStart: selectedDay, dateEnd: end, reason: blockReason.trim() || undefined }
     )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }
@@ -614,13 +617,10 @@ export default function CalendarGrid({
 
   async function handleMultiBlock() {
     const dates = Array.from(selectedDays).sort()
-    if (dates.length === 0) return
+    if (dates.length === 0 || activeCalendarId == null) return
     setIsSubmitting(true); setActionError(null)
-    // Calendar-scoped mode: pass calendarId; legacy mode: pass experienceIds
     const result = await blockMultipleDates(
-      activeCalendarId != null
-        ? { calendarId: activeCalendarId, dates, reason: multiBlockReason.trim() || undefined }
-        : { experienceIds: multiBlockExpIds, dates, reason: multiBlockReason.trim() || undefined }
+      { calendarId: activeCalendarId, dates, reason: multiBlockReason.trim() || undefined }
     )
     setIsSubmitting(false)
     if ('error' in result) { setActionError(result.error); return }

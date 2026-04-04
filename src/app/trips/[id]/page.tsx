@@ -450,10 +450,7 @@ export default async function ExperienceDetailPage({
 
   const isDraft = !exp.published
 
-  // ── Blocked dates: check calendar membership first ─────────────────────────
-  // If experience is in a named calendar → read calendar_blocked_dates (one row
-  // per calendar block, shared by all experiences in the calendar).
-  // Otherwise → read experience_blocked_dates (per-listing blocks).
+  // ── Blocked dates: always read from calendar_blocked_dates ─────────────────
   const svcClient = createServiceClient()
   const { data: calExp } = await svcClient
     .from('calendar_experiences')
@@ -463,22 +460,17 @@ export default async function ExperienceDetailPage({
 
   const [moreFromGuide, availConfigRes, blockedDatesRes] = await Promise.all([
     getMoreFromGuide(exp.guide_id, exp.id, 3),
-    // Availability schedule set by the guide
     supabase
       .from('experience_availability_config')
       .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
       .eq('experience_id', id)
       .maybeSingle(),
-    // Blocked dates: calendar-scoped or per-experience depending on membership.
     calExp != null
       ? svcClient
           .from('calendar_blocked_dates')
           .select('date_start, date_end')
           .eq('calendar_id', calExp.calendar_id)
-      : svcClient
-          .from('experience_blocked_dates')
-          .select('date_start, date_end')
-          .eq('experience_id', id),
+      : Promise.resolve({ data: [] as Array<{ date_start: string; date_end: string }> }),
   ])
 
   const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
@@ -1195,12 +1187,14 @@ export default async function ExperienceDetailPage({
                     </div>
                   </section>
                 ) : (
-                  <AvailabilityPreviewCalendar
-                    expId={exp.id}
-                    availabilityConfig={availabilityConfig}
-                    blockedDates={blockedDates}
-                    bookingType={exp.booking_type as 'classic' | 'icelandic' | 'both'}
-                  />
+                  <div id="availability-calendar">
+                    <AvailabilityPreviewCalendar
+                      expId={exp.id}
+                      availabilityConfig={availabilityConfig}
+                      blockedDates={blockedDates}
+                      bookingType={exp.booking_type as 'classic' | 'icelandic' | 'both'}
+                    />
+                  </div>
                 )
               )}
 

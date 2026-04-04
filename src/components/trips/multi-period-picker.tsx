@@ -22,7 +22,6 @@ import type { AvailConfigRow } from '@/components/trips/booking-widget'
 export type { Period } from '@/lib/periods'
 export { encodePeriodsParam, decodePeriodsParam, periodTotalDays } from '@/lib/periods'
 import type { Period } from '@/lib/periods'
-import { periodTotalDays } from '@/lib/periods'
 
 /** Blocked date range from guide's calendar. */
 export type BlockedRange = { date_start: string; date_end: string }
@@ -210,8 +209,6 @@ export function MultiPeriodPicker({
     return `${ny}-${String(nm + 1).padStart(2, '0')}-01` <= maxISO
   })()
 
-  const totalDays = periodTotalDays(periods)
-
   return (
     <div>
       {/* ── Mode toggle ─────────────────────────────────────────────── */}
@@ -381,7 +378,7 @@ export function MultiPeriodPicker({
         <div className="mt-3">
           <p className="text-[10px] font-bold uppercase tracking-widest f-body mb-2"
              style={{ color: 'rgba(10,46,77,0.35)' }}>
-            {periods.length} period{periods.length === 1 ? '' : 's'} · {totalDays} day{totalDays === 1 ? '' : 's'} total
+            {periods.length} period{periods.length === 1 ? '' : 's'} selected
           </p>
           <div className="flex flex-wrap gap-1.5">
             {periods.map((p, idx) => (

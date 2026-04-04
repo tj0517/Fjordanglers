@@ -155,7 +155,7 @@ export default async function BookPage({ params, searchParams }: Props) {
     // Fetch availability data (public — use service client)
     const serviceClient = createServiceClient()
 
-    // Check if experience belongs to a named calendar for calendar-scoped blocking
+    // Always read blocked dates from calendar_blocked_dates
     const { data: calExpRow } = await serviceClient
       .from('calendar_experiences')
       .select('calendar_id')
@@ -168,17 +168,12 @@ export default async function BookPage({ params, searchParams }: Props) {
         .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
         .eq('experience_id', expId)
         .maybeSingle(),
-      // Blocked dates: calendar-scoped (calendar_blocked_dates) or per-listing
-      // (experience_blocked_dates) depending on whether experience is in a calendar.
       calExpRow != null
         ? serviceClient
             .from('calendar_blocked_dates')
             .select('date_start, date_end')
             .eq('calendar_id', calExpRow.calendar_id)
-        : serviceClient
-            .from('experience_blocked_dates')
-            .select('date_start, date_end')
-            .eq('experience_id', expId),
+        : Promise.resolve({ data: [] as Array<{ date_start: string; date_end: string }> }),
     ])
 
     const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null

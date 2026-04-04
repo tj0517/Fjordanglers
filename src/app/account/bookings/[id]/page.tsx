@@ -9,6 +9,8 @@ import PayBalanceBanner from '@/components/booking/pay-balance-banner'
 import { getPaymentModel } from '@/lib/payment-model'
 import type { Database } from '@/lib/supabase/database.types'
 import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
+import { MicroCalendar } from '@/components/account/micro-calendar'
+import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +48,7 @@ export default async function AnglerBookingDetailPage({
   const { data: booking } = await supabase
     .from('bookings')
     .select(
-      '*, experience:experiences(id, title, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled)',
+      '*, experience:experiences(id, title, description, fish_types, fishing_methods, technique, difficulty, duration_hours, duration_days, location_country, location_city, location_lat, location_lng, meeting_point_lat, meeting_point_lng, meeting_point_address, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled)',
     )
     .eq('id', id)
     .eq('angler_id', user.id)
@@ -54,13 +56,82 @@ export default async function AnglerBookingDetailPage({
 
   if (!booking) notFound()
 
+  const serviceClient = createServiceClient()
+
+  // ── Webhook fallback: confirm directly from Stripe if webhook hasn't arrived ─
+  //
+  // Stripe webhooks are sent to the registered endpoint (production URL).
+  // On preview deployments the webhook never arrives, so we verify payment
+  // directly with Stripe when the angler returns from Checkout (?status=paid /
+  // ?status=balance_paid) and the booking status hasn't been updated yet.
+  //
+  // This is idempotent: the .eq('status', ...) condition ensures only one path
+  // (webhook or page load) wins the DB update. The webhook arriving later is a
+  // no-op because the status will already be 'confirmed' / 'completed'.
+
+  let webhookFallbackSession: Awaited<ReturnType<typeof stripe.checkout.sessions.retrieve>> | null = null
+
+  if (
+    qStatus === 'paid' &&
+    (booking.status === 'accepted' || booking.status === 'offer_accepted') &&
+    booking.stripe_checkout_id
+  ) {
+    try {
+      webhookFallbackSession = await stripe.checkout.sessions.retrieve(booking.stripe_checkout_id)
+      const session = webhookFallbackSession
+      if (session.payment_status === 'paid') {
+        await serviceClient
+          .from('bookings')
+          .update({
+            status:                   'confirmed',
+            confirmed_at:             new Date().toISOString(),
+            stripe_payment_intent_id: typeof session.payment_intent === 'string'
+              ? session.payment_intent
+              : null,
+          })
+          .eq('id', id)
+          .in('status', ['accepted', 'offer_accepted']) // idempotent guard
+        // Reflect in this render without a second DB round-trip
+        booking.status = 'confirmed' as typeof booking.status
+      }
+    } catch {
+      // Non-fatal — webhook may still arrive
+    }
+  }
+
+  if (qStatus === 'balance_paid' && booking.status === 'confirmed' && booking.balance_paid_at == null && booking.balance_stripe_checkout_id) {
+    try {
+      const session = await stripe.checkout.sessions.retrieve(booking.balance_stripe_checkout_id)
+      if (session.payment_status === 'paid') {
+        await serviceClient
+          .from('bookings')
+          .update({
+            status:                           'completed',
+            balance_paid_at:                  new Date().toISOString(),
+            balance_stripe_payment_intent_id: typeof session.payment_intent === 'string'
+              ? session.payment_intent
+              : null,
+          })
+          .eq('id', id)
+          .eq('status', 'confirmed')
+          .is('balance_paid_at', null) // idempotent guard
+        booking.status = 'completed' as typeof booking.status
+        ;(booking as typeof booking & { balance_paid_at: string }).balance_paid_at = new Date().toISOString()
+      }
+    } catch {
+      // Non-fatal — webhook may still arrive
+    }
+  }
+
   // ── Stripe Checkout URL ───────────────────────────────────────────────────
   let depositCheckoutUrl: string | null = null
-  const awaitingPayment = booking.status === 'accepted'
+  const awaitingPayment = booking.status === 'accepted' || booking.status === 'offer_accepted'
 
   if (awaitingPayment && booking.stripe_checkout_id) {
     try {
-      const session = await stripe.checkout.sessions.retrieve(booking.stripe_checkout_id)
+      // Reuse the session already fetched by the webhook fallback above if available,
+      // otherwise fetch it now.
+      const session = webhookFallbackSession ?? await stripe.checkout.sessions.retrieve(booking.stripe_checkout_id)
       if (session.status === 'open' && session.url) {
         depositCheckoutUrl = session.url
       }
@@ -72,9 +143,6 @@ export default async function AnglerBookingDetailPage({
   const justPaid        = qStatus === 'paid'
   const awaitingBalance = booking.status === 'confirmed' && booking.balance_paid_at == null
   const justBalancePaid = qStatus === 'balance_paid'
-
-  // Initial messages
-  const serviceClient = createServiceClient()
   const { data: rawMsgs } = await serviceClient
     .from('booking_messages')
     .select('id, body, sender_id, created_at')
@@ -83,8 +151,23 @@ export default async function AnglerBookingDetailPage({
 
   const initialMessages = (rawMsgs ?? []) as ChatMessage[]
 
-  const exp   = booking.experience as unknown as {
-    id: string; title: string;
+  const exp = booking.experience as unknown as {
+    id: string
+    title: string
+    description: string | null
+    fish_types: string[] | null
+    fishing_methods: string[] | null
+    technique: string | null
+    difficulty: string | null
+    duration_hours: number | null
+    duration_days: number | null
+    location_country: string | null
+    location_city: string | null
+    location_lat: number | null
+    location_lng: number | null
+    meeting_point_lat: number | null
+    meeting_point_lng: number | null
+    meeting_point_address: string | null
     experience_images: { url: string; is_cover: boolean; sort_order: number }[]
   } | null
   const guide = booking.guide as unknown as {
@@ -112,30 +195,97 @@ export default async function AnglerBookingDetailPage({
   const images = exp?.experience_images ?? []
   const cover  =
     images.find(img => img.is_cover) ??
-    images.sort((a, b) => a.sort_order - b.sort_order)[0]
+    [...images].sort((a, b) => a.sort_order - b.sort_order)[0]
   const coverUrl = cover?.url ?? null
 
   // Requested dates (what angler originally picked)
   const requestedDates = (booking.requested_dates as string[] | null) ?? null
   const hasRequestedDates = requestedDates != null && requestedDates.length > 0
 
-  // Confirmed trip start date (set by guide on accept — may differ from requested)
-  const confirmedDate = ['accepted', 'confirmed', 'completed'].includes(booking.status)
-    ? new Date(booking.booking_date + 'T12:00:00').toLocaleDateString('en-GB', {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-      })
+  const isInquiry = booking.source === 'inquiry'
+
+  // ── Canonical confirmed days ───────────────────────────────────────────────
+  // confirmed_days is the array of specific trip days (non-consecutive safe).
+  // Preferred over all other sources once guide has accepted.
+  const confirmedDaysArr = (booking.confirmed_days as string[] | null)
+  const offerDaysRaw      = (booking.offer_days    as string[] | null)
+
+  // Envelope dates — first/last day used as MicroCalendar from/to fallback
+  const confirmedStatuses = ['accepted', 'offer_accepted', 'confirmed', 'completed']
+  const isConfirmedStatus = confirmedStatuses.includes(booking.status)
+  const dateForConfirmed  =
+    confirmedDaysArr?.[0] ??
+    (isInquiry ? booking.offer_date_from : null) ??
+    booking.booking_date
+  const dateToConfirmed: string | null =
+    confirmedDaysArr?.[confirmedDaysArr.length - 1] ??
+    (isInquiry ? booking.offer_date_to : null) ??
+    booking.date_to ?? null
+  const isMultiDay = dateToConfirmed != null && dateToConfirmed !== dateForConfirmed
+
+  // ── Robust display days ────────────────────────────────────────────────────
+  // Canonical array first, then specific-day fallbacks for pre-backfill bookings
+  // where confirmed_days is still null.
+  // · direct bookings: old code overwrote requested_dates with the guide's confirmed days
+  //   so requested_dates contains the correct specific days for legacy rows.
+  // · inquiry bookings: offer_days contains the guide's exact day picks.
+  const displayDays: string[] | null =
+    (confirmedDaysArr != null && confirmedDaysArr.length > 0 ? confirmedDaysArr : null) ??
+    (!isInquiry && isConfirmedStatus && requestedDates != null && requestedDates.length > 0
+      ? requestedDates : null) ??
+    (isInquiry  && isConfirmedStatus && offerDaysRaw  != null && offerDaysRaw.length  > 0
+      ? offerDaysRaw  : null)
+
+  const sortedDisplayDays = displayDays != null ? [...displayDays].sort() : null
+  const hasNonConsecutiveDays =
+    sortedDisplayDays != null &&
+    sortedDisplayDays.length > 1 &&
+    !isConsecutiveDays(sortedDisplayDays)
+
+  // Human-readable date text for the "Trip confirmed for" banner
+  const confirmedDate = isConfirmedStatus
+    ? sortedDisplayDays != null && sortedDisplayDays.length > 0
+      ? hasNonConsecutiveDays
+        ? sortedDisplayDays.length <= 3
+          ? formatDaysList(sortedDisplayDays)
+          : `${sortedDisplayDays.length} fishing days`
+        : sortedDisplayDays.length === 1
+          ? new Date(sortedDisplayDays[0]! + 'T12:00:00').toLocaleDateString('en-GB', {
+              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+            })
+          : `${new Date(sortedDisplayDays[0]! + 'T12:00:00').toLocaleDateString('en-GB', {
+              weekday: 'short', day: 'numeric', month: 'long',
+            })} – ${new Date(sortedDisplayDays[sortedDisplayDays.length - 1]! + 'T12:00:00').toLocaleDateString('en-GB', {
+              weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+            })}`
+      : isMultiDay
+        ? `${new Date(dateForConfirmed + 'T12:00:00').toLocaleDateString('en-GB', {
+            weekday: 'short', day: 'numeric', month: 'long',
+          })} – ${new Date(dateToConfirmed! + 'T12:00:00').toLocaleDateString('en-GB', {
+            weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
+          })}`
+        : new Date(dateForConfirmed + 'T12:00:00').toLocaleDateString('en-GB', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          })
     : null
 
-  // Duration
-  const durationLabel =
-    booking.duration_option ??
-    (requestedDates != null && requestedDates.length > 1
-      ? `${requestedDates.length} day${requestedDates.length !== 1 ? 's' : ''}`
-      : '1 day')
+  // Duration — only use the guide-confirmed value; never derive from window length
+  const durationLabel = booking.duration_option ?? null
+
+  // Availability window for pending inquiry bookings (first → last date in the array)
+  const windowFrom = requestedDates?.[0] ?? null
+  const windowTo   = requestedDates != null && requestedDates.length > 1
+    ? requestedDates[requestedDates.length - 1]
+    : null
+  const isWindowBooking = windowTo != null  // true = range; false = single exact date
 
   // Financials
-  const depositEur = booking.deposit_eur ?? Math.round(booking.total_eur * 0.4)
-  const balanceEur = Math.round(booking.total_eur - depositEur)
+  const depositEur = booking.deposit_eur ?? (booking.total_eur != null ? Math.round(booking.total_eur * 0.4) : 0)
+  const balanceEur = booking.total_eur != null ? Math.round(booking.total_eur - depositEur) : 0
+  const depositPct = booking.total_eur != null && booking.total_eur > 0
+    ? Math.round((depositEur / booking.total_eur) * 100)
+    : 40
+  const balancePct = 100 - depositPct
 
   const createdFormatted = new Date(booking.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short', year: 'numeric',
@@ -144,7 +294,7 @@ export default async function AnglerBookingDetailPage({
   const bookingRef = id.slice(-8).toUpperCase()
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[960px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[1120px]">
 
       {/* ── Back nav ────────────────────────────────────────────────────────── */}
       <Link
@@ -197,7 +347,11 @@ export default async function AnglerBookingDetailPage({
                     </p>
                   </div>
                   <h1 className="text-[#0A2E4D] text-xl font-bold f-display leading-snug">
-                    {exp?.title ?? 'Fishing trip'}
+                    {exp?.title ?? (
+                      isInquiry && (booking as unknown as Record<string, string[] | null>).target_species?.length
+                        ? ((booking as unknown as Record<string, string[]>).target_species.join(' & ') + ' Fishing')
+                        : 'Fishing trip'
+                    )}
                   </h1>
                 </div>
                 <span
@@ -208,56 +362,154 @@ export default async function AnglerBookingDetailPage({
                 </span>
               </div>
 
+              {/* ── Pay deposit banner (shown immediately after header when awaiting payment) ── */}
+              {awaitingPayment && !justPaid && (
+                <div className="mb-2">
+                  <PayDepositBanner
+                    bookingId={id}
+                    initialCheckoutUrl={depositCheckoutUrl}
+                    depositEur={depositEur}
+                    balanceEur={balanceEur}
+                    paymentModel={paymentModel}
+                  />
+                </div>
+              )}
+
+              {/* ── Trip info (experience details) ──────────────────────────── */}
+              {exp != null && (
+                <div className="mb-5 pb-5 flex flex-col gap-3" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
+                  {/* Location + quick facts */}
+                  <div className="flex flex-wrap gap-2">
+                    {(exp.location_city != null || exp.location_country != null) && (
+                      <Chip>📍 {[exp.location_city, exp.location_country].filter(Boolean).join(', ')}</Chip>
+                    )}
+                    {exp.fish_types != null && exp.fish_types.length > 0 &&
+                      exp.fish_types.map(f => <Chip key={f}>🎣 {f}</Chip>)
+                    }
+                    {exp.technique != null && <Chip>{exp.technique}</Chip>}
+                    {exp.duration_hours != null && (
+                      <Chip>
+                        {exp.duration_hours >= 24
+                          ? `${Math.round(exp.duration_hours / 24)} day${Math.round(exp.duration_hours / 24) !== 1 ? 's' : ''}`
+                          : `${exp.duration_hours}h`}
+                      </Chip>
+                    )}
+                    {exp.duration_days != null && exp.duration_hours == null && (
+                      <Chip>{exp.duration_days} day{exp.duration_days !== 1 ? 's' : ''}</Chip>
+                    )}
+                  </div>
+                  {/* Description excerpt */}
+                  {exp.description != null && exp.description.length > 0 && (
+                    <p
+                      className="text-sm f-body leading-relaxed line-clamp-3"
+                      style={{ color: 'rgba(10,46,77,0.6)' }}
+                    >
+                      {exp.description}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Location map ────────────────────────────────────────────────── */}
+              {exp != null && (() => {
+                const mapLat = exp.meeting_point_lat ?? exp.location_lat
+                const mapLng = exp.meeting_point_lng ?? exp.location_lng
+                if (mapLat == null || mapLng == null) return null
+                return (
+                  <div className="mb-5 pb-5 flex flex-col gap-2" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
+                    <p className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                      Meeting point
+                    </p>
+                    {exp.meeting_point_address != null && (
+                      <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                        {exp.meeting_point_address}
+                      </p>
+                    )}
+                    <div style={{ height: 200, borderRadius: 16, overflow: 'hidden', isolation: 'isolate' }}>
+                      <ExperienceLocationMap lat={mapLat} lng={mapLng} />
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* ── Inquiry: what guide arranged ─────────────────────────────── */}
+              {isInquiry && (booking.offer_details != null || booking.assigned_river != null) && (
+                <div className="mb-5 pb-5 flex flex-col gap-3" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
+                  <p className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                    What your guide arranged
+                  </p>
+                  {booking.assigned_river != null && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Location</span>
+                      <span className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{booking.assigned_river}</span>
+                    </div>
+                  )}
+                  {booking.offer_details != null && (
+                    <p className="text-sm f-body leading-relaxed whitespace-pre-line" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                      {booking.offer_details}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* ── Dates section ───────────────────────────────────────────── */}
               <div className="mb-5 flex flex-col gap-3">
 
                 {/* Confirmed trip date — shown when guide accepted */}
                 {confirmedDate != null && (
                   <div
-                    className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                    className="px-4 py-4 rounded-2xl"
                     style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
                   >
-                    <Calendar width={16} height={16} stroke="#16A34A" strokeWidth={1.5} className="flex-shrink-0" />
+                    <div className="flex items-center gap-3 mb-3">
+                      <Calendar width={16} height={16} stroke="#16A34A" strokeWidth={1.5} className="flex-shrink-0" />
+                      <div>
+                        <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(22,163,74,0.65)' }}>
+                          {awaitingPayment ? 'Your trip dates' : 'Trip confirmed for'}
+                        </p>
+                        <p className="text-sm font-bold f-display" style={{ color: '#15803D' }}>
+                          {confirmedDate}
+                        </p>
+                      </div>
+                    </div>
+                    <MicroCalendar
+                      from={dateForConfirmed}
+                      to={dateToConfirmed ?? dateForConfirmed}
+                      days={sortedDisplayDays ?? undefined}
+                    />
+                  </div>
+                )}
+
+                {/* Availability window — only while pending, only for range requests */}
+                {booking.status === 'pending' && isWindowBooking && windowFrom != null && (
+                  <div
+                    className="flex items-start gap-3 px-4 py-3 rounded-2xl"
+                    style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}
+                  >
+                    <Calendar width={15} height={15} stroke="#2563EB" strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(22,163,74,0.65)' }}>
-                        Trip confirmed for
+                      <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(37,99,235,0.6)' }}>
+                        Your availability window
                       </p>
-                      <p className="text-sm font-bold f-display" style={{ color: '#15803D' }}>
-                        {confirmedDate}
+                      <p className="text-sm font-semibold f-display" style={{ color: '#1D4ED8' }}>
+                        {new Date(`${windowFrom}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {' – '}
+                        {new Date(`${windowTo}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                      <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(37,99,235,0.55)' }}>
+                        The guide will confirm your exact trip date{durationLabel ? ` (${durationLabel})` : ''}
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* Requested dates — always show what the angler picked */}
-                {hasRequestedDates && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.15em] mb-1.5 f-body"
-                       style={{ color: 'rgba(10,46,77,0.38)' }}>
-                      {booking.status === 'pending' ? 'Your requested dates' : 'Originally requested'}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {requestedDates!.map(d => (
-                        <span
-                          key={d}
-                          className="text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
-                          style={{
-                            background: booking.status === 'pending'
-                              ? 'rgba(59,130,246,0.08)'
-                              : 'rgba(10,46,77,0.05)',
-                            color: booking.status === 'pending'
-                              ? '#2563EB'
-                              : 'rgba(10,46,77,0.5)',
-                            border: `1px solid ${booking.status === 'pending' ? 'rgba(59,130,246,0.2)' : 'rgba(10,46,77,0.08)'}`,
-                          }}
-                        >
-                          {new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', {
-                            weekday: 'short', day: 'numeric', month: 'short',
-                          })}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                {/* Single exact date — pending direct booking */}
+                {booking.status === 'pending' && !isWindowBooking && windowFrom != null && confirmedDate == null && (
+                  <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                    {new Date(`${windowFrom}T12:00:00`).toLocaleDateString('en-GB', {
+                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </p>
                 )}
 
                 {/* Fallback: show booking_date if no requested_dates and no confirmed date */}
@@ -291,16 +543,16 @@ export default async function AnglerBookingDetailPage({
                 />
                 <InfoCard
                   label="Duration"
-                  value={durationLabel}
+                  value={durationLabel ?? '—'}
                 />
                 <InfoCard
-                  label={paymentModel === 'manual' ? 'Booking fee' : 'Deposit (40%)'}
+                  label={paymentModel === 'manual' ? 'Booking fee' : `Deposit (${depositPct}%)`}
                   value={`€${depositEur}`}
                   subValue={booking.status === 'confirmed' || booking.status === 'completed' ? 'Paid ✓' : undefined}
                   subColor="#16A34A"
                 />
                 <InfoCard
-                  label={paymentModel === 'manual' ? 'Guide direct' : 'Balance (60%)'}
+                  label={paymentModel === 'manual' ? 'Guide direct' : `Balance (${balancePct}%)`}
                   value={`€${balanceEur}`}
                   subValue={
                     paymentModel === 'manual'
@@ -351,18 +603,6 @@ export default async function AnglerBookingDetailPage({
                 </div>
               )}
 
-              {/* ── Pay deposit banner ───────────────────────────────────────── */}
-              {awaitingPayment && !justPaid && (
-                <div className="mb-4">
-                  <PayDepositBanner
-                    bookingId={id}
-                    initialCheckoutUrl={depositCheckoutUrl}
-                    depositEur={depositEur}
-                    balanceEur={balanceEur}
-                    paymentModel={paymentModel}
-                  />
-                </div>
-              )}
 
               {/* ── Pay balance banner ───────────────────────────────────────── */}
               {awaitingBalance && !justBalancePaid && (
@@ -501,7 +741,47 @@ export default async function AnglerBookingDetailPage({
   )
 }
 
-// ─── Helper ───────────────────────────────────────────────────────────────────
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+
+/** Returns true only if every consecutive pair in a sorted ISO-date array is exactly 1 day apart. */
+function isConsecutiveDays(sorted: string[]): boolean {
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(sorted[i - 1]! + 'T12:00:00')
+    const curr = new Date(sorted[i]!      + 'T12:00:00')
+    if (Math.round((curr.getTime() - prev.getTime()) / 86_400_000) !== 1) return false
+  }
+  return true
+}
+
+/** Formats up to 3 specific days as "4 Apr, 16 Apr & 26 Apr 2026". */
+function formatDaysList(sorted: string[]): string {
+  const fmt = (d: string, includeYear = false) =>
+    new Date(d + 'T12:00:00').toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'short',
+      ...(includeYear ? { year: 'numeric' } : {}),
+    })
+  if (sorted.length === 1) {
+    return new Date(sorted[0]! + 'T12:00:00').toLocaleDateString('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    })
+  }
+  const parts = sorted.map((d, i) => fmt(d, i === sorted.length - 1))
+  const last  = parts.pop()!
+  return parts.join(', ') + ' & ' + last
+}
+
+// ─── UI helpers ───────────────────────────────────────────────────────────────
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs f-body font-medium"
+      style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.65)' }}
+    >
+      {children}
+    </span>
+  )
+}
 
 function InfoCard({
   label,

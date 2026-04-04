@@ -520,7 +520,7 @@ function CardSelect<T extends string>({
   cols?:    2 | 3
 }) {
   return (
-    <div className={cols === 2 ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-3 gap-2'}>
+    <div className={cols === 2 ? 'grid grid-cols-2 gap-2 items-start' : 'grid grid-cols-3 gap-2 items-start'}>
       {options.map(opt => {
         const on = value === opt.value
         return (
@@ -712,6 +712,7 @@ function fmtPkgDuration(opt: DurationOptionPayload): string {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function InquireForm({
+  experienceId,
   guideId,
   prefilledDates,
   prefilledPeriods,
@@ -848,8 +849,8 @@ export default function InquireForm({
   }
 
   // ── Submit
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault()
     setError(null)
 
     if (!isLoggedIn && (!name.trim() || !email.trim())) {
@@ -927,7 +928,10 @@ export default function InquireForm({
           // Direct-mode: which of the guide's packages the angler selected
           selectedPackageLabel: selectedPackageLabel ?? undefined,
         },
-        guideId: guideId ?? undefined,
+        guideId:      guideId      ?? undefined,
+        // Pin inquiry to the trip it was started from — scopes calendar blocking
+        // to the right calendar and shows trip details on the angler's booking page.
+        experienceId: experienceId ?? undefined,
       })
 
       if ('error' in result) {
@@ -972,7 +976,7 @@ export default function InquireForm({
   const prevTab = [...TABS].reverse().find(t => t.next === activeTab)?.key ?? null
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={e => e.preventDefault()} className="flex flex-col gap-4">
 
       {/* ── Identity ─────────────────────────────────────────────────── */}
       {isLoggedIn ? (
@@ -1062,7 +1066,7 @@ export default function InquireForm({
                     (optional — ask anything even without picking)
                   </span>
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 items-start">
                   {durationOptions.map((opt, i) => {
                     const on  = selectedPackageLabel === opt.label
                     const dur = fmtPkgDuration(opt)
@@ -1111,7 +1115,7 @@ export default function InquireForm({
                 <label style={labelCss} className="f-body">
                   Trip type{isRequired('tripType') && ' *'}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 items-start">
                   {DURATION_OPTIONS.map(opt => {
                     const on = durationType === opt.value
                     return (
@@ -1139,14 +1143,24 @@ export default function InquireForm({
               </div>
             ) : null}
 
-            {/* Days stepper — only in standard mode */}
+            {/* Days stepper — only in standard mode, shown as a highlighted callout */}
             {!isDirectMode && isVisible('numDays') && durationType === 'multi_day' && (
-              <div>
-                <label style={labelCss} className="f-body">
-                  How many days?{isRequired('numDays') && ' *'}
-                </label>
-                <Stepper value={numDays} onChange={setNumDays} min={2} max={21}
-                  disabled={isPending} suffix="days" />
+              <div
+                className="rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
+                style={{
+                  background: 'rgba(230,126,80,0.07)',
+                  border:     '1.5px solid rgba(230,126,80,0.22)',
+                }}
+              >
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.22em] font-bold f-body mb-3"
+                     style={{ color: 'rgba(230,126,80,0.7)' }}>
+                    How many fishing days?{isRequired('numDays') && ' *'}
+                  </p>
+                  <Stepper value={numDays} onChange={setNumDays} min={2} max={21}
+                    disabled={isPending} suffix={numDays === 1 ? 'day' : 'days'} />
+                </div>
+                <span style={{ fontSize: 36, lineHeight: 1, opacity: 0.45, flexShrink: 0 }}>🎣</span>
               </div>
             )}
 
@@ -1249,7 +1263,7 @@ export default function InquireForm({
                 <label style={labelCss} className="f-body">
                   Fishing experience{isRequired('experienceLevel') && ' *'}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 items-start">
                   {([
                     { value: 'beginner'     as const, label: 'Beginner',     desc: 'New to fishing'  },
                     { value: 'intermediate' as const, label: 'Intermediate', desc: '2–5 years'       },
@@ -1515,7 +1529,9 @@ export default function InquireForm({
 
         {activeTab === 'extras' ? (
           <button
-            type="submit"
+            key="submit-btn"
+            type="button"
+            onClick={() => handleSubmit()}
             disabled={isPending}
             className="flex-1 py-4 rounded-2xl text-base font-bold f-body transition-all"
             style={{
@@ -1529,6 +1545,7 @@ export default function InquireForm({
           </button>
         ) : (
           <button
+            key="continue-btn"
             type="button"
             onClick={handleContinue}
             disabled={isPending}

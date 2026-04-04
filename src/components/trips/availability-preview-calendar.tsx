@@ -3,11 +3,14 @@
 /**
  * AvailabilityPreviewCalendar — shown in the trip page main content.
  *
- * • classic / both:   read-only availability preview with green dots
+ * • classic / both:   interactive single-date picker — click an available day
+ *                     to select it; CTA updates with that date in the URL.
+ *                     Dispatches CLASSIC_DATE_EVENT so the sidebar BookingWidget
+ *                     can mirror the selection.
  * • icelandic:        interactive MultiPeriodPicker (range picker)
  *
- * Both widgets sync via INQUIRY_PERIOD_EVENT so the right-panel BookingWidget
- * stays in sync with selections made here.
+ * Both widgets sync via INQUIRY_PERIOD_EVENT / CLASSIC_DATE_EVENT so the
+ * right-panel BookingWidget stays in sync with selections made here.
  */
 
 import { useState, useMemo, useEffect } from 'react'
@@ -30,12 +33,23 @@ type Props = {
   expId:                string
   availabilityConfig:   AvailConfigRow | null
   blockedDates:         BlockedRange[]
-  /** @deprecated booking-based blocks are now in blockedDates via experience_blocked_dates */
+  /** @deprecated booking-based blocks are included in blockedDates (from calendar_blocked_dates) */
   bookedDates?:         string[]
   bookingType:          'classic' | 'icelandic' | 'both'
 }
 
 type PreviewStatus = 'available' | 'blocked' | 'booked' | 'unavailable' | 'past'
+
+// ─── Custom event — syncs classic date selection with sidebar BookingWidget ───
+
+export const CLASSIC_DATE_EVENT = 'fjord:classic-date-select'
+
+export type ClassicDateEventDetail = {
+  /** ISO date string (YYYY-MM-DD), or null to clear selection */
+  date:   string | null
+  /** 'preview' = emitted by this calendar; 'widget' = emitted by the sidebar */
+  source: 'preview' | 'widget'
+}
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
@@ -55,11 +69,13 @@ function getPreviewStatus(
   blocked:  BlockedRange[],
   booked:   Set<string>,
   todayISO: string,
+  minISO:   string,
   maxISO:   string,
 ): PreviewStatus {
   const iso = toISO(y, m, d)
 
   if (iso < todayISO) return 'past'
+  if (iso < minISO)   return 'unavailable'
   if (iso > maxISO)   return 'unavailable'
 
   // Guide-blocked ranges
@@ -81,6 +97,16 @@ function getPreviewStatus(
   }
 
   return 'available'
+}
+
+function fmtDate(iso: string): string {
+  try {
+    return new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', {
+      weekday: 'short', day: 'numeric', month: 'long',
+    })
+  } catch {
+    return iso
+  }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -108,6 +134,29 @@ export function AvailabilityPreviewCalendar({
 
   const [viewY, setViewY] = useState(todayY)
   const [viewM, setViewM] = useState(todayM)
+
+  // ── Classic/both: single-date selection ────────────────────────────────────
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+
+  // Listen for widget → preview sync
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent<ClassicDateEventDetail>).detail
+      if (detail.source !== 'preview') setSelectedDate(detail.date)
+    }
+    window.addEventListener(CLASSIC_DATE_EVENT, handler)
+    return () => window.removeEventListener(CLASSIC_DATE_EVENT, handler)
+  }, [])
+
+  function handleDayClick(iso: string) {
+    const next = selectedDate === iso ? null : iso
+    setSelectedDate(next)
+    window.dispatchEvent(
+      new CustomEvent<ClassicDateEventDetail>(CLASSIC_DATE_EVENT, {
+        detail: { date: next, source: 'preview' },
+      }),
+    )
+  }
 
   // ── Icelandic: interactive period picker state ──────────────────────────────
   const [inquiryPeriods, setInquiryPeriods] = useState<Period[]>([])
@@ -155,23 +204,17 @@ export function AvailabilityPreviewCalendar({
   const availableCount = useMemo(() => {
     let count = 0
     for (let d = 1; d <= daysInMonth; d++) {
-      const s = getPreviewStatus(viewY, viewM, d, availabilityConfig, blockedDates, bookedSet, minISO, maxISO)
+      const s = getPreviewStatus(viewY, viewM, d, availabilityConfig, blockedDates, bookedSet, todayISO, minISO, maxISO)
       if (s === 'available') count++
     }
     return count
-  }, [viewY, viewM, daysInMonth, availabilityConfig, blockedDates, bookedSet, minISO, maxISO])
+  }, [viewY, viewM, daysInMonth, availabilityConfig, blockedDates, bookedSet, todayISO, minISO, maxISO])
 
-  // 'classic' and 'both' both route to the direct-booking page.
-  // 'icelandic' routes to the inquiry form.
-  const inquireHref = bookingType === 'icelandic'
-    ? `/trips/${expId}/inquire`
+  // CTA hrefs
+  const classicBookHref = selectedDate
+    ? `/book/${expId}?dates=${selectedDate}`
     : `/book/${expId}`
 
-  const ctaLabel = bookingType === 'icelandic'
-    ? 'Choose your dates →'
-    : 'Book now →'
-
-  // Icelandic CTA href — include selected periods in the URL when picked
   const icelandicInquireHref = inquiryPeriods.length > 0
     ? `/trips/${expId}/inquire?periods=${encodePeriodsParam(inquiryPeriods)}`
     : `/trips/${expId}/inquire`
@@ -220,7 +263,7 @@ export function AvailabilityPreviewCalendar({
               blockedDates={blockedDates}
             />
           ) : (
-            /* ── Classic / both: read-only availability preview ─────────── */
+            /* ── Classic / both: interactive single-date picker ─────────── */
             <>
               {/* Month navigation */}
               <div className="flex items-center justify-between mb-5">
@@ -232,7 +275,7 @@ export function AvailabilityPreviewCalendar({
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(10,46,77,0.07)' }}
                 >
-                  <ChevronLeft size={6} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
+                  <ChevronLeft size={14} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
                 </button>
 
                 <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
@@ -247,7 +290,7 @@ export function AvailabilityPreviewCalendar({
                   className="w-8 h-8 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
                   style={{ background: 'rgba(10,46,77,0.07)' }}
                 >
-                  <ChevronRight size={6} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
+                  <ChevronRight size={14} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
                 </button>
               </div>
 
@@ -264,7 +307,7 @@ export function AvailabilityPreviewCalendar({
                 ))}
               </div>
 
-              {/* Day grid — read-only */}
+              {/* Day grid — interactive */}
               <div className="grid grid-cols-7 gap-y-0.5">
                 {Array.from({ length: startPad }).map((_, i) => (
                   <div key={`pad${i}`} />
@@ -273,81 +316,106 @@ export function AvailabilityPreviewCalendar({
                 {Array.from({ length: daysInMonth }).map((_, i) => {
                   const d      = i + 1
                   const iso    = toISO(viewY, viewM, d)
-                  const status = getPreviewStatus(viewY, viewM, d, availabilityConfig, blockedDates, bookedSet, minISO, maxISO)
-                  const isToday = iso === todayISO
+                  const status = getPreviewStatus(viewY, viewM, d, availabilityConfig, blockedDates, bookedSet, todayISO, minISO, maxISO)
+                  const isToday    = iso === todayISO
+                  const isSelected = iso === selectedDate
 
-                  let bg       = 'transparent'
-                  let color    = '#0A2E4D'
-                  let opacity  = 1
-                  let textDeco = 'none'
+                  // ── Visual state ─────────────────────────────────────────
+                  let bg      = 'transparent'
+                  let color   = '#0A2E4D'
+                  let opacity = 1
+                  let textDeco: string  = 'none'
                   let dotColor: string | null = null
                   let titleTxt = ''
+                  let cursor  = 'default'
+                  let fw: number | string = status === 'available' ? 500 : 400
 
-                  switch (status) {
-                    case 'past':
-                      color = 'rgba(10,46,77,0.2)'; opacity = 0.4
-                      break
-                    case 'unavailable':
-                      color = 'rgba(10,46,77,0.2)'; opacity = 0.35
-                      break
-                    case 'blocked':
-                      bg       = 'rgba(239,68,68,0.07)'
-                      color    = 'rgba(239,68,68,0.45)'
-                      textDeco = 'line-through'
-                      titleTxt = 'Guide is closed on this date'
-                      break
-                    case 'booked':
-                      bg       = 'rgba(10,46,77,0.04)'
-                      color    = 'rgba(10,46,77,0.2)'
-                      textDeco = 'line-through'
-                      titleTxt = 'Already booked'
-                      break
-                    case 'available':
-                      color    = '#0A2E4D'
-                      dotColor = '#059669'
-                      if (isToday) bg = 'rgba(10,46,77,0.05)'
-                      break
+                  if (isSelected) {
+                    bg      = '#E67E50'
+                    color   = 'white'
+                    fw      = 700
+                    dotColor = null
+                    cursor  = 'pointer'
+                  } else {
+                    switch (status) {
+                      case 'past':
+                        color = 'rgba(10,46,77,0.2)'; opacity = 0.4
+                        break
+                      case 'unavailable':
+                        color = 'rgba(10,46,77,0.2)'; opacity = 0.35
+                        break
+                      case 'blocked':
+                        bg       = 'rgba(239,68,68,0.07)'
+                        color    = 'rgba(239,68,68,0.45)'
+                        textDeco = 'line-through'
+                        titleTxt = 'Guide is closed on this date'
+                        break
+                      case 'booked':
+                        bg       = 'rgba(10,46,77,0.04)'
+                        color    = 'rgba(10,46,77,0.2)'
+                        textDeco = 'line-through'
+                        titleTxt = 'Already booked'
+                        break
+                      case 'available':
+                        color    = '#0A2E4D'
+                        dotColor = '#059669'
+                        cursor   = 'pointer'
+                        if (isToday) bg = 'rgba(10,46,77,0.05)'
+                        break
+                    }
                   }
+
+                  const isClickable = status === 'available'
 
                   return (
                     <div key={d} className="flex flex-col items-center py-px">
-                      <div
-                        className="w-8 h-8 rounded-full flex flex-col items-center justify-center relative"
-                        style={{ background: bg }}
-                        title={titleTxt || undefined}
-                      >
-                        <span
-                          className="text-[12px] f-body leading-none"
+                      {isClickable ? (
+                        <button
+                          type="button"
+                          onClick={() => handleDayClick(iso)}
+                          aria-label={`Select ${fmtDate(iso)}`}
+                          aria-pressed={isSelected}
+                          className="w-8 h-8 rounded-full flex flex-col items-center justify-center relative transition-transform active:scale-90"
                           style={{
-                            color,
-                            opacity,
-                            fontWeight: isToday ? 700 : status === 'available' ? 500 : 400,
-                            textDecoration: textDeco,
+                            background: bg,
+                            cursor,
+                            border: isToday && !isSelected ? '1.5px solid rgba(10,46,77,0.18)' : 'none',
                           }}
+                          title={titleTxt || undefined}
                         >
-                          {d}
-                        </span>
-
-                        {isToday && status === 'available' && (
                           <span
-                            className="absolute inset-0 rounded-full pointer-events-none"
-                            style={{ border: '1.5px solid rgba(10,46,77,0.18)' }}
-                          />
-                        )}
-
-                        {dotColor != null && (
+                            className="text-[12px] f-body leading-none"
+                            style={{ color, opacity, fontWeight: fw, textDecoration: textDeco }}
+                          >
+                            {d}
+                          </span>
+                          {!isSelected && dotColor != null && (
+                            <span
+                              className="absolute rounded-full"
+                              style={{
+                                width: 3, height: 3,
+                                background: dotColor,
+                                bottom: 3,
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                              }}
+                            />
+                          )}
+                        </button>
+                      ) : (
+                        <div
+                          className="w-8 h-8 rounded-full flex flex-col items-center justify-center relative"
+                          style={{ background: bg }}
+                          title={titleTxt || undefined}
+                        >
                           <span
-                            className="absolute rounded-full"
-                            style={{
-                              width: 3, height: 3,
-                              background: dotColor,
-                              bottom: 3,
-                              left: '50%',
-                              transform: 'translateX(-50%)',
-                            }}
-                          />
-                        )}
-                      </div>
+                            className="text-[12px] f-body leading-none"
+                            style={{ color, opacity, fontWeight: fw, textDecoration: textDeco }}
+                          >
+                            {d}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -356,16 +424,19 @@ export function AvailabilityPreviewCalendar({
               {/* Legend */}
               <div className="flex items-center gap-4 mt-4 flex-wrap">
                 {(([
-                  { color: '#059669',               label: 'Available'    },
+                  { color: '#E67E50',               label: 'Selected',      circle: true  },
+                  { color: '#059669',               label: 'Available'                    },
                   { color: 'rgba(239,68,68,0.4)',   label: 'Closed',        strike: true  },
-                  { color: 'rgba(10,46,77,0.18)',   label: 'Booked',        strike: true  },
                   { color: 'rgba(10,46,77,0.18)',   label: 'Not available'                },
-                ]) as { color: string; label: string; strike?: true }[]).map(({ color, label, strike }) => (
+                ]) as { color: string; label: string; strike?: true; circle?: true }[]).map(({ color, label, strike, circle }) => (
                   <div key={label} className="flex items-center gap-1.5">
                     <div
                       className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: color }}
+                      style={{ background: circle ? color : 'transparent', border: circle ? 'none' : `2px solid ${color}`, outline: !circle ? 'none' : undefined }}
                     />
+                    {!circle && (
+                      <div className="w-2 h-2 rounded-full flex-shrink-0 -ml-3.5" style={{ background: color }} />
+                    )}
                     <span
                       className={`text-[10px] f-body ${strike ? 'line-through' : ''}`}
                       style={{ color: 'rgba(10,46,77,0.4)' }}
@@ -402,17 +473,37 @@ export function AvailabilityPreviewCalendar({
                 {inquiryPeriods.length > 0 ? 'Request trip →' : 'Send inquiry →'}
               </Link>
             </>
+          ) : selectedDate != null ? (
+            /* Date selected — confirm CTA */
+            <>
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                  Selected date
+                </p>
+                <p className="text-sm font-bold f-display truncate" style={{ color: '#0A2E4D' }}>
+                  {fmtDate(selectedDate)}
+                </p>
+              </div>
+              <Link
+                href={classicBookHref}
+                className="flex-shrink-0 text-xs font-bold uppercase tracking-[0.12em] px-4 py-2.5 rounded-full f-body transition-all hover:opacity-90 active:scale-[0.97]"
+                style={{ background: '#E67E50', color: 'white' }}
+              >
+                Book this date →
+              </Link>
+            </>
           ) : (
+            /* No date selected yet */
             <>
               <p className="text-xs leading-relaxed f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                Preview only — pick your exact dates in the next step
+                Tap an available date to select it, then book
               </p>
               <Link
-                href={inquireHref}
+                href={classicBookHref}
                 className="flex-shrink-0 text-xs font-bold uppercase tracking-[0.12em] px-4 py-2 rounded-full f-body transition-opacity hover:opacity-85 active:scale-[0.97]"
                 style={{ background: '#E67E50', color: 'white' }}
               >
-                {ctaLabel}
+                Book now →
               </Link>
             </>
           )}

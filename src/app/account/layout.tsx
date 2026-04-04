@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import AccountSidebar from '@/components/account/sidebar'
+import AccountTopNav from '@/components/account/top-nav'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -19,11 +19,9 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const displayName = profile?.full_name ?? user.email?.split('@')[0] ?? 'Angler'
 
   return (
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <AccountSidebar displayName={displayName} />
-      <main className="lg:ml-[240px] pt-14 lg:pt-0" style={{ minHeight: '100vh' }}>
-        {children}
-      </main>
+    <div style={{ background: '#F3EDE4', minHeight: '100vh' }}>
+      <AccountTopNav displayName={displayName} />
+      <main className="flex flex-col items-center w-full">{children}</main>
     </div>
   )
 }

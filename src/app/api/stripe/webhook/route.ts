@@ -125,9 +125,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
-  // Idempotency
-  if (existing.status === 'confirmed') {
-    console.log(`[webhook] Booking ${bookingId} already confirmed — skipping`)
+  // Idempotency + safety guard: only confirm from statuses that represent
+  // "guide accepted, angler hasn't paid yet". Prevents a stale/replayed payment
+  // from jumping a 'pending' booking straight to 'confirmed' without guide acceptance.
+  const confirmableStatuses = ['accepted', 'offer_accepted']
+  if (!confirmableStatuses.includes(existing.status)) {
+    if (existing.status === 'confirmed') {
+      console.log(`[webhook] Booking ${bookingId} already confirmed — skipping`)
+    } else {
+      console.warn(
+        `[webhook] Booking ${bookingId} has unexpected status '${existing.status}' — skipping confirmation`,
+      )
+    }
     return
   }
 

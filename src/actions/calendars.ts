@@ -15,9 +15,8 @@
  *   NO per-experience block sync is needed.  The angler date picker always reads
  *   from the experience's current calendar.
  *
- *   setCalendarExperiences() only needs to clean up per-experience booking blocks
- *   in `experience_blocked_dates` for experiences that are being assigned to a
- *   calendar (transitioning from guide-wide → calendar-scoped blocking).
+ *   `experience_blocked_dates` is empty (cleared by migration 20260402200000)
+ *   and must NOT be used.
  */
 
 import { redirect } from 'next/navigation'
@@ -145,10 +144,11 @@ export async function deleteCalendar(id: string): Promise<CalendarActionResult> 
  * Block migration rules when moving an experience between calendars:
  *
  *   • Booking blocks  (reason = 'booking:<id>')
- *       → Follow the experience to the destination calendar.
- *         The blocks are COPIED (not moved) — the source calendar keeps them
- *         so its remaining experiences stay correctly blocked for the same
- *         guide-busy periods.
+ *       → Follow the experience to the destination calendar (MOVED, not just
+ *         copied).  After copying to the destination, they are deleted from
+ *         the source calendar — those dates were blocked because of this
+ *         experience's bookings, so they have no place in the source once
+ *         the experience leaves.
  *
  *   • Manual blocks (reason IS NULL)
  *       → Stay in the source calendar.  They represent availability decisions
@@ -273,6 +273,26 @@ export async function setCalendarExperiences(
             `[setCalendarExperiences] copied ${blocksToCarry.length} booking block(s)` +
             ` for exp ${expId} from cal ${sourceCalRow.calendar_id} → ${calendarId}`
           )
+
+          // Step 5 — remove those same booking blocks from the source calendar.
+          // They belonged to this experience's bookings; once the experience has
+          // moved, the source calendar should no longer show those dates as blocked.
+          const reasonsToRemove = blocksToCarry.map(b => b.reason!)
+          const { error: cleanupErr } = await supabase
+            .from('calendar_blocked_dates')
+            .delete()
+            .eq('calendar_id', sourceCalRow.calendar_id)
+            .in('reason', reasonsToRemove)
+
+          if (cleanupErr != null) {
+            console.error('[setCalendarExperiences] source cleanup failed:', cleanupErr.message)
+            // Non-fatal
+          } else {
+            console.log(
+              `[setCalendarExperiences] removed ${reasonsToRemove.length} stale booking block(s)` +
+              ` from source cal ${sourceCalRow.calendar_id} for exp ${expId}`
+            )
+          }
         }
       }
     }
@@ -316,15 +336,6 @@ export async function setCalendarExperiences(
         console.error('[setCalendarExperiences]', error.message)
         return { error: 'Failed to assign experiences.' }
       }
-    }
-
-    // ── Clean up legacy experience_blocked_dates ───────────────────────────────
-    if (newExpIds.length > 0) {
-      await supabase
-        .from('experience_blocked_dates')
-        .delete()
-        .in('experience_id', newExpIds)
-        .like('reason', 'booking:%')
     }
 
     // ── Compute unassigned experiences ────────────────────────────────────────

@@ -29,7 +29,10 @@ type BookingEntry = {
   id: string; experience_id: string; booking_date: string; requested_dates: string[] | null; guests: number; status: string; angler_full_name: string | null
 }
 type InquiryEntry = {
-  id: string; dates_from: string; dates_to: string
+  id: string
+  /** Null for guide-initiated or legacy inquiries not pinned to a specific trip. */
+  experience_id: string | null
+  dates_from: string; dates_to: string
   /** All individual dates the angler selected (expanded from their period choices).
    *  When present, pre-offer calendar rendering uses these instead of the envelope
    *  dates_from → dates_to, avoiding false highlights on non-selected days. */
