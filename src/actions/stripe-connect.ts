@@ -18,17 +18,11 @@
 import { z } from 'zod'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
-import { env } from '@/lib/env'
+import { getAppUrl } from '@/lib/app-url'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
-function getAppUrl(): string {
-  if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`
-  }
-  return env.NEXT_PUBLIC_APP_URL
-}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -291,7 +285,7 @@ export async function startStripeOnboarding(): Promise<
 
     try {
       // Stripe requires a public URL — skip for local dev
-      const appUrl = getAppUrl()
+      const appUrl = await getAppUrl()
       const isLocalhost = appUrl.includes('localhost') || appUrl.includes('127.0.0.1')
 
       const account = await stripe.accounts.create({
@@ -346,7 +340,7 @@ export async function startStripeOnboarding(): Promise<
   // 4. Patch business_profile on existing accounts (mcc + url may be missing)
   //    Safe to call even if already set — Stripe ignores no-op updates.
   //    Skip url on localhost — Stripe requires a public URL.
-  const appUrl      = getAppUrl()
+  const appUrl      = await getAppUrl()
   const isLocalhost = appUrl.includes('localhost') || appUrl.includes('127.0.0.1')
   await stripe.accounts.update(accountId, {
     business_profile: {
@@ -359,7 +353,7 @@ export async function startStripeOnboarding(): Promise<
   })
 
   // 5. Generate a one-time account link (expires ~10 min)
-  const baseUrl = getAppUrl()
+  const baseUrl = await getAppUrl()
   try {
     const link = await stripe.accountLinks.create({
       account:     accountId,

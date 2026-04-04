@@ -19,16 +19,25 @@ import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
+import { getAppUrl } from '@/lib/app-url'
 import { getPaymentModel, calcDepositEur } from '@/lib/payment-model'
+import { computeBookingPricing, calcSubtotalFromOption, type DurationOption } from '@/lib/booking-pricing'
 import type { Json } from '@/lib/supabase/database.types'
+import {
+  fmtEmailDate,
+  fmtEmailDateRange,
+  fmtEmailDays,
+  sendBookingRequestAnglerEmail,
+  sendBookingRequestGuideEmail,
+  sendBookingAcceptedAnglerEmail,
+  sendBookingDeclinedAnglerEmail,
+  sendBalancePaidAnglerEmail,
+  sendInquiryReceivedAnglerEmail,
+  sendInquiryReceivedGuideEmail,
+  sendOfferReceivedAnglerEmail,
+  sendOfferAcceptedGuideEmail,
+} from '@/lib/email'
 
-/** Returns the correct base URL — preview deployments use VERCEL_URL, not NEXT_PUBLIC_APP_URL. */
-function getAppUrl(): string {
-  if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`
-  }
-  return env.NEXT_PUBLIC_APP_URL
-}
 import {
   type PriceTier,
   findApplicableTierPrice,
@@ -105,7 +114,7 @@ export async function createBookingCheckout(
   const { data: experience } = await supabase
     .from('experiences')
     .select(
-      'id, title, price_per_person_eur, max_guests, guide_id, guides(id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, pricing_model, commission_rate)',
+      'id, title, price_per_person_eur, max_guests, guide_id, duration_options, guides(id, user_id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, pricing_model, commission_rate)',
     )
     .eq('id', experienceId)
     .eq('published', true)
@@ -115,6 +124,7 @@ export async function createBookingCheckout(
 
   const guideRaw = experience.guides as unknown as {
     id: string
+    user_id: string | null
     full_name: string
     stripe_account_id: string | null
     stripe_charges_enabled: boolean | null
@@ -138,17 +148,26 @@ export async function createBookingCheckout(
     stripe_payouts_enabled:  guideRaw.stripe_payouts_enabled,
   })
 
-  // ── Calculate pricing ─────────────────────────────────────────────────────
+  // ── Calculate pricing (single source of truth) ────────────────────────────
   const pricePerPerson = experience.price_per_person_eur ?? 0
-  const subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
-  const serviceFee = Math.min(Math.round(subtotal * 0.05 * 100) / 100, 50) // 5% capped at €50
-  const totalEur = Math.round((subtotal + serviceFee) * 100) / 100
   const commissionRate = guideRaw.commission_rate ?? env.PLATFORM_COMMISSION_RATE
-  const platformFeeEur = Math.round(subtotal * commissionRate * 100) / 100
-  const guidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
-  // manual: angler pays only platform fee via Stripe, pays guide directly
-  // stripe_connect: angler pays 40% deposit via Stripe (balance due before trip)
-  const depositEur = calcDepositEur(subtotal, commissionRate, paymentModel)
+
+  // Resolve subtotal: if a duration option label was supplied, look up the option
+  // and use its pricing_type (per_person / per_boat / per_group).
+  // Falls back to the base per-person rate if no match is found.
+  let subtotal: number
+  const rawOpts = experience.duration_options as DurationOption[] | null
+  const matchedOpt = durationOptionLabel
+    ? rawOpts?.find(o => o.label === durationOptionLabel) ?? null
+    : null
+
+  if (matchedOpt) {
+    subtotal = calcSubtotalFromOption(matchedOpt, guests, tripDays)
+  } else {
+    subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
+  }
+
+  const pricing = computeBookingPricing(subtotal, commissionRate, paymentModel)
 
   // ── Insert booking row ────────────────────────────────────────────────────
   const serviceClient = createServiceClient()
@@ -163,11 +182,12 @@ export async function createBookingCheckout(
       booking_date: dates[0], // primary date (first selected)
       requested_dates: dates, // all selected dates
       guests,
-      total_eur: totalEur,
-      platform_fee_eur: platformFeeEur,
-      guide_payout_eur: guidePayoutEur,
-      deposit_eur: depositEur,
-      commission_rate: commissionRate,
+      total_eur:        pricing.totalEur,
+      service_fee_eur:  pricing.serviceFeeEur,
+      platform_fee_eur: pricing.commissionEur,
+      guide_payout_eur: pricing.guidePayoutEur,
+      deposit_eur:      pricing.depositEur,
+      commission_rate:  commissionRate,
       angler_full_name: anglerName ?? null,
       angler_country: anglerCountry ?? null,
       angler_phone: anglerPhone ?? null,
@@ -182,6 +202,47 @@ export async function createBookingCheckout(
   if (insertError || !booking) {
     console.error('[createBookingCheckout] insert error:', insertError)
     return { error: 'Failed to create booking. Please try again.' }
+  }
+
+  // ── Fire-and-forget emails ────────────────────────────────────────────────
+  {
+    const appUrl   = await getAppUrl()
+    const datesLbl = fmtEmailDateRange(dates[0], dates[dates.length - 1])
+
+    // To angler — "your request is on its way"
+    sendBookingRequestAnglerEmail({
+      to:              anglerEmail,
+      anglerName:      anglerName ?? anglerEmail,
+      experienceTitle: experience.title,
+      guideName:       guideRaw.full_name,
+      datesLabel:      datesLbl,
+      guests,
+      totalEur:  pricing.totalEur,
+      bookingUrl: `${appUrl}/account/bookings/${booking.id}`,
+    }).catch(e => console.error('[createBookingCheckout] angler email:', e))
+
+    // To guide — "new booking request"
+    if (guideRaw.user_id) {
+      serviceClient.auth.admin.getUserById(guideRaw.user_id)
+        .then(({ data }) => {
+          const guideEmail = data.user?.email
+          if (!guideEmail) return
+          return sendBookingRequestGuideEmail({
+            to:              guideEmail,
+            guideName:       guideRaw.full_name,
+            anglerName:      anglerName ?? anglerEmail,
+            anglerEmail,
+            anglerCountry:   anglerCountry ?? null,
+            experienceTitle: experience.title,
+            datesLabel:      datesLbl,
+            guests,
+            totalEur:  pricing.totalEur,
+            specialRequests: specialRequests ?? null,
+            bookingUrl: `${appUrl}/dashboard/bookings/${booking.id}`,
+          })
+        })
+        .catch(e => console.error('[createBookingCheckout] guide email:', e))
+    }
   }
 
   return { bookingId: booking.id }
@@ -285,7 +346,7 @@ export async function acceptBooking(
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, default_balance_payment_method')
+    .select('id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, default_balance_payment_method')
     .eq('user_id', user.id)
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
@@ -301,7 +362,7 @@ export async function acceptBooking(
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id, total_eur, platform_fee_eur, guide_payout_eur, angler_email, stripe_checkout_id, guests, commission_rate, experience_id, requested_dates, booking_date, offer_days, offer_date_from, offer_date_to, experiences(title, price_per_person_eur)')
+    .select('id, status, guide_id, total_eur, service_fee_eur, platform_fee_eur, guide_payout_eur, angler_email, angler_full_name, angler_phone, deposit_eur, stripe_checkout_id, guests, commission_rate, experience_id, requested_dates, booking_date, offer_days, offer_date_from, offer_date_to, duration_option, experiences(title, price_per_person_eur, duration_options)')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
@@ -315,41 +376,58 @@ export async function acceptBooking(
   const confirmedDays = options?.confirmedDays
   let effectiveTotalEur       = booking.total_eur
   let effectiveGuidePayoutEur = booking.guide_payout_eur
-  let pricingUpdate: Partial<{ total_eur: number; guide_payout_eur: number; deposit_eur: number; platform_fee_eur: number }> = {}
+  let pricingUpdate: Partial<{
+    total_eur:        number
+    service_fee_eur:  number
+    guide_payout_eur: number
+    deposit_eur:      number
+    platform_fee_eur: number
+  }> = {}
 
   if (options?.customTotalEur != null && options.customTotalEur > 0) {
-    // Guide manually set the total — back-calculate payout/fee.
-    // total = subtotal + min(subtotal × 5%, €50)
-    // Cap threshold: subtotal > €1000 → total > €1050. Reverse accordingly.
-    effectiveTotalEur       = Math.round(options.customTotalEur * 100) / 100
-    const subtotal          = effectiveTotalEur > 1050
-      ? Math.round((effectiveTotalEur - 50) * 100) / 100
-      : Math.round((effectiveTotalEur / 1.05) * 100) / 100
-    const platformFeeEur    = Math.round(subtotal * booking.commission_rate * 100) / 100
-    effectiveGuidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
-    const depositEur        = calcDepositEur(subtotal, booking.commission_rate, guidePaymentModel)
+    // Guide set a custom price — treat it as their SUBTOTAL (excl. service fee).
+    // computeBookingPricing() adds the service fee on top and returns all price fields.
+    const subtotal  = Math.round(options.customTotalEur * 100) / 100
+    const pricing   = computeBookingPricing(subtotal, booking.commission_rate, guidePaymentModel)
+    effectiveTotalEur       = pricing.totalEur
+    effectiveGuidePayoutEur = pricing.guidePayoutEur
     pricingUpdate = {
-      total_eur:        effectiveTotalEur,
-      guide_payout_eur: effectiveGuidePayoutEur,
-      deposit_eur:      depositEur,
-      platform_fee_eur: platformFeeEur,
+      total_eur:        pricing.totalEur,
+      service_fee_eur:  pricing.serviceFeeEur,
+      guide_payout_eur: pricing.guidePayoutEur,
+      deposit_eur:      pricing.depositEur,
+      platform_fee_eur: pricing.commissionEur,
     }
   } else if (confirmedDays && confirmedDays.length > 0) {
-    const exp = booking.experiences as unknown as { title: string; price_per_person_eur: number | null } | null
+    const exp = booking.experiences as unknown as {
+      title: string
+      price_per_person_eur: number | null
+      duration_options: DurationOption[] | null
+    } | null
     const pricePerPerson = exp?.price_per_person_eur
     if (pricePerPerson != null && booking.guests > 0) {
-      const numDays        = confirmedDays.length
-      const subtotal       = Math.round(pricePerPerson * booking.guests * numDays * 100) / 100
-      const serviceFee     = Math.round(subtotal * 0.05 * 100) / 100
-      effectiveTotalEur    = Math.round((subtotal + serviceFee) * 100) / 100
-      const platformFeeEur = Math.round(subtotal * booking.commission_rate * 100) / 100
-      effectiveGuidePayoutEur = Math.round((subtotal - platformFeeEur) * 100) / 100
-      const depositEur     = calcDepositEur(subtotal, booking.commission_rate, guidePaymentModel)
+      const numDays = confirmedDays.length
+
+      // Use the stored duration option (if any) for correct per_boat / per_group pricing.
+      // Falls back to base per-person rate if no matching option found.
+      const storedLabel = booking.duration_option ?? null
+      const matchedOpt  = storedLabel
+        ? (exp?.duration_options ?? []).find(o => o.label === storedLabel) ?? null
+        : null
+
+      const subtotal = matchedOpt
+        ? calcSubtotalFromOption(matchedOpt, booking.guests, numDays)
+        : Math.round(pricePerPerson * booking.guests * numDays * 100) / 100
+
+      const pricing = computeBookingPricing(subtotal, booking.commission_rate, guidePaymentModel)
+      effectiveTotalEur       = pricing.totalEur
+      effectiveGuidePayoutEur = pricing.guidePayoutEur
       pricingUpdate = {
-        total_eur:        effectiveTotalEur,
-        guide_payout_eur: effectiveGuidePayoutEur,
-        deposit_eur:      depositEur,
-        platform_fee_eur: platformFeeEur,
+        total_eur:        pricing.totalEur,
+        service_fee_eur:  pricing.serviceFeeEur,
+        guide_payout_eur: pricing.guidePayoutEur,
+        deposit_eur:      pricing.depositEur,
+        platform_fee_eur: pricing.commissionEur,
       }
     }
   }
@@ -423,17 +501,21 @@ export async function acceptBooking(
               },
             ],
             metadata:    { bookingId, guideId: guide.id, paymentModel: guidePaymentModel },
-            success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
-            cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
+            success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+            cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
             payment_intent_data: {
               // stripe_connect: destination charge — platform takes full application_fee on deposit,
               // balance payment transfers 100% to guide (no second fee).
               // manual: no transfer_data — money stays on platform, guide paid directly by angler.
               ...(guidePaymentModel === 'stripe_connect' && guide.stripe_account_id
                 ? {
-                    application_fee_amount: Math.round(
-                      (pricingUpdate.platform_fee_eur ?? booking.platform_fee_eur ?? 0) * 100,
-                    ),
+                    // application_fee = commission + service_fee (everything platform keeps).
+                    // CRITICAL: must include service_fee, not just platform_fee_eur (commission only).
+                    // Using platform_fee_eur alone causes the service fee to flow to the guide.
+                    application_fee_amount: Math.round((
+                      (pricingUpdate.platform_fee_eur ?? booking.platform_fee_eur ?? 0) +
+                      (pricingUpdate.service_fee_eur  ?? booking.service_fee_eur  ?? 0)
+                    ) * 100),
                     transfer_data: { destination: guide.stripe_account_id },
                   }
                 : {}),
@@ -569,6 +651,40 @@ export async function acceptBooking(
     }
   }
 
+  // ── Email to angler: "booking accepted — pay your deposit" ───────────────
+  {
+    const anglerEmail = booking.angler_email
+    if (anglerEmail) {
+      // Build a human-readable confirmed dates label
+      const confirmedDays = options?.confirmedDays
+      const confirmedDatesLabel = (() => {
+        if (confirmedDays && confirmedDays.length > 0) return fmtEmailDays(confirmedDays)
+        if (options?.confirmedDateFrom) {
+          return fmtEmailDateRange(options.confirmedDateFrom, options.confirmedDateTo ?? options.confirmedDateFrom)
+        }
+        const reqDates = booking.requested_dates as string[] | null
+        if (reqDates && reqDates.length > 0) return fmtEmailDateRange(reqDates[0], reqDates[reqDates.length - 1])
+        return fmtEmailDate(booking.booking_date)
+      })()
+
+      const emailDepositEur = pricingUpdate.deposit_eur ?? (booking.deposit_eur as number | null) ?? Math.round(effectiveTotalEur * 0.4 * 100) / 100
+      const expTitle = (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+      const guideFullName = (guide as unknown as { full_name?: string }).full_name ?? 'Your guide'
+
+      sendBookingAcceptedAnglerEmail({
+        to:              anglerEmail,
+        anglerName:      (booking.angler_full_name as string | null) ?? anglerEmail,
+        experienceTitle: expTitle,
+        guideName:       guideFullName,
+        confirmedDates:  confirmedDatesLabel,
+        depositEur:      emailDepositEur,
+        totalEur:        effectiveTotalEur,
+        guideNote:       options?.guideNote?.trim() ?? null,
+        bookingUrl:      `${await getAppUrl()}/account/bookings/${bookingId}`,
+      }).catch(e => console.error('[acceptBooking] angler email:', e))
+    }
+  }
+
   revalidatePath('/dashboard/bookings')
   revalidatePath(`/dashboard/bookings/${bookingId}`)
   revalidatePath(`/account/bookings/${bookingId}`)
@@ -595,7 +711,7 @@ export async function renewDepositCheckout(
   const { data: booking } = await serviceClient
     .from('bookings')
     .select(
-      'id, status, angler_id, total_eur, deposit_eur, platform_fee_eur, guide_payout_eur, angler_email, guide_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
+      'id, status, angler_id, total_eur, service_fee_eur, deposit_eur, platform_fee_eur, guide_payout_eur, angler_email, guide_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
     )
     .eq('id', bookingId)
     .eq('angler_id', user.id)
@@ -640,13 +756,16 @@ export async function renewDepositCheckout(
         },
       ],
       metadata:            { bookingId, guideId: booking.guide_id },
-      success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
-      cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
+      success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+      cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
       payment_intent_data: {
         ...(isStripeConnect && guide?.stripe_account_id != null && booking.platform_fee_eur != null
           ? {
-              application_fee_amount: Math.round(booking.platform_fee_eur * 100),
-              transfer_data:          { destination: guide.stripe_account_id },
+              // application_fee = commission + service_fee (full platform take)
+              application_fee_amount: Math.round(
+                (booking.platform_fee_eur + (booking.service_fee_eur ?? 0)) * 100
+              ),
+              transfer_data: { destination: guide.stripe_account_id },
             }
           : {}),
         metadata: { bookingId },
@@ -689,7 +808,7 @@ export async function declineBooking(
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id')
+    .select('id, full_name')
     .eq('user_id', user.id)
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
@@ -698,7 +817,7 @@ export async function declineBooking(
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id, stripe_checkout_id, stripe_payment_intent_id')
+    .select('id, status, guide_id, angler_email, angler_full_name, stripe_checkout_id, stripe_payment_intent_id, experiences(title)')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
@@ -793,6 +912,25 @@ export async function declineBooking(
     }
   }
 
+  // ── Email to angler: "booking declined" ──────────────────────────────────
+  {
+    const anglerEmail = booking.angler_email as string | null
+    if (anglerEmail) {
+      const expTitle   = (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+      const altDates   = alternatives ? fmtEmailDateRange(alternatives.from, alternatives.to) : null
+      sendBookingDeclinedAnglerEmail({
+        to:               anglerEmail,
+        anglerName:       (booking.angler_full_name as string | null) ?? anglerEmail,
+        experienceTitle:  expTitle,
+        guideName:        (guide as unknown as { full_name?: string }).full_name ?? 'Your guide',
+        declinedReason:   reason?.trim() ?? null,
+        alternativeDates: altDates,
+        didRefund,
+        searchUrl:        `${await getAppUrl()}/guides`,
+      }).catch(e => console.error('[declineBooking] angler email:', e))
+    }
+  }
+
   revalidatePath('/dashboard/bookings')
   revalidatePath(`/dashboard/bookings/${bookingId}`)
   revalidatePath(`/account/bookings/${bookingId}`)
@@ -884,8 +1022,8 @@ export async function createBalanceCheckout(
           },
         ],
         metadata: { bookingId, guideId: booking.guide_id, paymentType: 'balance' },
-        success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=balance_paid`,
-        cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
+        success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=balance_paid`,
+        cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
         payment_intent_data: {
           // stripe_connect: full balance → guide directly (platform fee already taken on deposit).
           // manual: full amount stays on platform; guide was paid directly by angler already.
@@ -937,7 +1075,7 @@ export async function markBalancePaid(
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id, balance_payment_method, balance_paid_at')
+    .select('id, status, guide_id, angler_email, angler_full_name, guests, total_eur, balance_payment_method, balance_paid_at, confirmed_date_from, confirmed_date_to, confirmed_days, experiences(title), guides(full_name)')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
@@ -958,6 +1096,34 @@ export async function markBalancePaid(
   if (error) {
     console.error('[markBalancePaid]', error)
     return { error: 'Failed to mark balance as paid.' }
+  }
+
+  // ── Email to angler: "trip fully paid" ────────────────────────────────────
+  {
+    const anglerEmail = booking.angler_email as string | null
+    if (anglerEmail) {
+      const confDays = booking.confirmed_days as string[] | null
+      const confirmedDatesLabel =
+        confDays && confDays.length > 0
+          ? fmtEmailDays(confDays)
+          : fmtEmailDateRange(
+              (booking.confirmed_date_from as string | null) ?? '',
+              (booking.confirmed_date_to   as string | null) ?? '',
+            )
+      const expTitle   = (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+      const guideData  = booking.guides as unknown as { full_name: string } | null
+
+      sendBalancePaidAnglerEmail({
+        to:               anglerEmail,
+        anglerName:       (booking.angler_full_name as string | null) ?? anglerEmail,
+        experienceTitle:  expTitle,
+        guideName:        guideData?.full_name ?? 'Your guide',
+        confirmedDates:   confirmedDatesLabel,
+        guests:           booking.guests as number,
+        totalEur:         booking.total_eur as number,
+        bookingUrl:       `${await getAppUrl()}/account/bookings/${bookingId}`,
+      }).catch(e => console.error('[markBalancePaid] angler email:', e))
+    }
   }
 
   revalidatePath('/dashboard/bookings')
@@ -1243,6 +1409,66 @@ export async function createInquiryBooking(
   }
 
   console.log(`[createInquiryBooking] New inquiry booking ${booking.id} from ${anglerEmail}`)
+
+  // ── Fire-and-forget emails ────────────────────────────────────────────────
+  {
+    const appUrl   = await getAppUrl()
+    const datesLbl = fmtEmailDateRange(datesFrom, datesTo)
+    const budgetLbl = preferences.budgetMin != null || preferences.budgetMax != null
+      ? [
+          preferences.budgetMin  != null ? `€${preferences.budgetMin}`  : null,
+          preferences.budgetMax != null ? `€${preferences.budgetMax}` : null,
+        ].filter(Boolean).join('–')
+      : null
+
+    // To angler — "request sent"
+    // Guide name is available only if guideId is known
+    let guideNameForEmail = 'your guide'
+    if (guideId) {
+      const { data: guideRow } = await serviceClient.from('guides').select('full_name').eq('id', guideId).single()
+      if (guideRow?.full_name) guideNameForEmail = guideRow.full_name
+    }
+
+    sendInquiryReceivedAnglerEmail({
+      to:        anglerEmail,
+      anglerName,
+      guideName: guideNameForEmail,
+      datesLabel: datesLbl,
+      species:   targetSpecies,
+      guests:    groupSize,
+      notes:     preferences.notes ?? null,
+      tripUrl:   `${appUrl}/account/trips/${booking.id}`,
+    }).catch(e => console.error('[createInquiryBooking] angler email:', e))
+
+    // To guide — "new inquiry request"
+    if (guideId) {
+      serviceClient.auth.admin
+        .getUserById(
+          await serviceClient.from('guides').select('user_id').eq('id', guideId).single()
+            .then(r => (r.data?.user_id as string | null) ?? ''),
+        )
+        .then(({ data }) => {
+          const guideEmail = data.user?.email
+          if (!guideEmail) return
+          return sendInquiryReceivedGuideEmail({
+            to:               guideEmail,
+            guideName:        guideNameForEmail,
+            anglerName,
+            anglerEmail,
+            anglerCountry:    null,  // inquiry form doesn't collect country
+            datesLabel:       datesLbl,
+            species:          targetSpecies,
+            guests:           groupSize,
+            experienceLevel,
+            budget:           budgetLbl,
+            notes:            preferences.notes ?? null,
+            inquiryUrl:       `${appUrl}/dashboard/bookings/${booking.id}`,
+          })
+        })
+        .catch(e => console.error('[createInquiryBooking] guide email:', e))
+    }
+  }
+
   revalidatePath('/dashboard/bookings')
   return { bookingId: booking.id }
 }
@@ -1298,7 +1524,7 @@ export async function sendOffer(
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id')
+    .select('id, full_name')
     .eq('user_id', user.id)
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
@@ -1321,7 +1547,7 @@ export async function sendOffer(
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, guide_id, status, source, guests, requested_dates')
+    .select('id, guide_id, status, source, guests, requested_dates, angler_email, angler_full_name, booking_date, date_to')
     .eq('id', bookingId)
     .single()
 
@@ -1367,6 +1593,35 @@ export async function sendOffer(
   // unavailability on the calendar.
 
   console.log(`[sendOffer] Offer sent for booking ${bookingId} — €${effectivePriceEur}`)
+
+  // ── Email to angler: "you have a new offer" ───────────────────────────────
+  {
+    const anglerEmail = booking.angler_email as string | null
+    if (anglerEmail) {
+      // Build offer dates label: specific days > date range > booking window
+      const offerDatesLabel = (() => {
+        if (offer.offerDays && offer.offerDays.length > 0) return fmtEmailDays(offer.offerDays)
+        if (offer.offerDateFrom)
+          return fmtEmailDateRange(offer.offerDateFrom, offer.offerDateTo ?? offer.offerDateFrom)
+        return fmtEmailDateRange(
+          booking.booking_date as string ?? '',
+          (booking.date_to as string | null) ?? (booking.booking_date as string ?? ''),
+        )
+      })()
+
+      sendOfferReceivedAnglerEmail({
+        to:           anglerEmail,
+        anglerName:   (booking.angler_full_name as string | null) ?? anglerEmail,
+        guideName:    (guide as unknown as { full_name?: string }).full_name ?? 'Your guide',
+        location:     offer.assignedRiver,
+        offerDates:   offerDatesLabel,
+        priceEur:     effectivePriceEur,
+        offerDetails: offer.offerDetails,
+        offerUrl:     `${await getAppUrl()}/account/trips/${bookingId}`,
+      }).catch(e => console.error('[sendOffer] angler email:', e))
+    }
+  }
+
   revalidatePath('/dashboard/bookings')
   revalidatePath(`/dashboard/bookings/${bookingId}`)
   return {}
@@ -1390,7 +1645,7 @@ export async function acceptBookingOffer(
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('*, guides(id, full_name, stripe_account_id, stripe_payouts_enabled, commission_rate)')
+    .select('*, guides(id, user_id, full_name, stripe_account_id, stripe_payouts_enabled, commission_rate)')
     .eq('id', bookingId)
     .single()
 
@@ -1417,6 +1672,7 @@ export async function acceptBookingOffer(
 
   const guide = booking.guides as unknown as {
     id: string
+    user_id: string | null
     full_name: string
     stripe_account_id: string | null
     stripe_payouts_enabled: boolean
@@ -1536,8 +1792,8 @@ export async function acceptBookingOffer(
             },
           ],
           metadata: { bookingId, guideId: guide.id },
-          success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
-          cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
+          success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+          cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
           payment_intent_data: {
             application_fee_amount: Math.round(appFeeEur * 100),
             transfer_data:          { destination: guide.stripe_account_id },
@@ -1552,8 +1808,9 @@ export async function acceptBookingOffer(
         .update({
           stripe_checkout_id:  session.id,
           total_eur:           totalChargeEur,   // total angler pays (guide price + service fee)
+          service_fee_eur:     serviceFeeEur,    // stored separately for Stripe application_fee calc
           deposit_eur:         totalChargeEur,   // paid in full upfront
-          platform_fee_eur:    appFeeEur,        // commission + service fee
+          platform_fee_eur:    appFeeEur,        // commission + service fee (inquiry: combined field)
           guide_payout_eur:    guidePayoutEur,   // guide price − commission
           commission_rate:     commissionRate,
           // Canonical confirmed days array — non-consecutive safe.
@@ -1563,6 +1820,28 @@ export async function acceptBookingOffer(
           confirmed_date_to:   confirmedToOffer,
         })
         .eq('id', bookingId)
+
+      // Email to guide: "angler accepted offer — payment processing"
+      if (guide?.user_id) {
+        const appUrlForGuide = await getAppUrl()
+        serviceClient.auth.admin.getUserById(guide.user_id)
+          .then(({ data }) => {
+            const guideEmail = data.user?.email
+            if (!guideEmail) return
+            return sendOfferAcceptedGuideEmail({
+              to:             guideEmail,
+              guideName:      guide.full_name,
+              anglerName:     (booking.angler_full_name as string | null) ?? (booking.angler_email ?? 'Angler'),
+              location:       (booking.assigned_river as string | null) ?? 'TBC',
+              confirmedDates: confirmedDaysForOffer.length > 0
+                ? fmtEmailDays(confirmedDaysForOffer)
+                : fmtEmailDateRange(confirmedFromOffer ?? '', confirmedToOffer ?? ''),
+              priceEur:       effectiveOfferPrice,
+              bookingUrl:     `${appUrlForGuide}/dashboard/bookings/${bookingId}`,
+            })
+          })
+          .catch(e => console.error('[acceptBookingOffer] guide email (stripe):', e))
+      }
 
       return { checkoutUrl: session.url! }
     } catch (err) {
@@ -1617,8 +1896,8 @@ export async function acceptBookingOffer(
           quantity: 1,
         }],
         metadata: { bookingId, guideId: guide?.id ?? '' },
-        success_url: `${getAppUrl()}/account/bookings/${bookingId}?status=paid`,
-        cancel_url:  `${getAppUrl()}/account/bookings/${bookingId}`,
+        success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
+        cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
       },
       { idempotencyKey: `offer-accept-${bookingId}` },
     )
@@ -1630,8 +1909,9 @@ export async function acceptBookingOffer(
         // total_eur = full angler cost (guide price + service fee) so that
         // balanceEur (total - deposit) = guide_payout_eur on the booking detail page
         total_eur:           Math.round((effectiveOfferPrice + serviceFeeEur) * 100) / 100,
+        service_fee_eur:     serviceFeeEur,        // stored separately (manual: combined in platform_fee_eur too)
         deposit_eur:         bookingFeeEur,        // platform fee charged via Stripe
-        platform_fee_eur:    bookingFeeEur,        // commission + service fee (total platform take)
+        platform_fee_eur:    bookingFeeEur,        // commission + service fee (total platform take, manual model)
         guide_payout_eur:    guidePayoutEur,       // guide price − commission
         commission_rate:     manualCommissionRate,
         // Canonical confirmed days array — non-consecutive safe.
@@ -1640,6 +1920,28 @@ export async function acceptBookingOffer(
         confirmed_date_to:   confirmedToOffer,
       })
       .eq('id', bookingId)
+
+    // Email to guide: "angler accepted offer — payment processing" (manual model)
+    if (guide?.user_id) {
+      const appUrlForGuide = await getAppUrl()
+      serviceClient.auth.admin.getUserById(guide.user_id)
+        .then(({ data }) => {
+          const guideEmail = data.user?.email
+          if (!guideEmail) return
+          return sendOfferAcceptedGuideEmail({
+            to:             guideEmail,
+            guideName:      guide?.full_name ?? 'Guide',
+            anglerName:     (booking.angler_full_name as string | null) ?? (booking.angler_email ?? 'Angler'),
+            location:       (booking.assigned_river as string | null) ?? 'TBC',
+            confirmedDates: confirmedDaysForOffer.length > 0
+              ? fmtEmailDays(confirmedDaysForOffer)
+              : fmtEmailDateRange(confirmedFromOffer ?? '', confirmedToOffer ?? ''),
+            priceEur:       effectiveOfferPrice,
+            bookingUrl:     `${appUrlForGuide}/dashboard/bookings/${bookingId}`,
+          })
+        })
+        .catch(e => console.error('[acceptBookingOffer] guide email (manual):', e))
+    }
 
     return { checkoutUrl: session.url! }
   } catch (err) {

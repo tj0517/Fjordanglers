@@ -18,6 +18,14 @@ import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { unblockBookingDates } from '@/lib/booking-blocks'
+import { getAppUrl } from '@/lib/app-url'
+import {
+  fmtEmailDateRange,
+  fmtEmailDays,
+  sendBookingConfirmedAnglerEmail,
+  sendBookingConfirmedGuideEmail,
+  sendBalancePaidAnglerEmail,
+} from '@/lib/email'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -80,7 +88,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (paymentType === 'balance') {
     const { data: existing } = await db
       .from('bookings')
-      .select('id, status, balance_paid_at')
+      .select('id, status, balance_paid_at, angler_email, angler_full_name, guests, total_eur, confirmed_date_from, confirmed_date_to, confirmed_days, experiences(title), guides(full_name)')
       .eq('id', bookingId)
       .single()
 
@@ -105,6 +113,33 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       .eq('id', bookingId)
 
     console.log(`[webhook] Booking ${bookingId} balance paid — status: completed`)
+
+    // Email to angler: "trip fully paid"
+    {
+      const anglerEmail = existing.angler_email as string | null
+      if (anglerEmail) {
+        const confDays      = existing.confirmed_days as string[] | null
+        const confirmedLbl  = confDays && confDays.length > 0
+          ? fmtEmailDays(confDays)
+          : fmtEmailDateRange(
+              (existing.confirmed_date_from as string | null) ?? '',
+              (existing.confirmed_date_to   as string | null) ?? '',
+            )
+        const expTitle  = (existing.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+        const guideData = existing.guides as unknown as { full_name: string } | null
+
+        sendBalancePaidAnglerEmail({
+          to:              anglerEmail,
+          anglerName:      (existing.angler_full_name as string | null) ?? anglerEmail,
+          experienceTitle: expTitle,
+          guideName:       guideData?.full_name ?? 'Your guide',
+          confirmedDates:  confirmedLbl,
+          guests:          existing.guests as number,
+          totalEur:        existing.total_eur as number,
+          bookingUrl:      `${await getAppUrl()}/account/bookings/${bookingId}`,
+        }).catch(e => console.error('[webhook] balance email:', e))
+      }
+    }
     return
   }
 
@@ -116,7 +151,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   //
   const { data: existing } = await db
     .from('bookings')
-    .select('id, status, stripe_payment_intent_id, source')
+    .select('id, status, stripe_payment_intent_id, source, angler_email, angler_full_name, angler_phone, guests, total_eur, deposit_eur, guide_payout_eur, balance_payment_method, confirmed_date_from, confirmed_date_to, confirmed_days, booking_date, requested_dates, experiences(title), guides(user_id, full_name, iban, iban_holder_name)')
     .eq('id', bookingId)
     .single()
 
@@ -150,7 +185,84 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     .eq('id', bookingId)
 
   console.log(`[webhook] Booking ${bookingId} confirmed (source: ${existing.source})`)
-  // TODO: sendBookingConfirmationEmail(bookingId)
+
+  // ── Confirmation emails ────────────────────────────────────────────────────
+  {
+    const anglerEmail = existing.angler_email as string | null
+    if (!anglerEmail) return
+
+    const isInquiry    = existing.source === 'inquiry'
+    const confDays     = existing.confirmed_days as string[] | null
+    const reqDates     = existing.requested_dates as string[] | null
+    const confirmedLbl =
+      confDays && confDays.length > 0
+        ? fmtEmailDays(confDays)
+        : (existing.confirmed_date_from as string | null)
+            ? fmtEmailDateRange(
+                existing.confirmed_date_from as string,
+                (existing.confirmed_date_to as string | null) ?? (existing.confirmed_date_from as string),
+              )
+            : reqDates && reqDates.length > 0
+              ? fmtEmailDateRange(reqDates[0], reqDates[reqDates.length - 1])
+              : (existing.booking_date as string | null) ?? ''
+
+    const expTitle   = (existing.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+    const guideData  = existing.guides as unknown as {
+      user_id:         string | null
+      full_name:       string
+      iban:            string | null
+      iban_holder_name: string | null
+    } | null
+
+    const totalEur     = existing.total_eur   as number
+    const depositEur   = (existing.deposit_eur as number | null) ?? totalEur
+    const balanceEur   = isInquiry ? 0 : Math.max(0, Math.round((totalEur - depositEur) * 100) / 100)
+    const amountPaid   = isInquiry ? totalEur : depositEur
+    const balanceMethod = (existing.balance_payment_method as string | null) as 'stripe' | 'cash' | null
+
+    const appUrl = await getAppUrl()
+
+    // To angler
+    sendBookingConfirmedAnglerEmail({
+      to:              anglerEmail,
+      anglerName:      (existing.angler_full_name as string | null) ?? anglerEmail,
+      experienceTitle: expTitle,
+      guideName:       guideData?.full_name ?? 'Your guide',
+      confirmedDates:  confirmedLbl,
+      guests:          existing.guests as number,
+      amountPaidEur:   amountPaid,
+      isPaidInFull:    isInquiry,
+      balanceEur,
+      balanceMethod:   isInquiry ? null : balanceMethod,
+      guidePayoutEur:  (existing.guide_payout_eur as number | null) ?? 0,
+      guideIban:       isInquiry ? null : (guideData?.iban ?? null),
+      guideIbanHolder: isInquiry ? null : (guideData?.iban_holder_name ?? null),
+      bookingUrl:      `${appUrl}/account/bookings/${bookingId}`,
+    }).catch(e => console.error('[webhook] confirmed angler email:', e))
+
+    // To guide
+    if (guideData?.user_id) {
+      db.auth.admin.getUserById(guideData.user_id)
+        .then(({ data }) => {
+          const guideEmail = data.user?.email
+          if (!guideEmail) return
+          return sendBookingConfirmedGuideEmail({
+            to:              guideEmail,
+            guideName:       guideData.full_name,
+            anglerName:      (existing.angler_full_name as string | null) ?? anglerEmail,
+            anglerEmail,
+            anglerPhone:     (existing.angler_phone as string | null) ?? null,
+            experienceTitle: expTitle,
+            confirmedDates:  confirmedLbl,
+            guests:          existing.guests as number,
+            guidePayoutEur:  (existing.guide_payout_eur as number | null) ?? 0,
+            isPaidInFull:    isInquiry,
+            bookingUrl:      `${appUrl}/dashboard/bookings/${bookingId}`,
+          })
+        })
+        .catch(e => console.error('[webhook] confirmed guide email:', e))
+    }
+  }
 }
 
 // ─── account.updated ──────────────────────────────────────────────────────────

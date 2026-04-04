@@ -119,7 +119,7 @@ export default async function AnglerPaymentsPage() {
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[900px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[1120px]">
       <div className="mb-8">
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
           My <span style={{ fontStyle: 'italic' }}>Payments</span>

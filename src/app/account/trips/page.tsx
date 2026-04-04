@@ -77,7 +77,7 @@ export default async function AnglerTripsPage() {
   ).length
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[900px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[1120px]">
 
       {/* Header */}
       <div className="flex items-start justify-between mb-8">

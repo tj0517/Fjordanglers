@@ -203,7 +203,7 @@ export default async function EarningsPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[900px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[1120px]">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="mb-8">

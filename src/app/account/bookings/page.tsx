@@ -347,7 +347,7 @@ export default async function AnglerBookingsPage() {
 
                   {/* Status */}
                   <span
-                    className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full self-start f-body"
+                    className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full f-body"
                     style={{ background: s.bg, color: s.color }}
                   >
                     {s.label}

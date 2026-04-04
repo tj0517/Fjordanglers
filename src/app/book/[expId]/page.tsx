@@ -9,6 +9,7 @@ import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import { decodePeriodsParam } from '@/lib/periods'
 import { expandBookingDateRange } from '@/lib/booking-blocks'
 import { getPaymentModel } from '@/lib/payment-model'
+import { calcSubtotalFromOption, type DurationOption } from '@/lib/booking-pricing'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -264,9 +265,20 @@ export default async function BookPage({ params, searchParams }: Props) {
     if (profile?.full_name) defaultName = profile.full_name
   }
 
-  // Price calculation — uses trip duration (numDays), NOT window length
-  const subtotal   = Math.round(pricePerPerson * guests * effectiveNumDays * 100) / 100
-  const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100
+  // Price calculation — uses the selected duration option's pricing type when available.
+  // Falls back to base per-person rate for old/unmatched labels.
+  const SERVICE_FEE_CAP_EUR = 50
+
+  const rawOpts    = experience.duration_options as DurationOption[] | null
+  const matchedOpt = durationLabel
+    ? rawOpts?.find(o => o.label === durationLabel) ?? null
+    : null
+
+  const subtotal = matchedOpt
+    ? calcSubtotalFromOption(matchedOpt, guests, effectiveNumDays)
+    : Math.round(pricePerPerson * guests * effectiveNumDays * 100) / 100
+
+  const serviceFee = Math.min(Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100, SERVICE_FEE_CAP_EUR)
   const totalEur   = Math.round((subtotal + serviceFee) * 100) / 100
 
   return (

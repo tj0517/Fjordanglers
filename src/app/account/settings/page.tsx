@@ -18,7 +18,7 @@ export default async function AccountSettingsPage() {
   const displayName = profile?.full_name ?? user.email?.split('@')[0] ?? 'Angler'
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[600px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[720px]">
       <div className="mb-8">
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
           Account <span style={{ fontStyle: 'italic' }}>Settings</span>

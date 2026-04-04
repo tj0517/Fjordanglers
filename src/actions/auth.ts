@@ -13,17 +13,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendPasswordResetEmail } from '@/lib/email'
-import { env } from '@/lib/env'
-
-/** Returns the canonical app URL.
- *  On Vercel Preview deployments VERCEL_URL is the actual preview hostname,
- *  so we use it instead of NEXT_PUBLIC_APP_URL (which may still be localhost). */
-function getAppUrl(): string {
-  if (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`
-  }
-  return env.NEXT_PUBLIC_APP_URL
-}
+import { getAppUrl } from '@/lib/app-url'
 
 // ─── Return type ──────────────────────────────────────────────────────────────
 
@@ -170,7 +160,7 @@ export async function resetPassword(email: string): Promise<AuthResult> {
         // /auth/reset is a dedicated no-query-param callback for password recovery.
         // It exchanges the code and redirects straight to /reset-password.
         // (Simpler to whitelist in Supabase than /auth/callback?next=...)
-        redirectTo: `${getAppUrl()}/auth/reset`,
+        redirectTo: `${await getAppUrl()}/auth/reset`,
       },
     })
 

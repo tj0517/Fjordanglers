@@ -122,6 +122,7 @@ export type Database = {
           payout_sent_at: string | null
           payout_status: string
           platform_fee_eur: number
+          service_fee_eur: number
           requested_dates: string[] | null
           special_requests: string | null
           status: Database["public"]["Enums"]["booking_status"]
@@ -180,6 +181,7 @@ export type Database = {
           payout_sent_at?: string | null
           payout_status?: string
           platform_fee_eur?: number
+          service_fee_eur?: number
           requested_dates?: string[] | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
@@ -235,6 +237,7 @@ export type Database = {
           payout_sent_at?: string | null
           payout_status?: string
           platform_fee_eur?: number
+          service_fee_eur?: number
           requested_dates?: string[] | null
           special_requests?: string | null
           status?: Database["public"]["Enums"]["booking_status"]

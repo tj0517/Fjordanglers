@@ -385,10 +385,14 @@ export default function BookingRespondForm({
     startTransition(async () => {
       let customTotalEur: number | undefined
       if (isDirect) {
-        // Recalculate total based on how many days the guide confirmed
-        if (confirmedDays.length > 0) {
-          customTotalEur = computeDefaultPrice(confirmedDays.length)
-        }
+        // Direct bookings: do NOT pass customTotalEur.
+        // acceptBooking() uses the confirmedDays array to recalculate price from
+        // experience.price_per_person_eur × guests × confirmedDays.length (+ 5% service fee).
+        //
+        // REASON: computeDefaultPrice() returns the SUBTOTAL (no service fee). If we passed
+        // that as customTotalEur, acceptBooking() would treat it as the angler-facing TOTAL
+        // and strip the fee again (÷1.05), causing total_eur to drop ~5%. That was the bug.
+        customTotalEur = undefined
       } else {
         const parsedPrice = parseFloat(priceInput)
         customTotalEur = !isNaN(parsedPrice) && parsedPrice > 0 ? parsedPrice : undefined
@@ -489,7 +493,7 @@ export default function BookingRespondForm({
         : fmtShort(windowFrom)
 
     return (
-      <div className="px-5 py-5 max-w-[580px]">
+      <div className="px-5 py-5 max-w-[580px] mx-auto">
 
         <div className="mb-5">
           <p
@@ -568,7 +572,7 @@ export default function BookingRespondForm({
     const hasNote     = guideNote.trim().length > 0
 
     return (
-      <div className="flex flex-col px-6 py-5" style={{ maxWidth: 600 }}>
+      <div className="flex flex-col px-6 py-5 mx-auto" style={{ maxWidth: 600 }}>
 
         {/* Header */}
         <div className="pb-4 mb-1" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
@@ -908,47 +912,45 @@ export default function BookingRespondForm({
                 />
               )}
             </div>
-            {/* Map — inquiry bookings only; direct bookings have a fixed experience location */}
-            {!isDirect && (
-              <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(10,46,77,0.12)' }}>
-                <LocationPickerMap
-                  mode="pin"
-                  lat={meetLat}
-                  lng={meetLng}
-                  defaultCenter={mapDefaultCenter}
-                  onChange={(lat, lng) => {
-                    setMeetLat(lat)
-                    setMeetLng(lng)
-                    void handleReverseGeocode(lat, lng)
-                  }}
-                />
-                <div
-                  className="px-3 py-2 flex items-center justify-between gap-3"
-                  style={{ background: 'rgba(10,46,77,0.02)', borderTop: '1px solid rgba(10,46,77,0.06)' }}
-                >
-                  {meetLat != null && meetLng != null ? (
-                    <>
-                      <span className="text-[10px] f-body font-mono" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                        {meetLat.toFixed(5)}, {meetLng.toFixed(5)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => { setMeetLat(null); setMeetLng(null) }}
-                        disabled={isPending}
-                        className="text-[10px] f-body hover:opacity-70 transition-opacity flex-shrink-0"
-                        style={{ color: 'rgba(10,46,77,0.38)' }}
-                      >
-                        Remove pin
-                      </button>
-                    </>
-                  ) : (
-                    <p className="text-[10px] f-body w-full text-center" style={{ color: 'rgba(10,46,77,0.35)' }}>
-                      Click the map to place a pin — location name auto-fills above
-                    </p>
-                  )}
-                </div>
+            {/* Map — pick exact meeting point (both direct and inquiry bookings) */}
+            <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(10,46,77,0.12)' }}>
+              <LocationPickerMap
+                mode="pin"
+                lat={meetLat}
+                lng={meetLng}
+                defaultCenter={mapDefaultCenter}
+                onChange={(lat, lng) => {
+                  setMeetLat(lat)
+                  setMeetLng(lng)
+                  void handleReverseGeocode(lat, lng)
+                }}
+              />
+              <div
+                className="px-3 py-2 flex items-center justify-between gap-3"
+                style={{ background: 'rgba(10,46,77,0.02)', borderTop: '1px solid rgba(10,46,77,0.06)' }}
+              >
+                {meetLat != null && meetLng != null ? (
+                  <>
+                    <span className="text-[10px] f-body font-mono" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      {meetLat.toFixed(5)}, {meetLng.toFixed(5)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { setMeetLat(null); setMeetLng(null) }}
+                      disabled={isPending}
+                      className="text-[10px] f-body hover:opacity-70 transition-opacity flex-shrink-0"
+                      style={{ color: 'rgba(10,46,77,0.38)' }}
+                    >
+                      Remove pin
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-[10px] f-body w-full text-center" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                    Click the map to place a pin — location name auto-fills above
+                  </p>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Message — same for both direct and inquiry */}

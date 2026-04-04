@@ -218,7 +218,7 @@ export default async function BookingsPage({
   ]
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[1120px]">
+    <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[1120px]">
 
       {/* Header */}
       <div className="mb-8">
@@ -414,7 +414,7 @@ export default async function BookingsPage({
 
                 {/* Status */}
                 <span
-                  className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full self-start f-body"
+                  className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full f-body"
                   style={{ background: item.statusBg, color: item.statusColor }}
                 >
                   {item.statusLabel}
