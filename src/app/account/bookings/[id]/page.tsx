@@ -62,17 +62,18 @@ export default async function AnglerBookingDetailPage({
   //
   // Stripe webhooks are sent to the registered endpoint (production URL).
   // On preview deployments the webhook never arrives, so we verify payment
-  // directly with Stripe when the angler returns from Checkout (?status=paid /
-  // ?status=balance_paid) and the booking status hasn't been updated yet.
+  // directly with Stripe whenever the booking is in an awaiting-payment state.
   //
-  // This is idempotent: the .eq('status', ...) condition ensures only one path
-  // (webhook or page load) wins the DB update. The webhook arriving later is a
-  // no-op because the status will already be 'confirmed' / 'completed'.
+  // We intentionally do NOT gate this on ?status=paid — if the user was logged
+  // out mid-redirect (wrong success_url) and navigated back manually, the query
+  // param is gone but the payment may have completed. Polling Stripe here is safe:
+  //   - Only fires when status is accepted/offer_accepted with a checkout_id set
+  //   - Idempotent: .in('status', ...) guard prevents double-updates
+  //   - Webhook arriving later is a no-op (status already 'confirmed')
 
   let webhookFallbackSession: Awaited<ReturnType<typeof stripe.checkout.sessions.retrieve>> | null = null
 
   if (
-    qStatus === 'paid' &&
     (booking.status === 'accepted' || booking.status === 'offer_accepted') &&
     booking.stripe_checkout_id
   ) {
@@ -99,7 +100,7 @@ export default async function AnglerBookingDetailPage({
     }
   }
 
-  if (qStatus === 'balance_paid' && booking.status === 'confirmed' && booking.balance_paid_at == null && booking.balance_stripe_checkout_id) {
+  if (booking.status === 'confirmed' && booking.balance_paid_at == null && booking.balance_stripe_checkout_id) {
     try {
       const session = await stripe.checkout.sessions.retrieve(booking.balance_stripe_checkout_id)
       if (session.payment_status === 'paid') {
