@@ -6,6 +6,7 @@ import { stripe } from '@/lib/stripe/client'
 import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import PayDepositBanner from '@/components/booking/pay-deposit-banner'
 import PayBalanceBanner from '@/components/booking/pay-balance-banner'
+import PayGuideButton from '@/components/booking/pay-guide-button'
 import { getPaymentModel } from '@/lib/payment-model'
 import type { Database } from '@/lib/supabase/database.types'
 import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
@@ -48,7 +49,7 @@ export default async function AnglerBookingDetailPage({
   const { data: booking } = await supabase
     .from('bookings')
     .select(
-      '*, experience:experiences(id, title, description, fish_types, fishing_methods, technique, difficulty, duration_hours, duration_days, location_country, location_city, location_lat, location_lng, meeting_point_lat, meeting_point_lng, meeting_point_address, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled)',
+      '*, experience:experiences(id, title, description, fish_types, fishing_methods, technique, difficulty, duration_hours, duration_days, location_country, location_city, location_lat, location_lng, meeting_point_lat, meeting_point_lng, meeting_point_address, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, iban_holder_name, iban_bic)',
     )
     .eq('id', id)
     .eq('angler_id', user.id)
@@ -142,8 +143,10 @@ export default async function AnglerBookingDetailPage({
   }
 
   const justPaid        = qStatus === 'paid'
+  const justGuidePaid   = qStatus === 'guide_paid'
   const awaitingBalance = booking.status === 'confirmed' && booking.balance_paid_at == null
   const justBalancePaid = qStatus === 'balance_paid'
+
   const { data: rawMsgs } = await serviceClient
     .from('booking_messages')
     .select('id, body, sender_id, created_at')
@@ -176,6 +179,9 @@ export default async function AnglerBookingDetailPage({
     stripe_account_id: string | null
     stripe_charges_enabled: boolean | null
     stripe_payouts_enabled: boolean | null
+    iban: string | null
+    iban_holder_name: string | null
+    iban_bic: string | null
   } | null
 
   const paymentModel = getPaymentModel({
@@ -183,6 +189,46 @@ export default async function AnglerBookingDetailPage({
     stripe_charges_enabled: guide?.stripe_charges_enabled ?? null,
     stripe_payouts_enabled: guide?.stripe_payouts_enabled ?? null,
   })
+
+  // ── Guide amount payment status ────────────────────────────────────────────
+  // New two-step model: after booking fee paid, angler still needs to pay guide.
+  // Model A (Stripe Connect): guide_stripe_checkout_id set, pay via Stripe
+  // Model B (IBAN): iban_shared_at set, pay via bank transfer
+  // Model C (nothing): arrange directly
+  const guideAmountEur  = booking.guide_payout_eur ?? Math.max(0, (booking.total_eur ?? 0) - (booking.deposit_eur ?? 0))
+  const guideAmountPaid = (booking as Record<string, unknown>).guide_amount_paid_at != null
+  const ibanShared      = (booking as Record<string, unknown>).iban_shared_at != null
+  const guideStripeCheckoutId = (booking as Record<string, unknown>).guide_stripe_checkout_id as string | null ?? null
+
+  // Guide amount payment link (Stripe Connect model)
+  let guideAmountCheckoutUrl: string | null = null
+  if (
+    booking.status === 'confirmed' &&
+    !guideAmountPaid &&
+    paymentModel === 'stripe_connect' &&
+    guideStripeCheckoutId
+  ) {
+    try {
+      const guideSession = await stripe.checkout.sessions.retrieve(guideStripeCheckoutId)
+      if (guideSession.payment_status === 'paid') {
+        // Guide amount already paid via Stripe — update DB (webhook may have missed it)
+        await serviceClient
+          .from('bookings')
+          .update({
+            guide_amount_paid_at:      new Date().toISOString(),
+            guide_amount_stripe_pi_id: typeof guideSession.payment_intent === 'string'
+              ? guideSession.payment_intent : null,
+          })
+          .eq('id', id)
+          .is('guide_amount_paid_at', null)
+        ;(booking as Record<string, unknown>).guide_amount_paid_at = new Date().toISOString()
+      } else if (guideSession.status === 'open' && guideSession.url) {
+        guideAmountCheckoutUrl = guideSession.url
+      }
+    } catch {
+      // Non-fatal
+    }
+  }
 
   // Guide's decline message (if they proposed alternatives)
   const guideDeclineMessage =
@@ -462,22 +508,24 @@ export default async function AnglerBookingDetailPage({
                     className="px-4 py-4 rounded-2xl"
                     style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <Calendar width={16} height={16} stroke="#16A34A" strokeWidth={1.5} className="flex-shrink-0" />
-                      <div>
-                        <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(22,163,74,0.65)' }}>
-                          {awaitingPayment ? 'Your trip dates' : 'Trip confirmed for'}
-                        </p>
-                        <p className="text-sm font-bold f-display" style={{ color: '#15803D' }}>
-                          {confirmedDate}
-                        </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <Calendar width={16} height={16} stroke="#16A34A" strokeWidth={1.5} className="flex-shrink-0" />
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(22,163,74,0.65)' }}>
+                            {awaitingPayment ? 'Your trip dates' : 'Trip confirmed for'}
+                          </p>
+                          <p className="text-sm font-bold f-display" style={{ color: '#15803D' }}>
+                            {confirmedDate}
+                          </p>
+                        </div>
                       </div>
+                      <MicroCalendar
+                        from={dateForConfirmed}
+                        to={dateToConfirmed ?? dateForConfirmed}
+                        days={sortedDisplayDays ?? undefined}
+                      />
                     </div>
-                    <MicroCalendar
-                      from={dateForConfirmed}
-                      to={dateToConfirmed ?? dateForConfirmed}
-                      days={sortedDisplayDays ?? undefined}
-                    />
                   </div>
                 )}
 
@@ -547,24 +595,24 @@ export default async function AnglerBookingDetailPage({
                   value={durationLabel ?? '—'}
                 />
                 <InfoCard
-                  label={paymentModel === 'manual' ? 'Booking fee' : `Deposit (${depositPct}%)`}
+                  label="Booking fee"
                   value={`€${depositEur}`}
                   subValue={booking.status === 'confirmed' || booking.status === 'completed' ? 'Paid ✓' : undefined}
                   subColor="#16A34A"
                 />
                 <InfoCard
-                  label={paymentModel === 'manual' ? 'Guide direct' : `Balance (${balancePct}%)`}
-                  value={`€${balanceEur}`}
+                  label="Guide payment"
+                  value={`€${guideAmountEur}`}
                   subValue={
-                    paymentModel === 'manual'
-                      ? 'Paid directly to guide'
-                      : booking.balance_paid_at != null
-                        ? 'Paid ✓'
-                        : booking.status === 'confirmed'
-                          ? 'Due before trip'
-                          : undefined
+                    guideAmountPaid
+                      ? 'Paid ✓'
+                      : booking.status === 'confirmed'
+                        ? paymentModel === 'stripe_connect'
+                          ? 'Due — pay online'
+                          : 'Due — pay guide directly'
+                        : undefined
                   }
-                  subColor={booking.balance_paid_at != null ? '#16A34A' : 'rgba(10,46,77,0.45)'}
+                  subColor={guideAmountPaid ? '#16A34A' : 'rgba(10,46,77,0.45)'}
                 />
               </div>
 
@@ -586,7 +634,7 @@ export default async function AnglerBookingDetailPage({
                 </div>
               )}
 
-              {/* ── Balance payment success banner ─────────────────────────── */}
+              {/* ── Balance payment success banner (legacy) ────────────────── */}
               {justBalancePaid && (
                 <div
                   className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
@@ -604,9 +652,26 @@ export default async function AnglerBookingDetailPage({
                 </div>
               )}
 
+              {/* ── Guide payment success banner ────────────────────────────── */}
+              {justGuidePaid && (
+                <div
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
+                  style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
+                >
+                  <Check width={18} height={18} stroke="#16A34A" strokeWidth={1.5} />
+                  <div>
+                    <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
+                      Guide payment complete — you&apos;re all set!
+                    </p>
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(22,163,74,0.75)' }}>
+                      Full payment received. See you on the water!
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              {/* ── Pay balance banner ───────────────────────────────────────── */}
-              {awaitingBalance && !justBalancePaid && (
+              {/* ── Pay balance banner (legacy — balance_payment_method flow) ── */}
+              {awaitingBalance && !justBalancePaid && booking.balance_stripe_checkout_id && (
                 <div className="mb-4">
                   <PayBalanceBanner
                     bookingId={id}
@@ -615,6 +680,20 @@ export default async function AnglerBookingDetailPage({
                     guideName={guide?.full_name ?? 'Your guide'}
                   />
                 </div>
+              )}
+
+              {/* ── Guide payment section (new model) ───────────────────────── */}
+              {booking.status === 'confirmed' && !guideAmountPaid && !justGuidePaid && guideAmountEur > 0 && (
+                <GuidePaymentSection
+                  paymentModel={paymentModel}
+                  guideAmountEur={guideAmountEur}
+                  guideName={guide?.full_name ?? 'Your guide'}
+                  guideAmountCheckoutUrl={guideAmountCheckoutUrl}
+                  bookingId={id}
+                  ibanShared={ibanShared}
+                  guideIban={guide?.iban ?? null}
+                  guideIbanHolder={guide?.iban_holder_name ?? null}
+                />
               )}
 
               {/* ── Guide card ───────────────────────────────────────────────── */}
@@ -741,6 +820,132 @@ export default async function AnglerBookingDetailPage({
     </div>
   )
 }
+
+// ─── GuidePaymentSection ──────────────────────────────────────────────────────
+
+function GuidePaymentSection({
+  paymentModel,
+  guideAmountEur,
+  guideName,
+  guideAmountCheckoutUrl,
+  bookingId,
+  ibanShared,
+  guideIban,
+  guideIbanHolder,
+}: {
+  paymentModel:           'stripe_connect' | 'manual'
+  guideAmountEur:         number
+  guideName:              string
+  guideAmountCheckoutUrl: string | null
+  bookingId:              string
+  ibanShared:             boolean
+  guideIban:              string | null
+  guideIbanHolder:        string | null
+}) {
+  if (paymentModel === 'stripe_connect') {
+    // Model A: pay guide via Stripe
+    return (
+      <div
+        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-3"
+        style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: '#2563EB' }}>
+              Pay your guide
+            </p>
+            <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
+              €{guideAmountEur}
+            </p>
+            <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
+              Trip payment to {guideName} — paid directly to their account
+            </p>
+          </div>
+          {guideAmountCheckoutUrl != null ? (
+            <a
+              href={guideAmountCheckoutUrl}
+              className="flex-shrink-0 flex items-center gap-1.5 text-sm font-bold f-body px-4 py-2.5 rounded-full transition-all hover:brightness-110 active:scale-[0.98]"
+              style={{ background: '#2563EB', color: '#fff' }}
+            >
+              Pay €{guideAmountEur} →
+            </a>
+          ) : (
+            <PayGuideButton bookingId={bookingId} guideAmountEur={guideAmountEur} />
+          )}
+        </div>
+        <p className="text-[11px] f-body" style={{ color: 'rgba(37,99,235,0.65)' }}>
+          This goes directly to your guide — FjordAnglers does not take any cut from this payment.
+        </p>
+      </div>
+    )
+  }
+
+  // Model B: IBAN shared by guide
+  if (ibanShared && guideIban) {
+    return (
+      <div
+        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-3"
+        style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}
+      >
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1" style={{ color: '#2563EB' }}>
+            Bank transfer to guide
+          </p>
+          <p className="text-base font-bold f-display mb-0.5" style={{ color: '#0A2E4D' }}>
+            €{guideAmountEur}
+          </p>
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
+            Pay {guideName} directly via bank transfer
+          </p>
+        </div>
+        <div
+          className="px-3 py-3 rounded-xl flex flex-col gap-1.5"
+          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
+        >
+          {guideIbanHolder && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-[0.12em] f-body w-14 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>Name</span>
+              <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>{guideIbanHolder}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.12em] f-body w-14 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>IBAN</span>
+            <span className="text-xs font-semibold f-body font-mono" style={{ color: '#0A2E4D' }}>
+              {guideIban.replace(/(.{4})/g, '$1 ').trim()}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.12em] f-body w-14 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>Amount</span>
+            <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>€{guideAmountEur}</span>
+          </div>
+        </div>
+        <p className="text-[11px] f-body" style={{ color: 'rgba(37,99,235,0.65)' }}>
+          Use your banking app to complete the transfer. Scan the QR code your guide shared with you, or enter the details above manually.
+        </p>
+      </div>
+    )
+  }
+
+  // Model C: no payment info yet / arrange directly
+  return (
+    <div
+      className="flex items-start gap-3 px-4 py-3.5 rounded-2xl mb-4"
+      style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.12)' }}
+    >
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: '#E67E50' }}>
+          Pay guide directly — €{guideAmountEur}
+        </p>
+        <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+          {ibanShared
+            ? 'Your guide will share their bank details shortly.'
+            : 'Arrange payment of €' + guideAmountEur + ' directly with ' + guideName + ' (cash, bank transfer, or their preferred method).'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 

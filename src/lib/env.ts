@@ -37,6 +37,12 @@ const envSchema = z.object({
   // ── Stripe ─────────────────────────────────────────────────────────────────
   STRIPE_SECRET_KEY: z.string().min(1, 'STRIPE_SECRET_KEY is required'),
   STRIPE_WEBHOOK_SECRET: z.string().min(1, 'STRIPE_WEBHOOK_SECRET is required'),
+  // Connect webhook secret — used for account.updated events from connected accounts.
+  // In production: register a separate Connect webhook in Stripe Dashboard → Connect → Webhooks.
+  // Locally: `stripe listen --forward-connect-to ...` gives the same whsec_ as STRIPE_WEBHOOK_SECRET,
+  // so you can set both to the same value.
+  // Optional — falls back to STRIPE_WEBHOOK_SECRET if not set (covers local dev).
+  STRIPE_CONNECT_WEBHOOK_SECRET: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1, 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is required'),
 
   // ── App ────────────────────────────────────────────────────────────────────

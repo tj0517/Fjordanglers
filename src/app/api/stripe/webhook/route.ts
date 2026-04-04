@@ -40,12 +40,22 @@ export async function POST(req: Request): Promise<Response> {
     return new Response('Missing stripe-signature header', { status: 400 })
   }
 
+  // Verify signature — try the regular webhook secret first.
+  // Connect events (e.g. account.updated from connected accounts) arrive with the
+  // STRIPE_CONNECT_WEBHOOK_SECRET, which is different in production but identical
+  // to STRIPE_WEBHOOK_SECRET when using `stripe listen --forward-connect-to` locally.
+  // We try both so a single endpoint handles both regular and Connect events.
   let event: Stripe.Event
+  const connectSecret = env.STRIPE_CONNECT_WEBHOOK_SECRET ?? env.STRIPE_WEBHOOK_SECRET
   try {
     event = stripe.webhooks.constructEvent(rawBody, signature, env.STRIPE_WEBHOOK_SECRET)
-  } catch (err) {
-    console.error('[webhook] Invalid signature:', err)
-    return new Response('Invalid signature', { status: 400 })
+  } catch {
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, signature, connectSecret)
+    } catch (err) {
+      console.error('[webhook] Invalid signature (tried both secrets):', err)
+      return new Response('Invalid signature', { status: 400 })
+    }
   }
 
   // Always return 200 — log errors internally
@@ -84,7 +94,38 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const paymentIntentId =
     typeof session.payment_intent === 'string' ? session.payment_intent : null
 
-  // ── Balance payment (70% remaining, Stripe path) ───────────────────────────
+  // ── Guide amount payment (Stripe Connect — step 2) ─────────────────────────
+  if (paymentType === 'guide_amount') {
+    const { data: existing } = await db
+      .from('bookings')
+      .select('id, status, guide_amount_paid_at')
+      .eq('id', bookingId)
+      .single()
+
+    if (!existing) {
+      console.error(`[webhook] Guide amount: booking ${bookingId} not found`)
+      return
+    }
+
+    // Idempotency
+    if (existing.guide_amount_paid_at != null) {
+      console.log(`[webhook] Guide amount for ${bookingId} already recorded — skipping`)
+      return
+    }
+
+    await db
+      .from('bookings')
+      .update({
+        guide_amount_paid_at:   new Date().toISOString(),
+        guide_amount_stripe_pi_id: paymentIntentId,
+      })
+      .eq('id', bookingId)
+
+    console.log(`[webhook] Booking ${bookingId} guide amount paid via Stripe Connect`)
+    return
+  }
+
+  // ── Balance payment (legacy flow — kept for backward compat) ──────────────
   if (paymentType === 'balance') {
     const { data: existing } = await db
       .from('bookings')

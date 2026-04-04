@@ -5,6 +5,7 @@ import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import RespondBookingWidget from './RespondBookingWidget'
 import MarkBalancePaidButton from '@/components/dashboard/mark-balance-paid-button'
 import MarkTripCompletedButton from '@/components/dashboard/mark-trip-completed-button'
+import ShareIbanButton from '@/components/dashboard/share-iban-button'
 import { CountryFlag } from '@/components/ui/country-flag'
 import type { Database } from '@/lib/supabase/database.types'
 import { getPaymentModel } from '@/lib/payment-model'
@@ -43,7 +44,7 @@ export default async function GuideBookingDetailPage({
   // ── Fetch guide — include Stripe fields to derive payment model ────────────
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
+    .select('id, full_name, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, iban_holder_name')
     .eq('user_id', user.id)
     .single()
   if (!guide) redirect('/dashboard/bookings')
@@ -274,6 +275,15 @@ export default async function GuideBookingDetailPage({
   const guideBalanceEur  = hasDepositSplit && guideDepositEur != null
     ? Math.round((guideTripPrice - guideDepositEur) * 100) / 100
     : null
+
+  // ── IBAN sharing (manual model) ───────────────────────────────────────────
+  const ibanSharedAt = (booking as Record<string, unknown>).iban_shared_at as string | null ?? null
+  const hasGuideIban = guide.iban != null && guide.iban.trim() !== ''
+  const showShareIban =
+    paymentModel === 'manual' &&
+    hasGuideIban &&
+    booking.status === 'confirmed' &&
+    ibanSharedAt == null
 
   const bookingRef      = id.slice(-8).toUpperCase()
   const createdFormatted = new Date(booking.created_at).toLocaleDateString('en-GB', {
@@ -878,20 +888,67 @@ export default async function GuideBookingDetailPage({
 
           {booking.status === 'confirmed' && !cashBalanceDue && (
             <div
-              className="p-5 rounded-2xl"
+              className="p-5 rounded-2xl flex flex-col gap-4"
               style={{
                 background: '#FDFAF7',
                 border:     '1px solid rgba(10,46,77,0.08)',
                 boxShadow:  '0 2px 8px rgba(10,46,77,0.05)',
               }}
             >
-              <p
-                className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
-                style={{ color: 'rgba(10,46,77,0.38)' }}
-              >
-                Trip status
-              </p>
-              <MarkTripCompletedButton bookingId={id} />
+              {/* Share IBAN with angler (manual model with IBAN) */}
+              {showShareIban && (
+                <>
+                  <div>
+                    <p
+                      className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
+                      style={{ color: 'rgba(10,46,77,0.38)' }}
+                    >
+                      Payment details
+                    </p>
+                    <ShareIbanButton
+                      bookingId={id}
+                      anglerName={booking.angler_full_name ?? 'the angler'}
+                    />
+                  </div>
+                  <div style={{ height: 1, background: 'rgba(10,46,77,0.06)' }} />
+                </>
+              )}
+
+              {/* IBAN already shared indicator */}
+              {paymentModel === 'manual' && hasGuideIban && ibanSharedAt != null && (
+                <>
+                  <div>
+                    <p
+                      className="text-[10px] uppercase tracking-[0.18em] mb-2 f-body"
+                      style={{ color: 'rgba(10,46,77,0.38)' }}
+                    >
+                      Payment details
+                    </p>
+                    <div
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                      style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
+                    >
+                      <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(22,163,74,0.2)' }}>
+                        <Check size={8} strokeWidth={2.5} style={{ color: '#16A34A' }} />
+                      </div>
+                      <p className="text-xs font-semibold f-body" style={{ color: '#16A34A' }}>
+                        Bank details shared with {booking.angler_full_name ?? 'angler'}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: 'rgba(10,46,77,0.06)' }} />
+                </>
+              )}
+
+              <div>
+                <p
+                  className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
+                  style={{ color: 'rgba(10,46,77,0.38)' }}
+                >
+                  Trip status
+                </p>
+                <MarkTripCompletedButton bookingId={id} />
+              </div>
             </div>
           )}
 

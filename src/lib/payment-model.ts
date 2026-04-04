@@ -4,16 +4,21 @@
  * A guide's payment model is DERIVED — never stored as a separate column.
  * It is determined solely by whether their Stripe account is active.
  *
- * stripe_connect — Stripe Connect (existing flow):
- *   • Angler pays full amount + 5% service fee via Stripe
- *   • Platform takes application_fee (commission) from each charge
- *   • Guide receives net payout via Stripe Connect transfer
+ * ## Two-step payment model (2026-04-05)
+ *
+ * stripe_connect — Guide has verified Stripe Connect account:
+ *   Step 1: Angler pays booking fee (commission + service fee) via Stripe to platform
+ *   Step 2: Angler pays guide amount via a SECOND Stripe Checkout session
+ *           → transfer_data to guide's connected account (guide receives 100%)
  *
  * manual — Direct payment model (no Stripe Connect):
- *   • Angler pays platform fee only (commission % + service fee %) via
- *     Stripe Direct Charge to FjordAnglers main account
- *   • Angler pays guide's net amount directly: cash on-site or IBAN transfer
- *   • Same economics as stripe_connect — only the transfer mechanism differs
+ *   Step 1: Angler pays booking fee (commission + service fee) via Stripe to platform
+ *   Step 2: Angler pays guide amount directly:
+ *           • IBAN guide: bank transfer (guide shares SEPA QR code)
+ *           • No payment info: "arrange directly with your guide"
+ *
+ * Both models have identical economics — only the payment mechanism differs.
+ * The booking fee (step 1) is always = commission + service_fee.
  *
  * This is the default for:
  *   • Guides who haven't connected Stripe yet
@@ -28,7 +33,6 @@ export type PaymentModel = 'stripe_connect' | 'manual'
 
 const SERVICE_FEE_RATE    = 0.05
 const SERVICE_FEE_CAP_EUR = 50          // max €50 service fee
-const DEPOSIT_RATE_SC     = 0.40        // Stripe Connect deposit rate
 
 // ─── Derivation ───────────────────────────────────────────────────────────────
 
@@ -64,9 +68,16 @@ export type DepositBreakdown = {
   serviceFeeEur:     number
   /** Platform commission (e.g. 10%) taken from trip total */
   commissionEur:     number
-  /** Amount angler pays NOW — via Stripe */
+  /**
+   * Booking fee — what angler pays NOW via Stripe to platform.
+   * Always = commission + service_fee (independent of payment model).
+   */
   payNowEur:         number
-  /** Amount angler pays guide DIRECTLY (cash or IBAN) — manual model only */
+  /**
+   * Guide amount — what angler pays directly to guide (step 2).
+   * = tripTotal − commission.
+   * Delivered via Stripe Connect (stripe_connect model) or cash/IBAN (manual model).
+   */
   payGuideEur:       number
   /** Grand total angler pays (payNow + payGuide). Same in both models. */
   grandTotalEur:     number
@@ -76,13 +87,11 @@ export type DepositBreakdown = {
 /**
  * Calculates how the trip total is split across payment channels.
  *
- * stripe_connect:
- *   payNow = 40% deposit of (tripTotal + serviceFee)
- *   (balance = remaining 60%, charged later before trip)
+ * Both models:
+ *   payNow  = commissionEur + serviceFeeEur  (booking fee → platform via Stripe)
+ *   payGuide = tripTotal - commissionEur      (guide amount → guide directly)
  *
- * manual:
- *   payNow  = commissionEur + serviceFeeEur  (goes to FjordAnglers via Direct Charge)
- *   payGuide = tripTotal - commissionEur      (angler pays guide directly)
+ * The 40% deposit model has been replaced — both models use the same booking fee.
  */
 export function calcDepositBreakdown(
   tripTotalEur:   number,
@@ -93,21 +102,9 @@ export function calcDepositBreakdown(
   const commissionEur  = Math.round(tripTotalEur * commissionRate  * 100) / 100
   const grandTotalEur  = Math.round((tripTotalEur + serviceFeeEur) * 100) / 100
 
-  if (paymentModel === 'stripe_connect') {
-    const depositEur = Math.round(grandTotalEur * DEPOSIT_RATE_SC * 100) / 100
-    return {
-      tripTotalEur,
-      serviceFeeEur,
-      commissionEur,
-      payNowEur:    depositEur,
-      payGuideEur:  0,
-      grandTotalEur,
-      paymentModel,
-    }
-  }
-
-  // manual — angler pays platform fee now, guide net directly
+  // Booking fee: platform's full cut (commission + service fee)
   const payNowEur   = Math.round((commissionEur + serviceFeeEur) * 100) / 100
+  // Guide amount: what angler pays directly to guide (via Stripe Connect or IBAN/cash)
   const payGuideEur = Math.round((tripTotalEur - commissionEur)  * 100) / 100
 
   return {
@@ -122,24 +119,18 @@ export function calcDepositBreakdown(
 }
 
 /**
- * Returns the deposit amount the angler pays now (EUR).
- *
- * stripe_connect: (subtotal + capped service fee) × 40%
- * manual:         subtotal × commissionRate + capped service fee
+ * Returns the booking fee (what the angler pays to the platform now).
+ * Always = commission + capped service fee, regardless of payment model.
  *
  * @param subtotalEur  Trip price before service fee (price_per_person × guests × days)
  */
 export function calcDepositEur(
   subtotalEur:    number,
   commissionRate: number,
-  paymentModel:   PaymentModel,
+  // paymentModel param kept for backward compatibility — no longer affects result
+  _paymentModel?: PaymentModel,
 ): number {
   const serviceFeeEur = Math.min(Math.round(subtotalEur * SERVICE_FEE_RATE * 100) / 100, SERVICE_FEE_CAP_EUR)
-  if (paymentModel === 'stripe_connect') {
-    const grandTotal = Math.round((subtotalEur + serviceFeeEur) * 100) / 100
-    return Math.round(grandTotal * DEPOSIT_RATE_SC * 100) / 100
-  }
-  // manual: commission + service fee = platform's take
   const commissionEur = Math.round(subtotalEur * commissionRate * 100) / 100
   return Math.round((commissionEur + serviceFeeEur) * 100) / 100
 }

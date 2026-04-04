@@ -101,6 +101,11 @@ export type Database = {
           balance_payment_method: string | null
           balance_stripe_checkout_id: string | null
           balance_stripe_payment_intent_id: string | null
+          // ── Guide direct payment (new model 2026-04-05) ─────────
+          guide_stripe_checkout_id: string | null
+          guide_amount_paid_at: string | null
+          guide_amount_stripe_pi_id: string | null
+          iban_shared_at: string | null
           // ── Dates ───────────────────────────────────────────────
           booking_date: string
           date_to: string | null
@@ -162,6 +167,10 @@ export type Database = {
           balance_payment_method?: string | null
           balance_stripe_checkout_id?: string | null
           balance_stripe_payment_intent_id?: string | null
+          guide_stripe_checkout_id?: string | null
+          guide_amount_paid_at?: string | null
+          guide_amount_stripe_pi_id?: string | null
+          iban_shared_at?: string | null
           booking_date: string
           date_to?: string | null
           commission_rate?: number
@@ -218,6 +227,10 @@ export type Database = {
           balance_payment_method?: string | null
           balance_stripe_checkout_id?: string | null
           balance_stripe_payment_intent_id?: string | null
+          guide_stripe_checkout_id?: string | null
+          guide_amount_paid_at?: string | null
+          guide_amount_stripe_pi_id?: string | null
+          iban_shared_at?: string | null
           booking_date?: string
           date_to?: string | null
           commission_rate?: number

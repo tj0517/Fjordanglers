@@ -20,7 +20,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
-import { getPaymentModel, calcDepositEur } from '@/lib/payment-model'
+import { getPaymentModel } from '@/lib/payment-model'
 import { computeBookingPricing, calcSubtotalFromOption, type DurationOption } from '@/lib/booking-pricing'
 import type { Json } from '@/lib/supabase/database.types'
 import {
@@ -167,7 +167,7 @@ export async function createBookingCheckout(
     subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
   }
 
-  const pricing = computeBookingPricing(subtotal, commissionRate, paymentModel)
+  const pricing = computeBookingPricing(subtotal, commissionRate)
 
   // ── Insert booking row ────────────────────────────────────────────────────
   const serviceClient = createServiceClient()
@@ -388,7 +388,7 @@ export async function acceptBooking(
     // Guide set a custom price — treat it as their SUBTOTAL (excl. service fee).
     // computeBookingPricing() adds the service fee on top and returns all price fields.
     const subtotal  = Math.round(options.customTotalEur * 100) / 100
-    const pricing   = computeBookingPricing(subtotal, booking.commission_rate, guidePaymentModel)
+    const pricing   = computeBookingPricing(subtotal, booking.commission_rate)
     effectiveTotalEur       = pricing.totalEur
     effectiveGuidePayoutEur = pricing.guidePayoutEur
     pricingUpdate = {
@@ -419,7 +419,7 @@ export async function acceptBooking(
         ? calcSubtotalFromOption(matchedOpt, booking.guests, numDays)
         : Math.round(pricePerPerson * booking.guests * numDays * 100) / 100
 
-      const pricing = computeBookingPricing(subtotal, booking.commission_rate, guidePaymentModel)
+      const pricing = computeBookingPricing(subtotal, booking.commission_rate)
       effectiveTotalEur       = pricing.totalEur
       effectiveGuidePayoutEur = pricing.guidePayoutEur
       pricingUpdate = {
@@ -432,54 +432,38 @@ export async function acceptBooking(
     }
   }
 
-  // ── Stripe Checkout ────────────────────────────────────────────────────────
+  // ── Stripe Checkouts — two-step payment model ─────────────────────────────
   //
-  // manual model:
-  //   Charge = platformFeeEur + serviceFeeEur (platform's full cut in one go)
-  //   Angler pays guide directly (cash / IBAN) for the remainder
+  // Step 1 — Booking fee (all models):
+  //   Charge = commission + service_fee (platform's full cut)
+  //   No transfer_data — money stays on FjordAnglers main account
+  //   Confirms the booking slot. Angler gets booking confirmed once paid.
   //
-  // stripe_connect model:
-  //   Charge = 40% deposit of (tripTotal + serviceFee)
-  //   Remaining 60% collected before the trip
+  // Step 2 — Guide amount (stripe_connect only):
+  //   Charge = guide_payout_eur (subtotal − commission)
+  //   transfer_data → guide's connected account (guide gets 100%, no application_fee)
+  //   For manual model: angler pays guide directly via IBAN or cash
 
+  const appUrl = await getAppUrl()
   let stripeCheckoutId: string | null = null
+  let guideStripeCheckoutId: string | null = null
 
   if (!booking.stripe_checkout_id) {
     try {
       const experienceTitle =
         (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
 
-      let chargeCents: number
-      let lineItemName: string
-      let lineItemDesc: string
+      // ── Step 1: Booking fee ─────────────────────────────────────────────────
+      // Always = commission + service_fee (same for both models).
+      // payNow = total − guide_payout avoids any reverse-1.05 calculation.
+      const bookingFeeEur = Math.round((effectiveTotalEur - effectiveGuidePayoutEur) * 100) / 100
+      const bookingFeeCents = Math.round(bookingFeeEur * 100)
 
-      if (guidePaymentModel === 'manual') {
-        // manual: charge platform fee + service fee only.
-        // payNow = total − guide_payout = (commission + service fee). This avoids any
-        // reverse-1.05 calculation and uses the already-correct effectiveGuidePayoutEur.
-        const payNowEur = Math.round((effectiveTotalEur - effectiveGuidePayoutEur) * 100) / 100
-        chargeCents   = Math.round(payNowEur * 100)
-        lineItemName  = `${experienceTitle} — Platform fee`
-        lineItemDesc  = 'Platform & service fee to confirm your booking. You\'ll pay the guide\'s fee directly (cash or bank transfer).'
-      } else {
-        // stripe_connect: 40% deposit.
-        // Reverse-derive subtotal respecting the €50 service fee cap.
-        const scSubtotal = effectiveTotalEur > 1050
-          ? Math.round((effectiveTotalEur - 50) * 100) / 100
-          : Math.round((effectiveTotalEur / 1.05) * 100) / 100
-        chargeCents   = Math.round(calcDepositEur(scSubtotal, booking.commission_rate, 'stripe_connect') * 100)
-        lineItemName  = `${experienceTitle} — Deposit`
-        lineItemDesc  = 'Deposit to confirm your booking. Remaining balance is due before the trip.'
-      }
-
-      // Stripe minimum: €0.50 for EUR charges.
-      // For PLN-based Stripe accounts the effective minimum is ~200 grosz ≈ €0.47.
-      // We use 100 cents (€1.00) as a safe floor so test bookings / very cheap trips
-      // never reach Stripe at all.  The booking is still accepted; Checkout is skipped
-      // and can be created later by the admin if needed.
-      if (chargeCents < 100) {
+      // Stripe minimum: €1.00 safe floor. Booking is still accepted; Checkout skipped
+      // for very cheap trips. Admin can create checkout manually if needed.
+      if (bookingFeeCents < 100) {
         console.warn(
-          `[acceptBooking] charge ${chargeCents}¢ below safe minimum — skipping Checkout for booking ${bookingId}`,
+          `[acceptBooking] booking fee ${bookingFeeCents}¢ below safe minimum — skipping Checkout for booking ${bookingId}`,
         )
       } else {
         const session = await stripe.checkout.sessions.create(
@@ -492,40 +476,68 @@ export async function acceptBooking(
                 price_data: {
                   currency:     'eur',
                   product_data: {
-                    name:        lineItemName,
-                    description: lineItemDesc,
+                    name:        `${experienceTitle} — Booking fee`,
+                    description: 'Platform & service fee to confirm your booking.',
                   },
-                  unit_amount: chargeCents,
+                  unit_amount: bookingFeeCents,
                 },
                 quantity: 1,
               },
             ],
-            metadata:    { bookingId, guideId: guide.id, paymentModel: guidePaymentModel },
-            success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
-            cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
+            metadata:    { bookingId, guideId: guide.id, paymentType: 'booking_fee' },
+            success_url: `${appUrl}/account/bookings/${bookingId}?status=paid`,
+            cancel_url:  `${appUrl}/account/bookings/${bookingId}`,
             payment_intent_data: {
-              // stripe_connect: destination charge — platform takes full application_fee on deposit,
-              // balance payment transfers 100% to guide (no second fee).
-              // manual: no transfer_data — money stays on platform, guide paid directly by angler.
-              ...(guidePaymentModel === 'stripe_connect' && guide.stripe_account_id
-                ? {
-                    // application_fee = commission + service_fee (everything platform keeps).
-                    // CRITICAL: must include service_fee, not just platform_fee_eur (commission only).
-                    // Using platform_fee_eur alone causes the service fee to flow to the guide.
-                    application_fee_amount: Math.round((
-                      (pricingUpdate.platform_fee_eur ?? booking.platform_fee_eur ?? 0) +
-                      (pricingUpdate.service_fee_eur  ?? booking.service_fee_eur  ?? 0)
-                    ) * 100),
-                    transfer_data: { destination: guide.stripe_account_id },
-                  }
-                : {}),
-              metadata: { bookingId, paymentModel: guidePaymentModel },
+              // No transfer_data — full booking fee stays on FjordAnglers platform.
+              // Guide amount is collected separately (step 2 below).
+              metadata: { bookingId, paymentType: 'booking_fee' },
             },
           },
           { idempotencyKey: `booking-accept-${bookingId}` },
         )
-
         stripeCheckoutId = session.id
+      }
+
+      // ── Step 2: Guide amount (Stripe Connect guides only) ───────────────────
+      // Creates a second Checkout session where angler pays the guide's portion
+      // directly to the guide's connected account. No application_fee — guide
+      // receives 100% of this amount. Session link is shown after booking fee is paid.
+      if (guidePaymentModel === 'stripe_connect' && guide.stripe_account_id) {
+        const guideAmountCents = Math.round(effectiveGuidePayoutEur * 100)
+
+        if (guideAmountCents >= 100) {
+          const guideSession = await stripe.checkout.sessions.create(
+            {
+              mode:                 'payment',
+              payment_method_types: ['card'],
+              customer_email:       booking.angler_email ?? undefined,
+              line_items: [
+                {
+                  price_data: {
+                    currency:     'eur',
+                    product_data: {
+                      name:        `${experienceTitle} — Trip payment`,
+                      description: 'Payment for your confirmed fishing trip, paid directly to your guide.',
+                    },
+                    unit_amount: guideAmountCents,
+                  },
+                  quantity: 1,
+                },
+              ],
+              metadata:    { bookingId, guideId: guide.id, paymentType: 'guide_amount' },
+              success_url: `${appUrl}/account/bookings/${bookingId}?status=guide_paid`,
+              cancel_url:  `${appUrl}/account/bookings/${bookingId}`,
+              payment_intent_data: {
+                // Transfer 100% to guide's connected account — no application_fee.
+                // Platform fee was already collected in full via the booking fee checkout.
+                transfer_data: { destination: guide.stripe_account_id },
+                metadata: { bookingId, paymentType: 'guide_amount' },
+              },
+            },
+            { idempotencyKey: `booking-guide-${bookingId}` },
+          )
+          guideStripeCheckoutId = guideSession.id
+        }
       }
     } catch (err) {
       console.error('[acceptBooking] Stripe Checkout error:', err)
@@ -533,13 +545,16 @@ export async function acceptBooking(
     }
   } else {
     stripeCheckoutId = booking.stripe_checkout_id
+    guideStripeCheckoutId = (booking as Record<string, unknown>).guide_stripe_checkout_id as string | null ?? null
   }
 
-  // manual: guide collects balance directly (cash/IBAN) — set to cash.
-  // stripe_connect: balance charged via Stripe by default; guide can override to cash if they prefer on-site collection.
-  const balanceMethod = guidePaymentModel === 'manual'
-    ? 'cash'
-    : (guide.default_balance_payment_method ?? 'stripe') as 'stripe' | 'cash'
+  // Guide amount delivery method (for display on angler's booking page):
+  //   stripe_connect → angler pays via Stripe (guide_stripe_checkout_id)
+  //   manual + IBAN  → angler pays via bank transfer (guide shares QR code)
+  //   manual no IBAN → angler arranges payment directly with guide
+  const balanceMethod = guidePaymentModel === 'stripe_connect'
+    ? 'stripe'
+    : 'cash'
 
   const { error } = await serviceClient
     .from('bookings')
@@ -547,7 +562,8 @@ export async function acceptBooking(
       status:                  'accepted',
       accepted_at:             new Date().toISOString(),
       balance_payment_method:  balanceMethod,
-      ...(stripeCheckoutId != null ? { stripe_checkout_id: stripeCheckoutId } : {}),
+      ...(stripeCheckoutId      != null ? { stripe_checkout_id:       stripeCheckoutId      } : {}),
+      ...(guideStripeCheckoutId != null ? { guide_stripe_checkout_id: guideStripeCheckoutId } : {}),
       // Confirmed trip dates.
       // confirmed_days  = canonical array of SPECIFIC days (non-consecutive safe).
       // confirmed_date_from/to = first/last day — envelope for display/sorting ONLY.
@@ -694,8 +710,11 @@ export async function acceptBooking(
 // ─── renewDepositCheckout ─────────────────────────────────────────────────────
 //
 // Called when the angler's Stripe Checkout session has expired (24h Stripe limit).
-// Creates a fresh destination-charge session and updates the DB.
+// Creates a fresh booking-fee session and updates the DB.
 // Only valid for 'accepted' bookings (guide has already confirmed).
+//
+// Booking fee = commission + service_fee (= deposit_eur stored on booking).
+// No transfer_data — money stays on FjordAnglers platform.
 
 export async function renewDepositCheckout(
   bookingId: string,
@@ -711,7 +730,7 @@ export async function renewDepositCheckout(
   const { data: booking } = await serviceClient
     .from('bookings')
     .select(
-      'id, status, angler_id, total_eur, service_fee_eur, deposit_eur, platform_fee_eur, guide_payout_eur, angler_email, guide_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
+      'id, status, angler_id, total_eur, deposit_eur, guide_payout_eur, angler_email, guide_id, experiences(title)',
     )
     .eq('id', bookingId)
     .eq('angler_id', user.id)
@@ -723,15 +742,15 @@ export async function renewDepositCheckout(
   const experienceTitle =
     (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
 
-  const guide = booking.guides as unknown as {
-    stripe_account_id:    string | null
-    stripe_payouts_enabled: boolean | null
-  } | null
+  // Booking fee = stored deposit_eur (commission + service_fee).
+  // Fall back to total − guide_payout if deposit_eur is missing (legacy rows).
+  const bookingFeeEur = booking.deposit_eur
+    ?? Math.round((booking.total_eur - (booking.guide_payout_eur ?? booking.total_eur * 0.87)) * 100) / 100
+  const bookingFeeCents = Math.round(bookingFeeEur * 100)
 
-  const isStripeConnect =
-    guide?.stripe_account_id != null && guide.stripe_payouts_enabled === true
-
-  const depositCents = Math.round((booking.deposit_eur ?? Math.round(booking.total_eur * 0.4)) * 100)
+  if (bookingFeeCents < 100) {
+    return { error: 'Booking fee is too small to process via Stripe.' }
+  }
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -743,32 +762,20 @@ export async function renewDepositCheckout(
           price_data: {
             currency:     'eur',
             product_data: {
-              name: isStripeConnect
-                ? `${experienceTitle} — Deposit`
-                : `Booking fee — ${experienceTitle}`,
-              description: isStripeConnect
-                ? 'Deposit to confirm your booking. Remaining balance is due before the trip.'
-                : 'Platform booking fee. Remaining trip cost is paid directly to your guide.',
+              name:        `${experienceTitle} — Booking fee`,
+              description: 'Platform & service fee to confirm your booking.',
             },
-            unit_amount: depositCents,
+            unit_amount: bookingFeeCents,
           },
           quantity: 1,
         },
       ],
-      metadata:            { bookingId, guideId: booking.guide_id },
+      metadata:    { bookingId, guideId: booking.guide_id, paymentType: 'booking_fee' },
       success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
       cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
       payment_intent_data: {
-        ...(isStripeConnect && guide?.stripe_account_id != null && booking.platform_fee_eur != null
-          ? {
-              // application_fee = commission + service_fee (full platform take)
-              application_fee_amount: Math.round(
-                (booking.platform_fee_eur + (booking.service_fee_eur ?? 0)) * 100
-              ),
-              transfer_data: { destination: guide.stripe_account_id },
-            }
-          : {}),
-        metadata: { bookingId },
+        // No transfer_data — booking fee stays on FjordAnglers platform.
+        metadata: { bookingId, paymentType: 'booking_fee' },
       },
     })
 
@@ -1353,6 +1360,175 @@ export async function updateGuideIban(
 // Guide sets which payment methods they accept from anglers (cash, online/Stripe).
 // Multi-select — at least one must be selected.
 // Shown publicly on guide profile and trip pages.
+
+// ─── createGuideAmountCheckout ────────────────────────────────────────────────
+//
+// Creates a fresh Stripe Checkout session for the guide amount payment.
+// Only relevant when the guide has Stripe Connect active.
+//
+// Called on-demand when the angler clicks "Pay guide" on their booking page.
+// Idempotency: if a valid session already exists, returns its URL.
+//
+// The guide receives 100% of this payment — no application_fee_amount.
+// Platform fee was collected in full via the booking fee checkout (step 1).
+
+export async function createGuideAmountCheckout(
+  bookingId: string,
+): Promise<{ url: string } | { error: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select(
+      'id, status, angler_id, total_eur, guide_payout_eur, angler_email, guide_id, guide_amount_paid_at, guide_stripe_checkout_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
+    )
+    .eq('id', bookingId)
+    .eq('angler_id', user.id)
+    .eq('status', 'confirmed')
+    .single()
+
+  if (!booking) return { error: 'Booking not found or not confirmed yet.' }
+  if (booking.guide_amount_paid_at != null) return { error: 'Guide amount already paid.' }
+
+  const guideStripe = booking.guides as unknown as {
+    stripe_account_id:    string | null
+    stripe_payouts_enabled: boolean | null
+  } | null
+
+  if (!guideStripe?.stripe_account_id || guideStripe.stripe_payouts_enabled !== true) {
+    return { error: 'This guide does not accept Stripe payments — please arrange payment directly.' }
+  }
+
+  // Idempotency: if we already have a valid open session, return its URL
+  if (booking.guide_stripe_checkout_id) {
+    try {
+      const existing = await stripe.checkout.sessions.retrieve(booking.guide_stripe_checkout_id)
+      if (existing.status === 'open' && existing.url) {
+        return { url: existing.url }
+      }
+    } catch {
+      // Session expired or invalid — fall through to create a new one
+    }
+  }
+
+  const experienceTitle =
+    (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
+
+  const guideAmountCents = Math.round((booking.guide_payout_eur ?? 0) * 100)
+  if (guideAmountCents < 100) {
+    return { error: 'Guide amount is too small to process via Stripe.' }
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode:                 'payment',
+        payment_method_types: ['card'],
+        customer_email:       booking.angler_email ?? undefined,
+        line_items: [
+          {
+            price_data: {
+              currency:     'eur',
+              product_data: {
+                name:        `${experienceTitle} — Trip payment`,
+                description: 'Payment for your confirmed fishing trip, paid directly to your guide.',
+              },
+              unit_amount: guideAmountCents,
+            },
+            quantity: 1,
+          },
+        ],
+        metadata:    { bookingId, guideId: booking.guide_id ?? '', paymentType: 'guide_amount' },
+        success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=guide_paid`,
+        cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
+        payment_intent_data: {
+          // Transfer 100% to guide — no application_fee.
+          // Booking fee was already collected in step 1.
+          transfer_data: { destination: guideStripe.stripe_account_id },
+          metadata: { bookingId, paymentType: 'guide_amount' },
+        },
+      },
+      { idempotencyKey: `booking-guide-refresh-${bookingId}-${Date.now()}` },
+    )
+
+    await serviceClient
+      .from('bookings')
+      .update({ guide_stripe_checkout_id: session.id })
+      .eq('id', bookingId)
+
+    return { url: session.url! }
+  } catch (err) {
+    console.error('[createGuideAmountCheckout]', err)
+    return { error: 'Failed to create payment session — please try again.' }
+  }
+}
+
+// ─── shareIbanWithAngler ──────────────────────────────────────────────────────
+//
+// Guide shares their IBAN / QR code with the angler for a specific booking.
+// Sets iban_shared_at on the booking row — this is the signal that makes the
+// IBAN + SEPA QR code visible on the angler's booking page.
+//
+// Only valid for confirmed bookings where the guide has an IBAN saved.
+
+export async function shareIbanWithAngler(
+  bookingId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: guide } = await supabase
+    .from('guides')
+    .select('id, iban, iban_holder_name')
+    .eq('user_id', user.id)
+    .single()
+  if (!guide) return { error: 'Guide profile not found.' }
+
+  if (!guide.iban || guide.iban.trim() === '') {
+    return { error: 'No IBAN saved. Add your IBAN in account settings first.' }
+  }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select('id, status, guide_id, iban_shared_at')
+    .eq('id', bookingId)
+    .eq('guide_id', guide.id)
+    .single()
+
+  if (!booking) return { error: 'Booking not found.' }
+  if (!['confirmed', 'completed'].includes(booking.status)) {
+    return { error: 'Can only share payment details for confirmed bookings.' }
+  }
+  if (booking.iban_shared_at != null) {
+    // Already shared — idempotent, not an error
+    return {}
+  }
+
+  const { error } = await serviceClient
+    .from('bookings')
+    .update({ iban_shared_at: new Date().toISOString() })
+    .eq('id', bookingId)
+
+  if (error) {
+    console.error('[shareIbanWithAngler]', error)
+    return { error: 'Failed to share payment details.' }
+  }
+
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
+  revalidatePath(`/account/bookings/${bookingId}`)
+  return {}
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // INQUIRY FLOW — source = 'inquiry'

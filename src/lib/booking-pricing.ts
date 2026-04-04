@@ -5,14 +5,27 @@
  * function instead of inline calculations. This prevents drift between:
  *   - service fee cap (5%, €50 max) being applied inconsistently
  *   - commission and payout being computed with slightly different rounding
- *   - application_fee_amount missing the service fee (critical Stripe bug)
+ *
+ * ## Two-step payment model (2026-04-05)
+ *
+ * Every booking has two payment components:
+ *
+ *   1. Booking fee (depositEur):
+ *      = commission + service_fee — always charged via Stripe to FjordAnglers account.
+ *      This is what the platform keeps. Never routed to guide.
+ *
+ *   2. Guide amount (guidePayoutEur):
+ *      = subtotal − commission — paid directly to guide via:
+ *        • Model A (Stripe Connect guide): second Stripe Checkout → transfer_data to connected account
+ *        • Model B (IBAN guide):           bank transfer (SEPA/EPC QR code shared by guide)
+ *        • Model C (no payment info):      "arrange directly with your guide"
+ *
+ * Grand total angler pays = bookingFee + guideAmount = subtotal + serviceFee (same for all models).
  *
  * Semantic note on `customTotalEur` / `subtotalEur`:
  *   This function always receives the GUIDE'S PRICE (subtotal, before service fee).
  *   The service fee is added ON TOP for the angler. Guides never see or pay it.
  */
-
-import type { PaymentModel } from './payment-model'
 
 // ─── Duration option pricing ───────────────────────────────────────────────────
 
@@ -74,7 +87,6 @@ export function calcSubtotalFromOption(
 
 const SERVICE_FEE_RATE    = 0.05
 const SERVICE_FEE_CAP_EUR = 50
-const DEPOSIT_RATE_SC     = 0.40
 
 export type BookingPricing = {
   /** Guide's trip price before any fees (price_per_person × guests × days) */
@@ -85,14 +97,21 @@ export type BookingPricing = {
   totalEur: number
   /** Platform commission (subtotal × commissionRate) — stored as platform_fee_eur */
   commissionEur: number
-  /** Guide's net earnings (subtotal − commission) — stored as guide_payout_eur */
+  /**
+   * Guide's net earnings (subtotal − commission) — stored as guide_payout_eur.
+   * This is the guide amount the angler pays directly (step 2).
+   */
   guidePayoutEur: number
-  /** Amount the angler pays NOW via Stripe — stored as deposit_eur */
+  /**
+   * Booking fee = commission + serviceFee — stored as deposit_eur.
+   * This is what the angler pays via Stripe to the platform (step 1).
+   * Always = applicationFeeEur. Independent of payment model.
+   */
   depositEur: number
   /**
-   * Stripe application_fee_amount = commission + serviceFee.
-   * This is what the platform actually keeps on each Stripe charge.
-   * NEVER use platform_fee_eur (commission only) for application_fee_amount!
+   * Stripe application_fee_amount equivalent.
+   * For the booking fee Checkout, this is NOT used (no destination charge).
+   * For informational / display purposes: equals commission + serviceFee.
    */
   applicationFeeEur: number
 }
@@ -100,14 +119,15 @@ export type BookingPricing = {
 /**
  * Compute all booking price fields from a single subtotal + commission rate.
  *
+ * The booking fee (depositEur) is always = commission + service_fee.
+ * The 40% deposit concept has been replaced by this flat booking fee model.
+ *
  * @param subtotalEur     Guide's trip price (excl. service fee) e.g. €330 × 2 guests × 1 day = €660
  * @param commissionRate  Platform commission e.g. 0.10 (10%)
- * @param paymentModel    'stripe_connect' → 40% deposit; 'manual' → platform fee only
  */
 export function computeBookingPricing(
   subtotalEur:    number,
   commissionRate: number,
-  paymentModel:   PaymentModel,
 ): BookingPricing {
   const r = (n: number) => Math.round(n * 100) / 100
 
@@ -115,17 +135,9 @@ export function computeBookingPricing(
   const totalEur          = r(subtotalEur + serviceFeeEur)
   const commissionEur     = r(subtotalEur * commissionRate)
   const guidePayoutEur    = r(subtotalEur - commissionEur)
+  // Booking fee = platform's full cut (commission + service fee)
   const applicationFeeEur = r(commissionEur + serviceFeeEur)
-
-  let depositEur: number
-  if (paymentModel === 'stripe_connect') {
-    // 40% of the full angler total (subtotal + service fee)
-    depositEur = r(totalEur * DEPOSIT_RATE_SC)
-  } else {
-    // manual: angler pays platform's full take now (commission + service fee),
-    // pays guide's net directly (cash / IBAN)
-    depositEur = applicationFeeEur
-  }
+  const depositEur        = applicationFeeEur
 
   return {
     subtotalEur,
