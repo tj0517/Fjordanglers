@@ -37,13 +37,17 @@ const DEPOSIT_RATE_SC     = 0.40        // Stripe Connect deposit rate
  * Single source of truth — call this instead of comparing stripe fields directly.
  */
 export function getPaymentModel(guide: {
-  stripe_account_id?:    string | null
-  stripe_charges_enabled?: boolean | null
+  stripe_account_id?:      string | null
+  stripe_charges_enabled?: boolean | null   // accepted but intentionally unused — see below
   stripe_payouts_enabled?: boolean | null
 }): PaymentModel {
+  // NOTE: stripe_charges_enabled is intentionally NOT checked here.
+  // FjordAnglers uses Accounts v2 destination charges — the platform account
+  // is the one that charges anglers, so Stripe always sets charges_enabled=false
+  // on the connected account. payouts_enabled is the correct "fully onboarded"
+  // signal for destination-charge connected accounts.
   if (
-    guide.stripe_account_id      != null &&
-    guide.stripe_charges_enabled === true &&
+    guide.stripe_account_id    != null &&
     guide.stripe_payouts_enabled === true
   ) {
     return 'stripe_connect'

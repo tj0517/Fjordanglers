@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import RespondBookingWidget from './RespondBookingWidget'
 import MarkBalancePaidButton from '@/components/dashboard/mark-balance-paid-button'
+import MarkTripCompletedButton from '@/components/dashboard/mark-trip-completed-button'
 import { CountryFlag } from '@/components/ui/country-flag'
 import type { Database } from '@/lib/supabase/database.types'
 import { getPaymentModel } from '@/lib/payment-model'
@@ -876,17 +877,22 @@ export default async function GuideBookingDetailPage({
           )}
 
           {booking.status === 'confirmed' && !cashBalanceDue && (
-            <ActionStatusCard
-              color="green"
-              title="Trip confirmed"
-              body={
-                balanceIsPaid
-                  ? 'All payments received. Good luck on the water!'
-                  : paymentModel === 'manual'
-                  ? 'Deposit paid. Collect your portion directly from the angler.'
-                  : 'Deposit received. Balance due before the trip.'
-              }
-            />
+            <div
+              className="p-5 rounded-2xl"
+              style={{
+                background: '#FDFAF7',
+                border:     '1px solid rgba(10,46,77,0.08)',
+                boxShadow:  '0 2px 8px rgba(10,46,77,0.05)',
+              }}
+            >
+              <p
+                className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
+                style={{ color: 'rgba(10,46,77,0.38)' }}
+              >
+                Trip status
+              </p>
+              <MarkTripCompletedButton bookingId={id} />
+            </div>
           )}
 
           {booking.status === 'completed' && (

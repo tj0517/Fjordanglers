@@ -20,6 +20,7 @@ type SidebarGuide = {
   stripe_account_id: string | null
   stripe_payouts_enabled: boolean
   status: string
+  iban: string | null
 } | null
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -59,9 +60,10 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
   const displayAvatar  = guide?.avatar_url ?? null
   const isFounder      = guide?.pricing_model === 'commission'
   // Custom Connect (transfers-only): charges_enabled is always false; payouts_enabled is the live signal
-  const payoutsActive  = guide?.stripe_payouts_enabled === true
-  const stripeVerifying = guide?.stripe_account_id != null && !payoutsActive
-  const isPending      = guide?.status === 'pending'
+  const payoutsActive   = guide?.stripe_payouts_enabled === true
+  const ibanActive      = !payoutsActive && (guide?.iban != null && guide.iban.trim() !== '')
+  const stripeVerifying = !payoutsActive && !ibanActive && guide?.stripe_account_id != null
+  const isPending       = guide?.status === 'pending'
 
   function isActive(href: string, exact: boolean) {
     return exact ? pathname === href : pathname.startsWith(href)
@@ -271,18 +273,20 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
             <div
               className="w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{
-                background: payoutsActive
+                background: payoutsActive || ibanActive
                   ? '#4ADE80'
                   : stripeVerifying
                   ? '#E67E50'
                   : '#94A3B8',
-                boxShadow: payoutsActive ? '0 0 6px rgba(74,222,128,0.5)' : 'none',
+                boxShadow: payoutsActive || ibanActive ? '0 0 6px rgba(74,222,128,0.5)' : 'none',
               }}
             />
             <div>
               <p className="text-white/55 text-xs f-body leading-tight">
                 {payoutsActive
                   ? 'Payouts active'
+                  : ibanActive
+                  ? 'Bank account connected'
                   : stripeVerifying
                   ? 'Under review'
                   : 'Bank account not set up'}
@@ -290,6 +294,8 @@ export default function DashboardSidebar({ guide }: { guide: SidebarGuide }) {
               <p className="text-white/25 text-[10px] f-body">
                 {payoutsActive
                   ? 'Weekly payouts on Monday'
+                  : ibanActive
+                  ? 'Anglers pay via bank transfer'
                   : stripeVerifying
                   ? 'Stripe verifying — 1–2 days'
                   : 'Add in Account settings'}

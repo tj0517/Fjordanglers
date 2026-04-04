@@ -42,7 +42,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // ── Fetch guide profile ───────────────────────────────────────────────────
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent')
+    .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent, iban')
     .eq('user_id', user.id)
     .single()
 
@@ -68,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         stripe_payouts_enabled: false,
         total_reviews:          0,
       })
-      .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent')
+      .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent, iban')
       .single()
 
     if (insertErr != null) {
@@ -76,7 +76,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       console.warn('[layout] guide auto-create failed, re-fetching:', insertErr.message)
       const { data: refetched } = await service
         .from('guides')
-        .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent')
+        .select('id, full_name, avatar_url, pricing_model, stripe_account_id, stripe_payouts_enabled, status, terms_accepted_at, photo_marketing_consent, iban')
         .eq('user_id', user.id)
         .single()
       resolvedGuide = refetched

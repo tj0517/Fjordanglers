@@ -1131,6 +1131,60 @@ export async function markBalancePaid(
   return {}
 }
 
+// ─── markTripCompleted ────────────────────────────────────────────────────────
+//
+// Guide marks a confirmed booking as completed after the trip happened.
+// This is the trigger that lets admin release the payout from the admin panel.
+//
+// Only valid for confirmed bookings owned by the calling guide.
+
+export async function markTripCompleted(
+  bookingId: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Unauthorized' }
+
+  const { data: guide } = await supabase
+    .from('guides')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+  if (!guide) return { error: 'Guide profile not found.' }
+
+  const serviceClient = createServiceClient()
+
+  const { data: booking } = await serviceClient
+    .from('bookings')
+    .select('id, status, guide_id')
+    .eq('id', bookingId)
+    .eq('guide_id', guide.id)
+    .single()
+
+  if (!booking) return { error: 'Booking not found.' }
+  if (booking.status === 'completed') return { error: 'Trip already marked as completed.' }
+  if (booking.status !== 'confirmed') return { error: 'Only confirmed bookings can be marked as completed.' }
+
+  const { error } = await serviceClient
+    .from('bookings')
+    .update({
+      status:       'completed',
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', bookingId)
+
+  if (error) {
+    console.error('[markTripCompleted]', error)
+    return { error: 'Failed to mark trip as completed. Please try again.' }
+  }
+
+  revalidatePath('/dashboard/bookings')
+  revalidatePath(`/dashboard/bookings/${bookingId}`)
+  return {}
+}
+
 // ─── mockConfirmDeposit ───────────────────────────────────────────────────────
 //
 // DEV / TEST ONLY — simulates the Stripe webhook that confirms a booking.
