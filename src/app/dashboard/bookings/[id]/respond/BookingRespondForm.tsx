@@ -613,9 +613,9 @@ export default function BookingRespondForm({
         {/* Price */}
         <BookingReviewRow label="Total">
           <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>€{reviewPrice}</p>
-          {depositEur != null && reviewPrice > 0 && (
+          {depositEur != null && depositEur > 0 && (
             <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              Deposit: €{depositEur} ({Math.round(depositEur / reviewPrice * 100)}%)
+              Booking fee: €{depositEur}
             </p>
           )}
         </BookingReviewRow>
@@ -738,9 +738,9 @@ export default function BookingRespondForm({
           {/* Trip value */}
           <PanelSection title="Trip value">
             <PanelRow value={`€${totalEur}`} />
-            {depositEur != null && totalEur > 0 && (
+            {depositEur != null && depositEur > 0 && (
               <PanelRow
-                value={`€${depositEur} deposit (${Math.round(depositEur / totalEur * 100)}%)`}
+                value={`€${depositEur} booking fee`}
                 muted
               />
             )}

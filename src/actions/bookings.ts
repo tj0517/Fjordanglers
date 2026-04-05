@@ -22,6 +22,7 @@ import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
 import { getPaymentModel } from '@/lib/payment-model'
 import { computeBookingPricing, calcSubtotalFromOption, type DurationOption } from '@/lib/booking-pricing'
+import { buildBookingReference } from '@/lib/sepa-qr'
 import type { Json } from '@/lib/supabase/database.types'
 import {
   fmtEmailDate,
@@ -1488,7 +1489,7 @@ export async function shareIbanWithAngler(
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, iban, iban_holder_name')
+    .select('id, full_name, iban, iban_holder_name')
     .eq('user_id', user.id)
     .single()
   if (!guide) return { error: 'Guide profile not found.' }
@@ -1501,7 +1502,7 @@ export async function shareIbanWithAngler(
 
   const { data: booking } = await serviceClient
     .from('bookings')
-    .select('id, status, guide_id, iban_shared_at')
+    .select('id, status, guide_id, iban_shared_at, guide_payout_eur')
     .eq('id', bookingId)
     .eq('guide_id', guide.id)
     .single()
@@ -1523,6 +1524,34 @@ export async function shareIbanWithAngler(
   if (error) {
     console.error('[shareIbanWithAngler]', error)
     return { error: 'Failed to share payment details.' }
+  }
+
+  // ── Post a chat message from the guide so the angler sees a notification ──
+  // The message contains the key transfer details inline for quick reference.
+  // The actual QR code is rendered on the angler's booking page.
+  if (booking.guide_payout_eur != null) {
+    const reference    = buildBookingReference(bookingId)
+    const holderName   = guide.iban_holder_name ?? guide.full_name ?? 'Guide'
+    const cleanIban    = guide.iban.replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim()
+    const amount       = booking.guide_payout_eur
+
+    const chatBody = [
+      `💳 I've shared my bank transfer details with you.`,
+      ``,
+      `Recipient: ${holderName}`,
+      `IBAN: ${cleanIban}`,
+      `Amount: €${amount}`,
+      `Reference: ${reference}`,
+      ``,
+      `Open your booking page to scan the SEPA QR code with your banking app — it pre-fills all the details automatically.`,
+    ].join('\n')
+
+    await serviceClient
+      .from('booking_messages')
+      .insert({ booking_id: bookingId, sender_id: user.id, body: chatBody })
+      .then(({ error: msgErr }) => {
+        if (msgErr) console.error('[shareIbanWithAngler] chat message insert failed:', msgErr)
+      })
   }
 
   revalidatePath(`/dashboard/bookings/${bookingId}`)

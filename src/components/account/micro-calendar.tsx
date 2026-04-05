@@ -28,7 +28,7 @@ export function MicroCalendar({ from, to, days }: Props) {
     const daySet = new Set(sorted)
 
     return (
-      <div className="flex flex-wrap gap-5">
+      <div className="flex flex-wrap gap-5 justify-center">
         {visibleMonths.map(monthKey => {
           const [year, month] = monthKey.split('-').map(Number) as [number, number]
           return (
@@ -63,7 +63,7 @@ export function MicroCalendar({ from, to, days }: Props) {
     : [startMonth, endMonth]
 
   return (
-    <div className="flex flex-wrap gap-5">
+    <div className="flex flex-wrap gap-5 justify-center">
       {months.map((month, idx) => (
         <RangeMonthGrid key={idx} month={month} from={startDate} to={endDate} />
       ))}

@@ -236,7 +236,8 @@ export default async function GuideBookingDetailPage({
     : null
   const balancePct = depositPct != null ? 100 - depositPct : null
 
-  const balanceIsPaid = booking.balance_paid_at != null
+  const balanceIsPaid    = booking.balance_paid_at != null
+  const guideAmountPaid  = (booking as Record<string, unknown>).guide_amount_paid_at != null
   const cashBalanceDue =
     booking.status === 'confirmed' &&
     booking.balance_payment_method === 'cash' &&
@@ -546,13 +547,13 @@ export default async function GuideBookingDetailPage({
               </div>
             </div>
 
-            {/* ── stripe_connect + deposit split ──────────────────────────── */}
-            {hasDepositSplit && depositPct != null && balancePct != null && (
+            {/* ── stripe_connect two-step: booking fee + guide amount ─────── */}
+            {hasDepositSplit && (
               <div
                 className="flex items-stretch gap-0 rounded-2xl overflow-hidden"
                 style={{ border: '1px solid rgba(10,46,77,0.07)' }}
               >
-                {/* Deposit */}
+                {/* Booking fee (platform collected) */}
                 <div
                   className="flex-1 px-4 py-3.5"
                   style={{ borderRight: '1px solid rgba(10,46,77,0.07)' }}
@@ -568,15 +569,15 @@ export default async function GuideBookingDetailPage({
                       className="text-[9px] uppercase tracking-[0.18em] font-bold f-body"
                       style={{ color: 'rgba(10,46,77,0.38)' }}
                     >
-                      Deposit ({depositPct}%)
+                      Booking fee
                     </p>
                   </div>
                   <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-                    €{guideDepositEur ?? depositEur}
+                    €{depositEur}
                   </p>
                   {isDepositPaid ? (
                     <p className="text-[10px] font-bold f-body mt-1" style={{ color: '#16A34A' }}>
-                      Paid ✓
+                      Collected ✓
                     </p>
                   ) : booking.status === 'accepted' ? (
                     <p className="text-[10px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -585,32 +586,32 @@ export default async function GuideBookingDetailPage({
                   ) : null}
                 </div>
 
-                {/* Balance */}
+                {/* Guide earnings (angler pays guide directly) */}
                 <div className="flex-1 px-4 py-3.5">
                   <div className="flex items-center gap-1.5 mb-1.5">
                     <div
                       className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{
-                        background: balanceIsPaid ? '#16A34A' : 'rgba(10,46,77,0.2)',
+                        background: guideAmountPaid ? '#16A34A' : 'rgba(10,46,77,0.2)',
                       }}
                     />
                     <p
                       className="text-[9px] uppercase tracking-[0.18em] font-bold f-body"
                       style={{ color: 'rgba(10,46,77,0.38)' }}
                     >
-                      Balance ({balancePct}%)
+                      Your earnings
                     </p>
                   </div>
-                  <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-                    €{guideBalanceEur ?? balanceEur}
+                  <p className="text-base font-bold f-display" style={{ color: '#E67E50' }}>
+                    €{guidePayoutEur}
                   </p>
-                  {balanceIsPaid ? (
+                  {guideAmountPaid ? (
                     <p className="text-[10px] font-bold f-body mt-1" style={{ color: '#16A34A' }}>
                       Paid ✓
                     </p>
                   ) : booking.status === 'confirmed' ? (
                     <p className="text-[10px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                      Due before trip
+                      Angler pays directly
                     </p>
                   ) : null}
                 </div>

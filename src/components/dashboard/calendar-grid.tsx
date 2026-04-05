@@ -142,6 +142,17 @@ function formatDayLong(dateStr: string): string {
   })
 }
 
+/** Returns true when a calendar block was created by an active booking. */
+function isBookingBlock(reason: string | null): boolean {
+  return reason != null && reason.startsWith('booking:')
+}
+
+/** Extracts a short human-readable booking reference from a booking-block reason. */
+function bookingRefFromReason(reason: string): string {
+  const bookingId = reason.replace('booking:', '')
+  return `#${bookingId.slice(-8).toUpperCase()}`
+}
+
 /** Expand a date range into an array of ISO date strings (inclusive). */
 function expandDateRange(from: string, to: string): string[] {
   const days: string[] = []
@@ -254,6 +265,15 @@ export default function CalendarGrid({
   // Multiselect unblock
   const [selectedBlockIds,  setSelectedBlockIds]  = useState<Set<string>>(new Set())
   const [isUnblockingMulti, setIsUnblockingMulti] = useState(false)
+
+  // Force-unblock confirmation — shown when a booking-block is about to be removed
+  // 'single': guide clicked "Unblock" on one booking-blocked entry
+  // 'selected': guide used multi-select checkbox and selected ≥1 booking-block
+  const [forceUnblockTarget, setForceUnblockTarget] = useState<
+    | null
+    | { kind: 'single';   block: BlockedEntry }
+    | { kind: 'selected'; blockIds: string[] }
+  >(null)
 
   // ── Per-trip colour map ────────────────────────────────────────────────────
   const expColors = useMemo(
@@ -628,7 +648,8 @@ export default function CalendarGrid({
     startNav(() => router.refresh())
   }
 
-  async function handleUnblock(blockId: string) {
+  // ── Core unblock execution (after any confirmation guard) ─────────────────
+  async function executeUnblock(blockId: string) {
     setUnblockingId(blockId); setActionError(null)
     const block = selData.blockedEntries.find(b => b.id === blockId)
     // Range block: split around the currently-viewed day instead of deleting all
@@ -647,8 +668,59 @@ export default function CalendarGrid({
     startUnblock(() => { router.refresh() })
   }
 
+  async function handleUnblock(blockId: string) {
+    const block = selData.blockedEntries.find(b => b.id === blockId)
+    // Booking-blocked date → require explicit confirmation before unblocking
+    if (block != null && isBookingBlock(block.reason)) {
+      setForceUnblockTarget({ kind: 'single', block })
+      return
+    }
+    await executeUnblock(blockId)
+  }
+
+  // Called when guide confirms force-unblock in the confirmation modal
+  async function handleConfirmedForceUnblock() {
+    if (forceUnblockTarget == null) return
+    const target = forceUnblockTarget
+    setForceUnblockTarget(null)
+
+    if (target.kind === 'single') {
+      await executeUnblock(target.block.id)
+    } else if (target.kind === 'selected') {
+      // Delegate to the same execution logic as handleUnblockSelected but skip guard
+      setIsUnblockingMulti(true); setActionError(null)
+      const results = await Promise.all(
+        target.blockIds.map(id => {
+          const b = selData.blockedEntries.find(x => x.id === id)
+          return b != null && b.date_start !== b.date_end && selectedDay != null
+            ? unblockDaysFromRange(id, [selectedDay])
+            : unblockDates(id)
+        })
+      )
+      const failed = results.find(r => 'error' in r)
+      if (failed && 'error' in failed) {
+        setActionError(failed.error)
+        setIsUnblockingMulti(false)
+        return
+      }
+      closeModal()
+      startUnblock(() => { router.refresh() })
+    }
+  }
+
   async function handleUnblockSelected() {
     if (selectedBlockIds.size === 0 || isUnblockingMulti) return
+
+    // Guard: if any selected blocks are booking-blocked, require confirmation first
+    const blockingBookingIds = Array.from(selectedBlockIds).filter(id => {
+      const b = selData.blockedEntries.find(x => x.id === id)
+      return b != null && isBookingBlock(b.reason)
+    })
+    if (blockingBookingIds.length > 0) {
+      setForceUnblockTarget({ kind: 'selected', blockIds: Array.from(selectedBlockIds) })
+      return
+    }
+
     setIsUnblockingMulti(true); setActionError(null)
     // For range blocks, only remove the currently-viewed day (split); delete single-day blocks
     const results = await Promise.all(
@@ -1456,6 +1528,15 @@ export default function CalendarGrid({
                               <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
                                 {expById[b.experience_id]?.title ?? 'Trip'}
                               </p>
+                              {/* Booking-block badge */}
+                              {isBookingBlock(b.reason) && (
+                                <span
+                                  className="flex-shrink-0 text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full f-body"
+                                  style={{ background: 'rgba(27,79,114,0.1)', color: '#1B4F72' }}
+                                >
+                                  Booking {b.reason != null ? bookingRefFromReason(b.reason) : ''}
+                                </span>
+                              )}
                               {/* Range badge — shown when block covers more than one day */}
                               {b.date_start !== b.date_end && (
                                 <span
@@ -1469,7 +1550,7 @@ export default function CalendarGrid({
                             <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
                               {b.date_start === b.date_end ? b.date_start : `${b.date_start} → ${b.date_end}`}
                             </p>
-                            {b.reason != null && b.reason !== '' && (
+                            {b.reason != null && b.reason !== '' && !isBookingBlock(b.reason) && (
                               <p className="text-xs f-body mt-1 italic" style={{ color: 'rgba(10,46,77,0.45)' }}>
                                 &ldquo;{b.reason}&rdquo;
                               </p>
@@ -1663,6 +1744,103 @@ export default function CalendarGrid({
                 </div>
               </div>
             )}
+          </div>
+        </>
+      )}
+
+      {/* ─── Force-unblock confirmation modal ────────────────────────────────── */}
+      {forceUnblockTarget != null && (
+        <>
+          <div
+            className="fixed inset-0"
+            style={{ background: 'rgba(7,17,28,0.65)', zIndex: 60 }}
+            onClick={() => setForceUnblockTarget(null)}
+            aria-hidden="true"
+          />
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="force-unblock-title"
+            className="fixed flex flex-col"
+            style={{ zIndex: 70, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '100%', maxWidth: '400px', background: '#FDFAF7', borderRadius: '20px', boxShadow: '0 24px 64px rgba(7,17,28,0.3)', border: '1px solid rgba(10,46,77,0.08)' }}
+          >
+            <div className="px-6 pt-6 pb-4 flex flex-col gap-3">
+              {/* Warning icon */}
+              <div
+                className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(220,38,38,0.1)' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+
+              <div>
+                <h3
+                  id="force-unblock-title"
+                  className="text-base font-bold f-display mb-1.5"
+                  style={{ color: '#0A2E4D' }}
+                >
+                  Force unblock — active booking
+                </h3>
+                {forceUnblockTarget.kind === 'single' ? (
+                  <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    This date is blocked because of booking{' '}
+                    <strong style={{ color: '#0A2E4D' }}>
+                      {bookingRefFromReason(forceUnblockTarget.block.reason ?? '')}
+                    </strong>
+                    . The angler is expecting to fish on this day.
+                  </p>
+                ) : (
+                  <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    Some of the selected blocks are tied to active bookings.
+                    The anglers are expecting to fish on these days.
+                  </p>
+                )}
+              </div>
+
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{ background: 'rgba(220,38,38,0.05)', border: '1px solid rgba(220,38,38,0.15)' }}
+              >
+                <p className="text-xs f-body leading-relaxed" style={{ color: '#991B1B' }}>
+                  <strong>This does NOT cancel the booking.</strong> It only removes the calendar block.
+                  Use this only to fix a calendar error — contact the angler if plans have changed.
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div
+              className="px-6 pb-6 flex flex-col gap-2.5"
+            >
+              <button
+                onClick={handleConfirmedForceUnblock}
+                className="w-full text-sm font-bold f-body py-3 rounded-xl transition-opacity"
+                style={{
+                  background: '#DC2626',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Yes, force unblock anyway
+              </button>
+              <button
+                onClick={() => setForceUnblockTarget(null)}
+                className="w-full text-sm font-semibold f-body py-3 rounded-xl transition-colors"
+                style={{
+                  background: 'transparent',
+                  color: 'rgba(10,46,77,0.55)',
+                  border: '1px solid rgba(10,46,77,0.12)',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </>
       )}

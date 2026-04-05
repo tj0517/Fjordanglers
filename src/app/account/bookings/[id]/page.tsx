@@ -7,6 +7,7 @@ import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import PayDepositBanner from '@/components/booking/pay-deposit-banner'
 import PayBalanceBanner from '@/components/booking/pay-balance-banner'
 import PayGuideButton from '@/components/booking/pay-guide-button'
+import SepaQrCode from '@/components/booking/sepa-qr-code'
 import { getPaymentModel } from '@/lib/payment-model'
 import type { Database } from '@/lib/supabase/database.types'
 import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
@@ -880,13 +881,14 @@ function GuidePaymentSection({
     )
   }
 
-  // Model B: IBAN shared by guide
+  // Model B: IBAN shared by guide — render SEPA QR code + transfer details
   if (ibanShared && guideIban) {
     return (
       <div
-        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-3"
+        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-4"
         style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}
       >
+        {/* Header */}
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1" style={{ color: '#2563EB' }}>
             Bank transfer to guide
@@ -895,33 +897,17 @@ function GuidePaymentSection({
             €{guideAmountEur}
           </p>
           <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-            Pay {guideName} directly via bank transfer
+            Pay {guideName} directly via SEPA bank transfer
           </p>
         </div>
-        <div
-          className="px-3 py-3 rounded-xl flex flex-col gap-1.5"
-          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
-        >
-          {guideIbanHolder && (
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-[0.12em] f-body w-14 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>Name</span>
-              <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>{guideIbanHolder}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-[0.12em] f-body w-14 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>IBAN</span>
-            <span className="text-xs font-semibold f-body font-mono" style={{ color: '#0A2E4D' }}>
-              {guideIban.replace(/(.{4})/g, '$1 ').trim()}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-[0.12em] f-body w-14 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.4)' }}>Amount</span>
-            <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>€{guideAmountEur}</span>
-          </div>
-        </div>
-        <p className="text-[11px] f-body" style={{ color: 'rgba(37,99,235,0.65)' }}>
-          Use your banking app to complete the transfer. Scan the QR code your guide shared with you, or enter the details above manually.
-        </p>
+
+        {/* SEPA QR code + transfer details */}
+        <SepaQrCode
+          beneficiaryName={guideIbanHolder ?? guideName}
+          iban={guideIban}
+          amountEur={guideAmountEur}
+          bookingId={bookingId}
+        />
       </div>
     )
   }
