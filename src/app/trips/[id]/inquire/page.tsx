@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import InquireForm from './InquireForm'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
@@ -57,23 +57,21 @@ export default async function InquirePage({
   const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
   const blockedDates       = (blockedDatesRes.data ?? []) as { date_start: string; date_end: string }[]
 
-  // Check if user is logged in — pre-fill their name + email if so
+  // Auth — required to send an inquiry
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  let anglerName:  string | null = null
-  let anglerEmail: string | null = null
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/trips/${id}/inquire`)}`)
 
-  if (user != null) {
-    anglerEmail = user.email ?? null
-    // Try to get full_name from profiles
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .single()
-    anglerName = profile?.full_name ?? null
-  }
+  let anglerName:  string | null = null
+  const anglerEmail: string | null = user.email ?? null
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+  anglerName = profile?.full_name ?? null
 
   // Parse pre-filled values from URL
   const prefilledDates   = sp.dates   ? sp.dates.split(',').filter(Boolean) : []

@@ -247,23 +247,28 @@ export default async function BookPage({ params, searchParams }: Props) {
 
   // ── STEP 2: Dates selected — show contact form ─────────────────────────────
 
-  // Auth — pre-fill if logged in
+  // Auth — required to book
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  let defaultName  = ''
-  let defaultEmail = user?.email ?? ''
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .single()
-    if (profile?.full_name) defaultName = profile.full_name
+  if (!user) {
+    const qs = new URLSearchParams(
+      Object.entries(sp).filter((e): e is [string, string] => e[1] != null),
+    ).toString()
+    redirect(`/login?next=${encodeURIComponent(`/book/${expId}?${qs}`)}`)
   }
+
+  let defaultName  = ''
+  const defaultEmail = user.email ?? ''
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single()
+  if (profile?.full_name) defaultName = profile.full_name
 
   // Price calculation — uses the selected duration option's pricing type when available.
   // Falls back to base per-person rate for old/unmatched labels.

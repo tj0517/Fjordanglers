@@ -4,14 +4,14 @@
  * /plan-your-trip — Icelandic Flow / Concierge inquiry form.
  *
  * Two-step multi-select form. Calls submitInquiry Server Action.
- * Can be submitted without auth (angler_id = null if not logged in).
+ * Requires auth — layout.tsx redirects to /login if not signed in.
  * Accepts ?guideId= query param to pre-assign a guide.
  */
 
 import { useState, useTransition, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { submitInquiry } from '@/actions/inquiries'
+import { createInquiryBooking as submitInquiry } from '@/actions/bookings'
 import { CheckCircle, Minus, Plus, Loader2 } from 'lucide-react'
 
 // ─── Constants ────────────────────────────────────────────────────────────────

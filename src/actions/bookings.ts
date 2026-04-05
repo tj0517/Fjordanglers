@@ -83,11 +83,12 @@ type CreateBookingInput = z.infer<typeof createBookingSchema>
 export async function createBookingCheckout(
   input: CreateBookingInput,
 ): Promise<{ bookingId: string } | { error: string }> {
-  // ── Auth (optional — guest bookings allowed) ──────────────────────────────
+  // ── Auth — required ────────────────────────────────────────────────────────
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in to book a trip.' }
 
   // ── Validate ──────────────────────────────────────────────────────────────
   const parsed = createBookingSchema.safeParse(input)
@@ -177,7 +178,7 @@ export async function createBookingCheckout(
     .from('bookings')
     .insert({
       experience_id: experienceId,
-      angler_id: user?.id ?? null,
+      angler_id: user.id,
       angler_email: anglerEmail,
       guide_id: guideRaw.id,
       booking_date: dates[0], // primary date (first selected)
@@ -1634,13 +1635,14 @@ export async function createInquiryBooking(
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'You must be signed in to send an inquiry.' }
 
   const serviceClient = createServiceClient()
   const { data: booking, error } = await serviceClient
     .from('bookings')
     .insert({
       source:            'inquiry',
-      angler_id:         user?.id ?? null,
+      angler_id:         user.id,
       angler_email:      anglerEmail,
       angler_full_name:  anglerName,
       booking_date:      datesFrom,
@@ -1667,7 +1669,6 @@ export async function createInquiryBooking(
     return { error: 'Failed to submit inquiry. Please try again.' }
   }
 
-  console.log(`[createInquiryBooking] New inquiry booking ${booking.id} from ${anglerEmail}`)
 
   // ── Fire-and-forget emails ────────────────────────────────────────────────
   {
@@ -1851,7 +1852,6 @@ export async function sendOffer(
   // commitment — the angler may decline. Blocking at this stage would cause false
   // unavailability on the calendar.
 
-  console.log(`[sendOffer] Offer sent for booking ${bookingId} — €${effectivePriceEur}`)
 
   // ── Email to angler: "you have a new offer" ───────────────────────────────
   {
