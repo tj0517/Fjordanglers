@@ -104,6 +104,9 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
             <div className="text-right">
               <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Total</p>
               <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>€{booking.total_eur}</p>
+              <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                incl. €{serviceFeeEur} service fee
+              </p>
             </div>
           </div>
           {booking.angler_email != null && (

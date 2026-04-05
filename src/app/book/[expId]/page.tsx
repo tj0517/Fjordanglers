@@ -430,6 +430,12 @@ export default async function BookPage({ params, searchParams }: Props) {
                 label={`€${pricePerPerson} × ${guests} ${guests === 1 ? 'angler' : 'anglers'} × ${effectiveNumDays} ${effectiveNumDays === 1 ? 'day' : 'days'}`}
                 value={`€${subtotal}`}
               />
+              <PriceLine
+                label="Service fee"
+                value={`€${serviceFee}`}
+                muted
+                tooltip={`A ${serviceFee >= 50 ? '€50 (capped)' : '5%'} platform fee that covers booking support, secure payments, and access to vetted guides. Never charged to the guide.`}
+              />
               <div className="my-1" style={{ height: '1px', background: 'rgba(10,46,77,0.08)' }} />
               <PriceLine label="Total" value={`€${totalEur}`} bold />
               <div className="my-1" style={{ height: '1px', background: 'rgba(10,46,77,0.08)' }} />
@@ -524,24 +530,63 @@ function PriceLine({
   value,
   bold = false,
   muted = false,
+  tooltip,
 }: {
-  label: string
-  value: string
-  bold?: boolean
-  muted?: boolean
+  label:    string
+  value:    string
+  bold?:    boolean
+  muted?:   boolean
+  tooltip?: string
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-2">
       <span
-        className="text-sm f-body"
-        style={{ color: muted ? 'rgba(10,46,77,0.38)' : 'rgba(10,46,77,0.6)' }}
+        className="text-sm f-body flex items-center gap-1.5"
+        style={{ color: muted ? 'rgba(10,46,77,0.45)' : 'rgba(10,46,77,0.6)' }}
       >
         {label}
+        {tooltip != null && (
+          <span
+            className="group relative inline-flex items-center"
+            tabIndex={0}
+          >
+            {/* ⓘ circle */}
+            <svg
+              width="13" height="13" viewBox="0 0 13 13" fill="none"
+              style={{ color: 'rgba(10,46,77,0.28)', cursor: 'default', flexShrink: 0 }}
+            >
+              <circle cx="6.5" cy="6.5" r="5.75" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M6.5 5.8v3.4M6.5 4.1v.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            {/* Tooltip bubble */}
+            <span
+              className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 rounded-xl px-3 py-2.5 text-[11px] f-body leading-relaxed opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity z-10"
+              style={{
+                background:  '#07192A',
+                color:       'rgba(255,255,255,0.82)',
+                boxShadow:   '0 8px 24px rgba(7,17,28,0.28)',
+                whiteSpace:  'normal',
+              }}
+            >
+              {tooltip}
+              {/* Arrow */}
+              <span
+                className="absolute top-full left-1/2 -translate-x-1/2"
+                style={{
+                  width: 0, height: 0,
+                  borderLeft:  '5px solid transparent',
+                  borderRight: '5px solid transparent',
+                  borderTop:   '5px solid #07192A',
+                }}
+              />
+            </span>
+          </span>
+        )}
       </span>
       <span
         className="text-sm f-body"
         style={{
-          color:      bold ? '#0A2E4D' : muted ? 'rgba(10,46,77,0.38)' : 'rgba(10,46,77,0.7)',
+          color:      bold ? '#0A2E4D' : muted ? 'rgba(10,46,77,0.45)' : 'rgba(10,46,77,0.7)',
           fontWeight: bold ? 700 : 500,
         }}
       >
