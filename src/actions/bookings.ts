@@ -1508,8 +1508,8 @@ export async function shareIbanWithAngler(
     .single()
 
   if (!booking) return { error: 'Booking not found.' }
-  if (!['confirmed', 'completed'].includes(booking.status)) {
-    return { error: 'Can only share payment details for confirmed bookings.' }
+  if (!['accepted', 'offer_accepted', 'confirmed', 'completed'].includes(booking.status)) {
+    return { error: 'Can only share payment details after accepting the booking.' }
   }
   if (booking.iban_shared_at != null) {
     // Already shared — idempotent, not an error

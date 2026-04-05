@@ -280,10 +280,13 @@ export default async function GuideBookingDetailPage({
   // ── IBAN sharing (manual model) ───────────────────────────────────────────
   const ibanSharedAt = (booking as Record<string, unknown>).iban_shared_at as string | null ?? null
   const hasGuideIban = guide.iban != null && guide.iban.trim() !== ''
+  // Show ShareIbanButton from 'accepted' onwards — guide can share IBAN as soon
+  // as they accept, so angler knows where to send the guide amount even before
+  // paying the platform booking fee.
   const showShareIban =
     paymentModel === 'manual' &&
     hasGuideIban &&
-    booking.status === 'confirmed' &&
+    ['accepted', 'offer_accepted', 'confirmed', 'completed'].includes(booking.status) &&
     ibanSharedAt == null
 
   const bookingRef      = id.slice(-8).toUpperCase()
@@ -849,20 +852,67 @@ export default async function GuideBookingDetailPage({
           )}
 
           {booking.status === 'accepted' && (
-            <ActionStatusCard
-              color="blue"
-              title="Accepted — awaiting deposit"
-              body="The angler will pay the deposit to confirm the trip. You'll be notified when payment arrives."
-            />
+            <div className="flex flex-col gap-3">
+              <ActionStatusCard
+                color="blue"
+                title="Accepted — awaiting booking fee"
+                body="The angler will pay the booking fee to confirm the trip. You'll be notified when payment arrives."
+              />
+              {/* Guide can share IBAN right away so angler knows where to send guide amount */}
+              {showShareIban && (
+                <div
+                  className="p-5 rounded-2xl"
+                  style={{
+                    background: '#FDFAF7',
+                    border:     '1px solid rgba(10,46,77,0.08)',
+                    boxShadow:  '0 2px 8px rgba(10,46,77,0.05)',
+                  }}
+                >
+                  <p
+                    className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
+                    style={{ color: 'rgba(10,46,77,0.38)' }}
+                  >
+                    Payment details
+                  </p>
+                  <ShareIbanButton
+                    bookingId={id}
+                    anglerName={booking.angler_full_name ?? 'the angler'}
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {/* offer_accepted: angler accepted an inquiry offer, payment in progress */}
           {booking.status === 'offer_accepted' && (
-            <ActionStatusCard
-              color="blue"
-              title="Offer accepted — payment processing"
-              body="The angler accepted your offer and is completing payment. You'll be notified when it clears."
-            />
+            <div className="flex flex-col gap-3">
+              <ActionStatusCard
+                color="blue"
+                title="Offer accepted — payment processing"
+                body="The angler accepted your offer and is completing payment. You'll be notified when it clears."
+              />
+              {showShareIban && (
+                <div
+                  className="p-5 rounded-2xl"
+                  style={{
+                    background: '#FDFAF7',
+                    border:     '1px solid rgba(10,46,77,0.08)',
+                    boxShadow:  '0 2px 8px rgba(10,46,77,0.05)',
+                  }}
+                >
+                  <p
+                    className="text-[10px] uppercase tracking-[0.18em] mb-3 f-body"
+                    style={{ color: 'rgba(10,46,77,0.38)' }}
+                  >
+                    Payment details
+                  </p>
+                  <ShareIbanButton
+                    bookingId={id}
+                    anglerName={booking.angler_full_name ?? 'the angler'}
+                  />
+                </div>
+              )}
+            </div>
           )}
 
           {cashBalanceDue && (
