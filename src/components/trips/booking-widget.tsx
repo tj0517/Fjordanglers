@@ -383,8 +383,9 @@ type BookingWidgetProps = {
 
 // ─── Platform fee ─────────────────────────────────────────────────────────────
 
-/** 5% service fee charged to the angler on top of the base price. */
-const SERVICE_FEE_RATE = 0.05
+/** 5% service fee charged to the angler on top of the base price, capped at €50. */
+const SERVICE_FEE_RATE    = 0.05
+const SERVICE_FEE_CAP_EUR = 50
 
 // ─── Price calculation ────────────────────────────────────────────────────────
 
@@ -679,7 +680,7 @@ export function BookingWidget({
   // Range mode = 1 trip even though N days; pkg price already accounts for the N days.
   const tripCount    = isRangeMode ? 1 : (selectedDates.length > 0 ? selectedDates.length : 1)
   const subtotal     = Math.round(price.total * tripCount * 100) / 100
-  const serviceFee   = Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100
+  const serviceFee   = Math.min(Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100, SERVICE_FEE_CAP_EUR)
   const grandTotal   = Math.round((subtotal + serviceFee) * 100) / 100
 
   /** True when the N-day range overlaps a booked or blocked date. Disables the CTA. */
@@ -1307,6 +1308,16 @@ export function BookingWidget({
               </span>
             </div>
           )}
+
+          {/* Service fee */}
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
+              Service fee{serviceFee >= SERVICE_FEE_CAP_EUR ? ' (capped)' : ' (5%)'}
+            </span>
+            <span className="text-[11px] font-semibold f-body" style={{ color: '#0A2E4D' }}>
+              €{serviceFee}
+            </span>
+          </div>
 
           {/* Divider */}
           <div className="my-2.5" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
