@@ -238,7 +238,11 @@ export default async function GuideBookingDetailPage({
 
   const balanceIsPaid    = booking.balance_paid_at != null
   const guideAmountPaid  = (booking as Record<string, unknown>).guide_amount_paid_at != null
+  // Cash balance is only relevant for stripe_connect model (old deposit+balance flow).
+  // For manual model, the guide amount is paid directly by the angler — the platform
+  // doesn't track it as a "cash balance due" and MarkBalancePaidButton doesn't apply.
   const cashBalanceDue =
+    paymentModel === 'stripe_connect' &&
     booking.status === 'confirmed' &&
     booking.balance_payment_method === 'cash' &&
     !balanceIsPaid
