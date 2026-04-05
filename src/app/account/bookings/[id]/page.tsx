@@ -7,7 +7,7 @@ import BookingChat, { type ChatMessage } from '@/components/booking/chat'
 import PayDepositBanner from '@/components/booking/pay-deposit-banner'
 import PayBalanceBanner from '@/components/booking/pay-balance-banner'
 import PayGuideButton from '@/components/booking/pay-guide-button'
-import SepaQrCode from '@/components/booking/sepa-qr-code'
+import { buildBookingReference } from '@/lib/sepa-qr'
 import { getPaymentModel } from '@/lib/payment-model'
 import type { Database } from '@/lib/supabase/database.types'
 import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
@@ -881,14 +881,14 @@ function GuidePaymentSection({
     )
   }
 
-  // Model B: IBAN shared by guide — render SEPA QR code + transfer details
+  // Model B: IBAN shared by guide — show transfer details table
   if (ibanShared && guideIban) {
+    const reference = buildBookingReference(bookingId)
     return (
       <div
-        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-4"
+        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-3"
         style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}
       >
-        {/* Header */}
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1" style={{ color: '#2563EB' }}>
             Bank transfer to guide
@@ -897,17 +897,40 @@ function GuidePaymentSection({
             €{guideAmountEur}
           </p>
           <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-            Pay {guideName} directly via SEPA bank transfer
+            Pay {guideName} directly via bank transfer
           </p>
         </div>
 
-        {/* SEPA QR code + transfer details */}
-        <SepaQrCode
-          beneficiaryName={guideIbanHolder ?? guideName}
-          iban={guideIban}
-          amountEur={guideAmountEur}
-          bookingId={bookingId}
-        />
+        {/* Transfer details table */}
+        <div
+          className="rounded-xl flex flex-col gap-0 overflow-hidden"
+          style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}
+        >
+          {(guideIbanHolder ?? guideName) && (
+            <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
+              <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>Name</span>
+              <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>{guideIbanHolder ?? guideName}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
+            <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>IBAN</span>
+            <span className="text-xs font-semibold f-body font-mono" style={{ color: '#0A2E4D' }}>
+              {guideIban.replace(/(.{4})/g, '$1 ').trim()}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
+            <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>Amount</span>
+            <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>€{guideAmountEur}</span>
+          </div>
+          <div className="flex items-center gap-3 px-3 py-2.5">
+            <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>Ref</span>
+            <span className="text-xs font-semibold f-body font-mono" style={{ color: '#0A2E4D' }}>{reference}</span>
+          </div>
+        </div>
+
+        <p className="text-[11px] f-body" style={{ color: 'rgba(37,99,235,0.65)' }}>
+          Use the reference when making the transfer so the guide can identify your payment.
+        </p>
       </div>
     )
   }

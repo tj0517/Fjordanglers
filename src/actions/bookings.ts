@@ -551,7 +551,7 @@ export async function acceptBooking(
 
   // Guide amount delivery method (for display on angler's booking page):
   //   stripe_connect → angler pays via Stripe (guide_stripe_checkout_id)
-  //   manual + IBAN  → angler pays via bank transfer (guide shares QR code)
+  //   manual + IBAN  → angler pays via bank transfer (guide shares IBAN details)
   //   manual no IBAN → angler arranges payment directly with guide
   const balanceMethod = guidePaymentModel === 'stripe_connect'
     ? 'stripe'
@@ -1472,9 +1472,9 @@ export async function createGuideAmountCheckout(
 
 // ─── shareIbanWithAngler ──────────────────────────────────────────────────────
 //
-// Guide shares their IBAN / QR code with the angler for a specific booking.
+// Guide shares their IBAN bank transfer details with the angler for a specific booking.
 // Sets iban_shared_at on the booking row — this is the signal that makes the
-// IBAN + SEPA QR code visible on the angler's booking page.
+// IBAN transfer details visible on the angler's booking page.
 //
 // Only valid for confirmed bookings where the guide has an IBAN saved.
 
@@ -1528,7 +1528,7 @@ export async function shareIbanWithAngler(
 
   // ── Post a chat message from the guide so the angler sees a notification ──
   // The message contains the key transfer details inline for quick reference.
-  // The actual QR code is rendered on the angler's booking page.
+  // Full details are also shown on the angler's booking page.
   if (booking.guide_payout_eur != null) {
     const reference    = buildBookingReference(bookingId)
     const holderName   = guide.iban_holder_name ?? guide.full_name ?? 'Guide'
@@ -1543,7 +1543,7 @@ export async function shareIbanWithAngler(
       `Amount: €${amount}`,
       `Reference: ${reference}`,
       ``,
-      `Open your booking page to scan the SEPA QR code with your banking app — it pre-fills all the details automatically.`,
+      `Open your booking page for the full transfer details.`,
     ].join('\n')
 
     await serviceClient
