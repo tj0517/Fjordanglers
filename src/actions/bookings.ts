@@ -23,7 +23,6 @@ import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
 import { getPaymentModel } from '@/lib/payment-model'
 import { computeBookingPricing, calcSubtotalFromOption, type DurationOption } from '@/lib/booking-pricing'
-import { buildBookingReference } from '@/lib/sepa-qr'
 import type { Json } from '@/lib/supabase/database.types'
 import {
   fmtEmailDate,
@@ -627,49 +626,6 @@ export async function acceptBooking(
     }
   }
 
-  // ── Guide note → booking chat ─────────────────────────────────────────────
-  {
-    const fmtD = (d: string) => {
-      try {
-        return new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', {
-          weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
-        })
-      } catch { return d }
-    }
-
-    const manualNote = options?.guideNote?.trim() ?? ''
-    let body = ''
-
-    if (confirmedDays && confirmedDays.length > 0) {
-      // Multi-day: list every confirmed day
-      const n = confirmedDays.length
-      const dayLines = confirmedDays.map(d => `• ${fmtD(d)}`).join('\n')
-      body = `✅ Booking accepted!\n\n📅 Trip days confirmed (${n} day${n !== 1 ? 's' : ''}):\n${dayLines}`
-      if (Object.keys(pricingUpdate).length > 0) {
-        body += `\n\n💰 Updated total: €${effectiveTotalEur}`
-      }
-      if (manualNote) body += `\n\n${manualNote}`
-    } else if (options?.confirmedDateFrom) {
-      // Legacy single-date (from old BookingActions component)
-      body = `✅ Booking accepted! Trip date confirmed: ${fmtD(options.confirmedDateFrom)}`
-      if (manualNote) body += `\n\n${manualNote}`
-    } else if (manualNote) {
-      body = manualNote
-    } else {
-      // No dates, no note — still send acceptance notice
-      body = '✅ Booking accepted! I\'ll be in touch to confirm the exact dates.'
-    }
-
-    try {
-      await serviceClient
-        .from('booking_messages')
-        .insert({ booking_id: bookingId, sender_id: user.id, body })
-    } catch (msgErr) {
-      // Non-fatal — booking is accepted; message failure doesn't block confirmation
-      console.error('[acceptBooking] Failed to send guide note:', msgErr)
-    }
-  }
-
   // ── Email to angler: "booking accepted — pay your deposit" ───────────────
   {
     const anglerEmail = booking.angler_email
@@ -888,39 +844,6 @@ export async function declineBooking(
   // ── Unblock calendar dates ─────────────────────────────────────────────────
   unblockBookingDates(serviceClient, bookingId)
     .catch(e => console.error('[declineBooking] unblockBookingDates:', e))
-
-  // ── Auto-compose alternatives message → booking chat ──────────────────────
-  if (alternatives?.from && alternatives?.to) {
-    const fmt = (d: string) => {
-      try {
-        return new Date(`${d}T12:00:00`).toLocaleDateString('en-GB', {
-          weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
-        })
-      } catch { return d }
-    }
-
-    const datesStr =
-      alternatives.from === alternatives.to
-        ? fmt(alternatives.from)
-        : `${fmt(alternatives.from)} – ${fmt(alternatives.to)}`
-
-    const reasonPart = reason?.trim()
-      ? `Unfortunately those dates don't work for me — ${reason.trim().replace(/\.$/, '')}.\n\n`
-      : `Unfortunately I'm unable to take the booking for those dates.\n\n`
-
-    const autoMessage =
-      `${reasonPart}📅 I'm available on: ${datesStr}\n\n` +
-      `Feel free to send a new booking request for those dates, or message me here if you'd like to discuss other options.`
-
-    try {
-      await serviceClient
-        .from('booking_messages')
-        .insert({ booking_id: bookingId, sender_id: user.id, body: autoMessage })
-    } catch (msgErr) {
-      // Non-fatal — decline has already gone through
-      console.error('[declineBooking] Failed to send alternatives message:', msgErr)
-    }
-  }
 
   // ── Email to angler: "booking declined" ──────────────────────────────────
   {
@@ -1529,34 +1452,6 @@ export async function shareIbanWithAngler(
   if (error) {
     console.error('[shareIbanWithAngler]', error)
     return { error: 'Failed to share payment details.' }
-  }
-
-  // ── Post a chat message from the guide so the angler sees a notification ──
-  // The message contains the key transfer details inline for quick reference.
-  // Full details are also shown on the angler's booking page.
-  if (booking.guide_payout_eur != null) {
-    const reference    = buildBookingReference(bookingId)
-    const holderName   = guideIbanHolder ?? guide.full_name ?? 'Guide'
-    const cleanIban    = guideIban.replace(/\s+/g, '').replace(/(.{4})/g, '$1 ').trim()
-    const amount       = booking.guide_payout_eur
-
-    const chatBody = [
-      `💳 I've shared my bank transfer details with you.`,
-      ``,
-      `Recipient: ${holderName}`,
-      `IBAN: ${cleanIban}`,
-      `Amount: €${amount}`,
-      `Reference: ${reference}`,
-      ``,
-      `Open your booking page for the full transfer details.`,
-    ].join('\n')
-
-    await serviceClient
-      .from('booking_messages')
-      .insert({ booking_id: bookingId, sender_id: user.id, body: chatBody })
-      .then(({ error: msgErr }) => {
-        if (msgErr) console.error('[shareIbanWithAngler] chat message insert failed:', msgErr)
-      })
   }
 
   revalidatePath(`/dashboard/bookings/${bookingId}`)
