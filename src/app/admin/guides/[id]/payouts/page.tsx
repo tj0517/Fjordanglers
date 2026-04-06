@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { AdminPayoutsActions } from './AdminPayoutsActions'
 
 /**
@@ -37,7 +37,7 @@ export default async function AdminGuidePayoutsPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const [{ data: guide }, { data: bookings }] = await Promise.all([
     supabase

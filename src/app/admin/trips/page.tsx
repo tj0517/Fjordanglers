@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import DeleteExperienceButton from '@/components/admin/delete-experience-button'
 import { Calendar, CheckCircle, AlertCircle, Euro } from 'lucide-react'
 
@@ -52,7 +52,7 @@ export default async function AdminExperiencesPage({
   const { filter } = await searchParams
   const currentFilter = filter ?? ''
 
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const { data } = await supabase
     .from('experiences')

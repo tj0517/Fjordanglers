@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
 import InquiryFormConfigEditor from '@/components/trips/InquiryFormConfigEditor'
 import type { DurationOptionPayload, GroupPricingPayload, ItineraryStep } from '@/actions/experiences'
@@ -19,7 +19,7 @@ export async function generateMetadata({
   params: Promise<{ id: string; expId: string }>
 }) {
   const { expId } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data: exp } = await supabase
     .from('experiences')
     .select('title')
@@ -34,7 +34,7 @@ export default async function AdminEditExperiencePage({
   params: Promise<{ id: string; expId: string }>
 }) {
   const { id: guideId, expId } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   // ── Parallel fetch ──────────────────────────────────────────────────────────
   const [{ data: guide }, { data: exp }, { data: guideAccommodations }, { data: expAccommodations }] = await Promise.all([

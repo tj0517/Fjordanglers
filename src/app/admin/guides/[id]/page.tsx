@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import DeleteGuideButton from '@/components/admin/delete-guide-button'
 import DeleteExperienceButton from '@/components/admin/delete-experience-button'
 import LinkGuideButton from '@/components/admin/link-guide-button'
@@ -83,7 +83,7 @@ export default async function AdminGuideDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const [{ data: guide }, { data: experiences }, { data: bookings }] = await Promise.all([
     supabase

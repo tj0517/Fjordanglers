@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import LeadActions from '@/components/admin/lead-actions'
 import type { LeadStatus } from '@/actions/admin'
 import { CountryFlag } from '@/components/ui/country-flag'
@@ -68,7 +68,7 @@ const PLAN_LABELS: Record<string, string> = {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminLeadsPage() {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const { data: leads } = await supabase
     .from('leads')

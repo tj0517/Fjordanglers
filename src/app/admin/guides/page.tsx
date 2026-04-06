@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import LinkGuideButton from '@/components/admin/link-guide-button'
 import { QuickApproveButton } from '@/components/admin/quick-approve-button'
 import { CountryFlag } from '@/components/ui/country-flag'
@@ -35,7 +35,7 @@ export default async function AdminGuidesPage({
   searchParams: Promise<{ filter?: string }>
 }) {
   const { filter = '' } = await searchParams
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const [{ data: guides }, { data: expCounts }] = await Promise.all([
     supabase

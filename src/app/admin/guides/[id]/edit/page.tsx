@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import EditGuideForm from '@/components/admin/edit-guide-form'
 
 /**
@@ -16,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data } = await supabase
     .from('guides')
     .select('full_name')
@@ -33,7 +33,7 @@ export default async function AdminEditGuidePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const [{ data: guide }, { data: guideImages }] = await Promise.all([
     supabase

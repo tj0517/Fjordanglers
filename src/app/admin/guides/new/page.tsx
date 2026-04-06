@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import CreateGuideForm, { type GuideFormDefaults } from '@/components/admin/create-guide-form'
 import { UserPlus } from 'lucide-react'
 
@@ -66,7 +66,7 @@ export default async function NewBetaListingPage({
 
   // ── Pre-fill mode: fetch lead data ────────────────────────────────────────
   if (lead_id != null && lead_id !== '') {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     const { data: lead } = await supabase
       .from('leads')

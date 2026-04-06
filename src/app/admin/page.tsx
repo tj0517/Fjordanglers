@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Plus, AlertCircle, ArrowRight } from 'lucide-react'
 
@@ -22,7 +22,7 @@ const LEAD_STATUS: Record<string, { label: string; color: string; bg: string }> 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AdminPage() {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const [
     { data: allGuidesData },

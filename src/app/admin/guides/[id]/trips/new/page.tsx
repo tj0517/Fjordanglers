@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 import ExperienceForm from '@/components/trips/experience-form'
 import { UserPlus } from 'lucide-react'
 
@@ -13,7 +13,7 @@ import { UserPlus } from 'lucide-react'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data: guide } = await supabase.from('guides').select('full_name').eq('id', id).single()
   return { title: guide != null ? `New Trip for ${guide.full_name} — Admin` : 'New Trip' }
 }
@@ -24,7 +24,7 @@ export default async function AdminNewExperiencePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
 
   const { data: guide } = await supabase
     .from('guides')
