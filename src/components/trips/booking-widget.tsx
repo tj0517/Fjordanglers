@@ -20,6 +20,14 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   Calendar, Clock, Info, Check, Minus, Plus, MessageSquare, ArrowDown,
 } from 'lucide-react'
+import {
+  MultiPeriodPicker,
+  type Period,
+  fmtPeriod,
+  INQUIRY_PERIOD_EVENT,
+  type InquiryPeriodEventDetail,
+  encodePeriodsParam,
+} from '@/components/trips/multi-period-picker'
 
 // ─── Availability types ───────────────────────────────────────────────────────
 
@@ -504,8 +512,12 @@ export function BookingWidget({
   const [calendarOpen,        setCalendarOpen]         = useState(false)
   /** Hover date for range-mode preview in direct mode calendar. */
   const [hoverDate,           setHoverDate]            = useState<string | null>(null)
-  const calendarRef = useRef<HTMLDivElement>(null)
-  const optionRef   = useRef<HTMLDivElement>(null)
+  const [inquiryPeriods,      setInquiryPeriods]      = useState<Period[]>([])
+  const [inquiryCalendarOpen, setInquiryCalendarOpen] = useState(false)
+  const [bookMode,            setBookMode]            = useState<'direct' | 'icelandic'>('direct')
+  const calendarRef        = useRef<HTMLDivElement>(null)
+  const optionRef          = useRef<HTMLDivElement>(null)
+  const inquiryCalendarRef = useRef<HTMLDivElement>(null)
 
   // ── Sync FROM main-content duration cards ────────────────────────────────
   useEffect(() => {
@@ -552,6 +564,37 @@ export function BookingWidget({
     document.addEventListener('mousedown', handleOutside)
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [calendarOpen])
+
+  // Close icelandic period picker on outside click
+  useEffect(() => {
+    if (!inquiryCalendarOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (inquiryCalendarRef.current && !inquiryCalendarRef.current.contains(e.target as Node)) {
+        setInquiryCalendarOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [inquiryCalendarOpen])
+
+  // Sync inquiry periods with main-page calendar
+  useEffect(() => {
+    function handler(e: Event) {
+      const detail = (e as CustomEvent<InquiryPeriodEventDetail>).detail
+      if (detail.source !== 'widget') setInquiryPeriods(detail.periods)
+    }
+    window.addEventListener(INQUIRY_PERIOD_EVENT, handler)
+    return () => window.removeEventListener(INQUIRY_PERIOD_EVENT, handler)
+  }, [])
+
+  function handleInquiryPeriodsChange(periods: Period[]) {
+    setInquiryPeriods(periods)
+    window.dispatchEvent(
+      new CustomEvent<InquiryPeriodEventDetail>(INQUIRY_PERIOD_EVENT, {
+        detail: { periods, source: 'widget' },
+      }),
+    )
+  }
 
   const selectedOpt = durationOptions[selectedOptIdx] ?? durationOptions[0]
 
@@ -612,8 +655,65 @@ export function BookingWidget({
       }}
     >
 
-      {/* ── Classic date picker ───────────────────────────────────────────────── */}
-      {!isDraft && (
+      {/* ── Period picker — icelandic mode ─────────────────────────────────────── */}
+      {!isDraft && bookMode === 'icelandic' && (
+        <div className="mb-4" ref={inquiryCalendarRef} style={{ position: 'relative' }}>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setInquiryCalendarOpen(o => !o)}
+              className="flex-1 flex items-center justify-between px-4 py-3 rounded-2xl transition-all"
+              style={{ background: '#F3EDE4', border: `1.5px solid ${inquiryCalendarOpen ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}` }}
+              aria-expanded={inquiryCalendarOpen}>
+              <div className="flex items-center gap-3 min-w-0">
+                <Calendar size={15} strokeWidth={1.4} className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.45 }} />
+                {inquiryPeriods.length === 0
+                  ? <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>Pick your travel period</span>
+                  : <span className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                      {inquiryPeriods.length === 1 ? fmtPeriod(inquiryPeriods[0]) : `${inquiryPeriods.length} periods selected`}
+                    </span>}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {inquiryPeriods.length > 0 && (
+                  <span onClick={e => { e.stopPropagation(); handleInquiryPeriodsChange([]) }} role="button"
+                    className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
+                    style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}>Clear</span>
+                )}
+                <ChevronDown size={12} strokeWidth={1.6} className="transition-transform"
+                  style={{ transform: inquiryCalendarOpen ? 'rotate(180deg)' : 'rotate(0deg)', color: 'rgba(10,46,77,0.35)' }} />
+              </div>
+            </button>
+            <a href="#widget-cta" className="flex-shrink-0 w-[50px] h-[50px] rounded-2xl flex items-center justify-center transition-all hover:brightness-110"
+              style={{ background: '#0A2E4D' }}>
+              <ArrowDown size={13} strokeWidth={1.8} style={{ color: 'white' }} />
+            </a>
+          </div>
+          {inquiryCalendarOpen && (
+            <div className="absolute left-0 right-0 z-50 mt-2 p-4 rounded-2xl"
+              style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.12)', boxShadow: '0 16px 48px rgba(10,46,77,0.16)', top: '100%' }}
+              role="dialog">
+              <MultiPeriodPicker periods={inquiryPeriods} onChange={handleInquiryPeriodsChange}
+                availabilityConfig={availabilityConfig ?? null} blockedDates={blockedDates ?? []} />
+              <button type="button" onClick={() => setInquiryCalendarOpen(false)}
+                className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-[0.14em] f-body transition-opacity hover:opacity-80"
+                style={{ background: '#0A2E4D', color: '#fff' }}>Done</button>
+            </div>
+          )}
+          {inquiryPeriods.length > 0 && !inquiryCalendarOpen && (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {inquiryPeriods.map((p, idx) => (
+                <span key={idx} className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
+                  style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.12)' }}>
+                  {fmtPeriod(p)}
+                  <button type="button" onClick={() => handleInquiryPeriodsChange(inquiryPeriods.filter((_, i) => i !== idx))}
+                    className="opacity-50 hover:opacity-100 transition-opacity" style={{ lineHeight: 1, fontSize: '14px' }}>×</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Classic date picker — direct booking mode ───────────────────────── */}
+      {!isDraft && bookMode === 'direct' && (
         <div className="mb-4" ref={calendarRef} style={{ position: 'relative' }}>
 
           {/* Trigger row */}
@@ -741,6 +841,25 @@ export function BookingWidget({
         </div>
       )}
 
+      {/* ── Mode selector ───────────────────────────────────────────────────── */}
+      {!isDraft && (
+        <div className="flex gap-2 mb-4 p-1 rounded-2xl"
+          style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.08)' }}>
+          {([
+            { mode: 'direct'    as const, label: 'Direct booking', icon: '📅' },
+            { mode: 'icelandic' as const, label: 'Request dates',  icon: '💬' },
+          ]).map(({ mode, label, icon }) => (
+            <button key={mode} type="button" onClick={() => setBookMode(mode)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold f-body transition-all"
+              style={bookMode === mode
+                ? { background: 'white', color: '#0A2E4D', boxShadow: '0 1px 8px rgba(10,46,77,0.10)' }
+                : { background: 'transparent', color: 'rgba(10,46,77,0.45)' }}>
+              <span style={{ fontSize: '13px' }}>{icon}</span>{label}
+            </button>
+          ))}
+        </div>
+      )}
+      {!isDraft && <div className="mb-4" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />}
 
       {/* ── Duration option dropdown ─────────────────────────────────────────── */}
       {<div className="mb-4" ref={optionRef} style={{ position: 'relative' }}>
@@ -1001,52 +1120,50 @@ export function BookingWidget({
       <div id="widget-cta" />
       {isDraft ? (
         <>
-          <div
-            className="flex items-start gap-3 px-4 py-3 rounded-2xl mb-4"
-            style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.18)' }}
-          >
+          <div className="flex items-start gap-3 px-4 py-3 rounded-2xl mb-4"
+            style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.18)' }}>
             <Info size={16} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" style={{ color: '#E67E50' }} />
             <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
               This experience is a draft. Publish it from your dashboard to accept bookings.
             </p>
           </div>
-          <Link
-            href={`/dashboard/trips/${expId}/edit`}
+          <Link href={`/dashboard/trips/${expId}/edit`}
             className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-            style={{ background: '#E67E50' }}
-          >
+            style={{ background: '#E67E50' }}>
             Edit &amp; Publish →
           </Link>
         </>
-      ) : selectedDates.length > 0 ? (
-        /* ── Dates selected → request booking ───────────────────────────── */
+      ) : bookMode === 'direct' ? (
         <>
-          <Link
-            href={`/trips/${expId}/inquire?dates=${[...selectedDates].sort().join(',')}&group=${groupSize}`}
-            className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-            style={{ background: '#E67E50' }}
-          >
-            {selectedDates.length === 1
-              ? `Request ${[...selectedDates][0]} →`
-              : `Request ${selectedDates.length} days →`}
-          </Link>
+          {selectedDates.length > 0 ? (
+            <Link href={`/trips/${expId}/inquire?dates=${[...selectedDates].sort().join(',')}&group=${groupSize}`}
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              style={{ background: '#E67E50' }}>
+              {selectedDates.length === 1 ? `Request ${[...selectedDates][0]} →` : `Request ${selectedDates.length} days →`}
+            </Link>
+          ) : (
+            <button type="button" onClick={() => setCalendarOpen(true)}
+              className="w-full font-semibold py-3.5 rounded-2xl text-sm tracking-wide f-body transition-all hover:brightness-105"
+              style={{ background: '#E67E50', color: '#fff' }}>
+              Select dates to book →
+            </button>
+          )}
           <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
             No payment now. Guide confirms within 24 hours.
           </p>
         </>
       ) : (
-        /* ── No dates → prompt to open calendar ─────────────────────────── */
         <>
-          <button
-            type="button"
-            onClick={() => setCalendarOpen(true)}
-            className="w-full font-semibold py-3.5 rounded-2xl text-sm tracking-wide f-body transition-all hover:brightness-105"
-            style={{ background: '#E67E50', color: '#fff' }}
-          >
-            Select dates to book →
-          </button>
+          <Link
+            href={`/trips/${expId}/inquire${inquiryPeriods.length > 0 ? `?periods=${encodePeriodsParam(inquiryPeriods)}&group=${groupSize}` : `?group=${groupSize}`}`}
+            className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+            style={{ background: '#0A2E4D' }}>
+            {inquiryPeriods.length > 0
+              ? inquiryPeriods.length === 1 ? `Request trip — ${fmtPeriod(inquiryPeriods[0])} →` : `Request trip — ${inquiryPeriods.length} periods →`
+              : 'Request this trip →'}
+          </Link>
           <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            No payment now. Guide confirms within 24 hours.
+            Guide reviews your request and sets up a custom offer — no payment until confirmed.
           </p>
         </>
       )}

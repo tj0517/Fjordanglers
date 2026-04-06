@@ -1072,9 +1072,7 @@ export default function InquireForm({
       />
 
       {/* ── Tab content card ─────────────────────────────────────────── */}
-      <div className={activeTab === 'extras' && !isLoggedIn
-        ? 'grid grid-cols-1 md:grid-cols-[1fr_360px] items-start gap-4'
-        : ''}>
+      <div className={activeTab === 'extras' && !isLoggedIn ? 'flex flex-col gap-4' : ''}>
       <div
         className="rounded-2xl p-6 flex flex-col gap-5"
         style={{
