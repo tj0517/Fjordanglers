@@ -390,15 +390,12 @@ export default async function BookingsPage({
                   {item.guests != null ? String(item.guests) : '—'}
                 </p>
 
-                {/* Amount */}
+                {/* Amount — guide sees only their payout */}
                 <div>
-                  {item.totalEur != null ? (
-                    <>
-                      <p className="text-[#0A2E4D] text-sm font-bold f-display">€{item.totalEur}</p>
-                      {item.guidePayoutEur != null && (
-                        <p className="text-[#16A34A] text-xs f-body">€{item.guidePayoutEur} you</p>
-                      )}
-                    </>
+                  {item.guidePayoutEur != null ? (
+                    <p className="text-[#E67E50] text-sm font-bold f-display">€{item.guidePayoutEur}</p>
+                  ) : item.totalEur != null ? (
+                    <p className="text-[#0A2E4D] text-sm font-bold f-display">€{item.totalEur}</p>
                   ) : item.source === 'inquiry' ? (
                     /* Inquiry with no offer price yet — waiting for guide to send offer */
                     <p

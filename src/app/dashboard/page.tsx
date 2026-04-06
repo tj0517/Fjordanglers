@@ -147,12 +147,12 @@ export default async function DashboardHomePage() {
       .in('status', ['confirmed', 'completed']).gte('booking_date', sixMonthsAgoStr),
     // Upcoming confirmed trips
     supabase.from('bookings')
-      .select('id, angler_full_name, guests, total_eur, booking_date')
+      .select('id, angler_full_name, guests, guide_payout_eur, booking_date')
       .eq('guide_id', guide.id).eq('status', 'confirmed')
       .gte('booking_date', today).order('booking_date', { ascending: true }).limit(4),
     // Recent activity
     supabase.from('bookings')
-      .select('id, angler_full_name, total_eur, status, created_at')
+      .select('id, angler_full_name, guide_payout_eur, status, created_at')
       .eq('guide_id', guide.id).order('created_at', { ascending: false }).limit(6),
     // All-time totals
     supabase.from('bookings').select('guide_payout_eur').eq('guide_id', guide.id)
@@ -454,7 +454,7 @@ export default async function DashboardHomePage() {
                         {bk.angler_full_name ?? 'Angler'}
                       </p>
                       <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {bk.guests} {bk.guests === 1 ? 'guest' : 'guests'} · {fmtEur(bk.total_eur)}
+                        {bk.guests} {bk.guests === 1 ? 'guest' : 'guests'} · {fmtEur(bk.guide_payout_eur)}
                       </p>
                     </div>
                     <p className="text-[10px] font-bold f-body flex-shrink-0"
@@ -496,7 +496,7 @@ export default async function DashboardHomePage() {
                         {bk.angler_full_name ?? 'Angler'}
                       </p>
                       <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {fmtEur(bk.total_eur)} · {dateStr}
+                        {fmtEur(bk.guide_payout_eur)} · {dateStr}
                       </p>
                     </div>
                     <StatusChip status={bk.status} />

@@ -220,7 +220,7 @@ export default async function EarningsPage() {
               { icon: '✅', title: 'Paid out', text: 'Earnings already transferred to your bank account by FjordAnglers.' },
               { icon: '⏳', title: 'Awaiting payout', text: 'Trip is confirmed or completed but the admin has not yet sent the transfer. Usually processed within a few business days.' },
               { icon: '📅', title: 'Upcoming trips', text: 'Earnings from confirmed future trips — the money will be in your account after the trip is completed.' },
-              { icon: '💶', title: 'Your cut', text: 'Your guide payout = total paid by angler minus the platform commission and 5% service fee. The balance payment has no platform fee.' },
+              { icon: '💶', title: 'Your cut', text: 'The amount you receive for each booking after FjordAnglers deducts its fee.' },
             ]}
           />
         </div>
@@ -331,11 +331,11 @@ export default async function EarningsPage() {
             {/* Table head — desktop */}
             <div className="hidden sm:grid px-6 py-2.5"
               style={{
-                gridTemplateColumns: '1fr 1.2fr 90px 90px 130px',
+                gridTemplateColumns: '1fr 1.2fr 90px 130px',
                 borderBottom: '1px solid rgba(10,46,77,0.05)',
                 background: 'rgba(10,46,77,0.02)',
               }}>
-              {['Trip date', 'Angler', 'Total', 'Your cut', 'Status'].map(col => (
+              {['Trip date', 'Angler', 'Your cut', 'Status'].map(col => (
                 <p key={col} className="text-[10px] uppercase tracking-[0.14em] font-semibold f-body"
                    style={{ color: 'rgba(10,46,77,0.35)' }}>{col}</p>
               ))}
@@ -356,7 +356,7 @@ export default async function EarningsPage() {
                   >
                     {/* Desktop row */}
                     <div className="hidden sm:grid items-center px-6 py-4"
-                      style={{ gridTemplateColumns: '1fr 1.2fr 90px 90px 130px' }}>
+                      style={{ gridTemplateColumns: '1fr 1.2fr 90px 130px' }}>
 
                       {/* Trip + date */}
                       <div className="min-w-0 pr-3">
@@ -373,12 +373,7 @@ export default async function EarningsPage() {
                         </p>
                       </div>
 
-                      {/* Total */}
-                      <p className="text-sm font-semibold f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                        {fmtEur(tx.total_eur)}
-                      </p>
-
-                      {/* Guide payout */}
+                      {/* Your cut only — no angler total shown */}
                       <p className="text-sm font-bold f-body" style={{ color: isSent ? '#16A34A' : '#0A2E4D' }}>
                         {fmtEur(tx.guide_payout_eur)}
                       </p>
