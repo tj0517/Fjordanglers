@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import { createBookingCheckout } from '@/actions/bookings'
+import { signUp } from '@/actions/auth'
 import { createClient } from '@/lib/supabase/client'
 import { GoogleAuthButton } from '@/components/auth/google-auth-button'
 import { COUNTRIES } from '@/lib/countries'
@@ -48,6 +49,12 @@ export default function BookingCheckoutForm({
   const [marketingConsent, setMarketingConsent] = useState(false)
   const [termsAccepted, setTermsAccepted]       = useState(false)
 
+  // Current page URL for Google OAuth redirect — set after mount to capture query params.
+  const [currentUrl, setCurrentUrl] = useState(`/book/${expId}`)
+  useEffect(() => {
+    setCurrentUrl(window.location.pathname + window.location.search)
+  }, [expId])
+
   const [error, setError]       = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -71,18 +78,12 @@ export default function BookingCheckoutForm({
       }
 
       // ── Create account ────────────────────────────────────────────────────
+      // Uses the server action (admin.createUser with email_confirm: true) so no
+      // confirmation email is sent and the user is signed in immediately.
       if (!isLoggedIn && mode === 'register') {
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email: anglerEmail,
-          password,
-          options: { data: { full_name: anglerName } },
-        })
-        if (signUpError) {
-          setError(signUpError.message)
-          return
-        }
-        if (!data.session) {
-          setError('Account created — check your email to confirm, then try booking again.')
+        const result = await signUp(anglerName, anglerEmail, password)
+        if ('error' in result) {
+          setError(result.error)
           return
         }
       }
@@ -275,7 +276,7 @@ export default function BookingCheckoutForm({
           {mode === 'register' && (
             <>
               <GoogleAuthButton
-                next={`/book/${expId}/confirmation`}
+                next={currentUrl}
                 label="Sign up with Google"
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

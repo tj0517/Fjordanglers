@@ -304,9 +304,10 @@ export default function BookingRespondForm({
 
   // ── Accept form state ─────────────────────────────────────────────────────
   //
-  // Direct bookings: dates are pre-selected from the angler's request and locked.
-  // Inquiry bookings: guide picks dates from the availability window.
-  const initialConfirmedDays: string[] = isDirect
+  // Single-date direct bookings: pre-select the one date the angler chose.
+  // Request bookings (direct with a window) + inquiry bookings: start empty
+  //   so the guide must explicitly pick the exact days they'll run the trip.
+  const initialConfirmedDays: string[] = (isDirect && !isRequestBooking)
     ? (anglerRequestedDates && anglerRequestedDates.length > 0
         ? anglerRequestedDates
         : [windowFrom])
