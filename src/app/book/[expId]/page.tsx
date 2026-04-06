@@ -293,7 +293,7 @@ export default async function BookPage({ params, searchParams }: Props) {
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       {navBar}
 
-      <div className="max-w-5xl mx-auto px-4 py-10 grid lg:grid-cols-2 gap-10">
+      <div className="max-w-6xl mx-auto px-4 py-10 grid lg:grid-cols-2 gap-10 lg:items-start">
 
         {/* ── LEFT: Experience summary ──────────────────────────────────────── */}
         <div className="flex flex-col gap-6">
@@ -512,7 +512,7 @@ export default async function BookPage({ params, searchParams }: Props) {
         </div>
 
         {/* ── RIGHT: Angler contact form ────────────────────────────────────── */}
-        <div>
+        <div className="lg:sticky lg:top-8">
           <div
             className="p-8"
             style={{

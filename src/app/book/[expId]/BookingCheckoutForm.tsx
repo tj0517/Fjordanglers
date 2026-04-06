@@ -272,7 +272,7 @@ export default function BookingCheckoutForm({
 
       {/* ── Auth fields (login + register) ───────────────────────────────────── */}
       {!isLoggedIn && (
-        <>
+        <div className="flex flex-col gap-3">
           {mode === 'register' && (
             <>
               <GoogleAuthButton
@@ -336,7 +336,7 @@ export default function BookingCheckoutForm({
               </p>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {/* ── Error ───────────────────────────────────────────────────────────── */}
