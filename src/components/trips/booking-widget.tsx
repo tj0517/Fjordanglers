@@ -607,7 +607,9 @@ export function BookingWidget({
   const fromPrice = useMemo(() => globalFromPrice(durationOptions), [durationOptions])
 
   // ── Price + service fee ───────────────────────────────────────────────────
-  const subtotal   = Math.round(price.total * 100) / 100
+  // In direct mode with single-day options (non-range), multiply by number of selected dates
+  const numSelectedDays = (bookMode === 'direct' && (selectedOpt.days ?? 0) <= 1 && selectedDates.length > 0) ? selectedDates.length : 1
+  const subtotal   = Math.round(price.total * numSelectedDays * 100) / 100
   const serviceFee = Math.min(Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100, SERVICE_FEE_CAP_EUR)
   const grandTotal = Math.round((subtotal + serviceFee) * 100) / 100
 
@@ -1136,10 +1138,10 @@ export function BookingWidget({
       ) : bookMode === 'direct' ? (
         <>
           {selectedDates.length > 0 ? (
-            <Link href={`/trips/${expId}/inquire?dates=${[...selectedDates].sort().join(',')}&group=${groupSize}`}
+            <Link href={`/book/${expId}?dates=${[...selectedDates].sort().join(',')}&guests=${groupSize}&numDays=${selectedDates.length}${selectedDurationLabel ? `&pkgLabel=${encodeURIComponent(selectedDurationLabel)}` : ''}`}
               className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
               style={{ background: '#E67E50' }}>
-              {selectedDates.length === 1 ? `Request ${[...selectedDates][0]} →` : `Request ${selectedDates.length} days →`}
+              {selectedDates.length === 1 ? `Book ${[...selectedDates][0]} →` : `Book ${selectedDates.length} days →`}
             </Link>
           ) : (
             <button type="button" onClick={() => setCalendarOpen(true)}

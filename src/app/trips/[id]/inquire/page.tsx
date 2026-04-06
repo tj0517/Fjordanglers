@@ -111,7 +111,7 @@ export default async function InquirePage({
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <div className="max-w-lg mx-auto px-4 py-12">
+      <div className="max-w-3xl mx-auto px-4 py-12">
 
         {/* Back link */}
         <a
