@@ -1039,7 +1039,7 @@ export default function InquireForm({
           <a href="/login" className="text-[11px] font-semibold f-body flex-shrink-0"
             style={{ color: 'rgba(10,46,77,0.4)' }}>Not you?</a>
         </div>
-      ) : (
+      ) : activeTab !== 'extras' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label style={labelCss} className="f-body flex items-center gap-1">
@@ -1060,7 +1060,7 @@ export default function InquireForm({
               style={inputCss} className="f-body" />
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* ── Tab bar ──────────────────────────────────────────────────── */}
       <TabBar
@@ -1549,19 +1549,13 @@ export default function InquireForm({
         {/* ── Auth panel (right column on desktop) ─────────────────── */}
         {activeTab === 'extras' && !isLoggedIn && (
           <div
-            className="rounded-2xl p-6 flex flex-col gap-5"
+            className="rounded-2xl p-6 flex flex-col gap-4"
             style={{ background: 'white', border: '1px solid rgba(10,46,77,0.07)' }}
           >
-            <div>
-              <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
-                {authMode === 'login' ? 'Log in to send your request' : 'Create account & send'}
-              </p>
-              {email.trim() && (
-                <p className="text-xs f-body mt-1 truncate" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                  {email}
-                </p>
-              )}
-            </div>
+            <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
+              {authMode === 'login' ? 'Log in to send your request' : 'Create account & send'}
+            </p>
+
             {/* Auth mode toggle */}
             <div className="flex rounded-2xl p-1 gap-1" style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.08)' }}>
               {(['login', 'register'] as const).map(m => (
@@ -1582,23 +1576,66 @@ export default function InquireForm({
                 </button>
               ))}
             </div>
+
+            {/* Name — only for register */}
+            {authMode === 'register' && (
+              <div>
+                <label style={labelCss} className="f-body">
+                  Full name <span style={{ color: '#E67E50' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="John Smith"
+                  required
+                  disabled={isPending}
+                  style={inputCss}
+                  className="f-body"
+                />
+              </div>
+            )}
+
+            {/* Email */}
+            <div>
+              <label style={labelCss} className="f-body">
+                Email <span style={{ color: '#E67E50' }}>*</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                disabled={isPending}
+                style={inputCss}
+                className="f-body"
+              />
+            </div>
+
             {/* Password */}
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Password"
-              required
-              disabled={isPending}
-              style={inputCss}
-              className="f-body"
-            />
+            <div>
+              <label style={labelCss} className="f-body">
+                Password <span style={{ color: '#E67E50' }}>*</span>
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder={authMode === 'register' ? 'Min 8 characters' : 'Your password'}
+                required
+                disabled={isPending}
+                style={inputCss}
+                className="f-body"
+              />
+            </div>
+
             {/* Submit */}
             <button
               type="button"
               onClick={handleAuthAndSubmit}
               disabled={isPending}
-              className="py-4 rounded-2xl text-base font-bold f-body transition-all"
+              className="py-4 rounded-2xl text-sm font-bold f-body transition-all"
               style={{
                 background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
                 color: 'white',
