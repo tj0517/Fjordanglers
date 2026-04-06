@@ -926,8 +926,8 @@ export function BookingWidget({
           style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.08)' }}
         >
           {([
-            { mode: 'direct'    as const, label: 'Direct booking', icon: '💬' },
-            { mode: 'icelandic' as const, label: 'Request dates',  icon: '📅' },
+            { mode: 'direct'    as const, label: 'Direct booking', icon: '📅' },
+            { mode: 'icelandic' as const, label: 'Message guide',  icon: '💬' },
           ]).map(({ mode, label, icon }) => (
             <button
               key={mode}
@@ -1224,23 +1224,37 @@ export function BookingWidget({
           </Link>
         </>
       ) : bookMode === 'direct' ? (
-        /* ── Direct booking — with optional dates pre-filled ─────────────── */
+        /* ── Direct booking — dates required; no redirect without selection ─ */
         <>
-          <Link
-            href={`/trips/${expId}/inquire?${selectedDates.length > 0 ? `dates=${[...selectedDates].sort().join(',')}&` : ''}group=${groupSize}&mode=direct`}
-            className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-            style={{ background: '#E67E50' }}
-          >
-            {selectedDates.length > 0
-              ? selectedDates.length === 1
+          {selectedDates.length > 0 ? (
+            <Link
+              href={`/trips/${expId}/inquire?dates=${[...selectedDates].sort().join(',')}&group=${groupSize}&mode=direct`}
+              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+              style={{ background: '#E67E50' }}
+            >
+              {selectedDates.length === 1
                 ? `Request — ${[...selectedDates][0]} →`
-                : `Request — ${selectedDates.length} days →`
-              : 'Message the guide →'}
-          </Link>
+                : `Request — ${selectedDates.length} days →`}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCalendarOpen(true)}
+              className="w-full text-center font-semibold py-3.5 rounded-2xl text-sm tracking-wide f-body"
+              style={{
+                background: 'rgba(10,46,77,0.06)',
+                color: 'rgba(10,46,77,0.35)',
+                border: '1.5px dashed rgba(10,46,77,0.18)',
+                cursor: 'pointer',
+              }}
+            >
+              Pick dates above to continue ↑
+            </button>
+          )}
           <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
             {selectedDates.length > 0
-              ? 'Selected dates will be pre-filled in the form.'
-              : 'Ask about dates, availability, or anything — no commitment, no payment.'}
+              ? 'Your dates will be pre-filled in the booking form.'
+              : 'Select specific dates to send a booking request.'}
           </p>
         </>
       ) : (
