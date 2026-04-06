@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { ExperienceWithGuide, LocationSpot } from '@/types'
@@ -184,6 +184,12 @@ export default function MapSection({
 
   const hasServerFilters = filterKey !== ''
 
+  // Parse selected countries from filterKey (URLSearchParams string)
+  const countries = useMemo(() => {
+    const sp = new URLSearchParams(filterKey)
+    return sp.get('country')?.split(',').filter(Boolean) ?? []
+  }, [filterKey])
+
   // Viewport filter applies on desktop and on mobile map view
   const useViewportFilter = bounds != null && !hasServerFilters && (isDesktop || mobileView === 'map')
 
@@ -259,6 +265,7 @@ export default function MapSection({
               onBoundsChange={setBounds}
               hoveredExpId={hoveredExpId}
               onPinClick={handlePinClick}
+              countries={countries}
             />
           </div>
         </aside>
@@ -285,6 +292,7 @@ export default function MapSection({
             hoveredExpId={hoveredExpId}
             onPinClick={handlePinClick}
             showPopups={false}
+            countries={countries}
           />
         </div>
 

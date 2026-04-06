@@ -16,6 +16,75 @@ type PointProps = {
   bookingType: string | null
 }
 
+// ─── Country bounding boxes (SW corner, NE corner) ────────────────────────────
+const COUNTRY_BOUNDS: Record<string, [[number, number], [number, number]]> = {
+  'Norway':  [[57.5,  4.0],  [71.5, 31.5]],
+  'Sweden':  [[55.0, 10.5],  [69.5, 24.5]],
+  'Denmark': [[54.5,  7.5],  [58.0, 15.5]],
+  'Finland': [[59.5, 18.5],  [70.5, 31.5]],
+  'Iceland': [[63.0, -25.5], [66.8, -12.5]],
+}
+
+function computeCountryBounds(countries: string[]): L.LatLngBoundsExpression | null {
+  let swLat = Infinity, swLng = Infinity, neLat = -Infinity, neLng = -Infinity
+  let found = false
+  for (const c of countries) {
+    const b = COUNTRY_BOUNDS[c]
+    if (b == null) continue
+    found = true
+    swLat = Math.min(swLat, b[0][0]); swLng = Math.min(swLng, b[0][1])
+    neLat = Math.max(neLat, b[1][0]); neLng = Math.max(neLng, b[1][1])
+  }
+  return found ? [[swLat, swLng], [neLat, neLng]] : null
+}
+
+function collectPoints(experiences: ExperienceWithGuide[]): L.LatLngTuple[] {
+  const pts: L.LatLngTuple[] = []
+  for (const exp of experiences) {
+    if (exp.location_lat != null && exp.location_lng != null)
+      pts.push([exp.location_lat, exp.location_lng])
+    const spots = (exp.location_spots as unknown as LocationSpot[] | null) ?? []
+    spots.forEach(s => pts.push([s.lat, s.lng]))
+  }
+  return pts
+}
+
+// ─── MapPositioner — initial fit + country fly-to ─────────────────────────────
+function MapPositioner({
+  experiences,
+  countries,
+}: {
+  experiences: ExperienceWithGuide[]
+  countries: string[]
+}) {
+  const map = useMap()
+  const prevKey = useRef('')
+
+  // On mount: fit to country bounds or to all pin bounds
+  useEffect(() => {
+    prevKey.current = countries.join(',')
+    if (countries.length > 0) {
+      const b = computeCountryBounds(countries)
+      if (b) map.fitBounds(b as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 8 })
+      return
+    }
+    const pts = collectPoints(experiences)
+    if (pts.length >= 2) map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 7 })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps — intentionally once on mount
+
+  // When countries change after mount: fly to new country bounds
+  useEffect(() => {
+    const key = countries.join(',')
+    if (key === prevKey.current) return
+    prevKey.current = key
+    if (countries.length === 0) return
+    const b = computeCountryBounds(countries)
+    if (b) map.flyToBounds(b as L.LatLngBoundsExpression, { padding: [40, 40], duration: 0.5 })
+  }, [countries, map])
+
+  return null
+}
+
 // ─── BoundsTracker ────────────────────────────────────────────────────────────
 function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: MapBounds) => void }) {
   const fire = useCallback(
@@ -395,6 +464,7 @@ type Props = {
   hoveredExpId?: string | null
   onPinClick?: (id: string) => void
   showPopups?: boolean
+  countries?: string[]
 }
 
 // ─── Main MapView ──────────────────────────────────────────────────────────────
@@ -404,6 +474,7 @@ export default function MapView({
   hoveredExpId,
   onPinClick,
   showPopups = true,
+  countries = [],
 }: Props) {
   const [mapHoveredId, setMapHoveredId] = useState<string | null>(null)
   const [pinnedAreaId, setPinnedAreaId] = useState<string | null>(null)
@@ -440,6 +511,8 @@ export default function MapView({
       zoomControl={false}
       scrollWheelZoom
     >
+      <MapPositioner experiences={experiences} countries={countries} />
+
       {onBoundsChange != null && <BoundsTracker onBoundsChange={onBoundsChange} />}
 
       {/* Clears pinned highlight when user clicks map background */}
