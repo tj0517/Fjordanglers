@@ -319,7 +319,16 @@ export default async function BookingsPage({
           }
         />
       ) : (
-        <TableCard>
+        <>
+          {/* ── Mobile cards ──────────────────────────────────────────── */}
+          <div className="sm:hidden flex flex-col gap-3">
+            {activeItems.map(item => (
+              <MobileBookingCard key={item.id} item={item} />
+            ))}
+          </div>
+          {/* ── Desktop table ─────────────────────────────────────────── */}
+          <div className="hidden sm:block">
+          <TableCard>
           <TableHeader
             columns={['Type', 'Angler', 'Trip', 'Date', 'Guests', 'Amount', 'Status', '']}
             gridClass={GRID_CLASS}
@@ -427,7 +436,9 @@ export default async function BookingsPage({
               </Link>
             ))}
           </div>
-        </TableCard>
+          </TableCard>
+          </div>
+        </>
       )}
 
     </div>
@@ -435,6 +446,76 @@ export default async function BookingsPage({
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+function MobileBookingCard({ item }: { item: UnifiedItem }) {
+  return (
+    <Link
+      href={item.href}
+      className="block rounded-2xl px-4 py-4"
+      style={{
+        background:  item.isPrimary ? 'rgba(230,126,80,0.02)' : '#FDFAF7',
+        border:      item.isPrimary ? '1px solid rgba(230,126,80,0.18)' : '1px solid rgba(10,46,77,0.07)',
+        boxShadow:   '0 2px 8px rgba(10,46,77,0.04)',
+      }}
+    >
+      {/* Type + Status */}
+      <div className="flex items-center justify-between mb-2.5">
+        <span
+          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-1 rounded-full f-body"
+          style={{
+            background: item.isPrimary ? 'rgba(230,126,80,0.14)' : item.source === 'inquiry' ? 'rgba(139,92,246,0.1)' : 'rgba(59,130,246,0.1)',
+            color:      item.isPrimary ? '#E67E50' : item.source === 'inquiry' ? '#7C3AED' : '#2563EB',
+          }}
+        >
+          {item.isPrimary && (
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
+          )}
+          {item.source === 'inquiry' ? 'Request' : 'Booking'}
+        </span>
+        <span
+          className="text-[10px] font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full f-body"
+          style={{ background: item.statusBg, color: item.statusColor }}
+        >
+          {item.statusLabel}
+        </span>
+      </div>
+
+      {/* Angler */}
+      <div className="flex items-center gap-1.5 mb-0.5">
+        {item.anglerCountry != null && (
+          <CountryFlag country={item.anglerCountry} size={13} />
+        )}
+        <p className="text-[#0A2E4D] text-sm font-semibold f-body truncate">{item.anglerName}</p>
+      </div>
+
+      {/* Trip */}
+      <p className="text-[#0A2E4D]/60 text-xs f-body truncate mb-2">{item.tripTitle}</p>
+
+      {/* Date · Guests · Amount */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs f-body">
+        <span style={{ color: 'rgba(10,46,77,0.55)' }}>{item.dateLabel}</span>
+        {item.guests != null && (
+          <span style={{ color: 'rgba(10,46,77,0.55)' }}>
+            {item.guests} {item.guests === 1 ? 'guest' : 'guests'}
+          </span>
+        )}
+        {item.guidePayoutEur != null ? (
+          <span className="font-bold f-display" style={{ color: '#E67E50' }}>€{item.guidePayoutEur}</span>
+        ) : item.totalEur != null ? (
+          <span className="font-bold f-display" style={{ color: '#0A2E4D' }}>€{item.totalEur}</span>
+        ) : null}
+      </div>
+
+      {/* CTA */}
+      <p
+        className="mt-2.5 text-xs font-bold f-body text-right"
+        style={{ color: item.isPrimary ? '#E67E50' : 'rgba(10,46,77,0.38)' }}
+      >
+        {item.isPrimary ? 'Respond →' : 'View →'}
+      </p>
+    </Link>
+  )
+}
 
 function TableCard({ children }: { children: React.ReactNode }) {
   return (

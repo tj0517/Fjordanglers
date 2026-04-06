@@ -350,7 +350,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         </div>
 
         {landscapeTab === 'library' && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {LANDSCAPE_LIBRARY.map(url => {
               const selected = landscapeUrl === url
               return (
@@ -446,7 +446,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         ]} />
       }>
         <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <ImageUpload
               label="Avatar photo"
               aspect="square"
@@ -496,7 +496,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
           </div>
 
           {/* Country + City */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="country">Country *</Label>
               <select
@@ -861,7 +861,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
         {/* Collapsible boat fields */}
         {hasBoat && (
           <div className="mt-6 flex flex-col gap-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="boat_name">Boat name</Label>
                 <input
@@ -893,7 +893,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="boat_length_m">Length (m)</Label>
                 <input

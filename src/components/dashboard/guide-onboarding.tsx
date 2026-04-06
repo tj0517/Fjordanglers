@@ -197,7 +197,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
 
       {/* ─── Top bar ────────────────────────────────────────────────── */}
       <header
-        className="flex items-center justify-between px-8 py-4 flex-shrink-0"
+        className="flex items-center justify-between px-4 sm:px-8 py-4 flex-shrink-0"
         style={{ borderBottom: '1px solid rgba(10,46,77,0.07)', background: '#FDFAF7' }}
       >
         <Link href="/">
@@ -303,7 +303,7 @@ export default function GuideOnboarding({ defaultFullName }: { defaultFullName: 
                 </div>
 
                 {/* Country + City */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="ob-country" className="block text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
                       Country <span style={{ color: '#E67E50' }}>*</span>

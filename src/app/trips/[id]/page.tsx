@@ -364,9 +364,27 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const exp = await getExperience(id)
   if (!exp) return {}
+
+  const coverImg =
+    exp.images?.find((img: { url: string; is_cover: boolean }) => img.is_cover) ??
+    exp.images?.[0]
+
   return {
     title: exp.title,
-    description: exp.description,
+    description: exp.description ?? undefined,
+    openGraph: {
+      title: exp.title,
+      description: exp.description ?? undefined,
+      images: coverImg?.url
+        ? [{ url: coverImg.url, width: 1200, height: 630, alt: exp.title }]
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image' as const,
+      title: exp.title,
+      description: exp.description ?? undefined,
+      images: coverImg?.url ? [coverImg.url] : [],
+    },
   }
 }
 

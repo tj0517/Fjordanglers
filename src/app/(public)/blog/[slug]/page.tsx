@@ -28,7 +28,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const post = BLOG_POSTS.find(p => p.slug === slug)
   if (!post) return {}
-  return { title: `${post.title} — FjordAnglers`, description: post.excerpt }
+  return {
+    title: `${post.title} — FjordAnglers`,
+    description: post.excerpt,
+    openGraph: {
+      title: `${post.title} — FjordAnglers`,
+      description: post.excerpt,
+      type: 'article',
+      images: [{ url: post.img, width: 1200, height: 630, alt: post.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${post.title} — FjordAnglers`,
+      description: post.excerpt,
+      images: [post.img],
+    },
+  }
 }
 
 export default async function BlogPostPage({ params }: Props) {

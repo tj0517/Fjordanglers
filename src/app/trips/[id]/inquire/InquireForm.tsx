@@ -1072,6 +1072,9 @@ export default function InquireForm({
       />
 
       {/* ── Tab content card ─────────────────────────────────────────── */}
+      <div className={activeTab === 'extras' && !isLoggedIn
+        ? 'grid grid-cols-1 md:grid-cols-[1fr_360px] items-start gap-4'
+        : ''}>
       <div
         className="rounded-2xl p-6 flex flex-col gap-5"
         style={{
@@ -1545,6 +1548,76 @@ export default function InquireForm({
 
       </div>
 
+        {/* ── Auth panel (right column on desktop) ─────────────────── */}
+        {activeTab === 'extras' && !isLoggedIn && (
+          <div
+            className="rounded-2xl p-6 flex flex-col gap-5"
+            style={{ background: 'white', border: '1px solid rgba(10,46,77,0.07)' }}
+          >
+            <div>
+              <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
+                {authMode === 'login' ? 'Log in to send your request' : 'Create account & send'}
+              </p>
+              {email.trim() && (
+                <p className="text-xs f-body mt-1 truncate" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                  {email}
+                </p>
+              )}
+            </div>
+            {/* Auth mode toggle */}
+            <div className="flex rounded-2xl p-1 gap-1" style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.08)' }}>
+              {(['login', 'register'] as const).map(m => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setAuthMode(m); setError(null) }}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-semibold f-body transition-all"
+                  style={{
+                    background: authMode === m ? '#FDFAF7' : 'transparent',
+                    color: authMode === m ? '#0A2E4D' : 'rgba(10,46,77,0.4)',
+                    border: 'none',
+                    boxShadow: authMode === m ? '0 1px 6px rgba(10,46,77,0.08)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {m === 'login' ? 'Log In' : 'Sign Up'}
+                </button>
+              ))}
+            </div>
+            {/* Password */}
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Password"
+              required
+              disabled={isPending}
+              style={inputCss}
+              className="f-body"
+            />
+            {/* Submit */}
+            <button
+              type="button"
+              onClick={handleAuthAndSubmit}
+              disabled={isPending}
+              className="py-4 rounded-2xl text-base font-bold f-body transition-all"
+              style={{
+                background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
+                color: 'white',
+                border: 'none',
+                cursor: isPending ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isPending
+                ? 'Sending\u2026'
+                : authMode === 'login'
+                ? 'Log In & Send request \u2192'
+                : 'Sign Up & Send request \u2192'}
+            </button>
+          </div>
+        )}
+      </div>{/* end grid wrapper */}
+
       {/* ── Error banner ─────────────────────────────────────────────── */}
       {error != null && (
         <div className="rounded-xl px-4 py-3 text-sm f-body"
@@ -1573,78 +1646,23 @@ export default function InquireForm({
           </button>
         )}
 
-        {activeTab === 'extras' ? (
-          isLoggedIn ? (
-            <button
-              key="submit-btn"
-              type="button"
-              onClick={() => handleSubmit()}
-              disabled={isPending}
-              className="flex-1 py-4 rounded-2xl text-base font-bold f-body transition-all"
-              style={{
-                background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
-                color: 'white',
-                border: 'none',
-                cursor: isPending ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {isPending ? 'Sending\u2026' : 'Send request'}
-            </button>
-          ) : (
-            /* Unauthenticated — show inline login/register before submit */
-            <div className="flex-1 flex flex-col gap-3">
-              {/* Auth mode toggle */}
-              <div className="flex rounded-2xl p-1 gap-1" style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.08)' }}>
-                {(['login', 'register'] as const).map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => { setAuthMode(m); setError(null) }}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold f-body transition-all"
-                    style={{
-                      background: authMode === m ? '#FDFAF7' : 'transparent',
-                      color: authMode === m ? '#0A2E4D' : 'rgba(10,46,77,0.4)',
-                      border: 'none',
-                      boxShadow: authMode === m ? '0 1px 6px rgba(10,46,77,0.08)' : 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {m === 'login' ? 'Log In' : 'Sign Up'}
-                  </button>
-                ))}
-              </div>
-              {/* Password field (email already in the name/email inputs above) */}
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Password"
-                required
-                disabled={isPending}
-                style={inputCss}
-                className="f-body"
-              />
-              <button
-                type="button"
-                onClick={handleAuthAndSubmit}
-                disabled={isPending}
-                className="py-4 rounded-2xl text-base font-bold f-body transition-all"
-                style={{
-                  background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
-                  color: 'white',
-                  border: 'none',
-                  cursor: isPending ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {isPending
-                  ? 'Sending\u2026'
-                  : authMode === 'login'
-                  ? 'Log In & Send request \u2192'
-                  : 'Sign Up & Send request \u2192'}
-              </button>
-            </div>
-          )
-        ) : (
+        {activeTab === 'extras' && isLoggedIn ? (
+          <button
+            key="submit-btn"
+            type="button"
+            onClick={() => handleSubmit()}
+            disabled={isPending}
+            className="flex-1 py-4 rounded-2xl text-base font-bold f-body transition-all"
+            style={{
+              background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
+              color: 'white',
+              border: 'none',
+              cursor: isPending ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isPending ? 'Sending\u2026' : 'Send request'}
+          </button>
+        ) : activeTab !== 'extras' ? (
           <button
             key="continue-btn"
             type="button"
@@ -1660,7 +1678,7 @@ export default function InquireForm({
           >
             Continue →
           </button>
-        )}
+        ) : null}
       </div>
 
       <p className="text-xs text-center f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>

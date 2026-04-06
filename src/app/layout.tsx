@@ -21,6 +21,7 @@ const dmSans = DM_Sans({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://fjordanglers.com'),
   title: {
     default: 'FjordAnglers — Epic Fjord Fishing Trips',
     template: '%s | FjordAnglers',
@@ -28,10 +29,6 @@ export const metadata: Metadata = {
   description:
     'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures. Salmon, trout, cod and more.',
   keywords: ['fishing', 'fjord', 'Norway', 'Scandinavia', 'fishing guide', 'salmon fishing'],
-  icons: {
-    icon: '/brand/sygnet.png',
-    apple: '/brand/sygnet.png',
-  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -39,12 +36,13 @@ export const metadata: Metadata = {
     siteName: 'FjordAnglers',
     title: 'FjordAnglers — Epic Fjord Fishing Trips',
     description: 'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures.',
-    images: [{ url: '/brand/dark-logo.png', width: 400, height: 100, alt: 'FjordAnglers' }],
+    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'FjordAnglers — Epic Fjord Fishing Trips' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'FjordAnglers — Epic Fjord Fishing Trips',
-    images: ['/brand/dark-logo.png'],
+    description: 'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures.',
+    images: ['/brand/og-default.png'],
   },
 }
 

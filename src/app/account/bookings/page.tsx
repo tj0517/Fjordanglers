@@ -249,7 +249,98 @@ export default async function AnglerBookingsPage() {
           </Link>
         </div>
       ) : (
-        <TableCard>
+        <>
+          {/* ── Mobile cards ──────────────────────────────────────────── */}
+          <div className="sm:hidden flex flex-col gap-3">
+            {bookings.map(booking => {
+              const s          = STATUS_STYLES[booking.status]
+              const isInquiry  = booking.source === 'inquiry'
+              const title      = booking.experience?.title
+                ?? (isInquiry && booking.target_species?.length
+                  ? `Custom trip · ${booking.target_species.join(', ')}`
+                  : 'Fishing trip')
+              const href           = isInquiry ? `/account/trips/${booking.id}` : `/account/bookings/${booking.id}`
+              const dateFormatted  = new Date(`${booking.booking_date}T12:00:00`).toLocaleDateString(
+                'en-GB', { day: 'numeric', month: 'short', year: 'numeric' },
+              )
+              const isActionable   = booking.status === 'offer_sent' || booking.status === 'accepted' || booking.status === 'offer_accepted'
+
+              return (
+                <Link
+                  key={booking.id}
+                  href={href}
+                  className="block rounded-2xl overflow-hidden"
+                  style={{
+                    background:  '#FDFAF7',
+                    border:      isActionable ? '1px solid rgba(230,126,80,0.2)' : '1px solid rgba(10,46,77,0.07)',
+                    boxShadow:   '0 2px 8px rgba(10,46,77,0.04)',
+                  }}
+                >
+                  <div className="flex items-center gap-3 px-4 py-4">
+                    {/* Thumbnail */}
+                    <div
+                      className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0"
+                      style={{ background: 'rgba(10,46,77,0.06)' }}
+                    >
+                      {booking.experience_image != null ? (
+                        <Image
+                          src={booking.experience_image}
+                          alt={title}
+                          width={56}
+                          height={56}
+                          className="object-cover w-full h-full"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center" style={{ color: 'rgba(10,46,77,0.22)' }}>
+                          <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
+                            <path d="M4 20C8 13 16 10 24 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            <path d="M22 12L26 16L22 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-0.5">
+                        <p className="text-[#0A2E4D] text-sm font-semibold f-body truncate">{title}</p>
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-[0.12em] px-2 py-0.5 rounded-full f-body flex-shrink-0"
+                          style={{ background: s.bg, color: s.color }}
+                        >
+                          {s.label}
+                        </span>
+                      </div>
+                      <p className="text-[#0A2E4D]/55 text-xs f-body truncate">{booking.guide?.full_name ?? '—'}</p>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5 text-xs f-body">
+                        <span style={{ color: 'rgba(10,46,77,0.5)' }}>{dateFormatted}</span>
+                        <span style={{ color: 'rgba(10,46,77,0.28)' }}>·</span>
+                        <span style={{ color: 'rgba(10,46,77,0.5)' }}>{booking.guests} guest{booking.guests !== 1 ? 's' : ''}</span>
+                        {booking.total_eur != null && (
+                          <>
+                            <span style={{ color: 'rgba(10,46,77,0.28)' }}>·</span>
+                            <span className="font-bold f-display" style={{ color: '#0A2E4D' }}>€{booking.total_eur}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 pb-3 text-right">
+                    <span
+                      className="text-xs font-bold f-body"
+                      style={{ color: isActionable ? '#E67E50' : 'rgba(10,46,77,0.38)' }}
+                    >
+                      {isActionable ? 'Action →' : 'View →'}
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+          {/* ── Desktop table ─────────────────────────────────────────── */}
+          <div className="hidden sm:block">
+          <TableCard>
           <TableHeader
             columns={['', 'Trip', 'Guide', 'Date', 'Guests', 'Amount', 'Status', '']}
             gridClass={GRID_CLASS}
@@ -364,7 +455,9 @@ export default async function AnglerBookingsPage() {
               )
             })}
           </div>
-        </TableCard>
+          </TableCard>
+          </div>
+        </>
       )}
 
     </div>
