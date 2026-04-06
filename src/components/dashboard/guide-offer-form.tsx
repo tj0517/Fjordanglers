@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { sendOfferByGuide } from '@/actions/inquiries'
+import { sendOffer as sendOfferByGuide } from '@/actions/bookings'
 import { ChevronLeft, ChevronRight, Clock, MapPin, X } from 'lucide-react'
 
 // ─── Dynamic map import (Leaflet needs browser DOM) ───────────────────────────

@@ -126,7 +126,7 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
               style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.14)' }}
             >
               <p className="text-xs f-body font-semibold mb-0.5" style={{ color: '#0A2E4D' }}>
-                💳 Deposit — €{payNowEur}
+                💳 Booking fee — €{payNowEur}
               </p>
               <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
                 Charged securely online once the guide confirms your booking.
@@ -147,13 +147,32 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
             </div>
           </div>
         ) : (
-          <div
-            className="w-full px-4 py-3 rounded-2xl mb-8 text-left"
-            style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.14)' }}
-          >
-            <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              💳 Once the guide confirms, you&apos;ll pay a 40% deposit securely via Stripe. The remaining balance is due before the trip.
-            </p>
+          <div className="w-full mb-8 text-left flex flex-col gap-3">
+            {/* Booking fee via Stripe */}
+            <div
+              className="px-4 py-3 rounded-2xl"
+              style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.14)' }}
+            >
+              <p className="text-xs f-body font-semibold mb-0.5" style={{ color: '#0A2E4D' }}>
+                💳 Booking fee — €{payNowEur}
+              </p>
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                Charged securely online once the guide confirms your booking.
+              </p>
+            </div>
+
+            {/* Guide payment via Stripe */}
+            <div
+              className="px-4 py-3 rounded-2xl"
+              style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.08)' }}
+            >
+              <p className="text-xs f-body font-semibold mb-0.5" style={{ color: '#0A2E4D' }}>
+                🔗 Guide payment — €{payGuideEur}
+              </p>
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                Paid securely via Stripe — you&apos;ll receive a payment link after confirmation.
+              </p>
+            </div>
           </div>
         )}
 

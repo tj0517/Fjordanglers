@@ -125,9 +125,17 @@ export default async function BookPage({ params, searchParams }: Props) {
     stripe_payouts_enabled: guideStripe?.stripe_payouts_enabled ?? null,
   })
 
-  const pricePerPerson = experience.price_per_person_eur ?? 0
-  const maxGuests      = experience.max_guests ?? 20
-  const coverImage     = experience.images.find(img => img.is_cover) ?? experience.images[0]
+  const pricePerPerson    = experience.price_per_person_eur ?? 0
+  const maxGuests         = experience.max_guests ?? 20
+  const coverImage        = experience.images.find(img => img.is_cover) ?? experience.images[0]
+  const cancellationPolicy = (experience.guide as unknown as { cancellation_policy: string | null }).cancellation_policy
+
+  const CANCEL_REFUND: Record<string, { days: number; label: string; color: string; bg: string; border: string }> = {
+    flexible: { days: 7,  label: 'Flexible',  color: '#16A34A', bg: 'rgba(22,163,74,0.06)',  border: 'rgba(22,163,74,0.16)'  },
+    moderate: { days: 14, label: 'Moderate',  color: '#D97706', bg: 'rgba(217,119,6,0.06)', border: 'rgba(217,119,6,0.18)'  },
+    strict:   { days: 30, label: 'Strict',    color: '#DC2626', bg: 'rgba(220,38,38,0.06)',  border: 'rgba(220,38,38,0.16)'  },
+  }
+  const cancelCfg = cancellationPolicy ? (CANCEL_REFUND[cancellationPolicy] ?? null) : null
 
   // ── Nav bar (shared across both steps) ────────────────────────────────────
   const navBar = (
@@ -247,28 +255,23 @@ export default async function BookPage({ params, searchParams }: Props) {
 
   // ── STEP 2: Dates selected — show contact form ─────────────────────────────
 
-  // Auth — required to book
+  // Auth — optional. Unauthenticated users see the inline login/register form.
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    const qs = new URLSearchParams(
-      Object.entries(sp).filter((e): e is [string, string] => e[1] != null),
-    ).toString()
-    redirect(`/login?next=${encodeURIComponent(`/book/${expId}?${qs}`)}`)
-  }
-
   let defaultName  = ''
-  const defaultEmail = user.email ?? ''
+  let defaultEmail = user?.email ?? ''
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', user.id)
-    .single()
-  if (profile?.full_name) defaultName = profile.full_name
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+    if (profile?.full_name) defaultName = profile.full_name
+  }
 
   // Price calculation — uses the selected duration option's pricing type when available.
   // Falls back to base per-person rate for old/unmatched labels.
@@ -451,9 +454,7 @@ export default async function BookPage({ params, searchParams }: Props) {
                     Due today
                   </p>
                   <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                    {guidePaymentModel === 'manual'
-                      ? 'Booking fee via Stripe after guide confirmation'
-                      : '40% deposit via Stripe after guide confirmation'}
+                    {'Booking fee via Stripe after guide confirmation'}
                   </p>
                 </div>
                 <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>€0</p>
@@ -471,20 +472,43 @@ export default async function BookPage({ params, searchParams }: Props) {
             }}
           >
             {[
-              { icon: '🛡️', text: 'No payment required to send a request' },
+              { icon: '🛡️', text: 'No payment now — guide reviews your request first' },
               { icon: '⏰', text: 'Guide confirms within 24 hours' },
               { icon: '🔒', text: guidePaymentModel === 'manual'
-                  ? 'Booking fee via Stripe after confirmation — pay guide directly for the rest'
-                  : '40% deposit via Stripe after confirmation — balance before the trip' },
+                  ? 'Booking fee charged via Stripe after confirmation — pay the rest directly to your guide'
+                  : 'Booking fee charged via Stripe after confirmation — guide payment via Stripe separately' },
             ].map(item => (
-              <div key={item.text} className="flex items-center gap-3 mb-2.5 last:mb-0">
-                <span className="text-base leading-none">{item.icon}</span>
+              <div key={item.text} className="flex items-start gap-3 mb-2.5 last:mb-0">
+                <span className="text-base leading-none mt-0.5">{item.icon}</span>
                 <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
                   {item.text}
                 </p>
               </div>
             ))}
           </div>
+
+          {/* Cancellation policy banner */}
+          {cancelCfg != null && (
+            <div
+              className="px-5 py-4 flex items-start gap-3"
+              style={{
+                background:   cancelCfg.bg,
+                borderRadius: '20px',
+                border:       `1px solid ${cancelCfg.border}`,
+              }}
+            >
+              <span className="text-base leading-none mt-0.5">↩️</span>
+              <div>
+                <p className="text-xs font-semibold f-body mb-0.5" style={{ color: cancelCfg.color }}>
+                  {cancelCfg.label} cancellation policy
+                </p>
+                <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                  Full booking fee refund if you cancel <strong>{cancelCfg.days}+ days</strong> before your trip.
+                  After that, the booking fee is non-refundable.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── RIGHT: Angler contact form ────────────────────────────────────── */}

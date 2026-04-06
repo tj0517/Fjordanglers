@@ -9,6 +9,7 @@ import { HideListingToggle } from './HideListingToggle'
 import { PayoutSettingsCard } from './PayoutSettingsCard'
 import { HelpWidget } from '@/components/ui/help-widget'
 import { getPaymentModel } from '@/lib/payment-model'
+import { decryptField } from '@/lib/field-encryption'
 import { Lock, Check } from 'lucide-react'
 
 export const revalidate = 0
@@ -204,10 +205,10 @@ export default async function AccountPage({
           payoutCurrencyLabel={payoutCurrencyLabel}
           payoutScheduleLabel={payoutScheduleLabel}
           ibanData={{
-            iban:             guide.iban             ?? null,
-            iban_holder_name: guide.iban_holder_name ?? null,
-            iban_bic:         guide.iban_bic         ?? null,
-            iban_bank_name:   guide.iban_bank_name   ?? null,
+            iban:             decryptField(guide.iban),
+            iban_holder_name: decryptField(guide.iban_holder_name),
+            iban_bic:         decryptField(guide.iban_bic),
+            iban_bank_name:   decryptField(guide.iban_bank_name),
           }}
           helpWidget={
             <HelpWidget

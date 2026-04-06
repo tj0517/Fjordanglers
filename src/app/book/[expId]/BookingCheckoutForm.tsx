@@ -21,8 +21,7 @@ type Props = {
   isLoggedIn?: boolean
 }
 
-type Mode = 'guest' | 'login' | 'register'
-
+type Mode = 'login' | 'register'
 
 export default function BookingCheckoutForm({
   expId,
@@ -34,22 +33,22 @@ export default function BookingCheckoutForm({
   defaultEmail = '',
   isLoggedIn = false,
 }: Props) {
-  const [mode, setMode] = useState<Mode>('guest')
+  const [mode, setMode] = useState<Mode>('login')
 
-  // Contact fields
-  const [anglerName, setAnglerName] = useState(defaultName)
-  const [anglerEmail, setAnglerEmail] = useState(defaultEmail)
-  const [anglerPhone, setAnglerPhone] = useState('')
-  const [anglerCountry, setAnglerCountry] = useState('')
-  const [specialRequests, setSpecialRequests] = useState('')
+  // Contact fields — shown when logged in
+  const [anglerName, setAnglerName]               = useState(defaultName)
+  const [anglerEmail, setAnglerEmail]             = useState(defaultEmail)
+  const [anglerPhone, setAnglerPhone]             = useState('')
+  const [anglerCountry, setAnglerCountry]         = useState('')
+  const [specialRequests, setSpecialRequests]     = useState('')
 
   // Auth fields (login + register)
   const [password, setPassword] = useState('')
 
   const [marketingConsent, setMarketingConsent] = useState(false)
-  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsAccepted, setTermsAccepted]       = useState(false)
 
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError]       = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleSubmit(e: React.FormEvent) {
@@ -59,8 +58,8 @@ export default function BookingCheckoutForm({
     startTransition(async () => {
       const supabase = createClient()
 
-      // ── Login ──────────────────────────────────────────────────────────────
-      if (mode === 'login') {
+      // ── Login ─────────────────────────────────────────────────────────────
+      if (!isLoggedIn && mode === 'login') {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: anglerEmail,
           password,
@@ -71,8 +70,8 @@ export default function BookingCheckoutForm({
         }
       }
 
-      // ── Create account ─────────────────────────────────────────────────────
-      if (mode === 'register') {
+      // ── Create account ────────────────────────────────────────────────────
+      if (!isLoggedIn && mode === 'register') {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: anglerEmail,
           password,
@@ -88,18 +87,20 @@ export default function BookingCheckoutForm({
         }
       }
 
-      // ── Submit booking ──────────────────────────────────────────────────────
+      // ── Submit booking ────────────────────────────────────────────────────
+      // When logged in: pass contact details from the form.
+      // When authenticating: action reads name/email from the session.
       const result = await createBookingCheckout({
         experienceId: expId,
         dates,
         numDays,
         guests,
         durationOptionLabel,
-        anglerName: mode === 'guest' ? anglerName : undefined,
+        anglerName:      isLoggedIn ? (anglerName || undefined)      : undefined,
         anglerEmail,
-        anglerPhone: mode === 'guest' ? (anglerPhone || undefined) : undefined,
-        anglerCountry: mode === 'guest' ? (anglerCountry || undefined) : undefined,
-        specialRequests: mode === 'guest' ? (specialRequests || undefined) : undefined,
+        anglerPhone:     isLoggedIn ? (anglerPhone || undefined)      : undefined,
+        anglerCountry:   isLoggedIn ? (anglerCountry || undefined)    : undefined,
+        specialRequests: isLoggedIn ? (specialRequests || undefined)  : undefined,
         marketingConsent,
       })
 
@@ -108,7 +109,6 @@ export default function BookingCheckoutForm({
         return
       }
 
-      // Always redirect to confirmation page — guide will accept, then angler pays
       window.location.href = `/book/${expId}/confirmation?bookingId=${result.bookingId}`
     })
   }
@@ -138,32 +138,31 @@ export default function BookingCheckoutForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-      {/* ── Step header ──────────────────────────────────────────────────────── */}
+      {/* ── Step header ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <p className="text-[11px] uppercase tracking-[0.2em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
           Step 2 of 2 — Your details
         </p>
         <HelpWidget
           title="Your booking request"
-          description="No payment is taken now. Your request goes to the guide, who confirms within 24 hours. After confirmation you pay a 40% deposit."
+          description="No payment is taken now. Your request goes to the guide, who confirms within 24 hours. After confirmation you pay a booking fee."
           items={[
             { icon: '👤', title: 'Name & email', text: 'Used to send your booking confirmation and to identify you with the guide.' },
             { icon: '📞', title: 'Phone (optional)', text: 'Useful for last-minute changes or if the guide needs to reach you quickly.' },
             { icon: '🌍', title: 'Country', text: 'Helps the guide understand where their clients come from.' },
-            { icon: '💬', title: 'Special requests', text: 'Dietary requirements, gear needs, accessibility, or anything the guide should know before your trip.' },
-            { icon: '🔒', title: 'No payment now', text: 'You only pay after the guide confirms. A 40% deposit is charged via Stripe — the balance is due before the trip.' },
+            { icon: '💬', title: 'Special requests', text: 'Dietary requirements, gear needs, accessibility, or anything your guide should know before the trip.' },
+            { icon: '🔒', title: 'No payment now', text: 'You only pay after the guide confirms. A booking fee is charged via Stripe to secure your spot.' },
           ]}
         />
       </div>
 
-      {/* ── Mode toggle — hidden when already logged in ──────────────────────── */}
+      {/* ── Auth mode toggle — shown only when not logged in ─────────────────── */}
       {!isLoggedIn && (
         <div
           className="flex rounded-2xl p-1 gap-1"
           style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.08)' }}
         >
           {([
-            { key: 'guest',    label: 'Guest' },
             { key: 'login',    label: 'Log In' },
             { key: 'register', label: 'Sign Up' },
           ] as { key: Mode; label: string }[]).map(({ key, label }) => (
@@ -184,8 +183,8 @@ export default function BookingCheckoutForm({
         </div>
       )}
 
-      {/* ── Guest fields ─────────────────────────────────────────────────────── */}
-      {mode === 'guest' && (
+      {/* ── Contact details — shown when already logged in ───────────────────── */}
+      {isLoggedIn && (
         <>
           <div>
             <label style={labelStyle} className="flex items-center gap-1">
@@ -271,7 +270,7 @@ export default function BookingCheckoutForm({
       )}
 
       {/* ── Auth fields (login + register) ───────────────────────────────────── */}
-      {!isLoggedIn && (mode === 'login' || mode === 'register') && (
+      {!isLoggedIn && (
         <>
           {mode === 'register' && (
             <>
@@ -284,8 +283,23 @@ export default function BookingCheckoutForm({
                 <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>or</span>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(10,46,77,0.08)' }} />
               </div>
+              <div>
+                <label style={labelStyle}>
+                  Full name <span style={{ color: '#E67E50' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Your full name"
+                  value={anglerName}
+                  onChange={e => setAnglerName(e.target.value)}
+                  className="f-body"
+                  style={inputStyle}
+                />
+              </div>
             </>
           )}
+
           <div>
             <label style={labelStyle}>
               Email <span style={{ color: '#E67E50' }}>*</span>
@@ -375,7 +389,6 @@ export default function BookingCheckoutForm({
             onChange={e => setTermsAccepted(e.target.checked)}
             className="sr-only peer"
           />
-          {/* Custom checkbox box */}
           <span
             className="flex items-center justify-center w-[18px] h-[18px] rounded-[5px] border-[1.5px] transition-all peer-focus-visible:ring-2 peer-focus-visible:ring-[#E67E50]/40"
             style={{
@@ -424,7 +437,7 @@ export default function BookingCheckoutForm({
             Sending request…
           </>
         ) : (
-          'Request to Book →'
+          isLoggedIn ? 'Request to Book →' : (mode === 'login' ? 'Log In & Request →' : 'Sign Up & Request →')
         )}
       </button>
 
@@ -432,7 +445,7 @@ export default function BookingCheckoutForm({
         className="text-center text-xs f-body"
         style={{ color: 'rgba(10,46,77,0.38)' }}
       >
-        No payment now. Guide confirms within 24h — then 40% deposit via Stripe.
+        No payment now. Guide confirms within 24h — then booking fee via Stripe.
       </p>
     </form>
   )

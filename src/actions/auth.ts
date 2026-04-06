@@ -133,16 +133,39 @@ export async function deleteAccount(): Promise<{ error?: string }> {
     if (!user) return { error: 'Not signed in.' }
 
     const service = createServiceClient()
+
+    // GDPR Art. 17 — anonymize angler PII on bookings before deleting auth user.
+    // Booking history is retained for guide tax records; personal data is erased.
+    //
+    // NOTE: bookings has CHECK (angler_id IS NOT NULL OR angler_email IS NOT NULL).
+    // We cannot set both to null — replace email with a non-identifying placeholder
+    // so the constraint is satisfied while all real PII is removed.
+    await service
+      .from('bookings')
+      .update({
+        angler_email:     '[deleted]',   // placeholder keeps CHECK constraint happy
+        angler_full_name: null,
+        angler_phone:     null,
+        angler_id:        null,
+      })
+      .eq('angler_id', user.id)
+
+    // Remove profile row (profiles.id has no ON DELETE CASCADE in our schema)
+    await service
+      .from('profiles')
+      .delete()
+      .eq('id', user.id)
+
     const { error } = await service.auth.admin.deleteUser(user.id)
     if (error) return { error: error.message }
-
-    redirect('/')
   } catch (err) {
-    // redirect() throws — let it propagate
-    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('[auth/deleteAccount] Unexpected error:', err)
     return { error: 'An unexpected error occurred. Please try again.' }
   }
+
+  // redirect() outside try/catch — in Next.js it throws a non-Error object
+  // ({ digest: 'NEXT_REDIRECT;...' }) that would be swallowed by a catch block.
+  redirect('/')
 }
 
 // ─── Reset password ───────────────────────────────────────────────────────────

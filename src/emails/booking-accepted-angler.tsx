@@ -23,14 +23,14 @@ export function BookingAcceptedAnglerEmail({
   const balanceEur = Math.round((totalEur - depositEur) * 100) / 100
 
   return (
-    <EmailLayout preview={`${guideName} accepted your booking — pay your deposit to confirm.`}>
-      <Heading style={h1}>Booking accepted — pay your deposit</Heading>
+    <EmailLayout preview={`${guideName} accepted your booking — pay the booking fee to confirm.`}>
+      <Heading style={h1}>Booking accepted — pay booking fee</Heading>
 
       <Text style={text}>Hi {anglerName},</Text>
 
       <Text style={text}>
         Great news — <strong>{guideName}</strong> has accepted your booking for{' '}
-        <strong>{experienceTitle}</strong>. Pay your deposit now to confirm your spot.
+        <strong>{experienceTitle}</strong>. Pay the booking fee now to confirm your spot.
       </Text>
 
       {/* Confirmation box */}
@@ -57,12 +57,12 @@ export function BookingAcceptedAnglerEmail({
               <td style={valueCell}>{confirmedDates}</td>
             </tr>
             <tr style={summaryRow}>
-              <td style={labelCell}>Deposit due now</td>
+              <td style={labelCell}>Booking fee due now</td>
               <td style={{ ...valueCell, color: '#E67E50', fontSize: '16px' }}>€{depositEur}</td>
             </tr>
             {balanceEur > 0 && (
               <tr style={summaryRowLast}>
-                <td style={labelCell}>Balance (before trip)</td>
+                <td style={labelCell}>Guide payment</td>
                 <td style={valueCell}>€{balanceEur}</td>
               </tr>
             )}
@@ -89,14 +89,14 @@ export function BookingAcceptedAnglerEmail({
 
       <Section style={ctaSection}>
         <Button style={button} href={bookingUrl}>
-          Pay deposit — €{depositEur}
+          Pay booking fee — €{depositEur}
         </Button>
       </Section>
 
       <Text style={textSmall}>
-        Your spot is held for 24 hours. If the deposit is not paid, the booking will be released.
+        Your spot is held for 24 hours. If the booking fee is not paid, the booking will be released.
         {balanceEur > 0
-          ? ` The remaining €${balanceEur} balance will be due before your trip.`
+          ? ` Instructions for the remaining €${balanceEur} guide payment will be on your booking page.`
           : ''}
       </Text>
     </EmailLayout>

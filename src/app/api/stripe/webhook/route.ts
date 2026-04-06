@@ -19,6 +19,7 @@ import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { unblockBookingDates } from '@/lib/booking-blocks'
 import { getAppUrl } from '@/lib/app-url'
+import { getPaymentModel } from '@/lib/payment-model'
 import {
   fmtEmailDateRange,
   fmtEmailDays,
@@ -108,10 +109,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
 
     // Idempotency
-    if (existing.guide_amount_paid_at != null) {
-      console.log(`[webhook] Guide amount for ${bookingId} already recorded — skipping`)
-      return
-    }
+    if (existing.guide_amount_paid_at != null) return
 
     await db
       .from('bookings')
@@ -121,7 +119,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       })
       .eq('id', bookingId)
 
-    console.log(`[webhook] Booking ${bookingId} guide amount paid via Stripe Connect`)
     return
   }
 
@@ -139,10 +136,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
 
     // Idempotency
-    if (existing.status === 'completed' || existing.balance_paid_at != null) {
-      console.log(`[webhook] Balance for ${bookingId} already recorded — skipping`)
-      return
-    }
+    if (existing.status === 'completed' || existing.balance_paid_at != null) return
 
     await db
       .from('bookings')
@@ -153,7 +147,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       })
       .eq('id', bookingId)
 
-    console.log(`[webhook] Booking ${bookingId} balance paid — status: completed`)
 
     // Email to angler: "trip fully paid"
     {
@@ -192,7 +185,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   //
   const { data: existing } = await db
     .from('bookings')
-    .select('id, status, stripe_payment_intent_id, source, angler_email, angler_full_name, angler_phone, guests, total_eur, deposit_eur, guide_payout_eur, balance_payment_method, confirmed_date_from, confirmed_date_to, confirmed_days, booking_date, requested_dates, experiences(title), guides(user_id, full_name, iban, iban_holder_name)')
+    .select('id, status, stripe_payment_intent_id, source, angler_email, angler_full_name, angler_phone, guests, total_eur, deposit_eur, guide_payout_eur, confirmed_date_from, confirmed_date_to, confirmed_days, booking_date, requested_dates, experiences(title), guides(user_id, full_name, iban, iban_holder_name, stripe_account_id, stripe_payouts_enabled)')
     .eq('id', bookingId)
     .single()
 
@@ -206,9 +199,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // from jumping a 'pending' booking straight to 'confirmed' without guide acceptance.
   const confirmableStatuses = ['accepted', 'offer_accepted']
   if (!confirmableStatuses.includes(existing.status)) {
-    if (existing.status === 'confirmed') {
-      console.log(`[webhook] Booking ${bookingId} already confirmed — skipping`)
-    } else {
+    if (existing.status !== 'confirmed') {
       console.warn(
         `[webhook] Booking ${bookingId} has unexpected status '${existing.status}' — skipping confirmation`,
       )
@@ -225,7 +216,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     })
     .eq('id', bookingId)
 
-  console.log(`[webhook] Booking ${bookingId} confirmed (source: ${existing.source})`)
 
   // ── Confirmation emails ────────────────────────────────────────────────────
   {
@@ -249,17 +239,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     const expTitle   = (existing.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
     const guideData  = existing.guides as unknown as {
-      user_id:         string | null
-      full_name:       string
-      iban:            string | null
-      iban_holder_name: string | null
+      user_id:              string | null
+      full_name:            string
+      iban:                 string | null
+      iban_holder_name:     string | null
+      stripe_account_id:    string | null
+      stripe_payouts_enabled: boolean | null
     } | null
 
-    const totalEur     = existing.total_eur   as number
-    const depositEur   = (existing.deposit_eur as number | null) ?? totalEur
-    const balanceEur   = isInquiry ? 0 : Math.max(0, Math.round((totalEur - depositEur) * 100) / 100)
-    const amountPaid   = isInquiry ? totalEur : depositEur
-    const balanceMethod = (existing.balance_payment_method as string | null) as 'stripe' | 'cash' | null
+    const isStripeConnect = getPaymentModel({
+      stripe_account_id:      guideData?.stripe_account_id      ?? null,
+      stripe_payouts_enabled: guideData?.stripe_payouts_enabled ?? null,
+    }) === 'stripe_connect'
+
+    const totalEur   = existing.total_eur as number
+    const depositEur = (existing.deposit_eur as number | null) ?? totalEur
+    const balanceEur = isInquiry ? 0 : Math.max(0, Math.round((totalEur - depositEur) * 100) / 100)
+    const amountPaid = isInquiry ? totalEur : depositEur
 
     const appUrl = await getAppUrl()
 
@@ -274,10 +270,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       amountPaidEur:   amountPaid,
       isPaidInFull:    isInquiry,
       balanceEur,
-      balanceMethod:   isInquiry ? null : balanceMethod,
+      isStripeConnect: !isInquiry && isStripeConnect,
       guidePayoutEur:  (existing.guide_payout_eur as number | null) ?? 0,
-      guideIban:       isInquiry ? null : (guideData?.iban ?? null),
-      guideIbanHolder: isInquiry ? null : (guideData?.iban_holder_name ?? null),
+      guideHasIban:    !isInquiry && !isStripeConnect && guideData?.iban != null,
       bookingUrl:      `${appUrl}/account/bookings/${bookingId}`,
     }).catch(e => console.error('[webhook] confirmed angler email:', e))
 
@@ -331,9 +326,6 @@ async function handleAccountUpdated(account: Stripe.Account) {
     })
     .eq('stripe_account_id', account.id)
 
-  if (account.payouts_enabled && payoutsChanged) {
-    console.log(`[webhook] Guide ${guide.id} Stripe account verified — payouts enabled`)
-  }
 }
 
 // ─── charge.refunded ──────────────────────────────────────────────────────────

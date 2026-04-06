@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { Calendar, Users, SlidersHorizontal, FileText, Check, CheckCircle } from 'lucide-react'
-import { submitInquiry } from '@/actions/inquiries'
+import { createInquiryBooking as submitInquiry } from '@/actions/bookings'
 import { type InquiryFormConfig, SPECIES_OPTIONS, resolveFormConfig } from '@/lib/inquiry-form-config'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import { MultiPeriodPicker, type Period, type BlockedRange } from '@/components/trips/multi-period-picker'

@@ -2,10 +2,10 @@
 
 /**
  * PayDepositBanner — shown on the angler booking detail page when
- * the booking is 'accepted' (guide confirmed) but deposit not yet paid.
+ * the booking is 'accepted' (guide confirmed) but booking fee not yet paid.
  *
- * stripe_connect: 40% deposit paid now, 60% balance before trip.
- * manual:         platform booking fee paid now, guide's net paid directly.
+ * stripe_connect: booking fee paid now via Stripe; guide payment via Stripe separately.
+ * manual:         booking fee paid now via Stripe; guide's net paid directly.
  */
 
 import { useState, useTransition } from 'react'
@@ -50,17 +50,13 @@ export default function PayDepositBanner({
 
   const isManual = paymentModel === 'manual'
 
-  const title = isManual
-    ? 'Your guide accepted — pay booking fee to confirm'
-    : 'Your guide accepted — pay deposit to confirm'
+  const title = 'Your guide accepted — pay booking fee to confirm'
 
   const subtitle = isManual
     ? `Pay <strong>€${depositEur}</strong> booking fee now via Stripe. You\'ll pay the guide <strong>€${balanceEur}</strong> directly on the day.`
-    : `Pay <strong>€${depositEur}</strong> deposit (40%) to secure your booking. Remaining balance of <strong>€${balanceEur}</strong> is due before the trip.`
+    : `Pay <strong>€${depositEur}</strong> booking fee now via Stripe. You\'ll pay the guide <strong>€${balanceEur}</strong> via Stripe separately.`
 
-  const ctaLabel = isManual
-    ? `Pay €${depositEur} booking fee — secure by Stripe`
-    : `Pay €${depositEur} deposit — secure by Stripe`
+  const ctaLabel = `Pay €${depositEur} booking fee — secure by Stripe`
 
   return (
     <div

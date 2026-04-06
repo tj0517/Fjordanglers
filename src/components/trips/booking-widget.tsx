@@ -375,8 +375,8 @@ type BookingWidgetProps = {
   calendarDisabled?: boolean
   /**
    * Payment model derived from guide's Stripe status.
-   * stripe_connect — angler pays 40% deposit via Stripe; balance before trip.
-   * manual         — angler pays platform fee via Stripe + guide fee directly (cash/IBAN).
+   * stripe_connect — angler pays booking fee via Stripe; guide amount via Stripe separately.
+   * manual         — angler pays booking fee via Stripe + guide amount directly (cash/IBAN).
    */
   paymentModel?: 'stripe_connect' | 'manual'
 }
@@ -1494,7 +1494,7 @@ export function BookingWidget({
             {paymentModel === 'manual'
               ? 'No payment now — guide confirms, then you pay a small platform fee online and the guide\'s fee directly.'
               : selectedDates.length > 0
-                ? 'No payment now — guide confirms and you pay a 40% deposit.'
+                ? 'No payment now — guide confirms and you pay a booking fee.'
                 : 'No payment now — guide confirms within 24 hours.'}
           </p>
 

@@ -21,6 +21,8 @@
  *  NEXT_PUBLIC_APP_URL                https://fjordanglers.com (or http://localhost:3000)
  *  PLATFORM_COMMISSION_RATE           0.10  (optional, defaults to 10%)
  *  RESEND_API_KEY                     re_...
+ *  SENTRY_DSN                         https://...@sentry.io/... (optional)
+ *  IBAN_ENCRYPTION_KEY                64-char hex (optional, required in prod)
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -55,6 +57,13 @@ const envSchema = z.object({
 
   // ── Email (Resend) ─────────────────────────────────────────────────────────
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
+
+  // ── Security / Observability ───────────────────────────────────────────────
+  // Sentry DSN — optional. If not set, Sentry is disabled (safe without key).
+  SENTRY_DSN: z.string().optional(),
+  // AES-256-GCM key for IBAN field encryption — 64 hex chars (32 bytes).
+  // If not set, encryption is disabled (passthrough). Required in production.
+  IBAN_ENCRYPTION_KEY: z.string().min(64).optional(),
 
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`

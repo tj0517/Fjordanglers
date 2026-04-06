@@ -2,7 +2,7 @@ import { Button, Heading, Section, Text } from '@react-email/components'
 import {
   EmailLayout, h1, text, textSmall, button, ctaSection,
   summaryBox, labelCell, valueCell, summaryRow, summaryRowLast,
-  successBox, noteBox, warnBox,
+  successBox, noteBox,
 } from './_shared'
 
 export interface BookingConfirmedAnglerEmailProps {
@@ -11,31 +11,32 @@ export interface BookingConfirmedAnglerEmailProps {
   guideName:        string
   confirmedDates:   string
   guests:           number
-  amountPaidEur:    number   // deposit paid now (direct) OR full amount (inquiry)
-  isPaidInFull:     boolean  // true = inquiry (paid in full), false = direct (deposit only)
+  amountPaidEur:    number   // booking fee paid (direct) OR full amount (inquiry)
+  isPaidInFull:     boolean  // true = inquiry (paid in full), false = direct (booking fee only)
   balanceEur:       number   // 0 when isPaidInFull
-  balanceMethod:    'stripe' | 'cash' | null
-  guidePayoutEur:   number   // used for manual model IBAN instructions
-  guideIban:        string | null
-  guideIbanHolder:  string | null
+  /** True when guide has active Stripe Connect — angler pays guide via second Stripe Checkout */
+  isStripeConnect:  boolean
+  guidePayoutEur:   number   // guide payment amount (used for IBAN instructions)
+  /** True when guide has IBAN configured (manual model only) */
+  guideHasIban:     boolean
   bookingUrl:       string
 }
 
 export function BookingConfirmedAnglerEmail({
   anglerName, experienceTitle, guideName, confirmedDates, guests,
-  amountPaidEur, isPaidInFull, balanceEur, balanceMethod,
-  guidePayoutEur, guideIban, guideIbanHolder, bookingUrl,
+  amountPaidEur, isPaidInFull, balanceEur, isStripeConnect,
+  guidePayoutEur, guideHasIban, bookingUrl,
 }: BookingConfirmedAnglerEmailProps) {
   return (
     <EmailLayout
       preview={
         isPaidInFull
           ? `Booking confirmed — see you on the water with ${guideName}!`
-          : `Deposit received — booking confirmed with ${guideName}.`
+          : `Booking fee received — booking confirmed with ${guideName}.`
       }
     >
       <Heading style={h1}>
-        {isPaidInFull ? 'Booking confirmed! 🎣' : 'Deposit received — booking confirmed'}
+        {isPaidInFull ? 'Booking confirmed! 🎣' : 'Booking fee received — booking confirmed'}
       </Heading>
 
       <Text style={text}>Hi {anglerName},</Text>
@@ -43,13 +44,13 @@ export function BookingConfirmedAnglerEmail({
       <Text style={text}>
         {isPaidInFull
           ? `Your booking with ${guideName} is fully confirmed and paid. See you on the water!`
-          : `Your deposit has been received and your booking with ${guideName} is confirmed.`}
+          : `Your booking fee has been received and your booking with ${guideName} is confirmed.`}
       </Text>
 
       {/* Confirmation badge */}
       <Section style={successBox}>
         <Text style={{ color: '#16A34A', fontSize: '14px', fontWeight: 600, margin: 0 }}>
-          ✓ {isPaidInFull ? `€${amountPaidEur} paid in full` : `€${amountPaidEur} deposit received`}
+          ✓ {isPaidInFull ? `€${amountPaidEur} paid in full` : `€${amountPaidEur} booking fee received`}
         </Text>
       </Section>
 
@@ -74,12 +75,12 @@ export function BookingConfirmedAnglerEmail({
               <td style={valueCell}>{guests} {guests === 1 ? 'angler' : 'anglers'}</td>
             </tr>
             <tr style={summaryRow}>
-              <td style={labelCell}>Paid</td>
+              <td style={labelCell}>Booking fee paid</td>
               <td style={{ ...valueCell, color: '#16A34A' }}>€{amountPaidEur}</td>
             </tr>
             {!isPaidInFull && balanceEur > 0 && (
               <tr style={summaryRowLast}>
-                <td style={labelCell}>Balance due</td>
+                <td style={labelCell}>Guide payment</td>
                 <td style={{ ...valueCell, color: '#E67E50' }}>€{balanceEur}</td>
               </tr>
             )}
@@ -93,42 +94,39 @@ export function BookingConfirmedAnglerEmail({
         </table>
       </Section>
 
-      {/* Balance instructions — only for deposit-only (direct booking) */}
+      {/* Guide payment instructions — direct bookings only */}
       {!isPaidInFull && balanceEur > 0 && (
-        <Section style={balanceMethod === 'cash' ? warnBox : noteBox}>
+        <Section style={noteBox}>
           <Text style={{
-            color: balanceMethod === 'cash' ? '#92400E' : '#1D4ED8',
+            color: '#1D4ED8',
             fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' as const,
             letterSpacing: '0.05em', margin: '0 0 6px',
           }}>
-            Balance due before your trip
+            Guide payment — €{guidePayoutEur}
           </Text>
-          {balanceMethod === 'cash' ? (
-            <Text style={{ color: '#78350F', fontSize: '14px', lineHeight: '22px', margin: 0 }}>
-              The remaining <strong>€{balanceEur}</strong> is due before or on the day of your
-              trip. Your guide will collect payment directly.
+
+          {isStripeConnect ? (
+            /* Stripe Connect: angler pays guide via second Stripe Checkout on booking page */
+            <Text style={{ color: '#374151', fontSize: '14px', lineHeight: '22px', margin: 0 }}>
+              Pay <strong>€{guidePayoutEur}</strong> to your guide securely via Stripe —
+              use the payment button on your <a href={bookingUrl} style={{ color: '#1D4ED8' }}>booking page</a>.
+            </Text>
+          ) : guideHasIban ? (
+            /* Manual model with IBAN: guide will share details via booking chat */
+            <Text style={{ color: '#374151', fontSize: '14px', lineHeight: '22px', margin: 0 }}>
+              Your guide will share bank transfer details for <strong>€{guidePayoutEur}</strong>{' '}
+              via the booking chat. Check your{' '}
+              <a href={bookingUrl} style={{ color: '#1D4ED8' }}>booking page</a> for the payment
+              instructions.
             </Text>
           ) : (
+            /* Manual model without IBAN: arrange via chat */
             <Text style={{ color: '#374151', fontSize: '14px', lineHeight: '22px', margin: 0 }}>
-              The remaining <strong>€{balanceEur}</strong> will be charged automatically before
-              your trip. A payment link is also available in your booking page.
+              Arrange payment of <strong>€{guidePayoutEur}</strong> directly with{' '}
+              <strong>{guideName}</strong> — use the booking chat to agree on the method
+              (cash, bank transfer, Vipps, etc.).
             </Text>
           )}
-        </Section>
-      )}
-
-      {/* Manual model: guide IBAN */}
-      {guideIban && guideIbanHolder && (
-        <Section style={noteBox}>
-          <Text style={{ color: '#1D4ED8', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', margin: '0 0 6px' }}>
-            Pay €{guidePayoutEur} directly to your guide
-          </Text>
-          <Text style={{ color: '#374151', fontSize: '14px', lineHeight: '22px', margin: '0 0 4px' }}>
-            Name: <strong>{guideIbanHolder}</strong>
-          </Text>
-          <Text style={{ color: '#374151', fontSize: '14px', lineHeight: '22px', fontFamily: 'monospace', margin: 0 }}>
-            IBAN: <strong>{guideIban}</strong>
-          </Text>
         </Section>
       )}
 

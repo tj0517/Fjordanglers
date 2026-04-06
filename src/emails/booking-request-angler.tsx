@@ -10,12 +10,15 @@ export interface BookingRequestAnglerEmailProps {
   guideName:        string
   datesLabel:       string   // e.g. "4 Apr 2026" or "4–26 Apr 2026"
   guests:           number
-  totalEur:         number
+  totalEur?:        number
   bookingUrl:       string
+  /** Show the booking summary table. Defaults to false. */
+  showSummary?:     boolean
 }
 
 export function BookingRequestAnglerEmail({
   anglerName, experienceTitle, guideName, datesLabel, guests, totalEur, bookingUrl,
+  showSummary = false,
 }: BookingRequestAnglerEmailProps) {
   return (
     <EmailLayout preview={`Booking request received — ${guideName} will respond shortly.`}>
@@ -30,33 +33,37 @@ export function BookingRequestAnglerEmail({
         payment link as soon as they accept.
       </Text>
 
-      {/* Summary */}
-      <Section style={summaryBox}>
-        <table width="100%" style={{ borderCollapse: 'collapse' }}>
-          <tbody>
-            <tr style={summaryRow}>
-              <td style={labelCell}>Experience</td>
-              <td style={valueCell}>{experienceTitle}</td>
-            </tr>
-            <tr style={summaryRow}>
-              <td style={labelCell}>Guide</td>
-              <td style={valueCell}>{guideName}</td>
-            </tr>
-            <tr style={summaryRow}>
-              <td style={labelCell}>Dates</td>
-              <td style={valueCell}>{datesLabel}</td>
-            </tr>
-            <tr style={summaryRow}>
-              <td style={labelCell}>Group size</td>
-              <td style={valueCell}>{guests} {guests === 1 ? 'angler' : 'anglers'}</td>
-            </tr>
-            <tr style={summaryRowLast}>
-              <td style={labelCell}>Total</td>
-              <td style={{ ...valueCell, color: '#E67E50', fontSize: '16px' }}>€{totalEur}</td>
-            </tr>
-          </tbody>
-        </table>
-      </Section>
+      {/* Summary — optional */}
+      {showSummary && (
+        <Section style={summaryBox}>
+          <table width="100%" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <tr style={summaryRow}>
+                <td style={labelCell}>Experience</td>
+                <td style={valueCell}>{experienceTitle}</td>
+              </tr>
+              <tr style={summaryRow}>
+                <td style={labelCell}>Guide</td>
+                <td style={valueCell}>{guideName}</td>
+              </tr>
+              <tr style={summaryRow}>
+                <td style={labelCell}>Dates</td>
+                <td style={valueCell}>{datesLabel}</td>
+              </tr>
+              <tr style={summaryRow}>
+                <td style={labelCell}>Group size</td>
+                <td style={valueCell}>{guests} {guests === 1 ? 'angler' : 'anglers'}</td>
+              </tr>
+              {totalEur != null && (
+                <tr style={summaryRowLast}>
+                  <td style={labelCell}>Est. total</td>
+                  <td style={{ ...valueCell, color: '#E67E50', fontSize: '16px' }}>€{totalEur}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </Section>
+      )}
 
       <Section style={ctaSection}>
         <Button style={button} href={bookingUrl}>View your booking</Button>

@@ -709,7 +709,7 @@ export default function BookingDateStep({
           title="Step 1 — Choose your dates"
           description="Pick how you'd like to book this fishing trip. Either way, there's no payment now — the guide always reviews and confirms first."
           items={[
-            { icon: '📅', title: 'Book directly', text: 'Select exact date(s) from the calendar. Guide confirms within 24 hours, then you pay a 40% deposit.' },
+            { icon: '📅', title: 'Book directly', text: 'Select exact date(s) from the calendar. Guide confirms within 24 hours, then you pay a booking fee.' },
             { icon: '✉️', title: 'Send request', text: "Tell the guide a window of availability — they'll schedule the exact dates and confirm. Great if your dates are flexible." },
             { icon: '📦', title: 'Package', text: 'Each package has a price and duration. Choose the one that fits your trip style.' },
             { icon: '👥', title: 'Anglers', text: 'How many people are fishing? Price is calculated per angler for most packages.' },
@@ -1207,7 +1207,7 @@ export default function BookingDateStep({
           </button>
 
           <p className="text-center text-xs mt-3 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            No payment now — guide confirms exact dates &amp; you pay a 40% deposit.
+            No payment now — guide confirms exact dates &amp; you pay a booking fee.
           </p>
         </>
       )}

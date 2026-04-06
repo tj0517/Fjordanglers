@@ -50,12 +50,7 @@ export async function blockBookingDates(
       .eq('experience_id', experienceId)
       .maybeSingle()
 
-    if (calExp == null) {
-      console.log(
-        `[blockBookingDates] experience ${experienceId} not in any calendar — no block written`,
-      )
-      return
-    }
+    if (calExp == null) return
     calendarIds = [calExp.calendar_id]
   } else {
     // Inquiry/custom booking (no experience_id): block ALL calendars for this guide.
@@ -67,12 +62,7 @@ export async function blockBookingDates(
 
     calendarIds = (cals ?? []).map(c => c.id)
 
-    if (calendarIds.length === 0) {
-      console.log(
-        `[blockBookingDates] no calendars for guide ${guideId} — no block written`,
-      )
-      return
-    }
+    if (calendarIds.length === 0) return
   }
 
   const rows = calendarIds.flatMap(calendarId =>
@@ -90,10 +80,6 @@ export async function blockBookingDates(
 
   if (error) {
     console.error('[blockBookingDates] insert failed:', error.message)
-  } else {
-    console.log(
-      `[blockBookingDates] blocked ${dates.length} date(s) on ${calendarIds.length} calendar(s) for booking ${bookingId}`,
-    )
   }
 }
 
@@ -114,8 +100,6 @@ export async function unblockBookingDates(
 
   if (error) {
     console.error('[unblockBookingDates] delete failed:', error.message)
-  } else if ((count ?? 0) > 0) {
-    console.log(`[unblockBookingDates] removed ${count} block(s) for booking ${bookingId}`)
   }
 }
 

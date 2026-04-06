@@ -351,6 +351,7 @@ export default function BookingRespondForm({
   const [meetLat, setMeetLat] = useState<number | null>(null)
   const [meetLng, setMeetLng] = useState<number | null>(null)
   const [isRevGeocoding, setIsRevGeocoding] = useState(false)
+  const [mapExpanded, setMapExpanded] = useState(false)
   // Initial map centre (no pin yet — just flies there on first render)
   const mapDefaultCenter: [number, number] =
     tripCountryCentre ?? guideCountryCentre ?? [63.5, 14.0]
@@ -432,7 +433,8 @@ export default function BookingRespondForm({
   async function handleReverseGeocode(lat: number, lng: number) {
     setIsRevGeocoding(true)
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en&zoom=12`
+      // zoom=16 returns specific features (lake, river names) instead of provinces/states
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=en&zoom=16`
       const res = await fetch(url, { headers: { 'Accept-Language': 'en' } })
       const data = await res.json() as {
         name?: string
@@ -444,11 +446,12 @@ export default function BookingRespondForm({
         }
       }
       const addr = data.address ?? {}
-      // Priority: named water body first (most useful for fishing), then settlement
+      // Priority: data.name is the specific feature at this zoom (lake/river name),
+      // then explicit water body fields, then nearest settlement as fallback.
       const locationName =
+        (data.name && data.name.length > 0 ? data.name : null) ??
         addr.river ?? addr.stream ?? addr.waterway ?? addr.natural ?? addr.lake ?? addr.reservoir ??
-        addr.city ?? addr.town ?? addr.village ?? addr.hamlet ?? addr.municipality ??
-        (data.name && data.name.length > 0 ? data.name : null) ?? null
+        addr.city ?? addr.town ?? addr.village ?? addr.hamlet ?? addr.municipality ?? null
       if (locationName) setLocationText(locationName)
     } catch {
       // Silent — pin is still placed, just no text auto-fill
@@ -912,45 +915,68 @@ export default function BookingRespondForm({
                 />
               )}
             </div>
-            {/* Map — pick exact meeting point (both direct and inquiry bookings) */}
-            <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(10,46,77,0.12)' }}>
-              <LocationPickerMap
-                mode="pin"
-                lat={meetLat}
-                lng={meetLng}
-                defaultCenter={mapDefaultCenter}
-                onChange={(lat, lng) => {
-                  setMeetLat(lat)
-                  setMeetLng(lng)
-                  void handleReverseGeocode(lat, lng)
-                }}
-              />
-              <div
-                className="px-3 py-2 flex items-center justify-between gap-3"
-                style={{ background: 'rgba(10,46,77,0.02)', borderTop: '1px solid rgba(10,46,77,0.06)' }}
+            {/* Map toggle */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setMapExpanded(e => !e)}
+                className="flex items-center gap-1.5 text-xs f-body font-semibold transition-opacity hover:opacity-70"
+                style={{ color: '#E67E50' }}
               >
-                {meetLat != null && meetLng != null ? (
-                  <>
-                    <span className="text-[10px] f-body font-mono" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                      {meetLat.toFixed(5)}, {meetLng.toFixed(5)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => { setMeetLat(null); setMeetLng(null) }}
-                      disabled={isPending}
-                      className="text-[10px] f-body hover:opacity-70 transition-opacity flex-shrink-0"
-                      style={{ color: 'rgba(10,46,77,0.38)' }}
-                    >
-                      Remove pin
-                    </button>
-                  </>
-                ) : (
-                  <p className="text-[10px] f-body w-full text-center" style={{ color: 'rgba(10,46,77,0.35)' }}>
-                    Click the map to place a pin — location name auto-fills above
-                  </p>
-                )}
-              </div>
+                <MapPin size={13} strokeWidth={2} />
+                {mapExpanded ? 'Hide map' : 'Set location on map'}
+                <svg
+                  width="10" height="10" viewBox="0 0 10 10" fill="none"
+                  stroke="currentColor" strokeWidth="1.8"
+                  style={{ transition: 'transform 0.2s', transform: mapExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                >
+                  <polyline points="2,3 5,7 8,3" />
+                </svg>
+              </button>
+              {meetLat != null && meetLng != null && (
+                <>
+                  <span className="text-[10px] f-body font-mono" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    {meetLat.toFixed(4)}, {meetLng.toFixed(4)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { setMeetLat(null); setMeetLng(null) }}
+                    disabled={isPending}
+                    className="text-[10px] f-body hover:opacity-70 transition-opacity"
+                    style={{ color: 'rgba(10,46,77,0.38)' }}
+                  >
+                    ✕ remove
+                  </button>
+                </>
+              )}
             </div>
+
+            {/* Collapsible map */}
+            {mapExpanded && (
+              <div className="rounded-2xl overflow-hidden mt-2" style={{ border: '1.5px solid rgba(10,46,77,0.12)' }}>
+                <LocationPickerMap
+                  mode="pin"
+                  lat={meetLat}
+                  lng={meetLng}
+                  defaultCenter={mapDefaultCenter}
+                  onChange={(lat, lng) => {
+                    setMeetLat(lat)
+                    setMeetLng(lng)
+                    void handleReverseGeocode(lat, lng)
+                  }}
+                />
+                <div
+                  className="px-3 py-2"
+                  style={{ background: 'rgba(10,46,77,0.02)', borderTop: '1px solid rgba(10,46,77,0.06)' }}
+                >
+                  <p className="text-[10px] f-body text-center" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                    {meetLat != null && meetLng != null
+                      ? 'Drag the pin to fine-tune the location'
+                      : 'Click anywhere on the map to place a pin — location name fills in automatically'}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Message — same for both direct and inquiry */}

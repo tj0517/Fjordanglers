@@ -39,8 +39,11 @@ export default function DeleteAccountCard() {
         <h2 className="text-[#0A2E4D] text-base font-bold f-display">Delete Account</h2>
       </div>
 
-      <p className="text-sm f-body mb-5 leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
+      <p className="text-sm f-body mb-2 leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
         This will permanently delete your account and all associated data. This action cannot be undone.
+      </p>
+      <p className="text-xs f-body mb-5 leading-relaxed" style={{ color: 'rgba(10,46,77,0.45)' }}>
+        Your personal data will be erased in compliance with GDPR Art. 17. Booking history may be retained in anonymised form for legal and tax obligations.
       </p>
 
       <label className="flex items-start gap-3 mb-5 cursor-pointer">

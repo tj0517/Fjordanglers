@@ -7,7 +7,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { declineInquiry } from '@/actions/inquiries'
+import { declineBooking as declineInquiry } from '@/actions/bookings'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

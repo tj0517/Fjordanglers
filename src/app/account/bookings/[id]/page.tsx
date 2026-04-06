@@ -9,6 +9,7 @@ import PayBalanceBanner from '@/components/booking/pay-balance-banner'
 import PayGuideButton from '@/components/booking/pay-guide-button'
 import { buildBookingReference } from '@/lib/sepa-qr'
 import { getPaymentModel } from '@/lib/payment-model'
+import { decryptField } from '@/lib/field-encryption'
 import type { Database } from '@/lib/supabase/database.types'
 import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
 import { MicroCalendar } from '@/components/account/micro-calendar'
@@ -692,8 +693,8 @@ export default async function AnglerBookingDetailPage({
                   guideAmountCheckoutUrl={guideAmountCheckoutUrl}
                   bookingId={id}
                   ibanShared={ibanShared}
-                  guideIban={guide?.iban ?? null}
-                  guideIbanHolder={guide?.iban_holder_name ?? null}
+                  guideIban={decryptField(guide?.iban)}
+                  guideIbanHolder={decryptField(guide?.iban_holder_name)}
                 />
               )}
 

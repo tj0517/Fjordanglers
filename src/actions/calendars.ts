@@ -269,11 +269,6 @@ export async function setCalendarExperiences(
           // Non-fatal: log and continue — availability may be incomplete but
           // the assignment change itself should succeed.
         } else {
-          console.log(
-            `[setCalendarExperiences] copied ${blocksToCarry.length} booking block(s)` +
-            ` for exp ${expId} from cal ${sourceCalRow.calendar_id} → ${calendarId}`
-          )
-
           // Step 5 — remove those same booking blocks from the source calendar.
           // They belonged to this experience's bookings; once the experience has
           // moved, the source calendar should no longer show those dates as blocked.
@@ -287,11 +282,6 @@ export async function setCalendarExperiences(
           if (cleanupErr != null) {
             console.error('[setCalendarExperiences] source cleanup failed:', cleanupErr.message)
             // Non-fatal
-          } else {
-            console.log(
-              `[setCalendarExperiences] removed ${reasonsToRemove.length} stale booking block(s)` +
-              ` from source cal ${sourceCalRow.calendar_id} for exp ${expId}`
-            )
           }
         }
       }

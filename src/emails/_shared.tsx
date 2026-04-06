@@ -120,12 +120,9 @@ export const summaryBox = {
 
 export const summaryRow = {
   borderBottom: '1px solid #E5E7EB',
-  padding: '10px 20px',
 }
 
-export const summaryRowLast = {
-  padding: '10px 20px',
-}
+export const summaryRowLast = {}
 
 export const labelCell = {
   color: '#6B7280',
@@ -133,7 +130,7 @@ export const labelCell = {
   fontWeight: 600 as const,
   letterSpacing: '0.05em',
   textTransform: 'uppercase' as const,
-  paddingRight: '16px',
+  padding: '16px 16px 16px 20px',
   verticalAlign: 'top' as const,
   whiteSpace: 'nowrap' as const,
   width: '36%',
@@ -143,6 +140,7 @@ export const valueCell = {
   color: '#0A2E4D',
   fontSize: '14px',
   fontWeight: 600 as const,
+  padding: '16px 20px 16px 0',
   verticalAlign: 'top' as const,
 }
 
