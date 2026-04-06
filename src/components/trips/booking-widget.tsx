@@ -510,6 +510,12 @@ export function BookingWidget({
   const [inquiryPeriods,      setInquiryPeriods]      = useState<Period[]>([])
   /** Whether the icelandic period picker dropdown is open. */
   const [inquiryCalendarOpen, setInquiryCalendarOpen] = useState(false)
+  /** Classic date selection (multi-select for direct mode). */
+  const [selectedDates,       setSelectedDates]       = useState<string[]>([])
+  /** Whether the classic date picker dropdown is open (direct mode). */
+  const [calendarOpen,        setCalendarOpen]         = useState(false)
+  /** Hover date for range-mode preview in direct mode calendar. */
+  const [hoverDate,           setHoverDate]            = useState<string | null>(null)
   const calendarRef        = useRef<HTMLDivElement>(null)
   const optionRef          = useRef<HTMLDivElement>(null)
   const inquiryCalendarRef = useRef<HTMLDivElement>(null)
@@ -565,6 +571,18 @@ export function BookingWidget({
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [inquiryCalendarOpen])
 
+  // Close direct mode calendar on outside click
+  useEffect(() => {
+    if (!calendarOpen) return
+    function handleOutside(e: MouseEvent) {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setCalendarOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [calendarOpen])
+
   // Sync inquiry periods with AvailabilityPreviewCalendar via custom event
   useEffect(() => {
     function handler(e: Event) {
@@ -615,6 +633,25 @@ export function BookingWidget({
       ? durationLabel(selectedOpt)
       : legacyDuration
 
+  // ── Direct mode calendar helpers ──────────────────────────────────────────
+  const bookedSet   = useMemo(() => new Set(bookedDates ?? []), [bookedDates])
+  const selectedSet = useMemo(() => new Set(selectedDates), [selectedDates])
+  const pkgDays     = selectedOpt.days ?? null
+  const isRangeMode = (pkgDays ?? 0) > 1
+
+  function handleToggleDate(iso: string) {
+    if (isRangeMode && pkgDays != null) {
+      const range: string[] = []
+      for (let i = 0; i < pkgDays; i++) range.push(addDays(iso, i))
+      setSelectedDates(range)
+      setHoverDate(null)
+    } else {
+      setSelectedDates(prev =>
+        prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso],
+      )
+    }
+  }
+
   return (
     <div
       className="p-5"
@@ -624,6 +661,135 @@ export function BookingWidget({
         boxShadow: '0 8px 40px rgba(10,46,77,0.1)',
       }}
     >
+
+      {/* ── Classic date picker — shown in "Direct booking" mode ─────────────── */}
+      {!isDraft && bookMode === 'direct' && (
+        <div className="mb-4" ref={calendarRef} style={{ position: 'relative' }}>
+
+          {/* Trigger row */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCalendarOpen(o => !o)}
+              className="flex-1 flex items-center justify-between px-4 py-3 rounded-2xl transition-all"
+              style={{
+                background: '#F3EDE4',
+                border: `1.5px solid ${calendarOpen ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}`,
+              }}
+              aria-expanded={calendarOpen}
+              aria-haspopup="dialog"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Calendar size={15} strokeWidth={1.4} className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.45 }} />
+                {selectedDates.length === 0 ? (
+                  <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    Pick your dates (optional)
+                  </span>
+                ) : (
+                  <span className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                    {selectedDates.length === 1
+                      ? selectedDates[0]
+                      : `${selectedDates.length} days selected`}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {selectedDates.length > 0 && (
+                  <span
+                    onClick={e => { e.stopPropagation(); setSelectedDates([]) }}
+                    role="button"
+                    aria-label="Clear dates"
+                    className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
+                    style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}
+                  >
+                    Clear
+                  </span>
+                )}
+                <ChevronDown
+                  size={12} strokeWidth={1.6}
+                  className="transition-transform"
+                  style={{
+                    transform: calendarOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    color: 'rgba(10,46,77,0.35)',
+                  }}
+                />
+              </div>
+            </button>
+
+            {/* Scroll-to-CTA anchor */}
+            <a
+              href="#widget-cta"
+              className="flex-shrink-0 w-[50px] h-[50px] rounded-2xl flex items-center justify-center transition-all hover:brightness-110 active:scale-[0.95]"
+              style={{ background: '#E67E50' }}
+              title="Go to book button"
+            >
+              <ArrowDown size={13} strokeWidth={1.8} style={{ color: 'white' }} />
+            </a>
+          </div>
+
+          {/* Calendar dropdown */}
+          {calendarOpen && (
+            <div
+              className="absolute left-0 right-0 z-50 mt-2 p-4 rounded-2xl"
+              style={{
+                background: '#F3EDE4',
+                border: '1.5px solid rgba(10,46,77,0.12)',
+                boxShadow: '0 16px 48px rgba(10,46,77,0.16)',
+                top: '100%',
+              }}
+              role="dialog"
+              aria-label="Pick trip dates"
+            >
+              <AvailabilityCalendar
+                config={availabilityConfig ?? null}
+                blocked={blockedDates ?? []}
+                booked={bookedSet}
+                selectedSet={selectedSet}
+                onToggle={handleToggleDate}
+                numDays={pkgDays ?? undefined}
+                hoverDate={hoverDate}
+                onHoverChange={setHoverDate}
+              />
+              <button
+                type="button"
+                onClick={() => setCalendarOpen(false)}
+                className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-[0.14em] f-body transition-opacity hover:opacity-80"
+                style={{ background: '#0A2E4D', color: '#fff' }}
+              >
+                Done
+              </button>
+            </div>
+          )}
+
+          {/* Selected date chips */}
+          {selectedDates.length > 0 && !calendarOpen && (
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {[...selectedDates].sort().map(d => (
+                <span
+                  key={d}
+                  className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
+                  style={{
+                    background: 'rgba(10,46,77,0.07)',
+                    color: '#0A2E4D',
+                    border: '1px solid rgba(10,46,77,0.12)',
+                  }}
+                >
+                  {d}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDates(prev => prev.filter(x => x !== d))}
+                    aria-label={`Remove ${d}`}
+                    className="opacity-50 hover:opacity-100 transition-opacity"
+                    style={{ lineHeight: 1, fontSize: '14px' }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Period picker — shown in "Icelandic flow" mode ────────────────────── */}
       {!isDraft && bookMode === 'icelandic' && (
@@ -1058,17 +1224,23 @@ export function BookingWidget({
           </Link>
         </>
       ) : bookMode === 'direct' ? (
-        /* ── Direct booking — quick message to guide ──────────────────────── */
+        /* ── Direct booking — with optional dates pre-filled ─────────────── */
         <>
           <Link
-            href={`/trips/${expId}/inquire?group=${groupSize}&mode=direct`}
+            href={`/trips/${expId}/inquire?${selectedDates.length > 0 ? `dates=${[...selectedDates].sort().join(',')}&` : ''}group=${groupSize}&mode=direct`}
             className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
             style={{ background: '#E67E50' }}
           >
-            Message the guide →
+            {selectedDates.length > 0
+              ? selectedDates.length === 1
+                ? `Request — ${[...selectedDates][0]} →`
+                : `Request — ${selectedDates.length} days →`
+              : 'Message the guide →'}
           </Link>
           <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            Ask about dates, availability, or anything — no commitment, no payment.
+            {selectedDates.length > 0
+              ? 'Selected dates will be pre-filled in the form.'
+              : 'Ask about dates, availability, or anything — no commitment, no payment.'}
           </p>
         </>
       ) : (
