@@ -3,5 +3,12 @@
     "Read", "Write", "Edit", "MultiEdit", 
     "Bash", "Glob", "Grep", "LS" 
   ], 
-  "model": "claude-sonnet-4-6" 
+  "model": "claude-sonnet-4-6" ,
+   "permissions": {
+    "defaultMode": "bypassPermissions",
+    "allow": [
+      "Bash(*)"
+    ],
+    "deny": []
+  }
 } 
