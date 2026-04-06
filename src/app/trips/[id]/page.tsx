@@ -493,6 +493,7 @@ export default async function ExperienceDetailPage({
 
   const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
   const blockedDates = blockedDatesRes.data ?? []
+  console.log('[trips/debug] calExp:', calExp, '| blockedDates count:', blockedDates.length, '| first:', blockedDates[0])
 
   const coverUrl = heroFull(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
   const landscapeUrl = exp.landscape_url ?? getLandscapeUrl(exp.location_country, exp.id)
