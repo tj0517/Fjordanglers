@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Calendar, Users, SlidersHorizontal, FileText, Check, CheckCircle } from 'lucide-react'
 import { createInquiryBooking as submitInquiry } from '@/actions/bookings'
+import { createClient } from '@/lib/supabase/client'
 import { type InquiryFormConfig, SPECIES_OPTIONS, resolveFormConfig } from '@/lib/inquiry-form-config'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import { MultiPeriodPicker, type Period, type BlockedRange } from '@/components/trips/multi-period-picker'
@@ -744,6 +745,10 @@ export default function InquireForm({
 
   const isLoggedIn = anglerName != null && anglerEmail != null
 
+  // ── Auth (for unauthenticated users)
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+  const [password, setPassword] = useState('')
+
   // ── Identity
   const [name,  setName]  = useState(anglerName  ?? '')
   const [email, setEmail] = useState(anglerEmail ?? '')
@@ -848,17 +853,8 @@ export default function InquireForm({
     if (next != null) setActiveTab(next)
   }
 
-  // ── Submit
-  function handleSubmit(e?: React.FormEvent) {
-    e?.preventDefault()
-    setError(null)
-
-    if (!isLoggedIn && (!name.trim() || !email.trim())) {
-      setError('Please enter your name and email.')
-      return
-    }
-
-    // Validate dates + compute envelope range from all selected periods
+  // ── Validate form, return {datesFrom, datesTo} or null on error
+  function validateAndGetDates(): { datesFrom: string; datesTo: string } | null {
     let datesFrom = ''
     let datesTo   = ''
     const nextErrorTabs: Partial<Record<TabKey, boolean>> = {}
@@ -869,8 +865,8 @@ export default function InquireForm({
       // datesFrom = earliest start, datesTo = latest end across all periods
       const allFrom = periods.map(p => p.from).sort()
       const allTo   = periods.map(p => p.to).sort()
-      datesFrom = allFrom[0]
-      datesTo   = allTo[allTo.length - 1]
+      datesFrom = allFrom[0]!
+      datesTo   = allTo[allTo.length - 1]!
     }
 
     if (species.length === 0)                                              nextErrorTabs.group  = true
@@ -880,7 +876,6 @@ export default function InquireForm({
     if (isRequired('boatPreference') && !boatPref.trim())                 nextErrorTabs.needs  = true
     if (isRequired('dietary')       && !dietary.trim())                   nextErrorTabs.needs  = true
     if (isRequired('stayingAt')     && !stayingAt.trim())                 nextErrorTabs.extras = true
-
     if (isRequired('photography')   && photographyPackage === null)       nextErrorTabs.extras = true
     if (isRequired('regionExperience') && !regionExperience.trim())       nextErrorTabs.extras = true
     if (isRequired('budget')        && !budgetMin && !budgetMax)          nextErrorTabs.extras = true
@@ -888,57 +883,108 @@ export default function InquireForm({
 
     if (Object.keys(nextErrorTabs).length > 0) {
       setErrorTabs(nextErrorTabs)
-      // Navigate to the first errored tab
       const firstErr = TABS.find(t => nextErrorTabs[t.key])
       if (firstErr) setActiveTab(firstErr.key)
       setError('Please fill in all required fields.')
-      return
+      return null
     }
 
     setErrorTabs({})
+    return { datesFrom, datesTo }
+  }
+
+  // ── Call submitInquiry with current form state (assumes auth is already done)
+  async function doSubmitInquiry(datesFrom: string, datesTo: string) {
+    const result = await submitInquiry({
+      anglerName:      name.trim(),
+      anglerEmail:     email.trim(),
+      datesFrom,
+      datesTo,
+      targetSpecies:   species,
+      experienceLevel: level,
+      groupSize:       group,
+      preferences: {
+        durationType,
+        numDays:             durationType === 'multi_day' ? numDays : undefined,
+        hasBeginners:        hasBeginners  || undefined,
+        hasChildren:         hasChildren   || undefined,
+        gearNeeded:          gearNeeded    || undefined,
+        accommodation:       accommodation || undefined,
+        transport:           transport     || undefined,
+        boatPreference:      boatPref.trim()           || undefined,
+        dietaryRestrictions: dietary.trim()            || undefined,
+        stayingAt:           stayingAt.trim()          || undefined,
+        photographyPackage:  photographyPackage ?? undefined,
+        regionExperience:    regionExperience.trim()   || undefined,
+        budgetMin:           budgetMin ? Number(budgetMin) : undefined,
+        budgetMax:           budgetMax ? Number(budgetMax) : undefined,
+        notes:               notes.trim()              || undefined,
+        allDatePeriods:      periods.length > 0 ? periods : undefined,
+        selectedPackageLabel: selectedPackageLabel ?? undefined,
+      },
+      guideId:      guideId      ?? undefined,
+      experienceId: experienceId ?? undefined,
+    })
+
+    if ('error' in result) {
+      setError(result.error)
+      return
+    }
+    setDone(true)
+  }
+
+  // ── Submit (logged-in path)
+  function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault()
+    setError(null)
+
+    if (!isLoggedIn && (!name.trim() || !email.trim())) {
+      setError('Please enter your name and email.')
+      return
+    }
+
+    const dates = validateAndGetDates()
+    if (!dates) return
+
+    startTransition(() => doSubmitInquiry(dates.datesFrom, dates.datesTo))
+  }
+
+  // ── Auth + submit (unauthenticated path)
+  function handleAuthAndSubmit() {
+    setError(null)
+
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your email and password.')
+      return
+    }
+    if (authMode === 'register' && !name.trim()) {
+      setError('Please enter your name.')
+      return
+    }
+
+    const dates = validateAndGetDates()
+    if (!dates) return
 
     startTransition(async () => {
-      const result = await submitInquiry({
-        anglerName:      name.trim(),
-        anglerEmail:     email.trim(),
-        datesFrom,
-        datesTo,
-        targetSpecies:   species,
-        experienceLevel: level,
-        groupSize:       group,
-        preferences: {
-          durationType,
-          numDays:             durationType === 'multi_day' ? numDays : undefined,
-          hasBeginners:        hasBeginners  || undefined,
-          hasChildren:         hasChildren   || undefined,
-          gearNeeded:          gearNeeded    || undefined,
-          accommodation:       accommodation || undefined,
-          transport:           transport     || undefined,
-          boatPreference:      boatPref.trim()           || undefined,
-          dietaryRestrictions: dietary.trim()            || undefined,
-          stayingAt:           stayingAt.trim()          || undefined,
-          photographyPackage:  photographyPackage ?? undefined,
-          regionExperience:    regionExperience.trim()   || undefined,
-          budgetMin:           budgetMin ? Number(budgetMin) : undefined,
-          budgetMax:           budgetMax ? Number(budgetMax) : undefined,
-          notes:               notes.trim()              || undefined,
-          // Full period selection preserved — used by server to expand into
-          // individual requested_dates (prevents envelope problem).
-          allDatePeriods:      periods.length > 0 ? periods : undefined,
-          // Direct-mode: which of the guide's packages the angler selected
-          selectedPackageLabel: selectedPackageLabel ?? undefined,
-        },
-        guideId:      guideId      ?? undefined,
-        // Pin inquiry to the trip it was started from — scopes calendar blocking
-        // to the right calendar and shows trip details on the angler's booking page.
-        experienceId: experienceId ?? undefined,
-      })
+      const supabase = createClient()
 
-      if ('error' in result) {
-        setError(result.error)
-        return
+      if (authMode === 'login') {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        if (signInError) { setError('Invalid email or password.'); return }
+      } else {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { data: { full_name: name.trim() } },
+        })
+        if (signUpError) { setError(signUpError.message); return }
+        if (!data.session) {
+          setError('Account created — check your email to confirm, then try again.')
+          return
+        }
       }
-      setDone(true)
+
+      await doSubmitInquiry(dates.datesFrom, dates.datesTo)
     })
   }
 
@@ -1528,21 +1574,76 @@ export default function InquireForm({
         )}
 
         {activeTab === 'extras' ? (
-          <button
-            key="submit-btn"
-            type="button"
-            onClick={() => handleSubmit()}
-            disabled={isPending}
-            className="flex-1 py-4 rounded-2xl text-base font-bold f-body transition-all"
-            style={{
-              background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
-              color: 'white',
-              border: 'none',
-              cursor: isPending ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {isPending ? 'Sending\u2026' : 'Send request'}
-          </button>
+          isLoggedIn ? (
+            <button
+              key="submit-btn"
+              type="button"
+              onClick={() => handleSubmit()}
+              disabled={isPending}
+              className="flex-1 py-4 rounded-2xl text-base font-bold f-body transition-all"
+              style={{
+                background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
+                color: 'white',
+                border: 'none',
+                cursor: isPending ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isPending ? 'Sending\u2026' : 'Send request'}
+            </button>
+          ) : (
+            /* Unauthenticated — show inline login/register before submit */
+            <div className="flex-1 flex flex-col gap-3">
+              {/* Auth mode toggle */}
+              <div className="flex rounded-2xl p-1 gap-1" style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.08)' }}>
+                {(['login', 'register'] as const).map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setAuthMode(m); setError(null) }}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold f-body transition-all"
+                    style={{
+                      background: authMode === m ? '#FDFAF7' : 'transparent',
+                      color: authMode === m ? '#0A2E4D' : 'rgba(10,46,77,0.4)',
+                      border: 'none',
+                      boxShadow: authMode === m ? '0 1px 6px rgba(10,46,77,0.08)' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {m === 'login' ? 'Log In' : 'Sign Up'}
+                  </button>
+                ))}
+              </div>
+              {/* Password field (email already in the name/email inputs above) */}
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Password"
+                required
+                disabled={isPending}
+                style={inputCss}
+                className="f-body"
+              />
+              <button
+                type="button"
+                onClick={handleAuthAndSubmit}
+                disabled={isPending}
+                className="py-4 rounded-2xl text-base font-bold f-body transition-all"
+                style={{
+                  background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
+                  color: 'white',
+                  border: 'none',
+                  cursor: isPending ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {isPending
+                  ? 'Sending\u2026'
+                  : authMode === 'login'
+                  ? 'Log In & Send request \u2192'
+                  : 'Sign Up & Send request \u2192'}
+              </button>
+            </div>
+          )
         ) : (
           <button
             key="continue-btn"
