@@ -9,6 +9,7 @@ import ShareIbanButton from '@/components/dashboard/share-iban-button'
 import { CountryFlag } from '@/components/ui/country-flag'
 import type { Database } from '@/lib/supabase/database.types'
 import { getPaymentModel } from '@/lib/payment-model'
+import { decryptField } from '@/lib/field-encryption'
 import { ChevronLeft, Check, Mail, Phone, MessageSquare } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -219,71 +220,38 @@ export default async function GuideBookingDetailPage({
       })()
     : null
 
-  // ── Payment breakdown — fully dynamic, zero hardcoded values ──────────────
+  // ── Payment — guide only sees their payout amount ────────────────────────
 
-  // Inquiry bookings are always paid in full (100% of offer price) — there's no
-  // deposit / balance split. Exclude them so we don't show "Deposit 100% / Balance 0%".
-  const hasDepositSplit = !isInquiry && paymentModel === 'stripe_connect' && booking.deposit_eur != null
-
-  const depositEur = booking.deposit_eur
-  const balanceEur = hasDepositSplit
-    ? Math.max(0, Math.round((booking.total_eur - depositEur!) * 100) / 100)
+  const depositEur      = booking.deposit_eur
+  const balanceEur      = depositEur != null
+    ? Math.max(0, Math.round((booking.total_eur - depositEur) * 100) / 100)
     : null
-
-  // Percentages calculated from actual stored amounts — never hardcoded
-  const depositPct = hasDepositSplit && depositEur != null && booking.total_eur > 0
-    ? Math.round((depositEur / booking.total_eur) * 100)
-    : null
-  const balancePct = depositPct != null ? 100 - depositPct : null
-
-  const balanceIsPaid    = booking.balance_paid_at != null
-  const guideAmountPaid  = (booking as Record<string, unknown>).guide_amount_paid_at != null
-  // Cash balance is only relevant for stripe_connect model (old deposit+balance flow).
-  // For manual model, the guide amount is paid directly by the angler — the platform
-  // doesn't track it as a "cash balance due" and MarkBalancePaidButton doesn't apply.
-  const cashBalanceDue =
+  const balanceIsPaid   = booking.balance_paid_at != null
+  const guideAmountPaid = (booking as Record<string, unknown>).guide_amount_paid_at != null
+  const cashBalanceDue  =
     paymentModel === 'stripe_connect' &&
     booking.status === 'confirmed' &&
     booking.balance_payment_method === 'cash' &&
     !balanceIsPaid
 
-  // Guide-visible trip price — what the guide set, NO service fee.
-  // Primary path: guide_payout_eur ÷ (1 − commission_rate) reverses commission deduction.
-  // Fallback path: strip the 5% service fee from total_eur using the cap-aware formula.
-  //   total_eur > €1050 means service fee hit the €50 cap → subtract €50.
-  //   Otherwise service fee was exactly 5% → divide by 1.05.
-  // We NEVER divide when commission_rate = 0 because that would just return guide_payout_eur
-  // unchanged, which would show the price AFTER commission instead of the set price.
-  const guidePayoutEur   = booking.guide_payout_eur
-  const commissionRate   = booking.commission_rate ?? 0
-  const commissionPct    = Math.round(commissionRate * 100)
-  const rawSubtotal      = booking.total_eur > 1050
+  const guidePayoutEur = booking.guide_payout_eur
+
+  // guideTripPrice still needed by RespondBookingWidget (trip total without service fee)
+  const commissionRate = booking.commission_rate ?? 0
+  const rawSubtotal    = booking.total_eur > 1050
     ? Math.round((booking.total_eur - 50) * 100) / 100
     : Math.round(booking.total_eur / 1.05 * 100) / 100
-  const guideTripPrice   = guidePayoutEur != null && commissionRate > 0 && commissionRate < 1
+  const guideTripPrice = guidePayoutEur != null && commissionRate > 0 && commissionRate < 1
     ? Math.round(guidePayoutEur / (1 - commissionRate) * 100) / 100
     : rawSubtotal
-  const commissionEur    = guidePayoutEur != null
-    ? Math.round((guideTripPrice - guidePayoutEur) * 100) / 100
-    : null
 
-  // For manual model: what angler pays platform = commission + service fee
-  const platformFeeEur = guidePayoutEur != null
-    ? Math.round((booking.total_eur - guidePayoutEur) * 100) / 100
-    : booking.total_eur
-
-  // Deposit / balance in guide-centric amounts (% of guideTripPrice, not angler's total).
-  // This keeps the percentage labels consistent and hides the service fee from the guide.
-  const guideDepositEur  = hasDepositSplit && depositPct != null
-    ? Math.round(guideTripPrice * depositPct / 100 * 100) / 100
-    : null
-  const guideBalanceEur  = hasDepositSplit && guideDepositEur != null
-    ? Math.round((guideTripPrice - guideDepositEur) * 100) / 100
-    : null
+  // hasDepositSplit used to determine guide amount payment status
+  const hasDepositSplit = !isInquiry && paymentModel === 'stripe_connect' && booking.deposit_eur != null
 
   // ── IBAN sharing (manual model) ───────────────────────────────────────────
-  const ibanSharedAt = (booking as Record<string, unknown>).iban_shared_at as string | null ?? null
-  const hasGuideIban = guide.iban != null && guide.iban.trim() !== ''
+  const ibanSharedAt    = (booking as Record<string, unknown>).iban_shared_at as string | null ?? null
+  const decryptedIban   = decryptField(guide.iban)
+  const hasGuideIban    = decryptedIban != null && decryptedIban.trim() !== ''
   // Show ShareIbanButton from 'accepted' onwards — guide can share IBAN as soon
   // as they accept, so angler knows where to send the guide amount even before
   // paying the platform booking fee.
@@ -523,218 +491,57 @@ export default async function GuideBookingDetailPage({
           {/* ── Payment card ───────────────────────────────────────────────── */}
           <SectionCard title="Payment">
 
-            {/* Total + payout summary */}
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p
-                  className="text-[9px] uppercase tracking-[0.22em] font-bold f-body mb-1"
-                  style={{ color: 'rgba(10,46,77,0.3)' }}
-                >
-                  Trip price
-                </p>
-                <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                  €{guideTripPrice}
-                </p>
-                {commissionEur != null && commissionPct > 0 && (
-                  <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                    −€{commissionEur} commission ({commissionPct}%)
-                  </p>
-                )}
-              </div>
-              <div className="text-right">
-                <p
-                  className="text-[9px] uppercase tracking-[0.22em] font-bold f-body mb-1"
-                  style={{ color: 'rgba(10,46,77,0.3)' }}
-                >
-                  Your earnings
-                </p>
-                <p className="text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
-                  €{guidePayoutEur}
-                </p>
-              </div>
+            {/* Your earnings — the only number the guide needs to see */}
+            <div className="mb-4">
+              <p
+                className="text-[9px] uppercase tracking-[0.22em] font-bold f-body mb-1"
+                style={{ color: 'rgba(10,46,77,0.3)' }}
+              >
+                Your earnings
+              </p>
+              <p className="text-3xl font-bold f-display" style={{ color: '#E67E50' }}>
+                {guidePayoutEur != null ? `€${guidePayoutEur}` : '—'}
+              </p>
             </div>
 
-            {/* ── stripe_connect two-step: booking fee + guide amount ─────── */}
-            {hasDepositSplit && (
-              <div
-                className="flex items-stretch gap-0 rounded-2xl overflow-hidden"
-                style={{ border: '1px solid rgba(10,46,77,0.07)' }}
-              >
-                {/* Booking fee (platform collected) */}
-                <div
-                  className="flex-1 px-4 py-3.5"
-                  style={{ borderRight: '1px solid rgba(10,46,77,0.07)' }}
-                >
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        background: isDepositPaid ? '#16A34A' : 'rgba(10,46,77,0.2)',
-                      }}
-                    />
-                    <p
-                      className="text-[9px] uppercase tracking-[0.18em] font-bold f-body"
-                      style={{ color: 'rgba(10,46,77,0.38)' }}
-                    >
-                      Booking fee
-                    </p>
-                  </div>
-                  <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-                    €{depositEur}
-                  </p>
-                  {isDepositPaid ? (
-                    <p className="text-[10px] font-bold f-body mt-1" style={{ color: '#16A34A' }}>
-                      Collected ✓
-                    </p>
-                  ) : booking.status === 'accepted' ? (
-                    <p className="text-[10px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                      Awaiting payment
-                    </p>
-                  ) : null}
-                </div>
+            {/* Status indicators — no amounts, just confirmation dots */}
+            <div className="flex flex-col gap-2">
 
-                {/* Guide earnings (angler pays guide directly) */}
-                <div className="flex-1 px-4 py-3.5">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        background: guideAmountPaid ? '#16A34A' : 'rgba(10,46,77,0.2)',
-                      }}
-                    />
-                    <p
-                      className="text-[9px] uppercase tracking-[0.18em] font-bold f-body"
-                      style={{ color: 'rgba(10,46,77,0.38)' }}
-                    >
-                      Your earnings
-                    </p>
-                  </div>
-                  <p className="text-base font-bold f-display" style={{ color: '#E67E50' }}>
-                    €{guidePayoutEur}
-                  </p>
-                  {guideAmountPaid ? (
-                    <p className="text-[10px] font-bold f-body mt-1" style={{ color: '#16A34A' }}>
-                      Paid ✓
-                    </p>
-                  ) : booking.status === 'confirmed' ? (
-                    <p className="text-[10px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                      Angler pays directly
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            )}
-
-            {/* ── stripe_connect full upfront (no deposit) ─────────────────── */}
-            {paymentModel === 'stripe_connect' && !hasDepositSplit && (
-              <div
-                className="px-4 py-3.5 rounded-2xl flex items-center gap-3"
-                style={{
-                  background: isDepositPaid
-                    ? 'rgba(22,163,74,0.06)'
-                    : 'rgba(10,46,77,0.03)',
-                  border: `1px solid ${isDepositPaid
-                    ? 'rgba(22,163,74,0.15)'
-                    : 'rgba(10,46,77,0.07)'}`,
-                }}
-              >
+              {/* Booking fee status */}
+              <div className="flex items-center gap-2">
                 <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: isDepositPaid
-                      ? 'rgba(22,163,74,0.2)'
-                      : 'rgba(10,46,77,0.08)',
-                  }}
-                >
-                  {isDepositPaid && (
-                    <Check size={10} strokeWidth={2.2} style={{ color: '#16A34A' }} />
-                  )}
-                </div>
-                <p className="text-sm f-body font-semibold" style={{ color: isDepositPaid ? '#16A34A' : 'rgba(10,46,77,0.55)' }}>
-                  {isDepositPaid
-                    ? `Full payment received — €${guideTripPrice}`
-                    : `Full payment due on booking — €${guideTripPrice}`}
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: isDepositPaid ? '#16A34A' : 'rgba(10,46,77,0.2)' }}
+                />
+                <p className="text-xs f-body" style={{ color: isDepositPaid ? '#16A34A' : 'rgba(10,46,77,0.45)' }}>
+                  {isDepositPaid ? 'Booking fee paid ✓' : 'Awaiting booking fee'}
                 </p>
               </div>
-            )}
 
-            {/* ── manual model: commission + guide direct ───────────────────── */}
-            {paymentModel === 'manual' && (
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{ border: '1px solid rgba(10,46,77,0.07)' }}
-              >
-                {/* Commission row (platform's cut of the guide's price) */}
-                <div
-                  className="flex items-center justify-between px-4 py-3.5 gap-3"
-                  style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: isDepositPaid ? '#16A34A' : 'rgba(10,46,77,0.2)' }}
-                    />
-                    <div className="min-w-0">
-                      <p
-                        className="text-[9px] uppercase tracking-[0.18em] font-bold f-body"
-                        style={{ color: 'rgba(10,46,77,0.38)' }}
-                      >
-                        FjordAnglers commission ({commissionPct}%)
-                      </p>
-                      <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {isDepositPaid && !isInquiry
-                          ? 'Collected from angler when booking was confirmed'
-                          : 'Collected from angler at booking confirmation'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-                      €{commissionEur ?? (guidePayoutEur != null ? Math.round((guideTripPrice - guidePayoutEur) * 100) / 100 : null)}
-                    </p>
-                    {isDepositPaid && !isInquiry ? (
-                      <p className="text-[10px] font-bold f-body" style={{ color: '#16A34A' }}>
-                        Collected ✓
-                      </p>
-                    ) : booking.status === 'accepted' || booking.status === 'offer_accepted' ? (
-                      <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                        Awaiting booking
-                      </p>
-                    ) : (
-                      <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                        Pending
-                      </p>
-                    )}
-                  </div>
+              {/* Guide amount status (stripe_connect two-step only) */}
+              {hasDepositSplit && (
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: guideAmountPaid ? '#16A34A' : 'rgba(10,46,77,0.2)' }}
+                  />
+                  <p className="text-xs f-body" style={{ color: guideAmountPaid ? '#16A34A' : 'rgba(10,46,77,0.45)' }}>
+                    {guideAmountPaid ? 'Your payment received ✓' : 'Your payment pending from angler'}
+                  </p>
                 </div>
+              )}
 
-                {/* Guide direct row */}
-                <div className="flex items-center justify-between px-4 py-3.5 gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ background: 'rgba(10,46,77,0.2)' }}
-                    />
-                    <div className="min-w-0">
-                      <p
-                        className="text-[9px] uppercase tracking-[0.18em] font-bold f-body"
-                        style={{ color: 'rgba(10,46,77,0.38)' }}
-                      >
-                        Your earnings
-                      </p>
-                      <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        Collected directly from the angler (cash / bank transfer)
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold f-display" style={{ color: '#E67E50' }}>
-                      €{guidePayoutEur}
-                    </p>
-                  </div>
+              {/* Manual model: remind guide they collect directly */}
+              {paymentModel === 'manual' && isDepositPaid && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'rgba(10,46,77,0.2)' }} />
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                    Collect your earnings directly from the angler
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
+
+            </div>
           </SectionCard>
 
           {/* ── Angler ────────────────────────────────────────────────────── */}
