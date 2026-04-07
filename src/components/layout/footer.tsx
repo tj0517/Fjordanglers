@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { CountryFlag } from '@/components/ui/country-flag'
 
 export function Footer() {
   return (
@@ -77,18 +78,19 @@ export function Footer() {
             </h4>
             <ul className="flex flex-col gap-2.5 md:gap-3">
               {[
-                { label: '🇳🇴 Norway', href: '/trips?country=Norway' },
-                { label: '🇸🇪 Sweden', href: '/trips?country=Sweden' },
-                { label: '🇫🇮 Finland', href: '/trips?country=Finland' },
-                { label: '🇮🇸 Iceland', href: '/trips?country=Iceland' },
-                { label: '🇩🇰 Denmark', href: '/trips?country=Denmark' },
+                { label: 'Norway', href: '/trips?country=Norway' },
+                { label: 'Sweden', href: '/trips?country=Sweden' },
+                { label: 'Finland', href: '/trips?country=Finland' },
+                { label: 'Iceland', href: '/trips?country=Iceland' },
+                { label: 'Denmark', href: '/trips?country=Denmark' },
               ].map(item => (
                 <li key={item.label}>
                   <Link
                     href={item.href}
-                    className="text-[12px] md:text-[13px] f-body transition-colors hover:text-white/55"
+                    className="inline-flex items-center gap-1.5 text-[12px] md:text-[13px] f-body transition-colors hover:text-white/55"
                     style={{ color: 'rgba(255,255,255,0.32)' }}
                   >
+                    <CountryFlag country={item.label} size={14} />
                     {item.label}
                   </Link>
                 </li>
@@ -162,9 +164,6 @@ export function Footer() {
             >
               Legal Notice
             </Link>
-            <p className="hidden md:block text-[12px] f-body" style={{ color: 'rgba(255,255,255,0.14)' }}>
-              Norway · Sweden · Finland · Iceland · Denmark
-            </p>
           </div>
         </div>
       </div>

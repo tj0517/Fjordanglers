@@ -14,6 +14,8 @@ import type { Database } from '@/lib/supabase/database.types'
 import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
 import { MicroCalendar } from '@/components/account/micro-calendar'
 import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
+import { GaEvent } from '@/components/analytics/ga-event'
+import { FbEvent } from '@/components/analytics/fb-event'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -344,6 +346,33 @@ export default async function AnglerBookingDetailPage({
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[1120px]">
+
+      {/* GA4 + Meta Pixel: purchase/Purchase — fires once after Stripe ?status=paid redirect */}
+      {(qStatus === 'paid' || qStatus === 'guide_paid') && (
+        <>
+          <GaEvent
+            action="purchase"
+            params={{
+              transaction_id: booking.stripe_payment_intent_id ?? booking.id,
+              value:          booking.deposit_eur ?? booking.total_eur ?? 0,
+              currency:       'EUR',
+              items: [{
+                item_name:     exp?.title             ?? 'Fishing trip',
+                item_category: exp?.location_country  ?? '',
+                price:         booking.deposit_eur    ?? booking.total_eur ?? 0,
+                quantity:      1,
+              }],
+            }}
+          />
+          <FbEvent
+            event="Purchase"
+            params={{
+              value:    booking.deposit_eur ?? booking.total_eur ?? 0,
+              currency: 'EUR',
+            }}
+          />
+        </>
+      )}
 
       {/* ── Back nav ────────────────────────────────────────────────────────── */}
       <Link

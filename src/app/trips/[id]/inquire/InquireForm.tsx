@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { Calendar, Users, SlidersHorizontal, FileText, Check, CheckCircle } from 'lucide-react'
 import { createInquiryBooking as submitInquiry } from '@/actions/bookings'
+import { trackFormStart } from '@/lib/gtag'
+import { trackFbInitiateCheckout } from '@/lib/fbq'
 import { createClient } from '@/lib/supabase/client'
 import { type InquiryFormConfig, SPECIES_OPTIONS, resolveFormConfig } from '@/lib/inquiry-form-config'
 import type { AvailConfigRow } from '@/components/trips/booking-widget'
@@ -738,6 +740,7 @@ export default function InquireForm({
   const [isPending, startTransition] = useTransition()
   const [done,      setDone]         = useState(false)
   const [error,     setError]        = useState<string | null>(null)
+  const formStartFired               = useRef(false)
 
   // Tab state
   const [activeTab,  setActiveTab]  = useState<TabKey>('trip')
@@ -1021,8 +1024,15 @@ export default function InquireForm({
   const nextTab = TABS.find(t => t.key === activeTab)?.next ?? null
   const prevTab = [...TABS].reverse().find(t => t.next === activeTab)?.key ?? null
 
+  function handleFormFocus() {
+    if (formStartFired.current) return
+    formStartFired.current = true
+    trackFormStart({ form_id: 'inquiry_form', form_name: 'Trip Inquiry Form' })
+    trackFbInitiateCheckout()
+  }
+
   return (
-    <form onSubmit={e => e.preventDefault()} className="flex flex-col gap-4">
+    <form onSubmit={e => e.preventDefault()} onFocus={handleFormFocus} className="flex flex-col gap-4">
 
       {/* ── Identity ─────────────────────────────────────────────────── */}
       {isLoggedIn ? (

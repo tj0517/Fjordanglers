@@ -156,6 +156,16 @@ export default function MapSection({
   const [hoveredExpId, setHoveredExpId] = useState<string | null>(null)
   const sheetScrollRef                  = useRef<HTMLDivElement>(null)
 
+  // Shuffle allGeoExperiences once on mount so viewport-filtered list is also random
+  const [shuffledGeoExperiences] = useState(() => {
+    const arr = [...allGeoExperiences]
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[arr[i], arr[j]] = [arr[j], arr[i]]
+    }
+    return arr
+  })
+
   // Detect desktop breakpoint + auto-switch to map on mobile
   useEffect(() => {
     const desktop = window.innerWidth >= 1024
@@ -194,7 +204,7 @@ export default function MapSection({
   const useViewportFilter = bounds != null && !hasServerFilters && (isDesktop || mobileView === 'map')
 
   const visibleExperiences = useViewportFilter
-    ? allGeoExperiences.filter(exp => isInBounds(exp, bounds!))
+    ? shuffledGeoExperiences.filter(exp => isInBounds(exp, bounds!))
     : initialExperiences
 
   const visibleCount = useViewportFilter ? visibleExperiences.length : initialTotal
@@ -261,7 +271,7 @@ export default function MapSection({
         <aside className="flex-shrink-0 lg:w-1/2" style={{ padding: '12px 16px 12px 0' }}>
           <div className="w-full h-full overflow-hidden" style={{ borderRadius: '20px' }}>
             <MapWrapper
-              experiences={allGeoExperiences}
+              experiences={shuffledGeoExperiences}
               onBoundsChange={setBounds}
               hoveredExpId={hoveredExpId}
               onPinClick={handlePinClick}

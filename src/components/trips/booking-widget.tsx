@@ -51,7 +51,6 @@ const MONTH_NAMES = [
 ]
 
 function toISO(y: number, m: number, d: number): string {
-  // m is 0-indexed (matches Date.getMonth())
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
 
@@ -65,7 +64,7 @@ type DayStatus = 'available' | 'selected' | 'booked' | 'blocked' | 'unavailable'
 
 function getDayStatus(
   y: number, m: number, d: number,
-  selectedSet: Set<string>,           // ← multi-select: set of ISO strings
+  selectedSet: Set<string>,
   config: AvailConfigRow | null,
   blocked: BlockedRange[],
   booked: Set<string>,
@@ -77,7 +76,6 @@ function getDayStatus(
   if (selectedSet.has(iso)) return 'selected'
   if (iso < todayISO || iso < minISO) return 'unavailable'
   if (iso > maxISO) return 'unavailable'
-
   if (config) {
     const month1 = m + 1
     if (config.available_months.length > 0 && !config.available_months.includes(month1))
@@ -86,30 +84,23 @@ function getDayStatus(
     if (config.available_weekdays.length > 0 && !config.available_weekdays.includes(weekday))
       return 'unavailable'
   }
-
   for (const r of blocked) {
     if (iso >= r.date_start && iso <= r.date_end) return 'blocked'
   }
-
   if (booked.has(iso)) return 'booked'
   return 'available'
 }
 
-// ─── AvailabilityCalendar (multi-select) ──────────────────────────────────────
+// ─── AvailabilityCalendar (mini inline, used inside widget dropdown) ──────────
 
 type CalendarProps = {
   config: AvailConfigRow | null
   blocked: BlockedRange[]
   booked: Set<string>
-  /** Current selection as a Set of ISO strings for O(1) lookups. */
   selectedSet: Set<string>
-  /** Toggle a date in/out of the selection. */
   onToggle: (iso: string) => void
-  /** When > 1, switches to range-start picker: click = start, N consecutive days highlighted. */
   numDays?: number
-  /** ISO date currently hovered (for range preview). Only used when numDays > 1. */
   hoverDate?: string | null
-  /** Fires when the hover date changes. */
   onHoverChange?: (iso: string | null) => void
 }
 
@@ -133,20 +124,13 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, 
 
   const firstDayOfMonth = new Date(viewY, viewM, 1)
   const daysInMonth = new Date(viewY, viewM + 1, 0).getDate()
-  const startPad = (firstDayOfMonth.getDay() + 6) % 7  // Monday-first offset
+  const startPad = (firstDayOfMonth.getDay() + 6) % 7
 
-  // ── Range-mode helpers ────────────────────────────────────────────────────
   const nDays      = numDays ?? 1
   const isRangeCal = nDays > 1
-
-  const rangeStart: string | null = isRangeCal && selectedSet.size > 0
-    ? ([...selectedSet].sort()[0] ?? null)
-    : null
+  const rangeStart: string | null = isRangeCal && selectedSet.size > 0 ? ([...selectedSet].sort()[0] ?? null) : null
   const rangeEnd: string | null = rangeStart ? addDays(rangeStart, nDays - 1) : null
-
-  const hoverStart: string | null = isRangeCal && !rangeStart && (hoverDate ?? null)
-    ? hoverDate!
-    : null
+  const hoverStart: string | null = isRangeCal && !rangeStart && (hoverDate ?? null) ? hoverDate! : null
   const hoverEnd: string | null = hoverStart ? addDays(hoverStart, nDays - 1) : null
 
   const canPrev = viewY > todayY || (viewY === todayY && viewM > todayM)
@@ -169,79 +153,50 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, 
 
   return (
     <div>
-      {/* Month navigation */}
       <div className="flex items-center justify-between mb-4">
-        <button
-          type="button"
-          onClick={goPrev}
-          disabled={!canPrev}
-          aria-label="Previous month"
+        <button type="button" onClick={goPrev} disabled={!canPrev} aria-label="Previous month"
           className="w-7 h-7 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
-          style={{ background: 'rgba(10,46,77,0.08)' }}
-        >
+          style={{ background: 'rgba(10,46,77,0.08)' }}>
           <ChevronLeft size={12} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
         </button>
         <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
           {MONTH_NAMES[viewM]} {viewY}
         </p>
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={!canNext}
-          aria-label="Next month"
+        <button type="button" onClick={goNext} disabled={!canNext} aria-label="Next month"
           className="w-7 h-7 rounded-full flex items-center justify-center transition-opacity disabled:opacity-20 disabled:cursor-not-allowed"
-          style={{ background: 'rgba(10,46,77,0.08)' }}
-        >
+          style={{ background: 'rgba(10,46,77,0.08)' }}>
           <ChevronRight size={12} strokeWidth={1.8} style={{ color: '#0A2E4D' }} />
         </button>
       </div>
 
-      {/* Range-mode hint */}
       {isRangeCal && (
         <p className="text-center text-[10px] f-body mb-3" style={{ color: 'rgba(10,46,77,0.45)' }}>
           Click a start date — {nDays} consecutive days will be selected
         </p>
       )}
 
-      {/* Weekday headers */}
       <div className="grid grid-cols-7 mb-1">
         {WEEKDAY_LABELS.map(wl => (
-          <p
-            key={wl}
-            className="text-center text-[9px] font-bold f-body tracking-wide uppercase"
-            style={{ color: 'rgba(10,46,77,0.28)' }}
-          >
-            {wl}
-          </p>
+          <p key={wl} className="text-center text-[9px] font-bold f-body tracking-wide uppercase"
+            style={{ color: 'rgba(10,46,77,0.28)' }}>{wl}</p>
         ))}
       </div>
 
-      {/* Day grid */}
       <div className="grid grid-cols-7 gap-y-0.5" onMouseLeave={() => onHoverChange?.(null)}>
-        {/* Leading empty cells */}
-        {Array.from({ length: startPad }).map((_, i) => (
-          <div key={`p${i}`} />
-        ))}
-
-        {/* Day buttons */}
+        {Array.from({ length: startPad }).map((_, i) => <div key={`p${i}`} />)}
         {Array.from({ length: daysInMonth }).map((_, i) => {
-          const d = i + 1
-          const status = getDayStatus(
-            viewY, viewM, d, selectedSet, config, blocked, booked,
-            todayISO, minISO, maxISO,
-          )
+          const d   = i + 1
           const iso = toISO(viewY, viewM, d)
+          const status    = getDayStatus(viewY, viewM, d, selectedSet, config, blocked, booked, todayISO, minISO, maxISO)
           const clickable = status === 'available' || status === 'selected'
 
-          // ── Range-mode: band position helpers ──────────────────────────
-          const inCommitted    = rangeStart != null && iso >= rangeStart && iso <= rangeEnd!
+          const inCommitted   = rangeStart != null && iso >= rangeStart && iso <= rangeEnd!
           const isRangeStartDay = iso === rangeStart
           const isRangeEndDay   = iso === rangeEnd
           const inHover        = hoverStart != null && iso >= hoverStart && iso <= hoverEnd!
           const isHoverStartDay = iso === hoverStart
           const isHoverEndDay   = iso === hoverEnd
 
-          // Container div: orange band strip across the range
           let containerRangeBg: React.CSSProperties = {}
           if (inCommitted) {
             containerRangeBg = isRangeStartDay
@@ -257,28 +212,22 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, 
               : { background: 'rgba(230,126,80,0.10)' }
           }
 
-          // Button styles: range endpoints get filled orange circle; mid cells are transparent on the band
           const bgStyle: React.CSSProperties =
-            isRangeCal && (isRangeStartDay || isRangeEndDay) ? { background: '#E67E50' } :
-            isRangeCal && (isHoverStartDay || isHoverEndDay) ? { background: 'rgba(230,126,80,0.55)' } :
+            isRangeCal && (isRangeStartDay || isRangeEndDay)   ? { background: '#E67E50' } :
+            isRangeCal && (isHoverStartDay || isHoverEndDay)   ? { background: 'rgba(230,126,80,0.55)' } :
             status === 'selected' ? { background: '#E67E50' } :
             status === 'booked'   ? { background: 'rgba(10,46,77,0.06)' } :
             {}
-
           const textStyle: React.CSSProperties =
-            isRangeCal && (isRangeStartDay || isRangeEndDay) ? { color: '#fff' } :
-            isRangeCal && (isHoverStartDay || isHoverEndDay) ? { color: '#fff' } :
-            status === 'selected'    ? { color: '#fff' } :
-            status === 'available'   ? { color: '#0A2E4D' } :
-            status === 'booked'      ? { color: 'rgba(10,46,77,0.28)', textDecoration: 'line-through' } :
+            isRangeCal && (isRangeStartDay || isRangeEndDay)   ? { color: '#fff' } :
+            isRangeCal && (isHoverStartDay || isHoverEndDay)   ? { color: '#fff' } :
+            status === 'selected'  ? { color: '#fff' } :
+            status === 'available' ? { color: '#0A2E4D' } :
+            status === 'booked'    ? { color: 'rgba(10,46,77,0.28)', textDecoration: 'line-through' } :
             { color: 'rgba(10,46,77,0.2)' }
 
           return (
-            <div
-              key={d}
-              className="flex items-center justify-center py-0.5"
-              style={containerRangeBg}
-            >
+            <div key={d} className="flex items-center justify-center py-0.5" style={containerRangeBg}>
               <button
                 type="button"
                 disabled={!clickable}
@@ -300,7 +249,6 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, 
         })}
       </div>
 
-      {/* Legend */}
       <div className="flex items-center gap-3 mt-3 flex-wrap">
         {isRangeCal ? (
           <>
@@ -313,28 +261,21 @@ function AvailabilityCalendar({ config, blocked, booked, selectedSet, onToggle, 
               <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>Selected range</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'transparent', border: '1px solid rgba(10,46,77,0.2)' }} />
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: 'transparent', border: '1px solid rgba(10,46,77,0.2)' }} />
               <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>Available</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: 'rgba(10,46,77,0.08)' }} />
-              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>Booked</span>
             </div>
           </>
         ) : (
           ([
-            { bg: '#E67E50', border: undefined, label: 'Selected' },
-            { bg: 'transparent', border: 'rgba(10,46,77,0.2)', label: 'Available' },
-            { bg: 'rgba(10,46,77,0.08)', border: undefined, label: 'Booked' },
+            { bg: '#E67E50',               border: undefined,             label: 'Selected'  },
+            { bg: 'transparent',           border: 'rgba(10,46,77,0.2)', label: 'Available' },
+            { bg: 'rgba(10,46,77,0.08)',   border: undefined,             label: 'Booked'    },
           ] as const).map(({ bg, border, label }) => (
             <div key={label} className="flex items-center gap-1.5">
-              <div
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ background: bg, border: border ? `1px solid ${border}` : undefined }}
-              />
-              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                {label}
-              </span>
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: bg, border: border ? `1px solid ${border}` : undefined }} />
+              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>{label}</span>
             </div>
           ))
         )}
@@ -504,17 +445,15 @@ export function BookingWidget({
   // ── Local state ───────────────────────────────────────────────────────────
   const [selectedOptIdx, setSelectedOptIdx] = useState(0)
   const [groupSize,      setGroupSize]      = useState(1)
-  /** Whether the duration option dropdown is open. */
   const [optionOpen,     setOptionOpen]     = useState(false)
-  /** Classic date selection (multi-select). */
   const [selectedDates,       setSelectedDates]       = useState<string[]>([])
-  /** Whether the classic date picker dropdown is open (direct mode). */
   const [calendarOpen,        setCalendarOpen]         = useState(false)
-  /** Hover date for range-mode preview in direct mode calendar. */
   const [hoverDate,           setHoverDate]            = useState<string | null>(null)
   const [inquiryPeriods,      setInquiryPeriods]      = useState<Period[]>([])
   const [inquiryCalendarOpen, setInquiryCalendarOpen] = useState(false)
-  const [bookMode,            setBookMode]            = useState<'direct' | 'icelandic'>('direct')
+  const [bookMode,            setBookMode]            = useState<'direct' | 'icelandic'>(
+    bookingType === 'icelandic' ? 'icelandic' : 'direct'
+  )
   const calendarRef        = useRef<HTMLDivElement>(null)
   const optionRef          = useRef<HTMLDivElement>(null)
   const inquiryCalendarRef = useRef<HTMLDivElement>(null)
@@ -553,7 +492,7 @@ export function BookingWidget({
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [optionOpen])
 
-  // Close calendar on outside click
+  // Close date calendar on outside click
   useEffect(() => {
     if (!calendarOpen) return
     function handleOutside(e: MouseEvent) {
@@ -565,7 +504,7 @@ export function BookingWidget({
     return () => document.removeEventListener('mousedown', handleOutside)
   }, [calendarOpen])
 
-  // Close icelandic period picker on outside click
+  // Close inquiry period picker on outside click
   useEffect(() => {
     if (!inquiryCalendarOpen) return
     function handleOutside(e: MouseEvent) {
@@ -606,9 +545,30 @@ export function BookingWidget({
 
   const fromPrice = useMemo(() => globalFromPrice(durationOptions), [durationOptions])
 
+  // ── Date selection helpers ────────────────────────────────────────────────
+  const bookedSet   = useMemo(() => new Set(bookedDates ?? []), [bookedDates])
+  const selectedSet = useMemo(() => new Set(selectedDates),    [selectedDates])
+  const pkgDays     = selectedOpt.days ?? null
+  const isRangeMode = (pkgDays ?? 0) > 1
+
+  function handleToggleDate(iso: string) {
+    if (isRangeMode && pkgDays != null) {
+      const range: string[] = []
+      for (let i = 0; i < pkgDays; i++) range.push(addDays(iso, i))
+      setSelectedDates(range)
+      setHoverDate(null)
+    } else {
+      setSelectedDates(prev =>
+        prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso],
+      )
+    }
+  }
+
   // ── Price + service fee ───────────────────────────────────────────────────
-  // In direct mode with single-day options (non-range), multiply by number of selected dates
-  const numSelectedDays = (bookMode === 'direct' && (selectedOpt.days ?? 0) <= 1 && selectedDates.length > 0) ? selectedDates.length : 1
+  // In direct mode with single-day options, multiply by number of selected dates
+  const numSelectedDays = (bookMode === 'direct' && !isRangeMode && selectedDates.length > 0)
+    ? selectedDates.length
+    : 1
   const subtotal   = Math.round(price.total * numSelectedDays * 100) / 100
   const serviceFee = Math.min(Math.round(subtotal * SERVICE_FEE_RATE * 100) / 100, SERVICE_FEE_CAP_EUR)
   const grandTotal = Math.round((subtotal + serviceFee) * 100) / 100
@@ -628,25 +588,6 @@ export function BookingWidget({
       ? durationLabel(selectedOpt)
       : legacyDuration
 
-  // ── Direct mode calendar helpers ──────────────────────────────────────────
-  const bookedSet   = useMemo(() => new Set(bookedDates ?? []), [bookedDates])
-  const selectedSet = useMemo(() => new Set(selectedDates), [selectedDates])
-  const pkgDays     = selectedOpt.days ?? null
-  const isRangeMode = (pkgDays ?? 0) > 1
-
-  function handleToggleDate(iso: string) {
-    if (isRangeMode && pkgDays != null) {
-      const range: string[] = []
-      for (let i = 0; i < pkgDays; i++) range.push(addDays(iso, i))
-      setSelectedDates(range)
-      setHoverDate(null)
-    } else {
-      setSelectedDates(prev =>
-        prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso],
-      )
-    }
-  }
-
   return (
     <div
       className="p-5"
@@ -657,7 +598,7 @@ export function BookingWidget({
       }}
     >
 
-      {/* ── Period picker — icelandic mode ─────────────────────────────────────── */}
+      {/* ── Period picker — request (icelandic) mode ────────────────────────── */}
       {!isDraft && bookMode === 'icelandic' && (
         <div className="mb-4" ref={inquiryCalendarRef} style={{ position: 'relative' }}>
           <div className="flex items-center gap-2">
@@ -714,84 +655,46 @@ export function BookingWidget({
         </div>
       )}
 
-      {/* ── Classic date picker — direct booking mode ───────────────────────── */}
+      {/* ── Date picker — direct booking mode ───────────────────────────────── */}
       {!isDraft && bookMode === 'direct' && (
         <div className="mb-4" ref={calendarRef} style={{ position: 'relative' }}>
-
-          {/* Trigger row */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setCalendarOpen(o => !o)}
+            <button type="button" onClick={() => setCalendarOpen(o => !o)}
               className="flex-1 flex items-center justify-between px-4 py-3 rounded-2xl transition-all"
-              style={{
-                background: '#F3EDE4',
-                border: `1.5px solid ${calendarOpen ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}`,
-              }}
-              aria-expanded={calendarOpen}
-              aria-haspopup="dialog"
-            >
+              style={{ background: '#F3EDE4', border: `1.5px solid ${calendarOpen ? '#0A2E4D' : 'rgba(10,46,77,0.12)'}` }}
+              aria-expanded={calendarOpen} aria-haspopup="dialog">
               <div className="flex items-center gap-3 min-w-0">
                 <Calendar size={15} strokeWidth={1.4} className="flex-shrink-0" style={{ color: '#0A2E4D', opacity: 0.45 }} />
                 {selectedDates.length === 0 ? (
-                  <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                    Pick your dates (optional)
-                  </span>
+                  <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>Pick your dates (optional)</span>
                 ) : (
                   <span className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                    {selectedDates.length === 1
-                      ? selectedDates[0]
-                      : `${selectedDates.length} days selected`}
+                    {isRangeMode
+                      ? `${pkgDays} days from ${selectedDates[0]}`
+                      : selectedDates.length === 1 ? selectedDates[0] : `${selectedDates.length} days selected`}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {selectedDates.length > 0 && (
-                  <span
-                    onClick={e => { e.stopPropagation(); setSelectedDates([]) }}
-                    role="button"
-                    aria-label="Clear dates"
+                  <span onClick={e => { e.stopPropagation(); setSelectedDates([]) }} role="button" aria-label="Clear dates"
                     className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full transition-opacity hover:opacity-70"
-                    style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}
-                  >
-                    Clear
-                  </span>
+                    style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}>Clear</span>
                 )}
-                <ChevronDown
-                  size={12} strokeWidth={1.6}
-                  className="transition-transform"
-                  style={{
-                    transform: calendarOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    color: 'rgba(10,46,77,0.35)',
-                  }}
-                />
+                <ChevronDown size={12} strokeWidth={1.6} className="transition-transform"
+                  style={{ transform: calendarOpen ? 'rotate(180deg)' : 'rotate(0deg)', color: 'rgba(10,46,77,0.35)' }} />
               </div>
             </button>
-
-            {/* Scroll-to-CTA anchor */}
-            <a
-              href="#widget-cta"
-              className="flex-shrink-0 w-[50px] h-[50px] rounded-2xl flex items-center justify-center transition-all hover:brightness-110 active:scale-[0.95]"
-              style={{ background: '#E67E50' }}
-              title="Go to book button"
-            >
+            <a href="#widget-cta" className="flex-shrink-0 w-[50px] h-[50px] rounded-2xl flex items-center justify-center transition-all hover:brightness-110 active:scale-[0.95]"
+              style={{ background: '#E67E50' }} title="Go to book button">
               <ArrowDown size={13} strokeWidth={1.8} style={{ color: 'white' }} />
             </a>
           </div>
 
-          {/* Calendar dropdown */}
           {calendarOpen && (
-            <div
-              className="absolute left-0 right-0 z-50 mt-2 p-4 rounded-2xl"
-              style={{
-                background: '#F3EDE4',
-                border: '1.5px solid rgba(10,46,77,0.12)',
-                boxShadow: '0 16px 48px rgba(10,46,77,0.16)',
-                top: '100%',
-              }}
-              role="dialog"
-              aria-label="Pick trip dates"
-            >
+            <div className="absolute left-0 right-0 z-50 mt-2 p-4 rounded-2xl"
+              style={{ background: '#F3EDE4', border: '1.5px solid rgba(10,46,77,0.12)', boxShadow: '0 16px 48px rgba(10,46,77,0.16)', top: '100%' }}
+              role="dialog" aria-label="Pick trip dates">
               <AvailabilityCalendar
                 config={availabilityConfig ?? null}
                 blocked={blockedDates ?? []}
@@ -802,40 +705,21 @@ export function BookingWidget({
                 hoverDate={hoverDate}
                 onHoverChange={setHoverDate}
               />
-              <button
-                type="button"
-                onClick={() => setCalendarOpen(false)}
+              <button type="button" onClick={() => setCalendarOpen(false)}
                 className="mt-4 w-full py-2.5 rounded-xl text-xs font-bold uppercase tracking-[0.14em] f-body transition-opacity hover:opacity-80"
-                style={{ background: '#0A2E4D', color: '#fff' }}
-              >
-                Done
-              </button>
+                style={{ background: '#0A2E4D', color: '#fff' }}>Done</button>
             </div>
           )}
 
-          {/* Selected date chips */}
           {selectedDates.length > 0 && !calendarOpen && (
             <div className="mt-2.5 flex flex-wrap gap-1.5">
               {[...selectedDates].sort().map(d => (
-                <span
-                  key={d}
-                  className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
-                  style={{
-                    background: 'rgba(10,46,77,0.07)',
-                    color: '#0A2E4D',
-                    border: '1px solid rgba(10,46,77,0.12)',
-                  }}
-                >
+                <span key={d} className="flex items-center gap-1.5 text-[11px] font-medium f-body px-2.5 py-1 rounded-full"
+                  style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.12)' }}>
                   {d}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDates(prev => prev.filter(x => x !== d))}
-                    aria-label={`Remove ${d}`}
-                    className="opacity-50 hover:opacity-100 transition-opacity"
-                    style={{ lineHeight: 1, fontSize: '14px' }}
-                  >
-                    ×
-                  </button>
+                  <button type="button" onClick={() => setSelectedDates(prev => prev.filter(x => x !== d))}
+                    aria-label={`Remove ${d}`} className="opacity-50 hover:opacity-100 transition-opacity"
+                    style={{ lineHeight: 1, fontSize: '14px' }}>×</button>
                 </span>
               ))}
             </div>
@@ -843,8 +727,9 @@ export function BookingWidget({
         </div>
       )}
 
-      {/* ── Mode selector ───────────────────────────────────────────────────── */}
-      {!isDraft && (
+      {/* ── Mode selector (Book directly / Request dates) ───────────────────── */}
+      {/* Hidden for icelandic experiences — request-only, no price-based booking */}
+      {!isDraft && bookingType !== 'icelandic' && (
         <div className="flex gap-2 mb-4 p-1 rounded-2xl"
           style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.08)' }}>
           {([
@@ -902,8 +787,10 @@ export function BookingWidget({
 
           <div className="flex items-center gap-2 flex-shrink-0 ml-3">
             {/* Selected option price */}
-            <span className="text-sm font-bold f-body" style={{ color: '#E67E50' }}>
-              {selectedOpt.pricing_type === 'per_boat'
+            <span className="text-sm font-bold f-body" style={{ color: bookingType === 'icelandic' ? 'rgba(10,46,77,0.4)' : '#E67E50' }}>
+              {bookingType === 'icelandic'
+                ? 'On request'
+                : selectedOpt.pricing_type === 'per_boat'
                 ? `€${selectedOpt.price_eur} flat`
                 : selectedOpt.pricing_type === 'per_group'
                 ? `From €${calcPrice(selectedOpt, groupSize).fromPrice}`
@@ -938,7 +825,9 @@ export function BookingWidget({
             {durationOptions.map((opt, i) => {
               const optPrice  = calcPrice(opt, groupSize)
               const isSel     = i === selectedOptIdx
-              const priceStr  = opt.pricing_type === 'per_boat'
+              const priceStr  = bookingType === 'icelandic'
+                ? 'On request'
+                : opt.pricing_type === 'per_boat'
                 ? `€${opt.price_eur} flat`
                 : opt.pricing_type === 'per_group'
                 ? `From €${optPrice.fromPrice}`
@@ -988,11 +877,7 @@ export function BookingWidget({
       </div>}
 
       {/* ── Divider ────────────────────────────────────────────────────────── */}
-      <div
-        className="mb-4"
-        style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }}
-      />
-
+      <div className="mb-4" style={{ height: '1px', background: 'rgba(10,46,77,0.07)' }} />
 
       {/* ── Group size stepper ──────────────────────────────────────────────── */}
       {!isDraft && showGroupSelector && (
@@ -1053,8 +938,23 @@ export function BookingWidget({
         </div>
       )}
 
+      {/* ── Price on request note — icelandic only ──────────────────────────── */}
+      {!isDraft && bookMode === 'icelandic' && (
+        <div
+          className="mb-4 px-4 py-3 rounded-2xl flex items-center justify-between"
+          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
+        >
+          <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.48)' }}>
+            Trip price
+          </span>
+          <span className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>
+            On request
+          </span>
+        </div>
+      )}
+
       {/* ── Live price breakdown ────────────────────────────────────────────── */}
-      {!isDraft && (
+      {!isDraft && bookMode === 'direct' && (
         <div
           className="mb-4 px-4 py-3 rounded-2xl"
           style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
@@ -1137,36 +1037,74 @@ export function BookingWidget({
         </>
       ) : bookMode === 'direct' ? (
         <>
-          {selectedDates.length > 0 ? (
-            <Link href={`/book/${expId}?dates=${[...selectedDates].sort().join(',')}&guests=${groupSize}&numDays=${selectedDates.length}${selectedDurationLabel ? `&pkgLabel=${encodeURIComponent(selectedDurationLabel)}` : ''}`}
-              className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-              style={{ background: '#E67E50' }}>
-              {selectedDates.length === 1 ? `Book ${[...selectedDates][0]} →` : `Book ${selectedDates.length} days →`}
-            </Link>
-          ) : (
-            <button type="button" onClick={() => setCalendarOpen(true)}
-              className="w-full font-semibold py-3.5 rounded-2xl text-sm tracking-wide f-body transition-all hover:brightness-105"
-              style={{ background: '#E67E50', color: '#fff' }}>
-              Select dates to book →
-            </button>
-          )}
+          {/*
+           * CTA always goes to Step 1 (/book/[expId]) — NEVER directly to Step 2.
+           * If dates were pre-selected in the widget, they're passed via `prefill`
+           * so BookingDateStep can highlight them; the user can still change them.
+           */}
+          <Link
+            href={(() => {
+              const base = `/book/${expId}?guests=${groupSize}`
+              const pkg  = selectedDurationLabel ? `&pkgLabel=${encodeURIComponent(selectedDurationLabel)}` : ''
+              if (selectedDates.length === 0) return `${base}${pkg}`
+              // For range packages: prefill with the start date only
+              const prefillDates = isRangeMode ? selectedDates[0] : [...selectedDates].sort().join(',')
+              return `${base}&prefill=${prefillDates}${pkg}`
+            })()}
+            className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
+            style={{ background: '#E67E50' }}
+          >
+            {selectedDates.length === 0
+              ? 'Book now →'
+              : isRangeMode
+                ? `Book — ${pkgDays} days from ${new Date(`${selectedDates[0]}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} →`
+                : selectedDates.length === 1
+                  ? `Book — ${new Date(`${selectedDates[0]}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} →`
+                  : `Book — ${selectedDates.length} dates →`}
+          </Link>
           <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            No payment now. Guide confirms within 24 hours.
+            No payment now. {selectedDates.length > 0 ? 'Review & confirm dates on the next step.' : 'Choose your dates on the next step.'}
           </p>
+          {/* Secondary: message guide (goes to request mode) */}
+          <Link
+            href={`/book/${expId}?mode=request&guests=${groupSize}`}
+            className="mt-2 flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-sm font-semibold f-body transition-all hover:brightness-95 active:scale-[0.98]"
+            style={{ background: 'rgba(10,46,77,0.05)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}
+          >
+            <MessageSquare size={14} strokeWidth={1.7} />
+            Message guide
+          </Link>
         </>
       ) : (
         <>
           <Link
-            href={`/trips/${expId}/inquire${inquiryPeriods.length > 0 ? `?periods=${encodePeriodsParam(inquiryPeriods)}&group=${groupSize}` : `?group=${groupSize}`}`}
+            href={(() => {
+              const base = `/book/${expId}?mode=request&guests=${groupSize}`
+              const pkg  = selectedDurationLabel ? `&pkgLabel=${encodeURIComponent(selectedDurationLabel)}` : ''
+              if (inquiryPeriods.length === 0) return `${base}${pkg}`
+              return `${base}&periods=${encodePeriodsParam(inquiryPeriods)}${pkg}`
+            })()}
             className="block w-full text-center text-white font-semibold py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
-            style={{ background: '#0A2E4D' }}>
-            {inquiryPeriods.length > 0
-              ? inquiryPeriods.length === 1 ? `Request trip — ${fmtPeriod(inquiryPeriods[0])} →` : `Request trip — ${inquiryPeriods.length} periods →`
-              : 'Request this trip →'}
+            style={{ background: '#0A2E4D' }}
+          >
+            {inquiryPeriods.length === 0
+              ? 'Request this trip →'
+              : inquiryPeriods.length === 1
+                ? `Request — ${fmtPeriod(inquiryPeriods[0])} →`
+                : `Request — ${inquiryPeriods.length} periods →`}
           </Link>
           <p className="text-center text-xs mt-2 f-body" style={{ color: 'rgba(10,46,77,0.32)' }}>
-            Guide reviews your request and sets up a custom offer — no payment until confirmed.
+            {inquiryPeriods.length > 0 ? 'Review availability on the next step.' : 'Tell the guide your availability window on the next step.'}
           </p>
+          {/* Secondary: message guide */}
+          <Link
+            href={`/book/${expId}?mode=request&guests=${groupSize}`}
+            className="mt-2 flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-sm font-semibold f-body transition-all hover:brightness-95 active:scale-[0.98]"
+            style={{ background: 'rgba(10,46,77,0.05)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}
+          >
+            <MessageSquare size={14} strokeWidth={1.7} />
+            Message guide
+          </Link>
         </>
       )}
 
@@ -1246,7 +1184,7 @@ export function MobileBookingBar({
           <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>On request</p>
         </div>
         <Link
-          href={`/trips/${expId}/inquire`}
+          href={`/book/${expId}?mode=request`}
           className="text-white font-semibold px-8 py-3.5 rounded-2xl text-sm tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
           style={{ background: '#0A2E4D' }}
         >
@@ -1284,7 +1222,7 @@ export function MobileBookingBar({
             Book & Pay
           </Link>
           <Link
-            href={`/trips/${expId}/inquire`}
+            href={`/book/${expId}?mode=request`}
             className="flex-1 text-center font-semibold py-3 rounded-xl text-xs tracking-wide transition-all hover:brightness-110 active:scale-[0.98] f-body"
             style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}
           >
@@ -1317,17 +1255,17 @@ export function MobileBookingBar({
       </div>
       <div className="flex gap-2 flex-1 min-w-0">
         <Link
-          href={`/trips/${expId}/inquire`}
+          href={`/book/${expId}?mode=request`}
           className="flex items-center justify-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold f-body transition-all hover:brightness-95 active:scale-[0.98] flex-shrink-0"
           style={{
             background: 'rgba(10,46,77,0.06)',
             color: '#0A2E4D',
             border: '1px solid rgba(10,46,77,0.1)',
           }}
-          aria-label="Message the guide first"
+          aria-label="Send a trip request"
         >
           <MessageSquare size={13} strokeWidth={1.8} />
-          Message
+          Request
         </Link>
         <Link
           href={`/book/${expId}`}

@@ -176,7 +176,7 @@ export default async function HomePage() {
 
           {featured.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {featured.map(exp => {
+              {featured.map((exp, idx) => {
                 const coverUrl = exp.images.find(img => img.is_cover)?.url ?? exp.images[0]?.url ?? null
                 const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
                 const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} ${exp.duration_days === 1 ? 'day' : 'days'}` : null
@@ -198,6 +198,7 @@ export default async function HomePage() {
                             src={coverUrl}
                             alt={exp.title}
                             fill
+                            priority={idx === 0}
                             className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
                           />
                         ) : (
@@ -568,7 +569,7 @@ export default async function HomePage() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-              {featuredGuides.map((guide: FeaturedGuide) => {
+              {featuredGuides.map((guide: FeaturedGuide, idx) => {
                 const fishPills = (guide.fish_expertise as string[]).slice(0, 2)
                 return (
                   <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
@@ -579,7 +580,7 @@ export default async function HomePage() {
                       {/* Cover */}
                       <div className="relative overflow-hidden" style={{ height: '180px' }}>
                         {guide.cover_url != null ? (
-                          <Image src={guide.cover_url} alt={guide.full_name} fill className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
+                          <Image src={guide.cover_url} alt={guide.full_name} fill priority={idx === 0} className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
                         ) : (
                           <div className="w-full h-full" style={{ background: '#0A2E4D' }} />
                         )}
@@ -645,9 +646,12 @@ export default async function HomePage() {
       <section style={{ background: '#F3EDE4' }}>
         <div className="relative overflow-hidden" style={{ minHeight: '580px' }}>
 
-          <BgVideo
-            src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/cta.mp4"
-            className="absolute inset-0 w-full h-full object-cover object-center"
+          <Image
+            src="/vanern.jpg"
+            alt=""
+            fill
+            priority
+            className="object-cover object-center"
           />
           <div
             className="absolute inset-0"
@@ -672,11 +676,11 @@ export default async function HomePage() {
                 className="text-white font-bold f-display mb-5"
                 style={{ fontSize: 'clamp(36px, 4.5vw, 60px)', lineHeight: 1.06 }}
               >
-                Are you a<br />
-                <span style={{ fontStyle: 'italic', color: '#E67E50' }}>fishing guide?</span>
+                Reach anglers<br />
+                <span style={{ fontStyle: 'italic', color: '#E67E50' }}>across Europe.</span>
               </h2>
               <p className="text-base leading-relaxed mb-10 f-body" style={{ color: 'rgba(255,255,255,0.48)', maxWidth: '380px' }}>
-                Send us your Instagram or website — we build your listing for you. No forms, no hassle.
+                Drop us your Instagram or website — we build your full listing for free. No tech, no paperwork, no hassle.
               </p>
               <div className="flex flex-wrap items-center gap-4">
                 <a
@@ -694,7 +698,7 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Right — founding offer card */}
+            {/* Right — how it works card */}
             <div className="hidden md:flex justify-end">
               <div
                 className="w-full"
@@ -712,16 +716,16 @@ export default async function HomePage() {
                   How it works
                 </p>
                 <p className="f-display font-bold text-white mb-1" style={{ fontSize: '42px', lineHeight: 1 }}>
-                  We set it
+                  Zero setup.
                 </p>
                 <p className="f-display font-bold mb-4" style={{ fontSize: '42px', lineHeight: 1, color: '#E67E50', fontStyle: 'italic' }}>
-                  up for you.
+                  Just guiding.
                 </p>
                 <p className="text-sm f-body mb-6" style={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.7 }}>
-                  Send us your profile — we handle the listing. You just show up and guide.
+                  Send us a link — we handle your full profile. You focus on the water, we handle the rest.
                 </p>
                 <div className="flex flex-col gap-2">
-                  {['Free to list', 'We write your profile', 'You set your price', 'Anglers from 20+ countries'].map(t => (
+                  {['Free to list', 'We write your profile', 'You control your pricing', 'Anglers from 20+ countries'].map(t => (
                     <div key={t} className="flex items-center gap-2.5">
                       <span className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(230,126,80,0.18)' }}>
                         <span style={{ color: '#E67E50', fontSize: '9px' }}>✓</span>

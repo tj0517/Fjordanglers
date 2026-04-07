@@ -45,6 +45,8 @@ type Props = {
     // Individual period boundaries — only present when angler picked multiple
     // non-contiguous ranges in request mode (encodePeriodsParam format).
     periods?:      string
+    // Pre-filled message to guide from step 1 (request mode textarea)
+    msg?:          string
   }>
 }
 
@@ -106,6 +108,11 @@ export default async function BookPage({ params, searchParams }: Props) {
   // ── Always fetch experience ────────────────────────────────────────────────
   const experience = await getExperience(expId)
   if (!experience) notFound()
+
+  // Guard: icelandic booking type (price-on-request, no direct dates) → inquiry form only
+  if (experience.booking_type === 'icelandic') {
+    redirect(`/trips/${expId}/inquire`)
+  }
 
   // Guard: guide disabled their calendar → booking not available, send to inquiry
   if (experience.guide.calendar_disabled) {
@@ -247,6 +254,7 @@ export default async function BookPage({ params, searchParams }: Props) {
             rawDurationOptions={experience.duration_options}
             initialMode={initialMode}
             initialDates={prefillDates}
+            initialPeriods={decodedPeriods}
           />
         </div>
       </div>
@@ -543,6 +551,7 @@ export default async function BookPage({ params, searchParams }: Props) {
               durationOptionLabel={durationLabel}
               defaultName={defaultName}
               defaultEmail={defaultEmail}
+              defaultSpecialRequests={sp.msg ?? ''}
               isLoggedIn={user != null}
             />
           </div>

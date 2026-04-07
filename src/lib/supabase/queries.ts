@@ -151,14 +151,17 @@ export async function getExperiences(
         case 'duration-desc':
           query = query.order('duration_days', { ascending: false, nullsFirst: false })
           break
-        default:
-          query = query.order('created_at', { ascending: false })
+        // default: no .order() — DB returns in heap order, we shuffle in JS below
       }
 
       const pageSize = params.pageSize ?? 12
       const page = Math.max(1, Number(params.page ?? 1))
       const offset = (page - 1) * pageSize
-      query = query.range(offset, offset + pageSize - 1)
+
+      // For explicit sorts, let DB handle pagination. For random default, fetch all and paginate in JS.
+      if (params.sort) {
+        query = query.range(offset, offset + pageSize - 1)
+      }
 
       const { data, error, count } = await query
 
@@ -167,13 +170,21 @@ export async function getExperiences(
         return { experiences: [], total: 0 }
       }
 
-      return {
-        experiences: (data as unknown as ExperienceWithGuide[]).map(exp => ({
-          ...exp,
-          images: sortImages(exp.images ?? []),
-        })),
-        total: count ?? 0,
+      let experiences = (data as unknown as ExperienceWithGuide[]).map(exp => ({
+        ...exp,
+        images: sortImages(exp.images ?? []),
+      }))
+
+      if (!params.sort) {
+        // Fisher-Yates shuffle, then slice for current page
+        for (let i = experiences.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1))
+          ;[experiences[i], experiences[j]] = [experiences[j], experiences[i]]
+        }
+        experiences = experiences.slice(offset, offset + pageSize)
       }
+
+      return { experiences, total: count ?? 0 }
     },
     ['experiences', JSON.stringify(params)],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },

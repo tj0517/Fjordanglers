@@ -91,8 +91,10 @@ type Props = {
   rawDurationOptions?: unknown
   /** Which tab to open by default ('direct' | 'request') */
   initialMode?:        'direct' | 'request'
-  /** Dates to pre-select in the "Book directly" calendar */
+  /** Dates to pre-select in the "Book directly" calendar (from widget pre-fill) */
   initialDates?:       string[]
+  /** Periods to pre-select in the "Send request" MultiPeriodPicker (from widget pre-fill) */
+  initialPeriods?:     Period[]
 }
 
 // ─── ISO helpers ──────────────────────────────────────────────────────────────
@@ -519,8 +521,9 @@ export default function BookingDateStep({
   availabilityConfig,
   blockedDates,
   rawDurationOptions,
-  initialMode  = 'direct',
-  initialDates = [],
+  initialMode    = 'direct',
+  initialDates   = [],
+  initialPeriods = [],
 }: Props) {
   const router = useRouter()
 
@@ -548,9 +551,10 @@ export default function BookingDateStep({
   const selectedPkg = durationOptions[selectedPkgIdx] ?? durationOptions[0]
 
   // ── Request mode state ───────────────────────────────────────────────────
-  const [periods,         setPeriods]        = useState<Period[]>([])
+  const [periods,         setPeriods]        = useState<Period[]>(initialPeriods)
   const [requestPkgIdx,   setRequestPkgIdx]  = useState(0)
   const [numDaysRequest,  setNumDaysRequest]  = useState(() => pkgDays(durationOptions[0] ?? durationOptions[0]))
+  const [guideMessage,    setGuideMessage]   = useState('')
 
   // ── Shared ────────────────────────────────────────────────────────────────
   const [groupSize, setGroupSize] = useState(Math.min(initialGuests, maxGuests))
@@ -660,6 +664,10 @@ export default function BookingDateStep({
     // date — not just the envelope start/end. Needed for correct calendar blocking.
     if (periods.length > 1) {
       params.set('periods', encodePeriodsParam(periods))
+    }
+    // Carry the optional guide message through to step 2 (pre-fills special requests)
+    if (guideMessage.trim()) {
+      params.set('msg', guideMessage.trim())
     }
     router.push(`/book/${expId}?${params.toString()}`)
   }
@@ -1001,9 +1009,45 @@ export default function BookingDateStep({
       {/* ════════════════════════════════════════════════════════════════════ */}
       {bookingMode === 'request' && (
         <>
-          <p className="text-sm f-body mb-5" style={{ color: 'rgba(10,46,77,0.5)' }}>
+          <p className="text-sm f-body mb-4" style={{ color: 'rgba(10,46,77,0.5)' }}>
             Choose a package, tell the guide when you could come — they&apos;ll confirm exact dates.
           </p>
+
+          {/* ── "Request, not instant booking" info box ─────────────────── */}
+          <div
+            className="mb-6 px-4 py-3.5 rounded-2xl flex items-start gap-3"
+            style={{ background: 'rgba(10,46,77,0.04)', border: '1.5px solid rgba(10,46,77,0.1)' }}
+          >
+            <div
+              className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+              style={{ background: 'rgba(10,46,77,0.08)' }}
+            >
+              {/* Envelope icon */}
+              <svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="#0A2E4D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="0.75" y="0.75" width="11.5" height="9.5" rx="1.5" />
+                <path d="M0.75 2.5l5.75 4 5.75-4" />
+              </svg>
+            </div>
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>
+                This sends a request — not an instant booking
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {[
+                  { icon: '✉️', text: 'Your request goes to the guide — you can message each other before anything is confirmed.' },
+                  { icon: '📋', text: 'The guide creates a personalised offer with exact dates and price.' },
+                  { icon: '✅', text: 'You review the offer and accept it. Only then is a booking fee charged.' },
+                ].map(({ icon, text }) => (
+                  <div key={text} className="flex items-start gap-2">
+                    <span className="text-[11px] leading-none mt-0.5 flex-shrink-0">{icon}</span>
+                    <p className="text-[11px] f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                      {text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
 
           {/* ── 1. Package selector ─────────────────────────────────────── */}
           <div className="mb-6">
@@ -1071,6 +1115,42 @@ export default function BookingDateStep({
             availabilityConfig={availabilityConfig}
             blockedDates={blockedDates}
           />
+
+          {/* ── Message to guide ─────────────────────────────────────── */}
+          <div className="mt-5">
+            <p
+              className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2 f-body flex items-center gap-1"
+              style={{ color: 'rgba(10,46,77,0.38)' }}
+            >
+              Message to guide
+              <span
+                className="normal-case tracking-normal text-[10px] font-normal ml-1 f-body"
+                style={{ color: 'rgba(10,46,77,0.3)' }}
+              >
+                — optional
+              </span>
+            </p>
+            <textarea
+              rows={3}
+              placeholder="Tell the guide about your fishing experience, target species, any special requirements, or questions you have before committing…"
+              value={guideMessage}
+              onChange={e => setGuideMessage(e.target.value)}
+              className="f-body resize-none w-full"
+              style={{
+                background:   '#F3EDE4',
+                border:       '1.5px solid rgba(10,46,77,0.12)',
+                borderRadius: '14px',
+                padding:      '12px 14px',
+                fontSize:     '13px',
+                color:        '#0A2E4D',
+                outline:      'none',
+                lineHeight:   '1.55',
+              }}
+            />
+            <p className="text-[11px] mt-1.5 f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+              The guide sees this before creating your offer. You can also chat after submitting.
+            </p>
+          </div>
 
           {/* ── 3. How many days + anglers — visible once window is set ─── */}
           {hasWindow && (

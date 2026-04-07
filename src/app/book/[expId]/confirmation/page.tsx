@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { Check } from 'lucide-react'
 import { getPaymentModel } from '@/lib/payment-model'
+import { GaEvent } from '@/components/analytics/ga-event'
+import { FbEvent } from '@/components/analytics/fb-event'
 
 type Props = {
   params: Promise<{ expId: string }>
@@ -55,6 +57,13 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16" style={{ background: '#F3EDE4' }}>
+      {/* GA4: qualify_lead — fires once when booking request is submitted */}
+      <GaEvent
+        action="qualify_lead"
+        params={{ value: booking.total_eur, currency: 'EUR', trip_name: expTitle }}
+      />
+      {/* Meta Pixel: Lead */}
+      <FbEvent event="Lead" params={{ value: booking.total_eur, currency: 'EUR' }} />
       <div
         className="w-full max-w-md p-10 flex flex-col items-center text-center"
         style={{

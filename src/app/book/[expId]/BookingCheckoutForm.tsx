@@ -19,6 +19,8 @@ type Props = {
   durationOptionLabel?: string
   defaultName?: string
   defaultEmail?: string
+  /** Pre-filled from the guide message textarea in step 1 (request mode) */
+  defaultSpecialRequests?: string
   isLoggedIn?: boolean
 }
 
@@ -32,6 +34,7 @@ export default function BookingCheckoutForm({
   durationOptionLabel,
   defaultName = '',
   defaultEmail = '',
+  defaultSpecialRequests = '',
   isLoggedIn = false,
 }: Props) {
   const [mode, setMode] = useState<Mode>('login')
@@ -41,7 +44,7 @@ export default function BookingCheckoutForm({
   const [anglerEmail, setAnglerEmail]             = useState(defaultEmail)
   const [anglerPhone, setAnglerPhone]             = useState('')
   const [anglerCountry, setAnglerCountry]         = useState('')
-  const [specialRequests, setSpecialRequests]     = useState('')
+  const [specialRequests, setSpecialRequests]     = useState(defaultSpecialRequests)
 
   // Auth fields (login + register)
   const [password, setPassword] = useState('')

@@ -50,6 +50,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable}`}>
+      <head>
+        {/* Preconnect to Supabase CDN — speeds up all guide/experience images */}
+        <link rel="preconnect" href="https://uwxrstbplaoxfghrchcy.supabase.co" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://uwxrstbplaoxfghrchcy.supabase.co" />
+      </head>
       <body>
         {children}
         {GTM_ID && <CookieBanner gtmId={GTM_ID} />}
