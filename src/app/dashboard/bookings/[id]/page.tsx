@@ -26,9 +26,80 @@ function parsedOfferDetails(raw: string | null): {
   meetingLocation?: string | null
   meetingLat?: number | null
   meetingLng?: number | null
+  riverSection?: string | null
+  included?: string[]
 } {
   if (raw == null) return {}
   try { return JSON.parse(raw) } catch { return {} }
+}
+
+// Read-only calendar grid for offer_sent state (guide's sent offer)
+function OfferCalendarGrid({ days }: { days: string[] }) {
+  if (days.length === 0) return null
+
+  const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+  const today = new Date().toISOString().slice(0, 10)
+
+  const byMonth = new Map<string, Set<string>>()
+  for (const d of days) {
+    const key = d.slice(0, 7)
+    if (!byMonth.has(key)) byMonth.set(key, new Set())
+    byMonth.get(key)!.add(d)
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {[...byMonth.entries()].map(([monthKey, daySet]) => {
+        const [yearStr, monthStr] = monthKey.split('-')
+        const year      = parseInt(yearStr, 10)
+        const monthIdx  = parseInt(monthStr, 10) - 1
+        const monthDate = new Date(year, monthIdx, 1)
+        const monthLabel = monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+        const firstDay  = monthDate.getDay()
+        const daysInMo  = new Date(year, monthIdx + 1, 0).getDate()
+        const offset    = (firstDay + 6) % 7
+        const cells: Array<number | null> = [
+          ...Array<null>(offset).fill(null),
+          ...Array.from({ length: daysInMo }, (_, i) => i + 1),
+        ]
+
+        return (
+          <div key={monthKey} className="p-4 rounded-2xl"
+            style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 1px 6px rgba(10,46,77,0.04)' }}>
+            <p className="text-xs font-bold f-body mb-2 text-center" style={{ color: '#0A2E4D' }}>
+              {monthLabel}
+            </p>
+            <div className="grid grid-cols-7 mb-1">
+              {DAY_HEADERS.map((h, i) => (
+                <div key={i} className="text-center text-[9px] font-bold f-body py-0.5"
+                  style={{ color: 'rgba(10,46,77,0.28)' }}>{h}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-0.5">
+              {cells.map((day, idx) => {
+                if (day == null) return <div key={`e${idx}`} />
+                const d = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                const isProposed = daySet.has(d)
+                const isPast = d < today
+                return (
+                  <div key={d}
+                    className="aspect-square flex items-center justify-center text-[10px] f-body rounded-lg"
+                    style={{
+                      background: isProposed ? '#E67E50' : 'transparent',
+                      color:      isProposed ? '#fff'    : isPast ? 'rgba(10,46,77,0.18)' : 'rgba(10,46,77,0.55)',
+                      fontWeight: isProposed ? '700'     : '400',
+                      boxShadow:  isProposed ? '0 1px 4px rgba(230,126,80,0.35)' : 'none',
+                    }}>
+                    {day}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -240,6 +311,90 @@ export default async function GuideBookingDetailPage({
               </div>
             </div>
 
+            {/* ── Sent offer details (offer_sent) ── */}
+            {booking.status === 'offer_sent' && (
+              <div
+                className="rounded-2xl p-6 flex flex-col gap-5"
+                style={{ background: '#FFFFFF', border: '1px solid rgba(59,130,246,0.15)', boxShadow: '0 1px 4px rgba(10,46,77,0.06)' }}
+              >
+                <h2 className="text-xs font-bold uppercase tracking-wider f-body"
+                  style={{ color: '#1D4ED8' }}>
+                  Your sent offer
+                </h2>
+
+                {/* Calendar */}
+                <div>
+                  <p className="text-xs f-body font-medium mb-2" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                    Proposed dates ({(booking.offer_days ?? []).length} day{(booking.offer_days ?? []).length !== 1 ? 's' : ''})
+                  </p>
+                  <OfferCalendarGrid days={booking.offer_days ?? []} />
+                </div>
+
+                {/* Price */}
+                {booking.offer_price_eur != null && booking.offer_price_eur > 0 && (
+                  <div className="flex items-center justify-between px-5 py-3.5 rounded-2xl"
+                    style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
+                    <div>
+                      <p className="text-xs f-body font-medium" style={{ color: 'rgba(10,46,77,0.45)' }}>Offered trip price</p>
+                      <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                        {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                      €{booking.offer_price_eur.toFixed(0)}
+                    </p>
+                  </div>
+                )}
+
+                {/* River / Beat section */}
+                {details.riverSection != null && details.riverSection.trim() !== '' && (
+                  <div>
+                    <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>River / Beat section</p>
+                    <p className="text-sm f-body font-semibold flex items-center gap-2" style={{ color: '#0A2E4D' }}>
+                      🎣 {details.riverSection}
+                    </p>
+                  </div>
+                )}
+
+                {/* What's included */}
+                {details.included != null && details.included.length > 0 && (
+                  <div>
+                    <p className="text-xs f-body font-medium mb-2" style={{ color: 'rgba(10,46,77,0.45)' }}>What&apos;s included</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {details.included.map(item => (
+                        <span key={item} className="text-xs f-body font-semibold px-2.5 py-1.5 rounded-lg"
+                          style={{ background: 'rgba(34,197,94,0.08)', color: '#15803D', border: '1px solid rgba(34,197,94,0.18)' }}>
+                          ✓ {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Meeting point */}
+                {details.meetingLocation != null && details.meetingLocation.trim() !== '' && (
+                  <div>
+                    <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>Meeting point</p>
+                    <p className="text-sm f-body font-semibold flex items-start gap-1.5" style={{ color: '#0A2E4D' }}>
+                      <span className="flex-shrink-0">📍</span>
+                      {details.meetingLocation}
+                    </p>
+                  </div>
+                )}
+
+                {/* Message */}
+                {details.message != null && details.message.trim() !== '' && (
+                  <div className="rounded-xl px-4 py-3"
+                    style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}>
+                    <p className="text-xs f-body font-medium mb-1" style={{ color: 'rgba(10,46,77,0.45)' }}>Your message</p>
+                    <p className="text-sm f-body leading-relaxed italic" style={{ color: '#374151' }}>
+                      &ldquo;{details.message}&rdquo;
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Trip details */}
             <div
               className="rounded-2xl p-6"
@@ -247,7 +402,7 @@ export default async function GuideBookingDetailPage({
             >
               <h2 className="text-xs font-bold uppercase tracking-wider f-body mb-4"
                 style={{ color: 'rgba(10,46,77,0.4)' }}>
-                Trip details
+                {booking.status === 'offer_sent' ? "Angler's request" : 'Trip details'}
               </h2>
 
               <div className="mb-4">

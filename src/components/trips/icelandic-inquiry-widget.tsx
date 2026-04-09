@@ -819,30 +819,25 @@ export function IcelandicAvailabilitySection() {
 
 // ─── MobileIcelandicBar ───────────────────────────────────────────────────────
 
-export function MobileIcelandicBar() {
-  function scrollToWidget() {
-    document.getElementById('inquiry-widget')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+export function MobileIcelandicBar({ experienceId }: { experienceId: string }) {
   return (
-    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-4 pt-3"
+    <div
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-4"
       style={{
         background:     'rgba(10,46,77,0.97)',
         backdropFilter: 'blur(12px)',
         borderTop:      '1px solid rgba(255,255,255,0.08)',
-        // Safe-area bottom padding for iPhones with home indicator
-        paddingBottom:  'calc(12px + env(safe-area-inset-bottom, 0px))',
-      }}>
-      <div className="flex items-center justify-between max-w-lg mx-auto">
-        <div>
-          <p className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.45)' }}>Price</p>
-          <p className="text-lg font-bold f-display" style={{ color: '#E67E50' }}>On request</p>
-        </div>
-        <button type="button" onClick={scrollToWidget}
-          className="px-6 py-2.5 rounded-xl text-sm font-bold text-white f-body"
-          style={{ background: '#E67E50', boxShadow: '0 4px 14px rgba(230,126,80,0.28)' }}>
-          Enquire →
-        </button>
-      </div>
+        paddingTop:     '10px',
+        paddingBottom:  'calc(10px + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
+      <a
+        href={`/trips/${experienceId}/inquire`}
+        className="flex items-center justify-center w-full py-3.5 rounded-2xl text-sm font-bold text-white f-body"
+        style={{ background: '#E67E50', boxShadow: '0 4px 14px rgba(230,126,80,0.28)' }}
+      >
+        Request to Book →
+      </a>
     </div>
   )
 }

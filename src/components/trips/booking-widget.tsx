@@ -549,43 +549,29 @@ export function BookingWidget({
 // ─── MobileBookingBar ─────────────────────────────────────────────────────────
 
 export function MobileBookingBar({
-  experience,
+  experienceId,
 }: {
-  experience: Pick<ExperienceSummary, 'price_per_person_eur' | 'duration_options'>
+  experienceId: string
 }) {
-  const packages = Array.isArray(experience.duration_options) && experience.duration_options.length > 0
-    ? experience.duration_options as DurationOptionPayload[]
-    : null
-  const lowestPrice = packages != null
-    ? Math.min(...packages.map(p => p.price_eur))
-    : experience.price_per_person_eur
-
-  function scrollToWidget() {
-    document.getElementById('booking-widget')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
   return (
-    <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-4 py-3"
+    <div
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-4"
       style={{
-        background: 'rgba(253,250,247,0.96)',
+        background:     'rgba(243,237,228,0.96)',
         backdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(10,46,77,0.08)',
-        boxShadow: '0 -4px 24px rgba(10,46,77,0.08)',
-      }}>
-      <div className="flex items-center justify-between max-w-lg mx-auto">
-        <div>
-          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>From</p>
-          <p className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>
-            €{lowestPrice}
-            <span className="text-sm font-normal" style={{ color: 'rgba(10,46,77,0.45)' }}>/pp</span>
-          </p>
-        </div>
-        <button type="button" onClick={scrollToWidget}
-          className="px-6 py-2.5 rounded-xl text-sm font-bold text-white f-body"
-          style={{ background: '#E67E50', boxShadow: '0 4px 14px rgba(230,126,80,0.28)' }}>
-          Book →
-        </button>
-      </div>
+        borderTop:      '1px solid rgba(10,46,77,0.08)',
+        boxShadow:      '0 -4px 24px rgba(10,46,77,0.08)',
+        paddingTop:     '10px',
+        paddingBottom:  'calc(10px + env(safe-area-inset-bottom, 0px))',
+      }}
+    >
+      <a
+        href={`/book/${experienceId}`}
+        className="flex items-center justify-center w-full py-3.5 rounded-2xl text-sm font-bold text-white f-body"
+        style={{ background: '#E67E50', boxShadow: '0 4px 14px rgba(230,126,80,0.28)' }}
+      >
+        Request to Book →
+      </a>
     </div>
   )
 }

@@ -26,20 +26,22 @@ function formatDateRange(
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending:   'Awaiting confirmation',
-  confirmed: 'Confirmed',
-  declined:  'Not confirmed',
-  cancelled: 'Cancelled',
-  completed: 'Completed',
+  pending:    'Awaiting confirmation',
+  offer_sent: 'New dates proposed',
+  confirmed:  'Confirmed',
+  declined:   'Not confirmed',
+  cancelled:  'Cancelled',
+  completed:  'Completed',
 }
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { bg: string; text: string; border: string }> = {
-    pending:   { bg: '#FFF7ED', text: '#C05621',  border: 'rgba(230,126,80,0.3)' },
-    confirmed: { bg: '#F0FDF4', text: '#15803D',  border: 'rgba(34,197,94,0.3)'  },
-    declined:  { bg: '#F9FAFB', text: '#6B7280',  border: '#E5E7EB'               },
-    cancelled: { bg: '#F9FAFB', text: '#6B7280',  border: '#E5E7EB'               },
-    completed: { bg: '#EFF6FF', text: '#1D4ED8',  border: 'rgba(59,130,246,0.3)' },
+    pending:    { bg: '#FFF7ED', text: '#C05621',  border: 'rgba(230,126,80,0.3)'  },
+    offer_sent: { bg: '#FFFBEB', text: '#92400E',  border: 'rgba(234,179,8,0.35)'  },
+    confirmed:  { bg: '#F0FDF4', text: '#15803D',  border: 'rgba(34,197,94,0.3)'   },
+    declined:   { bg: '#F9FAFB', text: '#6B7280',  border: '#E5E7EB'                },
+    cancelled:  { bg: '#F9FAFB', text: '#6B7280',  border: '#E5E7EB'                },
+    completed:  { bg: '#EFF6FF', text: '#1D4ED8',  border: 'rgba(59,130,246,0.3)'  },
   }
   const s = styles[status] ?? styles.pending
   return (
@@ -54,11 +56,11 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── Filter tabs ──────────────────────────────────────────────────────────────
 
-const TABS = [
-  { key: 'all',       label: 'All'       },
-  { key: 'pending',   label: 'Pending'   },
-  { key: 'confirmed', label: 'Confirmed' },
-  { key: 'declined',  label: 'Declined'  },
+const TABS: Array<{ key: string; label?: string; statuses?: string[] }> = [
+  { key: 'all' },
+  { key: 'pending',   label: 'Pending',   statuses: ['pending', 'offer_sent'] },
+  { key: 'confirmed', label: 'Confirmed', statuses: ['confirmed', 'completed'] },
+  { key: 'declined',  label: 'Declined',  statuses: ['declined', 'cancelled'] },
 ]
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -78,9 +80,10 @@ export default async function AnglerBookingsPage({
   }
 
   const all      = result.bookings
-  const filtered = tab === 'all'
+  const activeTab = TABS.find(t => t.key === tab) ?? TABS[0]
+  const filtered  = activeTab.statuses == null
     ? all
-    : all.filter(b => b.status === tab)
+    : all.filter(b => activeTab.statuses!.includes(b.status))
 
   return (
     <div className="w-full min-h-screen" style={{ background: '#F3EDE4' }}>
@@ -102,9 +105,9 @@ export default async function AnglerBookingsPage({
           style={{ background: 'rgba(10,46,77,0.07)', width: 'fit-content' }}
         >
           {TABS.map(t => {
-            const count = t.key === 'all'
+            const count = t.statuses == null
               ? all.length
-              : all.filter(b => b.status === t.key).length
+              : all.filter(b => t.statuses!.includes(b.status)).length
             const active = tab === t.key
             return (
               <Link
@@ -117,7 +120,7 @@ export default async function AnglerBookingsPage({
                   boxShadow:  active ? '0 1px 4px rgba(10,46,77,0.1)' : 'none',
                 }}
               >
-                {t.label}
+                {t.label ?? 'All'}
                 {count > 0 && (
                   <span
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full f-body"
@@ -149,7 +152,7 @@ export default async function AnglerBookingsPage({
               </svg>
             </div>
             <p className="text-base font-semibold f-body mb-2" style={{ color: '#0A2E4D' }}>
-              {tab === 'all' ? 'No booking requests yet' : `No ${tab} bookings`}
+              {tab === 'all' ? 'No booking requests yet' : `No ${activeTab.label?.toLowerCase() ?? ''} bookings`}
             </p>
             <p className="text-sm f-body mb-6" style={{ color: 'rgba(10,46,77,0.5)' }}>
               Find a guide and request your first fishing trip.
@@ -238,7 +241,12 @@ function AnglerBookingCard({ booking }: { booking: AnglerBookingListItem }) {
           <div className="text-right">
             <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>Total</p>
             <p className="text-base font-bold f-body" style={{ color: '#0A2E4D' }}>
-              €{booking.total_eur.toFixed(2)}
+              {booking.status === 'offer_sent' && (booking.offer_price_eur ?? 0) > 0
+                ? `€${booking.offer_price_eur!.toFixed(2)}`
+                : booking.total_eur > 0
+                  ? `€${booking.total_eur.toFixed(2)}`
+                  : 'On request'
+              }
             </p>
           </div>
         </div>

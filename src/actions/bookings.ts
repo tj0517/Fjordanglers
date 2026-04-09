@@ -13,6 +13,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendBookingRequestEmails, sendBookingConfirmedEmail, sendBookingDeclinedEmail, sendInquiryRequestEmails, sendOfferSentEmail, sendOfferAcceptedEmail, sendOfferDeclinedEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 import { stripe } from '@/lib/stripe/client'
+import { getAppUrl } from '@/lib/app-url'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -278,6 +279,7 @@ export async function createBookingCheckout(
     const bookingFeeCents = Math.round((platformFeeEur + serviceFeeEur) * 100)
 
     // 7. Create Stripe Checkout Session
+    const appUrl  = await getAppUrl()
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{
@@ -292,8 +294,8 @@ export async function createBookingCheckout(
         quantity: 1,
       }],
       customer_email: user.email ?? undefined,
-      success_url: `${env.NEXT_PUBLIC_APP_URL}/book/${experience.id}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/book/${experience.id}`,
+      success_url: `${appUrl}/book/${experience.id}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${appUrl}/book/${experience.id}`,
       metadata: {
         experience_id:    experience.id,
         guide_id:         guide.id,
@@ -460,12 +462,14 @@ export async function finalizeBookingFromSession(
 export type GuideBookingListItem = {
   id: string
   status: string
+  source: string
   booking_date: string
   date_to: string | null
   requested_dates: string[] | null
   guests: number
   total_eur: number
   guide_payout_eur: number
+  offer_price_eur: number | null
   duration_option: string | null
   angler_full_name: string | null
   angler_email: string | null
@@ -808,8 +812,8 @@ export async function getGuideBookings(): Promise<GetGuideBookingsResult> {
     const { data: rows, error } = await supabase
       .from('bookings')
       .select(`
-        id, status, booking_date, date_to, requested_dates,
-        guests, total_eur, guide_payout_eur, duration_option,
+        id, status, source, booking_date, date_to, requested_dates,
+        guests, total_eur, guide_payout_eur, offer_price_eur, duration_option,
         angler_full_name, angler_email, special_requests, created_at,
         experience_id,
         experiences ( title )
@@ -827,12 +831,14 @@ export async function getGuideBookings(): Promise<GetGuideBookingsResult> {
       return {
         id:               r.id,
         status:           r.status,
+        source:           r.source ?? 'direct',
         booking_date:     r.booking_date,
         date_to:          r.date_to,
         requested_dates:  r.requested_dates,
         guests:           r.guests,
         total_eur:        r.total_eur,
         guide_payout_eur: r.guide_payout_eur,
+        offer_price_eur:  r.offer_price_eur,
         duration_option:  r.duration_option,
         angler_full_name: r.angler_full_name,
         angler_email:     r.angler_email,
@@ -1111,6 +1117,10 @@ export async function confirmBooking(
     selectedDates:   string[]
     /** Guide-offered price (EUR). For icelandic inquiries. Pass 0 to keep existing total_eur. */
     offeredPriceEur: number
+    /** River / beat section (optional, Icelandic flow) */
+    riverSection?:   string
+    /** What's included in the trip (optional array of labels) */
+    included?:       string[]
   },
 ): Promise<ConfirmBookingResult> {
   try {
@@ -1183,6 +1193,8 @@ export async function confirmBooking(
           offer_details: JSON.stringify({
             message:         data.message.trim() || null,
             meetingLocation: data.meetingLocation.trim() || null,
+            riverSection:    data.riverSection?.trim() || null,
+            included:        data.included ?? [],
           }),
         })
         .eq('id', bookingId)
@@ -1190,7 +1202,7 @@ export async function confirmBooking(
 
       // Email angler about the new offer
       if (error == null && booking.angler_email != null) {
-        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        const baseUrl = await getAppUrl()
         sendOfferSentEmail({
           to:              booking.angler_email,
           anglerName:      booking.angler_full_name ?? 'Angler',
@@ -1218,6 +1230,8 @@ export async function confirmBooking(
             meetingLocation: data.meetingLocation.trim() || null,
             meetingLat:      data.meetingLat ?? null,
             meetingLng:      data.meetingLng ?? null,
+            riverSection:    data.riverSection?.trim() || null,
+            included:        data.included ?? [],
           }),
         })
         .eq('id', bookingId)
@@ -1492,7 +1506,7 @@ export async function acceptOffer(bookingId: string): Promise<AcceptOfferResult>
         const { data: authUser } = await svc2.auth.admin.getUserById(guideRow.user_id)
         const guideEmail = authUser.user?.email ?? null
         if (guideEmail == null) return
-        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        const baseUrl = await getAppUrl()
         await sendOfferAcceptedEmail({
           to:              guideEmail,
           guideName:       guideRow.full_name ?? 'Guide',
@@ -1524,7 +1538,7 @@ export async function acceptOffer(bookingId: string): Promise<AcceptOfferResult>
           .eq('id', booking.experience_id ?? '')
           .single()
 
-        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        const baseUrl = await getAppUrl()
         const session = await stripe.checkout.sessions.create({
           mode: 'payment',
           line_items: [{
@@ -1629,7 +1643,7 @@ export async function declineOffer(
         const { data: authUser } = await svc.auth.admin.getUserById(guideRow.user_id)
         const guideEmail = authUser.user?.email ?? null
         if (guideEmail == null) return
-        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        const baseUrl = await getAppUrl()
         await sendOfferDeclinedEmail({
           to:              guideEmail,
           guideName:       guideRow.full_name ?? 'Guide',
@@ -1700,7 +1714,7 @@ export async function createBookingFeeCheckout(
       .eq('id', booking.experience_id ?? '')
       .single()
 
-    const baseUrl = env.NEXT_PUBLIC_APP_URL
+    const baseUrl = await getAppUrl()
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [{

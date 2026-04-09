@@ -157,7 +157,7 @@ export default function AnglerOfferActions({ bookingId, guideName }: Props) {
           ? <Loader2 size={16} className="animate-spin" />
           : <CheckCircle size={16} />
         }
-        {isPending && active === 'accept' ? 'Accepting…' : 'Accept new dates'}
+        {isPending && active === 'accept' ? 'Accepting…' : 'Accept guide\'s offer'}
       </button>
 
       {/* Decline — opens confirm step */}

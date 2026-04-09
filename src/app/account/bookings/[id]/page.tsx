@@ -20,6 +20,8 @@ function parsedOfferDetails(raw: string | null): {
   meetingLocation?: string | null
   meetingLat?: number | null
   meetingLng?: number | null
+  riverSection?: string | null
+  included?: string[]
 } {
   if (raw == null) return {}
   try {
@@ -49,8 +51,10 @@ function MeetingMap({ lat, lng }: { lat: number; lng: number }) {
 // Read-only calendar map: month grids with the guide's proposed dates
 // highlighted as solid orange pills.  Server component — no state needed.
 
-function OfferCalendarGrid({ days }: { days: string[] }) {
+function OfferCalendarGrid({ days, theme = 'orange' }: { days: string[]; theme?: 'orange' | 'green' }) {
   if (days.length === 0) return null
+  const highlightBg     = theme === 'green' ? '#22C55E'                       : '#E67E50'
+  const highlightShadow = theme === 'green' ? '0 1px 4px rgba(34,197,94,0.35)' : '0 1px 4px rgba(230,126,80,0.35)'
 
   const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
@@ -104,10 +108,10 @@ function OfferCalendarGrid({ days }: { days: string[] }) {
                   <div key={d}
                     className="aspect-square flex items-center justify-center text-[10px] f-body rounded-lg"
                     style={{
-                      background: isProposed ? '#E67E50' : 'transparent',
-                      color:      isProposed ? '#fff'    : isPast ? 'rgba(10,46,77,0.18)' : 'rgba(10,46,77,0.55)',
-                      fontWeight: isProposed ? '700'     : '400',
-                      boxShadow:  isProposed ? '0 1px 4px rgba(230,126,80,0.35)' : 'none',
+                      background: isProposed ? highlightBg : 'transparent',
+                      color:      isProposed ? '#fff'      : isPast ? 'rgba(10,46,77,0.18)' : 'rgba(10,46,77,0.55)',
+                      fontWeight: isProposed ? '700'       : '400',
+                      boxShadow:  isProposed ? highlightShadow : 'none',
                     }}>
                     {day}
                   </div>
@@ -414,36 +418,59 @@ export default async function AnglerBookingDetailPage({
               {isConfirmed ? 'Trip details' : isOfferSent ? "Guide's offer" : 'Booking summary'}
             </h2>
 
-            {/* ── CONFIRMED VIEW — guide's data ── */}
+            {/* ── CONFIRMED VIEW — guide's confirmed data ── */}
             {isConfirmed ? (
               <div className="flex flex-col gap-5">
 
-                {/* Confirmed dates */}
+                {/* Calendar grid — confirmed days in green */}
                 <div>
-                  <p className="text-xs f-body font-semibold uppercase tracking-wide mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                    Confirmed dates
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-3"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    Confirmed dates &nbsp;·&nbsp; {dates.length} day{dates.length !== 1 ? 's' : ''}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {dates.map(d => (
-                      <span
-                        key={d}
-                        className="inline-block text-sm f-body px-3 py-1.5 rounded-xl font-semibold"
-                        style={{ background: 'rgba(34,197,94,0.1)', color: '#15803D', border: '1px solid rgba(34,197,94,0.2)' }}
-                      >
-                        {fmtDate(d)}
-                      </span>
-                    ))}
-                  </div>
+                  <OfferCalendarGrid days={dates} theme="green" />
                 </div>
+
+                {/* River / Beat section */}
+                {details.riverSection != null && details.riverSection.trim() !== '' && (
+                  <div className="pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-1.5"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      River / Beat section
+                    </p>
+                    <p className="text-sm f-body font-semibold flex items-center gap-2" style={{ color: '#0A2E4D' }}>
+                      🎣 {details.riverSection}
+                    </p>
+                  </div>
+                )}
+
+                {/* What's included */}
+                {details.included != null && details.included.length > 0 && (
+                  <div className="pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-2"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      What&apos;s included
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {details.included.map(item => (
+                        <span key={item} className="text-xs f-body font-semibold px-2.5 py-1.5 rounded-lg"
+                          style={{ background: 'rgba(34,197,94,0.08)', color: '#15803D', border: '1px solid rgba(34,197,94,0.18)' }}>
+                          ✓ {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Meeting point */}
                 {details.meetingLocation != null && details.meetingLocation.trim() !== '' && (
                   <div className="pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-                    <p className="text-xs f-body font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-1.5"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}>
                       Meeting point
                     </p>
                     <p className="text-sm f-body font-semibold flex items-start gap-2 mb-2" style={{ color: '#0A2E4D' }}>
-                      <span className="text-base flex-shrink-0" style={{ marginTop: '-1px' }}>📍</span>
+                      <span className="flex-shrink-0">📍</span>
                       {details.meetingLocation}
                     </p>
                     {(booking.offer_meeting_lat != null && booking.offer_meeting_lng != null) && (
@@ -458,7 +485,8 @@ export default async function AnglerBookingDetailPage({
                     className="rounded-xl px-4 py-3.5"
                     style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}
                   >
-                    <p className="text-xs f-body font-semibold uppercase tracking-wide mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-2"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}>
                       Message from {booking.guide_name ?? 'your guide'}
                     </p>
                     <p className="text-sm f-body leading-relaxed italic" style={{ color: '#374151' }}>
@@ -467,7 +495,7 @@ export default async function AnglerBookingDetailPage({
                   </div>
                 )}
 
-                {/* Guests + Price row */}
+                {/* Guests + Price */}
                 <div
                   className="grid grid-cols-2 gap-4 pt-4"
                   style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}
@@ -515,6 +543,37 @@ export default async function AnglerBookingDetailPage({
                     <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
                       €{booking.offer_price_eur.toFixed(0)}
                     </p>
+                  </div>
+                )}
+
+                {/* River / Beat section */}
+                {details.riverSection != null && details.riverSection.trim() !== '' && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-1.5"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      River / Beat section
+                    </p>
+                    <p className="text-sm f-body font-semibold flex items-center gap-2" style={{ color: '#0A2E4D' }}>
+                      🎣 {details.riverSection}
+                    </p>
+                  </div>
+                )}
+
+                {/* What's included */}
+                {details.included != null && details.included.length > 0 && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-2"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      What&apos;s included
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {details.included.map(item => (
+                        <span key={item} className="text-xs f-body font-semibold px-2.5 py-1.5 rounded-lg"
+                          style={{ background: 'rgba(230,126,80,0.07)', color: '#C05621', border: '1px solid rgba(230,126,80,0.18)' }}>
+                          ✓ {item}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 

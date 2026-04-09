@@ -313,10 +313,27 @@ function BookingCard({ booking }: { booking: GuideBookingListItem }) {
           {/* Right */}
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <div className="text-right">
-              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>Your payout</p>
-              <p className="text-base font-bold f-body" style={{ color: '#0A2E4D' }}>
-                €{booking.guide_payout_eur.toFixed(2)}
-              </p>
+              {/* Icelandic inquiry: guide_payout_eur stays 0 until angler accepts offer */}
+              {booking.source === 'inquiry' && booking.guide_payout_eur === 0 ? (
+                <>
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    {(booking.offer_price_eur ?? 0) > 0 ? 'Offered price' : 'Price'}
+                  </p>
+                  <p className="text-base font-bold f-body" style={{ color: '#0A2E4D' }}>
+                    {(booking.offer_price_eur ?? 0) > 0
+                      ? `€${booking.offer_price_eur!.toFixed(0)}`
+                      : 'On enquiry'
+                    }
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>Your payout</p>
+                  <p className="text-base font-bold f-body" style={{ color: '#0A2E4D' }}>
+                    €{booking.guide_payout_eur.toFixed(2)}
+                  </p>
+                </>
+              )}
             </div>
             <span className="text-xs f-body font-medium" style={{
               color: isPending ? '#E67E50' : isOfferSent ? '#1D4ED8' : 'rgba(10,46,77,0.4)',

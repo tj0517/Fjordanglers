@@ -1355,10 +1355,8 @@ export default async function ExperienceDetailPage({
       </div>
 
       {/* ─── Mobile booking bar ──────────────────────────────────── */}
-      {showBookingWidget && (
-        <MobileBookingBar experience={{ price_per_person_eur: exp.price_per_person_eur ?? 0, duration_options: durationOptions }} />
-      )}
-      {showIcelandicWidget && <MobileIcelandicBar />}
+      {showBookingWidget && <MobileBookingBar experienceId={exp.id} />}
+      {showIcelandicWidget && <MobileIcelandicBar experienceId={exp.id} />}
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}
       {moreFromGuide.length > 0 && (

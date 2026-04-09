@@ -23,23 +23,21 @@ type PaymentStatus = 'paid' | 'awaiting' | 'cancelled'
 
 function getPaymentStatus(booking: AnglerBookingListItem): PaymentStatus {
   if (booking.status === 'cancelled' || booking.status === 'declined') return 'cancelled'
-  if (booking.status === 'confirmed' || booking.status === 'completed') return 'paid'
+  if (booking.balance_paid_at != null) return 'paid'
   return 'awaiting'
 }
 
-function getDisplayAmount(booking: AnglerBookingListItem): number {
-  // For offer_sent bookings: show offer price if available
-  if (booking.status === 'offer_sent' && booking.offer_price_eur != null) {
-    return booking.offer_price_eur
-  }
-  return booking.total_eur
+// Booking fee = what angler paid to FjordAnglers (commission + service fee)
+function getBookingFeeEur(booking: AnglerBookingListItem): number {
+  const fee = (booking.platform_fee_eur ?? 0) + (booking.service_fee_eur ?? 0)
+  return Math.round(fee * 100) / 100
 }
 
 // ─── Status chip ──────────────────────────────────────────────────────────────
 
 function PaymentStatusChip({ status }: { status: PaymentStatus }) {
   const styles = {
-    paid:      { bg: '#F0FDF4', text: '#15803D', border: 'rgba(34,197,94,0.3)',  label: 'Agreed' },
+    paid:      { bg: '#F0FDF4', text: '#15803D', border: 'rgba(34,197,94,0.3)',  label: 'Fee paid' },
     awaiting:  { bg: '#FFF7ED', text: '#C05621', border: 'rgba(230,126,80,0.3)', label: 'Pending'  },
     cancelled: { bg: '#F9FAFB', text: '#6B7280', border: '#E5E7EB',              label: 'Cancelled' },
   }
@@ -57,9 +55,9 @@ function PaymentStatusChip({ status }: { status: PaymentStatus }) {
 // ─── Payment row ──────────────────────────────────────────────────────────────
 
 function PaymentRow({ booking }: { booking: AnglerBookingListItem }) {
-  const payStatus = getPaymentStatus(booking)
-  const amount    = getDisplayAmount(booking)
-  const hasAmount = amount > 0
+  const payStatus  = getPaymentStatus(booking)
+  const feeEur     = getBookingFeeEur(booking)
+  const hasAmount  = feeEur > 0
 
   return (
     <Link
@@ -104,7 +102,7 @@ function PaymentRow({ booking }: { booking: AnglerBookingListItem }) {
         <PaymentStatusChip status={payStatus} />
         {hasAmount ? (
           <span className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>
-            {fmtMoney(amount)}
+            {fmtMoney(feeEur)}
           </span>
         ) : (
           <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
@@ -129,11 +127,9 @@ export default async function PaymentsPage() {
   const pending    = bookings.filter(b => b.status === 'pending'   || b.status === 'offer_sent')
   const cancelled  = bookings.filter(b => b.status === 'cancelled' || b.status === 'declined')
 
-  // Total agreed (confirmed + completed with non-zero amount)
-  const totalAgreed = confirmed.reduce((sum, b) => {
-    const amt = getDisplayAmount(b)
-    return sum + amt
-  }, 0)
+  // Total booking fees paid to FjordAnglers
+  const feePaidBookings = bookings.filter(b => b.balance_paid_at != null)
+  const totalFeesPaid   = feePaidBookings.reduce((sum, b) => sum + getBookingFeeEur(b), 0)
 
   const isEmpty = bookings.length === 0
 
@@ -151,8 +147,8 @@ export default async function PaymentsPage() {
           </p>
         </div>
 
-        {/* Summary card (only if confirmed bookings exist) */}
-        {confirmed.length > 0 && (
+        {/* Summary card (only if any booking fee was paid) */}
+        {feePaidBookings.length > 0 && (
           <div
             className="rounded-2xl p-5 sm:p-6 mb-6 flex items-center gap-5"
             style={{
@@ -170,10 +166,10 @@ export default async function PaymentsPage() {
             </div>
             <div>
               <p className="text-xs f-body font-medium" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                Total agreed across {confirmed.length} confirmed {confirmed.length === 1 ? 'trip' : 'trips'}
+                Booking fees paid to FjordAnglers · {feePaidBookings.length} {feePaidBookings.length === 1 ? 'booking' : 'bookings'}
               </p>
               <p className="text-2xl font-bold f-display mt-0.5" style={{ color: '#FFFFFF' }}>
-                {totalAgreed > 0 ? fmtMoney(totalAgreed) : 'Arranged with guide'}
+                {fmtMoney(totalFeesPaid)}
               </p>
             </div>
           </div>
@@ -287,7 +283,7 @@ export default async function PaymentsPage() {
           className="text-xs f-body text-center mt-8"
           style={{ color: 'rgba(10,46,77,0.35)' }}
         >
-          Payment is arranged directly with your guide. FjordAnglers facilitates the booking only.
+          Amounts shown are booking fees charged by FjordAnglers. Trip payment details are on each booking page.
         </p>
 
       </div>

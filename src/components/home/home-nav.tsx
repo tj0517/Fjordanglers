@@ -27,6 +27,7 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
   const [open, setOpen]         = useState(false)
   const [user, setUser]         = useState<User | null>(null)
   const [authLoaded, setAuthLoaded] = useState(false)
+  const [guideAvatarUrl, setGuideAvatarUrl] = useState<string | null>(null)
   const navRef                  = useRef<HTMLElement>(null)
 
   // ── Auth state ──────────────────────────────────────────────────────────────
@@ -37,6 +38,11 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
       setAuthLoaded(true)
+      // Fetch guide avatar if user is a guide
+      if (data.user?.user_metadata?.role === 'guide') {
+        supabase.from('guides').select('avatar_url').eq('user_id', data.user.id).maybeSingle()
+          .then(({ data: g }) => { if (g?.avatar_url) setGuideAvatarUrl(g.avatar_url) })
+      }
     }).catch(() => { setAuthLoaded(true) })
 
     // Keep in sync on sign in / sign out
@@ -80,6 +86,10 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
   const initials = user
     ? ((user.user_metadata?.full_name as string | undefined) ?? user.email ?? '?')[0].toUpperCase()
     : ''
+
+  // Route to the right area based on role
+  const role     = (user?.user_metadata?.role as string | undefined) ?? ''
+  const dashHref = role === 'admin' ? '/admin' : role === 'guide' ? '/dashboard' : '/account/bookings'
 
   return (
     <nav
@@ -135,16 +145,21 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
             {/* ── Logged-in: avatar bubble → dashboard ──────────────────── */}
             {authLoaded && user != null && (
               <Link
-                href="/dashboard"
-                title="Go to dashboard"
-                className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl font-bold text-[13px] f-body transition-all hover:brightness-95 active:scale-[0.96]"
+                href={dashHref}
+                title={role === 'guide' ? 'Go to dashboard' : 'My account'}
+                className="hidden md:flex w-9 h-9 items-center justify-center rounded-xl overflow-hidden transition-all hover:brightness-95 active:scale-[0.96] flex-shrink-0"
                 style={{
                   background: showDark ? '#0A2E4D' : 'rgba(255,255,255,0.18)',
-                  color: '#fff',
-                  letterSpacing: '0.02em',
                 }}
               >
-                {initials}
+                {guideAvatarUrl != null ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={guideAvatarUrl} alt={initials} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="font-bold text-[13px] f-body" style={{ color: '#fff', letterSpacing: '0.02em' }}>
+                    {initials}
+                  </span>
+                )}
               </Link>
             )}
 
@@ -242,13 +257,13 @@ export function HomeNav({ pinned = false, topOffset = 0, initialVariant = 'dark'
 
               {authLoaded && user != null && (
                 <Link
-                  href="/dashboard"
+                  href={dashHref}
                   onClick={() => setOpen(false)}
                   className="text-[14px] font-semibold px-4 py-3 rounded-xl text-white text-center f-body transition-all hover:brightness-110 flex items-center justify-center gap-2"
                   style={{ background: '#0A2E4D' }}
                 >
                   <UserIcon size={15} strokeWidth={1.5} aria-hidden="true" />
-                  My Dashboard
+                  {role === 'guide' ? 'My Dashboard' : 'My Account'}
                 </Link>
               )}
             </div>
