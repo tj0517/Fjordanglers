@@ -506,7 +506,7 @@ export type Database = {
           accommodation_description: string | null
           boat_description: string | null
           booking_type: string
-          inquiry_form_config: import('@/lib/inquiry-form-config').InquiryFormConfig | null
+          inquiry_form_config: Json | null
           catch_and_release: boolean | null
           created_at: string
           description: string
@@ -558,7 +558,7 @@ export type Database = {
           accommodation_description?: string | null
           boat_description?: string | null
           booking_type?: string
-          inquiry_form_config?: import('@/lib/inquiry-form-config').InquiryFormConfig | null
+          inquiry_form_config?: Json | null
           catch_and_release?: boolean | null
           created_at?: string
           description: string
@@ -610,7 +610,7 @@ export type Database = {
           accommodation_description?: string | null
           boat_description?: string | null
           booking_type?: string
-          inquiry_form_config?: import('@/lib/inquiry-form-config').InquiryFormConfig | null
+          inquiry_form_config?: Json | null
           catch_and_release?: boolean | null
           created_at?: string
           description?: string

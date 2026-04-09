@@ -134,22 +134,6 @@ export async function deleteAccount(): Promise<{ error?: string }> {
 
     const service = createServiceClient()
 
-    // GDPR Art. 17 — anonymize angler PII on bookings before deleting auth user.
-    // Booking history is retained for guide tax records; personal data is erased.
-    //
-    // NOTE: bookings has CHECK (angler_id IS NOT NULL OR angler_email IS NOT NULL).
-    // We cannot set both to null — replace email with a non-identifying placeholder
-    // so the constraint is satisfied while all real PII is removed.
-    await service
-      .from('bookings')
-      .update({
-        angler_email:     '[deleted]',   // placeholder keeps CHECK constraint happy
-        angler_full_name: null,
-        angler_phone:     null,
-        angler_id:        null,
-      })
-      .eq('angler_id', user.id)
-
     // Remove profile row (profiles.id has no ON DELETE CASCADE in our schema)
     await service
       .from('profiles')

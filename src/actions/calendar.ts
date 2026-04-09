@@ -13,7 +13,6 @@
 
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { blockBookingDates, expandBookingDateRange } from '@/lib/booking-blocks'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -304,36 +303,6 @@ export async function toggleCalendarDisabled(
           .then(({ error: e }) => { if (e) console.error('[toggleCalendarDisabled] weekly_schedules:', e.message) }),
         // calendar_blocked_dates are cascade-deleted when guide_calendars rows are deleted
       ])
-    }
-
-    // ── ENABLE: re-block dates from all active upcoming bookings ───────────
-    if (!disabled) {
-      const today = new Date().toISOString().slice(0, 10)
-
-      const { data: activeBookings } = await service
-        .from('bookings')
-        .select('id, status, experience_id, booking_date, date_to, requested_dates, offer_days, offer_date_from, offer_date_to')
-        .eq('guide_id', guideId)
-        .in('status', ['accepted', 'confirmed', 'offer_sent', 'offer_accepted'])
-        .gte('booking_date', today)
-
-      for (const b of (activeBookings ?? [])) {
-        let dates: string[] = []
-
-        if (b.status === 'offer_sent' || b.status === 'offer_accepted') {
-          dates = (b.offer_days as string[] | null) ??
-            expandBookingDateRange(b.offer_date_from, b.offer_date_to)
-        } else {
-          dates = (b.requested_dates as string[] | null) ??
-            expandBookingDateRange(b.booking_date as string | null, (b as { date_to?: string | null }).date_to ?? null)
-          if (dates.length === 0 && b.booking_date) dates = [b.booking_date as string]
-        }
-
-        if (dates.length > 0) {
-          blockBookingDates(service, b.id, guideId, dates, b.experience_id ?? undefined)
-            .catch(e => console.error('[toggleCalendarDisabled] blockBookingDates:', e))
-        }
-      }
     }
 
     return { success: true }

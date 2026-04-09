@@ -66,7 +66,7 @@ export default async function HomePage() {
           style={{ minHeight: '96vh' }}
         >
           <BgVideo
-            src="https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/videos/hero_bg.mp4"
+            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/videos/hero_bg.mp4`}
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div

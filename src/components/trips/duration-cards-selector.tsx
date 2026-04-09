@@ -4,22 +4,14 @@
  * DurationCardsSelector — interactive "Choose your duration" section
  * in the experience detail main content.
  *
- * Clicking a card:
- *   1. Highlights it locally (selected ring + bg)
- *   2. Dispatches `fjord:duration-select` CustomEvent so the sidebar
- *      BookingWidget syncs its dropdown to the same option.
- *
- * Also listens for `fjord:duration-select` in the other direction —
- * if the widget dropdown is changed, the card highlights follow.
+ * Clicking a card updates the shared BookingStateContext so the right-column
+ * BookingWidget instantly reflects the selection (and vice-versa).
  */
 
-import { useState, useEffect } from 'react'
+import { useMemo } from 'react'
 import type { DurationOptionPayload } from '@/actions/experiences'
+import { useBookingState } from '@/contexts/booking-context'
 import { Check } from 'lucide-react'
-
-// ─── Custom event name (shared contract with BookingWidget) ────────────────────
-
-export const DURATION_EVENT = 'fjord:duration-select'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -49,26 +41,16 @@ type Props = {
 }
 
 export default function DurationCardsSelector({ options }: Props) {
-  const [selectedIdx, setSelectedIdx] = useState(0)
+  const { selectedPkg, setSelectedPkg } = useBookingState()
 
-  // ── Sync FROM widget → cards ──────────────────────────────────────────────
-  useEffect(() => {
-    function onWidgetSelect(e: Event) {
-      const idx = (e as CustomEvent<{ idx: number; source?: string }>).detail?.idx
-      if (typeof idx === 'number' && (e as CustomEvent).detail?.source !== 'cards') {
-        setSelectedIdx(idx)
-      }
-    }
-    window.addEventListener(DURATION_EVENT, onWidgetSelect)
-    return () => window.removeEventListener(DURATION_EVENT, onWidgetSelect)
-  }, [])
+  // Derive selected index from shared context state
+  const selectedIdx = useMemo(() => {
+    const idx = options.findIndex(o => o.label === selectedPkg?.label)
+    return idx >= 0 ? idx : 0
+  }, [options, selectedPkg])
 
-  // ── Select a card → update state + notify widget ──────────────────────────
   function handleSelect(idx: number) {
-    setSelectedIdx(idx)
-    window.dispatchEvent(
-      new CustomEvent(DURATION_EVENT, { detail: { idx, source: 'cards' } }),
-    )
+    setSelectedPkg(options[idx])
   }
 
   if (options.length === 0) return null
@@ -97,7 +79,7 @@ export default function DurationCardsSelector({ options }: Props) {
       <div className={`${gridClass} gap-4`}>
         {options.map((opt, i) => {
           const { str: pStr, hint: pHint } = priceLabel(opt)
-          const dur  = durationStr(opt)
+          const dur    = durationStr(opt)
           const isSel  = i === selectedIdx
           const isFirst = i === 0
 
@@ -146,7 +128,7 @@ export default function DurationCardsSelector({ options }: Props) {
               <div>
                 <p
                   className="text-base font-bold f-display transition-colors"
-                  style={{ color: isSel ? '#0A2E4D' : '#0A2E4D' }}
+                  style={{ color: '#0A2E4D' }}
                 >
                   {opt.label || `Option ${i + 1}`}
                 </p>

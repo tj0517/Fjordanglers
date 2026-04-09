@@ -5,7 +5,7 @@
  * Naming convention: {country-slug}-{n}.jpg  (e.g. norway-1.jpg, norway-2.jpg)
  *
  * Public URL base:
- *   https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/landscapes/
+ *   {NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/landscapes/
  *
  * Recommended: 5–10 photos per country, landscape orientation, ≥ 2400px wide.
  * Good sources: your own shots, licensed stock (Adobe, Shutterstock),
@@ -13,7 +13,7 @@
  */
 
 const BASE =
-  'https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/landscapes'
+  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/landscapes`
 
 // ─── Asset registry ───────────────────────────────────────────────────────────
 // Add filenames here as you upload them. The picker will rotate through them.

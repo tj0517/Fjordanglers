@@ -6,8 +6,8 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signOut } from '@/actions/auth'
 import {
-  LayoutGrid, Compass, Calendar, FileText, TrendingUp,
-  User, Settings, ArrowLeft, LogOut, MessageSquare, BedDouble,
+  LayoutGrid, Compass, Calendar, Inbox,
+  User, Settings, ArrowLeft, LogOut, BedDouble,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,9 +32,8 @@ const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/s
 const NAV = [
   { label: 'Home',           href: '/dashboard',                 icon: <LayoutGrid   size={15} strokeWidth={1.5} />, exact: true,  soon: false },
   { label: 'Trips',          href: '/dashboard/trips',           icon: <Compass      size={15} strokeWidth={1.5} />, exact: false, soon: false },
-  { label: 'Bookings',       href: '/dashboard/bookings',        icon: <FileText     size={15} strokeWidth={1.5} />, exact: false, soon: false },
   { label: 'Calendar',       href: '/dashboard/calendar',        icon: <Calendar     size={15} strokeWidth={1.5} />, exact: false, soon: false },
-  { label: 'Earnings',       href: '/dashboard/earnings',        icon: <TrendingUp   size={15} strokeWidth={1.5} />, exact: false, soon: false },
+  { label: 'Bookings',       href: '/dashboard/bookings',        icon: <Inbox        size={15} strokeWidth={1.5} />, exact: false, soon: false },
   { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <BedDouble    size={15} strokeWidth={1.5} />, exact: false, soon: false },
   // ─── Guide identity ─────────────────────────────────────────────────────────
   { label: 'Profile',        href: '/dashboard/profile',         icon: <User         size={15} strokeWidth={1.5} />, exact: false, soon: false },

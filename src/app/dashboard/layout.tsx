@@ -36,7 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // ── Non-guide (angler) accounts don't belong here ────────────────────────
   if (profile?.role !== 'guide') {
-    redirect('/account/bookings')
+    redirect('/')
   }
 
   // ── Fetch guide profile ───────────────────────────────────────────────────

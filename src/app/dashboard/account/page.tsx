@@ -3,13 +3,10 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { stripe } from '@/lib/stripe/client'
 import { PasswordResetButton } from './AccountActions'
-import { AcceptedPaymentMethodsForm } from './AcceptedPaymentMethodsForm'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
 import { HideListingToggle } from './HideListingToggle'
 import { PayoutSettingsCard } from './PayoutSettingsCard'
 import { HelpWidget } from '@/components/ui/help-widget'
-import { getPaymentModel } from '@/lib/payment-model'
-import { decryptField } from '@/lib/field-encryption'
 import { Lock, Check } from 'lucide-react'
 
 export const revalidate = 0
@@ -33,7 +30,7 @@ export default async function AccountPage({
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, is_hidden, created_at, iban, iban_holder_name, iban_bic, iban_bank_name')
+    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, is_hidden, created_at')
     .eq('user_id', user.id)
     .single()
 
@@ -111,14 +108,6 @@ export default async function AccountPage({
 
   const hasStripeAccount = guide.stripe_account_id != null
 
-  // Payment model — derived from Stripe status, never stored
-  const paymentModel = getPaymentModel({
-    stripe_account_id:      guide.stripe_account_id,
-    stripe_charges_enabled: guide.stripe_charges_enabled,
-    stripe_payouts_enabled: guide.stripe_payouts_enabled,
-  })
-  const isManualModel = paymentModel === 'manual'
-
   const stripeStatus = stripePayoutsLive
     ? { label: 'Active — payouts enabled',   dot: '#4ADE80', glow: true  }
     : hasStripeAccount
@@ -193,9 +182,8 @@ export default async function AccountPage({
           )}
         </Card>
 
-        {/* ── Payouts — unified Stripe Connect / IBAN card ─────────────────── */}
+        {/* ── Payouts — Stripe Connect ──────────────────────────────────────── */}
         <PayoutSettingsCard
-          defaultTab={isManualModel ? 'iban' : 'stripe'}
           hasStripeAccount={hasStripeAccount}
           stripePayoutsLive={stripePayoutsLive}
           stripeStatus={stripeStatus}
@@ -204,20 +192,13 @@ export default async function AccountPage({
           stripeRefresh={stripeRefresh}
           payoutCurrencyLabel={payoutCurrencyLabel}
           payoutScheduleLabel={payoutScheduleLabel}
-          ibanData={{
-            iban:             decryptField(guide.iban),
-            iban_holder_name: decryptField(guide.iban_holder_name),
-            iban_bic:         decryptField(guide.iban_bic),
-            iban_bank_name:   decryptField(guide.iban_bank_name),
-          }}
           helpWidget={
             <HelpWidget
               title="Payouts"
-              description="Choose how you receive guide earnings — via Stripe Connect or direct bank transfer."
+              description="Stripe Connect — your earnings are paid out weekly."
               items={[
                 { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
                 { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
-                { icon: '🏧', title: 'Bank transfer (IBAN)', text: 'Without Stripe Connect, anglers pay your fee directly to your bank account. FjordAnglers collects only the platform fee online.' },
               ]}
             />
           }
@@ -295,33 +276,6 @@ export default async function AccountPage({
                : 'Suspended'}
             </span>
           </Row>
-        </Card>
-
-        {/* ── Accepted payment methods — shown for all guides ───────────────── */}
-        <Card title="Accepted payment methods" help={
-          <HelpWidget title="Accepted payment methods" items={[
-            { icon: '💵', title: 'Cash', text: 'Collected in person on the day of the trip. You manually mark it as received in the booking details.' },
-            { icon: '💳', title: 'Online (Stripe)', text: 'Secure card payment via Stripe. Funds arrive in your Stripe account on the weekly payout schedule.' },
-          ]} />
-        }>
-          <div className="px-6 pt-4 pb-2">
-            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              {isManualModel ? (
-                <>
-                  Anglers pay a <strong style={{ color: '#0A2E4D' }}>deposit</strong> online when the guide confirms.
-                  Choose how anglers pay the <strong style={{ color: '#0A2E4D' }}>rest</strong> directly to you.
-                </>
-              ) : (
-                <>
-                  Anglers always pay a <strong style={{ color: '#0A2E4D' }}>40% deposit</strong> online at the time of booking.
-                  Choose how you want to collect the <strong style={{ color: '#0A2E4D' }}>remaining 60%</strong> before the trip.
-                </>
-              )}
-            </p>
-          </div>
-          <AcceptedPaymentMethodsForm
-            current={(guide.accepted_payment_methods ?? ['cash', 'online']) as ('cash' | 'online')[]}
-          />
         </Card>
 
         {/* ── Photo & marketing consent ─────────────────────────────────────── */}

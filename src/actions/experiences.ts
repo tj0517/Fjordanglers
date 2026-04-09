@@ -1,7 +1,7 @@
 'use server'
 
 import type * as GeoJSON from 'geojson'
-import type { LocationSpot } from '@/types'
+import type { LocationSpot, IcelandicFormConfig } from '@/types'
 
 /**
  * Experience Server Actions.
@@ -138,6 +138,8 @@ export type ExperiencePayload = {
   license_description?: string | null
   gear_description?: string | null
   transport_description?: string | null
+  /** Icelandic Flow — guide-configured enquiry form fields */
+  inquiry_form_config?: IcelandicFormConfig | null
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -345,6 +347,7 @@ export async function createExperience(
         transport_description:        payload.transport_description?.trim() || null,
         price_range_min_eur:          payload.price_range_min_eur ?? null,
         price_range_max_eur:          payload.price_range_max_eur ?? null,
+        inquiry_form_config:          (payload.inquiry_form_config as unknown as DbJson) ?? null,
       })
       .select('id')
       .single()
@@ -501,6 +504,7 @@ export async function updateExperience(
     if (payload.transport_description !== undefined)      update.transport_description     = payload.transport_description?.trim() || null
     if (payload.price_range_min_eur !== undefined)        update.price_range_min_eur       = payload.price_range_min_eur ?? null
     if (payload.price_range_max_eur !== undefined)        update.price_range_max_eur       = payload.price_range_max_eur ?? null
+    if (payload.inquiry_form_config !== undefined)        update.inquiry_form_config       = (payload.inquiry_form_config as unknown as DbJson) ?? null
 
     const { error } = await supabase
       .from('experiences')

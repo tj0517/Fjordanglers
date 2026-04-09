@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { Check, ArrowRight, User, AlignLeft, Image as ImageIcon, Anchor, CreditCard, PlusCircle, Calendar, FileText, MessageSquare, Pencil } from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
+import {
+  Check, ArrowRight, User, AlignLeft, Image as ImageIcon, Anchor,
+  CreditCard, PlusCircle, Calendar, Pencil, Inbox, Clock, TrendingUp,
+} from 'lucide-react'
 
 export const revalidate = 0
 
@@ -16,85 +19,45 @@ function greet(): string {
   return 'Good evening'
 }
 
-function fmtEur(n: number): string {
-  return new Intl.NumberFormat('en-IE', {
-    style: 'currency', currency: 'EUR', maximumFractionDigits: 0,
-  }).format(n)
+function fmtDate(iso: string): string {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
 }
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-
-// ─── Earnings SVG bar chart ───────────────────────────────────────────────────
-
-function EarningsChart({ bars }: {
-  bars: { key: string; label: string; value: number; isCurrent: boolean }[]
-}) {
-  const max   = Math.max(...bars.map(b => b.value), 100)
-  const BAR_W = 36
-  const GAP   = 10
-  const CH    = 110 // chart height
-  const LH    = 18  // label height
-  const W     = bars.length * BAR_W + (bars.length - 1) * GAP
-
-  return (
-    <svg viewBox={`0 0 ${W} ${CH + LH}`} className="w-full" style={{ overflow: 'visible' }}>
-      {/* Grid lines */}
-      {[0.25, 0.5, 0.75, 1].map(pct => (
-        <line key={pct} x1={0} y1={CH - pct * CH} x2={W} y2={CH - pct * CH}
-          stroke="rgba(10,46,77,0.06)" strokeWidth="1" />
-      ))}
-      {/* Bars */}
-      {bars.map((bar, i) => {
-        const barH = Math.max((bar.value / max) * CH, 3)
-        const x    = i * (BAR_W + GAP)
-        return (
-          <g key={bar.key}>
-            <rect
-              x={x} y={CH - barH} width={BAR_W} height={barH} rx={5}
-              fill={bar.isCurrent ? '#E67E50' : bar.value > 0 ? 'rgba(230,126,80,0.28)' : 'rgba(10,46,77,0.06)'}
-            />
-            {bar.value > 0 && (
-              <text
-                x={x + BAR_W / 2} y={CH - barH - 5}
-                textAnchor="middle" fontSize={7} fontFamily="DM Sans, sans-serif" fontWeight="600"
-                fill={bar.isCurrent ? '#E67E50' : 'rgba(10,46,77,0.4)'}
-              >
-                {bar.value >= 1000 ? `€${(bar.value / 1000).toFixed(1)}k` : `€${Math.round(bar.value)}`}
-              </text>
-            )}
-            <text
-              x={x + BAR_W / 2} y={CH + LH - 2}
-              textAnchor="middle" fontSize={8} fontFamily="DM Sans, sans-serif"
-              fontWeight={bar.isCurrent ? '700' : '400'}
-              fill={bar.isCurrent ? '#E67E50' : 'rgba(10,46,77,0.38)'}
-            >
-              {bar.label}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
-  )
+function fmtDateShort(iso: string): string {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'short',
+  })
 }
 
-// ─── Status chip ──────────────────────────────────────────────────────────────
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 60)    return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24)     return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  if (days < 7)     return `${days}d ago`
+  return fmtDate(iso)
+}
 
-function StatusChip({ status }: { status: string }) {
-  const map: Record<string, { label: string; bg: string; color: string }> = {
-    pending:   { label: 'Pending',   bg: 'rgba(217,119,6,0.1)',  color: '#B45309' },
-    accepted:  { label: 'Accepted',  bg: 'rgba(59,130,246,0.1)', color: '#2563EB' },
-    confirmed: { label: 'Confirmed', bg: 'rgba(74,222,128,0.1)', color: '#16A34A' },
-    completed: { label: 'Completed', bg: 'rgba(10,46,77,0.08)',  color: '#0A2E4D' },
-    declined:  { label: 'Declined',  bg: 'rgba(239,68,68,0.1)',  color: '#DC2626' },
-    refunded:  { label: 'Refunded',  bg: 'rgba(239,68,68,0.07)', color: '#EF4444' },
-  }
-  const s = map[status] ?? map['pending']!
-  return (
-    <span className="text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body flex-shrink-0"
-      style={{ background: s.bg, color: s.color }}>
-      {s.label}
-    </span>
-  )
+const STATUS_LABEL: Record<string, string> = {
+  pending:    'Awaiting response',
+  offer_sent: 'Offer sent',
+  confirmed:  'Confirmed',
+  declined:   'Declined',
+  cancelled:  'Cancelled',
+  completed:  'Completed',
+}
+
+const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
+  pending:    { bg: '#FFF7ED', color: '#C05621'  },
+  offer_sent: { bg: '#EFF6FF', color: '#1D4ED8'  },
+  confirmed:  { bg: '#F0FDF4', color: '#15803D'  },
+  declined:   { bg: '#F9FAFB', color: '#6B7280'  },
+  cancelled:  { bg: '#F9FAFB', color: '#6B7280'  },
+  completed:  { bg: '#EFF6FF', color: '#1D4ED8'  },
 }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
@@ -114,77 +77,43 @@ export default async function DashboardHomePage() {
 
   const firstName = guide.full_name?.split(' ')[0] ?? 'there'
 
-  // ── Date helpers ───────────────────────────────────────────────────────────
-  const now        = new Date()
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-  const today      = now.toISOString().split('T')[0]
-
-  const sixMonthsAgo = new Date(now)
-  sixMonthsAgo.setMonth(now.getMonth() - 5)
-  const sixMonthsAgoStr = `${sixMonthsAgo.getFullYear()}-${String(sixMonthsAgo.getMonth() + 1).padStart(2, '0')}-01`
-
-  const service = createServiceClient()
-
-  // ── All queries in parallel ────────────────────────────────────────────────
-  const [
-    { data: expRows },
-    { data: bookingsMonth },
-    { data: pendingBks },
-    { data: pendingInqs },
-    { data: earningsData },
-    { data: upcomingBks },
-    { data: recentBks },
-    { data: allTimeBks },
-  ] = await Promise.all([
-    supabase.from('experiences').select('id, published').eq('guide_id', guide.id),
-    supabase.from('bookings').select('guide_payout_eur').eq('guide_id', guide.id)
-      .in('status', ['confirmed', 'completed']).gte('booking_date', monthStart),
-    supabase.from('bookings').select('id').eq('guide_id', guide.id).eq('status', 'pending'),
-    service.from('bookings').select('id').eq('guide_id', guide.id).eq('source', 'inquiry')
-      .in('status', ['pending', 'reviewing', 'offer_sent']),
-    // 6-month chart data
-    supabase.from('bookings').select('booking_date, guide_payout_eur').eq('guide_id', guide.id)
-      .in('status', ['confirmed', 'completed']).gte('booking_date', sixMonthsAgoStr),
-    // Upcoming confirmed trips
-    supabase.from('bookings')
-      .select('id, angler_full_name, guests, guide_payout_eur, booking_date')
-      .eq('guide_id', guide.id).eq('status', 'confirmed')
-      .gte('booking_date', today).order('booking_date', { ascending: true }).limit(4),
-    // Recent activity
-    supabase.from('bookings')
-      .select('id, angler_full_name, guide_payout_eur, status, created_at')
-      .eq('guide_id', guide.id).order('created_at', { ascending: false }).limit(6),
-    // All-time totals
-    supabase.from('bookings').select('guide_payout_eur').eq('guide_id', guide.id)
-      .in('status', ['confirmed', 'completed']),
+  // Fetch experiences + bookings in parallel
+  const [{ data: expRows }, { data: bookingRows }] = await Promise.all([
+    supabase
+      .from('experiences')
+      .select('id, published')
+      .eq('guide_id', guide.id),
+    supabase
+      .from('bookings')
+      .select(`
+        id, status, source, booking_date, date_to, requested_dates,
+        guests, total_eur, guide_payout_eur, angler_full_name, created_at,
+        experience_id,
+        experiences ( title )
+      `)
+      .eq('guide_id', guide.id)
+      .order('created_at', { ascending: false })
+      .limit(20),
   ])
 
-  const totalTrips      = expRows?.length ?? 0
-  const publishedTrips  = expRows?.filter(e => e.published).length ?? 0
-  const monthEarnings   = bookingsMonth?.reduce((acc, b) => acc + (b.guide_payout_eur ?? 0), 0) ?? 0
-  const pendingCount    = pendingBks?.length ?? 0
-  const requestCount    = pendingInqs?.length ?? 0
-  const allTimeEarnings = allTimeBks?.reduce((acc, b) => acc + (b.guide_payout_eur ?? 0), 0) ?? 0
-  const confirmedCount  = allTimeBks?.length ?? 0
-  const monthlyCount    = bookingsMonth?.length ?? 0
+  const totalTrips     = expRows?.length ?? 0
+  const publishedTrips = expRows?.filter(e => e.published).length ?? 0
 
-  // Build 6-month earnings chart bars
-  const chartBars = Array.from({ length: 6 }, (_, i) => {
-    const offset = 5 - i
-    const d = new Date(now.getFullYear(), now.getMonth() - offset, 1)
-    return {
-      key:       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      label:     MONTHS[d.getMonth()]!,
-      value:     0,
-      isCurrent: offset === 0,
-    }
-  })
-  earningsData?.forEach(b => {
-    const key = b.booking_date.slice(0, 7)
-    const bar = chartBars.find(cb => cb.key === key)
-    if (bar) bar.value += b.guide_payout_eur
-  })
-  const sixMonthTotal = chartBars.reduce((s, b) => s + b.value, 0)
+  const allBookings  = bookingRows ?? []
+  const pending      = allBookings.filter(b => b.status === 'pending')
+  const offerSent    = allBookings.filter(b => b.status === 'offer_sent')
+  const confirmed    = allBookings.filter(b => b.status === 'confirmed' || b.status === 'completed')
+  const recentAll    = allBookings.slice(0, 5)
+
+  // Upcoming confirmed trips (booking_date >= today)
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const upcoming = confirmed
+    .filter(b => (b.booking_date ?? '') >= todayStr)
+    .sort((a, b) => (a.booking_date ?? '').localeCompare(b.booking_date ?? ''))
+    .slice(0, 3)
+
+  // Items needing action (pending + offer_sent awaiting angler)
+  const needsAction = [...pending, ...offerSent]
 
   // ── Completion checklist ───────────────────────────────────────────────────
   const profileDone = (guide.country ?? '').length > 0 && (guide.fish_expertise ?? []).length > 0
@@ -306,8 +235,7 @@ export default async function DashboardHomePage() {
               { label: 'My public profile', sub: 'See how anglers find you',   href: guide.slug ? `/guides/${guide.slug}` : '/dashboard/profile', icon: <User size={16} strokeWidth={1.5} />, primary: true  },
               { label: '+ New trip listing', sub: 'Add a new fishing trip',    href: '/dashboard/trips/new',    icon: <PlusCircle size={16} strokeWidth={1.5} />, primary: false },
               { label: 'Manage calendar',   sub: 'Set availability & blocks', href: '/dashboard/calendar',     icon: <Calendar size={16} strokeWidth={1.5} />, primary: false },
-              { label: 'Bookings',          sub: `${pendingCount} pending`,   href: '/dashboard/bookings',     icon: <FileText size={16} strokeWidth={1.5} />, primary: false },
-              { label: 'Requests',          sub: `${requestCount} open`,       href: '/dashboard/bookings?view=requests',   icon: <MessageSquare size={16} strokeWidth={1.5} />, primary: false },
+              { label: 'My trips',          sub: `${publishedTrips} published`, href: '/dashboard/trips',      icon: <Anchor size={16} strokeWidth={1.5} />, primary: false },
               { label: 'Edit profile',      sub: 'Update info & photos',       href: '/dashboard/profile/edit', icon: <Pencil size={16} strokeWidth={1.5} />, primary: false },
             ].map(sc => (
               <Link key={sc.label} href={sc.href}
@@ -327,213 +255,285 @@ export default async function DashboardHomePage() {
       )}
 
       {/* ── Stats row ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
-          { label: 'Active trips',        value: String(publishedTrips),  sub: totalTrips > 0 ? `${totalTrips} total` : 'No trips yet',    href: '/dashboard/trips'    },
-          { label: 'Earnings this month', value: fmtEur(monthEarnings),   sub: 'confirmed bookings',                                        href: '/dashboard/earnings' },
-          { label: 'Pending bookings',    value: String(pendingCount),    sub: 'awaiting confirmation',                                     href: '/dashboard/bookings' },
-          { label: 'Open requests',       value: String(requestCount),    sub: 'trip inquiries',                                            href: '/dashboard/bookings?view=requests'},
+          {
+            label: 'Active trips',
+            value: String(publishedTrips),
+            sub:   totalTrips > 0 ? `${totalTrips} total` : 'No trips yet',
+            href:  '/dashboard/trips',
+            icon:  <Anchor size={15} strokeWidth={1.5} />,
+          },
+          {
+            label: 'Pending requests',
+            value: String(pending.length),
+            sub:   pending.length === 1 ? 'needs your response' : pending.length > 0 ? 'need your response' : 'all clear',
+            href:  '/dashboard/bookings',
+            icon:  <Inbox size={15} strokeWidth={1.5} />,
+            urgent: pending.length > 0,
+          },
+          {
+            label: 'Confirmed',
+            value: String(confirmed.length),
+            sub:   confirmed.length === 1 ? 'booking confirmed' : `bookings confirmed`,
+            href:  '/dashboard/bookings',
+            icon:  <Check size={15} strokeWidth={2} />,
+          },
+          {
+            label: 'Total bookings',
+            value: String(allBookings.length),
+            sub:   allBookings.length === 0 ? 'No bookings yet' : 'all time',
+            href:  '/dashboard/bookings',
+            icon:  <TrendingUp size={15} strokeWidth={1.5} />,
+          },
         ].map(stat => (
           <Link key={stat.label} href={stat.href}
-            className="rounded-2xl px-4 py-4 transition-all hover:scale-[1.01]"
-            style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', display: 'block', textDecoration: 'none' }}>
-            <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-1"
-               style={{ color: 'rgba(10,46,77,0.38)' }}>{stat.label}</p>
-            <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>{stat.value}</p>
-            <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>{stat.sub}</p>
+            className="rounded-2xl px-4 py-4 flex flex-col gap-2 transition-all hover:scale-[1.02]"
+            style={{
+              background: 'urgent' in stat && stat.urgent ? 'rgba(230,126,80,0.06)' : '#FDFAF7',
+              border: `1px solid ${'urgent' in stat && stat.urgent ? 'rgba(230,126,80,0.25)' : 'rgba(10,46,77,0.07)'}`,
+              textDecoration: 'none',
+            }}>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body"
+                 style={{ color: 'urgent' in stat && stat.urgent ? '#C05621' : 'rgba(10,46,77,0.38)' }}>
+                {stat.label}
+              </p>
+              <span style={{ color: 'urgent' in stat && stat.urgent ? '#E67E50' : 'rgba(10,46,77,0.25)' }}>
+                {stat.icon}
+              </span>
+            </div>
+            <p className="text-2xl font-bold f-display"
+               style={{ color: 'urgent' in stat && stat.urgent ? '#E67E50' : '#0A2E4D' }}>
+              {stat.value}
+            </p>
+            <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>{stat.sub}</p>
           </Link>
         ))}
       </div>
 
-      {/* ── Charts row ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-
-        {/* Earnings trend bar chart */}
-        <div className="sm:col-span-2 rounded-2xl px-6 py-5"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-          <div className="flex items-start justify-between gap-4 mb-5">
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-1"
-                 style={{ color: 'rgba(10,46,77,0.38)' }}>
-                Earnings — last 6 months
-              </p>
-              <p className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                {fmtEur(sixMonthTotal)}
+      {/* ── Pending requests — needs action ────────────────────────────────── */}
+      {needsAction.length > 0 && (
+        <div className="rounded-2xl mb-6 overflow-hidden"
+          style={{ background: '#FDFAF7', border: '1px solid rgba(230,126,80,0.2)' }}>
+          <div className="px-6 py-4 flex items-center justify-between"
+            style={{ borderBottom: '1px solid rgba(230,126,80,0.12)', background: 'rgba(230,126,80,0.04)' }}>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
+              <p className="text-sm font-bold f-body" style={{ color: '#C05621' }}>
+                {needsAction.length === 1 ? '1 request needs your attention' : `${needsAction.length} requests need your attention`}
               </p>
             </div>
-            <div className="text-right flex-shrink-0">
-              <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-1"
-                 style={{ color: 'rgba(10,46,77,0.38)' }}>All time</p>
-              <p className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>{fmtEur(allTimeEarnings)}</p>
-              <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>{confirmedCount} bookings</p>
-            </div>
+            <Link href="/dashboard/bookings"
+              className="text-xs font-semibold f-body transition-opacity hover:opacity-70"
+              style={{ color: '#E67E50' }}>
+              View all →
+            </Link>
           </div>
-          <EarningsChart bars={chartBars} />
-        </div>
-
-        {/* Booking overview — progress bars */}
-        <div className="rounded-2xl px-6 py-5 flex flex-col"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-          <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-5"
-             style={{ color: 'rgba(10,46,77,0.38)' }}>
-            Booking overview
-          </p>
-          <div className="flex-1 flex flex-col gap-4">
-            {[
-              { label: 'Published trips',      value: publishedTrips,             max: Math.max(totalTrips, 1),                          color: '#E67E50' },
-              { label: 'Pending action',        value: pendingCount + requestCount, max: Math.max(pendingCount + requestCount, 5),         color: '#B45309' },
-              { label: 'Confirmed this month',  value: monthlyCount,               max: Math.max(monthlyCount, 5),                        color: '#16A34A' },
-            ].map(item => (
-              <div key={item.label}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>{item.label}</span>
-                  <span className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>{item.value}</span>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(10,46,77,0.07)' }}>
-                  <div className="h-full rounded-full transition-all"
-                    style={{
-                      width:    `${Math.min(item.value > 0 ? Math.max((item.value / item.max) * 100, 8) : 0, 100)}%`,
-                      background: item.color,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
-            <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-1"
-               style={{ color: 'rgba(10,46,77,0.38)' }}>All-time confirmed</p>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>{confirmedCount}</span>
-              <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>bookings</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Upcoming + Recent ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-
-        {/* Upcoming confirmed trips */}
-        <div className="rounded-2xl overflow-hidden"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-          <div className="px-5 py-4 flex items-center justify-between"
-            style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
-            <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body"
-               style={{ color: 'rgba(10,46,77,0.38)' }}>Upcoming trips</p>
-            <Link href="/dashboard/bookings" className="text-[11px] font-semibold f-body"
-              style={{ color: '#E67E50' }}>View all →</Link>
-          </div>
-          {(upcomingBks?.length ?? 0) === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No upcoming confirmed trips</p>
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {upcomingBks!.map((bk, idx) => {
-                const tripDate = new Date(bk.booking_date)
-                const daysAway = Math.ceil((tripDate.getTime() - Date.now()) / 86400000)
-                return (
-                  <Link key={bk.id} href={`/dashboard/bookings/${bk.id}`}
-                    className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-black/[0.015]"
-                    style={idx > 0 ? { borderTop: '1px solid rgba(10,46,77,0.05)' } : {}}>
-                    {/* Date chip */}
-                    <div className="flex-shrink-0 w-10 text-center rounded-xl py-1"
-                      style={{ background: daysAway <= 7 ? 'rgba(230,126,80,0.1)' : 'rgba(10,46,77,0.05)' }}>
-                      <p className="text-sm font-bold f-display leading-tight"
-                        style={{ color: daysAway <= 7 ? '#E67E50' : '#0A2E4D' }}>
-                        {tripDate.getDate()}
-                      </p>
-                      <p className="text-[9px] font-semibold f-body uppercase"
-                        style={{ color: daysAway <= 7 ? '#E67E50' : 'rgba(10,46,77,0.4)' }}>
-                        {MONTHS[tripDate.getMonth()]}
-                      </p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                        {bk.angler_full_name ?? 'Angler'}
-                      </p>
-                      <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {bk.guests} {bk.guests === 1 ? 'guest' : 'guests'} · {fmtEur(bk.guide_payout_eur)}
-                      </p>
-                    </div>
-                    <p className="text-[10px] font-bold f-body flex-shrink-0"
-                      style={{ color: daysAway <= 3 ? '#DC2626' : daysAway <= 7 ? '#E67E50' : 'rgba(10,46,77,0.35)' }}>
-                      {daysAway === 0 ? 'Today' : daysAway === 1 ? 'Tomrw' : `${daysAway}d`}
+          <div className="flex flex-col divide-y" style={{ '--divide-color': 'rgba(10,46,77,0.05)' } as React.CSSProperties}>
+            {needsAction.map(b => {
+              const exp = b.experiences as { title: string } | null
+              const dates = b.requested_dates?.length
+                ? `${fmtDateShort(b.requested_dates[0])}${b.requested_dates.length > 1 ? ` +${b.requested_dates.length - 1}` : ''}`
+                : fmtDateShort(b.booking_date)
+              const ss = STATUS_STYLE[b.status] ?? STATUS_STYLE['pending']
+              return (
+                <Link
+                  key={b.id}
+                  href={`/dashboard/bookings/${b.id}`}
+                  className="flex items-center gap-4 px-6 py-4 transition-all hover:bg-white"
+                  style={{ textDecoration: 'none' }}
+                >
+                  {/* Avatar initial */}
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold f-body"
+                    style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}>
+                    {(b.angler_full_name ?? 'A')[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                      {b.angler_full_name ?? 'Angler'}
                     </p>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Recent bookings activity */}
-        <div className="rounded-2xl overflow-hidden"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-          <div className="px-5 py-4 flex items-center justify-between"
-            style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
-            <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body"
-               style={{ color: 'rgba(10,46,77,0.38)' }}>Recent activity</p>
-            <Link href="/dashboard/bookings" className="text-[11px] font-semibold f-body"
-              style={{ color: '#E67E50' }}>View all →</Link>
-          </div>
-          {(recentBks?.length ?? 0) === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No bookings yet</p>
-            </div>
-          ) : (
-            <div className="flex flex-col">
-              {recentBks!.map((bk, idx) => {
-                const createdDate = new Date(bk.created_at)
-                const dateStr = createdDate.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })
-                return (
-                  <Link key={bk.id} href={`/dashboard/bookings/${bk.id}`}
-                    className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-black/[0.015]"
-                    style={idx > 0 ? { borderTop: '1px solid rgba(10,46,77,0.05)' } : {}}>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                        {bk.angler_full_name ?? 'Angler'}
-                      </p>
-                      <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                        {fmtEur(bk.guide_payout_eur)} · {dateStr}
-                      </p>
-                    </div>
-                    <StatusChip status={bk.status} />
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Quick actions — only shown when setup incomplete (allDone has shortcuts grid) */}
-      {!allDone && (
-        <div className="rounded-2xl px-6 py-5"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-          <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-4"
-             style={{ color: 'rgba(10,46,77,0.38)' }}>Quick actions</p>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { label: '+ New trip',   href: '/dashboard/trips/new',    primary: true  },
-              { label: 'My trips',     href: '/dashboard/trips',        primary: false },
-              { label: 'Calendar',     href: '/dashboard/calendar',     primary: false },
-              { label: 'Bookings',     href: '/dashboard/bookings',     primary: false },
-              { label: 'Requests',     href: '/dashboard/bookings?view=requests', primary: false },
-              { label: 'Edit profile', href: '/dashboard/profile/edit', primary: false },
-            ].map(action => (
-              <Link key={action.label} href={action.href}
-                className="text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-all"
-                style={action.primary
-                  ? { background: '#E67E50', color: '#fff' }
-                  : { background: 'rgba(10,46,77,0.05)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
-                {action.label}
-              </Link>
-            ))}
+                    <p className="text-xs f-body truncate mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      {exp?.title ?? 'Fishing trip'} · {dates} · {b.guests} {b.guests === 1 ? 'angler' : 'anglers'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <span className="text-[10px] font-semibold f-body px-2.5 py-1 rounded-full"
+                      style={{ background: ss.bg, color: ss.color }}>
+                      {STATUS_LABEL[b.status] ?? b.status}
+                    </span>
+                    <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>
+                      {timeAgo(b.created_at)}
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}
+
+      {/* ── Upcoming confirmed trips ────────────────────────────────────────── */}
+      {upcoming.length > 0 && (
+        <div className="rounded-2xl mb-6 overflow-hidden"
+          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
+          <div className="px-6 py-4 flex items-center justify-between"
+            style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
+            <div className="flex items-center gap-2">
+              <Calendar size={14} strokeWidth={1.5} style={{ color: '#0A2E4D', opacity: 0.5 }} />
+              <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>Upcoming trips</p>
+            </div>
+            <Link href="/dashboard/bookings"
+              className="text-xs font-semibold f-body transition-opacity hover:opacity-70"
+              style={{ color: 'rgba(10,46,77,0.45)' }}>
+              View all →
+            </Link>
+          </div>
+          <div className="flex flex-col divide-y" style={{ '--divide-color': 'rgba(10,46,77,0.05)' } as React.CSSProperties}>
+            {upcoming.map(b => {
+              const exp = b.experiences as { title: string } | null
+              const dateFrom = b.requested_dates?.[0] ?? b.booking_date
+              const dateTo   = b.requested_dates?.at(-1) ?? b.date_to ?? b.booking_date
+              const dateStr  = dateFrom === dateTo
+                ? fmtDate(dateFrom)
+                : `${fmtDateShort(dateFrom)} – ${fmtDateShort(dateTo)}`
+              return (
+                <Link
+                  key={b.id}
+                  href={`/dashboard/bookings/${b.id}`}
+                  className="flex items-center gap-4 px-6 py-4 transition-all hover:bg-white"
+                  style={{ textDecoration: 'none' }}
+                >
+                  {/* Date chip */}
+                  <div className="flex flex-col items-center justify-center w-11 h-11 rounded-xl flex-shrink-0"
+                    style={{ background: 'rgba(10,46,77,0.07)' }}>
+                    <span className="text-[10px] font-bold f-body uppercase leading-none"
+                      style={{ color: 'rgba(10,46,77,0.5)' }}>
+                      {new Date(dateFrom + 'T00:00:00').toLocaleDateString('en-GB', { month: 'short' })}
+                    </span>
+                    <span className="text-base font-bold f-display leading-tight" style={{ color: '#0A2E4D' }}>
+                      {new Date(dateFrom + 'T00:00:00').getDate()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                      {exp?.title ?? 'Fishing trip'}
+                    </p>
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      {b.angler_full_name ?? 'Angler'} · {dateStr} · {b.guests} {b.guests === 1 ? 'angler' : 'anglers'}
+                    </p>
+                  </div>
+                  {b.guide_payout_eur > 0 && (
+                    <p className="text-sm font-bold f-display flex-shrink-0" style={{ color: '#0A2E4D' }}>
+                      €{b.guide_payout_eur.toFixed(0)}
+                    </p>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Recent bookings ─────────────────────────────────────────────────── */}
+      {recentAll.length > 0 ? (
+        <div className="rounded-2xl mb-6 overflow-hidden"
+          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
+          <div className="px-6 py-4 flex items-center justify-between"
+            style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
+            <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>Recent bookings</p>
+            <Link href="/dashboard/bookings"
+              className="text-xs font-semibold f-body transition-opacity hover:opacity-70"
+              style={{ color: 'rgba(10,46,77,0.45)' }}>
+              All bookings →
+            </Link>
+          </div>
+          <div className="flex flex-col divide-y" style={{ '--divide-color': 'rgba(10,46,77,0.05)' } as React.CSSProperties}>
+            {recentAll.map(b => {
+              const exp = b.experiences as { title: string } | null
+              const dates = b.requested_dates?.length
+                ? `${fmtDateShort(b.requested_dates[0])}${b.requested_dates.length > 1 ? ` – ${fmtDateShort(b.requested_dates.at(-1)!)}` : ''}`
+                : fmtDateShort(b.booking_date)
+              const ss = STATUS_STYLE[b.status] ?? STATUS_STYLE['pending']
+              return (
+                <Link
+                  key={b.id}
+                  href={`/dashboard/bookings/${b.id}`}
+                  className="flex items-center gap-4 px-6 py-3.5 transition-all hover:bg-white"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                        {b.angler_full_name ?? 'Angler'}
+                      </p>
+                      <span className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full"
+                        style={{ background: ss.bg, color: ss.color }}>
+                        {STATUS_LABEL[b.status] ?? b.status}
+                      </span>
+                    </div>
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      {exp?.title ?? 'Fishing trip'} · {dates}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                    {b.guide_payout_eur > 0 && (
+                      <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
+                        €{b.guide_payout_eur.toFixed(0)}
+                      </p>
+                    )}
+                    <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>
+                      {timeAgo(b.created_at)}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+        /* ── Empty state ── */
+        <div className="rounded-2xl px-6 py-12 flex flex-col items-center text-center"
+          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mb-4"
+            style={{ background: 'rgba(10,46,77,0.06)' }}>
+            <Clock size={22} strokeWidth={1.3} style={{ color: 'rgba(10,46,77,0.3)' }} />
+          </div>
+          <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>No bookings yet</p>
+          <p className="text-xs f-body mb-5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+            Once anglers start requesting trips, you&apos;ll see everything here.
+          </p>
+          <Link href="/dashboard/trips/new"
+            className="text-sm font-bold f-body px-5 py-2.5 rounded-xl transition-all"
+            style={{ background: '#E67E50', color: '#fff' }}>
+            + Create a trip listing
+          </Link>
+        </div>
+      )}
+
+      {/* ── Quick actions ───────────────────────────────────────────────────── */}
+      <div className="rounded-2xl px-6 py-5"
+        style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
+        <p className="text-[10px] uppercase tracking-[0.18em] font-semibold f-body mb-4"
+           style={{ color: 'rgba(10,46,77,0.38)' }}>Quick actions</p>
+        <div className="flex flex-wrap gap-3">
+          {[
+            { label: '+ New trip',     href: '/dashboard/trips/new',    primary: true  },
+            { label: 'All bookings',   href: '/dashboard/bookings',     primary: false },
+            { label: 'My trips',       href: '/dashboard/trips',        primary: false },
+            { label: 'Calendar',       href: '/dashboard/calendar',     primary: false },
+            { label: 'Edit profile',   href: '/dashboard/profile/edit', primary: false },
+          ].map(action => (
+            <Link key={action.label} href={action.href}
+              className="text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-all"
+              style={action.primary
+                ? { background: '#E67E50', color: '#fff' }
+                : { background: 'rgba(10,46,77,0.05)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
+              {action.label}
+            </Link>
+          ))}
+        </div>
+      </div>
 
     </div>
   )

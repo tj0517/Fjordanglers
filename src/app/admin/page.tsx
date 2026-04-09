@@ -9,11 +9,6 @@ export const metadata = {
 
 // ─── Status style maps ────────────────────────────────────────────────────────
 
-const INQUIRY_STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  pending:   { label: 'New',       color: '#E67E50', bg: 'rgba(230,126,80,0.1)' },
-  reviewing: { label: 'Reviewing', color: '#D97706', bg: 'rgba(217,119,6,0.1)'  },
-}
-
 const LEAD_STATUS: Record<string, { label: string; color: string; bg: string }> = {
   new:       { label: 'New',       color: '#E67E50', bg: 'rgba(230,126,80,0.1)' },
   contacted: { label: 'Contacted', color: '#D97706', bg: 'rgba(217,119,6,0.1)'  },
@@ -28,9 +23,7 @@ export default async function AdminPage() {
     { data: allGuidesData },
     { data: tripsData },
     { count: totalActiveLeads },
-    { count: totalOpenInquiries },
     { data: recentLeads },
-    { data: recentInquiries },
   ] = await Promise.all([
     supabase.from('guides').select('id, status, user_id, stripe_account_id'),
     supabase.from('experiences').select('guide_id').eq('published', true),
@@ -39,21 +32,9 @@ export default async function AdminPage() {
       .select('id', { count: 'exact', head: true })
       .in('status', ['new', 'contacted']),
     supabase
-      .from('bookings')
-      .select('id', { count: 'exact', head: true })
-      .eq('source', 'inquiry')
-      .in('status', ['pending', 'reviewing']),
-    supabase
       .from('leads')
       .select('id, name, country, status, created_at')
       .in('status', ['new', 'contacted'])
-      .order('created_at', { ascending: false })
-      .limit(5),
-    supabase
-      .from('bookings')
-      .select('id, angler_full_name, target_species, status, created_at')
-      .eq('source', 'inquiry')
-      .in('status', ['pending', 'reviewing'])
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -85,10 +66,9 @@ export default async function AdminPage() {
   ].filter((item): item is NonNullable<typeof item> => item !== null)
 
   const STATS = [
-    { label: 'Total guides',   value: totalGuides,                   sub: `${activeGuides} active`,          urgent: false },
-    { label: 'Pending review', value: pendingGuides,                 sub: 'awaiting approval',               urgent: pendingGuides > 0 },
-    { label: 'Active leads',   value: totalActiveLeads ?? 0,         sub: 'new & contacted',                 urgent: false },
-    { label: 'Open inquiries', value: totalOpenInquiries ?? 0,       sub: 'inquiry & reviewing',             urgent: false },
+    { label: 'Total guides',   value: totalGuides,              sub: `${activeGuides} active`, urgent: false },
+    { label: 'Pending review', value: pendingGuides,            sub: 'awaiting approval',      urgent: pendingGuides > 0 },
+    { label: 'Active leads',   value: totalActiveLeads ?? 0,   sub: 'new & contacted',        urgent: false },
   ]
 
   return (
@@ -183,10 +163,8 @@ export default async function AdminPage() {
         </div>
       )}
 
-      {/* ─── Recent Leads + Open Inquiries ────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-
-        {/* Recent leads */}
+      {/* ─── Recent Leads ────────────────────────────────────────── */}
+      <div className="mb-4">
         <div
           className="overflow-hidden rounded-[20px]"
           style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 12px rgba(10,46,77,0.05)' }}
@@ -227,58 +205,14 @@ export default async function AdminPage() {
             </div>
           )}
         </div>
-
-        {/* Open inquiries */}
-        <div
-          className="overflow-hidden rounded-[20px]"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 12px rgba(10,46,77,0.05)' }}
-        >
-          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
-            <div>
-              <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Open Inquiries</h2>
-              <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>Inquiry & reviewing</p>
-            </div>
-            <Link href="/admin/inquiries" className="text-xs f-body font-medium hover:text-[#E67E50] transition-colors" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              View all →
-            </Link>
-          </div>
-          {(recentInquiries ?? []).length === 0 ? (
-            <p className="px-5 py-10 text-sm text-center f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No open inquiries</p>
-          ) : (
-            <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
-              {(recentInquiries ?? []).map((inq) => {
-                const is = INQUIRY_STATUS[inq.status] ?? INQUIRY_STATUS.pending
-                const speciesArr = (inq.target_species ?? []) as string[]
-                const species = speciesArr.slice(0, 2).join(', ')
-                return (
-                  <div key={inq.id} className="flex items-center gap-3 px-5 py-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold f-body text-[#0A2E4D] truncate">{inq.angler_full_name ?? '—'}</p>
-                      <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                        {species !== '' ? species : '—'} · {new Date(inq.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body flex-shrink-0"
-                      style={{ background: is.bg, color: is.color }}
-                    >
-                      {is.label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ─── Quick nav ────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[
-          { label: 'All Guides',  href: '/admin/guides',    icon: '🧭' },
-          { label: 'All Leads',   href: '/admin/leads',     icon: '📋' },
-          { label: 'Inquiries',   href: '/admin/inquiries', icon: '💬' },
-          { label: 'Add Guide',   href: '/admin/guides/new', icon: '+', accent: true },
+          { label: 'All Guides', href: '/admin/guides',    icon: '🧭' },
+          { label: 'All Leads',  href: '/admin/leads',     icon: '📋' },
+          { label: 'Add Guide',  href: '/admin/guides/new', icon: '+', accent: true },
         ].map((item) => (
           <Link
             key={item.label}

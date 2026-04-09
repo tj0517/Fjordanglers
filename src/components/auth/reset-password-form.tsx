@@ -13,7 +13,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { updatePassword } from '@/actions/auth'
 import { Check } from 'lucide-react'
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -107,11 +107,10 @@ export function ResetPasswordForm() {
     setErrors({})
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.updateUser({ password })
+      const { error } = await updatePassword(password)
 
       if (error) {
-        setErrors({ form: error.message })
+        setErrors({ form: error })
         setIsLoading(false)
         return
       }

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
-import InquiryFormConfigEditor from '@/components/trips/InquiryFormConfigEditor'
+
 import type { DurationOptionPayload, GroupPricingPayload, ItineraryStep } from '@/actions/experiences'
 import type * as GeoJSON from 'geojson'
 
@@ -174,12 +174,7 @@ export default async function AdminEditExperiencePage({
         context="admin"
         successPath={`/admin/guides/${guide.id}`}
         guideAccommodations={guideAccommodations ?? []}
-        inquiryFormConfigSlot={
-          <InquiryFormConfigEditor
-            expId={exp.id}
-            initialConfig={exp.inquiry_form_config}
-          />
-        }
+
       />
     </div>
   )

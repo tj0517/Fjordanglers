@@ -52,8 +52,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${fraunces.variable} ${dmSans.variable}`}>
       <head>
         {/* Preconnect to Supabase CDN — speeds up all guide/experience images */}
-        <link rel="preconnect" href="https://uwxrstbplaoxfghrchcy.supabase.co" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://uwxrstbplaoxfghrchcy.supabase.co" />
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
       </head>
       <body>
         {children}

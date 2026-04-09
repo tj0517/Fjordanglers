@@ -1,1061 +1,649 @@
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
-import { notFound, redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe/client'
-import BookingChat, { type ChatMessage } from '@/components/booking/chat'
-import PayDepositBanner from '@/components/booking/pay-deposit-banner'
-import PayBalanceBanner from '@/components/booking/pay-balance-banner'
-import PayGuideButton from '@/components/booking/pay-guide-button'
-import { buildBookingReference } from '@/lib/sepa-qr'
-import { getPaymentModel } from '@/lib/payment-model'
-import { decryptField } from '@/lib/field-encryption'
-import type { Database } from '@/lib/supabase/database.types'
-import { ArrowLeft, Calendar, Clock, Check, X, MessageSquare, ArrowRight } from 'lucide-react'
-import { MicroCalendar } from '@/components/account/micro-calendar'
-import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
-import { GaEvent } from '@/components/analytics/ga-event'
-import { FbEvent } from '@/components/analytics/fb-event'
+import { getAnglerBookingDetail, getBookingMessages } from '@/actions/bookings'
+import { createClient } from '@/lib/supabase/server'
+import BookingChat from '@/components/booking/BookingChat'
+import AnglerOfferActions from './AnglerOfferActions'
+import AnglerPaymentButton from './AnglerPaymentButton'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+export const revalidate = 0
 
-type BookingStatus = Database['public']['Enums']['booking_status']
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<BookingStatus, { bg: string; color: string; label: string }> = {
-  pending:        { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Pending'        },
-  reviewing:      { bg: 'rgba(139,92,246,0.1)',   color: '#7C3AED', label: 'Reviewing'      },
-  offer_sent:     { bg: 'rgba(230,126,80,0.12)',  color: '#E67E50', label: 'Offer sent'     },
-  offer_accepted: { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Offer accepted' },
-  accepted:       { bg: 'rgba(59,130,246,0.1)',   color: '#2563EB', label: 'Accepted'       },
-  confirmed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Confirmed'      },
-  completed:      { bg: 'rgba(74,222,128,0.1)',   color: '#16A34A', label: 'Completed'      },
-  cancelled:      { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Cancelled'      },
-  refunded:       { bg: 'rgba(239,68,68,0.1)',    color: '#DC2626', label: 'Refunded'       },
-  declined:       { bg: 'rgba(239,68,68,0.08)',   color: '#B91C1C', label: 'Declined'       },
+function fmtDate(iso: string): string {
+  const d = new Date(iso + 'T00:00:00')
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function parsedOfferDetails(raw: string | null): {
+  message?: string | null
+  meetingLocation?: string | null
+  meetingLat?: number | null
+  meetingLng?: number | null
+} {
+  if (raw == null) return {}
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return {}
+  }
+}
+
+function MeetingMap({ lat, lng }: { lat: number; lng: number }) {
+  const bbox = `${(lng - 0.015).toFixed(5)},${(lat - 0.01).toFixed(5)},${(lng + 0.015).toFixed(5)},${(lat + 0.01).toFixed(5)}`
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lng}`
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(10,46,77,0.1)' }}>
+      <iframe
+        src={src}
+        style={{ width: '100%', height: 200, border: 0, display: 'block' }}
+        title="Meeting point map"
+        loading="lazy"
+        referrerPolicy="no-referrer"
+      />
+    </div>
+  )
+}
+
+// ─── OfferCalendarGrid ────────────────────────────────────────────────────────
+// Read-only calendar map: month grids with the guide's proposed dates
+// highlighted as solid orange pills.  Server component — no state needed.
+
+function OfferCalendarGrid({ days }: { days: string[] }) {
+  if (days.length === 0) return null
+
+  const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+  // Group proposed days by YYYY-MM
+  const byMonth = new Map<string, Set<string>>()
+  for (const d of days) {
+    const key = d.slice(0, 7)
+    if (!byMonth.has(key)) byMonth.set(key, new Set())
+    byMonth.get(key)!.add(d)
+  }
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {[...byMonth.entries()].map(([monthKey, daySet]) => {
+        const [yearStr, monthStr] = monthKey.split('-')
+        const year       = parseInt(yearStr, 10)
+        const monthIdx   = parseInt(monthStr, 10) - 1   // 0-based
+        const monthDate  = new Date(year, monthIdx, 1)
+        const monthLabel = monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+        const firstDay   = monthDate.getDay()
+        const daysInMo   = new Date(year, monthIdx + 1, 0).getDate()
+        const offset     = (firstDay + 6) % 7            // Mon = 0
+        const cells: Array<number | null> = [
+          ...Array<null>(offset).fill(null),
+          ...Array.from({ length: daysInMo }, (_, i) => i + 1),
+        ]
+
+        return (
+          <div key={monthKey} className="p-4 rounded-2xl"
+            style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 1px 6px rgba(10,46,77,0.04)' }}>
+            <p className="text-xs font-bold f-body mb-2 text-center" style={{ color: '#0A2E4D' }}>
+              {monthLabel}
+            </p>
+            {/* Day headers */}
+            <div className="grid grid-cols-7 mb-1">
+              {DAY_HEADERS.map((h, i) => (
+                <div key={i} className="text-center text-[9px] font-bold f-body py-0.5"
+                  style={{ color: 'rgba(10,46,77,0.28)' }}>{h}</div>
+              ))}
+            </div>
+            {/* Day cells */}
+            <div className="grid grid-cols-7 gap-0.5">
+              {cells.map((day, idx) => {
+                if (day == null) return <div key={`e${idx}`} />
+                const d          = `${year}-${String(monthIdx + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                const isProposed = daySet.has(d)
+                const isPast     = d < today
+                return (
+                  <div key={d}
+                    className="aspect-square flex items-center justify-center text-[10px] f-body rounded-lg"
+                    style={{
+                      background: isProposed ? '#E67E50' : 'transparent',
+                      color:      isProposed ? '#fff'    : isPast ? 'rgba(10,46,77,0.18)' : 'rgba(10,46,77,0.55)',
+                      fontWeight: isProposed ? '700'     : '400',
+                      boxShadow:  isProposed ? '0 1px 4px rgba(230,126,80,0.35)' : 'none',
+                    }}>
+                    {day}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Status labels / badge ─────────────────────────────────────────────────────
+
+const STATUS_LABELS: Record<string, string> = {
+  pending:      'Awaiting confirmation',
+  offer_sent:   'New dates proposed',
+  confirmed:    'Confirmed',
+  declined:     'Not confirmed',
+  cancelled:    'Cancelled',
+  completed:    'Completed',
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, { bg: string; text: string; border: string }> = {
+    pending:    { bg: '#FFF7ED', text: '#C05621',  border: 'rgba(230,126,80,0.3)'  },
+    offer_sent: { bg: '#FFFBEB', text: '#92400E',  border: 'rgba(234,179,8,0.35)'  },
+    confirmed:  { bg: '#F0FDF4', text: '#15803D',  border: 'rgba(34,197,94,0.3)'   },
+    declined:   { bg: '#F9FAFB', text: '#6B7280',  border: '#E5E7EB'                },
+    cancelled:  { bg: '#F9FAFB', text: '#6B7280',  border: '#E5E7EB'                },
+    completed:  { bg: '#EFF6FF', text: '#1D4ED8',  border: 'rgba(59,130,246,0.3)'  },
+  }
+  const s = styles[status] ?? styles.pending
+  return (
+    <span
+      className="inline-flex items-center text-sm font-semibold px-3.5 py-1.5 rounded-full f-body"
+      style={{ background: s.bg, color: s.text, border: `1px solid ${s.border}` }}
+    >
+      {STATUS_LABELS[status] ?? status}
+    </span>
+  )
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function AnglerBookingDetailPage({
   params,
-  searchParams,
 }: {
-  params:       Promise<{ id: string }>
-  searchParams: Promise<{ status?: string }>
+  params: Promise<{ id: string }>
 }) {
-  const [{ id }, { status: qStatus }] = await Promise.all([params, searchParams])
+  const { id } = await params
 
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?next=/account/bookings/${id}`)
+  const [
+    result,
+    messagesResult,
+    { data: { user } },
+  ] = await Promise.all([
+    getAnglerBookingDetail(id),
+    getBookingMessages(id),
+    supabase.auth.getUser(),
+  ])
 
-  // Booking — must belong to this angler (RLS enforces angler_id = auth.uid())
-  const { data: booking } = await supabase
-    .from('bookings')
-    .select(
-      '*, experience:experiences(id, title, description, fish_types, fishing_methods, technique, difficulty, duration_hours, duration_days, location_country, location_city, location_lat, location_lng, meeting_point_lat, meeting_point_lng, meeting_point_address, experience_images(url, is_cover, sort_order)), guide:guides(id, full_name, user_id, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, iban_holder_name, iban_bic)',
-    )
-    .eq('id', id)
-    .eq('angler_id', user.id)
-    .single()
+  if (!result.success) notFound()
 
-  if (!booking) notFound()
+  const booking  = result.booking
+  const details  = parsedOfferDetails(booking.offer_details)
+  const messages = messagesResult.success ? messagesResult.messages : []
 
-  const serviceClient = createServiceClient()
+  const isOfferSent = booking.status === 'offer_sent'
+  const isConfirmed = booking.status === 'confirmed' || booking.status === 'completed'
 
-  // ── Webhook fallback: confirm directly from Stripe if webhook hasn't arrived ─
-  //
-  // Stripe webhooks are sent to the registered endpoint (production URL).
-  // On preview deployments the webhook never arrives, so we verify payment
-  // directly with Stripe whenever the booking is in an awaiting-payment state.
-  //
-  // We intentionally do NOT gate this on ?status=paid — if the user was logged
-  // out mid-redirect (wrong success_url) and navigated back manually, the query
-  // param is gone but the payment may have completed. Polling Stripe here is safe:
-  //   - Only fires when status is accepted/offer_accepted with a checkout_id set
-  //   - Idempotent: .in('status', ...) guard prevents double-updates
-  //   - Webhook arriving later is a no-op (status already 'confirmed')
+  // Payment fee banner (Tier B: Direct Payment)
+  const bookingFeeEur = Math.round((booking.platform_fee_eur + booking.service_fee_eur) * 100) / 100
+  const feeDue        = isConfirmed && booking.balance_paid_at == null && bookingFeeEur > 0
+  const feePaid       = isConfirmed && booking.balance_paid_at != null
+  const dates = isConfirmed && booking.confirmed_days?.length
+    ? booking.confirmed_days
+    : booking.requested_dates?.length
+      ? booking.requested_dates
+      : [booking.booking_date]
 
-  let webhookFallbackSession: Awaited<ReturnType<typeof stripe.checkout.sessions.retrieve>> | null = null
-
-  if (
-    (booking.status === 'accepted' || booking.status === 'offer_accepted') &&
-    booking.stripe_checkout_id
-  ) {
-    try {
-      webhookFallbackSession = await stripe.checkout.sessions.retrieve(booking.stripe_checkout_id)
-      const session = webhookFallbackSession
-      if (session.payment_status === 'paid') {
-        await serviceClient
-          .from('bookings')
-          .update({
-            status:                   'confirmed',
-            confirmed_at:             new Date().toISOString(),
-            stripe_payment_intent_id: typeof session.payment_intent === 'string'
-              ? session.payment_intent
-              : null,
-          })
-          .eq('id', id)
-          .in('status', ['accepted', 'offer_accepted']) // idempotent guard
-        // Reflect in this render without a second DB round-trip
-        booking.status = 'confirmed' as typeof booking.status
-      }
-    } catch {
-      // Non-fatal — webhook may still arrive
-    }
-  }
-
-  if (booking.status === 'confirmed' && booking.balance_paid_at == null && booking.balance_stripe_checkout_id) {
-    try {
-      const session = await stripe.checkout.sessions.retrieve(booking.balance_stripe_checkout_id)
-      if (session.payment_status === 'paid') {
-        await serviceClient
-          .from('bookings')
-          .update({
-            status:                           'completed',
-            balance_paid_at:                  new Date().toISOString(),
-            balance_stripe_payment_intent_id: typeof session.payment_intent === 'string'
-              ? session.payment_intent
-              : null,
-          })
-          .eq('id', id)
-          .eq('status', 'confirmed')
-          .is('balance_paid_at', null) // idempotent guard
-        booking.status = 'completed' as typeof booking.status
-        ;(booking as typeof booking & { balance_paid_at: string }).balance_paid_at = new Date().toISOString()
-      }
-    } catch {
-      // Non-fatal — webhook may still arrive
-    }
-  }
-
-  // ── Stripe Checkout URL ───────────────────────────────────────────────────
-  let depositCheckoutUrl: string | null = null
-  const awaitingPayment = booking.status === 'accepted' || booking.status === 'offer_accepted'
-
-  if (awaitingPayment && booking.stripe_checkout_id) {
-    try {
-      // Reuse the session already fetched by the webhook fallback above if available,
-      // otherwise fetch it now.
-      const session = webhookFallbackSession ?? await stripe.checkout.sessions.retrieve(booking.stripe_checkout_id)
-      if (session.status === 'open' && session.url) {
-        depositCheckoutUrl = session.url
-      }
-    } catch {
-      // Session ID might not exist — let banner handle it
-    }
-  }
-
-  const justPaid        = qStatus === 'paid'
-  const justGuidePaid   = qStatus === 'guide_paid'
-  const awaitingBalance = booking.status === 'confirmed' && booking.balance_paid_at == null
-  const justBalancePaid = qStatus === 'balance_paid'
-
-  const { data: rawMsgs } = await serviceClient
-    .from('booking_messages')
-    .select('id, body, sender_id, created_at')
-    .eq('booking_id', id)
-    .order('created_at', { ascending: true })
-
-  const initialMessages = (rawMsgs ?? []) as ChatMessage[]
-
-  const exp = booking.experience as unknown as {
-    id: string
-    title: string
-    description: string | null
-    fish_types: string[] | null
-    fishing_methods: string[] | null
-    technique: string | null
-    difficulty: string | null
-    duration_hours: number | null
-    duration_days: number | null
-    location_country: string | null
-    location_city: string | null
-    location_lat: number | null
-    location_lng: number | null
-    meeting_point_lat: number | null
-    meeting_point_lng: number | null
-    meeting_point_address: string | null
-    experience_images: { url: string; is_cover: boolean; sort_order: number }[]
-  } | null
-  const guide = booking.guide as unknown as {
-    id: string; full_name: string; user_id: string
-    stripe_account_id: string | null
-    stripe_charges_enabled: boolean | null
-    stripe_payouts_enabled: boolean | null
-    iban: string | null
-    iban_holder_name: string | null
-    iban_bic: string | null
-  } | null
-
-  const paymentModel = getPaymentModel({
-    stripe_account_id:      guide?.stripe_account_id ?? null,
-    stripe_charges_enabled: guide?.stripe_charges_enabled ?? null,
-    stripe_payouts_enabled: guide?.stripe_payouts_enabled ?? null,
-  })
-
-  // ── Guide amount payment status ────────────────────────────────────────────
-  // New two-step model: after booking fee paid, angler still needs to pay guide.
-  // Model A (Stripe Connect): guide_stripe_checkout_id set, pay via Stripe
-  // Model B (IBAN): iban_shared_at set, pay via bank transfer
-  // Model C (nothing): arrange directly
-  const guideAmountEur  = booking.guide_payout_eur ?? Math.max(0, (booking.total_eur ?? 0) - (booking.deposit_eur ?? 0))
-  const guideAmountPaid = (booking as Record<string, unknown>).guide_amount_paid_at != null
-  const ibanShared      = (booking as Record<string, unknown>).iban_shared_at != null
-  const guideStripeCheckoutId = (booking as Record<string, unknown>).guide_stripe_checkout_id as string | null ?? null
-
-  // Guide amount payment link (Stripe Connect model)
-  let guideAmountCheckoutUrl: string | null = null
-  if (
-    booking.status === 'confirmed' &&
-    !guideAmountPaid &&
-    paymentModel === 'stripe_connect' &&
-    guideStripeCheckoutId
-  ) {
-    try {
-      const guideSession = await stripe.checkout.sessions.retrieve(guideStripeCheckoutId)
-      if (guideSession.payment_status === 'paid') {
-        // Guide amount already paid via Stripe — update DB (webhook may have missed it)
-        await serviceClient
-          .from('bookings')
-          .update({
-            guide_amount_paid_at:      new Date().toISOString(),
-            guide_amount_stripe_pi_id: typeof guideSession.payment_intent === 'string'
-              ? guideSession.payment_intent : null,
-          })
-          .eq('id', id)
-          .is('guide_amount_paid_at', null)
-        ;(booking as Record<string, unknown>).guide_amount_paid_at = new Date().toISOString()
-      } else if (guideSession.status === 'open' && guideSession.url) {
-        guideAmountCheckoutUrl = guideSession.url
-      }
-    } catch {
-      // Non-fatal
-    }
-  }
-
-  // Guide's decline message (if they proposed alternatives)
-  const guideDeclineMessage =
-    booking.status === 'declined' && guide != null
-      ? (initialMessages.filter(m => m.sender_id === guide.user_id).at(-1) ?? null)
-      : null
-
-  const s = STATUS_STYLES[booking.status]
-
-  // Cover image
-  const images = exp?.experience_images ?? []
-  const cover  =
-    images.find(img => img.is_cover) ??
-    [...images].sort((a, b) => a.sort_order - b.sort_order)[0]
-  const coverUrl = cover?.url ?? null
-
-  // Requested dates (what angler originally picked)
-  const requestedDates = (booking.requested_dates as string[] | null) ?? null
-  const hasRequestedDates = requestedDates != null && requestedDates.length > 0
-
-  const isInquiry = booking.source === 'inquiry'
-
-  // ── Canonical confirmed days ───────────────────────────────────────────────
-  // confirmed_days is the array of specific trip days (non-consecutive safe).
-  // Preferred over all other sources once guide has accepted.
-  const confirmedDaysArr = (booking.confirmed_days as string[] | null)
-  const offerDaysRaw      = (booking.offer_days    as string[] | null)
-
-  // Envelope dates — first/last day used as MicroCalendar from/to fallback
-  const confirmedStatuses = ['accepted', 'offer_accepted', 'confirmed', 'completed']
-  const isConfirmedStatus = confirmedStatuses.includes(booking.status)
-  const dateForConfirmed  =
-    confirmedDaysArr?.[0] ??
-    (isInquiry ? booking.offer_date_from : null) ??
-    booking.booking_date
-  const dateToConfirmed: string | null =
-    confirmedDaysArr?.[confirmedDaysArr.length - 1] ??
-    (isInquiry ? booking.offer_date_to : null) ??
-    booking.date_to ?? null
-  const isMultiDay = dateToConfirmed != null && dateToConfirmed !== dateForConfirmed
-
-  // ── Robust display days ────────────────────────────────────────────────────
-  // Canonical array first, then specific-day fallbacks for pre-backfill bookings
-  // where confirmed_days is still null.
-  // · direct bookings: old code overwrote requested_dates with the guide's confirmed days
-  //   so requested_dates contains the correct specific days for legacy rows.
-  // · inquiry bookings: offer_days contains the guide's exact day picks.
-  const displayDays: string[] | null =
-    (confirmedDaysArr != null && confirmedDaysArr.length > 0 ? confirmedDaysArr : null) ??
-    (!isInquiry && isConfirmedStatus && requestedDates != null && requestedDates.length > 0
-      ? requestedDates : null) ??
-    (isInquiry  && isConfirmedStatus && offerDaysRaw  != null && offerDaysRaw.length  > 0
-      ? offerDaysRaw  : null)
-
-  const sortedDisplayDays = displayDays != null ? [...displayDays].sort() : null
-  const hasNonConsecutiveDays =
-    sortedDisplayDays != null &&
-    sortedDisplayDays.length > 1 &&
-    !isConsecutiveDays(sortedDisplayDays)
-
-  // Human-readable date text for the "Trip confirmed for" banner
-  const confirmedDate = isConfirmedStatus
-    ? sortedDisplayDays != null && sortedDisplayDays.length > 0
-      ? hasNonConsecutiveDays
-        ? sortedDisplayDays.length <= 3
-          ? formatDaysList(sortedDisplayDays)
-          : `${sortedDisplayDays.length} fishing days`
-        : sortedDisplayDays.length === 1
-          ? new Date(sortedDisplayDays[0]! + 'T12:00:00').toLocaleDateString('en-GB', {
-              weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-            })
-          : `${new Date(sortedDisplayDays[0]! + 'T12:00:00').toLocaleDateString('en-GB', {
-              weekday: 'short', day: 'numeric', month: 'long',
-            })} – ${new Date(sortedDisplayDays[sortedDisplayDays.length - 1]! + 'T12:00:00').toLocaleDateString('en-GB', {
-              weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
-            })}`
-      : isMultiDay
-        ? `${new Date(dateForConfirmed + 'T12:00:00').toLocaleDateString('en-GB', {
-            weekday: 'short', day: 'numeric', month: 'long',
-          })} – ${new Date(dateToConfirmed! + 'T12:00:00').toLocaleDateString('en-GB', {
-            weekday: 'short', day: 'numeric', month: 'long', year: 'numeric',
-          })}`
-        : new Date(dateForConfirmed + 'T12:00:00').toLocaleDateString('en-GB', {
-            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-          })
-    : null
-
-  // Duration — only use the guide-confirmed value; never derive from window length
-  const durationLabel = booking.duration_option ?? null
-
-  // Availability window for pending inquiry bookings (first → last date in the array)
-  const windowFrom = requestedDates?.[0] ?? null
-  const windowTo   = requestedDates != null && requestedDates.length > 1
-    ? requestedDates[requestedDates.length - 1]
-    : null
-  const isWindowBooking = windowTo != null  // true = range; false = single exact date
-
-  // Financials
-  const depositEur = booking.deposit_eur ?? (booking.total_eur != null ? Math.round(booking.total_eur * 0.4) : 0)
-  const balanceEur = booking.total_eur != null ? Math.round(booking.total_eur - depositEur) : 0
-  const depositPct = booking.total_eur != null && booking.total_eur > 0
-    ? Math.round((depositEur / booking.total_eur) * 100)
-    : 40
-  const balancePct = 100 - depositPct
-
-  const createdFormatted = new Date(booking.created_at).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
-
-  const bookingRef = id.slice(-8).toUpperCase()
+  const guideInitial = booking.guide_name?.[0]?.toUpperCase() ?? 'G'
 
   return (
-    <div className="px-4 py-6 sm:px-8 sm:py-10 w-full max-w-[1120px]">
+    <div className="w-full min-h-screen" style={{ background: '#F3EDE4' }}>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
 
-      {/* GA4 + Meta Pixel: purchase/Purchase — fires once after Stripe ?status=paid redirect */}
-      {(qStatus === 'paid' || qStatus === 'guide_paid') && (
-        <>
-          <GaEvent
-            action="purchase"
-            params={{
-              transaction_id: booking.stripe_payment_intent_id ?? booking.id,
-              value:          booking.deposit_eur ?? booking.total_eur ?? 0,
-              currency:       'EUR',
-              items: [{
-                item_name:     exp?.title             ?? 'Fishing trip',
-                item_category: exp?.location_country  ?? '',
-                price:         booking.deposit_eur    ?? booking.total_eur ?? 0,
-                quantity:      1,
-              }],
-            }}
-          />
-          <FbEvent
-            event="Purchase"
-            params={{
-              value:    booking.deposit_eur ?? booking.total_eur ?? 0,
-              currency: 'EUR',
-            }}
-          />
-        </>
-      )}
+        {/* ── Back link ── */}
+        <Link
+          href="/account/bookings"
+          className="inline-flex items-center gap-1.5 text-sm f-body mb-6 transition-opacity hover:opacity-70"
+          style={{ color: 'rgba(10,46,77,0.5)' }}
+        >
+          <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M10 12L6 8l4-4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          My Bookings
+        </Link>
 
-      {/* ── Back nav ────────────────────────────────────────────────────────── */}
-      <Link
-        href="/account/bookings"
-        className="inline-flex items-center gap-1.5 text-xs f-body mb-7 transition-opacity hover:opacity-70"
-        style={{ color: 'rgba(10,46,77,0.45)' }}
-      >
-        <ArrowLeft width={12} height={12} strokeWidth={1.5} />
-        My Bookings
-      </Link>
+        {/* ── Status badge ── */}
+        <div className="mb-4">
+          <StatusBadge status={booking.status} />
+        </div>
 
-      {/* ── Two-column layout ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
+        {/* ── Title ── */}
+        <h1 className="text-2xl font-bold f-display mb-8" style={{ color: '#0A2E4D' }}>
+          {booking.experience_title ?? 'Fishing experience'}
+        </h1>
 
-        {/* ── LEFT: Booking info ─────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-5">
-          <div
-            className="overflow-hidden"
-            style={{
-              background: '#FDFAF7',
-              borderRadius: '24px',
-              border: '1px solid rgba(10,46,77,0.07)',
-              boxShadow: '0 2px 16px rgba(10,46,77,0.05)',
-            }}
-          >
-            {/* Cover image */}
-            {coverUrl != null && (
-              <div style={{ height: 180, position: 'relative', background: 'rgba(10,46,77,0.08)' }}>
-                <Image
-                  src={coverUrl}
-                  alt={exp?.title ?? 'Trip'}
-                  fill
-                  className="object-cover"
-                />
+        <div className="flex flex-col gap-4">
+
+          {/* ── Status-specific banner ── */}
+          {booking.status === 'offer_sent' && (
+            <div className="rounded-2xl px-5 py-4 flex items-start gap-3"
+              style={{ background: '#FFFBEB', border: '1.5px solid rgba(234,179,8,0.3)', boxShadow: '0 2px 12px rgba(234,179,8,0.08)' }}>
+              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1"
+                style={{ background: '#D97706' }} />
+              <div>
+                <p className="text-sm font-semibold f-body" style={{ color: '#92400E' }}>
+                  {booking.guide_name ?? 'Your guide'} sent you an offer
+                </p>
+                <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(146,64,14,0.65)' }}>
+                  Review the proposed dates and price below, then accept or decline.
+                </p>
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="p-6">
-              {/* ── Header ─────────────────────────────────────────────────── */}
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-[11px] uppercase tracking-[0.22em] f-body"
-                       style={{ color: 'rgba(10,46,77,0.38)' }}>
-                      #{bookingRef}
-                    </p>
-                    <span style={{ color: 'rgba(10,46,77,0.2)', fontSize: 10 }}>·</span>
-                    <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                      {createdFormatted}
-                    </p>
-                  </div>
-                  <h1 className="text-[#0A2E4D] text-xl font-bold f-display leading-snug">
-                    {exp?.title ?? (
-                      isInquiry && (booking as unknown as Record<string, string[] | null>).target_species?.length
-                        ? ((booking as unknown as Record<string, string[]>).target_species.join(' & ') + ' Fishing')
-                        : 'Fishing trip'
-                    )}
-                  </h1>
-                </div>
-                <span
-                  className="flex-shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] px-3 py-1.5 rounded-full f-body"
-                  style={{ background: s.bg, color: s.color }}
-                >
-                  {s.label}
-                </span>
-              </div>
+          {booking.status === 'pending' && (
+            <div
+              className="rounded-2xl p-5"
+              style={{ background: '#FFF7ED', border: '1px solid rgba(230,126,80,0.25)', borderLeft: '3px solid #E67E50' }}
+            >
+              <p className="text-sm font-semibold f-body mb-1" style={{ color: '#C05621' }}>
+                Waiting for guide confirmation
+              </p>
+              <p className="text-sm f-body" style={{ color: 'rgba(194,86,33,0.75)' }}>
+                The guide will review your request and respond within 48 hours.
+                You&apos;ll receive an email as soon as they respond.
+              </p>
+            </div>
+          )}
 
-              {/* ── Pay deposit banner (shown immediately after header when awaiting payment) ── */}
-              {awaitingPayment && !justPaid && (
-                <div className="mb-2">
-                  <PayDepositBanner
-                    bookingId={id}
-                    initialCheckoutUrl={depositCheckoutUrl}
-                    depositEur={depositEur}
-                    balanceEur={balanceEur}
-                    paymentModel={paymentModel}
-                  />
-                </div>
-              )}
-
-              {/* ── Trip info (experience details) ──────────────────────────── */}
-              {exp != null && (
-                <div className="mb-5 pb-5 flex flex-col gap-3" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
-                  {/* Location + quick facts */}
-                  <div className="flex flex-wrap gap-2">
-                    {(exp.location_city != null || exp.location_country != null) && (
-                      <Chip>📍 {[exp.location_city, exp.location_country].filter(Boolean).join(', ')}</Chip>
-                    )}
-                    {exp.fish_types != null && exp.fish_types.length > 0 &&
-                      exp.fish_types.map(f => <Chip key={f}>🎣 {f}</Chip>)
-                    }
-                    {exp.technique != null && <Chip>{exp.technique}</Chip>}
-                    {exp.duration_hours != null && (
-                      <Chip>
-                        {exp.duration_hours >= 24
-                          ? `${Math.round(exp.duration_hours / 24)} day${Math.round(exp.duration_hours / 24) !== 1 ? 's' : ''}`
-                          : `${exp.duration_hours}h`}
-                      </Chip>
-                    )}
-                    {exp.duration_days != null && exp.duration_hours == null && (
-                      <Chip>{exp.duration_days} day{exp.duration_days !== 1 ? 's' : ''}</Chip>
-                    )}
-                  </div>
-                  {/* Description excerpt */}
-                  {exp.description != null && exp.description.length > 0 && (
-                    <p
-                      className="text-sm f-body leading-relaxed line-clamp-3"
-                      style={{ color: 'rgba(10,46,77,0.6)' }}
-                    >
-                      {exp.description}
+          {booking.status === 'confirmed' && (
+            <div
+              className="rounded-2xl overflow-hidden"
+              style={{ background: '#F0FDF4', border: '1px solid rgba(34,197,94,0.2)', borderLeft: '3px solid #22C55E' }}
+            >
+              {/* Confirmed header */}
+              <div className="p-5 flex items-start gap-3">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <div>
+                  <p className="text-sm font-bold f-body" style={{ color: '#15803D' }}>
+                    Your trip is confirmed!
+                  </p>
+                  {booking.confirmed_at != null && (
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(21,128,61,0.6)' }}>
+                      Confirmed on {fmtDate(booking.confirmed_at)} · All details below
                     </p>
                   )}
                 </div>
+              </div>
+
+              {/* Payment fee banner — only for inquiries with a set price */}
+              {feePaid && (
+                <div
+                  className="mx-5 mb-5 rounded-xl px-4 py-3 flex items-center gap-2.5"
+                  style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <p className="text-sm f-body font-semibold" style={{ color: '#15803D' }}>
+                    Booking fee paid — €{bookingFeeEur.toFixed(2)}
+                  </p>
+                </div>
               )}
 
-              {/* ── Location map ────────────────────────────────────────────────── */}
-              {exp != null && (() => {
-                const mapLat = exp.meeting_point_lat ?? exp.location_lat
-                const mapLng = exp.meeting_point_lng ?? exp.location_lng
-                if (mapLat == null || mapLng == null) return null
-                return (
-                  <div className="mb-5 pb-5 flex flex-col gap-2" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
-                    <p className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              {feeDue && (
+                <div
+                  className="mx-5 mb-5 rounded-xl overflow-hidden"
+                  style={{ border: '1px solid rgba(10,46,77,0.12)', background: '#FFFFFF' }}
+                >
+                  {/* Fee due header */}
+                  <div
+                    className="px-4 py-3 flex items-center gap-2"
+                    style={{ background: 'rgba(10,46,77,0.04)', borderBottom: '1px solid rgba(10,46,77,0.08)' }}
+                  >
+                    <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
+                    <p className="text-xs font-bold uppercase tracking-wider f-body" style={{ color: '#C05621' }}>
+                      Action required — booking fee due
+                    </p>
+                  </div>
+
+                  {/* Breakdown */}
+                  <div className="px-4 py-4">
+                    <div className="space-y-1.5 mb-4">
+                      <div className="flex justify-between text-sm f-body">
+                        <span style={{ color: 'rgba(10,46,77,0.5)' }}>Platform commission</span>
+                        <span style={{ color: '#0A2E4D' }}>€{booking.platform_fee_eur.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm f-body">
+                        <span style={{ color: 'rgba(10,46,77,0.5)' }}>Service fee</span>
+                        <span style={{ color: '#0A2E4D' }}>€{booking.service_fee_eur.toFixed(2)}</span>
+                      </div>
+                      <div
+                        className="flex justify-between text-sm font-bold f-body pt-2"
+                        style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}
+                      >
+                        <span style={{ color: '#0A2E4D' }}>Total due now</span>
+                        <span style={{ color: '#E67E50' }}>€{bookingFeeEur.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <AnglerPaymentButton
+                      bookingId={booking.id}
+                      bookingFeeEur={bookingFeeEur}
+                    />
+
+                    <p className="text-[11px] f-body mt-3" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      {booking.guide_stripe_enabled
+                        ? `The remaining €${booking.guide_payout_eur.toFixed(2)} trip payment is charged via Stripe automatically.`
+                        : `The guide receives the remaining €${booking.guide_payout_eur.toFixed(2)} directly from you (cash, bank transfer, etc.).`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {booking.status === 'declined' && (
+            <div
+              className="rounded-2xl p-5"
+              style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderLeft: '3px solid #9CA3AF' }}
+            >
+              <p className="text-sm font-semibold f-body mb-1" style={{ color: '#374151' }}>
+                This booking was not confirmed
+                {booking.declined_at != null && (
+                  <span className="font-normal ml-1.5" style={{ color: '#9CA3AF' }}>
+                    on {fmtDate(booking.declined_at)}
+                  </span>
+                )}
+              </p>
+              {booking.declined_reason != null && booking.declined_reason.trim() !== '' && (
+                <p className="text-sm f-body mt-1 italic" style={{ color: '#6B7280' }}>
+                  &ldquo;{booking.declined_reason}&rdquo;
+                </p>
+              )}
+              <div className="mt-4">
+                <Link
+                  href="/trips"
+                  className="inline-flex items-center gap-1.5 text-sm f-body font-semibold transition-opacity hover:opacity-80"
+                  style={{ color: '#E67E50' }}
+                >
+                  Search for other guides →
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* ── Guide info ── */}
+          <div
+            className="rounded-2xl p-6"
+            style={{ background: '#FFFFFF', border: '1px solid rgba(10,46,77,0.08)', boxShadow: '0 1px 4px rgba(10,46,77,0.06)' }}
+          >
+            <h2 className="text-xs font-bold uppercase tracking-wider f-body mb-4" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              Guide
+            </h2>
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold f-body flex-shrink-0"
+                style={{ background: '#0A2E4D' }}
+              >
+                {guideInitial}
+              </div>
+              <div>
+                <p className="text-base font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                  {booking.guide_name ?? 'Your guide'}
+                </p>
+                {booking.guide_id != null && (
+                  <Link
+                    href={`/guides/${booking.guide_id}`}
+                    className="text-xs f-body transition-opacity hover:opacity-70"
+                    style={{ color: '#E67E50' }}
+                  >
+                    View profile →
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Trip details / Booking summary (status-aware) ── */}
+          <div
+            className="rounded-2xl p-6"
+            style={{ background: '#FFFFFF', border: '1px solid rgba(10,46,77,0.08)', boxShadow: '0 1px 4px rgba(10,46,77,0.06)' }}
+          >
+            <h2 className="text-xs font-bold uppercase tracking-wider f-body mb-5" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              {isConfirmed ? 'Trip details' : isOfferSent ? "Guide's offer" : 'Booking summary'}
+            </h2>
+
+            {/* ── CONFIRMED VIEW — guide's data ── */}
+            {isConfirmed ? (
+              <div className="flex flex-col gap-5">
+
+                {/* Confirmed dates */}
+                <div>
+                  <p className="text-xs f-body font-semibold uppercase tracking-wide mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    Confirmed dates
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {dates.map(d => (
+                      <span
+                        key={d}
+                        className="inline-block text-sm f-body px-3 py-1.5 rounded-xl font-semibold"
+                        style={{ background: 'rgba(34,197,94,0.1)', color: '#15803D', border: '1px solid rgba(34,197,94,0.2)' }}
+                      >
+                        {fmtDate(d)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Meeting point */}
+                {details.meetingLocation != null && details.meetingLocation.trim() !== '' && (
+                  <div className="pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                    <p className="text-xs f-body font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
                       Meeting point
                     </p>
-                    {exp.meeting_point_address != null && (
-                      <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                        {exp.meeting_point_address}
-                      </p>
+                    <p className="text-sm f-body font-semibold flex items-start gap-2 mb-2" style={{ color: '#0A2E4D' }}>
+                      <span className="text-base flex-shrink-0" style={{ marginTop: '-1px' }}>📍</span>
+                      {details.meetingLocation}
+                    </p>
+                    {(booking.offer_meeting_lat != null && booking.offer_meeting_lng != null) && (
+                      <MeetingMap lat={booking.offer_meeting_lat} lng={booking.offer_meeting_lng} />
                     )}
-                    <div style={{ height: 200, borderRadius: 16, overflow: 'hidden', isolation: 'isolate' }}>
-                      <ExperienceLocationMap lat={mapLat} lng={mapLng} />
-                    </div>
-                  </div>
-                )
-              })()}
-
-              {/* ── Inquiry: what guide arranged ─────────────────────────────── */}
-              {isInquiry && (booking.offer_details != null || booking.assigned_river != null) && (
-                <div className="mb-5 pb-5 flex flex-col gap-3" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
-                  <p className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                    What your guide arranged
-                  </p>
-                  {booking.assigned_river != null && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Location</span>
-                      <span className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{booking.assigned_river}</span>
-                    </div>
-                  )}
-                  {booking.offer_details != null && (
-                    <p className="text-sm f-body leading-relaxed whitespace-pre-line" style={{ color: 'rgba(10,46,77,0.65)' }}>
-                      {booking.offer_details}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* ── Dates section ───────────────────────────────────────────── */}
-              <div className="mb-5 flex flex-col gap-3">
-
-                {/* Confirmed trip date — shown when guide accepted */}
-                {confirmedDate != null && (
-                  <div
-                    className="px-4 py-4 rounded-2xl"
-                    style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <Calendar width={16} height={16} stroke="#16A34A" strokeWidth={1.5} className="flex-shrink-0" />
-                        <div>
-                          <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(22,163,74,0.65)' }}>
-                            {awaitingPayment ? 'Your trip dates' : 'Trip confirmed for'}
-                          </p>
-                          <p className="text-sm font-bold f-display" style={{ color: '#15803D' }}>
-                            {confirmedDate}
-                          </p>
-                        </div>
-                      </div>
-                      <MicroCalendar
-                        from={dateForConfirmed}
-                        to={dateToConfirmed ?? dateForConfirmed}
-                        days={sortedDisplayDays ?? undefined}
-                      />
-                    </div>
                   </div>
                 )}
 
-                {/* Availability window — only while pending, only for range requests */}
-                {booking.status === 'pending' && isWindowBooking && windowFrom != null && (
+                {/* Guide's message */}
+                {details.message != null && details.message.trim() !== '' && (
                   <div
-                    className="flex items-start gap-3 px-4 py-3 rounded-2xl"
-                    style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}
+                    className="rounded-xl px-4 py-3.5"
+                    style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}
                   >
-                    <Calendar width={15} height={15} stroke="#2563EB" strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
+                    <p className="text-xs f-body font-semibold uppercase tracking-wide mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      Message from {booking.guide_name ?? 'your guide'}
+                    </p>
+                    <p className="text-sm f-body leading-relaxed italic" style={{ color: '#374151' }}>
+                      &ldquo;{details.message}&rdquo;
+                    </p>
+                  </div>
+                )}
+
+                {/* Guests + Price row */}
+                <div
+                  className="grid grid-cols-2 gap-4 pt-4"
+                  style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}
+                >
+                  <div>
+                    <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>Anglers</p>
+                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                      {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>Total price</p>
+                    <p className="text-base font-bold f-body" style={{ color: '#0A2E4D' }}>
+                      {booking.total_eur > 0 ? `€${booking.total_eur.toFixed(2)}` : 'Agreed with guide'}
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+
+            ) : isOfferSent ? (
+
+              /* ── OFFER VIEW — guide's proposed dates as visual calendar ── */
+              <div className="flex flex-col gap-5">
+
+                {/* Visual calendar map */}
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-3"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    Proposed dates &nbsp;·&nbsp; {(booking.offer_days ?? []).length} day{(booking.offer_days ?? []).length !== 1 ? 's' : ''}
+                  </p>
+                  <OfferCalendarGrid days={booking.offer_days ?? []} />
+                </div>
+
+                {/* Price */}
+                {booking.offer_price_eur != null && booking.offer_price_eur > 0 && (
+                  <div className="flex items-center justify-between px-5 py-4 rounded-2xl"
+                    style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.15)' }}>
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-0.5" style={{ color: 'rgba(37,99,235,0.6)' }}>
-                        Your availability window
-                      </p>
-                      <p className="text-sm font-semibold f-display" style={{ color: '#1D4ED8' }}>
-                        {new Date(`${windowFrom}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {' – '}
-                        {new Date(`${windowTo}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                      <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(37,99,235,0.55)' }}>
-                        The guide will confirm your exact trip date{durationLabel ? ` (${durationLabel})` : ''}
+                      <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>Trip price</p>
+                      <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                        {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
                       </p>
                     </div>
+                    <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                      €{booking.offer_price_eur.toFixed(0)}
+                    </p>
                   </div>
                 )}
 
-                {/* Single exact date — pending direct booking */}
-                {booking.status === 'pending' && !isWindowBooking && windowFrom != null && confirmedDate == null && (
-                  <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                    {new Date(`${windowFrom}T12:00:00`).toLocaleDateString('en-GB', {
-                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                    })}
-                  </p>
-                )}
-
-                {/* Fallback: show booking_date if no requested_dates and no confirmed date */}
-                {!hasRequestedDates && confirmedDate == null && (
-                  <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                    {new Date(booking.booking_date + 'T12:00:00').toLocaleDateString('en-GB', {
-                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                    })}
-                  </p>
-                )}
-
-                {/* Pending: waiting message */}
-                {booking.status === 'pending' && (
-                  <div
-                    className="flex items-center gap-2.5 px-3.5 py-3 rounded-2xl"
-                    style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.15)' }}
-                  >
-                    <Clock width={14} height={14} stroke="#E67E50" strokeWidth={1.5} className="flex-shrink-0" />
-                    <p className="text-xs f-body" style={{ color: '#C46030' }}>
-                      Waiting for your guide to confirm dates and accept the booking.
+                {/* Guide message */}
+                {details.message != null && details.message.trim() !== '' && (
+                  <div className="rounded-2xl px-4 py-4"
+                    style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-2"
+                      style={{ color: 'rgba(10,46,77,0.38)' }}>
+                      Message from {booking.guide_name ?? 'guide'}
                     </p>
+                    <p className="text-sm f-body leading-relaxed" style={{ color: '#374151' }}>
+                      &ldquo;{details.message}&rdquo;
+                    </p>
+                  </div>
+                )}
+
+                {/* Meeting point */}
+                {details.meetingLocation != null && details.meetingLocation.trim() !== '' && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] f-body mb-2 flex items-center gap-1.5"
+                      style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      <span>📍</span> Meeting point
+                    </p>
+                    <p className="text-sm f-body font-semibold mb-2" style={{ color: '#0A2E4D' }}>
+                      {details.meetingLocation}
+                    </p>
+                    {booking.offer_meeting_lat != null && booking.offer_meeting_lng != null && (
+                      <MeetingMap lat={booking.offer_meeting_lat} lng={booking.offer_meeting_lng} />
+                    )}
+                  </div>
+                )}
+
+                {/* Accept / Decline CTAs */}
+                {user != null && (
+                  <div className="pt-2" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                    <AnglerOfferActions
+                      bookingId={booking.id}
+                      guideName={booking.guide_name ?? 'your guide'}
+                    />
                   </div>
                 )}
               </div>
 
-              {/* ── Stats grid ──────────────────────────────────────────────── */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-                <InfoCard
-                  label="Anglers"
-                  value={`${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`}
-                />
-                <InfoCard
-                  label="Duration"
-                  value={durationLabel ?? '—'}
-                />
-                <InfoCard
-                  label="Booking fee"
-                  value={`€${depositEur}`}
-                  subValue={booking.status === 'confirmed' || booking.status === 'completed' ? 'Paid ✓' : undefined}
-                  subColor="#16A34A"
-                />
-                <InfoCard
-                  label="Guide payment"
-                  value={`€${guideAmountEur}`}
-                  subValue={
-                    guideAmountPaid
-                      ? 'Paid ✓'
-                      : booking.status === 'confirmed'
-                        ? paymentModel === 'stripe_connect'
-                          ? 'Due — pay online'
-                          : 'Due — pay guide directly'
-                        : undefined
-                  }
-                  subColor={guideAmountPaid ? '#16A34A' : 'rgba(10,46,77,0.45)'}
-                />
-              </div>
+            ) : (
 
-              {/* ── Deposit payment success banner ─────────────────────────── */}
-              {justPaid && (
-                <div
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
-                  style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
-                >
-                  <Check width={18} height={18} stroke="#16A34A" strokeWidth={1.5} />
-                  <div>
-                    <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
-                      Deposit received!
-                    </p>
-                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(22,163,74,0.75)' }}>
-                      Your booking is being confirmed — usually takes a few seconds.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Balance payment success banner (legacy) ────────────────── */}
-              {justBalancePaid && (
-                <div
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
-                  style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
-                >
-                  <Check width={18} height={18} stroke="#16A34A" strokeWidth={1.5} />
-                  <div>
-                    <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
-                      Balance paid — you&apos;re all set!
-                    </p>
-                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(22,163,74,0.75)' }}>
-                      Full payment received. See you on the water!
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Guide payment success banner ────────────────────────────── */}
-              {justGuidePaid && (
-                <div
-                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-4"
-                  style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.3)' }}
-                >
-                  <Check width={18} height={18} stroke="#16A34A" strokeWidth={1.5} />
-                  <div>
-                    <p className="text-sm font-semibold f-body" style={{ color: '#16A34A' }}>
-                      Guide payment complete — you&apos;re all set!
-                    </p>
-                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(22,163,74,0.75)' }}>
-                      Full payment received. See you on the water!
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Pay balance banner (legacy — balance_payment_method flow) ── */}
-              {awaitingBalance && !justBalancePaid && booking.balance_stripe_checkout_id && (
+              /* ── PENDING / DECLINED VIEW — original request ── */
+              <>
+                {/* Requested dates */}
                 <div className="mb-4">
-                  <PayBalanceBanner
-                    bookingId={id}
-                    balanceEur={balanceEur}
-                    paymentMethod={(booking.balance_payment_method ?? 'cash') as 'stripe' | 'cash'}
-                    guideName={guide?.full_name ?? 'Your guide'}
-                  />
-                </div>
-              )}
-
-              {/* ── Guide payment section (new model) ───────────────────────── */}
-              {booking.status === 'confirmed' && !guideAmountPaid && !justGuidePaid && guideAmountEur > 0 && (
-                <GuidePaymentSection
-                  paymentModel={paymentModel}
-                  guideAmountEur={guideAmountEur}
-                  guideName={guide?.full_name ?? 'Your guide'}
-                  guideAmountCheckoutUrl={guideAmountCheckoutUrl}
-                  bookingId={id}
-                  ibanShared={ibanShared}
-                  guideIban={decryptField(guide?.iban)}
-                  guideIbanHolder={decryptField(guide?.iban_holder_name)}
-                />
-              )}
-
-              {/* ── Guide card ───────────────────────────────────────────────── */}
-              {guide != null && (
-                <div
-                  className="flex items-center gap-3 p-4 rounded-2xl"
-                  style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}
-                >
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
-                    style={{ background: '#0A2E4D' }}
-                  >
-                    {guide.full_name[0].toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
-                      {guide.full_name}
-                    </p>
-                    <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                      Your guide
-                    </p>
-                  </div>
-                  <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                    Message via chat →
+                  <p className="text-xs f-body font-medium mb-1.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                    Requested dates
                   </p>
-                </div>
-              )}
-
-              {/* ── Link to inquiry view (inquiry-sourced bookings) ─────────── */}
-              {booking.source === 'inquiry' && (
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-                  <Link
-                    href={`/account/trips/${booking.id}`}
-                    className="inline-flex items-center gap-1.5 text-xs f-body font-medium transition-opacity hover:opacity-70"
-                    style={{ color: 'rgba(10,46,77,0.5)' }}
-                  >
-                    <MessageSquare width={12} height={12} strokeWidth={1.5} />
-                    View trip request →
-                  </Link>
-                </div>
-              )}
-
-              {/* ── Declined: reason + guide's alternative dates ────────────── */}
-              {booking.status === 'declined' && (
-                <div className="mt-4 pt-4 flex flex-col gap-3" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-
-                  <div
-                    className="flex items-start gap-3 px-4 py-4 rounded-2xl"
-                    style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
-                  >
-                    <X width={18} height={18} stroke="#DC2626" strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-semibold f-body mb-1" style={{ color: '#DC2626' }}>
-                        Guide couldn&apos;t accept this booking
-                      </p>
-                      {booking.declined_reason != null && booking.declined_reason.length > 0 ? (
-                        <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-                          {booking.declined_reason}
-                        </p>
-                      ) : (
-                        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                          No reason provided. Feel free to reach out via chat.
-                        </p>
-                      )}
-                    </div>
+                  <div className="flex flex-wrap gap-2">
+                    {dates.map(d => (
+                      <span
+                        key={d}
+                        className="inline-block text-sm f-body px-3 py-1.5 rounded-lg font-medium"
+                        style={{ background: 'rgba(10,46,77,0.05)', color: '#0A2E4D' }}
+                      >
+                        {fmtDate(d)}
+                      </span>
+                    ))}
                   </div>
+                </div>
 
-                  {guideDeclineMessage != null && (
-                    <div
-                      className="px-4 py-4 rounded-2xl flex flex-col gap-2.5"
-                      style={{ background: 'rgba(37,99,235,0.05)', border: '1px solid rgba(37,99,235,0.18)' }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Calendar width={14} height={14} stroke="#2563EB" strokeWidth={1.5} />
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body" style={{ color: '#2563EB' }}>
-                          Message from {guide?.full_name ?? 'guide'}
-                        </p>
-                      </div>
-                      <p className="text-xs f-body leading-relaxed whitespace-pre-line" style={{ color: 'rgba(10,46,77,0.7)' }}>
-                        {guideDeclineMessage.body}
+                {/* Grid: guests, package, price */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>Guests</p>
+                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                      {booking.guests} {booking.guests === 1 ? 'angler' : 'anglers'}
+                    </p>
+                  </div>
+                  {booking.duration_option != null && (
+                    <div>
+                      <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>Package</p>
+                      <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                        {booking.duration_option}
                       </p>
-                      {exp?.id != null && (
-                        <a
-                          href={`/book/${exp.id}`}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold f-body transition-opacity hover:opacity-75"
-                          style={{ color: '#2563EB' }}
-                        >
-                          <ArrowRight width={12} height={12} strokeWidth={1.7} />
-                          Book new dates for this experience →
-                        </a>
-                      )}
                     </div>
                   )}
+                  <div>
+                    <p className="text-xs f-body font-medium mb-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>Price</p>
+                    <p className="text-base font-bold f-body" style={{ color: '#0A2E4D' }}>
+                      {booking.total_eur > 0 ? `€${booking.total_eur.toFixed(2)}` : 'On request'}
+                    </p>
+                  </div>
                 </div>
-              )}
 
-              {/* ── Special requests ────────────────────────────────────────── */}
-              {booking.special_requests != null && (
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-                  <p className="text-[10px] uppercase tracking-[0.18em] mb-1.5 f-body"
-                     style={{ color: 'rgba(10,46,77,0.38)' }}>
-                    Your requests
-                  </p>
-                  <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
-                    {booking.special_requests}
-                  </p>
-                </div>
-              )}
-            </div>
+                {/* Special requests */}
+                {booking.special_requests != null && booking.special_requests.trim() !== '' && (
+                  <div
+                    className="mt-4 pt-4 rounded-lg p-3"
+                    style={{ borderTop: '1px solid rgba(10,46,77,0.07)', background: 'rgba(10,46,77,0.03)' }}
+                  >
+                    <p className="text-xs font-semibold f-body mb-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      Your notes to guide
+                    </p>
+                    <p className="text-sm f-body italic leading-relaxed" style={{ color: '#374151' }}>
+                      &ldquo;{booking.special_requests}&rdquo;
+                    </p>
+                  </div>
+                )}
+
+                {/* Submitted date */}
+                <p className="text-xs f-body mt-4" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                  Request submitted on {fmtDate(booking.created_at)}
+                </p>
+              </>
+            )}
           </div>
-        </div>
 
-        {/* ── RIGHT: Chat ────────────────────────────────────────────────────── */}
-        <div className="lg:sticky lg:top-6">
-          <BookingChat
-            bookingId={id}
-            currentUserId={user.id}
-            myName={booking.angler_full_name ?? 'You'}
-            partnerName={guide?.full_name ?? 'Guide'}
-            initialMessages={initialMessages}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── GuidePaymentSection ──────────────────────────────────────────────────────
-
-function GuidePaymentSection({
-  paymentModel,
-  guideAmountEur,
-  guideName,
-  guideAmountCheckoutUrl,
-  bookingId,
-  ibanShared,
-  guideIban,
-  guideIbanHolder,
-}: {
-  paymentModel:           'stripe_connect' | 'manual'
-  guideAmountEur:         number
-  guideName:              string
-  guideAmountCheckoutUrl: string | null
-  bookingId:              string
-  ibanShared:             boolean
-  guideIban:              string | null
-  guideIbanHolder:        string | null
-}) {
-  if (paymentModel === 'stripe_connect') {
-    // Model A: pay guide via Stripe
-    return (
-      <div
-        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-3"
-        style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: '#2563EB' }}>
-              Pay your guide
-            </p>
-            <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-              €{guideAmountEur}
-            </p>
-            <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
-              Trip payment to {guideName} — paid directly to their account
-            </p>
-          </div>
-          {guideAmountCheckoutUrl != null ? (
-            <a
-              href={guideAmountCheckoutUrl}
-              className="flex-shrink-0 flex items-center gap-1.5 text-sm font-bold f-body px-4 py-2.5 rounded-full transition-all hover:brightness-110 active:scale-[0.98]"
-              style={{ background: '#2563EB', color: '#fff' }}
-            >
-              Pay €{guideAmountEur} →
-            </a>
-          ) : (
-            <PayGuideButton bookingId={bookingId} guideAmountEur={guideAmountEur} />
+          {/* ── Messages / chat ── */}
+          {user != null && (
+            <BookingChat
+              bookingId={booking.id}
+              initialMessages={messages}
+              currentUserId={user.id}
+              senderRole="angler"
+              myName="You"
+              otherName={booking.guide_name ?? 'Guide'}
+              bookingNote={booking.special_requests}
+              bookingNoteDate={booking.created_at}
+            />
           )}
+
         </div>
-        <p className="text-[11px] f-body" style={{ color: 'rgba(37,99,235,0.65)' }}>
-          This goes directly to your guide — FjordAnglers does not take any cut from this payment.
-        </p>
       </div>
-    )
-  }
-
-  // Model B: IBAN shared by guide — show transfer details table
-  if (ibanShared && guideIban) {
-    const reference = buildBookingReference(bookingId)
-    return (
-      <div
-        className="px-4 py-4 rounded-2xl mb-4 flex flex-col gap-3"
-        style={{ background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.15)' }}
-      >
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1" style={{ color: '#2563EB' }}>
-            Bank transfer to guide
-          </p>
-          <p className="text-base font-bold f-display mb-0.5" style={{ color: '#0A2E4D' }}>
-            €{guideAmountEur}
-          </p>
-          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-            Pay {guideName} directly via bank transfer
-          </p>
-        </div>
-
-        {/* Transfer details table */}
-        <div
-          className="rounded-xl flex flex-col gap-0 overflow-hidden"
-          style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}
-        >
-          {(guideIbanHolder ?? guideName) && (
-            <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
-              <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>Name</span>
-              <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>{guideIbanHolder ?? guideName}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
-            <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>IBAN</span>
-            <span className="text-xs font-semibold f-body font-mono" style={{ color: '#0A2E4D' }}>
-              {guideIban.replace(/(.{4})/g, '$1 ').trim()}
-            </span>
-          </div>
-          <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
-            <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>Amount</span>
-            <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>€{guideAmountEur}</span>
-          </div>
-          <div className="flex items-center gap-3 px-3 py-2.5">
-            <span className="text-[10px] uppercase tracking-[0.14em] font-bold f-body w-16 flex-shrink-0" style={{ color: 'rgba(10,46,77,0.38)' }}>Ref</span>
-            <span className="text-xs font-semibold f-body font-mono" style={{ color: '#0A2E4D' }}>{reference}</span>
-          </div>
-        </div>
-
-        <p className="text-[11px] f-body" style={{ color: 'rgba(37,99,235,0.65)' }}>
-          Use the reference when making the transfer so the guide can identify your payment.
-        </p>
-      </div>
-    )
-  }
-
-  // Model C: no payment info yet / arrange directly
-  return (
-    <div
-      className="flex items-start gap-3 px-4 py-3.5 rounded-2xl mb-4"
-      style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.12)' }}
-    >
-      <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-0.5" style={{ color: '#E67E50' }}>
-          Pay guide directly — €{guideAmountEur}
-        </p>
-        <p className="text-xs f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-          {ibanShared
-            ? 'Your guide will share their bank details shortly.'
-            : 'Arrange payment of €' + guideAmountEur + ' directly with ' + guideName + ' (cash, bank transfer, or their preferred method).'}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-
-// ─── Date helpers ─────────────────────────────────────────────────────────────
-
-/** Returns true only if every consecutive pair in a sorted ISO-date array is exactly 1 day apart. */
-function isConsecutiveDays(sorted: string[]): boolean {
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = new Date(sorted[i - 1]! + 'T12:00:00')
-    const curr = new Date(sorted[i]!      + 'T12:00:00')
-    if (Math.round((curr.getTime() - prev.getTime()) / 86_400_000) !== 1) return false
-  }
-  return true
-}
-
-/** Formats up to 3 specific days as "4 Apr, 16 Apr & 26 Apr 2026". */
-function formatDaysList(sorted: string[]): string {
-  const fmt = (d: string, includeYear = false) =>
-    new Date(d + 'T12:00:00').toLocaleDateString('en-GB', {
-      day: 'numeric', month: 'short',
-      ...(includeYear ? { year: 'numeric' } : {}),
-    })
-  if (sorted.length === 1) {
-    return new Date(sorted[0]! + 'T12:00:00').toLocaleDateString('en-GB', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    })
-  }
-  const parts = sorted.map((d, i) => fmt(d, i === sorted.length - 1))
-  const last  = parts.pop()!
-  return parts.join(', ') + ' & ' + last
-}
-
-// ─── UI helpers ───────────────────────────────────────────────────────────────
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs f-body font-medium"
-      style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.65)' }}
-    >
-      {children}
-    </span>
-  )
-}
-
-function InfoCard({
-  label,
-  value,
-  subValue,
-  subColor,
-}: {
-  label:     string
-  value:     string
-  subValue?: string
-  subColor?: string
-}) {
-  return (
-    <div
-      className="px-4 py-3 rounded-2xl"
-      style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.06)' }}
-    >
-      <p className="text-[10px] uppercase tracking-[0.15em] mb-1 f-body"
-         style={{ color: 'rgba(10,46,77,0.38)' }}>
-        {label}
-      </p>
-      <p className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-        {value}
-      </p>
-      {subValue != null && (
-        <p className="text-[10px] font-semibold f-body mt-0.5" style={{ color: subColor ?? 'rgba(10,46,77,0.4)' }}>
-          {subValue}
-        </p>
-      )}
     </div>
   )
 }

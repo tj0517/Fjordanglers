@@ -7,7 +7,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const { data: { user } } = await supabase.auth.getUser()
 
   if (user == null) {
-    redirect('/login?next=/account/bookings')
+    redirect('/login')
   }
 
   const { data: profile } = await supabase
@@ -17,10 +17,11 @@ export default async function AccountLayout({ children }: { children: React.Reac
     .maybeSingle()
 
   const displayName = profile?.full_name ?? user.email?.split('@')[0] ?? 'Angler'
+  const email       = user.email ?? ''
 
   return (
     <div style={{ background: '#F3EDE4', minHeight: '100vh' }}>
-      <AccountTopNav displayName={displayName} />
+      <AccountTopNav displayName={displayName} email={email} />
       <main className="flex flex-col items-center w-full">{children}</main>
     </div>
   )

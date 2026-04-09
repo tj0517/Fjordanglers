@@ -1,193 +1,133 @@
 import { notFound } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import InquireForm from './InquireForm'
-import type { AvailConfigRow } from '@/components/trips/booking-widget'
-import { decodePeriodsParam } from '@/lib/periods'
-import type { DurationOptionPayload } from '@/actions/experiences'
-import { ChevronLeft } from 'lucide-react'
+import { IcelandicInquireForm } from './IcelandicInquireForm'
+import type { IcelandicFormConfig } from '@/types'
 
-// ─── Page ──────────────────────────────────────────────────────────────────────
+/**
+ * /trips/[id]/inquire — full Icelandic Flow enquiry form.
+ *
+ * Server Component. Parses URL params (periods, guests) pre-filled from the widget,
+ * fetches the experience + inquiry_form_config, then renders the client form.
+ *
+ * URL format:
+ *   ?periods=2024-06-15..2024-06-22,2024-07-01..2024-07-07&guests=2
+ */
 
-export default async function InquirePage({
+export default async function IcelandicInquirePage({
   params,
   searchParams,
 }: {
   params:       Promise<{ id: string }>
-  searchParams: Promise<{ dates?: string; group?: string; periods?: string; mode?: string }>
+  searchParams: Promise<{ periods?: string; guests?: string; duration?: string }>
 }) {
   const { id } = await params
-  const sp     = await searchParams
+  const sp      = await searchParams
 
-  // Fetch experience (public, service client)
-  const serviceClient = createServiceClient()
-  const { data: experience } = await serviceClient
+  // ── Parse URL params ─────────────────────────────────────────────────────
+  const periodsRaw = sp.periods ?? ''
+  const initialPeriods = periodsRaw
+    .split(',')
+    .filter(Boolean)
+    .map(p => {
+      const [from, to] = p.split('..')
+      return { from: from ?? '', to: to ?? from ?? '' }
+    })
+    .filter(p => /^\d{4}-\d{2}-\d{2}$/.test(p.from) && /^\d{4}-\d{2}-\d{2}$/.test(p.to))
+
+  const initialGuests       = Math.max(1, parseInt(sp.guests   ?? '1',  10) || 1)
+  const initialDurationDays = Math.max(1, Math.min(30, parseInt(sp.duration ?? '1', 10) || 1))
+
+  // ── Fetch experience ─────────────────────────────────────────────────────
+  const supabase = await createClient()
+
+  const { data: rawExp } = await supabase
     .from('experiences')
-    .select('id, title, guide_id, fish_types, inquiry_form_config, price_per_person_eur, duration_options, guides(id, full_name, avatar_url)')
+    .select('id, title, booking_type, max_guests, inquiry_form_config, fish_types, fishing_methods, guide_id, published, guide:guides(id, full_name, avatar_url)')
     .eq('id', id)
     .eq('published', true)
     .single()
 
-  if (!experience) notFound()
+  if (rawExp == null || rawExp.booking_type !== 'icelandic') notFound()
 
-  const guide = Array.isArray(experience.guides)
-    ? experience.guides[0]
-    : experience.guides
+  const exp = rawExp as typeof rawExp & {
+    guide: { id: string; full_name: string; avatar_url: string | null }
+  }
 
-  // Fetch availability config + blocked dates (always from calendar_blocked_dates)
-  const { data: calExp } = await serviceClient
+  // ── Fetch guide's blocked dates (for the calendar in step 1) ────────────
+  //
+  // calendar_blocked_dates has NO guide_id column — must join through calendars:
+  //   1. Experience-specific: calendar_experiences WHERE experience_id = exp.id
+  //   2. Fallback: guide_calendars WHERE guide_id = exp.guide.id (all guide calendars)
+  //
+  // Service client bypasses RLS — calendar availability is public-facing data
+  // (same pattern as fetchBookingWidgetData in /trips/[id]/page.tsx).
+  const svc   = createServiceClient()
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Step 1 — experience-specific calendars
+  const { data: expCalendars } = await svc
     .from('calendar_experiences')
     .select('calendar_id')
-    .eq('experience_id', id)
-    .maybeSingle()
+    .eq('experience_id', exp.id)
 
-  const [availConfigRes, blockedDatesRes] = await Promise.all([
-    serviceClient
-      .from('experience_availability_config')
-      .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
-      .eq('experience_id', id)
-      .maybeSingle(),
-    calExp != null
-      ? serviceClient
-          .from('calendar_blocked_dates')
-          .select('date_start, date_end')
-          .eq('calendar_id', calExp.calendar_id)
-      : Promise.resolve({ data: [] as Array<{ date_start: string; date_end: string }> }),
-  ])
+  let calendarIds: string[] = (expCalendars ?? []).map(
+    (c: { calendar_id: string }) => c.calendar_id,
+  )
 
-  const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
-  const blockedDates       = (blockedDatesRes.data ?? []) as { date_start: string; date_end: string }[]
+  // Step 2 — fallback: all guide calendars
+  if (calendarIds.length === 0) {
+    const { data: guideCalendars } = await svc
+      .from('guide_calendars')
+      .select('id')
+      .eq('guide_id', exp.guide.id)
+    calendarIds = (guideCalendars ?? []).map((c: { id: string }) => c.id)
+  }
 
-  // Auth — optional; unauthenticated users see the form with inline login/register
-  const supabase = await createClient()
+  // Step 3 — blocked date ranges for those calendars
+  const blockedRanges: Array<{ date_start: string; date_end: string }> = []
+  if (calendarIds.length > 0) {
+    const { data: rawBlocked } = await svc
+      .from('calendar_blocked_dates')
+      .select('date_start, date_end')
+      .in('calendar_id', calendarIds)
+      .gte('date_end', today)
+    blockedRanges.push(...(rawBlocked ?? []))
+  }
+
+  // ── Get auth user + profile ───────────────────────────────────────────────
   const { data: { user } } = await supabase.auth.getUser()
 
-  let anglerName:  string | null = null
-  let anglerEmail: string | null = user?.email ?? null
-
-  if (user) {
+  let initialUser: { id: string; email: string; name: string } | null = null
+  if (user != null) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name')
       .eq('id', user.id)
       .single()
-    anglerName = profile?.full_name ?? null
+    initialUser = { id: user.id, email: user.email ?? '', name: profile?.full_name ?? '' }
   }
-
-  // Parse pre-filled values from URL
-  const prefilledDates   = sp.dates   ? sp.dates.split(',').filter(Boolean) : []
-  const prefilledPeriods = sp.periods ? decodePeriodsParam(sp.periods)      : []
-  const prefilledGroup   = sp.group   ? Math.max(1, Math.min(50, Number(sp.group) || 1)) : 1
-  const isDirectMode     = sp.mode === 'direct'
-
-  // ── Price range (widełki) — shown to angler before they submit ────────────
-  const durationOpts = Array.isArray(experience.duration_options)
-    ? (experience.duration_options as unknown as DurationOptionPayload[])
-    : []
-
-  let priceMin: number | null = null
-  let priceMax: number | null = null
-
-  if (durationOpts.length > 0) {
-    const allPrices = durationOpts.flatMap(o => {
-      if (o.pricing_type === 'per_group' && o.group_prices) {
-        const vals = Object.values(o.group_prices).filter((v): v is number => typeof v === 'number')
-        return vals.length > 0 ? vals : [o.price_eur]
-      }
-      return [o.price_eur]
-    })
-    priceMin = Math.min(...allPrices)
-    priceMax = Math.max(...allPrices)
-  } else if (experience.price_per_person_eur != null) {
-    priceMin = experience.price_per_person_eur
-    priceMax = experience.price_per_person_eur
-  }
-
-  const isRange        = priceMin != null && priceMax != null && priceMin !== priceMax
-  const pricingLabel   = isRange
-    ? `€${priceMin!.toLocaleString('de-DE')} – €${priceMax!.toLocaleString('de-DE')}`
-    : priceMin != null
-    ? `From €${priceMin.toLocaleString('de-DE')}`
-    : null
 
   return (
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <div className="max-w-3xl mx-auto px-4 py-12">
-
-        {/* Back link */}
-        <a
-          href={`/trips/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm f-body mb-8 transition-colors"
-          style={{ color: 'rgba(10,46,77,0.5)' }}
-        >
-          <ChevronLeft size={14} strokeWidth={1.6} />
-          Back to trip
-        </a>
-
-        {/* Header */}
-        <div className="mb-8">
-          <p className="text-xs uppercase tracking-[0.18em] font-semibold f-body mb-2"
-             style={{ color: '#E67E50' }}>
-            {isDirectMode ? 'Message the guide' : 'Send a request'}
-          </p>
-          <h1 className="text-3xl font-bold f-display mb-1" style={{ color: '#0A2E4D' }}>
-            {experience.title}
-          </h1>
-          {guide != null && (
-            <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-              Guide: {guide.full_name}
-            </p>
-          )}
-          {isDirectMode && (
-            <p className="text-sm f-body mt-2 leading-relaxed" style={{ color: 'rgba(10,46,77,0.52)' }}>
-              Have questions before booking? Ask the guide directly — no payment required.
-            </p>
-          )}
-
-          {/* Price range — visible to angler before submitting */}
-          {pricingLabel != null && (
-            <div
-              className="mt-5 flex items-center justify-between px-4 py-3.5 rounded-2xl"
-              style={{
-                background: 'rgba(230,126,80,0.07)',
-                border:     '1px solid rgba(230,126,80,0.18)',
-              }}
-            >
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-0.5"
-                   style={{ color: 'rgba(10,46,77,0.4)' }}>
-                  {isRange ? 'Price range' : 'Starting price'}
-                </p>
-                <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                  {pricingLabel}
-                </p>
-              </div>
-              <p className="text-[11px] f-body text-right max-w-[130px]"
-                 style={{ color: 'rgba(10,46,77,0.42)', lineHeight: 1.4 }}>
-                {isRange
-                  ? 'depends on group size & package'
-                  : 'per person · guide confirms exact price'}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <InquireForm
-          experienceId={experience.id}
-          guideId={guide?.id ?? null}
-          prefilledDates={prefilledDates}
-          prefilledPeriods={prefilledPeriods}
-          prefilledGroup={prefilledGroup}
-          anglerName={anglerName}
-          anglerEmail={anglerEmail}
-          formConfig={experience.inquiry_form_config}
-          availabilityConfig={availabilityConfig}
-          blockedDates={blockedDates}
-          fishTypes={experience.fish_types ?? []}
-          isDirectMode={isDirectMode}
-          durationOptions={durationOpts}
-        />
-
-      </div>
-    </div>
+    <IcelandicInquireForm
+      experience={{
+        id:                  exp.id,
+        title:               exp.title,
+        max_guests:          exp.max_guests ?? 99,
+        inquiry_form_config: (exp.inquiry_form_config as unknown as IcelandicFormConfig | null) ?? null,
+        targetSpecies:       rawExp.fish_types ?? [],
+        fishingMethods:      rawExp.fishing_methods ?? [],
+      }}
+      guide={{
+        id:         exp.guide.id,
+        full_name:  exp.guide.full_name,
+        avatar_url: exp.guide.avatar_url,
+      }}
+      initialPeriods={initialPeriods}
+      initialGuests={initialGuests}
+      initialDurationDays={initialDurationDays}
+      initialUser={initialUser}
+      backHref={`/trips/${id}`}
+      blockedRanges={blockedRanges}
+    />
   )
 }

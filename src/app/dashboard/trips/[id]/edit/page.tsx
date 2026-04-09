@@ -2,8 +2,9 @@ import Link from 'next/link'
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ExperienceForm, { type ExperienceFormDefaults } from '@/components/trips/experience-form'
-import InquiryFormConfigEditor from '@/components/trips/InquiryFormConfigEditor'
+
 import type { DurationOptionPayload, GroupPricingPayload } from '@/actions/experiences'
+import type { IcelandicFormConfig } from '@/types'
 import type * as GeoJSON from 'geojson'
 
 /**
@@ -100,6 +101,7 @@ export default async function DashboardEditExperiencePage({
     transport_description:   exp.transport_description ?? null,
     price_range_min_eur:     exp.price_range_min_eur ?? null,
     price_range_max_eur:     exp.price_range_max_eur ?? null,
+    inquiry_form_config:     (exp.inquiry_form_config as unknown as IcelandicFormConfig | null) ?? null,
   }
 
   return (
@@ -148,12 +150,7 @@ export default async function DashboardEditExperiencePage({
         context="guide"
         successPath="/dashboard/trips"
         guideAccommodations={guideAccommodations ?? []}
-        inquiryFormConfigSlot={
-          <InquiryFormConfigEditor
-            expId={exp.id}
-            initialConfig={exp.inquiry_form_config}
-          />
-        }
+
       />
     </div>
   )

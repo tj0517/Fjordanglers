@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "supabase:types": "supabase gen types typescript --project-id uwxrstbplaoxfghrchcy > src/lib/supabase/database.types.ts",
+    "supabase:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/lib/supabase/database.types.ts",
     "supabase:push": "supabase db push"
   },
   "dependencies": {

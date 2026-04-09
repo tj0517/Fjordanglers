@@ -1,16 +1,14 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Calendar } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { AccommodationGallery } from '@/components/trips/accommodation-gallery'
 import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
 import { SpeciesCard } from '@/components/trips/species-card'
-import { BookingWidget, MobileBookingBar } from '@/components/trips/booking-widget'
 import DurationCardsSelector from '@/components/trips/duration-cards-selector'
-import type { AvailConfigRow } from '@/components/trips/booking-widget'
 import type { SpeciesInfo, FishVariant } from '@/components/trips/species-card'
 import type { ExperienceWithGuide } from '@/types'
 import type { DurationOptionPayload, ItineraryStep } from '@/actions/experiences'
@@ -19,8 +17,10 @@ import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { TripDetailNav } from '@/components/trips/trip-detail-nav'
-import { AvailabilityPreviewCalendar } from '@/components/trips/availability-preview-calendar'
-import { getPaymentModel } from '@/lib/payment-model'
+import { BookingWidget, MobileBookingBar, AvailabilityCalendarBanner } from '@/components/trips/booking-widget'
+import { BookingStateProvider } from '@/contexts/booking-context'
+import { IcelandicInquiryWidget, MobileIcelandicBar, IcelandicAvailabilitySection } from '@/components/trips/icelandic-inquiry-widget'
+import { MaybeIcelandicProvider } from '@/contexts/icelandic-context'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -388,6 +388,69 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
+// ─── Booking widget data fetch ────────────────────────────────────────────────
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+async function fetchBookingWidgetData(
+  supabase: SupabaseClient,
+  experienceId: string,
+  guideId: string,
+) {
+  const today     = new Date().toISOString().slice(0, 10)
+  const yearAhead = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10)
+
+  // Service client bypasses RLS — calendar data is public-facing (blocks booking dates).
+  const svc = createServiceClient()
+
+  const [
+    { data: { user } },
+    { data: guideData },
+    { data: expCalendars },
+    { data: allGuideCalendars },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('guides').select('id, commission_rate').eq('id', guideId).single(),
+    svc.from('calendar_experiences').select('calendar_id').eq('experience_id', experienceId),
+    svc.from('guide_calendars').select('id').eq('guide_id', guideId),
+  ])
+
+  // Use experience-specific calendars when the guide has linked them, otherwise
+  // fall back to all guide calendars (covers guides using a shared/general calendar).
+  const specificIds = (expCalendars ?? []).map((c: { calendar_id: string }) => c.calendar_id)
+  const calendarIds = specificIds.length > 0
+    ? specificIds
+    : (allGuideCalendars ?? []).map((c: { id: string }) => c.id)
+
+  const { data: blockedRanges } = calendarIds.length > 0
+    ? await svc
+        .from('calendar_blocked_dates')
+        .select('date_start, date_end')
+        .in('calendar_id', calendarIds)
+        .gte('date_end', today)
+        .lte('date_start', yearAhead)
+    : { data: [] as Array<{ date_start: string; date_end: string }> }
+
+  // Fetch angler profile name if logged in
+  let anglerName = ''
+  if (user != null) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+    anglerName = profile?.full_name ?? ''
+  }
+
+  return {
+    initialUser: user != null
+      ? { id: user.id, email: user.email ?? '', name: anglerName }
+      : null,
+    commissionRate: guideData?.commission_rate ?? 0.10,
+    blockedRanges: blockedRanges ?? [],
+  }
+}
+
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default async function ExperienceDetailPage({
@@ -452,48 +515,20 @@ export default async function ExperienceDetailPage({
       .sort((a, b) => a.sort_order - b.sort_order),
   }
 
-  // calendar_disabled + payment model flags — queried separately so a missing
-  // column never breaks the trip page (falls back to safe defaults).
-  const { data: guideFlags } = await supabase
-    .from('guides')
-    .select('calendar_disabled, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled')
-    .eq('id', exp.guide_id)
-    .maybeSingle()
-  const calendarDisabled = guideFlags?.calendar_disabled ?? false
-  const paymentModel = getPaymentModel({
-    stripe_account_id:      guideFlags?.stripe_account_id      ?? null,
-    stripe_charges_enabled: guideFlags?.stripe_charges_enabled ?? null,
-    stripe_payouts_enabled: guideFlags?.stripe_payouts_enabled ?? null,
-  })
-
   const isDraft = !exp.published
 
-  // ── Blocked dates: always read from calendar_blocked_dates ─────────────────
-  const svcClient = createServiceClient()
-  const { data: calExp } = await svcClient
-    .from('calendar_experiences')
-    .select('calendar_id')
-    .eq('experience_id', id)
-    .maybeSingle()
+  // ── Booking widget data (parallel fetch) ─────────────────────────────────
+  const showBookingWidget =
+    (exp.booking_type === 'classic' || exp.booking_type === 'both') && !isDraft
 
-  const [moreFromGuide, availConfigRes, blockedDatesRes] = await Promise.all([
+  const showIcelandicWidget = exp.booking_type === 'icelandic' && !isDraft
+
+  const [moreFromGuide, widgetData] = await Promise.all([
     getMoreFromGuide(exp.guide_id, exp.id, 3),
-    supabase
-      .from('experience_availability_config')
-      .select('available_months, available_weekdays, advance_notice_hours, max_advance_days, slots_per_day, start_time')
-      .eq('experience_id', id)
-      .maybeSingle(),
-    calExp != null
-      ? svcClient
-          .from('calendar_blocked_dates')
-          .select('date_start, date_end')
-          .eq('calendar_id', calExp.calendar_id)
-      : Promise.resolve({ data: [] as Array<{ date_start: string; date_end: string }> }),
+    (showBookingWidget || showIcelandicWidget)
+      ? fetchBookingWidgetData(supabase, exp.id, exp.guide_id)
+      : Promise.resolve(null),
   ])
-
-  const availabilityConfig = (availConfigRes.data ?? null) as AvailConfigRow | null
-  const blockedDates = blockedDatesRes.data ?? []
-  console.log('[trips/debug] calExp:', calExp, '| blockedDates count:', blockedDates.length, '| first:', blockedDates[0])
 
   const coverUrl = heroFull(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
   const landscapeUrl = exp.landscape_url ?? getLandscapeUrl(exp.location_country, exp.id)
@@ -703,6 +738,12 @@ export default async function ExperienceDetailPage({
             <ExperienceGallery images={exp.images} title={exp.title} />
           </div>
 
+          <BookingStateProvider initialPkg={durationOptions?.[0] ?? null}>
+          <MaybeIcelandicProvider
+            enabled={showIcelandicWidget}
+            blockedRanges={widgetData?.blockedRanges ?? []}
+            maxGuests={exp.max_guests ?? 99}
+          >
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
 
             {/* ─── LEFT — main content ─────────────────────────── */}
@@ -1165,60 +1206,16 @@ export default async function ExperienceDetailPage({
                 </section>
               )}
 
-              {/* ─── Availability preview / period picker calendar ──────────── */}
-              {/* Shown when:                                                  */}
-              {/*   • calendar disabled → "inquiry-only" notice                */}
-              {/*   • availability config set (any booking type)               */}
-              {/*   • booking_type is 'classic', 'both', or 'icelandic'        */}
-              {/*     (icelandic shows interactive period picker)              */}
-              {!isDraft && (
-                calendarDisabled ||
-                availabilityConfig != null ||
-                exp.booking_type === 'classic' ||
-                exp.booking_type === 'both' ||
-                exp.booking_type === 'icelandic'
-              ) && (
-                calendarDisabled ? (
-                  /* ── Calendar disabled: guide uses inquiry-only mode ── */
-                  <section>
-                    <div
-                      className="rounded-2xl px-5 py-5 flex gap-4 items-start"
-                      style={{ background: '#F3EDE4', border: '1px solid rgba(230,126,80,0.18)' }}
-                    >
-                      {/* Icon */}
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ background: 'rgba(230,126,80,0.14)' }}
-                      >
-                        <Calendar size={17} strokeWidth={1.8} style={{ color: '#E67E50' }} />
-                      </div>
-                      {/* Text */}
-                      <div>
-                        <p className="text-sm font-semibold f-body mb-1" style={{ color: '#0A2E4D' }}>
-                          Flexible scheduling — dates agreed with guide
-                        </p>
-                        <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                          This guide handles bookings through personal inquiry.
-                          Send a request with your preferred dates and group size —
-                          the guide will confirm availability and send a custom offer.
-                        </p>
-                      </div>
-                    </div>
-                  </section>
-                ) : (
-                  <div id="availability-calendar">
-                    <AvailabilityPreviewCalendar
-                      expId={exp.id}
-                      availabilityConfig={availabilityConfig}
-                      blockedDates={blockedDates}
-                      bookingType={exp.booking_type as 'classic' | 'icelandic' | 'both'}
-                    />
-                  </div>
-                )
-              )}
-
               {/* Cancellation policy banner */}
               <CancellationPolicyBanner policy={exp.guide.cancellation_policy} />
+
+              {/* ─── Availability calendar (direct booking) ── */}
+              {showBookingWidget && widgetData != null && (
+                <AvailabilityCalendarBanner blockedRanges={widgetData.blockedRanges} />
+              )}
+
+              {/* ─── Availability calendar (Icelandic period-picking) ── */}
+              {showIcelandicWidget && <IcelandicAvailabilitySection />}
 
               {/* Guide card */}
               <section>
@@ -1307,52 +1304,61 @@ export default async function ExperienceDetailPage({
                   </div>
                 </div>
               </section>
+
             </div>
 
-            {/* ─── RIGHT — booking widget (sticky) ── */}
-            <aside
-              className="hidden lg:block flex-shrink-0"
-              style={{
-                width: '380px',
-                position: 'sticky',
-                top: '81px',
-                alignSelf: 'flex-start',
-              }}
-            >
-              <BookingWidget
-                expId={exp.id}
-                isDraft={isDraft}
-                rawDurationOptions={exp.duration_options}
-                maxGuests={exp.max_guests ?? 4}
-                legacyPricePerPerson={exp.price_per_person_eur}
-                difficulty={exp.difficulty}
-                durationHours={exp.duration_hours}
-                durationDays={exp.duration_days}
-                availabilityConfig={availabilityConfig}
-                blockedDates={blockedDates}
-                bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
-                calendarDisabled={calendarDisabled}
-                paymentModel={paymentModel}
-              />
-            </aside>
+            {/* ─── RIGHT COLUMN — Booking Widget ───────────────────── */}
+            {showBookingWidget && widgetData != null && (
+              <aside
+                id="booking-widget"
+                className="w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
+              >
+                <BookingWidget
+                  experience={{
+                    id:                    exp.id,
+                    title:                 exp.title,
+                    price_per_person_eur:  exp.price_per_person_eur ?? 0,
+                    max_guests:            exp.max_guests ?? 99,
+                    duration_options:      durationOptions,
+                    booking_type:          exp.booking_type ?? 'classic',
+                  }}
+                  guideId={exp.guide_id}
+                  guideName={exp.guide.full_name}
+                  blockedRanges={widgetData.blockedRanges}
+                  commissionRate={widgetData.commissionRate}
+                  initialUser={widgetData.initialUser}
+                />
+              </aside>
+            )}
+
+            {/* ─── RIGHT COLUMN — Icelandic Enquiry Widget ─────────── */}
+            {showIcelandicWidget && (
+              <aside
+                id="inquiry-widget"
+                className="w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
+              >
+                <IcelandicInquiryWidget
+                  experience={{
+                    id:         exp.id,
+                    title:      exp.title,
+                    max_guests: exp.max_guests ?? 99,
+                  }}
+                  guideName={exp.guide.full_name}
+                />
+              </aside>
+            )}
 
           </div>
+          </MaybeIcelandicProvider>
+          </BookingStateProvider>
         </div>
       </div>
 
-      {/* ─── MOBILE BOOKING BAR (fixed bottom) — hidden for drafts ─ */}
-      <MobileBookingBar
-        expId={exp.id}
-        isDraft={isDraft}
-        rawDurationOptions={exp.duration_options}
-        maxGuests={exp.max_guests ?? 4}
-        legacyPricePerPerson={exp.price_per_person_eur}
-        durationHours={exp.duration_hours}
-        durationDays={exp.duration_days}
-        bookingType={(exp.booking_type as 'classic' | 'icelandic' | 'both') ?? 'classic'}
-        calendarDisabled={calendarDisabled}
-        paymentModel={paymentModel}
-      />
+      {/* ─── Mobile booking bar ──────────────────────────────────── */}
+      {showBookingWidget && (
+        <MobileBookingBar experience={{ price_per_person_eur: exp.price_per_person_eur ?? 0, duration_options: durationOptions }} />
+      )}
+      {showIcelandicWidget && <MobileIcelandicBar />}
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}
       {moreFromGuide.length > 0 && (

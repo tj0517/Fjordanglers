@@ -59,6 +59,19 @@ export default async function CalendarPage({
 
   const activeCalendarId = sp.calendarId ?? null
 
+  // ── Single-calendar auto-redirect ────────────────────────────────────────────
+  // When the guide has exactly one calendar and the URL doesn't already target it,
+  // redirect so the calendar opens in its own view (with editing available) immediately.
+  if (activeCalendarId == null) {
+    const { data: calRows } = await supabase
+      .from('guide_calendars')
+      .select('id')
+      .eq('guide_id', guide.id)
+    if (calRows != null && calRows.length === 1) {
+      redirect(`/dashboard/calendar?year=${safeYear}&month=${safeMonth}&calendarId=${calRows[0]!.id}`)
+    }
+  }
+
   const firstDay = toDateStr(safeYear, safeMonth, 1)
   const lastDay  = toDateStr(safeYear, safeMonth, new Date(safeYear, safeMonth, 0).getDate())
 

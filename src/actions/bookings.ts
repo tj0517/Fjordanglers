@@ -1,2209 +1,1877 @@
 'use server'
 
 /**
- * Booking Server Actions — unified model.
+ * Booking Server Actions.
  *
- * Direct flow (source = 'direct'):
- *   createBookingCheckout → acceptBooking → [angler pays deposit] → confirmed
- *   → markBalancePaid / createBalanceCheckout → completed
- *
- * Inquiry flow (source = 'inquiry'):
- *   createInquiryBooking → [guide reviews] → sendOffer → acceptBookingOffer
- *   → [angler pays full amount] → confirmed → completed
- *
- * Both flows share: declineBooking, sendBookingMessage, markBalancePaid, etc.
+ * createDirectBooking() — direct booking request (classic / both booking_type).
+ * Angler selects dates + guests + package in the BookingWidget on /trips/[id],
+ * submits a booking request. Guide receives an email notification. No Stripe in
+ * this flow — guide will follow up to arrange payment.
  */
 
-import { z } from 'zod'
-import { revalidatePath } from 'next/cache'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe/client'
-import { encryptField, decryptField } from '@/lib/field-encryption'
+import { sendBookingRequestEmails, sendBookingConfirmedEmail, sendBookingDeclinedEmail, sendInquiryRequestEmails, sendOfferSentEmail, sendOfferAcceptedEmail, sendOfferDeclinedEmail } from '@/lib/email'
 import { env } from '@/lib/env'
-import { getAppUrl } from '@/lib/app-url'
-import { getPaymentModel } from '@/lib/payment-model'
-import { computeBookingPricing, calcSubtotalFromOption, type DurationOption } from '@/lib/booking-pricing'
-import type { Json } from '@/lib/supabase/database.types'
-import {
-  fmtEmailDate,
-  fmtEmailDateRange,
-  fmtEmailDays,
-  sendBookingRequestAnglerEmail,
-  sendBookingRequestGuideEmail,
-  sendBookingAcceptedAnglerEmail,
-  sendBookingDeclinedAnglerEmail,
-  sendBalancePaidAnglerEmail,
-  sendInquiryReceivedAnglerEmail,
-  sendInquiryReceivedGuideEmail,
-  sendOfferReceivedAnglerEmail,
-  sendOfferAcceptedGuideEmail,
-} from '@/lib/email'
+import { stripe } from '@/lib/stripe/client'
 
-import {
-  type PriceTier,
-  findApplicableTierPrice,
-  validatePriceTiers,
-} from '@/lib/inquiry-pricing'
-import {
-  blockBookingDates,
-  unblockBookingDates,
-  expandBookingDateRange,
-} from '@/lib/booking-blocks'
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-// ─── Input schema ─────────────────────────────────────────────────────────────
+export type DirectBookingInput = {
+  experienceId: string
+  bookingDate: string          // YYYY-MM-DD (first day)
+  dateTo: string | null        // YYYY-MM-DD (last day for multi-day, null for single day)
+  requestedDates: string[]     // all individual dates
+  guests: number
+  packageLabel: string | null  // selected duration_option label
+  totalEur: number             // pre-calculated on client (validated server-side)
+  specialRequests: string | null
+}
 
-const createBookingSchema = z.object({
-  experienceId: z.string().uuid(),
-  // Availability window boundaries (angler's "when can you come")
-  dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1, 'Select at least one date'),
-  // Actual trip duration in days — price is based on this, NOT dates.length
-  numDays: z.number().int().min(1).max(30).optional(),
-  guests: z.number().int().min(1).max(50),
-  durationOptionLabel: z.string().optional(),
-  anglerName: z.string().max(100).optional(),
-  anglerEmail: z.string().email('Valid email required'),
-  anglerPhone: z.string().optional(),
-  anglerCountry: z.string().optional(),
-  specialRequests: z.string().max(1000).optional(),
-  marketingConsent: z.boolean().optional(),
-})
+export type DirectBookingResult =
+  | { success: true;  bookingId: string }
+  | { success: false; error: string }
 
-type CreateBookingInput = z.infer<typeof createBookingSchema>
+// ─── createDirectBooking ──────────────────────────────────────────────────────
+
+export async function createDirectBooking(
+  input: DirectBookingInput,
+): Promise<DirectBookingResult> {
+  try {
+    const supabase = await createClient()
+
+    // 1. Auth check
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) {
+      return { success: false, error: 'Please sign in to book this trip.' }
+    }
+
+    // 2. Fetch experience (must be published + correct booking_type)
+    const { data: experience } = await supabase
+      .from('experiences')
+      .select('id, title, guide_id, booking_type, price_per_person_eur, published, max_guests, duration_options')
+      .eq('id', input.experienceId)
+      .eq('published', true)
+      .single()
+
+    if (experience == null) {
+      return { success: false, error: 'Experience not found or no longer available.' }
+    }
+
+    if (
+      experience.booking_type !== 'classic' &&
+      experience.booking_type !== 'both'
+    ) {
+      return { success: false, error: 'This experience does not accept direct bookings.' }
+    }
+
+    // 3. Fetch guide (name + commission_rate + user_id for email)
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id, full_name, commission_rate, user_id')
+      .eq('id', experience.guide_id)
+      .single()
+
+    if (guide == null) {
+      return { success: false, error: 'Guide not found.' }
+    }
+
+    // 4. Fetch angler profile (name)
+    const { data: anglerProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const anglerName = anglerProfile?.full_name ?? ''
+
+    // 5. Validate input
+    const guests = Math.max(1, Math.min(input.guests, experience.max_guests ?? 99))
+
+    if (input.requestedDates.length === 0 || !input.bookingDate) {
+      return { success: false, error: 'Please select at least one date.' }
+    }
+
+    // 6. Pricing — compute server-side from the selected package (or base price).
+    //    Never trust the client's totalEur directly; always derive from package config.
+    const days = input.requestedDates.length
+
+    // Try to find the selected package in duration_options
+    type PkgOption = { label: string; pricing_type: string; price_eur: number; group_prices?: Record<string, number> }
+    const packages = (experience.duration_options ?? []) as PkgOption[]
+    const selectedPkg = input.packageLabel != null
+      ? packages.find(p => p.label === input.packageLabel) ?? null
+      : null
+
+    let totalEur: number
+    if (selectedPkg != null) {
+      switch (selectedPkg.pricing_type) {
+        case 'per_person': totalEur = selectedPkg.price_eur * guests * days; break
+        case 'per_boat':   totalEur = selectedPkg.price_eur * days;          break
+        case 'per_group':  totalEur = (selectedPkg.group_prices?.[String(guests)] ?? selectedPkg.price_eur) * days; break
+        default:           totalEur = selectedPkg.price_eur * guests * days;
+      }
+    } else {
+      // No package — fall back to experience base price per person
+      totalEur = (experience.price_per_person_eur ?? 0) * guests * days
+    }
+
+    const commissionRate = guide.commission_rate ?? 0.10
+    const platformFeeEur = Math.round(totalEur * commissionRate * 100) / 100
+    const serviceFeeEur  = Math.min(Math.round(totalEur * 0.05 * 100) / 100, 50)
+    const guidePayoutEur = totalEur - platformFeeEur
+
+    // 7. Insert booking
+    // Use service client: auth is already verified above; anon client INSERT is blocked
+    // by RLS unless an explicit INSERT policy exists for authenticated users.
+    const { data: booking, error: insertError } = await createServiceClient()
+      .from('bookings')
+      .insert({
+        source:           'direct',
+        status:           'pending',
+        experience_id:    experience.id,
+        guide_id:         guide.id,
+        angler_id:        user.id,
+        angler_email:     user.email ?? null,
+        angler_full_name: anglerName || null,
+        booking_date:     input.bookingDate,
+        date_to:          input.dateTo,
+        requested_dates:  input.requestedDates,
+        guests,
+        duration_option:  input.packageLabel,
+        total_eur:        totalEur,
+        platform_fee_eur: platformFeeEur,
+        service_fee_eur:  serviceFeeEur,
+        guide_payout_eur: guidePayoutEur,
+        commission_rate:  commissionRate,
+        special_requests: input.specialRequests ?? null,
+      })
+      .select('id')
+      .single()
+
+    if (insertError != null || booking == null) {
+      console.error('[bookings/createDirectBooking] Insert error:', insertError)
+      return { success: false, error: 'Failed to create booking. Please try again.' }
+    }
+
+    // 8. Send emails (fire-and-forget)
+    //    Fetch guide's auth email via service client
+    if (guide.user_id != null) {
+      const serviceClient = createServiceClient()
+      serviceClient.auth.admin
+        .getUserById(guide.user_id)
+        .then(({ data }) => {
+          const guideEmail = data.user?.email ?? null
+          if (guideEmail == null) return
+
+          sendBookingRequestEmails({
+            guideEmail,
+            anglerEmail:     user.email ?? '',
+            anglerName:      anglerName || 'Angler',
+            guideName:       guide.full_name ?? 'Your guide',
+            experienceTitle: experience.title,
+            bookingId:       booking.id,
+            bookingDate:     input.bookingDate,
+            dateTo:          input.dateTo,
+            requestedDates:  input.requestedDates,
+            guests,
+            packageLabel:    input.packageLabel,
+            totalEur,
+            specialRequests: input.specialRequests ?? null,
+          }).catch(err => console.error('[bookings/createDirectBooking] Email error:', err))
+        })
+        .catch(err => console.error('[bookings/createDirectBooking] Guide email lookup error:', err))
+    }
+
+    return { success: true, bookingId: booking.id }
+
+  } catch (err) {
+    console.error('[bookings/createDirectBooking] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+  }
+}
 
 // ─── createBookingCheckout ────────────────────────────────────────────────────
-//
-// Creates a DB booking row and returns bookingId.
-// No payment at this stage — payment happens only after guide accepts.
-//
-// Flow for all booking types:
-//   1. Angler submits → DB row (status: pending)
-//   2. Guide accepts → acceptBooking() → Stripe Checkout (destination charge)
-//   3. Angler pays  → webhook → status: confirmed
+
+export type BookingCheckoutResult =
+  | { success: true;  checkoutUrl: string }
+  | { success: false; error: string }
 
 export async function createBookingCheckout(
-  input: CreateBookingInput,
-): Promise<{ bookingId: string } | { error: string }> {
-  // ── Auth — required ────────────────────────────────────────────────────────
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'You must be signed in to book a trip.' }
-
-  // ── Validate ──────────────────────────────────────────────────────────────
-  const parsed = createBookingSchema.safeParse(input)
-  if (!parsed.success) return { error: parsed.error.issues[0].message }
-
-  const {
-    experienceId,
-    dates,
-    numDays,
-    guests,
-    durationOptionLabel,
-    anglerName,
-    anglerEmail,
-    anglerPhone,
-    anglerCountry,
-    specialRequests,
-    marketingConsent,
-  } = parsed.data
-
-  // Use explicit numDays (trip duration) if provided; fall back to dates.length
-  // for backward compat with any legacy calls that send individual date arrays.
-  const tripDays = numDays ?? dates.length
-
-  // ── Fetch experience + guide ───────────────────────────────────────────────
-  const { data: experience } = await supabase
-    .from('experiences')
-    .select(
-      'id, title, price_per_person_eur, max_guests, guide_id, duration_options, guides(id, user_id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, pricing_model, commission_rate)',
-    )
-    .eq('id', experienceId)
-    .eq('published', true)
-    .single()
-
-  if (!experience) return { error: 'Experience not found or no longer available.' }
-
-  const guideRaw = experience.guides as unknown as {
-    id: string
-    user_id: string | null
-    full_name: string
-    stripe_account_id: string | null
-    stripe_charges_enabled: boolean | null
-    stripe_payouts_enabled: boolean | null
-    pricing_model: string
-    commission_rate: number
-  } | null
-
-  if (!guideRaw) return { error: 'Guide not found.' }
-
-  // ── Validate guests ────────────────────────────────────────────────────────
-  const maxGuests = experience.max_guests ?? 20
-  if (guests > maxGuests) {
-    return { error: `Maximum ${maxGuests} guests allowed for this experience.` }
-  }
-
-  // ── Derive payment model ───────────────────────────────────────────────────
-  const paymentModel = getPaymentModel({
-    stripe_account_id:       guideRaw.stripe_account_id,
-    stripe_charges_enabled:  guideRaw.stripe_charges_enabled,
-    stripe_payouts_enabled:  guideRaw.stripe_payouts_enabled,
-  })
-
-  // ── Calculate pricing (single source of truth) ────────────────────────────
-  const pricePerPerson = experience.price_per_person_eur ?? 0
-  const commissionRate = guideRaw.commission_rate ?? env.PLATFORM_COMMISSION_RATE
-
-  // Resolve subtotal: if a duration option label was supplied, look up the option
-  // and use its pricing_type (per_person / per_boat / per_group).
-  // Falls back to the base per-person rate if no match is found.
-  let subtotal: number
-  const rawOpts = experience.duration_options as DurationOption[] | null
-  const matchedOpt = durationOptionLabel
-    ? rawOpts?.find(o => o.label === durationOptionLabel) ?? null
-    : null
-
-  if (matchedOpt) {
-    subtotal = calcSubtotalFromOption(matchedOpt, guests, tripDays)
-  } else {
-    subtotal = Math.round(pricePerPerson * guests * tripDays * 100) / 100
-  }
-
-  const pricing = computeBookingPricing(subtotal, commissionRate)
-
-  // ── Insert booking row ────────────────────────────────────────────────────
-  const serviceClient = createServiceClient()
-
-  const { data: booking, error: insertError } = await serviceClient
-    .from('bookings')
-    .insert({
-      experience_id: experienceId,
-      angler_id: user.id,
-      angler_email: anglerEmail,
-      guide_id: guideRaw.id,
-      booking_date: dates[0], // primary date (first selected)
-      requested_dates: dates, // all selected dates
-      guests,
-      total_eur:        pricing.totalEur,
-      service_fee_eur:  pricing.serviceFeeEur,
-      platform_fee_eur: pricing.commissionEur,
-      guide_payout_eur: pricing.guidePayoutEur,
-      deposit_eur:      pricing.depositEur,
-      commission_rate:  commissionRate,
-      angler_full_name: anglerName ?? null,
-      angler_country: anglerCountry ?? null,
-      angler_phone: anglerPhone ?? null,
-      special_requests: specialRequests ?? null,
-      duration_option: durationOptionLabel ?? null,
-      marketing_consent: marketingConsent ?? false,
-      status: 'pending',
-    })
-    .select('id')
-    .single()
-
-  if (insertError || !booking) {
-    console.error('[createBookingCheckout] insert error:', insertError)
-    return { error: 'Failed to create booking. Please try again.' }
-  }
-
-  // ── Fire-and-forget emails ────────────────────────────────────────────────
-  {
-    const appUrl   = await getAppUrl()
-    const datesLbl = fmtEmailDateRange(dates[0], dates[dates.length - 1])
-
-    // To angler — "your request is on its way"
-    sendBookingRequestAnglerEmail({
-      to:              anglerEmail,
-      anglerName:      anglerName ?? anglerEmail,
-      experienceTitle: experience.title,
-      guideName:       guideRaw.full_name,
-      datesLabel:      datesLbl,
-      guests,
-      totalEur:  pricing.totalEur,
-      bookingUrl: `${appUrl}/account/bookings/${booking.id}`,
-    }).catch(e => console.error('[createBookingCheckout] angler email:', e))
-
-    // To guide — "new booking request"
-    if (guideRaw.user_id) {
-      serviceClient.auth.admin.getUserById(guideRaw.user_id)
-        .then(({ data }) => {
-          const guideEmail = data.user?.email
-          if (!guideEmail) return
-          return sendBookingRequestGuideEmail({
-            to:              guideEmail,
-            guideName:       guideRaw.full_name,
-            anglerName:      anglerName ?? anglerEmail,
-            anglerEmail,
-            anglerCountry:   anglerCountry ?? null,
-            experienceTitle: experience.title,
-            datesLabel:      datesLbl,
-            guests,
-            totalEur:  pricing.totalEur,
-            specialRequests: specialRequests ?? null,
-            bookingUrl: `${appUrl}/dashboard/bookings/${booking.id}`,
-          })
-        })
-        .catch(e => console.error('[createBookingCheckout] guide email:', e))
-    }
-  }
-
-  return { bookingId: booking.id }
-}
-
-// ─── sendBookingMessage ───────────────────────────────────────────────────────
-
-/**
- * Send a message within a booking's chat thread.
- * Both the angler and the guide for the booking may send.
- */
-export type SentMessage = {
-  id: string
-  body: string
-  sender_id: string
-  created_at: string
-}
-
-export async function sendBookingMessage(
-  bookingId: string,
-  body: string,
-): Promise<{ error?: string; message?: SentMessage }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const trimmed = body.trim()
-  if (!trimmed) return { error: 'Message cannot be empty.' }
-  if (trimmed.length > 2000) return { error: 'Message is too long (max 2000 characters).' }
-
-  // Verify the caller is the angler or guide for this booking (RLS does this too,
-  // but we want a friendly error rather than a silent DB reject).
-  const { data: booking } = await supabase
-    .from('bookings')
-    .select('id, angler_id, angler_email, guide_id, guides(user_id)')
-    .eq('id', bookingId)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-
-  const guide = booking.guides as unknown as { user_id: string } | null
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser()
-  const userEmail = authUser?.email
-
-  const isAngler =
-    booking.angler_id === user.id ||
-    (userEmail != null && booking.angler_email === userEmail)
-  const isGuide  = guide?.user_id === user.id
-
-  if (!isAngler && !isGuide) return { error: 'You do not have access to this booking.' }
-
-  // Insert and return the created row so the client can replace the optimistic placeholder
-  const { data: msg, error } = await supabase
-    .from('booking_messages')
-    .insert({ booking_id: bookingId, sender_id: user.id, body: trimmed })
-    .select('id, body, sender_id, created_at')
-    .single()
-
-  if (error || !msg) {
-    console.error('[sendBookingMessage]', error)
-    return { error: 'Failed to send message. Please try again.' }
-  }
-
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
-  revalidatePath(`/account/bookings/${bookingId}`)
-  return { message: { id: msg.id, body: msg.body, sender_id: msg.sender_id, created_at: msg.created_at } }
-}
-
-// ─── acceptBooking ────────────────────────────────────────────────────────────
-//
-// Guide accepts a pending booking:
-//   → Stripe Checkout created (destination charge: Stripe auto-splits on payment)
-//   → status: 'accepted'
-//   → Angler receives PayDepositBanner → pays deposit → webhook → 'confirmed'
-//
-// 40% deposit now, 60% balance before the trip.
-// application_fee = proportional platform fee (service fee + commission).
-
-export async function acceptBooking(
-  bookingId: string,
-  options?: {
-    confirmedDays?:     string[]   // guide-picked individual days (multi-day picker)
-    confirmedDateFrom?: string     // legacy / booking-actions fallback
-    confirmedDateTo?:   string
-    guideNote?:         string
-    customTotalEur?:    number     // guide-set total override (angler-facing, incl. service fee)
-    locationText?:      string     // river / location name set by guide when accepting
-    meetingLat?:        number     // optional meeting point pin
-    meetingLng?:        number
-  },
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const { data: guide } = await supabase
-    .from('guides')
-    .select('id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, default_balance_payment_method')
-    .eq('user_id', user.id)
-    .single()
-  if (!guide) return { error: 'Guide profile not found.' }
-
-  // Derive payment model from guide's current Stripe status
-  const guidePaymentModel = getPaymentModel({
-    stripe_account_id:       guide.stripe_account_id,
-    stripe_charges_enabled:  guide.stripe_charges_enabled,
-    stripe_payouts_enabled:  guide.stripe_payouts_enabled,
-  })
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, guide_id, total_eur, service_fee_eur, platform_fee_eur, guide_payout_eur, angler_email, angler_full_name, angler_phone, deposit_eur, stripe_checkout_id, guests, commission_rate, experience_id, requested_dates, booking_date, offer_days, offer_date_from, offer_date_to, duration_option, experiences(title, price_per_person_eur, duration_options)')
-    .eq('id', bookingId)
-    .eq('guide_id', guide.id)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (booking.status !== 'pending') {
-    return { error: 'Only pending bookings can be accepted.' }
-  }
-
-  // ── Recalculate pricing if guide confirmed specific days or set custom total ─
-  const confirmedDays = options?.confirmedDays
-  let effectiveTotalEur       = booking.total_eur
-  let effectiveGuidePayoutEur = booking.guide_payout_eur
-  let pricingUpdate: Partial<{
-    total_eur:        number
-    service_fee_eur:  number
-    guide_payout_eur: number
-    deposit_eur:      number
-    platform_fee_eur: number
-  }> = {}
-
-  if (options?.customTotalEur != null && options.customTotalEur > 0) {
-    // Guide set a custom price — treat it as their SUBTOTAL (excl. service fee).
-    // computeBookingPricing() adds the service fee on top and returns all price fields.
-    const subtotal  = Math.round(options.customTotalEur * 100) / 100
-    const pricing   = computeBookingPricing(subtotal, booking.commission_rate)
-    effectiveTotalEur       = pricing.totalEur
-    effectiveGuidePayoutEur = pricing.guidePayoutEur
-    pricingUpdate = {
-      total_eur:        pricing.totalEur,
-      service_fee_eur:  pricing.serviceFeeEur,
-      guide_payout_eur: pricing.guidePayoutEur,
-      deposit_eur:      pricing.depositEur,
-      platform_fee_eur: pricing.commissionEur,
-    }
-  } else if (confirmedDays && confirmedDays.length > 0) {
-    const exp = booking.experiences as unknown as {
-      title: string
-      price_per_person_eur: number | null
-      duration_options: DurationOption[] | null
-    } | null
-    const pricePerPerson = exp?.price_per_person_eur
-    if (pricePerPerson != null && booking.guests > 0) {
-      const numDays = confirmedDays.length
-
-      // Use the stored duration option (if any) for correct per_boat / per_group pricing.
-      // Falls back to base per-person rate if no matching option found.
-      const storedLabel = booking.duration_option ?? null
-      const matchedOpt  = storedLabel
-        ? (exp?.duration_options ?? []).find(o => o.label === storedLabel) ?? null
-        : null
-
-      const subtotal = matchedOpt
-        ? calcSubtotalFromOption(matchedOpt, booking.guests, numDays)
-        : Math.round(pricePerPerson * booking.guests * numDays * 100) / 100
-
-      const pricing = computeBookingPricing(subtotal, booking.commission_rate)
-      effectiveTotalEur       = pricing.totalEur
-      effectiveGuidePayoutEur = pricing.guidePayoutEur
-      pricingUpdate = {
-        total_eur:        pricing.totalEur,
-        service_fee_eur:  pricing.serviceFeeEur,
-        guide_payout_eur: pricing.guidePayoutEur,
-        deposit_eur:      pricing.depositEur,
-        platform_fee_eur: pricing.commissionEur,
-      }
-    }
-  }
-
-  // ── Stripe Checkouts — two-step payment model ─────────────────────────────
-  //
-  // Step 1 — Booking fee (all models):
-  //   Charge = commission + service_fee (platform's full cut)
-  //   No transfer_data — money stays on FjordAnglers main account
-  //   Confirms the booking slot. Angler gets booking confirmed once paid.
-  //
-  // Step 2 — Guide amount (stripe_connect only):
-  //   Charge = guide_payout_eur (subtotal − commission)
-  //   transfer_data → guide's connected account (guide gets 100%, no application_fee)
-  //   For manual model: angler pays guide directly via IBAN or cash
-
-  const appUrl = await getAppUrl()
-  let stripeCheckoutId: string | null = null
-  let guideStripeCheckoutId: string | null = null
-
-  if (!booking.stripe_checkout_id) {
-    try {
-      const experienceTitle =
-        (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-
-      // ── Step 1: Booking fee ─────────────────────────────────────────────────
-      // Always = commission + service_fee (same for both models).
-      // payNow = total − guide_payout avoids any reverse-1.05 calculation.
-      const bookingFeeEur = Math.round((effectiveTotalEur - effectiveGuidePayoutEur) * 100) / 100
-      const bookingFeeCents = Math.round(bookingFeeEur * 100)
-
-      // Stripe minimum: €1.00 safe floor. Booking is still accepted; Checkout skipped
-      // for very cheap trips. Admin can create checkout manually if needed.
-      if (bookingFeeCents < 100) {
-        console.warn(
-          `[acceptBooking] booking fee ${bookingFeeCents}¢ below safe minimum — skipping Checkout for booking ${bookingId}`,
-        )
-      } else {
-        const session = await stripe.checkout.sessions.create(
-          {
-            mode:                 'payment',
-            payment_method_types: ['card'],
-            customer_email:       booking.angler_email ?? undefined,
-            line_items: [
-              {
-                price_data: {
-                  currency:     'eur',
-                  product_data: {
-                    name:        `${experienceTitle} — Booking fee`,
-                    description: 'Platform & service fee to confirm your booking.',
-                  },
-                  unit_amount: bookingFeeCents,
-                },
-                quantity: 1,
-              },
-            ],
-            metadata:    { bookingId, guideId: guide.id, paymentType: 'booking_fee' },
-            success_url: `${appUrl}/account/bookings/${bookingId}?status=paid`,
-            cancel_url:  `${appUrl}/account/bookings/${bookingId}`,
-            payment_intent_data: {
-              // No transfer_data — full booking fee stays on FjordAnglers platform.
-              // Guide amount is collected separately (step 2 below).
-              metadata: { bookingId, paymentType: 'booking_fee' },
-            },
-          },
-          { idempotencyKey: `booking-accept-${bookingId}` },
-        )
-        stripeCheckoutId = session.id
-      }
-
-      // ── Step 2: Guide amount (Stripe Connect guides only) ───────────────────
-      // Creates a second Checkout session where angler pays the guide's portion
-      // directly to the guide's connected account. No application_fee — guide
-      // receives 100% of this amount. Session link is shown after booking fee is paid.
-      if (guidePaymentModel === 'stripe_connect' && guide.stripe_account_id) {
-        const guideAmountCents = Math.round(effectiveGuidePayoutEur * 100)
-
-        if (guideAmountCents >= 100) {
-          const guideSession = await stripe.checkout.sessions.create(
-            {
-              mode:                 'payment',
-              payment_method_types: ['card'],
-              customer_email:       booking.angler_email ?? undefined,
-              line_items: [
-                {
-                  price_data: {
-                    currency:     'eur',
-                    product_data: {
-                      name:        `${experienceTitle} — Trip payment`,
-                      description: 'Payment for your confirmed fishing trip, paid directly to your guide.',
-                    },
-                    unit_amount: guideAmountCents,
-                  },
-                  quantity: 1,
-                },
-              ],
-              metadata:    { bookingId, guideId: guide.id, paymentType: 'guide_amount' },
-              success_url: `${appUrl}/account/bookings/${bookingId}?status=guide_paid`,
-              cancel_url:  `${appUrl}/account/bookings/${bookingId}`,
-              payment_intent_data: {
-                // Transfer 100% to guide's connected account — no application_fee.
-                // Platform fee was already collected in full via the booking fee checkout.
-                transfer_data: { destination: guide.stripe_account_id },
-                metadata: { bookingId, paymentType: 'guide_amount' },
-              },
-            },
-            { idempotencyKey: `booking-guide-${bookingId}` },
-          )
-          guideStripeCheckoutId = guideSession.id
-        }
-      }
-    } catch (err) {
-      console.error('[acceptBooking] Stripe Checkout error:', err)
-      // Non-fatal: accept without payment link, admin can create checkout manually
-    }
-  } else {
-    stripeCheckoutId = booking.stripe_checkout_id
-    guideStripeCheckoutId = (booking as Record<string, unknown>).guide_stripe_checkout_id as string | null ?? null
-  }
-
-  // Guide amount delivery method (for display on angler's booking page):
-  //   stripe_connect → angler pays via Stripe (guide_stripe_checkout_id)
-  //   manual + IBAN  → angler pays via bank transfer (guide shares IBAN details)
-  //   manual no IBAN → angler arranges payment directly with guide
-  const balanceMethod = guidePaymentModel === 'stripe_connect'
-    ? 'stripe'
-    : 'cash'
-
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({
-      status:                  'accepted',
-      accepted_at:             new Date().toISOString(),
-      balance_payment_method:  balanceMethod,
-      ...(stripeCheckoutId      != null ? { stripe_checkout_id:       stripeCheckoutId      } : {}),
-      ...(guideStripeCheckoutId != null ? { guide_stripe_checkout_id: guideStripeCheckoutId } : {}),
-      // Confirmed trip dates.
-      // confirmed_days  = canonical array of SPECIFIC days (non-consecutive safe).
-      // confirmed_date_from/to = first/last day — envelope for display/sorting ONLY.
-      //
-      // INVARIANT: booking_date and requested_dates are NEVER mutated after INSERT.
-      // They always represent the angler's original request, not the guide's confirmation.
-      ...(confirmedDays != null && confirmedDays.length > 0 ? {
-        confirmed_days:      confirmedDays,
-        confirmed_date_from: confirmedDays[0],
-        confirmed_date_to:   confirmedDays[confirmedDays.length - 1],
-      } : options?.confirmedDateFrom ? {
-        confirmed_date_from: options.confirmedDateFrom,
-        confirmed_date_to:   options.confirmedDateTo ?? options.confirmedDateFrom,
-      } : {}),
-      // Updated pricing when guide confirmed specific days
-      ...pricingUpdate,
-      // Location set by guide when accepting
-      ...(options?.locationText ? { assigned_river: options.locationText } : {}),
-      ...(options?.meetingLat != null && options?.meetingLng != null
-        ? { offer_meeting_lat: options.meetingLat, offer_meeting_lng: options.meetingLng }
-        : {}),
-    })
-    .eq('id', bookingId)
-
-  if (error) {
-    console.error('[acceptBooking]', error)
-    return { error: 'Failed to accept booking.' }
-  }
-
-  // ── Block calendar dates ───────────────────────────────────────────────────
-  // Writes to calendar_blocked_dates (single source of truth, post-migration 20260402200000).
-  //
-  // Fallback priority (most → least specific):
-  //   1. confirmedDays   — guide explicitly picked days in the accept form
-  //   2. offer_days      — guide picked exact days when sending the offer
-  //   3. requested_dates — individual dates the angler selected (never an envelope)
-  //   4. offer range     — guide's offered range (last resort; range may be broad)
-  {
-    const bookingOfferDays   = booking.offer_days as string[] | null
-    const bookingReqDates    = booking.requested_dates as string[] | null
-    const bookingOfferFrom   = booking.offer_date_from as string | null
-    const bookingOfferTo     = booking.offer_date_to   as string | null
-
-    const datesToBlock =
-      confirmedDays != null && confirmedDays.length > 0
-        ? confirmedDays
-        : bookingOfferDays != null && bookingOfferDays.length > 0
-          ? bookingOfferDays
-          : bookingReqDates != null && bookingReqDates.length > 0
-            ? bookingReqDates
-            : expandBookingDateRange(bookingOfferFrom, bookingOfferTo)
-
-    if (datesToBlock.length > 0) {
-      // Pass experience_id so blocking respects calendar boundaries:
-      // only sibling experiences in the same named calendar get blocked.
-      blockBookingDates(serviceClient, bookingId, booking.guide_id!, datesToBlock, booking.experience_id ?? undefined)
-        .catch(e => console.error('[acceptBooking] blockBookingDates:', e))
-    }
-  }
-
-  // ── Email to angler: "booking accepted — pay your deposit" ───────────────
-  {
-    const anglerEmail = booking.angler_email
-    if (anglerEmail) {
-      // Build a human-readable confirmed dates label
-      const confirmedDays = options?.confirmedDays
-      const confirmedDatesLabel = (() => {
-        if (confirmedDays && confirmedDays.length > 0) return fmtEmailDays(confirmedDays)
-        if (options?.confirmedDateFrom) {
-          return fmtEmailDateRange(options.confirmedDateFrom, options.confirmedDateTo ?? options.confirmedDateFrom)
-        }
-        const reqDates = booking.requested_dates as string[] | null
-        if (reqDates && reqDates.length > 0) return fmtEmailDateRange(reqDates[0], reqDates[reqDates.length - 1])
-        return fmtEmailDate(booking.booking_date)
-      })()
-
-      const emailDepositEur = pricingUpdate.deposit_eur ?? (booking.deposit_eur as number | null) ?? Math.round(effectiveTotalEur * 0.4 * 100) / 100
-      const expTitle = (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-      const guideFullName = (guide as unknown as { full_name?: string }).full_name ?? 'Your guide'
-
-      sendBookingAcceptedAnglerEmail({
-        to:              anglerEmail,
-        anglerName:      (booking.angler_full_name as string | null) ?? anglerEmail,
-        experienceTitle: expTitle,
-        guideName:       guideFullName,
-        confirmedDates:  confirmedDatesLabel,
-        depositEur:      emailDepositEur,
-        totalEur:        effectiveTotalEur,
-        guideNote:       options?.guideNote?.trim() ?? null,
-        bookingUrl:      `${await getAppUrl()}/account/bookings/${bookingId}`,
-      }).catch(e => console.error('[acceptBooking] angler email:', e))
-    }
-  }
-
-  revalidatePath('/dashboard/bookings')
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
-  revalidatePath(`/account/bookings/${bookingId}`)
-  return {}
-}
-
-// ─── renewDepositCheckout ─────────────────────────────────────────────────────
-//
-// Called when the angler's Stripe Checkout session has expired (24h Stripe limit).
-// Creates a fresh booking-fee session and updates the DB.
-// Only valid for 'accepted' bookings (guide has already confirmed).
-//
-// Booking fee = commission + service_fee (= deposit_eur stored on booking).
-// No transfer_data — money stays on FjordAnglers platform.
-
-export async function renewDepositCheckout(
-  bookingId: string,
-): Promise<{ url: string } | { error: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select(
-      'id, status, angler_id, total_eur, deposit_eur, guide_payout_eur, angler_email, guide_id, experiences(title)',
-    )
-    .eq('id', bookingId)
-    .eq('angler_id', user.id)
-    .in('status', ['accepted', 'offer_accepted'])
-    .single()
-
-  if (!booking) return { error: 'Booking not found or not ready for payment.' }
-
-  const experienceTitle =
-    (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-
-  // Booking fee = stored deposit_eur (commission + service_fee).
-  // Fall back to total − guide_payout if deposit_eur is missing (legacy rows).
-  const bookingFeeEur = booking.deposit_eur
-    ?? Math.round((booking.total_eur - (booking.guide_payout_eur ?? booking.total_eur * 0.87)) * 100) / 100
-  const bookingFeeCents = Math.round(bookingFeeEur * 100)
-
-  if (bookingFeeCents < 100) {
-    return { error: 'Booking fee is too small to process via Stripe.' }
-  }
-
+  input: DirectBookingInput,
+): Promise<BookingCheckoutResult> {
   try {
+    const supabase = await createClient()
+
+    // 1. Auth check
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) {
+      return { success: false, error: 'Please sign in to book this trip.' }
+    }
+
+    // 2. Fetch experience
+    const { data: experience } = await supabase
+      .from('experiences')
+      .select('id, title, guide_id, booking_type, price_per_person_eur, published, max_guests, duration_options')
+      .eq('id', input.experienceId)
+      .eq('published', true)
+      .single()
+
+    if (experience == null) {
+      return { success: false, error: 'Experience not found or no longer available.' }
+    }
+
+    if (experience.booking_type !== 'classic' && experience.booking_type !== 'both') {
+      return { success: false, error: 'This experience does not accept direct bookings.' }
+    }
+
+    // 3. Fetch guide
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id, full_name, commission_rate')
+      .eq('id', experience.guide_id)
+      .single()
+
+    if (guide == null) {
+      return { success: false, error: 'Guide not found.' }
+    }
+
+    // 4. Fetch angler name
+    const { data: anglerProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const anglerName = anglerProfile?.full_name ?? ''
+
+    // 5. Validate
+    const guests = Math.max(1, Math.min(input.guests, experience.max_guests ?? 99))
+    if (input.requestedDates.length === 0 || !input.bookingDate) {
+      return { success: false, error: 'Please select at least one date.' }
+    }
+
+    // 6. Server-side pricing
+    const days = input.requestedDates.length
+    type PkgOption = { label: string; pricing_type: string; price_eur: number; group_prices?: Record<string, number> }
+    const packages = (experience.duration_options ?? []) as PkgOption[]
+    const selectedPkg = input.packageLabel != null
+      ? packages.find(p => p.label === input.packageLabel) ?? null
+      : null
+
+    let totalEur: number
+    if (selectedPkg != null) {
+      switch (selectedPkg.pricing_type) {
+        case 'per_person': totalEur = selectedPkg.price_eur * guests * days; break
+        case 'per_boat':   totalEur = selectedPkg.price_eur * days;          break
+        case 'per_group':  totalEur = (selectedPkg.group_prices?.[String(guests)] ?? selectedPkg.price_eur) * days; break
+        default:           totalEur = selectedPkg.price_eur * guests * days;
+      }
+    } else {
+      totalEur = (experience.price_per_person_eur ?? 0) * guests * days
+    }
+
+    const commissionRate = guide.commission_rate ?? 0.10
+    const platformFeeEur = Math.round(totalEur * commissionRate * 100) / 100
+    const serviceFeeEur  = Math.min(Math.round(totalEur * 0.05 * 100) / 100, 50)
+    const guidePayoutEur = totalEur - platformFeeEur
+
+    const bookingFeeCents = Math.round((platformFeeEur + serviceFeeEur) * 100)
+
+    // 7. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
-      mode:                 'payment',
-      payment_method_types: ['card'],
-      customer_email:       booking.angler_email ?? undefined,
-      line_items: [
-        {
-          price_data: {
-            currency:     'eur',
-            product_data: {
-              name:        `${experienceTitle} — Booking fee`,
-              description: 'Platform & service fee to confirm your booking.',
-            },
-            unit_amount: bookingFeeCents,
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `Booking fee — ${experience.title}`,
+            description: `Platform commission (${Math.round(commissionRate * 100)}%) + service fee (5%, max €50)`,
           },
-          quantity: 1,
+          unit_amount: bookingFeeCents,
         },
-      ],
-      metadata:    { bookingId, guideId: booking.guide_id, paymentType: 'booking_fee' },
-      success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
-      cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
-      payment_intent_data: {
-        // No transfer_data — booking fee stays on FjordAnglers platform.
-        metadata: { bookingId, paymentType: 'booking_fee' },
+        quantity: 1,
+      }],
+      customer_email: user.email ?? undefined,
+      success_url: `${env.NEXT_PUBLIC_APP_URL}/book/${experience.id}/confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${env.NEXT_PUBLIC_APP_URL}/book/${experience.id}`,
+      metadata: {
+        experience_id:    experience.id,
+        guide_id:         guide.id,
+        angler_id:        user.id,
+        angler_email:     user.email ?? '',
+        angler_full_name: anglerName ?? '',
+        booking_date:     input.bookingDate,
+        date_to:          input.dateTo ?? '',
+        requested_dates:  JSON.stringify(input.requestedDates),
+        guests:           String(guests),
+        package_label:    input.packageLabel ?? '',
+        special_requests: input.specialRequests ?? '',
+        total_eur:        String(totalEur),
+        platform_fee_eur: String(platformFeeEur),
+        service_fee_eur:  String(serviceFeeEur),
+        commission_rate:  String(commissionRate),
+        guide_payout_eur: String(guidePayoutEur),
       },
     })
 
-    // Update DB with fresh checkout ID (overwrites the expired one)
-    await serviceClient
+    return { success: true, checkoutUrl: session.url! }
+
+  } catch (err) {
+    console.error('[bookings/createBookingCheckout] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+  }
+}
+
+// ─── finalizeBookingFromSession ───────────────────────────────────────────────
+
+export type FinalizeBookingResult =
+  | { success: true;  bookingId: string }
+  | { success: false; error: string }
+
+export async function finalizeBookingFromSession(
+  sessionId: string,
+): Promise<FinalizeBookingResult> {
+  try {
+    const session = await stripe.checkout.sessions.retrieve(sessionId)
+
+    if (session.payment_status !== 'paid') {
+      return { success: false, error: 'Payment not completed.' }
+    }
+
+    const svc = createServiceClient()
+
+    // Idempotency: return existing booking if already created
+    const { data: existing } = await svc
+      .from('bookings')
+      .select('id')
+      .eq('stripe_checkout_id', sessionId)
+      .maybeSingle()
+
+    if (existing != null) {
+      return { success: true, bookingId: existing.id }
+    }
+
+    // Parse metadata
+    const m = session.metadata ?? {}
+    const experienceId   = m.experience_id
+    const guideId        = m.guide_id
+    const anglerId       = m.angler_id
+    const anglerEmail    = m.angler_email ?? ''
+    const anglerName     = m.angler_full_name ?? ''
+    const bookingDate    = m.booking_date
+    const dateTo         = m.date_to || null
+    const requestedDates: string[] = m.requested_dates ? JSON.parse(m.requested_dates) : []
+    const guests         = parseInt(m.guests ?? '1', 10)
+    const packageLabel   = m.package_label || null
+    const specialReqs    = m.special_requests || null
+    const totalEur       = parseFloat(m.total_eur ?? '0')
+    const platformFeeEur = parseFloat(m.platform_fee_eur ?? '0')
+    const serviceFeeEur  = parseFloat(m.service_fee_eur ?? '0')
+    const commissionRate = parseFloat(m.commission_rate ?? '0.10')
+    const guidePayoutEur = parseFloat(m.guide_payout_eur ?? '0')
+
+    if (!experienceId || !guideId || !anglerId || !bookingDate) {
+      return { success: false, error: 'Invalid session metadata.' }
+    }
+
+    // Fetch experience title for emails
+    const { data: experience } = await svc
+      .from('experiences')
+      .select('title')
+      .eq('id', experienceId)
+      .single()
+
+    // Fetch guide for emails
+    const { data: guide } = await svc
+      .from('guides')
+      .select('full_name, user_id')
+      .eq('id', guideId)
+      .single()
+
+    // Insert booking
+    const { data: booking, error: insertError } = await svc
+      .from('bookings')
+      .insert({
+        source:             'direct',
+        status:             'pending',
+        experience_id:      experienceId,
+        guide_id:           guideId,
+        angler_id:          anglerId,
+        angler_email:       anglerEmail || null,
+        angler_full_name:   anglerName || null,
+        booking_date:       bookingDate,
+        date_to:            dateTo,
+        requested_dates:    requestedDates,
+        guests,
+        duration_option:    packageLabel,
+        total_eur:          totalEur,
+        platform_fee_eur:   platformFeeEur,
+        service_fee_eur:    serviceFeeEur,
+        guide_payout_eur:   guidePayoutEur,
+        commission_rate:    commissionRate,
+        special_requests:   specialReqs,
+        stripe_checkout_id: sessionId,
+      })
+      .select('id')
+      .single()
+
+    if (insertError != null || booking == null) {
+      console.error('[bookings/finalizeBookingFromSession] Insert error:', insertError)
+      return { success: false, error: 'Failed to create booking. Please try again.' }
+    }
+
+    // Send emails (fire-and-forget)
+    if (guide?.user_id != null) {
+      Promise.resolve(
+        svc.auth.admin
+          .getUserById(guide.user_id)
+          .then(({ data }) => {
+            const guideEmail = data.user?.email ?? null
+            if (guideEmail == null) return
+            return sendBookingRequestEmails({
+              guideEmail,
+              anglerEmail,
+              anglerName:      anglerName || 'Angler',
+              guideName:       guide.full_name ?? 'Your guide',
+              experienceTitle: experience?.title ?? '',
+              bookingId:       booking.id,
+              bookingDate,
+              dateTo,
+              requestedDates,
+              guests,
+              packageLabel,
+              totalEur,
+              specialRequests: specialReqs,
+            })
+          })
+      ).catch(err => console.error('[bookings/finalizeBookingFromSession] Email error:', err))
+    }
+
+    return { success: true, bookingId: booking.id }
+
+  } catch (err) {
+    console.error('[bookings/finalizeBookingFromSession] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+  }
+}
+
+// ─── Guide booking list type ───────────────────────────────────────────────────
+
+export type GuideBookingListItem = {
+  id: string
+  status: string
+  booking_date: string
+  date_to: string | null
+  requested_dates: string[] | null
+  guests: number
+  total_eur: number
+  guide_payout_eur: number
+  duration_option: string | null
+  angler_full_name: string | null
+  angler_email: string | null
+  special_requests: string | null
+  created_at: string
+  experience_title: string | null
+  experience_id: string | null
+}
+
+// ─── Angler booking list type ──────────────────────────────────────────────────
+
+export type AnglerBookingListItem = {
+  id: string
+  status: string
+  source: string
+  booking_date: string
+  date_to: string | null
+  requested_dates: string[] | null
+  confirmed_days: string[] | null
+  guests: number
+  total_eur: number
+  guide_payout_eur: number
+  platform_fee_eur: number
+  service_fee_eur: number
+  offer_price_eur: number | null
+  duration_option: string | null
+  created_at: string
+  confirmed_at: string | null
+  balance_paid_at: string | null
+  experience_title: string | null
+  experience_id: string | null
+  guide_name: string | null
+  guide_avatar: string | null
+  guide_id: string | null
+}
+
+// ─── Guide booking detail type ─────────────────────────────────────────────────
+
+export type GuideBookingDetail = {
+  id: string
+  status: string
+  source: string
+  booking_date: string
+  date_to: string | null
+  requested_dates: string[] | null
+  guests: number
+  total_eur: number
+  platform_fee_eur: number
+  service_fee_eur: number
+  guide_payout_eur: number
+  commission_rate: number
+  duration_option: string | null
+  angler_full_name: string | null
+  angler_email: string | null
+  special_requests: string | null
+  declined_reason: string | null
+  offer_details: string | null
+  offer_price_eur: number | null
+  offer_days: string[] | null
+  offer_date_from: string | null
+  offer_date_to: string | null
+  offer_meeting_lat: number | null
+  offer_meeting_lng: number | null
+  preferences: IcelandicPreferences | null
+  confirmed_at: string | null
+  declined_at: string | null
+  created_at: string
+  experience_title: string | null
+  experience_id: string | null
+}
+
+// ─── Angler booking detail type ────────────────────────────────────────────────
+
+export type AnglerBookingDetail = {
+  id: string
+  status: string
+  source: string
+  booking_date: string
+  date_to: string | null
+  requested_dates: string[] | null
+  guests: number
+  total_eur: number
+  platform_fee_eur: number
+  service_fee_eur: number
+  guide_payout_eur: number
+  duration_option: string | null
+  special_requests: string | null
+  declined_reason: string | null
+  offer_details: string | null
+  offer_price_eur: number | null
+  offer_days: string[] | null
+  offer_date_from: string | null
+  offer_date_to: string | null
+  offer_meeting_lat: number | null
+  offer_meeting_lng: number | null
+  confirmed_days: string[] | null
+  accepted_at: string | null
+  confirmed_at: string | null
+  declined_at: string | null
+  created_at: string
+  experience_title: string | null
+  experience_id: string | null
+  guide_name: string | null
+  guide_avatar: string | null
+  guide_id: string | null
+  guide_stripe_enabled: boolean
+  balance_paid_at: string | null
+  stripe_checkout_id: string | null
+}
+
+// ─── createIcelandicInquiry ────────────────────────────────────────────────────
+
+/**
+ * Icelandic Flow — angler sends an availability enquiry (not a direct booking).
+ *
+ * Stores in bookings table with source='inquiry', status='pending', total_eur=0.
+ * Custom field answers + period structure stored in preferences JSON.
+ * Emails both guide and angler on success.
+ */
+
+export type IcelandicInquiryInput = {
+  experienceId: string
+  periods: Array<{ from: string; to: string }>   // YYYY-MM-DD ranges
+  individualDates: string[]                        // extra individual dates
+  guests: number
+  /** { fieldId → answer } map from the guide's inquiry_form_config */
+  customAnswers: Record<string, string>
+  /** { fieldId → label } map — needed to produce readable email */
+  fieldLabels: Record<string, string>
+  notes: string | null
+  /** Angler's preferred trip duration ("Half day", "1 day", "2 days", etc.) */
+  durationPreference: string | null
+}
+
+export type IcelandicInquiryResult =
+  | { success: true;  inquiryId: string }
+  | { success: false; error: string }
+
+/** Structured preferences stored in bookings.preferences JSON for icelandic inquiries. */
+export type IcelandicPreferences = {
+  periods?:           Array<{ from: string; to: string }>
+  individualDates?:   string[]
+  customAnswers?:     Record<string, string>
+  durationPreference?: string | null
+}
+
+export async function createIcelandicInquiry(
+  input: IcelandicInquiryInput,
+): Promise<IcelandicInquiryResult> {
+  try {
+    const supabase = await createClient()
+
+    // 1. Auth check
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) {
+      return { success: false, error: 'Please sign in to send an enquiry.' }
+    }
+
+    // 2. Validate availability
+    if (input.periods.length === 0 && input.individualDates.length === 0) {
+      return { success: false, error: 'Please select at least one availability period or date.' }
+    }
+
+    // 3. Fetch experience (must be icelandic + published)
+    const { data: experience } = await supabase
+      .from('experiences')
+      .select('id, title, guide_id, booking_type, max_guests, published')
+      .eq('id', input.experienceId)
+      .eq('published', true)
+      .single()
+
+    if (experience == null) {
+      return { success: false, error: 'Experience not found or no longer available.' }
+    }
+    if (experience.booking_type !== 'icelandic') {
+      return { success: false, error: 'This experience does not accept enquiries via this form.' }
+    }
+
+    // 4. Fetch guide
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id, full_name, commission_rate, user_id')
+      .eq('id', experience.guide_id)
+      .single()
+
+    if (guide == null) {
+      return { success: false, error: 'Guide not found.' }
+    }
+
+    // 5. Fetch angler profile
+    const { data: anglerProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    const anglerName = anglerProfile?.full_name ?? ''
+    const guests = Math.max(1, Math.min(input.guests, experience.max_guests ?? 99))
+
+    // 6. Derive booking_date + date_to from periods + individualDates
+    const allFromDates = [
+      ...input.periods.map(p => p.from),
+      ...input.individualDates,
+    ].sort()
+    const allToDates = [
+      ...input.periods.map(p => p.to),
+      ...input.individualDates,
+    ].sort()
+
+    const bookingDate = allFromDates[0] ?? new Date().toISOString().slice(0, 10)
+    const dateTo      = allToDates[allToDates.length - 1] ?? null
+
+    // requested_dates = all individual dates within each period + individual dates
+    // Use noon timestamps + local date components to avoid UTC timezone off-by-one.
+    // Each period is expanded independently so non-contiguous ranges stay separate.
+    function expandPeriod(from: string, to: string): string[] {
+      const dates: string[] = []
+      const end = new Date(to   + 'T12:00:00')
+      let   cur = new Date(from + 'T12:00:00')
+      let   safety = 0
+      while (cur <= end && safety < 366) {
+        dates.push(
+          `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`
+        )
+        cur.setDate(cur.getDate() + 1)
+        safety++
+      }
+      return dates
+    }
+
+    const requestedDates = [
+      ...input.periods.flatMap(p => expandPeriod(p.from, p.to)),
+      ...input.individualDates,
+    ]
+      .filter((d, i, arr) => arr.indexOf(d) === i)
+      .sort()
+
+    // 7. Insert booking
+    // Use service client: same RLS restriction as createDirectBooking.
+    const { data: inquiry, error: insertError } = await createServiceClient()
+      .from('bookings')
+      .insert({
+        source:           'inquiry',
+        status:           'pending',
+        experience_id:    experience.id,
+        guide_id:         guide.id,
+        angler_id:        user.id,
+        angler_email:     user.email ?? null,
+        angler_full_name: anglerName || null,
+        booking_date:     bookingDate,
+        date_to:          dateTo,
+        requested_dates:  requestedDates,
+        guests,
+        total_eur:        0,
+        guide_payout_eur: 0,
+        platform_fee_eur: 0,
+        service_fee_eur:  0,
+        commission_rate:  guide.commission_rate ?? 0.10,
+        special_requests: input.notes ?? null,
+        preferences: {
+          periods:            input.periods,
+          individualDates:    input.individualDates,
+          customAnswers:      input.customAnswers,
+          durationPreference: input.durationPreference,
+        },
+      })
+      .select('id')
+      .single()
+
+    if (insertError != null || inquiry == null) {
+      console.error('[bookings/createIcelandicInquiry] Insert error:', insertError)
+      return { success: false, error: 'Failed to send enquiry. Please try again.' }
+    }
+
+    // 8. Build labeled answers for email (human-readable field labels)
+    const labeledAnswers = Object.entries(input.customAnswers)
+      .filter(([, answer]) => answer.trim() !== '')
+      .map(([fieldId, answer]) => ({
+        label:  input.fieldLabels[fieldId] ?? fieldId,
+        answer,
+      }))
+
+    // 9. Send emails (fire-and-forget)
+    if (guide.user_id != null) {
+      const serviceClient = createServiceClient()
+      serviceClient.auth.admin
+        .getUserById(guide.user_id)
+        .then(({ data }) => {
+          const guideEmail = data.user?.email ?? null
+          if (guideEmail == null) return
+
+          sendInquiryRequestEmails({
+            guideEmail,
+            anglerEmail:        user.email ?? '',
+            anglerName:         anglerName || 'Angler',
+            guideName:          guide.full_name ?? 'Your guide',
+            experienceTitle:    experience.title,
+            inquiryId:          inquiry.id,
+            periods:            input.periods,
+            individualDates:    input.individualDates,
+            guests,
+            labeledAnswers,
+            notes:              input.notes,
+            durationPreference: input.durationPreference,
+          }).catch(err => console.error('[bookings/createIcelandicInquiry] Email error:', err))
+        })
+        .catch(err => console.error('[bookings/createIcelandicInquiry] Guide email lookup error:', err))
+    }
+
+    return { success: true, inquiryId: inquiry.id }
+
+  } catch (err) {
+    console.error('[bookings/createIcelandicInquiry] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred. Please try again.' }
+  }
+}
+
+// ─── getGuideBookings ──────────────────────────────────────────────────────────
+
+export type GetGuideBookingsResult =
+  | { success: true;  bookings: GuideBookingListItem[] }
+  | { success: false; error: string }
+
+export async function getGuideBookings(): Promise<GetGuideBookingsResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    // Look up the guide row for this user
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (guide == null) return { success: false, error: 'Guide not found' }
+
+    const { data: rows, error } = await supabase
+      .from('bookings')
+      .select(`
+        id, status, booking_date, date_to, requested_dates,
+        guests, total_eur, guide_payout_eur, duration_option,
+        angler_full_name, angler_email, special_requests, created_at,
+        experience_id,
+        experiences ( title )
+      `)
+      .eq('guide_id', guide.id)
+      .order('created_at', { ascending: false })
+
+    if (error != null) {
+      console.error('[bookings/getGuideBookings] Query error:', error)
+      return { success: false, error: 'Failed to fetch bookings.' }
+    }
+
+    const bookings: GuideBookingListItem[] = (rows ?? []).map(r => {
+      const exp = r.experiences as { title: string } | null
+      return {
+        id:               r.id,
+        status:           r.status,
+        booking_date:     r.booking_date,
+        date_to:          r.date_to,
+        requested_dates:  r.requested_dates,
+        guests:           r.guests,
+        total_eur:        r.total_eur,
+        guide_payout_eur: r.guide_payout_eur,
+        duration_option:  r.duration_option,
+        angler_full_name: r.angler_full_name,
+        angler_email:     r.angler_email,
+        special_requests: r.special_requests,
+        created_at:       r.created_at,
+        experience_title: exp?.title ?? null,
+        experience_id:    r.experience_id,
+      }
+    })
+
+    return { success: true, bookings }
+
+  } catch (err) {
+    console.error('[bookings/getGuideBookings] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── getAnglerBookings ─────────────────────────────────────────────────────────
+
+export type GetAnglerBookingsResult =
+  | { success: true;  bookings: AnglerBookingListItem[] }
+  | { success: false; error: string }
+
+export async function getAnglerBookings(): Promise<GetAnglerBookingsResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    const { data: rows, error } = await supabase
+      .from('bookings')
+      .select(`
+        id, status, source, booking_date, date_to, requested_dates,
+        confirmed_days, guests, total_eur, guide_payout_eur,
+        platform_fee_eur, service_fee_eur,
+        offer_price_eur, duration_option, created_at, confirmed_at,
+        balance_paid_at,
+        experience_id, guide_id,
+        experiences ( title ),
+        guides ( full_name, avatar_url )
+      `)
+      .eq('angler_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error != null) {
+      console.error('[bookings/getAnglerBookings] Query error:', error)
+      return { success: false, error: 'Failed to fetch bookings.' }
+    }
+
+    const bookings: AnglerBookingListItem[] = (rows ?? []).map(r => {
+      const exp   = r.experiences as { title: string } | null
+      const guide = r.guides as { full_name: string; avatar_url: string | null } | null
+      return {
+        id:               r.id,
+        status:           r.status,
+        source:           r.source ?? 'direct',
+        booking_date:     r.booking_date,
+        date_to:          r.date_to,
+        requested_dates:  r.requested_dates,
+        confirmed_days:   r.confirmed_days,
+        guests:           r.guests,
+        total_eur:        r.total_eur,
+        guide_payout_eur: r.guide_payout_eur ?? 0,
+        platform_fee_eur: r.platform_fee_eur ?? 0,
+        service_fee_eur:  r.service_fee_eur ?? 0,
+        offer_price_eur:  r.offer_price_eur,
+        duration_option:  r.duration_option,
+        created_at:       r.created_at,
+        confirmed_at:     r.confirmed_at,
+        balance_paid_at:  r.balance_paid_at,
+        experience_title: exp?.title ?? null,
+        experience_id:    r.experience_id,
+        guide_name:       guide?.full_name ?? null,
+        guide_avatar:     guide?.avatar_url ?? null,
+        guide_id:         r.guide_id,
+      }
+    })
+
+    return { success: true, bookings }
+
+  } catch (err) {
+    console.error('[bookings/getAnglerBookings] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── getGuideBookingDetail ─────────────────────────────────────────────────────
+
+export type GetGuideBookingDetailResult =
+  | { success: true;  booking: GuideBookingDetail }
+  | { success: false; error: string }
+
+export async function getGuideBookingDetail(
+  bookingId: string,
+): Promise<GetGuideBookingDetailResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (guide == null) return { success: false, error: 'Guide not found' }
+
+    const { data: row, error } = await supabase
+      .from('bookings')
+      .select(`
+        id, status, source, booking_date, date_to, requested_dates,
+        guests, total_eur, platform_fee_eur, service_fee_eur, guide_payout_eur,
+        commission_rate, duration_option, angler_full_name, angler_email,
+        special_requests, declined_reason, offer_details,
+        offer_price_eur, offer_days, offer_date_from, offer_date_to,
+        offer_meeting_lat, offer_meeting_lng, preferences,
+        confirmed_at, declined_at, created_at,
+        experience_id,
+        experiences ( title )
+      `)
+      .eq('id', bookingId)
+      .eq('guide_id', guide.id)
+      .single()
+
+    if (error != null || row == null) {
+      return { success: false, error: 'Booking not found.' }
+    }
+
+    const exp = row.experiences as { title: string } | null
+
+    const booking: GuideBookingDetail = {
+      id:               row.id,
+      status:           row.status,
+      source:           row.source,
+      booking_date:     row.booking_date,
+      date_to:          row.date_to,
+      requested_dates:  row.requested_dates,
+      guests:           row.guests,
+      total_eur:        row.total_eur,
+      platform_fee_eur: row.platform_fee_eur,
+      service_fee_eur:  row.service_fee_eur,
+      guide_payout_eur: row.guide_payout_eur,
+      commission_rate:  row.commission_rate,
+      duration_option:  row.duration_option,
+      angler_full_name: row.angler_full_name,
+      angler_email:     row.angler_email,
+      special_requests: row.special_requests,
+      declined_reason:  row.declined_reason,
+      offer_details:    row.offer_details,
+      offer_price_eur:  row.offer_price_eur,
+      offer_days:       row.offer_days,
+      offer_date_from:  row.offer_date_from,
+      offer_date_to:    row.offer_date_to,
+      offer_meeting_lat: row.offer_meeting_lat,
+      offer_meeting_lng: row.offer_meeting_lng,
+      preferences:      (row.preferences as IcelandicPreferences | null) ?? null,
+      confirmed_at:     row.confirmed_at,
+      declined_at:      row.declined_at,
+      created_at:       row.created_at,
+      experience_title: exp?.title ?? null,
+      experience_id:    row.experience_id,
+    }
+
+    return { success: true, booking }
+
+  } catch (err) {
+    console.error('[bookings/getGuideBookingDetail] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── getAnglerBookingDetail ────────────────────────────────────────────────────
+
+export type GetAnglerBookingDetailResult =
+  | { success: true;  booking: AnglerBookingDetail }
+  | { success: false; error: string }
+
+export async function getAnglerBookingDetail(
+  bookingId: string,
+): Promise<GetAnglerBookingDetailResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    const { data: row, error } = await supabase
+      .from('bookings')
+      .select(`
+        id, status, source, booking_date, date_to, requested_dates,
+        guests, total_eur, platform_fee_eur, service_fee_eur, guide_payout_eur,
+        duration_option, special_requests, declined_reason, offer_details,
+        offer_price_eur, offer_days, offer_date_from, offer_date_to,
+        offer_meeting_lat, offer_meeting_lng,
+        confirmed_days,
+        accepted_at, confirmed_at, declined_at, created_at,
+        balance_paid_at, stripe_checkout_id,
+        experience_id, guide_id,
+        experiences ( title ),
+        guides ( full_name, avatar_url, stripe_charges_enabled )
+      `)
+      .eq('id', bookingId)
+      .eq('angler_id', user.id)
+      .single()
+
+    if (error != null || row == null) {
+      return { success: false, error: 'Booking not found.' }
+    }
+
+    const exp   = row.experiences as { title: string } | null
+    const guide = row.guides as { full_name: string; avatar_url: string | null; stripe_charges_enabled: boolean | null } | null
+
+    const booking: AnglerBookingDetail = {
+      id:               row.id,
+      status:           row.status,
+      source:           row.source,
+      booking_date:     row.booking_date,
+      date_to:          row.date_to,
+      requested_dates:  row.requested_dates,
+      guests:           row.guests,
+      total_eur:        row.total_eur,
+      platform_fee_eur: row.platform_fee_eur,
+      service_fee_eur:  row.service_fee_eur,
+      guide_payout_eur: row.guide_payout_eur,
+      duration_option:  row.duration_option,
+      special_requests: row.special_requests,
+      declined_reason:  row.declined_reason,
+      offer_details:    row.offer_details,
+      offer_price_eur:  row.offer_price_eur,
+      offer_days:       row.offer_days,
+      offer_date_from:  row.offer_date_from,
+      offer_date_to:    row.offer_date_to,
+      offer_meeting_lat: row.offer_meeting_lat,
+      offer_meeting_lng: row.offer_meeting_lng,
+      confirmed_days:   row.confirmed_days,
+      accepted_at:      row.accepted_at,
+      confirmed_at:     row.confirmed_at,
+      declined_at:      row.declined_at,
+      created_at:       row.created_at,
+      experience_title: exp?.title ?? null,
+      experience_id:    row.experience_id,
+      guide_name:           guide?.full_name ?? null,
+      guide_avatar:         guide?.avatar_url ?? null,
+      guide_id:             row.guide_id,
+      guide_stripe_enabled: guide?.stripe_charges_enabled === true,
+      balance_paid_at:      row.balance_paid_at,
+      stripe_checkout_id:   row.stripe_checkout_id,
+    }
+
+    return { success: true, booking }
+
+  } catch (err) {
+    console.error('[bookings/getAnglerBookingDetail] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── confirmBooking ────────────────────────────────────────────────────────────
+
+export type ConfirmBookingResult =
+  | { success: true }
+  | { success: false; error: string }
+
+export async function confirmBooking(
+  bookingId: string,
+  data: {
+    message:         string
+    meetingLocation: string
+    meetingLat?:     number
+    meetingLng?:     number
+    /** Guide's confirmed/offered days (ISO strings). For direct bookings = angler's requested dates ± guide edits. */
+    selectedDates:   string[]
+    /** Guide-offered price (EUR). For icelandic inquiries. Pass 0 to keep existing total_eur. */
+    offeredPriceEur: number
+  },
+): Promise<ConfirmBookingResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    // Verify guide ownership
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id, full_name, user_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (guide == null) return { success: false, error: 'Guide not found' }
+
+    // Fetch the booking (must be pending + owned by this guide)
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, status, source, angler_email, angler_full_name, experience_id, booking_date, date_to, requested_dates, guests, duration_option, total_eur, commission_rate')
+      .eq('id', bookingId)
+      .eq('guide_id', guide.id)
+      .single()
+
+    if (booking == null) return { success: false, error: 'Booking not found.' }
+    if (booking.status !== 'pending') return { success: false, error: 'Booking is not in pending status.' }
+
+    // Fetch experience title
+    const { data: experience } = await supabase
+      .from('experiences')
+      .select('title')
+      .eq('id', booking.experience_id ?? '')
+      .single()
+
+    const isInquiry     = booking.source === 'inquiry'
+    const offeredDays   = [...data.selectedDates].sort()
+    const offerDateFrom = offeredDays[0] ?? null
+    const offerDateTo   = offeredDays[offeredDays.length - 1] ?? null
+    const now           = new Date().toISOString()
+
+    // For direct bookings: detect if guide changed the requested dates
+    const originalDates  = [...(booking.requested_dates ?? [booking.booking_date])].sort()
+    const datesChanged   = isInquiry ? false
+      : JSON.stringify(offeredDays) !== JSON.stringify(originalDates)
+
+    let updateError: { message?: string } | null = null
+    let isDirectConfirm = false  // true when booking is immediately confirmed
+
+    if (isInquiry || datesChanged) {
+      // ── Offer flow: angler must still approve (inquiry OR direct with changed dates) ──
+      // Compute offered price server-side for direct bookings with changed days.
+      const originalDays      = originalDates.length || 1
+      const newDays           = offeredDays.length || 1
+      const dailyRate         = booking.total_eur / originalDays
+      const computedOffer     = data.offeredPriceEur > 0
+        ? data.offeredPriceEur
+        : Math.round(dailyRate * newDays * 100) / 100
+
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          status:            'offer_sent',
+          offer_days:        offeredDays,
+          offer_date_from:   offerDateFrom,
+          offer_date_to:     offerDateTo,
+          offer_price_eur:   computedOffer,
+          offer_meeting_lat: data.meetingLat ?? null,
+          offer_meeting_lng: data.meetingLng ?? null,
+          offer_details: JSON.stringify({
+            message:         data.message.trim() || null,
+            meetingLocation: data.meetingLocation.trim() || null,
+          }),
+        })
+        .eq('id', bookingId)
+      updateError = error
+
+      // Email angler about the new offer
+      if (error == null && booking.angler_email != null) {
+        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        sendOfferSentEmail({
+          to:              booking.angler_email,
+          anglerName:      booking.angler_full_name ?? 'Angler',
+          guideName:       guide.full_name,
+          experienceTitle: experience?.title ?? 'Your trip',
+          bookingId:       booking.id,
+          offerDates:      offeredDays,
+          offerPriceEur:   computedOffer > 0 ? computedOffer : null,
+          bookingUrl:      `${baseUrl}/account/bookings/${booking.id}`,
+        }).catch(err => console.error('[bookings/confirmBooking] Offer email error:', err))
+      }
+    } else {
+      // ── Direct booking, same dates → confirm immediately ──
+      isDirectConfirm = true
+      const { error } = await supabase
+        .from('bookings')
+        .update({
+          status:              'confirmed',
+          confirmed_at:        now,
+          confirmed_days:      offeredDays,
+          confirmed_date_from: offerDateFrom,
+          confirmed_date_to:   offerDateTo,
+          offer_details: JSON.stringify({
+            message:         data.message.trim() || null,
+            meetingLocation: data.meetingLocation.trim() || null,
+            meetingLat:      data.meetingLat ?? null,
+            meetingLng:      data.meetingLng ?? null,
+          }),
+        })
+        .eq('id', bookingId)
+      updateError = error
+
+      // Block calendar dates (fire-and-forget):
+      // Prefer the calendar explicitly linked to this experience via calendar_experiences;
+      // fall back to the guide's first/general calendar so dates always show on the trip page.
+      if (offeredDays.length > 0 && booking.experience_id != null) {
+        const svc = createServiceClient()
+        ;(async () => {
+          const { data: calLink } = await svc
+            .from('calendar_experiences')
+            .select('calendar_id')
+            .eq('experience_id', booking.experience_id!)
+            .limit(1)
+            .single()
+
+          let calendarId: string | null = calLink?.calendar_id ?? null
+
+          // Fallback: guide's first general calendar
+          if (calendarId == null) {
+            const { data: fallback } = await svc
+              .from('guide_calendars')
+              .select('id')
+              .eq('guide_id', guide.id)
+              .limit(1)
+              .single()
+            calendarId = fallback?.id ?? null
+          }
+
+          if (calendarId == null) return
+
+          await svc.from('calendar_blocked_dates').insert(
+            offeredDays.map((d: string) => ({
+              calendar_id: calendarId!,
+              date_start:  d,
+              date_end:    d,
+              reason:      `Booking — ${bookingId.slice(0, 8).toUpperCase()}`,
+            }))
+          )
+        })().catch(err => console.error('[bookings/confirmBooking] Calendar block error:', err))
+      }
+    }
+
+    if (updateError != null) {
+      console.error('[bookings/confirmBooking] Update error:', updateError)
+      return { success: false, error: 'Failed to confirm booking. Please try again.' }
+    }
+
+    // Email angler on immediate direct confirm
+    if (isDirectConfirm && booking.angler_email != null) {
+      const baseUrl = env.NEXT_PUBLIC_APP_URL
+      sendBookingConfirmedEmail({
+        to:              booking.angler_email,
+        anglerName:      booking.angler_full_name ?? 'Angler',
+        guideName:       guide.full_name,
+        experienceTitle: experience?.title ?? 'Your trip',
+        bookingId:       booking.id,
+        bookingDate:     booking.booking_date,
+        dateTo:          booking.date_to,
+        requestedDates:  offeredDays,
+        guests:          booking.guests,
+        packageLabel:    booking.duration_option,
+        totalEur:        booking.total_eur,
+        guideMessage:    data.message.trim() || null,
+        meetingLocation: data.meetingLocation.trim() || null,
+        bookingUrl:      `${baseUrl}/account/bookings/${booking.id}`,
+      }).catch(err => console.error('[bookings/confirmBooking] Email error:', err))
+    }
+
+    return { success: true }
+
+  } catch (err) {
+    console.error('[bookings/confirmBooking] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── declineBooking ────────────────────────────────────────────────────────────
+
+export type DeclineBookingResult =
+  | { success: true }
+  | { success: false; error: string }
+
+export async function declineBooking(
+  bookingId: string,
+  data: { reason: string },
+): Promise<DeclineBookingResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    const { data: guide } = await supabase
+      .from('guides')
+      .select('id, full_name')
+      .eq('user_id', user.id)
+      .single()
+
+    if (guide == null) return { success: false, error: 'Guide not found' }
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, status, angler_email, angler_full_name, experience_id, booking_date')
+      .eq('id', bookingId)
+      .eq('guide_id', guide.id)
+      .single()
+
+    if (booking == null) return { success: false, error: 'Booking not found.' }
+    if (booking.status !== 'pending') return { success: false, error: 'Booking is not in pending status.' }
+
+    const { data: experience } = await supabase
+      .from('experiences')
+      .select('title')
+      .eq('id', booking.experience_id ?? '')
+      .single()
+
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status:          'declined',
+        declined_at:     new Date().toISOString(),
+        declined_reason: data.reason.trim() || null,
+      })
+      .eq('id', bookingId)
+
+    if (updateError != null) {
+      console.error('[bookings/declineBooking] Update error:', updateError)
+      return { success: false, error: 'Failed to decline booking. Please try again.' }
+    }
+
+    // Fire-and-forget email to angler
+    if (booking.angler_email != null) {
+      const baseUrl = env.NEXT_PUBLIC_APP_URL
+      sendBookingDeclinedEmail({
+        to:              booking.angler_email,
+        anglerName:      booking.angler_full_name ?? 'Angler',
+        guideName:       guide.full_name,
+        experienceTitle: experience?.title ?? 'Your trip',
+        bookingId:       booking.id,
+        declineReason:   data.reason.trim() || null,
+        bookingUrl:      `${baseUrl}/account/bookings/${booking.id}`,
+      }).catch(err => console.error('[bookings/declineBooking] Email error:', err))
+    }
+
+    return { success: true }
+
+  } catch (err) {
+    console.error('[bookings/declineBooking] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── acceptOffer ──────────────────────────────────────────────────────────────
+
+export type AcceptOfferResult =
+  | { success: true; checkoutUrl: string | null }
+  | { success: false; error: string }
+
+/**
+ * Angler accepts the guide's offer (icelandic flow).
+ * Status: offer_sent → offer_accepted.
+ * Copies offer_days → confirmed_days and updates total_eur + payout.
+ * Blocks guide's confirmed dates in their calendar (fire-and-forget).
+ */
+export async function acceptOffer(bookingId: string): Promise<AcceptOfferResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    // Fetch booking — must be offer_sent + owned by this angler
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, status, guide_id, experience_id, offer_price_eur, offer_days, commission_rate, angler_full_name, angler_email')
+      .eq('id', bookingId)
+      .eq('angler_id', user.id)
+      .single()
+
+    if (booking == null) return { success: false, error: 'Booking not found.' }
+    if (booking.status !== 'offer_sent') return { success: false, error: 'No offer to accept.' }
+
+    const offeredDays    = (booking.offer_days ?? []).sort()
+    const offerPriceEur  = booking.offer_price_eur ?? 0
+    const commissionRate = booking.commission_rate ?? 0.10
+
+    // Update booking to offer_accepted and finalise pricing
+    const serviceFeeEur = offerPriceEur > 0
+      ? Math.min(Math.round(offerPriceEur * 0.05 * 100) / 100, 50)
+      : 0
+
+    const priceUpdate = offerPriceEur > 0
+      ? {
+          total_eur:        offerPriceEur,
+          guide_payout_eur: Math.round(offerPriceEur * (1 - commissionRate) * 100) / 100,
+          platform_fee_eur: Math.round(offerPriceEur * commissionRate * 100) / 100,
+          service_fee_eur:  serviceFeeEur,
+        }
+      : {}
+
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status:              'confirmed',
+        accepted_at:         new Date().toISOString(),
+        confirmed_at:        new Date().toISOString(),
+        confirmed_days:      offeredDays,
+        confirmed_date_from: offeredDays[0] ?? null,
+        confirmed_date_to:   offeredDays[offeredDays.length - 1] ?? null,
+        ...priceUpdate,
+      })
+      .eq('id', bookingId)
+
+    if (updateError != null) {
+      console.error('[bookings/acceptOffer] Update error:', updateError)
+      return { success: false, error: 'Failed to accept offer. Please try again.' }
+    }
+
+    // Block calendar dates (fire-and-forget):
+    // Prefer the calendar explicitly linked to this experience via calendar_experiences;
+    // fall back to the guide's first/general calendar so dates always show on the trip page.
+    if (offeredDays.length > 0 && booking.experience_id != null && booking.guide_id != null) {
+      const svc = createServiceClient()
+      ;(async () => {
+        const { data: calLink } = await svc
+          .from('calendar_experiences')
+          .select('calendar_id')
+          .eq('experience_id', booking.experience_id!)
+          .limit(1)
+          .single()
+
+        let calendarId: string | null = calLink?.calendar_id ?? null
+
+        // Fallback: guide's first general calendar
+        if (calendarId == null) {
+          const { data: fallback } = await svc
+            .from('guide_calendars')
+            .select('id')
+            .eq('guide_id', booking.guide_id!)
+            .limit(1)
+            .single()
+          calendarId = fallback?.id ?? null
+        }
+
+        if (calendarId == null) return
+
+        await svc.from('calendar_blocked_dates').insert(
+          offeredDays.map((d: string) => ({
+            calendar_id: calendarId!,
+            date_start:  d,
+            date_end:    d,
+            reason:      `Trip confirmed — ${bookingId.slice(0, 8).toUpperCase()}`,
+          }))
+        )
+      })().catch(err => console.error('[bookings/acceptOffer] Calendar block error:', err))
+    }
+
+    // Email guide (fire-and-forget): fetch guide email + experience title
+    if (booking.guide_id != null) {
+      const svc2 = createServiceClient()
+      ;(async () => {
+        const [{ data: guideRow }, { data: expRow }] = await Promise.all([
+          svc2.from('guides').select('full_name, user_id').eq('id', booking.guide_id!).single(),
+          booking.experience_id != null
+            ? svc2.from('experiences').select('title').eq('id', booking.experience_id).single()
+            : Promise.resolve({ data: null }),
+        ])
+        if (guideRow?.user_id == null) return
+        const { data: authUser } = await svc2.auth.admin.getUserById(guideRow.user_id)
+        const guideEmail = authUser.user?.email ?? null
+        if (guideEmail == null) return
+        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        await sendOfferAcceptedEmail({
+          to:              guideEmail,
+          guideName:       guideRow.full_name ?? 'Guide',
+          anglerName:      booking.angler_full_name ?? 'Angler',
+          experienceTitle: (expRow as { title: string } | null)?.title ?? 'Your trip',
+          bookingId,
+          confirmedDates:  offeredDays,
+          bookingUrl:      `${baseUrl}/dashboard/bookings/${bookingId}`,
+        })
+      })().catch(err => console.error('[bookings/acceptOffer] Email error:', err))
+    }
+
+    // ── Stripe booking-fee checkout ──────────────────────────────────────────
+    // Charge angler the booking fee (platform commission + service fee) via Stripe.
+    // Tier B (Direct Payment): guide portion is paid directly angler → guide.
+    // Non-fatal: if Stripe fails, booking stays confirmed and angler can pay later
+    // from the booking detail page.
+    let checkoutUrl: string | null = null
+    if (offerPriceEur > 0) {
+      try {
+        const platformFeeEur  = Math.round(offerPriceEur * commissionRate * 100) / 100
+        const bookingFeeEur   = Math.round((platformFeeEur + serviceFeeEur) * 100) / 100
+        const bookingFeeCents = Math.round(bookingFeeEur * 100)
+
+        const svc3 = createServiceClient()
+        const { data: expRow } = await svc3
+          .from('experiences')
+          .select('title')
+          .eq('id', booking.experience_id ?? '')
+          .single()
+
+        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        const session = await stripe.checkout.sessions.create({
+          mode: 'payment',
+          line_items: [{
+            price_data: {
+              currency: 'eur',
+              product_data: {
+                name: `Booking fee — ${(expRow as { title: string } | null)?.title ?? 'Fishing trip'}`,
+                description: 'Platform commission + service fee (guide receives the rest directly)',
+              },
+              unit_amount: bookingFeeCents,
+            },
+            quantity: 1,
+          }],
+          success_url: `${baseUrl}/account/bookings/${bookingId}?payment=success`,
+          cancel_url:  `${baseUrl}/account/bookings/${bookingId}`,
+          metadata: {
+            booking_id:   bookingId,
+            payment_type: 'booking_fee',
+          },
+          customer_email: user.email ?? booking.angler_email ?? undefined,
+        })
+
+        if (session.url != null) {
+          checkoutUrl = session.url
+          // Store session ID (non-fatal if this update fails)
+          await supabase
+            .from('bookings')
+            .update({ stripe_checkout_id: session.id })
+            .eq('id', bookingId)
+        }
+      } catch (stripeErr) {
+        console.error('[bookings/acceptOffer] Stripe checkout error (non-fatal):', stripeErr)
+        // Booking is confirmed — angler can pay later from booking detail page
+      }
+    }
+
+    return { success: true, checkoutUrl }
+
+  } catch (err) {
+    console.error('[bookings/acceptOffer] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── declineOffer ─────────────────────────────────────────────────────────────
+
+export type DeclineOfferResult =
+  | { success: true }
+  | { success: false; error: string }
+
+/**
+ * Angler declines the guide's offer (icelandic flow).
+ * Status: offer_sent → declined.
+ */
+export async function declineOffer(
+  bookingId: string,
+  reason?: string,
+): Promise<DeclineOfferResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, status, guide_id, experience_id, angler_full_name')
+      .eq('id', bookingId)
+      .eq('angler_id', user.id)
+      .single()
+
+    if (booking == null) return { success: false, error: 'Booking not found.' }
+    if (booking.status !== 'offer_sent') return { success: false, error: 'No offer to decline.' }
+
+    const declineReason = reason?.trim() || null
+
+    const { error: updateError } = await supabase
+      .from('bookings')
+      .update({
+        status:          'declined',
+        declined_at:     new Date().toISOString(),
+        declined_reason: declineReason,
+      })
+      .eq('id', bookingId)
+
+    if (updateError != null) {
+      console.error('[bookings/declineOffer] Update error:', updateError)
+      return { success: false, error: 'Failed to decline offer. Please try again.' }
+    }
+
+    // Email guide (fire-and-forget)
+    if (booking.guide_id != null) {
+      const svc = createServiceClient()
+      ;(async () => {
+        const [{ data: guideRow }, { data: expRow }] = await Promise.all([
+          svc.from('guides').select('full_name, user_id').eq('id', booking.guide_id!).single(),
+          booking.experience_id != null
+            ? svc.from('experiences').select('title').eq('id', booking.experience_id).single()
+            : Promise.resolve({ data: null }),
+        ])
+        if (guideRow?.user_id == null) return
+        const { data: authUser } = await svc.auth.admin.getUserById(guideRow.user_id)
+        const guideEmail = authUser.user?.email ?? null
+        if (guideEmail == null) return
+        const baseUrl = env.NEXT_PUBLIC_APP_URL
+        await sendOfferDeclinedEmail({
+          to:              guideEmail,
+          guideName:       guideRow.full_name ?? 'Guide',
+          anglerName:      booking.angler_full_name ?? 'Angler',
+          experienceTitle: (expRow as { title: string } | null)?.title ?? 'Your trip',
+          bookingId,
+          declineReason,
+          bookingUrl:      `${baseUrl}/dashboard/bookings/${bookingId}`,
+        })
+      })().catch(err => console.error('[bookings/declineOffer] Email error:', err))
+    }
+
+    return { success: true }
+
+  } catch (err) {
+    console.error('[bookings/declineOffer] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
+  }
+}
+
+// ─── createBookingFeeCheckout ─────────────────────────────────────────────────
+
+export type CreateBookingFeeCheckoutResult =
+  | { success: true;  checkoutUrl: string }
+  | { success: false; error: string }
+
+/**
+ * Creates (or re-creates) a Stripe Checkout session for the booking fee
+ * (platform commission + service fee) on a confirmed Icelandic inquiry booking.
+ *
+ * Used as a fallback when the angler dismissed/cancelled the Stripe window that
+ * opened automatically after acceptOffer(), or navigated away before paying.
+ *
+ * Only callable by the booking's angler. Only works when:
+ *   - status === 'confirmed'
+ *   - balance_paid_at === null  (not yet paid)
+ *   - platform_fee_eur + service_fee_eur > 0
+ */
+export async function createBookingFeeCheckout(
+  bookingId: string,
+): Promise<CreateBookingFeeCheckoutResult> {
+  try {
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, status, platform_fee_eur, service_fee_eur, experience_id, angler_email, balance_paid_at')
+      .eq('id', bookingId)
+      .eq('angler_id', user.id)
+      .single()
+
+    if (booking == null)            return { success: false, error: 'Booking not found.' }
+    if (booking.status !== 'confirmed') return { success: false, error: 'Booking is not confirmed.' }
+    if (booking.balance_paid_at != null) return { success: false, error: 'Booking fee already paid.' }
+
+    const bookingFeeEur   = Math.round((booking.platform_fee_eur + booking.service_fee_eur) * 100) / 100
+    if (bookingFeeEur <= 0) return { success: false, error: 'No booking fee to pay.' }
+
+    const bookingFeeCents = Math.round(bookingFeeEur * 100)
+
+    const svc = createServiceClient()
+    const { data: expRow } = await svc
+      .from('experiences')
+      .select('title')
+      .eq('id', booking.experience_id ?? '')
+      .single()
+
+    const baseUrl = env.NEXT_PUBLIC_APP_URL
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [{
+        price_data: {
+          currency: 'eur',
+          product_data: {
+            name: `Booking fee — ${(expRow as { title: string } | null)?.title ?? 'Fishing trip'}`,
+            description: 'Platform commission + service fee (guide receives the rest directly)',
+          },
+          unit_amount: bookingFeeCents,
+        },
+        quantity: 1,
+      }],
+      success_url: `${baseUrl}/account/bookings/${bookingId}?payment=success`,
+      cancel_url:  `${baseUrl}/account/bookings/${bookingId}`,
+      metadata: {
+        booking_id:   bookingId,
+        payment_type: 'booking_fee',
+      },
+      customer_email: user.email ?? booking.angler_email ?? undefined,
+    })
+
+    if (session.url == null) return { success: false, error: 'Failed to create checkout session.' }
+
+    // Store session ID
+    await supabase
       .from('bookings')
       .update({ stripe_checkout_id: session.id })
       .eq('id', bookingId)
 
-    return { url: session.url! }
+    return { success: true, checkoutUrl: session.url }
+
   } catch (err) {
-    console.error('[renewDepositCheckout]', err)
-    return { error: 'Failed to create payment session — please try again.' }
+    console.error('[bookings/createBookingFeeCheckout] Error:', err)
+    return { success: false, error: 'Failed to create checkout session. Please try again.' }
   }
 }
 
-// ─── declineBooking ───────────────────────────────────────────────────────────
-//
-// Handles three states:
-//  'pending'  no payment     → just cancel (no money moved)
-//  'accepted' + checkout_id  → guide accepted, angler hasn't paid → expire Checkout session
-//  'confirmed'+ payment_intent → angler paid (destination charge) → refund + auto-reverses transfer
-//
-// Optional `alternatives.from / .to` — guide proposes new dates.
-// Auto-composes a chat message sent to the angler with the suggested window.
+// ─── BookingMessage type ───────────────────────────────────────────────────────
 
-export async function declineBooking(
+export type BookingMessage = {
+  id: string
+  booking_id: string
+  body: string
+  sender_id: string
+  sender_role: string | null
+  created_at: string
+  read_at: string | null
+}
+
+// ─── getBookingMessages ────────────────────────────────────────────────────────
+
+export type GetBookingMessagesResult =
+  | { success: true;  messages: BookingMessage[] }
+  | { success: false; error: string }
+
+export async function getBookingMessages(
   bookingId: string,
-  reason?: string,
-  alternatives?: { from: string; to: string },
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
+): Promise<GetBookingMessagesResult> {
+  try {
+    const supabase = await createClient()
 
-  const { data: guide } = await supabase
-    .from('guides')
-    .select('id, full_name')
-    .eq('user_id', user.id)
-    .single()
-  if (!guide) return { error: 'Guide profile not found.' }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
 
-  const serviceClient = createServiceClient()
+    // Fetch booking to verify access
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, guide_id, angler_id')
+      .eq('id', bookingId)
+      .single()
 
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, guide_id, angler_email, angler_full_name, stripe_checkout_id, stripe_payment_intent_id, experiences(title)')
-    .eq('id', bookingId)
-    .eq('guide_id', guide.id)
-    .single()
+    if (booking == null) return { success: false, error: 'Booking not found.' }
 
-  if (!booking) return { error: 'Booking not found.' }
-
-  const declineable = ['pending', 'reviewing', 'offer_sent', 'offer_accepted', 'accepted', 'confirmed']
-  if (!declineable.includes(booking.status)) {
-    return { error: 'This booking cannot be declined at its current status.' }
-  }
-
-  // ── Stripe cleanup ────────────────────────────────────────────────────────
-
-  if (booking.status === 'accepted' && booking.stripe_checkout_id) {
-    // Icelandic — guide accepted, angler hasn't paid yet → expire so they can't complete
-    try {
-      await stripe.checkout.sessions.expire(booking.stripe_checkout_id)
-    } catch (err) {
-      // Session may already be expired — not fatal
-      console.warn('[declineBooking] Could not expire checkout session:', err)
+    // Check access: must be the angler or the guide
+    let hasAccess = booking.angler_id === user.id
+    if (!hasAccess) {
+      const { data: guide } = await supabase
+        .from('guides')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+      hasAccess = guide != null && booking.guide_id === guide.id
     }
+    if (!hasAccess) return { success: false, error: 'Unauthorized' }
+
+    const { data: rows, error } = await supabase
+      .from('booking_messages')
+      .select('id, booking_id, body, sender_id, sender_role, created_at, read_at')
+      .eq('booking_id', bookingId)
+      .order('created_at', { ascending: true })
+
+    if (error != null) {
+      console.error('[bookings/getBookingMessages] Query error:', error)
+      return { success: false, error: 'Failed to fetch messages.' }
+    }
+
+    return { success: true, messages: rows ?? [] }
+
+  } catch (err) {
+    console.error('[bookings/getBookingMessages] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
   }
+}
 
-  // Track whether we issue a refund — determines the final booking status.
-  const didRefund = booking.status === 'confirmed' && booking.stripe_payment_intent_id != null
+// ─── sendBookingMessage ────────────────────────────────────────────────────────
 
-  if (didRefund) {
-    // Angler has paid — refund the Stripe charge.
-    // No reverse_transfer: current Checkout sessions have no transfer_data
-    // (full amount stays on platform), so reverse_transfer would error.
-    try {
-      await stripe.refunds.create({
-        payment_intent: booking.stripe_payment_intent_id!,
-        reason:         'requested_by_customer',
+export type SendBookingMessageResult =
+  | { success: true;  message: BookingMessage }
+  | { success: false; error: string }
+
+export async function sendBookingMessage(
+  bookingId: string,
+  body: string,
+): Promise<SendBookingMessageResult> {
+  try {
+    const trimmed = body.trim()
+    if (trimmed === '') return { success: false, error: 'Message cannot be empty.' }
+
+    const supabase = await createClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user == null) return { success: false, error: 'Unauthorized' }
+
+    // Fetch booking to verify access + determine sender role
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('id, guide_id, angler_id')
+      .eq('id', bookingId)
+      .single()
+
+    if (booking == null) return { success: false, error: 'Booking not found.' }
+
+    let senderRole: 'guide' | 'angler'
+
+    if (booking.angler_id === user.id) {
+      senderRole = 'angler'
+    } else {
+      const { data: guide } = await supabase
+        .from('guides')
+        .select('id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (guide != null && booking.guide_id === guide.id) {
+        senderRole = 'guide'
+      } else {
+        return { success: false, error: 'Unauthorized' }
+      }
+    }
+
+    const { data: message, error: insertError } = await createServiceClient()
+      .from('booking_messages')
+      .insert({
+        booking_id:  bookingId,
+        body:        trimmed,
+        sender_id:   user.id,
+        sender_role: senderRole,
       })
-    } catch (err) {
-      console.error('[declineBooking] Stripe refund error:', err)
-      return { error: 'Failed to refund payment — please contact support.' }
+      .select('id, booking_id, body, sender_id, sender_role, created_at, read_at')
+      .single()
+
+    if (insertError != null || message == null) {
+      console.error('[bookings/sendBookingMessage] Insert error:', insertError)
+      return { success: false, error: 'Failed to send message. Please try again.' }
     }
-  }
 
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({
-      // Use 'refunded' when money was returned so the angler sees the correct state.
-      // The charge.refunded webhook will also fire; idempotency guard there handles that.
-      status:          didRefund ? 'refunded' : 'declined',
-      declined_at:     new Date().toISOString(),
-      declined_reason: reason ?? null,
-    })
-    .eq('id', bookingId)
+    return { success: true, message }
 
-  if (error) {
-    console.error('[declineBooking]', error)
-    return { error: 'Failed to decline booking.' }
-  }
-
-  // ── Unblock calendar dates ─────────────────────────────────────────────────
-  unblockBookingDates(serviceClient, bookingId)
-    .catch(e => console.error('[declineBooking] unblockBookingDates:', e))
-
-  // ── Email to angler: "booking declined" ──────────────────────────────────
-  {
-    const anglerEmail = booking.angler_email as string | null
-    if (anglerEmail) {
-      const expTitle   = (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-      const altDates   = alternatives ? fmtEmailDateRange(alternatives.from, alternatives.to) : null
-      sendBookingDeclinedAnglerEmail({
-        to:               anglerEmail,
-        anglerName:       (booking.angler_full_name as string | null) ?? anglerEmail,
-        experienceTitle:  expTitle,
-        guideName:        (guide as unknown as { full_name?: string }).full_name ?? 'Your guide',
-        declinedReason:   reason?.trim() ?? null,
-        alternativeDates: altDates,
-        didRefund,
-        searchUrl:        `${await getAppUrl()}/guides`,
-      }).catch(e => console.error('[declineBooking] angler email:', e))
-    }
-  }
-
-  revalidatePath('/dashboard/bookings')
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
-  revalidatePath(`/account/bookings/${bookingId}`)
-  return {}
-}
-
-// ─── createBalanceCheckout ────────────────────────────────────────────────────
-//
-// Angler pays the remaining 70% balance via Stripe.
-// Manual payout model — full amount stays on platform; admin sends payout to guide.
-// Idempotency: if a balance checkout already exists and is open, returns its URL.
-
-export async function createBalanceCheckout(
-  bookingId: string,
-): Promise<{ url: string } | { error: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select(
-      'id, status, angler_id, total_eur, deposit_eur, angler_email, guide_id, balance_payment_method, balance_paid_at, balance_stripe_checkout_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
-    )
-    .eq('id', bookingId)
-    .eq('angler_id', user.id)
-    .eq('status', 'confirmed')
-    .single()
-
-  if (!booking) return { error: 'Booking not found or not ready for balance payment.' }
-  if (booking.balance_payment_method !== 'stripe') return { error: 'This booking uses cash payment.' }
-  if (booking.balance_paid_at != null) return { error: 'Balance already paid.' }
-
-  // Idempotency: if a Checkout session already exists and is still open, return its URL
-  if (booking.balance_stripe_checkout_id) {
-    try {
-      const existing = await stripe.checkout.sessions.retrieve(booking.balance_stripe_checkout_id)
-      if (existing.status === 'open' && existing.url) {
-        return { url: existing.url }
-      }
-    } catch {
-      // Session expired or invalid — fall through to create a new one
-    }
-  }
-
-  const experienceTitle =
-    (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-
-  const guideStripe = booking.guides as unknown as {
-    stripe_account_id:    string | null
-    stripe_payouts_enabled: boolean | null
-  } | null
-
-  // Guide has active Stripe Connect → balance goes directly to guide (application_fee
-  // was already taken in full on the deposit payment, so no second fee here).
-  const isStripeConnect =
-    guideStripe?.stripe_account_id != null && guideStripe.stripe_payouts_enabled === true
-
-  // Use the stored deposit amount — NOT a hardcoded percentage.
-  // deposit_eur is written at booking creation; fall back to 40% only for legacy rows.
-  const depositEur   = booking.deposit_eur ?? Math.round(booking.total_eur * 0.4 * 100) / 100
-  const balanceCents = Math.round((booking.total_eur - depositEur) * 100)
-
-  if (balanceCents < 100) {
-    return { error: 'Balance amount is too small to process via Stripe — please collect payment directly.' }
-  }
-
-  try {
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode:                 'payment',
-        payment_method_types: ['card'],
-        customer_email:       booking.angler_email ?? undefined,
-        line_items: [
-          {
-            price_data: {
-              currency:     'eur',
-              product_data: {
-                name:        `${experienceTitle} — Remaining Balance`,
-                description: 'Remaining balance for your confirmed fishing trip.',
-              },
-              unit_amount: balanceCents,
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: { bookingId, guideId: booking.guide_id, paymentType: 'balance' },
-        success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=balance_paid`,
-        cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
-        payment_intent_data: {
-          // stripe_connect: full balance → guide directly (platform fee already taken on deposit).
-          // manual: full amount stays on platform; guide was paid directly by angler already.
-          ...(isStripeConnect && guideStripe?.stripe_account_id
-            ? {
-                transfer_data: { destination: guideStripe.stripe_account_id },
-              }
-            : {}),
-          metadata: { bookingId, paymentType: 'balance' },
-        },
-      },
-      { idempotencyKey: `booking-balance-${bookingId}` },
-    )
-
-    await serviceClient
-      .from('bookings')
-      .update({ balance_stripe_checkout_id: session.id })
-      .eq('id', bookingId)
-
-    return { url: session.url! }
   } catch (err) {
-    console.error('[createBalanceCheckout]', err)
-    return { error: 'Failed to create payment session — please try again.' }
+    console.error('[bookings/sendBookingMessage] Unexpected error:', err)
+    return { success: false, error: 'An unexpected error occurred.' }
   }
-}
-
-// ─── markBalancePaid ──────────────────────────────────────────────────────────
-//
-// Guide confirms receipt of cash balance.
-// Only valid for confirmed bookings with balance_payment_method === 'cash'.
-
-export async function markBalancePaid(
-  bookingId: string,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const { data: guide } = await supabase
-    .from('guides')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-  if (!guide) return { error: 'Guide profile not found.' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, guide_id, angler_email, angler_full_name, guests, total_eur, balance_payment_method, balance_paid_at, confirmed_date_from, confirmed_date_to, confirmed_days, experiences(title), guides(full_name)')
-    .eq('id', bookingId)
-    .eq('guide_id', guide.id)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (booking.status !== 'confirmed') return { error: 'Only confirmed bookings can be marked as paid.' }
-  if (booking.balance_payment_method !== 'cash') return { error: 'This booking is set to Stripe payment — cannot mark manually.' }
-  if (booking.balance_paid_at != null) return { error: 'Balance already marked as paid.' }
-
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({
-      balance_paid_at: new Date().toISOString(),
-      status:          'completed',
-    })
-    .eq('id', bookingId)
-
-  if (error) {
-    console.error('[markBalancePaid]', error)
-    return { error: 'Failed to mark balance as paid.' }
-  }
-
-  // ── Email to angler: "trip fully paid" ────────────────────────────────────
-  {
-    const anglerEmail = booking.angler_email as string | null
-    if (anglerEmail) {
-      const confDays = booking.confirmed_days as string[] | null
-      const confirmedDatesLabel =
-        confDays && confDays.length > 0
-          ? fmtEmailDays(confDays)
-          : fmtEmailDateRange(
-              (booking.confirmed_date_from as string | null) ?? '',
-              (booking.confirmed_date_to   as string | null) ?? '',
-            )
-      const expTitle   = (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-      const guideData  = booking.guides as unknown as { full_name: string } | null
-
-      sendBalancePaidAnglerEmail({
-        to:               anglerEmail,
-        anglerName:       (booking.angler_full_name as string | null) ?? anglerEmail,
-        experienceTitle:  expTitle,
-        guideName:        guideData?.full_name ?? 'Your guide',
-        confirmedDates:   confirmedDatesLabel,
-        guests:           booking.guests as number,
-        totalEur:         booking.total_eur as number,
-        bookingUrl:       `${await getAppUrl()}/account/bookings/${bookingId}`,
-      }).catch(e => console.error('[markBalancePaid] angler email:', e))
-    }
-  }
-
-  revalidatePath('/dashboard/bookings')
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
-  return {}
-}
-
-// ─── markTripCompleted ────────────────────────────────────────────────────────
-//
-// Guide marks a confirmed booking as completed after the trip happened.
-// This is the trigger that lets admin release the payout from the admin panel.
-//
-// Only valid for confirmed bookings owned by the calling guide.
-
-export async function markTripCompleted(
-  bookingId: string,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const { data: guide } = await supabase
-    .from('guides')
-    .select('id')
-    .eq('user_id', user.id)
-    .single()
-  if (!guide) return { error: 'Guide profile not found.' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, guide_id')
-    .eq('id', bookingId)
-    .eq('guide_id', guide.id)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (booking.status === 'completed') return { error: 'Trip already marked as completed.' }
-  if (booking.status !== 'confirmed') return { error: 'Only confirmed bookings can be marked as completed.' }
-
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({
-      status:       'completed',
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', bookingId)
-
-  if (error) {
-    console.error('[markTripCompleted]', error)
-    return { error: 'Failed to mark trip as completed. Please try again.' }
-  }
-
-  revalidatePath('/dashboard/bookings')
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
-  return {}
-}
-
-// ─── mockConfirmDeposit ───────────────────────────────────────────────────────
-//
-// DEV / TEST ONLY — simulates the Stripe webhook that confirms a booking.
-// Directly sets status = 'confirmed' without any Stripe interaction.
-// Use this when guide has no Stripe account connected yet.
-
-export async function mockConfirmDeposit(
-  bookingId: string,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, angler_id')
-    .eq('id', bookingId)
-    .eq('angler_id', user.id)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (booking.status !== 'accepted') return { error: 'Booking must be in accepted state.' }
-
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({ status: 'confirmed' })
-    .eq('id', bookingId)
-
-  if (error) {
-    console.error('[mockConfirmDeposit]', error)
-    return { error: 'Failed to confirm booking.' }
-  }
-
-  revalidatePath('/account/bookings')
-  revalidatePath(`/account/bookings/${bookingId}`)
-  return {}
-}
-
-// ─── mockCompleteBalance ──────────────────────────────────────────────────────
-//
-// DEV / TEST ONLY — simulates balance payment without Stripe.
-// Directly sets status = 'completed' and balance_paid_at = now().
-
-export async function mockCompleteBalance(
-  bookingId: string,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, angler_id, balance_paid_at')
-    .eq('id', bookingId)
-    .eq('angler_id', user.id)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (booking.status !== 'confirmed') return { error: 'Booking must be in confirmed state.' }
-  if (booking.balance_paid_at != null) return { error: 'Balance already paid.' }
-
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({ status: 'completed', balance_paid_at: new Date().toISOString() })
-    .eq('id', bookingId)
-
-  if (error) {
-    console.error('[mockCompleteBalance]', error)
-    return { error: 'Failed to complete balance payment.' }
-  }
-
-  revalidatePath('/account/bookings')
-  revalidatePath(`/account/bookings/${bookingId}`)
-  return {}
-}
-
-// ─── updateBalancePaymentMethod ───────────────────────────────────────────────
-//
-// Guide sets their default balance payment method (stripe | cash).
-// Applied to future bookings when acceptBooking() is called.
-
-export async function updateBalancePaymentMethod(
-  method: 'stripe' | 'cash',
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  if (method !== 'stripe' && method !== 'cash') {
-    return { error: 'Invalid payment method.' }
-  }
-
-  const serviceClient = createServiceClient()
-  const { error } = await serviceClient
-    .from('guides')
-    .update({ default_balance_payment_method: method })
-    .eq('user_id', user.id)
-
-  if (error) {
-    console.error('[updateBalancePaymentMethod]', error)
-    return { error: 'Failed to update balance payment method.' }
-  }
-
-  revalidatePath('/dashboard/account')
-  return {}
-}
-
-// ─── updateGuideIban ──────────────────────────────────────────────────────────
-//
-// Guide saves their IBAN for the manual payment model.
-// Used when a guide hasn't connected Stripe (or is in an unsupported country).
-// Anglers are shown this IBAN after booking confirmation to pay the guide's net
-// amount directly (the platform fee is collected via Stripe Direct Charge).
-
-const updateGuideIbanSchema = z.object({
-  iban:             z.string().max(34).optional().nullable(),
-  iban_holder_name: z.string().max(100).optional().nullable(),
-  iban_bic:         z.string().max(11).optional().nullable(),
-  iban_bank_name:   z.string().max(100).optional().nullable(),
-})
-
-export async function updateGuideIban(
-  data: z.infer<typeof updateGuideIbanSchema>,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const parsed = updateGuideIbanSchema.safeParse(data)
-  if (!parsed.success) return { error: parsed.error.issues[0].message }
-
-  const serviceClient = createServiceClient()
-  const { error } = await serviceClient
-    .from('guides')
-    .update({
-      iban:             parsed.data.iban             != null ? encryptField(parsed.data.iban)             : null,
-      iban_holder_name: parsed.data.iban_holder_name != null ? encryptField(parsed.data.iban_holder_name) : null,
-      iban_bic:         parsed.data.iban_bic         != null ? encryptField(parsed.data.iban_bic)         : null,
-      iban_bank_name:   parsed.data.iban_bank_name   != null ? encryptField(parsed.data.iban_bank_name)   : null,
-    })
-    .eq('user_id', user.id)
-
-  if (error) {
-    console.error('[updateGuideIban]', error)
-    return { error: 'Failed to save bank details.' }
-  }
-
-  revalidatePath('/dashboard/account')
-  return {}
-}
-
-// ─── updateAcceptedPaymentMethods ─────────────────────────────────────────────
-//
-// Guide sets which payment methods they accept from anglers (cash, online/Stripe).
-// Multi-select — at least one must be selected.
-// Shown publicly on guide profile and trip pages.
-
-// ─── createGuideAmountCheckout ────────────────────────────────────────────────
-//
-// Creates a fresh Stripe Checkout session for the guide amount payment.
-// Only relevant when the guide has Stripe Connect active.
-//
-// Called on-demand when the angler clicks "Pay guide" on their booking page.
-// Idempotency: if a valid session already exists, returns its URL.
-//
-// The guide receives 100% of this payment — no application_fee_amount.
-// Platform fee was collected in full via the booking fee checkout (step 1).
-
-export async function createGuideAmountCheckout(
-  bookingId: string,
-): Promise<{ url: string } | { error: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select(
-      'id, status, angler_id, total_eur, guide_payout_eur, angler_email, guide_id, guide_amount_paid_at, guide_stripe_checkout_id, experiences(title), guides(stripe_account_id, stripe_payouts_enabled)',
-    )
-    .eq('id', bookingId)
-    .eq('angler_id', user.id)
-    .eq('status', 'confirmed')
-    .single()
-
-  if (!booking) return { error: 'Booking not found or not confirmed yet.' }
-  if (booking.guide_amount_paid_at != null) return { error: 'Guide amount already paid.' }
-
-  const guideStripe = booking.guides as unknown as {
-    stripe_account_id:    string | null
-    stripe_payouts_enabled: boolean | null
-  } | null
-
-  if (!guideStripe?.stripe_account_id || guideStripe.stripe_payouts_enabled !== true) {
-    return { error: 'This guide does not accept Stripe payments — please arrange payment directly.' }
-  }
-
-  // Idempotency: if we already have a valid open session, return its URL
-  if (booking.guide_stripe_checkout_id) {
-    try {
-      const existing = await stripe.checkout.sessions.retrieve(booking.guide_stripe_checkout_id)
-      if (existing.status === 'open' && existing.url) {
-        return { url: existing.url }
-      }
-    } catch {
-      // Session expired or invalid — fall through to create a new one
-    }
-  }
-
-  const experienceTitle =
-    (booking.experiences as unknown as { title: string } | null)?.title ?? 'Fishing Trip'
-
-  const guideAmountCents = Math.round((booking.guide_payout_eur ?? 0) * 100)
-  if (guideAmountCents < 100) {
-    return { error: 'Guide amount is too small to process via Stripe.' }
-  }
-
-  try {
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode:                 'payment',
-        payment_method_types: ['card'],
-        customer_email:       booking.angler_email ?? undefined,
-        line_items: [
-          {
-            price_data: {
-              currency:     'eur',
-              product_data: {
-                name:        `${experienceTitle} — Trip payment`,
-                description: 'Payment for your confirmed fishing trip, paid directly to your guide.',
-              },
-              unit_amount: guideAmountCents,
-            },
-            quantity: 1,
-          },
-        ],
-        metadata:    { bookingId, guideId: booking.guide_id ?? '', paymentType: 'guide_amount' },
-        success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=guide_paid`,
-        cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
-        payment_intent_data: {
-          // Transfer 100% to guide — no application_fee.
-          // Booking fee was already collected in step 1.
-          transfer_data: { destination: guideStripe.stripe_account_id },
-          metadata: { bookingId, paymentType: 'guide_amount' },
-        },
-      },
-      { idempotencyKey: `booking-guide-refresh-${bookingId}-${Date.now()}` },
-    )
-
-    await serviceClient
-      .from('bookings')
-      .update({ guide_stripe_checkout_id: session.id })
-      .eq('id', bookingId)
-
-    return { url: session.url! }
-  } catch (err) {
-    console.error('[createGuideAmountCheckout]', err)
-    return { error: 'Failed to create payment session — please try again.' }
-  }
-}
-
-// ─── shareIbanWithAngler ──────────────────────────────────────────────────────
-//
-// Guide shares their IBAN bank transfer details with the angler for a specific booking.
-// Sets iban_shared_at on the booking row — this is the signal that makes the
-// IBAN transfer details visible on the angler's booking page.
-//
-// Only valid for confirmed bookings where the guide has an IBAN saved.
-
-export async function shareIbanWithAngler(
-  bookingId: string,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const { data: guide } = await supabase
-    .from('guides')
-    .select('id, full_name, iban, iban_holder_name')
-    .eq('user_id', user.id)
-    .single()
-  if (!guide) return { error: 'Guide profile not found.' }
-
-  const guideIban       = decryptField(guide.iban)
-  const guideIbanHolder = decryptField(guide.iban_holder_name)
-
-  if (!guideIban || guideIban.trim() === '') {
-    return { error: 'No IBAN saved. Add your IBAN in account settings first.' }
-  }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, guide_id, iban_shared_at, guide_payout_eur')
-    .eq('id', bookingId)
-    .eq('guide_id', guide.id)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (!['accepted', 'offer_accepted', 'confirmed', 'completed'].includes(booking.status)) {
-    return { error: 'Can only share payment details after accepting the booking.' }
-  }
-  if (booking.iban_shared_at != null) {
-    // Already shared — idempotent, not an error
-    return {}
-  }
-
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({ iban_shared_at: new Date().toISOString() })
-    .eq('id', bookingId)
-
-  if (error) {
-    console.error('[shareIbanWithAngler]', error)
-    return { error: 'Failed to share payment details.' }
-  }
-
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
-  revalidatePath(`/account/bookings/${bookingId}`)
-  return {}
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// INQUIRY FLOW — source = 'inquiry'
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ─── createInquiryBooking ─────────────────────────────────────────────────────
-//
-// Angler submits a custom trip request (was: submitInquiry in inquiries.ts).
-// Creates a booking row with source='inquiry', status='pending'.
-// No payment at this stage — guide reviews and sends an offer.
-
-const createInquirySchema = z.object({
-  anglerName:       z.string().min(1, 'Name is required').max(100),
-  anglerEmail:      z.string().email('Valid email required'),
-  datesFrom:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
-  datesTo:          z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format'),
-  targetSpecies:    z.array(z.string()).min(1, 'Select at least one species'),
-  experienceLevel:  z.enum(['beginner', 'intermediate', 'expert']),
-  groupSize:        z.number().int().min(1).max(50),
-  preferences:      z.object({
-    durationType:         z.enum(['half_day', 'full_day', 'multi_day']).optional(),
-    numDays:              z.number().int().min(1).max(30).optional(),
-    flexibleDates:        z.boolean().optional(),
-    preferredMonths:      z.array(z.string()).optional(),
-    hasBeginners:         z.boolean().optional(),
-    hasChildren:          z.boolean().optional(),
-    gearNeeded:           z.enum(['own', 'need_some', 'need_all']).optional(),
-    accommodation:        z.union([z.boolean(), z.enum(['needed', 'not_needed', 'flexible'])]).optional(),
-    transport:            z.enum(['need_pickup', 'self_drive', 'flexible']).optional(),
-    boatPreference:       z.string().max(200).optional(),
-    dietaryRestrictions:  z.string().max(500).optional(),
-    stayingAt:            z.string().max(200).optional(),
-    photographyPackage:   z.boolean().optional(),
-    regionExperience:     z.string().max(500).optional(),
-    budgetMin:            z.number().optional(),
-    budgetMax:            z.number().optional(),
-    allDatePeriods:       z.array(z.object({
-      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-      to:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    })).optional(),
-    selectedPackageLabel: z.string().max(200).optional(),
-    riverType:            z.string().optional(),
-    notes:                z.string().max(2000).optional(),
-  }).default({}),
-  guideId:      z.string().uuid().optional(),
-  // When inquiry is started from a specific trip page ("Message the guide first"
-  // or Icelandic flow), pin the booking to that experience so calendar blocking
-  // stays scoped to the right calendar and the angler sees trip details.
-  experienceId: z.string().uuid().optional(),
-})
-
-export async function createInquiryBooking(
-  formData: z.infer<typeof createInquirySchema>,
-): Promise<{ bookingId: string } | { error: string }> {
-  const parsed = createInquirySchema.safeParse(formData)
-  if (!parsed.success) return { error: parsed.error.issues[0].message }
-
-  const {
-    anglerName, anglerEmail, datesFrom, datesTo,
-    targetSpecies, experienceLevel, groupSize, preferences, guideId, experienceId,
-  } = parsed.data
-
-  if (datesFrom > datesTo) return { error: 'Start date must be before end date.' }
-
-  // Expand all selected periods into individual dates so downstream logic
-  // (sendOffer blocking, acceptBooking blocking) never has to guess the
-  // "envelope" range. Deduplication + sort for clean storage.
-  const allPeriods = preferences.allDatePeriods
-  const requestedDates: string[] = allPeriods != null && allPeriods.length > 0
-    ? [...new Set(
-        allPeriods.flatMap(p => expandBookingDateRange(p.from, p.to)),
-      )].sort()
-    : expandBookingDateRange(datesFrom, datesTo)
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'You must be signed in to send an inquiry.' }
-
-  const serviceClient = createServiceClient()
-  const { data: booking, error } = await serviceClient
-    .from('bookings')
-    .insert({
-      source:            'inquiry',
-      angler_id:         user.id,
-      angler_email:      anglerEmail,
-      angler_full_name:  anglerName,
-      booking_date:      datesFrom,
-      date_to:           datesTo,
-      // All individual dates the angler is available — avoids envelope problem
-      // where datesFrom/datesTo would otherwise span non-selected days.
-      requested_dates:   requestedDates.length > 0 ? requestedDates : null,
-      guests:            groupSize,
-      target_species:    targetSpecies,
-      experience_level:  experienceLevel,
-      preferences:       preferences as unknown as Json,
-      guide_id:          guideId      ?? null,
-      experience_id:     experienceId ?? null,
-      status:            'pending',
-      total_eur:         0,
-      platform_fee_eur:  0,
-      guide_payout_eur:  0,
-    })
-    .select('id')
-    .single()
-
-  if (error || !booking) {
-    console.error('[createInquiryBooking]', error)
-    return { error: 'Failed to submit inquiry. Please try again.' }
-  }
-
-
-  // ── Fire-and-forget emails ────────────────────────────────────────────────
-  {
-    const appUrl   = await getAppUrl()
-    const datesLbl = fmtEmailDateRange(datesFrom, datesTo)
-    const budgetLbl = preferences.budgetMin != null || preferences.budgetMax != null
-      ? [
-          preferences.budgetMin  != null ? `€${preferences.budgetMin}`  : null,
-          preferences.budgetMax != null ? `€${preferences.budgetMax}` : null,
-        ].filter(Boolean).join('–')
-      : null
-
-    // To angler — "request sent"
-    // Guide name is available only if guideId is known
-    let guideNameForEmail = 'your guide'
-    if (guideId) {
-      const { data: guideRow } = await serviceClient.from('guides').select('full_name').eq('id', guideId).single()
-      if (guideRow?.full_name) guideNameForEmail = guideRow.full_name
-    }
-
-    sendInquiryReceivedAnglerEmail({
-      to:        anglerEmail,
-      anglerName,
-      guideName: guideNameForEmail,
-      datesLabel: datesLbl,
-      species:   targetSpecies,
-      guests:    groupSize,
-      notes:     preferences.notes ?? null,
-      tripUrl:   `${appUrl}/account/trips/${booking.id}`,
-    }).catch(e => console.error('[createInquiryBooking] angler email:', e))
-
-    // To guide — "new inquiry request"
-    if (guideId) {
-      serviceClient.auth.admin
-        .getUserById(
-          await serviceClient.from('guides').select('user_id').eq('id', guideId).single()
-            .then(r => (r.data?.user_id as string | null) ?? ''),
-        )
-        .then(({ data }) => {
-          const guideEmail = data.user?.email
-          if (!guideEmail) return
-          return sendInquiryReceivedGuideEmail({
-            to:               guideEmail,
-            guideName:        guideNameForEmail,
-            anglerName,
-            anglerEmail,
-            anglerCountry:    null,  // inquiry form doesn't collect country
-            datesLabel:       datesLbl,
-            species:          targetSpecies,
-            guests:           groupSize,
-            experienceLevel,
-            budget:           budgetLbl,
-            notes:            preferences.notes ?? null,
-            inquiryUrl:       `${appUrl}/dashboard/bookings/${booking.id}`,
-          })
-        })
-        .catch(e => console.error('[createInquiryBooking] guide email:', e))
-    }
-  }
-
-  revalidatePath('/dashboard/bookings')
-  return { bookingId: booking.id }
-}
-
-// ─── markBookingReviewing ──────────────────────────────────────────────────────
-//
-// Guide opens an inquiry booking — auto-advance status from 'pending' → 'reviewing'.
-// Called server-side when the guide navigates to /dashboard/bookings/[id].
-
-export async function markBookingReviewing(
-  bookingId: string,
-): Promise<void> {
-  const serviceClient = createServiceClient()
-  await serviceClient
-    .from('bookings')
-    .update({ status: 'reviewing' })
-    .eq('id', bookingId)
-    .eq('status', 'pending')
-    .eq('source', 'inquiry')
-  // Errors are non-fatal — page renders regardless
-}
-
-// ─── sendOffer ────────────────────────────────────────────────────────────────
-//
-// Guide sends a priced offer for an inquiry booking.
-// Was: sendOfferByGuide() in inquiries.ts
-//
-// Status: pending | reviewing → offer_sent
-
-const sendOfferSchema = z.object({
-  assignedRiver:     z.string().min(1, 'Location is required'),
-  offerPriceMinEur:  z.number().positive().optional(),
-  offerPriceEur:     z.number().positive().optional(),
-  offerPriceTiers:   z.array(z.object({
-    anglers:  z.number().int().min(1),
-    priceEur: z.number().positive(),
-  })).optional(),
-  offerDetails:  z.string().min(1, 'Please provide offer details'),
-  offerDateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  offerDateTo:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  offerDays:     z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
-  offerMeetingLat: z.number().optional(),
-  offerMeetingLng: z.number().optional(),
-})
-
-export async function sendOffer(
-  bookingId: string,
-  offer: z.infer<typeof sendOfferSchema>,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  const { data: guide } = await supabase
-    .from('guides')
-    .select('id, full_name')
-    .eq('user_id', user.id)
-    .single()
-  if (!guide) return { error: 'Guide profile not found.' }
-
-  const hasTiers = offer.offerPriceTiers != null && offer.offerPriceTiers.length > 0
-
-  if (hasTiers) {
-    const tiersErr = validatePriceTiers(offer.offerPriceTiers!)
-    if (tiersErr) return { error: tiersErr }
-  } else {
-    if (!offer.offerPriceEur || offer.offerPriceEur <= 0) {
-      return { error: 'Enter a valid offer price.' }
-    }
-    if (offer.offerPriceMinEur != null && offer.offerPriceMinEur >= offer.offerPriceEur) {
-      return { error: 'Minimum price must be less than the maximum price.' }
-    }
-  }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, guide_id, status, source, guests, requested_dates, angler_email, angler_full_name, booking_date, date_to')
-    .eq('id', bookingId)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-  if (booking.source !== 'inquiry') return { error: 'Only inquiry bookings can receive an offer.' }
-  if (booking.guide_id !== null && booking.guide_id !== guide.id) {
-    return { error: 'You are not authorized to send an offer for this booking.' }
-  }
-  if (booking.status !== 'pending' && booking.status !== 'reviewing') {
-    return { error: 'An offer can only be sent for bookings in pending or reviewing status.' }
-  }
-
-  const effectivePriceEur = hasTiers
-    ? findApplicableTierPrice(offer.offerPriceTiers!, booking.guests)
-    : (offer.offerPriceEur ?? 0)
-
-  const { error: updateError } = await serviceClient
-    .from('bookings')
-    .update({
-      status:              'offer_sent',
-      guide_id:            guide.id,
-      assigned_river:      offer.assignedRiver,
-      offer_price_min_eur: hasTiers ? null : (offer.offerPriceMinEur ?? null),
-      offer_price_eur:     effectivePriceEur,
-      offer_price_tiers:   hasTiers ? (offer.offerPriceTiers as unknown as Json) : null,
-      offer_details:       offer.offerDetails,
-      offer_date_from:     offer.offerDateFrom ?? null,
-      offer_date_to:       offer.offerDateTo   ?? null,
-      offer_days:          offer.offerDays     ?? null,
-      offer_meeting_lat:   offer.offerMeetingLat ?? null,
-      offer_meeting_lng:   offer.offerMeetingLng ?? null,
-    })
-    .eq('id', bookingId)
-
-  if (updateError) {
-    console.error('[sendOffer]', updateError)
-    return { error: 'Failed to send offer. Please try again.' }
-  }
-
-  // NOTE: calendar blocking happens at acceptBookingOffer() when the angler confirms —
-  // the same as acceptBooking() for direct bookings. Sending an offer is not yet a
-  // commitment — the angler may decline. Blocking at this stage would cause false
-  // unavailability on the calendar.
-
-
-  // ── Email to angler: "you have a new offer" ───────────────────────────────
-  {
-    const anglerEmail = booking.angler_email as string | null
-    if (anglerEmail) {
-      // Build offer dates label: specific days > date range > booking window
-      const offerDatesLabel = (() => {
-        if (offer.offerDays && offer.offerDays.length > 0) return fmtEmailDays(offer.offerDays)
-        if (offer.offerDateFrom)
-          return fmtEmailDateRange(offer.offerDateFrom, offer.offerDateTo ?? offer.offerDateFrom)
-        return fmtEmailDateRange(
-          booking.booking_date as string ?? '',
-          (booking.date_to as string | null) ?? (booking.booking_date as string ?? ''),
-        )
-      })()
-
-      sendOfferReceivedAnglerEmail({
-        to:           anglerEmail,
-        anglerName:   (booking.angler_full_name as string | null) ?? anglerEmail,
-        guideName:    (guide as unknown as { full_name?: string }).full_name ?? 'Your guide',
-        location:     offer.assignedRiver,
-        offerDates:   offerDatesLabel,
-        priceEur:     effectivePriceEur,
-        offerDetails: offer.offerDetails,
-        offerUrl:     `${await getAppUrl()}/account/trips/${bookingId}`,
-      }).catch(e => console.error('[sendOffer] angler email:', e))
-    }
-  }
-
-  revalidatePath('/dashboard/bookings')
-  revalidatePath(`/dashboard/bookings/${bookingId}`)
-  return {}
-}
-
-// ─── acceptBookingOffer ───────────────────────────────────────────────────────
-//
-// Angler accepts a guide's offer → creates Stripe Checkout for full payment.
-// Was: acceptOffer() in inquiries.ts
-//
-// Status: offer_sent → offer_accepted → (webhook) → confirmed
-
-export async function acceptBookingOffer(
-  bookingId: string,
-): Promise<{ checkoutUrl: string } | { error: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Please sign in to accept this offer.' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('*, guides(id, user_id, full_name, stripe_account_id, stripe_payouts_enabled, commission_rate)')
-    .eq('id', bookingId)
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-  const userEmail = authUser?.email
-  const isOwner =
-    booking.angler_id === user.id ||
-    (userEmail != null && booking.angler_email === userEmail)
-
-  if (!isOwner) return { error: 'You do not have permission to accept this offer.' }
-  if (booking.status !== 'offer_sent') return { error: 'No pending offer to accept.' }
-  if (!booking.offer_price_eur && !booking.offer_price_tiers) return { error: 'No offer price set.' }
-
-  const rawTiers = booking.offer_price_tiers as PriceTier[] | null
-  const effectiveOfferPrice =
-    rawTiers != null && rawTiers.length > 0
-      ? findApplicableTierPrice(rawTiers, booking.guests)
-      : (booking.offer_price_eur ?? 0)
-
-  if (effectiveOfferPrice <= 0) return { error: 'No valid offer price set.' }
-  if (effectiveOfferPrice < 1) return { error: 'Offer price must be at least €1 to process via Stripe.' }
-
-  const guide = booking.guides as unknown as {
-    id: string
-    user_id: string | null
-    full_name: string
-    stripe_account_id: string | null
-    stripe_payouts_enabled: boolean
-    commission_rate: number
-  } | null
-
-  // ── Compute confirmed days from offer (before Stripe, before blocking) ───────
-  //
-  // offer_days  = guide explicitly picked individual days (non-consecutive safe).
-  // offer_date_from/to = envelope dates (may span non-trip days).
-  //
-  // Rule: always prefer the specific days array over the envelope.
-  // confirmedDaysForOffer is the canonical array written to confirmed_days column.
-  const offerDaysRaw = booking.offer_days as string[] | null
-  const confirmedDaysForOffer: string[] =
-    offerDaysRaw != null && offerDaysRaw.length > 0
-      ? offerDaysRaw
-      : expandBookingDateRange(
-          booking.offer_date_from as string | null,
-          booking.offer_date_to   as string | null,
-        )
-
-  const confirmedFromOffer = confirmedDaysForOffer[0]                               ?? booking.offer_date_from ?? null
-  const confirmedToOffer   = confirmedDaysForOffer[confirmedDaysForOffer.length - 1] ?? booking.offer_date_to   ?? null
-
-  // Mark as offer_accepted
-  await serviceClient
-    .from('bookings')
-    .update({ status: 'offer_accepted' })
-    .eq('id', bookingId)
-
-  // ── Block calendar dates ───────────────────────────────────────────────────
-  // Exact same trigger as acceptBooking() for direct bookings.
-  // Angler accepted the offer → dates are committed → block the calendar.
-  // Inquiry bookings have no experience_id → blockBookingDates blocks ALL guide calendars.
-  {
-    const offerDays   = booking.offer_days as string[] | null
-    const daysToBlock =
-      offerDays != null && offerDays.length > 0
-        ? offerDays
-        : expandBookingDateRange(
-            booking.offer_date_from as string | null,
-            booking.offer_date_to   as string | null,
-          )
-
-    const guideIdForBlock = (booking.guide_id as string | null) ?? guide?.id ?? ''
-    if (daysToBlock.length > 0 && guideIdForBlock) {
-      blockBookingDates(
-        serviceClient,
-        bookingId,
-        guideIdForBlock,
-        daysToBlock,
-        (booking.experience_id as string | null) ?? undefined,
-      ).catch(e => console.error('[acceptBookingOffer] blockBookingDates:', e))
-    }
-  }
-
-  // Guide has Stripe → two-step payment model (same as acceptBooking for direct flow):
-  //
-  //   Step 1 — Booking fee (commission + service_fee):
-  //     No transfer_data — money stays on FjordAnglers platform account.
-  //
-  //   Step 2 — Guide amount (guide_price − commission):
-  //     transfer_data → guide's connected account.
-  //     No application_fee — guide receives 100% of this session.
-  //
-  // Fee model:
-  //   - effectiveOfferPrice = guide's quoted price (their subtotal)
-  //   - service fee (5%, capped €50) added ON TOP for angler
-  //   - commission deducted from guide's earnings
-  //   - Angler total = guide_price + service_fee
-  //   - Guide receives = guide_price − commission
-  if (guide?.stripe_account_id && guide.stripe_payouts_enabled) {
-    try {
-      const commissionRate  = guide.commission_rate ?? env.PLATFORM_COMMISSION_RATE
-      const SERVICE_FEE_CAP = 50
-      const serviceFeeEur   = Math.min(
-        Math.round(effectiveOfferPrice * 0.05 * 100) / 100,
-        SERVICE_FEE_CAP,
-      )
-      const commissionEur   = Math.round(effectiveOfferPrice * commissionRate * 100) / 100
-      const bookingFeeEur   = Math.round((commissionEur + serviceFeeEur) * 100) / 100
-      const guidePayoutEur  = Math.round((effectiveOfferPrice - commissionEur) * 100) / 100
-      const totalChargeEur  = Math.round((effectiveOfferPrice + serviceFeeEur) * 100) / 100
-
-      const appUrl = await getAppUrl()
-      const tripLabel = booking.assigned_river
-        ? `Fishing Trip — ${booking.assigned_river}`
-        : `Fishing Trip — ${guide.full_name}`
-
-      // ── Step 1: Booking fee ──────────────────────────────────────────────────
-      const session1 = await stripe.checkout.sessions.create(
-        {
-          mode:                 'payment',
-          payment_method_types: ['card'],
-          customer_email:       booking.angler_email ?? undefined,
-          line_items: [{
-            price_data: {
-              currency:     'eur',
-              product_data: {
-                name:        `${tripLabel} — Booking fee`,
-                description: 'Platform & service fee to confirm your booking.',
-              },
-              unit_amount: Math.round(bookingFeeEur * 100),
-            },
-            quantity: 1,
-          }],
-          metadata:    { bookingId, guideId: guide.id, paymentType: 'booking_fee' },
-          success_url: `${appUrl}/account/bookings/${bookingId}?status=paid`,
-          cancel_url:  `${appUrl}/account/bookings/${bookingId}`,
-          payment_intent_data: {
-            // No transfer_data — booking fee stays on FjordAnglers platform.
-            metadata: { bookingId, paymentType: 'booking_fee' },
-          },
-        },
-        { idempotencyKey: `offer-booking-fee-${bookingId}` },
-      )
-
-      // ── Step 2: Guide amount ─────────────────────────────────────────────────
-      let guideStripeCheckoutId: string | null = null
-      if (Math.round(guidePayoutEur * 100) >= 100) {
-        const session2 = await stripe.checkout.sessions.create(
-          {
-            mode:                 'payment',
-            payment_method_types: ['card'],
-            customer_email:       booking.angler_email ?? undefined,
-            line_items: [{
-              price_data: {
-                currency:     'eur',
-                product_data: {
-                  name:        `${tripLabel} — Trip payment`,
-                  description: 'Payment for your confirmed fishing trip, paid directly to your guide.',
-                },
-                unit_amount: Math.round(guidePayoutEur * 100),
-              },
-              quantity: 1,
-            }],
-            metadata:    { bookingId, guideId: guide.id, paymentType: 'guide_amount' },
-            success_url: `${appUrl}/account/bookings/${bookingId}?status=guide_paid`,
-            cancel_url:  `${appUrl}/account/bookings/${bookingId}`,
-            payment_intent_data: {
-              // Transfer 100% to guide's connected account — no application_fee.
-              transfer_data: { destination: guide.stripe_account_id },
-              metadata:      { bookingId, paymentType: 'guide_amount' },
-            },
-          },
-          { idempotencyKey: `offer-guide-amount-${bookingId}` },
-        )
-        guideStripeCheckoutId = session2.id
-      }
-
-      await serviceClient
-        .from('bookings')
-        .update({
-          stripe_checkout_id:       session1.id,
-          guide_stripe_checkout_id: guideStripeCheckoutId,
-          total_eur:                totalChargeEur,
-          service_fee_eur:          serviceFeeEur,
-          deposit_eur:              bookingFeeEur,   // booking fee = what angler pays now
-          platform_fee_eur:         bookingFeeEur,   // commission + service_fee
-          guide_payout_eur:         guidePayoutEur,
-          commission_rate:          commissionRate,
-          balance_payment_method:   'stripe',        // guide amount via Stripe session 2
-          confirmed_days:           confirmedDaysForOffer.length > 0 ? confirmedDaysForOffer : null,
-          confirmed_date_from:      confirmedFromOffer,
-          confirmed_date_to:        confirmedToOffer,
-        })
-        .eq('id', bookingId)
-
-      // Email to guide: "angler accepted offer — payment processing"
-      if (guide?.user_id) {
-        serviceClient.auth.admin.getUserById(guide.user_id)
-          .then(({ data }) => {
-            const guideEmail = data.user?.email
-            if (!guideEmail) return
-            return sendOfferAcceptedGuideEmail({
-              to:             guideEmail,
-              guideName:      guide.full_name,
-              anglerName:     (booking.angler_full_name as string | null) ?? (booking.angler_email ?? 'Angler'),
-              location:       (booking.assigned_river as string | null) ?? 'TBC',
-              confirmedDates: confirmedDaysForOffer.length > 0
-                ? fmtEmailDays(confirmedDaysForOffer)
-                : fmtEmailDateRange(confirmedFromOffer ?? '', confirmedToOffer ?? ''),
-              priceEur:       effectiveOfferPrice,
-              bookingUrl:     `${appUrl}/dashboard/bookings/${bookingId}`,
-            })
-          })
-          .catch(e => console.error('[acceptBookingOffer] guide email (stripe):', e))
-      }
-
-      return { checkoutUrl: session1.url! }
-    } catch (err) {
-      console.error('[acceptBookingOffer] Stripe error:', err)
-      // Revert to offer_sent
-      await serviceClient
-        .from('bookings')
-        .update({ status: 'offer_sent' })
-        .eq('id', bookingId)
-      return { error: 'Payment setup failed. Please try again.' }
-    }
-  }
-
-  // Guide without Stripe Connect → manual model.
-  // Angler pays the platform fee (commission + service fee) via Stripe Direct Charge.
-  // The remainder is paid by the angler directly to the guide (cash / IBAN).
-  const manualCommissionRate = guide?.commission_rate ?? env.PLATFORM_COMMISSION_RATE
-  const SERVICE_FEE_RATE     = 0.05
-  const SERVICE_FEE_CAP_EUR  = 50
-
-  const commissionEur  = Math.round(effectiveOfferPrice * manualCommissionRate * 100) / 100
-  const serviceFeeEur  = Math.min(
-    Math.round(effectiveOfferPrice * SERVICE_FEE_RATE * 100) / 100,
-    SERVICE_FEE_CAP_EUR,
-  )
-  const bookingFeeEur  = Math.round((commissionEur + serviceFeeEur) * 100) / 100
-  const guidePayoutEur = Math.round((effectiveOfferPrice - commissionEur) * 100) / 100
-
-  try {
-    const session = await stripe.checkout.sessions.create(
-      {
-        mode:                 'payment',
-        payment_method_types: ['card'],
-        customer_email:       booking.angler_email ?? undefined,
-        line_items: [{
-          price_data: {
-            currency:     'eur',
-            product_data: {
-              name: booking.assigned_river
-                ? `Booking fee — ${booking.assigned_river}`
-                : `Booking fee — ${guide?.full_name ?? 'Fishing Trip'}`,
-              description: [
-                confirmedDaysForOffer.length > 0
-                  ? `${confirmedDaysForOffer.length} day${confirmedDaysForOffer.length !== 1 ? 's' : ''}`
-                  : (confirmedFromOffer ?? null),
-                `${booking.guests} ${booking.guests === 1 ? 'angler' : 'anglers'}`,
-                `Remaining €${guidePayoutEur} paid directly to guide`,
-              ].filter(Boolean).join(' · '),
-            },
-            unit_amount: Math.round(bookingFeeEur * 100),
-          },
-          quantity: 1,
-        }],
-        metadata: { bookingId, guideId: guide?.id ?? '' },
-        success_url: `${await getAppUrl()}/account/bookings/${bookingId}?status=paid`,
-        cancel_url:  `${await getAppUrl()}/account/bookings/${bookingId}`,
-      },
-      { idempotencyKey: `offer-accept-${bookingId}` },
-    )
-
-    await serviceClient
-      .from('bookings')
-      .update({
-        stripe_checkout_id:  session.id,
-        // total_eur = full angler cost (guide price + service fee) so that
-        // balanceEur (total - deposit) = guide_payout_eur on the booking detail page
-        total_eur:           Math.round((effectiveOfferPrice + serviceFeeEur) * 100) / 100,
-        service_fee_eur:     serviceFeeEur,        // stored separately (manual: combined in platform_fee_eur too)
-        deposit_eur:         bookingFeeEur,        // platform fee charged via Stripe
-        platform_fee_eur:    bookingFeeEur,        // commission + service fee (total platform take, manual model)
-        guide_payout_eur:    guidePayoutEur,       // guide price − commission
-        commission_rate:     manualCommissionRate,
-        // Canonical confirmed days array — non-consecutive safe.
-        confirmed_days:      confirmedDaysForOffer.length > 0 ? confirmedDaysForOffer : null,
-        confirmed_date_from: confirmedFromOffer,
-        confirmed_date_to:   confirmedToOffer,
-      })
-      .eq('id', bookingId)
-
-    // Email to guide: "angler accepted offer — payment processing" (manual model)
-    if (guide?.user_id) {
-      const appUrlForGuide = await getAppUrl()
-      serviceClient.auth.admin.getUserById(guide.user_id)
-        .then(({ data }) => {
-          const guideEmail = data.user?.email
-          if (!guideEmail) return
-          return sendOfferAcceptedGuideEmail({
-            to:             guideEmail,
-            guideName:      guide?.full_name ?? 'Guide',
-            anglerName:     (booking.angler_full_name as string | null) ?? (booking.angler_email ?? 'Angler'),
-            location:       (booking.assigned_river as string | null) ?? 'TBC',
-            confirmedDates: confirmedDaysForOffer.length > 0
-              ? fmtEmailDays(confirmedDaysForOffer)
-              : fmtEmailDateRange(confirmedFromOffer ?? '', confirmedToOffer ?? ''),
-            priceEur:       effectiveOfferPrice,
-            bookingUrl:     `${appUrlForGuide}/dashboard/bookings/${bookingId}`,
-          })
-        })
-        .catch(e => console.error('[acceptBookingOffer] guide email (manual):', e))
-    }
-
-    return { checkoutUrl: session.url! }
-  } catch (err) {
-    console.error('[acceptBookingOffer] Stripe error (manual):', err)
-    await serviceClient
-      .from('bookings')
-      .update({ status: 'offer_sent' })
-      .eq('id', bookingId)
-    return { error: 'Payment setup failed. Please try again.' }
-  }
-}
-
-export async function declineBookingOffer(
-  bookingId: string,
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Please sign in.' }
-
-  const serviceClient = createServiceClient()
-
-  const { data: booking } = await serviceClient
-    .from('bookings')
-    .select('id, status, angler_id, angler_email')
-    .eq('id', bookingId)
-    .eq('source', 'inquiry')
-    .single()
-
-  if (!booking) return { error: 'Booking not found.' }
-
-  const isOwner =
-    booking.angler_id === user.id ||
-    (user.email != null && booking.angler_email === user.email)
-  if (!isOwner) return { error: 'Unauthorized.' }
-
-  if (booking.status !== 'offer_sent') return { error: 'No active offer to decline.' }
-
-  const { error } = await serviceClient
-    .from('bookings')
-    .update({
-      status:            'declined',
-      cancelled_by:      'angler',
-      cancelled_at:      new Date().toISOString(),
-      updated_at:        new Date().toISOString(),
-    })
-    .eq('id', bookingId)
-
-  if (error) return { error: 'Failed to decline offer. Please try again.' }
-
-  // ── Unblock calendar dates ─────────────────────────────────────────────────
-  // Mirrors declineBooking() — angler declined, dates are no longer committed.
-  unblockBookingDates(serviceClient, bookingId)
-    .catch(e => console.error('[declineBookingOffer] unblockBookingDates:', e))
-
-  return {}
-}
-
-export async function updateAcceptedPaymentMethods(
-  methods: ('cash' | 'online')[],
-): Promise<{ error?: string }> {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { error: 'Unauthorized' }
-
-  if (!Array.isArray(methods) || methods.length === 0) {
-    return { error: 'Select at least one accepted payment method.' }
-  }
-
-  const valid = methods.every(m => m === 'cash' || m === 'online')
-  if (!valid) return { error: 'Invalid payment method value.' }
-
-  const serviceClient = createServiceClient()
-  const { error } = await serviceClient
-    .from('guides')
-    .update({ accepted_payment_methods: methods })
-    .eq('user_id', user.id)
-
-  if (error) {
-    console.error('[updateAcceptedPaymentMethods]', error)
-    return { error: 'Failed to save payment methods.' }
-  }
-
-  revalidatePath('/dashboard/account')
-  return {}
 }

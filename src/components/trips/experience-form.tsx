@@ -13,7 +13,8 @@
 
 import { useCallback, useState, useTransition } from 'react'
 import type * as GeoJSON from 'geojson'
-import type { LocationSpot } from '@/types'
+import type { LocationSpot, IcelandicFormConfig, InquiryFieldStatus } from '@/types'
+import { INQUIRY_PRESET_FIELDS } from '@/types'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
@@ -153,6 +154,7 @@ export type ExperienceFormDefaults = {
   license_description?: string | null
   gear_description?: string | null
   transport_description?: string | null
+  inquiry_form_config?: IcelandicFormConfig | null
 }
 
 type GuideAccommodationItem = {
@@ -635,6 +637,17 @@ export default function ExperienceForm({
   const [bookingType, setBookingType] = useState<'classic' | 'icelandic' | 'both'>(dv.booking_type ?? 'classic')
   const [priceRangeMin, setPriceRangeMin] = useState<string>(dv.price_range_min_eur != null ? String(dv.price_range_min_eur) : '')
   const [priceRangeMax, setPriceRangeMax] = useState<string>(dv.price_range_max_eur != null ? String(dv.price_range_max_eur) : '')
+  // inquiryFieldConfig: fieldId → 'excluded' | 'optional' | 'included'
+  // Only non-excluded fields are stored in DB; missing id defaults to 'excluded'.
+  const [inquiryFieldConfig, setInquiryFieldConfig] = useState<Record<string, InquiryFieldStatus>>(() => {
+    const result: Record<string, InquiryFieldStatus> = {}
+    for (const f of dv.inquiry_form_config?.fields ?? []) {
+      if (f.id && (f.status === 'included' || f.status === 'optional' || f.status === 'excluded')) {
+        result[f.id] = f.status
+      }
+    }
+    return result
+  })
 
   // ── Form tab ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<FormTabKey>('pricing')
@@ -879,6 +892,13 @@ export default function ExperienceForm({
       license_description:          licenseDescription.trim() || null,
       gear_description:             gearDescription.trim() || null,
       transport_description:        transportDescription.trim() || null,
+      inquiry_form_config:          bookingType === 'icelandic'
+        ? {
+            fields: INQUIRY_PRESET_FIELDS
+              .filter(f => (inquiryFieldConfig[f.id] ?? 'excluded') !== 'excluded')
+              .map(f => ({ id: f.id, status: inquiryFieldConfig[f.id]! })),
+          }
+        : null,
     }
 
     startTransition(async () => {
@@ -1266,6 +1286,66 @@ export default function ExperienceForm({
               </div>
             </div>
           </div>
+
+          {/* ── Enquiry form fields ─────────────────────────────────────── */}
+          <div className="mt-6 pt-6" style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              Enquiry form fields
+            </p>
+            <p className="text-xs f-body mb-4 leading-relaxed" style={{ color: 'rgba(10,46,77,0.4)' }}>
+              Choose which questions anglers must fill in when sending an enquiry.
+              Set each field to <strong style={{ color: '#0A2E4D' }}>Required</strong>,{' '}
+              <strong style={{ color: '#0A2E4D' }}>Optional</strong>, or{' '}
+              <strong style={{ color: '#0A2E4D' }}>Off</strong>.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              {INQUIRY_PRESET_FIELDS.map(def => {
+                const status: InquiryFieldStatus = inquiryFieldConfig[def.id] ?? 'excluded'
+                const isActive = status !== 'excluded'
+                return (
+                  <div key={def.id}
+                    className="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
+                    style={{
+                      background: isActive ? 'rgba(230,126,80,0.05)' : 'rgba(10,46,77,0.03)',
+                      border: isActive ? '1px solid rgba(230,126,80,0.2)' : '1px solid rgba(10,46,77,0.08)',
+                    }}>
+                    {/* Label + hint */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold f-body leading-tight"
+                        style={{ color: isActive ? '#0A2E4D' : 'rgba(10,46,77,0.38)' }}>
+                        {def.label}
+                      </p>
+                      <p className="text-[11px] f-body mt-0.5"
+                        style={{ color: 'rgba(10,46,77,0.35)' }}>
+                        {def.hint}
+                      </p>
+                    </div>
+                    {/* 3-state toggle */}
+                    <div className="flex gap-1 flex-shrink-0 p-0.5 rounded-xl"
+                      style={{ background: 'rgba(10,46,77,0.06)' }}>
+                      {(['excluded', 'optional', 'included'] as InquiryFieldStatus[]).map(s => (
+                        <button key={s} type="button"
+                          onClick={() => setInquiryFieldConfig(prev => ({ ...prev, [def.id]: s }))}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold f-body transition-all"
+                          style={status === s
+                            ? s === 'included'
+                              ? { background: '#E67E50', color: '#fff', boxShadow: '0 1px 4px rgba(230,126,80,0.3)' }
+                              : s === 'optional'
+                                ? { background: '#fff', color: '#0A2E4D', boxShadow: '0 1px 4px rgba(10,46,77,0.1)' }
+                                : { background: '#fff', color: 'rgba(10,46,77,0.45)', boxShadow: '0 1px 4px rgba(10,46,77,0.08)' }
+                            : { background: 'transparent', color: 'rgba(10,46,77,0.28)' }
+                          }>
+                          {s === 'excluded' ? 'Off' : s === 'optional' ? 'Optional' : 'Required'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
         </div>
       )}
       {bookingType !== 'icelandic' && <SectionCard id="form-pricing" title="Pricing & Logistics" help={
