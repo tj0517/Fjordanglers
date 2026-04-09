@@ -309,6 +309,9 @@ export function IcelandicInquireForm({
         durationPreference: `${durationDays} ${durationDays === 1 ? 'day' : 'days'}`,
       })
       if (res.success) {
+        window.dataLayer = window.dataLayer || []
+        window.dataLayer.push({ event: 'form_submit' })
+        if (typeof window.fbq === 'function') window.fbq('track', 'InitiateCheckout')
         setInquiryId(res.inquiryId)
         setSubmitted(true)
       } else {

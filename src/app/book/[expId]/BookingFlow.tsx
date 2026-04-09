@@ -266,8 +266,14 @@ export function BookingFlow({
         totalEur:        subtotalEur,
         specialRequests: message.trim() || null,
       })
-      if (result.success) setSuccessBookingId(result.bookingId)
-      else setErrorMsg(result.error)
+      if (result.success) {
+        window.dataLayer = window.dataLayer || []
+        window.dataLayer.push({ event: 'form_submit' })
+        if (typeof window.fbq === 'function') window.fbq('track', 'InitiateCheckout')
+        setSuccessBookingId(result.bookingId)
+      } else {
+        setErrorMsg(result.error)
+      }
     })
   }
 
