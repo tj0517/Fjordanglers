@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
-import { getExperiences, getAllExperiencesWithCoords } from '@/lib/supabase/queries'
+import { getExperiences } from '@/lib/supabase/queries'
 import { SearchBar } from './search-bar'
 import { FiltersModal } from './filters-modal'
 import { ExperiencesNav } from './experiences-nav'
@@ -95,10 +95,7 @@ export default async function ExperiencesPage({
   searchParams: Promise<SearchParams>
 }) {
   const params = await searchParams
-  const [{ experiences, total }, allGeoExperiences] = await Promise.all([
-    getExperiences(params),
-    getAllExperiencesWithCoords(params),
-  ])
+  const { experiences, total } = await getExperiences(params)
 
   const currentPage = Math.max(1, Number(params.page ?? '1'))
   const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -126,7 +123,6 @@ export default async function ExperiencesPage({
 
       {/* ── TWO-COLUMN (viewport-filtered map + list) ── */}
       <MapSection
-        allGeoExperiences={allGeoExperiences}
         initialExperiences={experiences}
         initialTotal={total}
         filterKey={baseParams}

@@ -88,6 +88,21 @@ function isBlocked(date: string, ranges: BlockedRange[]): boolean {
   return ranges.some(r => date >= r.date_start && date <= r.date_end)
 }
 
+function expandRange(start: string, numDays: number): string[] {
+  const result: string[] = []
+  const base = new Date(start + 'T00:00:00')
+  for (let i = 0; i < numDays; i++) {
+    const d = new Date(base)
+    d.setDate(base.getDate() + i)
+    result.push(d.toISOString().slice(0, 10))
+  }
+  return result
+}
+
+function isRangeBlocked(start: string, numDays: number, ranges: BlockedRange[]): boolean {
+  return expandRange(start, numDays).some(d => isBlocked(d, ranges))
+}
+
 function isoToday(): string {
   return new Date().toISOString().slice(0, 10)
 }
@@ -117,11 +132,17 @@ export function BookingFlow({
   // ── Booking state ────────────────────────────────────────────────────────
   const packages = experience.duration_options as DurationOptionPayload[] | null
 
-  const [selectedDates, setSelectedDates] = useState<string[]>(() =>
-    initialDatesStr
-      ? initialDatesStr.split(',').filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort()
-      : []
-  )
+  const [selectedDates, setSelectedDates] = useState<string[]>(() => {
+    if (!initialDatesStr) return []
+    const dates = initialDatesStr.split(',').filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort()
+    if (dates.length === 0) return []
+    // For multi-day fixed packages, rebuild the consecutive range from the first date
+    const pkg = packages != null && initialPkgLabel
+      ? (packages.find(p => p.label === initialPkgLabel) ?? packages[0])
+      : packages?.[0] ?? null
+    if (pkg?.days != null && pkg.days > 1) return expandRange(dates[0], pkg.days)
+    return dates
+  })
 
   const [selectedPkg, setSelectedPkg] = useState<DurationOptionPayload | null>(() => {
     if (packages == null || packages.length === 0) return null
@@ -158,8 +179,13 @@ export function BookingFlow({
   const [authPassword, setAuthPassword] = useState('')
   const [authError, setAuthError]       = useState<string | null>(null)
 
+  // ── Multi-day detection ────────────────────────────────────────────────────
+  const pkgDays    = selectedPkg?.days ?? null
+  const isMultiDay = pkgDays != null && pkgDays > 1
+
   // ── Price ─────────────────────────────────────────────────────────────────
-  const days = selectedDates.length > 0 ? selectedDates.length : (selectedPkg?.days ?? 1)
+  // For fixed-duration packages, always use pkg.days — not selectedDates.length
+  const days = isMultiDay ? pkgDays : (selectedDates.length > 0 ? selectedDates.length : 1)
 
   const subtotalEur = useMemo(() => {
     if (selectedPkg != null) return calcSubtotal(selectedPkg, guests, days)
@@ -176,6 +202,16 @@ export function BookingFlow({
     setSelectedDates(prev =>
       prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort()
     )
+  }
+
+  function handleDateSelect(d: string) {
+    if (isMultiDay) {
+      // Click current start → deselect; click new date → auto-fill consecutive range
+      if (selectedDates[0] === d) setSelectedDates([])
+      else setSelectedDates(expandRange(d, pkgDays!))
+    } else {
+      toggleDate(d)
+    }
   }
 
   function prevMonth() {
@@ -424,7 +460,7 @@ export function BookingFlow({
                         <button
                           key={pkg.label}
                           type="button"
-                          onClick={() => setSelectedPkg(pkg)}
+                          onClick={() => { setSelectedPkg(pkg); setSelectedDates([]) }}
                           className="w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all text-left"
                           style={{
                             background: isSelected ? '#0A2E4D' : 'rgba(10,46,77,0.04)',
@@ -465,10 +501,15 @@ export function BookingFlow({
             {/* ── Calendar ── */}
             <div style={{ height: '1px', background: 'rgba(10,46,77,0.06)' }} />
             <div className="px-6 py-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] f-body mb-4"
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] f-body mb-1 f-body"
                 style={{ color: 'rgba(10,46,77,0.4)' }}>
-                Dates
+                {isMultiDay ? 'Start date' : 'Dates'}
               </p>
+              {isMultiDay && (
+                <p className="text-xs f-body mb-4" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                  Pick when you want to start — the trip runs for {pkgDays} consecutive days
+                </p>
+              )}
 
               {/* Month navigation */}
               <div className="flex items-center justify-between mb-4">
@@ -510,31 +551,45 @@ export function BookingFlow({
                 {calendarCells.map((day, i) => {
                   if (day == null) return <div key={`e-${i}`} />
 
-                  const d        = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                  const isPast   = d < today
-                  const blocked  = isBlocked(d, blockedRanges)
-                  const disabled = isPast || blocked
-                  const selected = selectedSet.has(d)
-                  const isToday  = d === today
-                  const available = !disabled
+                  const d           = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                  const isPast      = d < today
+                  const blocked     = isBlocked(d, blockedRanges)
+                  const rangeWouldBlock = isMultiDay && !blocked && !isPast && isRangeBlocked(d, pkgDays!, blockedRanges)
+                  const disabled    = isPast || blocked || rangeWouldBlock
+                  const isRangeStart = isMultiDay && selectedDates[0] === d
+                  const isRangeIn   = isMultiDay && selectedSet.has(d) && !isRangeStart
+                  const selected    = selectedSet.has(d)
+                  const isToday     = d === today
+                  const available   = !disabled
 
                   return (
                     <button
                       key={d}
                       type="button"
                       disabled={disabled}
-                      onClick={() => !disabled && toggleDate(d)}
+                      onClick={() => !disabled && handleDateSelect(d)}
                       className="aspect-square flex items-center justify-center rounded-md relative transition-all text-sm f-body"
                       style={{
-                        background:  selected ? '#E67E50' : available ? 'rgba(22,163,74,0.08)' : blocked ? 'rgba(10,46,77,0.04)' : 'transparent',
-                        color:       disabled ? 'rgba(10,46,77,0.2)' : selected ? '#fff' : '#0A2E4D',
-                        fontWeight:  selected ? '700' : isToday ? '700' : '400',
+                        background:
+                          isRangeStart ? '#0A2E4D'
+                          : isRangeIn  ? 'rgba(10,46,77,0.10)'
+                          : selected   ? '#E67E50'
+                          : available  ? 'rgba(22,163,74,0.08)'
+                          : 'rgba(10,46,77,0.03)',
+                        color:
+                          disabled     ? 'rgba(10,46,77,0.2)'
+                          : isRangeStart ? '#fff'
+                          : isRangeIn  ? '#0A2E4D'
+                          : selected   ? '#fff'
+                          : '#0A2E4D',
+                        fontWeight:  isRangeStart || selected ? '700' : isToday ? '700' : '400',
                         cursor:      disabled ? 'not-allowed' : 'pointer',
-                        border:      isToday && !selected ? '1.5px solid rgba(10,46,77,0.25)' : '1.5px solid transparent',
-                        boxShadow:   selected ? '0 2px 8px rgba(230,126,80,0.35)' : 'none',
+                        border:      isToday && !selected && !isRangeStart && !isRangeIn ? '1.5px solid rgba(10,46,77,0.25)' : '1.5px solid transparent',
+                        boxShadow:   isRangeStart ? '0 2px 8px rgba(10,46,77,0.25)' : selected ? '0 2px 8px rgba(230,126,80,0.35)' : 'none',
+                        borderRadius: isRangeStart ? '8px' : isRangeIn ? '4px' : '6px',
                       }}
                       aria-label={d}
-                      aria-pressed={selected}
+                      aria-pressed={selected || isRangeStart}
                     >
                       {day}
                     </button>
@@ -547,8 +602,12 @@ export function BookingFlow({
                 style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
                 <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
                   {selectedDates.length === 0
-                    ? 'Tap dates to select'
-                    : `${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} selected`}
+                    ? isMultiDay
+                      ? `Tap a start date · ${pkgDays} days auto-selected`
+                      : 'Tap dates to select'
+                    : isMultiDay
+                      ? `${fmtDateShort(selectedDates[0])} → ${fmtDateShort(selectedDates[selectedDates.length - 1])}`
+                      : `${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} selected`}
                 </span>
                 {selectedDates.length > 0 && (
                   <button type="button" onClick={() => setSelectedDates([])}
@@ -687,13 +746,21 @@ export function BookingFlow({
               >
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap gap-1">
-                    {selectedDates.map(d => (
-                      <span key={d}
+                    {isMultiDay ? (
+                      <span
                         className="text-xs f-body font-semibold px-2 py-1 rounded-md"
                         style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}>
-                        {fmtDateShort(d)}
+                        {fmtDateShort(selectedDates[0])} → {fmtDateShort(selectedDates[selectedDates.length - 1])} · {pkgDays} days
                       </span>
-                    ))}
+                    ) : (
+                      selectedDates.map(d => (
+                        <span key={d}
+                          className="text-xs f-body font-semibold px-2 py-1 rounded-md"
+                          style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}>
+                          {fmtDateShort(d)}
+                        </span>
+                      ))
+                    )}
                   </div>
                   {selectedPkg != null && (
                     <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.5)' }}>{selectedPkg.label}</p>

@@ -23,6 +23,13 @@ import { signIn, signUp } from '@/actions/auth'
 import { createIcelandicInquiry } from '@/actions/bookings'
 import type { IcelandicFormConfig, InquiryFieldStatus, InquiryPresetFieldDef } from '@/types'
 import { INQUIRY_PRESET_FIELDS } from '@/types'
+
+// crypto.randomUUID() requires a secure context (HTTPS) and Safari 15.4+.
+// Safe wrapper so older mobile browsers don't throw a client-side exception.
+function uid(): string {
+  try { return crypto.randomUUID() } catch { /* fall through */ }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
 import {
   type Period,
   buildBlockedSet,
@@ -84,7 +91,7 @@ export function IcelandicInquireForm({
   const blockedSet = useMemo(() => buildBlockedSet(blockedRanges), [blockedRanges])
 
   const [periods,     setPeriods]     = useState<Period[]>(() =>
-    initialPeriods.map(p => ({ key: crypto.randomUUID(), from: p.from, to: p.to }))
+    initialPeriods.map(p => ({ key: uid(), from: p.from, to: p.to }))
   )
   const [pendingFrom, setPendingFrom] = useState<string | null>(null)
   const [hoverDate,   setHoverDate]   = useState<string | null>(null)
@@ -102,7 +109,7 @@ export function IcelandicInquireForm({
     } else if (pendingFrom === date) {
       const overlaps = periods.some(p => rangesOverlap(date, date, p.from, p.to))
       if (!overlaps) {
-        setPeriods(prev => [...prev, { key: crypto.randomUUID(), from: date, to: date }])
+        setPeriods(prev => [...prev, { key: uid(), from: date, to: date }])
       }
       setPendingFrom(null)
       setHoverDate(null)
@@ -111,7 +118,7 @@ export function IcelandicInquireForm({
       const to   = pendingFrom <= date ? date : pendingFrom
       const overlaps = periods.some(p => rangesOverlap(from, to, p.from, p.to))
       if (!overlaps) {
-        setPeriods(prev => [...prev, { key: crypto.randomUUID(), from, to }])
+        setPeriods(prev => [...prev, { key: uid(), from, to }])
       }
       setPendingFrom(null)
       setHoverDate(null)
@@ -530,17 +537,17 @@ export function IcelandicInquireForm({
               {/* Always-visible instruction banner — no layout shift */}
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl mb-4"
                 style={{
-                  background: pendingFrom != null ? 'rgba(230,126,80,0.10)' : 'rgba(10,46,77,0.04)',
-                  border:     pendingFrom != null ? '1px solid rgba(230,126,80,0.22)' : '1px solid rgba(10,46,77,0.07)',
+                  background: pendingFrom != null ? 'rgba(6,182,212,0.08)'       : 'rgba(10,46,77,0.04)',
+                  border:     pendingFrom != null ? '1px solid rgba(6,182,212,0.2)' : '1px solid rgba(10,46,77,0.07)',
                 }}>
                 <span className="text-sm flex-shrink-0 mt-px leading-none">
-                  {pendingFrom != null ? '📍' : '💡'}
+                  {pendingFrom != null ? '→' : '💡'}
                 </span>
                 <p className="text-[11px] f-body leading-snug"
-                  style={{ color: pendingFrom != null ? '#C05E33' : 'rgba(10,46,77,0.5)' }}>
+                  style={{ color: pendingFrom != null ? '#0E7490' : 'rgba(10,46,77,0.5)' }}>
                   {pendingFrom != null
-                    ? `From ${fmtDateShort(pendingFrom)} — click an end date, or the same date for a single day`
-                    : 'Click any date to start. Click the same date twice for a single day, or a second date for a range.'}
+                    ? `Starting ${fmtDateShort(pendingFrom)} — tap an end date, or the same date for a single day`
+                    : 'Tap any date to start. Tap the same date twice for a single day, or a second date for a range.'}
                 </p>
               </div>
 

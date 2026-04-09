@@ -196,6 +196,9 @@ export default async function AnglerBookingDetailPage({
       : [booking.booking_date]
 
   const guideInitial = booking.guide_name?.[0]?.toUpperCase() ?? 'G'
+  const heroImage    = booking.experience_images?.[0] ?? null
+  const locationStr  = [booking.experience_location_city, booking.experience_location_country]
+    .filter(Boolean).join(', ')
 
   return (
     <div className="w-full min-h-screen" style={{ background: '#F3EDE4' }}>
@@ -218,14 +221,67 @@ export default async function AnglerBookingDetailPage({
           <StatusBadge status={booking.status} />
         </div>
 
-        {/* ── Title ── */}
-        <h1 className="text-2xl font-bold f-display mb-8" style={{ color: '#0A2E4D' }}>
-          {booking.experience_title ?? 'Fishing experience'}
-        </h1>
+        {/* ── Trip hero card ── */}
+        <div
+          className="rounded-2xl overflow-hidden mb-6"
+          style={{ background: '#FFFFFF', border: '1px solid rgba(10,46,77,0.08)', boxShadow: '0 2px 12px rgba(10,46,77,0.06)' }}
+        >
+          {heroImage != null && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={heroImage}
+              alt={booking.experience_title ?? 'Trip photo'}
+              className="w-full object-cover"
+              style={{ height: 200 }}
+            />
+          )}
+          <div className="px-5 py-4">
+            <h1 className="text-xl font-bold f-display mb-2" style={{ color: '#0A2E4D' }}>
+              {booking.experience_title ?? 'Fishing experience'}
+            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              {locationStr !== '' && (
+                <span className="flex items-center gap-1 text-sm f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  {locationStr}
+                </span>
+              )}
+              {booking.experience_difficulty != null && (
+                <span className="text-xs f-body font-semibold px-2.5 py-1 rounded-full"
+                  style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.55)' }}>
+                  {booking.experience_difficulty}
+                </span>
+              )}
+            </div>
+            {booking.experience_fish_types != null && booking.experience_fish_types.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {booking.experience_fish_types.map(fish => (
+                  <span key={fish} className="text-xs f-body font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: 'rgba(230,126,80,0.08)', color: '#C05621', border: '1px solid rgba(230,126,80,0.15)' }}>
+                    🎣 {fish}
+                  </span>
+                ))}
+              </div>
+            )}
+            {booking.experience_id != null && (
+              <div className="mt-3">
+                <Link
+                  href={`/trips/${booking.experience_id}`}
+                  className="text-xs f-body font-semibold transition-opacity hover:opacity-70"
+                  style={{ color: '#E67E50' }}
+                >
+                  View trip details →
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-4">
 
-          {/* ── Status-specific banner ── */}
+          {/* ── Status-specific banners ── */}
           {booking.status === 'offer_sent' && (
             <div className="rounded-2xl px-5 py-4 flex items-start gap-3"
               style={{ background: '#FFFBEB', border: '1.5px solid rgba(234,179,8,0.3)', boxShadow: '0 2px 12px rgba(234,179,8,0.08)' }}>

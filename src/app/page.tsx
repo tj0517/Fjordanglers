@@ -198,7 +198,7 @@ export default async function HomePage() {
                             src={coverUrl}
                             alt={exp.title}
                             fill
-                            priority={idx === 0}
+                            priority={idx < 4}
                             className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
                           />
                         ) : (

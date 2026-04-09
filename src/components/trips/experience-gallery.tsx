@@ -76,6 +76,7 @@ export function ExperienceGallery({ images, title }: Props) {
               src={heroFull(cover.url) ?? cover.url}
               alt={`${title} — cover photo`}
               fill
+              sizes="(min-width: 1280px) 850px, (min-width: 768px) 60vw, 100vw"
               className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
               priority
             />
@@ -96,6 +97,7 @@ export function ExperienceGallery({ images, title }: Props) {
                   src={cardThumb(img.url) ?? img.url}
                   alt={`${title} — photo ${i + 2}`}
                   fill
+                  sizes="(min-width: 1280px) 280px, (min-width: 768px) 22vw, 50vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -126,12 +128,12 @@ export function ExperienceGallery({ images, title }: Props) {
             aria-label="Open photo"
           >
             <Image
-              key={sorted[current].id}
               src={heroFull(sorted[current].url) ?? sorted[current].url}
               alt={`${title} — photo ${current + 1}`}
               fill
+              sizes="100vw"
               className="object-cover"
-              priority={current === 0}
+              priority
             />
           </button>
 
@@ -164,26 +166,6 @@ export function ExperienceGallery({ images, title }: Props) {
           </div>
         </div>
 
-        {sorted.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 w-full" style={{ scrollbarWidth: 'none' } as React.CSSProperties}>
-            {sorted.map((img, i) => (
-              <button
-                key={img.id}
-                onClick={() => setCurrent(i)}
-                className="relative flex-shrink-0 overflow-hidden rounded-xl"
-                style={{
-                  width: '72px', height: '52px',
-                  opacity: i === current ? 1 : 0.55,
-                  outline: i === current ? '2px solid #E67E50' : '2px solid transparent',
-                  outlineOffset: '2px',
-                }}
-                aria-label={`Go to photo ${i + 1}`}
-              >
-                <Image src={cardThumb(img.url) ?? img.url} alt="" fill className="object-cover" />
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* ─── LIGHTBOX ──────────────────────────────────────────────── */}

@@ -572,6 +572,11 @@ export type AnglerBookingDetail = {
   created_at: string
   experience_title: string | null
   experience_id: string | null
+  experience_images: string[] | null
+  experience_fish_types: string[] | null
+  experience_location_city: string | null
+  experience_location_country: string | null
+  experience_difficulty: string | null
   guide_name: string | null
   guide_avatar: string | null
   guide_id: string | null
@@ -1041,7 +1046,7 @@ export async function getAnglerBookingDetail(
         accepted_at, confirmed_at, declined_at, created_at,
         balance_paid_at, stripe_checkout_id,
         experience_id, guide_id,
-        experiences ( title ),
+        experiences ( title, images, fish_types, location_city, location_country, difficulty ),
         guides ( full_name, avatar_url, stripe_charges_enabled )
       `)
       .eq('id', bookingId)
@@ -1052,7 +1057,7 @@ export async function getAnglerBookingDetail(
       return { success: false, error: 'Booking not found.' }
     }
 
-    const exp   = row.experiences as { title: string } | null
+    const exp   = row.experiences as { title: string; images: string[] | null; fish_types: string[]; location_city: string | null; location_country: string | null; difficulty: string | null } | null
     const guide = row.guides as { full_name: string; avatar_url: string | null; stripe_charges_enabled: boolean | null } | null
 
     const booking: AnglerBookingDetail = {
@@ -1082,8 +1087,13 @@ export async function getAnglerBookingDetail(
       confirmed_at:     row.confirmed_at,
       declined_at:      row.declined_at,
       created_at:       row.created_at,
-      experience_title: exp?.title ?? null,
-      experience_id:    row.experience_id,
+      experience_title:            exp?.title ?? null,
+      experience_id:               row.experience_id,
+      experience_images:           exp?.images ?? null,
+      experience_fish_types:       exp?.fish_types ?? null,
+      experience_location_city:    exp?.location_city ?? null,
+      experience_location_country: exp?.location_country ?? null,
+      experience_difficulty:       exp?.difficulty ?? null,
       guide_name:           guide?.full_name ?? null,
       guide_avatar:         guide?.avatar_url ?? null,
       guide_id:             row.guide_id,

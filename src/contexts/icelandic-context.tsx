@@ -19,6 +19,13 @@ import {
   rangesOverlap,
 } from '@/components/trips/icelandic-inquiry-widget'
 
+// uid() requires a secure context (HTTPS) and Safari 15.4+.
+// This safe wrapper falls back to a Date.now + Math.random ID on older browsers.
+function uid(): string {
+  try { return crypto.randomUUID() } catch { /* fall through */ }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
+
 // ─── Context type ─────────────────────────────────────────────────────────────
 
 interface IcelandicBookingState {
@@ -73,7 +80,7 @@ export function IcelandicBookingProvider({
     } else if (pendingFrom === date) {
       // Same date twice → single-day period
       const overlaps = periods.some(p => rangesOverlap(date, date, p.from, p.to))
-      if (!overlaps) setPeriods(prev => [...prev, { key: crypto.randomUUID(), from: date, to: date }])
+      if (!overlaps) setPeriods(prev => [...prev, { key: uid(), from: date, to: date }])
       setPendingFrom(null)
       setHoverDate(null)
     } else {
@@ -81,7 +88,7 @@ export function IcelandicBookingProvider({
       const from = pendingFrom <= date ? pendingFrom : date
       const to   = pendingFrom <= date ? date        : pendingFrom
       const overlaps = periods.some(p => rangesOverlap(from, to, p.from, p.to))
-      if (!overlaps) setPeriods(prev => [...prev, { key: crypto.randomUUID(), from, to }])
+      if (!overlaps) setPeriods(prev => [...prev, { key: uid(), from, to }])
       setPendingFrom(null)
       setHoverDate(null)
     }

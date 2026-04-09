@@ -8,6 +8,7 @@ import { cardThumb } from '@/lib/image'
 import { CountryFlag } from '@/components/ui/country-flag'
 import MapWrapper from './map-wrapper'
 import { Menu, MapPin } from 'lucide-react'
+import { fetchGeoExperiences } from './geo-action'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
 
@@ -37,7 +38,6 @@ function isInBounds(exp: ExperienceWithGuide, b: MapBounds): boolean {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Props = {
-  allGeoExperiences: ExperienceWithGuide[]
   initialExperiences: ExperienceWithGuide[]
   initialTotal: number
   paginationNode: React.ReactNode
@@ -143,7 +143,6 @@ function SheetCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function MapSection({
-  allGeoExperiences,
   initialExperiences,
   initialTotal,
   paginationNode,
@@ -151,57 +150,82 @@ export default function MapSection({
 }: Props) {
   const [bounds, setBounds]             = useState<MapBounds | null>(null)
   const [isDesktop, setIsDesktop]       = useState(false)
-  // 'list' is the SSR-safe default; on mobile we switch to 'map' after mount
   const [mobileView, setMobileView]     = useState<'list' | 'map'>('list')
   const [hoveredExpId, setHoveredExpId] = useState<string | null>(null)
   const sheetScrollRef                  = useRef<HTMLDivElement>(null)
 
-  // Shuffle allGeoExperiences once on mount so viewport-filtered list is also random
-  const [shuffledGeoExperiences] = useState(() => {
-    const arr = [...allGeoExperiences]
+  // ── Lazy geo data ──────────────────────────────────────────────────────────
+  const [geoExperiences, setGeoExperiences] = useState<ExperienceWithGuide[]>([])
+  const [geoLoading, setGeoLoading]         = useState(false)
+  const geoLoadedForKey                     = useRef<string | null>(null)
+
+  // Shuffle geo data once when it arrives (stable reference via useMemo)
+  const shuffledGeoExperiences = useMemo(() => {
+    if (geoExperiences.length === 0) return []
+    const arr = [...geoExperiences]
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[arr[i], arr[j]] = [arr[j], arr[i]]
     }
     return arr
-  })
+  }, [geoExperiences])
 
-  // Detect desktop breakpoint + auto-switch to map on mobile
+  const loadGeoData = useCallback(async () => {
+    if (geoLoadedForKey.current === filterKey) return  // already loaded for this filter
+    geoLoadedForKey.current = filterKey                // prevent double-fetch
+    setGeoLoading(true)
+    try {
+      const data = await fetchGeoExperiences(filterKey)
+      setGeoExperiences(data)
+    } catch (err) {
+      console.error('[MapSection] geo fetch failed:', err)
+      geoLoadedForKey.current = null  // allow retry
+    } finally {
+      setGeoLoading(false)
+    }
+  }, [filterKey])
+
+  // ── Detect desktop ─────────────────────────────────────────────────────────
   useEffect(() => {
     const desktop = window.innerWidth >= 1024
     setIsDesktop(desktop)
-    // On mobile: default to map view so users see the map immediately
-    if (!desktop) setMobileView('map')
-
+    // Desktop: load geo data immediately on mount (non-blocking — page already rendered)
+    if (desktop) void loadGeoData()
     const check = () => setIsDesktop(window.innerWidth >= 1024)
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])  // run once on mount; loadGeoData is stable for initial filterKey
 
-  // Clear bounds when switching to mobile list (map unmounts → stale bounds)
+  // ── Reset on filter change ─────────────────────────────────────────────────
+  const prevFilterKey = useRef(filterKey)
+  useEffect(() => {
+    if (prevFilterKey.current === filterKey) return
+    prevFilterKey.current = filterKey
+    setBounds(null)
+    // Reset geo data so the new filter's data loads fresh
+    setGeoExperiences([])
+    geoLoadedForKey.current = null
+    // Re-fetch immediately if the map is visible
+    if (isDesktop || mobileView === 'map') void loadGeoData()
+  }, [filterKey, isDesktop, mobileView, loadGeoData])
+
+  // ── Clear bounds when switching to mobile list ─────────────────────────────
   useEffect(() => {
     if (!isDesktop && mobileView === 'list') setBounds(null)
   }, [isDesktop, mobileView])
 
-  // Reset viewport filter whenever server-side filters change
-  const prevFilterKey = useRef(filterKey)
-  useEffect(() => {
-    if (prevFilterKey.current !== filterKey) {
-      prevFilterKey.current = filterKey
-      setBounds(null)
-    }
-  }, [filterKey])
-
   const hasServerFilters = filterKey !== ''
 
-  // Parse selected countries from filterKey (URLSearchParams string)
   const countries = useMemo(() => {
     const sp = new URLSearchParams(filterKey)
     return sp.get('country')?.split(',').filter(Boolean) ?? []
   }, [filterKey])
 
-  // Viewport filter applies on desktop and on mobile map view
-  const useViewportFilter = bounds != null && !hasServerFilters && (isDesktop || mobileView === 'map')
+  // While geo data loads, fall back to the paginated 12 for map pins
+  const mapPinExps = geoExperiences.length > 0 ? shuffledGeoExperiences : initialExperiences
+
+  const useViewportFilter = bounds != null && !hasServerFilters && (isDesktop || mobileView === 'map') && geoExperiences.length > 0
 
   const visibleExperiences = useViewportFilter
     ? shuffledGeoExperiences.filter(exp => isInBounds(exp, bounds!))
@@ -210,13 +234,12 @@ export default function MapSection({
   const visibleCount = useViewportFilter ? visibleExperiences.length : initialTotal
   const isFiltered   = useViewportFilter
 
-  // Pin tapped on map → highlight on desktop; scroll bottom sheet on mobile (no highlight)
   const handlePinClick = useCallback((id: string) => {
     setHoveredExpId(prev => prev === id ? null : id)
     if (!isDesktop && sheetScrollRef.current) {
       const idx = visibleExperiences.findIndex(e => e.id === id)
       if (idx >= 0) {
-        const CARD_W = 248 + 12 // card width + gap
+        const CARD_W = 248 + 12
         sheetScrollRef.current.scrollTo({ left: idx * CARD_W, behavior: 'smooth' })
       }
     }
@@ -253,13 +276,14 @@ export default function MapSection({
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {visibleExperiences.map(exp => (
+                {visibleExperiences.map((exp, idx) => (
                   <DesktopCard
                     key={exp.id}
                     exp={exp}
                     hovered={hoveredExpId === exp.id}
                     onMouseEnter={() => setHoveredExpId(exp.id)}
                     onMouseLeave={() => setHoveredExpId(null)}
+                    priority={idx < 4}
                   />
                 ))}
               </div>
@@ -271,7 +295,7 @@ export default function MapSection({
         <aside className="flex-shrink-0 lg:w-1/2" style={{ padding: '12px 16px 12px 0' }}>
           <div className="w-full h-full overflow-hidden" style={{ borderRadius: '20px' }}>
             <MapWrapper
-              experiences={shuffledGeoExperiences}
+              experiences={mapPinExps}
               onBoundsChange={setBounds}
               hoveredExpId={hoveredExpId}
               onPinClick={handlePinClick}
@@ -287,17 +311,17 @@ export default function MapSection({
   // ─── MOBILE MAP view ────────────────────────────────────────────────────────
 
   if (mobileView === 'map') {
-    const SHEET_H = 290 // px — bottom sheet height (must fit full card + header)
+    const SHEET_H = 290
 
     return (
       <div
         className="relative overflow-hidden"
         style={{ height: 'calc(100dvh - var(--nav-h, 120px))' }}
       >
-        {/* Full-screen map — leaves room for the bottom sheet */}
+        {/* Full-screen map */}
         <div className="absolute inset-0" style={{ bottom: `${SHEET_H}px` }}>
           <MapWrapper
-            experiences={allGeoExperiences}
+            experiences={mapPinExps}
             onBoundsChange={setBounds}
             hoveredExpId={hoveredExpId}
             onPinClick={handlePinClick}
@@ -306,7 +330,7 @@ export default function MapSection({
           />
         </div>
 
-        {/* "Show list" pill — top right, above Leaflet controls */}
+        {/* "Show list" pill */}
         <button
           onClick={() => setMobileView('list')}
           className="absolute top-3 right-3 z-[500] flex items-center gap-1.5 text-[13px] font-semibold px-4 py-2.5 rounded-full f-body"
@@ -316,7 +340,6 @@ export default function MapSection({
             boxShadow: '0 2px 16px rgba(10,46,77,0.18)',
           }}
         >
-          {/* List icon */}
           <Menu size={14} aria-hidden="true" />
           Show list
         </button>
@@ -333,13 +356,10 @@ export default function MapSection({
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-2">
-            <div
-              className="w-10 h-[5px] rounded-full"
-              style={{ background: 'rgba(10,46,77,0.14)' }}
-            />
+            <div className="w-10 h-[5px] rounded-full" style={{ background: 'rgba(10,46,77,0.14)' }} />
           </div>
 
-          {/* Count + clear filter */}
+          {/* Count */}
           <div className="flex items-center gap-2 px-5 mb-2.5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
               {isFiltered
@@ -355,6 +375,11 @@ export default function MapSection({
               >
                 Clear ✕
               </button>
+            )}
+            {geoLoading && (
+              <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                Loading all pins…
+              </span>
             )}
           </div>
 
@@ -421,13 +446,14 @@ export default function MapSection({
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {initialExperiences.map(exp => (
+            {initialExperiences.map((exp, idx) => (
               <DesktopCard
                 key={exp.id}
                 exp={exp}
                 hovered={false}
                 onMouseEnter={() => {}}
                 onMouseLeave={() => {}}
+                priority={idx < 4}
               />
             ))}
           </div>
@@ -435,10 +461,13 @@ export default function MapSection({
         </>
       )}
 
-      {/* Floating "Map" FAB — centered at bottom */}
+      {/* Floating "Map" FAB */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[300]">
         <button
-          onClick={() => setMobileView('map')}
+          onClick={() => {
+            setMobileView('map')
+            void loadGeoData()
+          }}
           className="flex items-center gap-2 text-[14px] font-semibold px-6 py-3.5 rounded-full f-body"
           style={{
             background: '#0A2E4D',
@@ -446,7 +475,6 @@ export default function MapSection({
             boxShadow: '0 6px 28px rgba(10,46,77,0.38)',
           }}
         >
-          {/* Map pin icon */}
           <MapPin size={16} aria-hidden="true" />
           Map
         </button>
@@ -504,11 +532,13 @@ function DesktopCard({
   hovered,
   onMouseEnter,
   onMouseLeave,
+  priority = false,
 }: {
   exp: ExperienceWithGuide
   hovered: boolean
   onMouseEnter: () => void
   onMouseLeave: () => void
+  priority?: boolean
 }) {
   const coverUrl = cardThumb(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url ?? null)
   const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
@@ -539,7 +569,8 @@ function DesktopCard({
               src={coverUrl}
               alt={exp.title}
               fill
-              sizes="25vw"
+              sizes="(min-width: 1280px) 560px, (min-width: 640px) 50vw, 100vw"
+              priority={priority}
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
           )}
@@ -605,18 +636,26 @@ function DesktopCard({
             <p className="text-[12px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.65)' }}>{duration}</p>
           )}
 
-          {exp.booking_type === 'icelandic' ? (
-            <p className="text-[12px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)', fontStyle: 'italic' }}>
-              Custom experience — enquire for price
-            </p>
-          ) : (
-            <p className="text-[13px] f-body mt-1" style={{ color: '#0A2E4D' }}>
-              <span className="font-semibold" style={{ textDecoration: 'underline' }}>
-                €{exp.price_per_person_eur}
-              </span>
-              <span style={{ color: 'rgba(10,46,77,0.65)' }}> /person</span>
-            </p>
-          )}
+          <div className="flex items-center justify-between mt-1">
+            {exp.booking_type === 'icelandic' ? (
+              <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.45)', fontStyle: 'italic' }}>
+                Custom — price on request
+              </p>
+            ) : (
+              <p className="text-[13px] f-body" style={{ color: '#0A2E4D' }}>
+                <span className="font-semibold">€{exp.price_per_person_eur}</span>
+                <span style={{ color: 'rgba(10,46,77,0.65)' }}> /pp</span>
+              </p>
+            )}
+
+            {/* CTA — always visible on mobile, hidden on desktop (desktop uses hover overlay) */}
+            <span
+              className="md:hidden flex-shrink-0 text-[12px] font-semibold f-body px-3.5 py-1.5 rounded-full"
+              style={{ background: '#E67E50', color: '#fff' }}
+            >
+              {exp.booking_type === 'icelandic' ? 'Enquire →' : 'View trip →'}
+            </span>
+          </div>
         </div>
       </article>
     </Link>

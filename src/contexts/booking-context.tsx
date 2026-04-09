@@ -18,6 +18,8 @@ export type BookingContextValue = {
   selectedDates: string[]
   /** Toggle a single date in/out of selectedDates */
   toggleDate: (date: string) => void
+  /** Replace all selected dates at once (used for multi-day range expansion) */
+  selectDates: (dates: string[]) => void
   /** Clear all selected dates */
   clearDates: () => void
   /** Currently selected duration package (null = no packages on this trip) */
@@ -49,6 +51,10 @@ export function BookingStateProvider({
     )
   }
 
+  function selectDates(dates: string[]) {
+    setSelectedDates([...dates].sort())
+  }
+
   function clearDates() {
     setSelectedDates([])
   }
@@ -60,7 +66,7 @@ export function BookingStateProvider({
   }
 
   return (
-    <BookingContext.Provider value={{ selectedDates, toggleDate, clearDates, selectedPkg, setSelectedPkg }}>
+    <BookingContext.Provider value={{ selectedDates, toggleDate, selectDates, clearDates, selectedPkg, setSelectedPkg }}>
       {children}
     </BookingContext.Provider>
   )

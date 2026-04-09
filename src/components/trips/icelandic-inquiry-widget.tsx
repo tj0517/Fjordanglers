@@ -182,13 +182,13 @@ export function UnifiedCalendar({
       {/* ── Instruction banner ── */}
       <div className="flex items-start gap-2 px-3 py-2 rounded-xl mb-3"
         style={{
-          background: pendingFrom != null ? 'rgba(230,126,80,0.10)' : 'rgba(10,46,77,0.05)',
-          border: pendingFrom != null ? '1px solid rgba(230,126,80,0.22)' : '1px solid rgba(10,46,77,0.08)',
+          background: pendingFrom != null ? 'rgba(6,182,212,0.08)'  : 'rgba(10,46,77,0.05)',
+          border:     pendingFrom != null ? '1px solid rgba(6,182,212,0.2)' : '1px solid rgba(10,46,77,0.08)',
         }}>
         <span className="text-sm flex-shrink-0 mt-px leading-none">
-          {pendingFrom != null ? '📍' : periods.length === 0 ? '💡' : '✏️'}
+          {pendingFrom != null ? '→' : periods.length === 0 ? '💡' : '✏️'}
         </span>
-        <p className="text-[11px] f-body leading-snug" style={{ color: pendingFrom != null ? '#C05E33' : 'rgba(10,46,77,0.6)' }}>
+        <p className="text-[11px] f-body leading-snug" style={{ color: pendingFrom != null ? '#0E7490' : 'rgba(10,46,77,0.6)' }}>
           {instruction}
         </p>
       </div>
@@ -322,11 +322,14 @@ export function IcelandicInquiryWidget({
 
   useEffect(() => {
     if (!calendarOpen) return
-    function handle(e: MouseEvent) {
+    // Use pointerdown so the handler fires on both mouse clicks and touch taps.
+    // mousedown alone can mis-fire on mobile: synthetic mouse events from touch
+    // sometimes have unexpected targets, causing the calendar to close on tap-inside.
+    function handle(e: PointerEvent) {
       if (!calendarRef.current?.contains(e.target as Node)) closeCalendar()
     }
-    document.addEventListener('mousedown', handle)
-    return () => document.removeEventListener('mousedown', handle)
+    document.addEventListener('pointerdown', handle)
+    return () => document.removeEventListener('pointerdown', handle)
   }, [calendarOpen])
 
   // ── Computed ───────────────────────────────────────────────────────────
@@ -350,10 +353,10 @@ export function IcelandicInquiryWidget({
       <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-0.5 f-body"
           style={{ color: 'rgba(255,255,255,0.35)' }}>
-          Price on request
+          Personalised offer
         </p>
         <p className="text-sm font-semibold f-body" style={{ color: '#FFFFFF' }}>
-          Send an enquiry to {guideName}
+          Tell us your dates — {guideName} will craft your offer
         </p>
       </div>
 
@@ -517,8 +520,8 @@ export function IcelandicInquiryWidget({
 export function IcelandicAvailabilitySection() {
   const today = isoToday()
   const {
-    periods, pendingFrom, hoverDate, durationDays,
-    handleDayClick, setHoverDate, clearAll, blockedSet, setDurationDays,
+    periods, pendingFrom, hoverDate,
+    handleDayClick, setHoverDate, clearAll, blockedSet,
   } = useIcelandicBooking()
 
   // Navigation state — left month; right = left + 1
@@ -678,18 +681,18 @@ export function IcelandicAvailabilitySection() {
       <div
         className="flex items-start gap-2 px-3 py-2 rounded-xl mb-4"
         style={{
-          background: pendingFrom != null ? 'rgba(230,126,80,0.10)' : 'rgba(10,46,77,0.04)',
-          border:     pendingFrom != null ? '1px solid rgba(230,126,80,0.22)' : '1px solid rgba(10,46,77,0.07)',
+          background: pendingFrom != null ? 'rgba(6,182,212,0.08)'       : 'rgba(10,46,77,0.04)',
+          border:     pendingFrom != null ? '1px solid rgba(6,182,212,0.2)' : '1px solid rgba(10,46,77,0.07)',
         }}
       >
         <span className="text-sm flex-shrink-0 mt-px leading-none">
-          {pendingFrom != null ? '📍' : '💡'}
+          {pendingFrom != null ? '→' : '💡'}
         </span>
         <p className="text-[11px] f-body leading-snug"
-          style={{ color: pendingFrom != null ? '#C05E33' : 'rgba(10,46,77,0.5)' }}>
+          style={{ color: pendingFrom != null ? '#0E7490' : 'rgba(10,46,77,0.5)' }}>
           {pendingFrom != null
-            ? `From ${fmtDateShort(pendingFrom)} — click an end date, or the same date for a single day`
-            : 'Click any date to start. Click the same date twice for a single day, or a second date for a range.'}
+            ? `Starting ${fmtDateShort(pendingFrom)} — now tap an end date, or tap the same date for a single day`
+            : 'Tap any date to start. Tap the same date twice for a single day, or a second date for a range.'}
         </p>
       </div>
 
@@ -739,53 +742,6 @@ export function IcelandicAvailabilitySection() {
         </div>
       </div>
 
-      {/* Duration stepper */}
-      <div className="mt-5 pt-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-3"
-          style={{ color: 'rgba(10,46,77,0.4)' }}>
-          How many days are you looking for?
-        </p>
-        <div className="flex items-center justify-between px-5 py-3 rounded-2xl"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.09)', boxShadow: '0 1px 4px rgba(10,46,77,0.04)' }}>
-          <button
-            type="button"
-            onClick={() => setDurationDays(durationDays - 1)}
-            disabled={durationDays <= 1}
-            className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-            style={{
-              background: durationDays <= 1 ? 'transparent' : 'rgba(10,46,77,0.07)',
-              color:      durationDays <= 1 ? 'rgba(10,46,77,0.2)' : '#0A2E4D',
-              cursor:     durationDays <= 1 ? 'not-allowed' : 'pointer',
-            }}
-            aria-label="Fewer days"
-          >
-            <Minus size={15} />
-          </button>
-          <div className="text-center">
-            <span className="text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-              {durationDays}
-            </span>
-            <span className="text-sm f-body ml-2" style={{ color: 'rgba(10,46,77,0.5)' }}>
-              {durationDays === 1 ? 'day' : 'days'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setDurationDays(durationDays + 1)}
-            disabled={durationDays >= 30}
-            className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors"
-            style={{
-              background: durationDays >= 30 ? 'transparent' : 'rgba(10,46,77,0.07)',
-              color:      durationDays >= 30 ? 'rgba(10,46,77,0.2)' : '#0A2E4D',
-              cursor:     durationDays >= 30 ? 'not-allowed' : 'pointer',
-            }}
-            aria-label="More days"
-          >
-            <Plus size={15} />
-          </button>
-        </div>
-      </div>
-
       {/* Clear all footer */}
       {periods.length > 0 && pendingFrom == null && (
         <div className="flex justify-end mt-3">
@@ -822,7 +778,7 @@ export function IcelandicAvailabilitySection() {
 export function MobileIcelandicBar({ experienceId }: { experienceId: string }) {
   return (
     <div
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-4"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center gap-4 px-4"
       style={{
         background:     'rgba(10,46,77,0.97)',
         backdropFilter: 'blur(12px)',
@@ -831,9 +787,20 @@ export function MobileIcelandicBar({ experienceId }: { experienceId: string }) {
         paddingBottom:  'calc(10px + env(safe-area-inset-bottom, 0px))',
       }}
     >
+      {/* Left — context text */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold f-body leading-tight" style={{ color: '#fff' }}>
+          Get a personalised offer
+        </p>
+        <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(255,255,255,0.42)' }}>
+          Free to enquire · no commitment
+        </p>
+      </div>
+
+      {/* Right — CTA button (not full-width) */}
       <a
         href={`/trips/${experienceId}/inquire`}
-        className="flex items-center justify-center w-full py-3.5 rounded-2xl text-sm font-bold text-white f-body"
+        className="flex-shrink-0 flex items-center justify-center px-5 py-3 rounded-2xl text-sm font-bold text-white f-body"
         style={{ background: '#E67E50', boxShadow: '0 4px 14px rgba(230,126,80,0.28)' }}
       >
         Request to Book →

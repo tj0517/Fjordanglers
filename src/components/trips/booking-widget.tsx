@@ -73,6 +73,21 @@ function isBlocked(date: string, ranges: BlockedRange[]): boolean {
   return ranges.some(r => date >= r.date_start && date <= r.date_end)
 }
 
+function expandRange(start: string, numDays: number): string[] {
+  const result: string[] = []
+  const base = new Date(start + 'T00:00:00')
+  for (let i = 0; i < numDays; i++) {
+    const d = new Date(base)
+    d.setDate(base.getDate() + i)
+    result.push(d.toISOString().slice(0, 10))
+  }
+  return result
+}
+
+function isRangeBlocked(start: string, numDays: number, ranges: BlockedRange[]): boolean {
+  return expandRange(start, numDays).some(d => isBlocked(d, ranges))
+}
+
 function pkgDays(pkg: DurationOptionPayload): number {
   return pkg.days ?? 1
 }
@@ -95,16 +110,19 @@ function isoToday(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-// ─── MiniCalendar (multi-select: tap individual dates, not a range) ───────────
+// ─── MiniCalendar ─────────────────────────────────────────────────────────────
 
 interface MiniCalendarProps {
-  selectedDates: string[]           // set of selected YYYY-MM-DD strings
+  selectedDates: string[]
   blockedRanges: BlockedRange[]
-  onToggle: (date: string) => void  // toggle a single date in/out
+  onToggle: (date: string) => void
   onClearAll: () => void
+  /** For fixed multi-day packages: auto-expand range from start date click */
+  numDays?: number | null
 }
 
-function MiniCalendar({ selectedDates, blockedRanges, onToggle, onClearAll }: MiniCalendarProps) {
+function MiniCalendar({ selectedDates, blockedRanges, onToggle, onClearAll, numDays }: MiniCalendarProps) {
+  const isMultiDay = numDays != null && numDays > 1
   const today = isoToday()
   const [viewYear, setViewYear]   = useState(() => new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth())
@@ -162,11 +180,14 @@ function MiniCalendar({ selectedDates, blockedRanges, onToggle, onClearAll }: Mi
         {cells.map((day, i) => {
           if (day == null) return <div key={`e-${i}`} />
 
-          const d        = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-          const isPast   = d < today
-          const blocked  = isBlocked(d, blockedRanges)
-          const disabled = isPast || blocked
-          const selected = selectedSet.has(d)
+          const d              = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const isPast         = d < today
+          const blocked        = isBlocked(d, blockedRanges)
+          const wouldBlock     = isMultiDay && !blocked && !isPast && isRangeBlocked(d, numDays!, blockedRanges)
+          const disabled       = isPast || blocked || wouldBlock
+          const isRangeStart   = isMultiDay && selectedDates[0] === d
+          const isRangeIn      = isMultiDay && selectedSet.has(d) && !isRangeStart
+          const selected       = selectedSet.has(d)
 
           return (
             <button
@@ -176,22 +197,29 @@ function MiniCalendar({ selectedDates, blockedRanges, onToggle, onClearAll }: Mi
               onClick={() => !disabled && onToggle(d)}
               className="aspect-square flex items-center justify-center rounded-md transition-all f-body relative"
               style={{
-                background:  selected ? '#E67E50' : 'transparent',
-                color:       selected ? '#fff'
-                             : blocked && !isPast ? 'rgba(10,46,77,0.18)'
-                             : '#0A2E4D',
+                background:
+                  isRangeStart ? '#0A2E4D'
+                  : isRangeIn  ? 'rgba(10,46,77,0.10)'
+                  : selected   ? '#E67E50'
+                  : 'transparent',
+                color:
+                  isPast       ? 'rgba(10,46,77,0.18)'
+                  : disabled   ? 'rgba(10,46,77,0.18)'
+                  : isRangeStart ? '#fff'
+                  : isRangeIn  ? '#0A2E4D'
+                  : selected   ? '#fff'
+                  : blocked    ? 'rgba(10,46,77,0.18)'
+                  : '#0A2E4D',
                 opacity:     isPast ? 0.22 : 1,
                 cursor:      disabled ? 'not-allowed' : 'pointer',
-                fontWeight:  selected ? '700' : '400',
+                fontWeight:  isRangeStart || selected ? '700' : '400',
                 fontSize:    '11px',
-                boxShadow:   selected ? '0 2px 6px rgba(230,126,80,0.35)' : 'none',
-                transform:   selected ? 'scale(1.08)' : 'scale(1)',
+                boxShadow:   isRangeStart ? '0 2px 6px rgba(10,46,77,0.25)' : selected ? '0 2px 6px rgba(230,126,80,0.35)' : 'none',
               }}
               aria-label={`${d}${blocked ? ' — unavailable' : ''}${selected ? ' — selected' : ''}`}
-              aria-pressed={selected}
+              aria-pressed={selected || isRangeStart}
             >
               {day}
-              {/* Guide-blocked dot */}
               {blocked && !isPast && (
                 <span style={{
                   position: 'absolute', bottom: '2px', left: '50%',
@@ -210,8 +238,12 @@ function MiniCalendar({ selectedDates, blockedRanges, onToggle, onClearAll }: Mi
         style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
         <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
           {selectedDates.length === 0
-            ? 'Tap dates to select'
-            : `${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} selected`
+            ? isMultiDay
+              ? `Tap start date · ${numDays} days`
+              : 'Tap dates to select'
+            : isMultiDay
+              ? `${fmtDateShort(selectedDates[0])} → ${fmtDateShort(selectedDates[selectedDates.length - 1])}`
+              : `${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} selected`
           }
         </span>
         {selectedDates.length > 0 && (
@@ -258,7 +290,19 @@ export function BookingWidget({
   }, [openDropdown])
 
   // Shared booking state (synced with left column via context)
-  const { selectedDates, toggleDate, clearDates, selectedPkg, setSelectedPkg } = useBookingState()
+  const { selectedDates, toggleDate, selectDates, clearDates, selectedPkg, setSelectedPkg } = useBookingState()
+
+  const widgetPkgDays    = selectedPkg?.days ?? null
+  const widgetIsMultiDay = widgetPkgDays != null && widgetPkgDays > 1
+
+  function handleWidgetDateToggle(d: string) {
+    if (widgetIsMultiDay) {
+      if (selectedDates[0] === d) clearDates()
+      else selectDates(expandRange(d, widgetPkgDays!))
+    } else {
+      toggleDate(d)
+    }
+  }
 
   // Selection (packages list is local — only the selected value is shared via context)
   const packages = useMemo(
@@ -271,9 +315,11 @@ export function BookingWidget({
 
   // ── Computed ─────────────────────────────────────────────────────────────
   const days = useMemo(() => {
+    // For fixed multi-day packages always use pkg.days, not selectedDates.length
+    if (widgetIsMultiDay) return widgetPkgDays!
     if (selectedDates.length > 0) return selectedDates.length
     return selectedPkg != null ? pkgDays(selectedPkg) : 1
-  }, [selectedDates, selectedPkg])
+  }, [selectedDates, selectedPkg, widgetIsMultiDay, widgetPkgDays])
 
   const subtotalEur = useMemo(() => {
     if (selectedPkg != null) return calcSubtotal(selectedPkg, guests, days)
@@ -315,10 +361,12 @@ export function BookingWidget({
 
   // ── Date label helper ─────────────────────────────────────────────────────
   const dateTriggerLabel = selectedDates.length === 0
-    ? 'Select dates'
-    : selectedDates.length === 1
-      ? fmtDate(selectedDates[0])
-      : `${selectedDates.length} dates selected`
+    ? widgetIsMultiDay ? `Pick start date · ${widgetPkgDays}d` : 'Select dates'
+    : widgetIsMultiDay
+      ? `${fmtDateShort(selectedDates[0])} → ${fmtDateShort(selectedDates[selectedDates.length - 1])}`
+      : selectedDates.length === 1
+        ? fmtDate(selectedDates[0])
+        : `${selectedDates.length} dates selected`
 
   // ── IDLE — main panel ─────────────────────────────────────────────────────
   const canBook = selectedDates.length > 0
@@ -362,8 +410,9 @@ export function BookingWidget({
               <MiniCalendar
                 selectedDates={selectedDates}
                 blockedRanges={blockedRanges}
-                onToggle={toggleDate}
+                onToggle={handleWidgetDateToggle}
                 onClearAll={clearDates}
+                numDays={widgetPkgDays}
               />
             </div>
           )}
@@ -550,12 +599,23 @@ export function BookingWidget({
 
 export function MobileBookingBar({
   experienceId,
+  basePricePerPerson,
 }: {
   experienceId: string
+  basePricePerPerson: number
 }) {
+  const { selectedPkg } = useBookingState()
+
+  const price = selectedPkg?.price_eur ?? basePricePerPerson
+  const suffix =
+    selectedPkg == null          ? '/pp'
+    : selectedPkg.pricing_type === 'per_boat'  ? '/boat'
+    : selectedPkg.pricing_type === 'per_group' ? ''
+    : '/pp'
+
   return (
     <div
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-4"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center gap-4 px-4"
       style={{
         background:     'rgba(243,237,228,0.96)',
         backdropFilter: 'blur(12px)',
@@ -565,9 +625,21 @@ export function MobileBookingBar({
         paddingBottom:  'calc(10px + env(safe-area-inset-bottom, 0px))',
       }}
     >
+      {/* Left — price (updates when package changes) */}
+      <div className="flex-1 min-w-0">
+        <p className="f-body leading-none" style={{ color: '#0A2E4D' }}>
+          <span style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.5px' }}>€{price}</span>
+          <span className="text-sm font-medium ml-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>{suffix}</span>
+        </p>
+        <p className="text-xs f-body mt-1 truncate" style={{ color: 'rgba(10,46,77,0.45)' }}>
+          {selectedPkg != null ? selectedPkg.label : 'per person'}
+        </p>
+      </div>
+
+      {/* Right — CTA button */}
       <a
         href={`/book/${experienceId}`}
-        className="flex items-center justify-center w-full py-3.5 rounded-2xl text-sm font-bold text-white f-body"
+        className="flex-shrink-0 flex items-center justify-center px-5 py-3 rounded-2xl text-sm font-bold text-white f-body"
         style={{ background: '#E67E50', boxShadow: '0 4px 14px rgba(230,126,80,0.28)' }}
       >
         Request to Book →
@@ -685,7 +757,8 @@ export function AvailabilityCalendarBanner({
             today={today}
             blockedRanges={blockedRanges}
             selectedDates={selectedDates}
-            onToggle={toggleDate}
+            onToggle={handleWidgetDateToggle}
+            numDays={widgetPkgDays}
           />
         ))}
       </div>

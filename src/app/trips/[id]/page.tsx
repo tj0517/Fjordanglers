@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin } from 'lucide-react'
+import { MapPin, Camera, Star } from 'lucide-react'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
@@ -390,33 +390,32 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 // ─── Booking widget data fetch ────────────────────────────────────────────────
 
-type SupabaseClient = Awaited<ReturnType<typeof createClient>>
-
-async function fetchBookingWidgetData(
-  supabase: SupabaseClient,
-  experienceId: string,
-  guideId: string,
-) {
+async function fetchBookingWidgetData(experienceId: string, guideId: string) {
   const today     = new Date().toISOString().slice(0, 10)
   const yearAhead = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10)
 
-  // Service client bypasses RLS — calendar data is public-facing (blocks booking dates).
-  const svc = createServiceClient()
+  const supabase = await createClient()
+  const svc      = createServiceClient()
 
+  // Get auth user first — needed to conditionally fetch profile
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // All independent queries in one round-trip
   const [
-    { data: { user } },
     { data: guideData },
     { data: expCalendars },
     { data: allGuideCalendars },
+    profileResult,
   ] = await Promise.all([
-    supabase.auth.getUser(),
     supabase.from('guides').select('id, commission_rate').eq('id', guideId).single(),
     svc.from('calendar_experiences').select('calendar_id').eq('experience_id', experienceId),
     svc.from('guide_calendars').select('id').eq('guide_id', guideId),
+    user != null
+      ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      : Promise.resolve({ data: null }),
   ])
 
-  // Use experience-specific calendars when the guide has linked them, otherwise
-  // fall back to all guide calendars (covers guides using a shared/general calendar).
+  // Use experience-specific calendars when linked; otherwise fall back to all guide calendars
   const specificIds = (expCalendars ?? []).map((c: { calendar_id: string }) => c.calendar_id)
   const calendarIds = specificIds.length > 0
     ? specificIds
@@ -431,20 +430,9 @@ async function fetchBookingWidgetData(
         .lte('date_start', yearAhead)
     : { data: [] as Array<{ date_start: string; date_end: string }> }
 
-  // Fetch angler profile name if logged in
-  let anglerName = ''
-  if (user != null) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
-      .single()
-    anglerName = profile?.full_name ?? ''
-  }
-
   return {
     initialUser: user != null
-      ? { id: user.id, email: user.email ?? '', name: anglerName }
+      ? { id: user.id, email: user.email ?? '', name: profileResult.data?.full_name ?? '' }
       : null,
     commissionRate: guideData?.commission_rate ?? 0.10,
     blockedRanges: blockedRanges ?? [],
@@ -460,74 +448,66 @@ export default async function ExperienceDetailPage({
 }) {
   const { id } = await params
 
-  // ── Fetch with auth client (no published filter) ─────────────────────────
-  // The auth client respects RLS:
-  //   • published + guide.status=active → visible to everyone (anon included)
-  //   • draft → visible only to the guide who owns it (via "Guide reads own experiences" policy)
-  //   • admins → can preview via /admin; for public page we show their own drafts too
-  //
-  // This means guides can visit /trips/[id] to preview their draft BEFORE publishing.
-  // Anon visitors hitting a draft URL still get 404 (RLS returns null).
-  const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
+  // ── Step 1: Try the cached public query first (covers 99% of visits) ──────
+  // getExperience() uses unstable_cache (5-min TTL) — avoids a live DB hit for
+  // every page view. Falls back to auth client only for drafts / admin previews.
+  let exp: ExperienceWithGuide | null = await getExperience(id)
 
-  // Try with auth client first (respects RLS — guides see own drafts)
-  const supabase = await createClient()
-  let { data: rawExp } = await supabase
-    .from('experiences')
-    .select(EXP_SELECT)
-    .eq('id', id)
-    .single()
+  // ── Step 2: Draft / admin fallback (cache miss = unpublished or hidden) ───
+  if (exp == null) {
+    const EXP_SELECT = '*, guide:guides(id, full_name, avatar_url, country, city, average_rating, cancellation_policy, languages), images:experience_images(id, experience_id, url, is_cover, sort_order, created_at)'
+    const supabase = await createClient()
+    let { data: rawExp } = await supabase.from('experiences').select(EXP_SELECT).eq('id', id).single()
 
-  // If not found, check if admin — admins can preview any draft via service client
-  if (rawExp == null) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user != null) {
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-      if (profile?.role === 'admin') {
-        const svc = createServiceClient()
-        const { data } = await svc.from('experiences').select(EXP_SELECT).eq('id', id).single()
-        rawExp = data
+    if (rawExp == null) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user != null) {
+        const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+        if (profile?.role === 'admin') {
+          const svc = createServiceClient()
+          const { data } = await svc.from('experiences').select(EXP_SELECT).eq('id', id).single()
+          rawExp = data
+        }
       }
     }
-  }
 
-  if (rawExp == null) notFound()
+    if (rawExp == null) notFound()
 
-  // Fetch linked accommodations separately — gracefully returns [] if migration not applied
-  let linkedAccommodations: Array<{
-    accommodation: { id: string; name: string; type: string; description: string | null; max_guests: number | null; location_note: string | null; images: string[] }
-  }> = []
-  try {
-    const { data: accData } = await supabase
-      .from('experience_accommodations')
-      .select('accommodation:guide_accommodations ( id, name, type, description, max_guests, location_note, images )')
-      .eq('experience_id', id)
-    if (accData != null) {
-      linkedAccommodations = accData as typeof linkedAccommodations
+    exp = {
+      ...(rawExp as unknown as ExperienceWithGuide),
+      images: [...(rawExp.images ?? []) as ExperienceWithGuide['images']]
+        .sort((a, b) => a.sort_order - b.sort_order),
     }
-  } catch {
-    // Tables don't exist yet — ignore
-  }
-
-  const exp: ExperienceWithGuide = {
-    ...(rawExp as unknown as ExperienceWithGuide),
-    images: [...(rawExp.images ?? []) as ExperienceWithGuide['images']]
-      .sort((a, b) => a.sort_order - b.sort_order),
   }
 
   const isDraft = !exp.published
 
-  // ── Booking widget data (parallel fetch) ─────────────────────────────────
-  const showBookingWidget =
-    (exp.booking_type === 'classic' || exp.booking_type === 'both') && !isDraft
-
+  const showBookingWidget  = (exp.booking_type === 'classic' || exp.booking_type === 'both') && !isDraft
   const showIcelandicWidget = exp.booking_type === 'icelandic' && !isDraft
 
-  const [moreFromGuide, widgetData] = await Promise.all([
+  // ── Step 3: All secondary fetches in one parallel round-trip ─────────────
+  type AccommodationRow = {
+    accommodation: { id: string; name: string; type: string; description: string | null; max_guests: number | null; location_note: string | null; images: string[] }
+  }
+  const fetchAccommodations = async (): Promise<AccommodationRow[]> => {
+    try {
+      const supabase = await createClient()
+      const { data } = await supabase
+        .from('experience_accommodations')
+        .select('accommodation:guide_accommodations ( id, name, type, description, max_guests, location_note, images )')
+        .eq('experience_id', id)
+      return (data as AccommodationRow[] | null) ?? []
+    } catch {
+      return []
+    }
+  }
+
+  const [moreFromGuide, widgetData, linkedAccommodations] = await Promise.all([
     getMoreFromGuide(exp.guide_id, exp.id, 3),
     (showBookingWidget || showIcelandicWidget)
-      ? fetchBookingWidgetData(supabase, exp.id, exp.guide_id)
+      ? fetchBookingWidgetData(exp.id, exp.guide_id)
       : Promise.resolve(null),
+    fetchAccommodations(),
   ])
 
   const coverUrl = heroFull(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
@@ -561,7 +541,7 @@ export default async function ExperienceDetailPage({
       : null
 
   // ── New content fields (added via DB migration 20260316171516) ───────────────
-  const expRaw = rawExp as unknown as Record<string, unknown>
+  const expRaw = exp as unknown as Record<string, unknown>
   const itinerary    = (expRaw.itinerary as ItineraryStep[] | null) ?? null
   const locationDesc = (expRaw.location_description as string | null) ?? null
   const boatDesc     = (expRaw.boat_description as string | null) ?? null
@@ -571,6 +551,17 @@ export default async function ExperienceDetailPage({
   const transportDesc = (expRaw.transport_description as string | null) ?? null
 
   const accommodations = linkedAccommodations
+
+  // ── Listed-since — human-readable month + year from created_at ───────────────
+  const listedSince = (() => {
+    const raw = expRaw.created_at
+    if (raw == null || typeof raw !== 'string') return null
+    try {
+      return new Date(raw).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+    } catch {
+      return null
+    }
+  })()
 
   const tripDetailCards = [
     { key: 'boat',      label: 'Boat',             icon: '⛵',  text: boatDesc },
@@ -724,6 +715,7 @@ export default async function ExperienceDetailPage({
             >
               <CountryFlag country={exp.location_country} /> {exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
             </p>
+
           </div>
         </div>
       </section>
@@ -733,8 +725,55 @@ export default async function ExperienceDetailPage({
       <div className="px-4 md:px-8 pb-12 md:pb-24" style={{ background: '#F3EDE4' }}>
         <div className="max-w-7xl mx-auto">
 
-          {/* Gallery */}
-          <div className="pt-8 md:pt-10">
+          {/* ─── Gallery + trip meta ─────────────────────────────── */}
+          <div id="gallery" className="pt-8 md:pt-10">
+
+            {/* Meta strip — listed date + guide rating */}
+            <div className="flex items-center gap-3 flex-wrap mb-4">
+              {listedSince != null && (
+                <span
+                  className="text-xs f-body"
+                  style={{ color: 'rgba(10,46,77,0.42)' }}
+                >
+                  Listed {listedSince}
+                </span>
+              )}
+              {listedSince != null && exp.guide.average_rating != null && (
+                <span
+                  className="w-px h-3.5 flex-shrink-0"
+                  style={{ background: 'rgba(10,46,77,0.14)' }}
+                />
+              )}
+              {exp.guide.average_rating != null && (
+                <span
+                  className="flex items-center gap-1.5 text-xs f-body font-medium"
+                  style={{ color: 'rgba(10,46,77,0.6)' }}
+                >
+                  <Star
+                    size={11}
+                    strokeWidth={2}
+                    style={{ color: '#E67E50', fill: '#E67E50' }}
+                  />
+                  {exp.guide.average_rating.toFixed(1)} guide rating
+                </span>
+              )}
+              {exp.images.length > 0 && (listedSince != null || exp.guide.average_rating != null) && (
+                <span
+                  className="w-px h-3.5 flex-shrink-0"
+                  style={{ background: 'rgba(10,46,77,0.14)' }}
+                />
+              )}
+              {exp.images.length > 0 && (
+                <span
+                  className="flex items-center gap-1.5 text-xs f-body"
+                  style={{ color: 'rgba(10,46,77,0.42)' }}
+                >
+                  <Camera size={12} strokeWidth={2} />
+                  {exp.images.length} {exp.images.length === 1 ? 'photo' : 'photos'}
+                </span>
+              )}
+            </div>
+
             <ExperienceGallery images={exp.images} title={exp.title} />
           </div>
 
@@ -1311,7 +1350,7 @@ export default async function ExperienceDetailPage({
             {showBookingWidget && widgetData != null && (
               <aside
                 id="booking-widget"
-                className="w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
+                className="hidden lg:block w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
               >
                 <BookingWidget
                   experience={{
@@ -1335,7 +1374,7 @@ export default async function ExperienceDetailPage({
             {showIcelandicWidget && (
               <aside
                 id="inquiry-widget"
-                className="w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
+                className="hidden lg:block w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
               >
                 <IcelandicInquiryWidget
                   experience={{
@@ -1349,14 +1388,15 @@ export default async function ExperienceDetailPage({
             )}
 
           </div>
+
+          {/* ─── Mobile booking bar (inside provider so it reads selected pkg) ── */}
+          {showBookingWidget && <MobileBookingBar experienceId={exp.id} basePricePerPerson={exp.price_per_person_eur ?? 0} />}
+          {showIcelandicWidget && <MobileIcelandicBar experienceId={exp.id} />}
+
           </MaybeIcelandicProvider>
           </BookingStateProvider>
         </div>
       </div>
-
-      {/* ─── Mobile booking bar ──────────────────────────────────── */}
-      {showBookingWidget && <MobileBookingBar experienceId={exp.id} />}
-      {showIcelandicWidget && <MobileIcelandicBar experienceId={exp.id} />}
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}
       {moreFromGuide.length > 0 && (
