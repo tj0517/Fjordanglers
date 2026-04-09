@@ -684,9 +684,21 @@ export function AvailabilityCalendarBanner({
 }: {
   blockedRanges: BlockedRange[]
 }) {
-  const { selectedDates, toggleDate, clearDates } = useBookingState()
+  const { selectedDates, toggleDate, selectDates, clearDates, selectedPkg } = useBookingState()
   const [today] = useState(isoToday)
   const [monthOffset, setMonthOffset] = useState(0)
+
+  const bannerPkgDays    = selectedPkg?.days ?? null
+  const bannerIsMultiDay = bannerPkgDays != null && bannerPkgDays > 1
+
+  function handleBannerDateToggle(d: string) {
+    if (bannerIsMultiDay) {
+      if (selectedDates[0] === d) clearDates()
+      else selectDates(expandRange(d, bannerPkgDays!))
+    } else {
+      toggleDate(d)
+    }
+  }
 
   const months = useMemo(() => {
     const now  = new Date()
@@ -757,8 +769,7 @@ export function AvailabilityCalendarBanner({
             today={today}
             blockedRanges={blockedRanges}
             selectedDates={selectedDates}
-            onToggle={handleWidgetDateToggle}
-            numDays={widgetPkgDays}
+            onToggle={handleBannerDateToggle}
           />
         ))}
       </div>
