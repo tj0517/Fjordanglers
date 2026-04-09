@@ -327,7 +327,7 @@ export async function createBookingCheckout(
 // ─── finalizeBookingFromSession ───────────────────────────────────────────────
 
 export type FinalizeBookingResult =
-  | { success: true;  bookingId: string }
+  | { success: true;  bookingId: string; totalEur: number; bookingFeeEur: number }
   | { success: false; error: string }
 
 export async function finalizeBookingFromSession(
@@ -350,7 +350,8 @@ export async function finalizeBookingFromSession(
       .maybeSingle()
 
     if (existing != null) {
-      return { success: true, bookingId: existing.id }
+      const fee = (session.amount_total ?? 0) / 100
+      return { success: true, bookingId: existing.id, totalEur: fee, bookingFeeEur: fee }
     }
 
     // Parse metadata
@@ -449,7 +450,12 @@ export async function finalizeBookingFromSession(
       ).catch(err => console.error('[bookings/finalizeBookingFromSession] Email error:', err))
     }
 
-    return { success: true, bookingId: booking.id }
+    return {
+      success:       true,
+      bookingId:     booking.id,
+      totalEur,
+      bookingFeeEur: platformFeeEur + serviceFeeEur,
+    }
 
   } catch (err) {
     console.error('[bookings/finalizeBookingFromSession] Unexpected error:', err)

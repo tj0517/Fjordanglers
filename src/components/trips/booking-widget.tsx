@@ -79,7 +79,11 @@ function expandRange(start: string, numDays: number): string[] {
   for (let i = 0; i < numDays; i++) {
     const d = new Date(base)
     d.setDate(base.getDate() + i)
-    result.push(d.toISOString().slice(0, 10))
+    // Use local date parts — toISOString() returns UTC which is the wrong day for UTC+ zones
+    const y  = d.getFullYear()
+    const m  = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    result.push(`${y}-${m}-${dd}`)
   }
   return result
 }
@@ -322,9 +326,13 @@ export function BookingWidget({
   }, [selectedDates, selectedPkg, widgetIsMultiDay, widgetPkgDays])
 
   const subtotalEur = useMemo(() => {
-    if (selectedPkg != null) return calcSubtotal(selectedPkg, guests, days)
+    if (selectedPkg != null) {
+      // Multi-day package: price_eur is the total for the whole package, not per-day
+      const pricingDays = widgetIsMultiDay ? 1 : days
+      return calcSubtotal(selectedPkg, guests, pricingDays)
+    }
     return experience.price_per_person_eur * guests * days
-  }, [selectedPkg, guests, days, experience.price_per_person_eur])
+  }, [selectedPkg, guests, days, widgetIsMultiDay, experience.price_per_person_eur])
 
   const serviceFeeEur = useMemo(() => calcServiceFee(subtotalEur), [subtotalEur])
   const totalEur      = subtotalEur + serviceFeeEur
@@ -546,7 +554,7 @@ export function BookingWidget({
             <div className="flex justify-between text-xs f-body">
               <span style={{ color: 'rgba(255,255,255,0.5)' }}>
                 {selectedPkg != null
-                  ? `${selectedPkg.label}${selectedPkg.pricing_type === 'per_person' ? ` × ${guests}` : ''}${days > 1 ? ` × ${days}d` : ''}`
+                  ? `${selectedPkg.label}${selectedPkg.pricing_type === 'per_person' ? ` × ${guests}` : ''}${!widgetIsMultiDay && days > 1 ? ` × ${days}d` : ''}`
                   : `€${experience.price_per_person_eur} × ${guests} × ${days}d`
                 }
               </span>

@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle, AlertCircle } from 'lucide-react'
 import { finalizeBookingFromSession } from '@/actions/bookings'
+import { PurchaseTracker } from './PurchaseTracker'
 
 interface Props {
   params:       Promise<{ expId: string }>
@@ -29,6 +30,13 @@ export default async function BookingConfirmationPage({ params, searchParams }: 
   return (
     <div style={{ background: '#F3EDE4', minHeight: '100vh' }}>
       <div className="max-w-[520px] mx-auto px-4 pt-16 pb-16">
+        {result.success && (
+          <PurchaseTracker
+            bookingId={result.bookingId}
+            totalEur={result.totalEur}
+            bookingFeeEur={result.bookingFeeEur}
+          />
+        )}
         {result.success ? (
           <div
             className="rounded-3xl bg-white p-8 text-center"
