@@ -636,7 +636,7 @@ function DesktopCard({
             <p className="text-[12px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.65)' }}>{duration}</p>
           )}
 
-          <div className="flex items-center justify-between mt-1">
+          <div className="mt-1">
             {exp.booking_type === 'icelandic' ? (
               <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.45)', fontStyle: 'italic' }}>
                 Custom — price on request
@@ -647,10 +647,12 @@ function DesktopCard({
                 <span style={{ color: 'rgba(10,46,77,0.65)' }}> /pp</span>
               </p>
             )}
+          </div>
 
-            {/* CTA — always visible on mobile, hidden on desktop (desktop uses hover overlay) */}
+          {/* CTA — full-width on mobile, hidden on desktop (desktop uses hover overlay) */}
+          <div className="md:hidden mt-3">
             <span
-              className="md:hidden flex-shrink-0 text-[12px] font-semibold f-body px-3.5 py-1.5 rounded-full"
+              className="block w-full text-center text-[12px] font-semibold f-body py-2 rounded-full"
               style={{ background: '#E67E50', color: '#fff' }}
             >
               {exp.booking_type === 'icelandic' ? 'Enquire →' : 'View trip →'}

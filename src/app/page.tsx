@@ -623,12 +623,13 @@ export default async function HomePage() {
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between mt-auto">
-                          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-                            {(guide.languages as string[]).slice(0, 2).join(', ')}
-                            {(guide.languages as string[]).length > 2 && ` +${(guide.languages as string[]).length - 2}`}
-                          </p>
-                          <span className="text-xs font-semibold px-4 py-2 rounded-full transition-all group-hover:brightness-110 f-body" style={{ background: '#E67E50', color: '#fff' }}>
+                        <p className="text-xs f-body mt-auto" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                          {(guide.languages as string[]).slice(0, 2).join(', ')}
+                          {(guide.languages as string[]).length > 2 && ` +${(guide.languages as string[]).length - 2}`}
+                        </p>
+
+                        <div className="mt-3">
+                          <span className="block w-full text-center text-xs font-semibold px-4 py-2 rounded-full transition-all group-hover:brightness-110 f-body" style={{ background: '#E67E50', color: '#fff' }}>
                             View Profile →
                           </span>
                         </div>

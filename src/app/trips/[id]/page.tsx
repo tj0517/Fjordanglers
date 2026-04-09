@@ -397,38 +397,39 @@ async function fetchBookingWidgetData(experienceId: string, guideId: string) {
   const supabase = await createClient()
   const svc      = createServiceClient()
 
-  // Get auth user first — needed to conditionally fetch profile
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // All independent queries in one round-trip
+  // Round-trip 1: auth + all independent DB queries run in parallel
   const [
+    { data: { user } },
     { data: guideData },
     { data: expCalendars },
     { data: allGuideCalendars },
-    profileResult,
   ] = await Promise.all([
-    supabase.from('guides').select('id, commission_rate').eq('id', guideId).single(),
+    supabase.auth.getUser(),
+    svc.from('guides').select('id, commission_rate').eq('id', guideId).single(),
     svc.from('calendar_experiences').select('calendar_id').eq('experience_id', experienceId),
     svc.from('guide_calendars').select('id').eq('guide_id', guideId),
-    user != null
-      ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
-      : Promise.resolve({ data: null }),
   ])
 
-  // Use experience-specific calendars when linked; otherwise fall back to all guide calendars
+  // Resolve calendar IDs
   const specificIds = (expCalendars ?? []).map((c: { calendar_id: string }) => c.calendar_id)
   const calendarIds = specificIds.length > 0
     ? specificIds
     : (allGuideCalendars ?? []).map((c: { id: string }) => c.id)
 
-  const { data: blockedRanges } = calendarIds.length > 0
-    ? await svc
-        .from('calendar_blocked_dates')
-        .select('date_start, date_end')
-        .in('calendar_id', calendarIds)
-        .gte('date_end', today)
-        .lte('date_start', yearAhead)
-    : { data: [] as Array<{ date_start: string; date_end: string }> }
+  // Round-trip 2: profile + blocked dates in parallel
+  const [profileResult, { data: blockedRanges }] = await Promise.all([
+    user != null
+      ? supabase.from('profiles').select('full_name').eq('id', user.id).single()
+      : Promise.resolve({ data: null }),
+    calendarIds.length > 0
+      ? svc
+          .from('calendar_blocked_dates')
+          .select('date_start, date_end')
+          .in('calendar_id', calendarIds)
+          .gte('date_end', today)
+          .lte('date_start', yearAhead)
+      : Promise.resolve({ data: [] as Array<{ date_start: string; date_end: string }> }),
+  ])
 
   return {
     initialUser: user != null
