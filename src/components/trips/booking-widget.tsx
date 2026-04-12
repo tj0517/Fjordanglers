@@ -623,32 +623,33 @@ export function MobileBookingBar({
 
   return (
     <div
-      className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex items-center gap-4 px-4"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-5"
       style={{
-        background:     'rgba(243,237,228,0.96)',
-        backdropFilter: 'blur(12px)',
-        borderTop:      '1px solid rgba(10,46,77,0.08)',
-        boxShadow:      '0 -4px 24px rgba(10,46,77,0.08)',
-        paddingTop:     '10px',
-        paddingBottom:  'calc(10px + env(safe-area-inset-bottom, 0px))',
+        background:     'rgba(243,237,228,0.97)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderTop:      '1px solid rgba(10,46,77,0.1)',
+        boxShadow:      '0 -8px 32px rgba(0,0,0,0.1)',
+        paddingTop:     '14px',
+        paddingBottom:  'calc(14px + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      {/* Left — price (updates when package changes) */}
-      <div className="flex-1 min-w-0">
-        <p className="f-body leading-none" style={{ color: '#0A2E4D' }}>
-          <span style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.5px' }}>€{price}</span>
-          <span className="text-sm font-medium ml-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>{suffix}</span>
-        </p>
-        <p className="text-xs f-body mt-1 truncate" style={{ color: 'rgba(10,46,77,0.45)' }}>
-          {selectedPkg != null ? selectedPkg.label : 'per person'}
-        </p>
+      {/* Price row */}
+      <div className="flex items-baseline gap-1.5 mb-3">
+        <span className="f-body" style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px', color: '#0A2E4D' }}>
+          €{price}
+        </span>
+        <span className="text-sm font-medium f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>{suffix}</span>
+        {selectedPkg != null && (
+          <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>· {selectedPkg.label}</span>
+        )}
       </div>
 
-      {/* Right — CTA button */}
+      {/* Full-width CTA */}
       <a
         href={`/book/${experienceId}`}
-        className="flex-shrink-0 flex items-center justify-center px-5 py-3 rounded-2xl text-sm font-bold text-white f-body"
-        style={{ background: '#E67E50', boxShadow: '0 4px 14px rgba(230,126,80,0.28)' }}
+        className="flex items-center justify-center w-full py-4 rounded-2xl font-bold text-white f-body"
+        style={{ background: '#E67E50', fontSize: '16px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
       >
         Request to Book →
       </a>

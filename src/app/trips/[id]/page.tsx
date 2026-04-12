@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { MapPin, Camera, Star } from 'lucide-react'
+import { MapPin, Camera, Star, Clock, Users } from 'lucide-react'
 import { getExperience, getMoreFromGuide } from '@/lib/supabase/queries'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
@@ -573,7 +573,7 @@ export default async function ExperienceDetailPage({
   ].filter(c => c.text != null && c.text.trim() !== '')
 
   return (
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+    <div className="relative min-h-screen" style={{ background: '#F3EDE4' }}>
 
       {/* ─── NAV ─────────────────────────────────────────────────── */}
       <TripDetailNav backHref="/trips" />
@@ -613,10 +613,17 @@ export default async function ExperienceDetailPage({
         </div>
       )}
 
-      {/* ─── HERO ────────────────────────────────────────────────── */}
+      {/* ─── MOBILE GALLERY (full-bleed, floats under transparent nav) */}
+      {exp.images.length > 0 && (
+        <div className="md:hidden">
+          <ExperienceGallery images={exp.images} title={exp.title} topMobile />
+        </div>
+      )}
+
+      {/* ─── HERO (desktop only) ─────────────────────────────────── */}
       <section
-        className="relative overflow-hidden"
-        style={{ minHeight: '480px', paddingTop: '92px', background: '#07111C' }}
+        className="relative overflow-hidden min-h-[380px] md:min-h-[480px] hidden md:block"
+        style={{ paddingTop: '92px', background: '#07111C' }}
       >
         {/* Landscape background */}
         <Image
@@ -628,9 +635,9 @@ export default async function ExperienceDetailPage({
           style={{ objectPosition: 'center bottom' }}
         />
 
-
+        {/* Gradient + text — desktop only */}
         <div
-          className="absolute inset-x-0 bottom-0"
+          className="absolute inset-x-0 bottom-0 hidden md:block"
           style={{
             height: '65%',
             background: 'linear-gradient(to bottom, transparent 0%, rgba(4,12,22,0.55) 50%, rgba(4,12,22,0.88) 100%)',
@@ -641,7 +648,7 @@ export default async function ExperienceDetailPage({
         <GrainOverlay />
 
         <div
-          className="absolute bottom-0 inset-x-0 px-4 md:px-8 pb-8 md:pb-12"
+          className="absolute bottom-0 inset-x-0 px-4 md:px-8 pb-8 md:pb-12 hidden md:block"
           style={{ zIndex: 3 }}
         >
           <div className="max-w-7xl mx-auto">
@@ -721,13 +728,64 @@ export default async function ExperienceDetailPage({
         </div>
       </section>
 
+      {/* ─── MOBILE TITLE CARD (hidden on md+) ──────────────────── */}
+      <div
+        className="md:hidden relative -mt-7 z-10"
+        style={{ background: '#F3EDE4', borderRadius: '24px 24px 0 0' }}
+      >
+        <div className="px-5 pt-7 pb-4">
+
+          {/* Fish badges */}
+          <div className="flex flex-wrap gap-1.5 mb-3 justify-center">
+            {exp.fish_types.map(fish => (
+              <span
+                key={fish}
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-full f-body"
+                style={{
+                  background: 'rgba(230,126,80,0.13)',
+                  color: '#B85C2C',
+                  border: '1px solid rgba(230,126,80,0.25)',
+                }}
+              >
+                {fish}
+              </span>
+            ))}
+            {diffLabel != null && (
+              <span
+                className="text-[11px] font-medium px-2.5 py-1 rounded-full f-body"
+                style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }}
+              >
+                {diffLabel}
+              </span>
+            )}
+          </div>
+
+          {/* Title */}
+          <h1
+            className="font-bold f-display leading-tight text-center"
+            style={{ fontSize: 'clamp(24px, 7vw, 32px)', color: '#0A2E4D' }}
+          >
+            {exp.title}
+          </h1>
+
+          {/* Location · guests · duration — single line */}
+          <p className="text-sm f-body mt-2 text-center" style={{ color: 'rgba(10,46,77,0.55)' }}>
+            <CountryFlag country={exp.location_country} />
+            {' '}{exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
+            {' · '}up to {exp.max_guests} guests
+            {duration != null ? ` · ${duration}` : ''}
+          </p>
+
+        </div>
+      </div>
+
       {/* ─── MAIN CONTENT ────────────────────────────────────────── */}
 
       <div className="px-4 md:px-8 pb-12 md:pb-24" style={{ background: '#F3EDE4' }}>
         <div className="max-w-7xl mx-auto">
 
-          {/* ─── Gallery + trip meta ─────────────────────────────── */}
-          <div id="gallery" className="pt-8 md:pt-10">
+          {/* ─── Gallery + trip meta (desktop only — mobile gallery is above hero) */}
+          <div id="gallery" className="hidden md:block pt-8 md:pt-10">
 
             {/* Meta strip — listed date + guide rating */}
             <div className="flex items-center gap-3 flex-wrap mb-4">

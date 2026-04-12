@@ -158,23 +158,40 @@ export function FiltersModal() {
     setOpen(true)
   }
 
-  function applyFilters() {
-    const p      = new URLSearchParams(sp.toString())
-    const preset = PRICE_OPTIONS.find(o => o.key === price)
+  function commitFilters(overrides: {
+    difficulty?: string
+    price?: PriceKey
+    sort?: string
+    technique?: string
+    duration?: string
+    catchRelease?: boolean
+    guests?: string
+    fish?: string[]
+  }) {
+    const d   = overrides.difficulty   ?? difficulty
+    const pr  = overrides.price        ?? price
+    const s   = overrides.sort         ?? sort
+    const t   = overrides.technique    ?? technique
+    const dur = overrides.duration     ?? duration
+    const cr  = overrides.catchRelease ?? catchRelease
+    const g   = overrides.guests       ?? guests
+    const f   = overrides.fish         ?? fish
 
-    if (difficulty)    p.set('difficulty', difficulty);   else p.delete('difficulty')
-    if (preset?.min)   p.set('minPrice', preset.min);     else p.delete('minPrice')
-    if (preset?.max)   p.set('maxPrice', preset.max);     else p.delete('maxPrice')
-    if (sort)          p.set('sort', sort);                else p.delete('sort')
-    if (technique)     p.set('technique', technique);      else p.delete('technique')
-    if (duration)      p.set('duration', duration);        else p.delete('duration')
-    if (catchRelease)  p.set('catchRelease', 'true');      else p.delete('catchRelease')
-    if (guests)        p.set('guests', guests);            else p.delete('guests')
-    if (fish.length)   p.set('fish', fish.join(','));      else p.delete('fish')
+    const p      = new URLSearchParams(sp.toString())
+    const preset = PRICE_OPTIONS.find(o => o.key === pr)
+
+    if (d)        p.set('difficulty', d);         else p.delete('difficulty')
+    if (preset?.min) p.set('minPrice', preset.min); else p.delete('minPrice')
+    if (preset?.max) p.set('maxPrice', preset.max); else p.delete('maxPrice')
+    if (s)        p.set('sort', s);                else p.delete('sort')
+    if (t)        p.set('technique', t);           else p.delete('technique')
+    if (dur)      p.set('duration', dur);          else p.delete('duration')
+    if (cr)       p.set('catchRelease', 'true');   else p.delete('catchRelease')
+    if (g)        p.set('guests', g);              else p.delete('guests')
+    if (f.length) p.set('fish', f.join(','));      else p.delete('fish')
     p.delete('page')
 
     router.push(`/trips?${p.toString()}`)
-    setOpen(false)
   }
 
   function handleClearAll() {
@@ -186,6 +203,7 @@ export function FiltersModal() {
     setCatchRelease(false)
     setGuests('')
     setFish([])
+    commitFilters({ difficulty: '', price: '', sort: '', technique: '', duration: '', catchRelease: false, guests: '', fish: [] })
   }
 
   // ESC to close
@@ -288,7 +306,11 @@ export function FiltersModal() {
                   {[...FISH_FILTER].map(s => (
                     <button
                       key={s}
-                      onClick={() => setFish(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])}
+                      onClick={() => {
+                        const newFish = fish.includes(s) ? fish.filter(x => x !== s) : [...fish, s]
+                        setFish(newFish)
+                        commitFilters({ fish: newFish })
+                      }}
                       className="text-sm font-medium px-4 py-2 rounded-full transition-all f-body"
                       style={{
                         background: fish.includes(s) ? 'rgba(230,126,80,0.14)' : 'rgba(10,46,77,0.05)',
@@ -311,7 +333,7 @@ export function FiltersModal() {
                   {SORT_OPTIONS.map(o => (
                     <button
                       key={o.value}
-                      onClick={() => setSort(o.value)}
+                      onClick={() => { setSort(o.value); commitFilters({ sort: o.value }) }}
                       className="text-sm font-medium px-4 py-3 rounded-2xl text-left transition-all f-body"
                       style={{
                         background: sort === o.value ? '#0A2E4D' : 'rgba(10,46,77,0.05)',
@@ -333,7 +355,7 @@ export function FiltersModal() {
                   {DURATION_OPTIONS.map(o => (
                     <button
                       key={o.value}
-                      onClick={() => setDuration(o.value)}
+                      onClick={() => { setDuration(o.value); commitFilters({ duration: o.value }) }}
                       className="flex flex-col items-start px-4 py-3 rounded-2xl text-left transition-all f-body"
                       style={{
                         background: duration === o.value ? '#0A2E4D' : 'rgba(10,46,77,0.05)',
@@ -365,7 +387,7 @@ export function FiltersModal() {
                       key={o.key}
                       label={o.label}
                       active={price === o.key}
-                      onClick={() => setPrice(o.key)}
+                      onClick={() => { setPrice(o.key); commitFilters({ price: o.key }) }}
                       variant="orange"
                     />
                   ))}
@@ -381,7 +403,11 @@ export function FiltersModal() {
                   {TECHNIQUE_OPTIONS.map(t => (
                     <button
                       key={t}
-                      onClick={() => setTechnique(technique === t ? '' : t)}
+                      onClick={() => {
+                        const newTech = technique === t ? '' : t
+                        setTechnique(newTech)
+                        commitFilters({ technique: newTech })
+                      }}
                       className="text-sm font-medium px-4 py-2 rounded-full transition-all f-body"
                       style={{
                         background: technique === t ? 'rgba(230,126,80,0.14)' : 'rgba(10,46,77,0.05)',
@@ -406,7 +432,7 @@ export function FiltersModal() {
                       key={d.value}
                       label={d.label}
                       active={difficulty === d.value}
-                      onClick={() => setDifficulty(d.value)}
+                      onClick={() => { setDifficulty(d.value); commitFilters({ difficulty: d.value }) }}
                       variant="blue"
                     />
                   ))}
@@ -424,7 +450,7 @@ export function FiltersModal() {
                       key={o.value}
                       label={o.label}
                       active={guests === o.value}
-                      onClick={() => setGuests(o.value)}
+                      onClick={() => { setGuests(o.value); commitFilters({ guests: o.value }) }}
                       variant="blue"
                     />
                   ))}
@@ -437,7 +463,11 @@ export function FiltersModal() {
               <section>
                 <SectionLabel>Conservation</SectionLabel>
                 <button
-                  onClick={() => setCatchRelease(!catchRelease)}
+                  onClick={() => {
+                    const newCR = !catchRelease
+                    setCatchRelease(newCR)
+                    commitFilters({ catchRelease: newCR })
+                  }}
                   className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl transition-all f-body"
                   style={{
                     background: catchRelease ? 'rgba(10,46,77,0.06)' : 'rgba(10,46,77,0.04)',
@@ -491,11 +521,11 @@ export function FiltersModal() {
                 Clear all
               </button>
               <button
-                onClick={applyFilters}
+                onClick={() => setOpen(false)}
                 className="text-white text-sm font-bold px-7 py-3 rounded-full transition-all hover:brightness-110 active:scale-[0.97] f-body"
                 style={{ background: '#E67E50' }}
               >
-                Show results →
+                Done
               </button>
             </div>
           </div>
@@ -506,23 +536,23 @@ export function FiltersModal() {
 
   return (
     <>
-      {/* Trigger button */}
+      {/* Trigger button — icon only */}
       <button
         onClick={handleOpen}
-        className="flex-shrink-0 h-[52px] md:h-9 flex items-center gap-2 px-4 rounded-2xl md:rounded-xl transition-all active:scale-[0.97] f-body"
+        className="flex-shrink-0 relative flex items-center justify-center rounded-2xl transition-all active:scale-[0.97]"
         style={{
+          width:      '44px',
+          height:     '52px',
           background: urlActiveCount > 0 ? 'rgba(230,126,80,0.15)' : 'rgba(10,46,77,0.08)',
-          color:      urlActiveCount > 0 ? '#9E4820' : 'rgba(10,46,77,0.8)',
-          fontSize:   '13px',
-          fontWeight: 600,
+          color:      urlActiveCount > 0 ? '#9E4820' : 'rgba(10,46,77,0.75)',
         }}
+        aria-label="Filters"
       >
-        <SlidersHorizontal size={14} strokeWidth={1.5} />
-        Filters
+        <SlidersHorizontal size={17} strokeWidth={1.5} />
         {urlActiveCount > 0 && (
           <span
-            className="flex items-center justify-center rounded-full text-[10px] font-bold"
-            style={{ background: '#E67E50', color: 'white', width: '18px', height: '18px', flexShrink: 0 }}
+            className="absolute top-1.5 right-1.5 flex items-center justify-center rounded-full text-[9px] font-bold"
+            style={{ background: '#E67E50', color: 'white', width: '15px', height: '15px' }}
           >
             {urlActiveCount}
           </span>
