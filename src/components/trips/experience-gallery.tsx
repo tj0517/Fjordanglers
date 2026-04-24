@@ -15,9 +15,10 @@ interface Props {
   images: GalleryImage[]
   title: string
   topMobile?: boolean  // full-bleed top carousel for mobile hero
+  square?: boolean     // remove rounded corners + bottom margin (for full-bleed top placement)
 }
 
-export function ExperienceGallery({ images, title, topMobile = false }: Props) {
+export function ExperienceGallery({ images, title, topMobile = false, square = false }: Props) {
   const [current, setCurrent] = useState(0)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
@@ -98,9 +99,9 @@ export function ExperienceGallery({ images, title, topMobile = false }: Props) {
       )}
 
       {/* ─── DESKTOP BENTO GRID ────────────────────────────────────── */}
-      <div className="hidden md:block mb-8 select-none">
+      <div className={`hidden md:block select-none${square ? '' : ' mb-8'}`}>
         <div
-          className="overflow-hidden rounded-3xl"
+          className={`overflow-hidden${square ? '' : ' rounded-3xl'}`}
           style={{
             display: 'grid',
             gridTemplateColumns: secondary.length === 0 ? '1fr' : secondary.length <= 2 ? '2fr 1fr' : '2fr 1fr 1fr',

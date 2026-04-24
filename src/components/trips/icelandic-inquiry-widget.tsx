@@ -795,7 +795,7 @@ export function MobileIcelandicBar({ experienceId }: { experienceId: string }) {
           Get a personalised offer
         </p>
         <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.42)' }}>
-          Free to enquire · no commitment
+          Free to request · no commitment
         </p>
       </div>
 

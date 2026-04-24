@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { Plus, ExternalLink, Compass } from 'lucide-react'
+import { Plus, ExternalLink, Compass, ClipboardList } from 'lucide-react'
 import type { Database } from '@/lib/supabase/database.types'
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
@@ -77,7 +77,8 @@ export default async function ExperiencesPage() {
   // ── Parallel data fetch ─────────────────────────────────────────────────────
   // 1) Guide's experiences with their images
   // 2) All confirmed/completed bookings for this guide (to compute counts + revenue)
-  const [{ data: expRows }, { data: bookingRows }] = await Promise.all([
+  // 3) Guide's submissions (pending / in progress)
+  const [{ data: expRows }, { data: bookingRows }, { data: submissionRows }] = await Promise.all([
     supabase
       .from('experiences')
       .select('*, images:experience_images(id, url, is_cover, sort_order)')
@@ -88,9 +89,16 @@ export default async function ExperiencesPage() {
       .select('experience_id, guide_payout_eur')
       .eq('guide_id', guide.id)
       .in('status', ['confirmed', 'completed']),
+    supabase
+      .from('guide_submissions')
+      .select('id, location_name, country, region, status, species, created_at')
+      .eq('guide_id', guide.id)
+      .in('status', ['submitted', 'in_progress'])
+      .order('created_at', { ascending: false }),
   ])
 
   const experiences = (expRows ?? []) as ExperienceRow[]
+  const submissions = submissionRows ?? []
 
   // Build per-experience booking count map and aggregate revenue
   const bookingCountPerExp: Record<string, number> = {}
@@ -175,6 +183,67 @@ export default async function ExperiencesPage() {
           </div>
         ))}
       </div>
+
+      {/* ─── Pending submissions ─────────────────────────────────── */}
+      {submissions.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <ClipboardList size={14} strokeWidth={1.5} style={{ color: 'rgba(10,46,77,0.4)' }} />
+            <h2 className="text-sm font-bold f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              Pending with FjordAnglers
+            </h2>
+            <span
+              className="text-[10px] font-bold px-2 py-0.5 rounded-full f-body"
+              style={{ background: 'rgba(217,119,6,0.12)', color: '#D97706' }}
+            >
+              {submissions.length}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {submissions.map(sub => {
+              const isInProgress = sub.status === 'in_progress'
+              return (
+                <div
+                  key={sub.id}
+                  className="flex items-center gap-4 px-5 py-4 rounded-[18px]"
+                  style={{
+                    background: isInProgress ? 'rgba(37,99,235,0.04)' : 'rgba(217,119,6,0.04)',
+                    border: isInProgress ? '1px solid rgba(37,99,235,0.15)' : '1px solid rgba(217,119,6,0.2)',
+                  }}
+                >
+                  <ClipboardList
+                    size={16}
+                    strokeWidth={1.5}
+                    style={{ color: isInProgress ? '#2563EB' : '#D97706', flexShrink: 0 }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold f-body truncate" style={{ color: '#0A2E4D' }}>
+                      {sub.location_name}
+                      {sub.region ? `, ${sub.region}` : ''}
+                    </p>
+                    <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      {sub.country}
+                      {sub.species.length > 0 && <> · {sub.species.slice(0, 3).join(', ')}</>}
+                    </p>
+                  </div>
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full f-body flex-shrink-0"
+                    style={{
+                      background: isInProgress ? 'rgba(37,99,235,0.1)' : 'rgba(217,119,6,0.1)',
+                      color: isInProgress ? '#2563EB' : '#D97706',
+                    }}
+                  >
+                    {isInProgress ? 'In progress' : 'Awaiting review'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-xs f-body mt-2" style={{ color: 'rgba(10,46,77,0.35)' }}>
+            FjordAnglers is building your experience page. We&apos;ll notify you when it&apos;s ready for review.
+          </p>
+        </div>
+      )}
 
       {/* ─── Experience cards ────────────────────────────────────── */}
       {experiences.length > 0 ? (

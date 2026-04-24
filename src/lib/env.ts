@@ -45,6 +45,10 @@ const envSchema = z.object({
   // so you can set both to the same value.
   // Optional — falls back to STRIPE_WEBHOOK_SECRET if not set (covers local dev).
   STRIPE_CONNECT_WEBHOOK_SECRET: z.string().optional(),
+  // Separate webhook secret for the deposit checkout endpoint.
+  // Register a second endpoint in Stripe Dashboard → Developers → Webhooks
+  // pointing to /api/webhooks/stripe-deposit. Optional in local dev (can reuse STRIPE_WEBHOOK_SECRET).
+  STRIPE_WEBHOOK_SECRET_DEPOSIT: z.string().optional(),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1, 'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is required'),
 
   // ── App ────────────────────────────────────────────────────────────────────
@@ -57,6 +61,8 @@ const envSchema = z.object({
 
   // ── Email (Resend) ─────────────────────────────────────────────────────────
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
+  // FA contact email — receives new inquiry notifications.
+  FA_EMAIL: z.string().email().optional().default('contact@fjordanglers.com'),
 
   // ── Security / Observability ───────────────────────────────────────────────
   // Sentry DSN — optional. If not set, Sentry is disabled (safe without key).

@@ -93,15 +93,12 @@ function SheetCard({
           ) : (
             <div className="w-full h-full" style={{ background: '#EDE6DB' }} />
           )}
-          {/* Price badge */}
+          {/* Inquire badge */}
           <div
             className="absolute bottom-2.5 left-2.5 text-xs font-bold px-2.5 py-1 rounded-full f-body"
             style={{ background: 'rgba(5,12,22,0.72)', color: '#fff', backdropFilter: 'blur(8px)' }}
           >
-            {exp.booking_type === 'icelandic'
-              ? 'Custom'
-              : `€${exp.price_per_person_eur}/pp`
-            }
+            Inquire
           </div>
         </div>
 
@@ -539,7 +536,6 @@ function TripCard({
   const rating    = exp.guide.average_rating
   const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
   const hasSeason = exp.season_from != null && exp.season_to != null
-  const isCustom  = exp.booking_type === 'icelandic'
   const fish      = exp.fish_types ?? []
 
   return (
@@ -594,36 +590,23 @@ function TripCard({
           {/* Bottom bar — stats left, CTA right */}
           <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
 
-            {/* Price pill */}
-            <div
-              className="inline-flex items-center gap-2 f-body text-[12px] font-semibold px-3.5 py-2 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.93)', backdropFilter: 'blur(14px)', color: '#0A2E4D' }}
-            >
-              {isCustom ? (
-                <span style={{ color: 'rgba(10,46,77,0.6)', fontStyle: 'italic' }}>Price on request</span>
-              ) : (
-                <>
-                  <span style={{ fontSize: '13px', fontWeight: 800 }}>€{exp.price_per_person_eur}</span>
-                  <span style={{ color: 'rgba(10,46,77,0.45)', fontWeight: 500 }}>/pp</span>
-                </>
-              )}
-              {rating != null && (
-                <>
-                  <span style={{ color: 'rgba(10,46,77,0.18)' }}>·</span>
-                  <span className="flex items-center gap-1">
-                    <Star size={11} strokeWidth={0} fill="#E67E50" style={{ color: '#E67E50' }} />
-                    {rating.toFixed(1)}
-                  </span>
-                </>
-              )}
-            </div>
+            {/* Rating pill (shown only if guide has a rating) */}
+            {rating != null && (
+              <div
+                className="inline-flex items-center gap-1.5 f-body text-[12px] font-semibold px-3 py-2 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.93)', backdropFilter: 'blur(14px)', color: '#0A2E4D' }}
+              >
+                <Star size={11} strokeWidth={0} fill="#E67E50" style={{ color: '#E67E50' }} />
+                {rating.toFixed(1)}
+              </div>
+            )}
 
             {/* CTA pill */}
             <span
-              className="flex-shrink-0 text-[12px] font-bold px-4 py-2 rounded-full f-body"
+              className="flex-shrink-0 text-[12px] font-bold px-4 py-2 rounded-full f-body ml-auto"
               style={{ background: '#E67E50', color: '#fff', boxShadow: '0 2px 12px rgba(230,126,80,0.45)' }}
             >
-              {isCustom ? 'Enquire →' : 'View trip →'}
+              Inquire →
             </span>
 
           </div>

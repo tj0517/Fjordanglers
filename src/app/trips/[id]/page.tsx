@@ -16,11 +16,9 @@ import { FISH_IMG } from '@/lib/fish'
 import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { CountryFlag } from '@/components/ui/country-flag'
-import { TripDetailNav } from '@/components/trips/trip-detail-nav'
-import { BookingWidget, MobileBookingBar, AvailabilityCalendarBanner } from '@/components/trips/booking-widget'
+import { HomeNav } from '@/components/home/home-nav'
 import { BookingStateProvider } from '@/contexts/booking-context'
-import { IcelandicInquiryWidget, MobileIcelandicBar, IcelandicAvailabilitySection } from '@/components/trips/icelandic-inquiry-widget'
-import { MaybeIcelandicProvider } from '@/contexts/icelandic-context'
+import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -305,6 +303,19 @@ function CancellationPolicyBanner({ policy }: { policy: string | null }) {
   const config = policy != null ? (POLICY_CONFIG[policy] ?? null) : null
   if (config == null) return null
 
+  const rows = [
+    {
+      icon: '🛡️',
+      title: `Free cancellation up to ${config.days} days before your trip`,
+      desc: config.detail,
+    },
+    {
+      icon: '🌦️',
+      title: 'Bad weather? Always covered',
+      desc: 'If your guide cancels due to weather or safety concerns, you get a full refund or free reschedule — no questions asked.',
+    },
+  ]
+
   return (
     <section className="mb-12">
       <SalmonRule />
@@ -312,47 +323,26 @@ function CancellationPolicyBanner({ policy }: { policy: string | null }) {
         className="text-xs font-semibold uppercase tracking-[0.25em] mt-4 mb-5 f-body"
         style={{ color: '#E67E50' }}
       >
-        Cancellation Policy
+        Cancellation & Refunds
       </p>
 
       <div
-        className="rounded-2xl overflow-hidden"
-        style={{ border: `1px solid ${config.border}`, background: config.bg }}
+        className="rounded-2xl divide-y"
+        style={{
+          border: '1px solid rgba(10,46,77,0.08)',
+          background: 'rgba(10,46,77,0.03)',
+        }}
       >
-        {/* Header row — policy badge + headline */}
-        <div className="flex items-center gap-3 px-6 py-5">
-          <span
-            className="text-[10px] font-bold uppercase tracking-[0.18em] px-2.5 py-1 rounded-full f-body flex-shrink-0"
-            style={{ background: config.color, color: 'white' }}
-          >
-            {config.label}
-          </span>
-          <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-            Free cancellation up to {config.days} days before your trip
-          </p>
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: '1px', background: config.border }} />
-
-        {/* Detail text */}
-        <div className="px-6 py-4">
-          <p className="text-sm leading-relaxed f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-            {config.detail}
-          </p>
-        </div>
-
-        {/* Divider */}
-        <div style={{ height: '1px', background: config.border }} />
-
-        {/* Weather clause — always shown regardless of policy */}
-        <div className="flex items-start gap-3 px-6 py-4">
-          <span className="text-base flex-shrink-0 mt-0.5" role="img" aria-label="Weather">🌦️</span>
-          <p className="text-sm leading-relaxed f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-            <span className="font-semibold" style={{ color: '#0A2E4D' }}>Bad weather? </span>
-            Always a full refund or free reschedule — no questions asked.
-          </p>
-        </div>
+        {rows.map((row, i) => (
+          <div key={i} className="flex items-start gap-4 px-6 py-5"
+            style={i > 0 ? { borderTop: '1px solid rgba(10,46,77,0.06)' } : undefined}>
+            <span className="text-xl flex-shrink-0 mt-0.5">{row.icon}</span>
+            <div>
+              <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{row.title}</p>
+              <p className="text-sm f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.55)' }}>{row.desc}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   )
@@ -483,8 +473,8 @@ export default async function ExperienceDetailPage({
 
   const isDraft = !exp.published
 
-  const showBookingWidget  = (exp.booking_type === 'classic' || exp.booking_type === 'both') && !isDraft
-  const showIcelandicWidget = exp.booking_type === 'icelandic' && !isDraft
+  // All published trips use the unified InquiryWidget (FA inquiry flow)
+  const showWidget = !isDraft
 
   // ── Step 3: All secondary fetches in one parallel round-trip ─────────────
   type AccommodationRow = {
@@ -505,7 +495,7 @@ export default async function ExperienceDetailPage({
 
   const [moreFromGuide, widgetData, linkedAccommodations] = await Promise.all([
     getMoreFromGuide(exp.guide_id, exp.id, 3),
-    (showBookingWidget || showIcelandicWidget)
+    showWidget
       ? fetchBookingWidgetData(exp.id, exp.guide_id)
       : Promise.resolve(null),
     fetchAccommodations(),
@@ -564,6 +554,32 @@ export default async function ExperienceDetailPage({
     }
   })()
 
+  // ── Mobile highlights — gear + booking trust signals ────────────────────────
+  const included = (expRaw.what_included as string[] | null) ?? []
+  type Highlight = { icon: string; title: string; desc: string }
+
+  const hasGear = included.some(i => /rod|gear|equip|tackle|lure/i.test(i)) || gearDesc != null
+  const guidePolicy = exp.guide.cancellation_policy as string | null
+  const cancelDays  = guidePolicy != null ? (POLICY_CONFIG[guidePolicy]?.days ?? null) : null
+
+  const mobileHighlights: Highlight[] = [
+    ...(hasGear ? [{
+      icon: '🎣',
+      title: 'All fishing gear provided',
+      desc: gearDesc ?? 'Rods, reels, tackle and lures — just show up and fish',
+    }] : []),
+    {
+      icon: '💳',
+      title: 'No payment today',
+      desc: 'Confirm your spot now — your guide will be in touch to arrange dates and payment.',
+    },
+    {
+      icon: '🛡️',
+      title: cancelDays != null ? `Free cancellation up to ${cancelDays} days before` : 'Refund protection',
+      desc: 'Bad weather or a change of plans? You get a full refund — no questions asked.',
+    },
+  ]
+
   const tripDetailCards = [
     { key: 'boat',      label: 'Boat',             icon: '⛵',  text: boatDesc },
     { key: 'food',      label: 'Food & Drinks',    icon: '🍽️', text: foodDesc },
@@ -576,7 +592,7 @@ export default async function ExperienceDetailPage({
     <div className="relative min-h-screen" style={{ background: '#F3EDE4' }}>
 
       {/* ─── NAV ─────────────────────────────────────────────────── */}
-      <TripDetailNav backHref="/trips" />
+      <HomeNav />
 
       {/* ─── DRAFT PREVIEW BANNER ────────────────────────────────── */}
       {isDraft && (
@@ -623,7 +639,7 @@ export default async function ExperienceDetailPage({
       {/* ─── HERO (desktop only) ─────────────────────────────────── */}
       <section
         className="relative overflow-hidden min-h-[380px] md:min-h-[480px] hidden md:block"
-        style={{ paddingTop: '92px', background: '#07111C' }}
+        style={{ paddingTop: '90px', background: '#07111C' }}
       >
         {/* Landscape background */}
         <Image
@@ -768,15 +784,78 @@ export default async function ExperienceDetailPage({
             {exp.title}
           </h1>
 
-          {/* Location · guests · duration — single line */}
-          <p className="text-sm f-body mt-2 text-center" style={{ color: 'rgba(10,46,77,0.55)' }}>
-            <CountryFlag country={exp.location_country} />
-            {' '}{exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
-            {' · '}up to {exp.max_guests} guests
-            {duration != null ? ` · ${duration}` : ''}
-          </p>
+          {/* Location · guests · duration — icon chips */}
+          <div className="flex items-center justify-center flex-wrap gap-x-4 gap-y-1.5 mt-3">
+            <span className="flex items-center gap-1.5 text-[13px] f-body font-medium" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              <MapPin size={13} strokeWidth={2} style={{ color: '#E67E50', flexShrink: 0 }} />
+              {exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
+            </span>
+            <span className="flex items-center gap-1.5 text-[13px] f-body font-medium" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              <Users size={13} strokeWidth={2} style={{ color: '#E67E50', flexShrink: 0 }} />
+              Up to {exp.max_guests} guests
+            </span>
+            {duration != null && (
+              <span className="flex items-center gap-1.5 text-[13px] f-body font-medium" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                <Clock size={13} strokeWidth={2} style={{ color: '#E67E50', flexShrink: 0 }} />
+                {duration}
+              </span>
+            )}
+          </div>
 
         </div>
+      </div>
+
+      {/* ─── MOBILE GUIDE + HIGHLIGHTS ───────────────────────────── */}
+      <div className="md:hidden px-5 pb-6" style={{ background: '#F3EDE4' }}>
+
+        {/* Guide row */}
+        <div
+          className="flex items-center gap-3 py-5"
+          style={{ borderTop: '1px solid rgba(10,46,77,0.09)' }}
+        >
+          <div
+            className="flex-shrink-0 rounded-full overflow-hidden"
+            style={{ width: '48px', height: '48px', border: '2px solid rgba(10,46,77,0.1)' }}
+          >
+            {exp.guide.avatar_url != null ? (
+              <Image
+                src={avatarImg(exp.guide.avatar_url) ?? exp.guide.avatar_url}
+                alt={exp.guide.full_name}
+                width={48} height={48}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-bold text-white f-body"
+                style={{ background: '#0A2E4D', fontSize: '18px' }}>
+                {exp.guide.full_name[0]}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+              Guide: {exp.guide.full_name}
+            </p>
+            <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+              Verified fishing guide{listedSince != null ? ` · Listed ${listedSince}` : ''}
+            </p>
+          </div>
+        </div>
+
+        {/* Highlight rows */}
+        {mobileHighlights.slice(0, 3).map((h, i) => (
+          <div
+            key={i}
+            className="flex items-start gap-4 py-5"
+            style={{ borderTop: '1px solid rgba(10,46,77,0.09)' }}
+          >
+            <span style={{ fontSize: '24px', lineHeight: 1, flexShrink: 0, marginTop: '1px' }}>{h.icon}</span>
+            <div>
+              <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{h.title}</p>
+              <p className="text-xs f-body mt-1 leading-relaxed" style={{ color: 'rgba(10,46,77,0.5)' }}>{h.desc}</p>
+            </div>
+          </div>
+        ))}
+
       </div>
 
       {/* ─── MAIN CONTENT ────────────────────────────────────────── */}
@@ -837,15 +916,51 @@ export default async function ExperienceDetailPage({
           </div>
 
           <BookingStateProvider initialPkg={durationOptions?.[0] ?? null}>
-          <MaybeIcelandicProvider
-            enabled={showIcelandicWidget}
-            blockedRanges={widgetData?.blockedRanges ?? []}
-            maxGuests={exp.max_guests ?? 99}
-          >
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 items-start">
 
             {/* ─── LEFT — main content ─────────────────────────── */}
             <div className="flex-1 min-w-0">
+
+              {/* ─── Guide + highlights (desktop only — mobile has same above hero) */}
+              <div className="hidden md:block mb-10">
+
+                {/* Guide row */}
+                <div className="flex items-center gap-4 pb-6" style={{ borderBottom: '1px solid rgba(10,46,77,0.08)' }}>
+                  <div className="flex-shrink-0 rounded-full overflow-hidden"
+                    style={{ width: '52px', height: '52px', border: '2px solid rgba(10,46,77,0.1)' }}>
+                    {exp.guide.avatar_url != null ? (
+                      <Image src={avatarImg(exp.guide.avatar_url) ?? exp.guide.avatar_url}
+                        alt={exp.guide.full_name} width={52} height={52} className="object-cover w-full h-full" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center font-bold text-white f-body"
+                        style={{ background: '#0A2E4D', fontSize: '20px' }}>
+                        {exp.guide.full_name[0]}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                      Guide: {exp.guide.full_name}
+                    </p>
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      Verified fishing guide{listedSince != null ? ` · Listed ${listedSince}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3-column highlight cards */}
+                <div className="grid grid-cols-3 gap-3 mt-5">
+                  {mobileHighlights.map((h, i) => (
+                    <div key={i} className="flex flex-col gap-3 p-4 rounded-2xl"
+                      style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}>
+                      <span style={{ fontSize: '24px', lineHeight: 1 }}>{h.icon}</span>
+                      <p className="text-[13px] font-semibold f-body leading-snug" style={{ color: '#0A2E4D' }}>
+                        {h.title}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Description */}
               <section className="mb-12">
@@ -1307,14 +1422,6 @@ export default async function ExperienceDetailPage({
               {/* Cancellation policy banner */}
               <CancellationPolicyBanner policy={exp.guide.cancellation_policy} />
 
-              {/* ─── Availability calendar (direct booking) ── */}
-              {showBookingWidget && widgetData != null && (
-                <AvailabilityCalendarBanner blockedRanges={widgetData.blockedRanges} />
-              )}
-
-              {/* ─── Availability calendar (Icelandic period-picking) ── */}
-              {showIcelandicWidget && <IcelandicAvailabilitySection />}
-
               {/* Guide card */}
               <section>
                 <SalmonRule />
@@ -1405,54 +1512,26 @@ export default async function ExperienceDetailPage({
 
             </div>
 
-            {/* ─── RIGHT COLUMN — Booking Widget ───────────────────── */}
-            {showBookingWidget && widgetData != null && (
-              <aside
-                id="booking-widget"
-                className="hidden lg:block w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
-              >
-                <BookingWidget
-                  experience={{
-                    id:                    exp.id,
-                    title:                 exp.title,
-                    price_per_person_eur:  exp.price_per_person_eur ?? 0,
-                    max_guests:            exp.max_guests ?? 99,
-                    duration_options:      durationOptions,
-                    booking_type:          exp.booking_type ?? 'classic',
-                  }}
-                  guideId={exp.guide_id}
-                  guideName={exp.guide.full_name}
-                  blockedRanges={widgetData.blockedRanges}
-                  commissionRate={widgetData.commissionRate}
-                  initialUser={widgetData.initialUser}
-                />
-              </aside>
-            )}
-
-            {/* ─── RIGHT COLUMN — Icelandic Enquiry Widget ─────────── */}
-            {showIcelandicWidget && (
+            {/* ─── RIGHT COLUMN — FA Inquiry Widget (all trip types) ── */}
+            {showWidget && (
               <aside
                 id="inquiry-widget"
                 className="hidden lg:block w-full lg:w-[380px] flex-shrink-0 lg:sticky lg:top-28 self-start pt-8 lg:pt-0"
               >
-                <IcelandicInquiryWidget
-                  experience={{
-                    id:         exp.id,
-                    title:      exp.title,
-                    max_guests: exp.max_guests ?? 99,
-                  }}
-                  guideName={exp.guide.full_name}
+                <InquiryWidget
+                  tripId={exp.id}
+                  tripTitle={exp.title}
+                  maxGuests={exp.max_guests ?? 12}
+                  blockedRanges={widgetData?.blockedRanges ?? []}
                 />
               </aside>
             )}
 
           </div>
 
-          {/* ─── Mobile booking bar (inside provider so it reads selected pkg) ── */}
-          {showBookingWidget && <MobileBookingBar experienceId={exp.id} basePricePerPerson={exp.price_per_person_eur ?? 0} />}
-          {showIcelandicWidget && <MobileIcelandicBar experienceId={exp.id} />}
+          {/* ─── Mobile inquiry bar ── */}
+          {showWidget && <MobileInquiryBar tripId={exp.id} />}
 
-          </MaybeIcelandicProvider>
           </BookingStateProvider>
         </div>
       </div>

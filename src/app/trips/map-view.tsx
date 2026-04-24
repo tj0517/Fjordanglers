@@ -107,91 +107,57 @@ function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: MapBounds) => v
 
 // ─── Icon factory functions ────────────────────────────────────────────────────
 
-function singlePriceIcon(price: number) {
+function pinIcon() {
   return L.divIcon({
     className: '',
     html: `<div style="
-      background: white;
-      color: #0A2E4D;
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-weight: 700;
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(0,0,0,0.07);
-      white-space: nowrap;
-      cursor: pointer;
-      line-height: 1.2;
-    ">€${price}</div>`,
-    iconSize: [68, 28],
-    iconAnchor: [34, 14],
-    popupAnchor: [0, -18],
-  })
-}
-
-function popupIcon(price: number) {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      background: #E67E50;
-      color: white;
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-weight: 700;
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      box-shadow: 0 2px 16px rgba(230,126,80,0.5), 0 0 0 3px rgba(230,126,80,0.2);
-      white-space: nowrap;
-      cursor: pointer;
-      line-height: 1.2;
-    ">€${price}</div>`,
-    iconSize: [68, 28],
-    iconAnchor: [34, 14],
-    popupAnchor: [0, -18],
-  })
-}
-
-function inquiryIcon() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      background: white;
-      color: #0A2E4D;
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-weight: 700;
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.18), 0 0 0 1.5px rgba(0,0,0,0.07);
-      white-space: nowrap;
-      cursor: pointer;
-      line-height: 1.2;
-    ">Custom</div>`,
-    iconSize: [76, 28],
-    iconAnchor: [38, 14],
-    popupAnchor: [0, -18],
-  })
-}
-
-function inquiryIconHover() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
+      width: 30px; height: 30px;
       background: #0A2E4D;
-      color: white;
-      border-radius: 20px;
-      padding: 5px 12px;
-      font-weight: 700;
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      box-shadow: 0 2px 16px rgba(10,46,77,0.35);
-      white-space: nowrap;
+      border-radius: 50%;
+      border: 2.5px solid white;
+      box-shadow: 0 2px 10px rgba(10,46,77,0.40);
       cursor: pointer;
-      line-height: 1.2;
-    ">Custom</div>`,
-    iconSize: [76, 28],
-    iconAnchor: [38, 14],
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    ">
+      <img
+        src="/brand/sygnet.png"
+        style="width: 17px; height: 17px; object-fit: contain; display: block;"
+        draggable="false"
+      />
+    </div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
     popupAnchor: [0, -18],
+  })
+}
+
+function pinIconHover() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width: 38px; height: 38px;
+      background: #E67E50;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 3px 18px rgba(230,126,80,0.65);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    ">
+      <img
+        src="/brand/sygnet-black.png"
+        style="width: 21px; height: 21px; object-fit: contain; display: block; opacity: 0.85;"
+        draggable="false"
+      />
+    </div>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -22],
   })
 }
 
@@ -246,14 +212,8 @@ function clusterIcon(count: number) {
 }
 
 // ─── Icon resolver ─────────────────────────────────────────────────────────────
-function resolveIcon(exp: ExperienceWithGuide, highlighted: boolean): L.DivIcon {
-  if (highlighted) {
-    return exp.booking_type === 'icelandic'
-      ? inquiryIconHover()
-      : popupIcon(exp.price_per_person_eur ?? 0)
-  }
-  if (exp.booking_type === 'icelandic') return inquiryIcon()
-  return singlePriceIcon(exp.price_per_person_eur ?? 0)
+function resolveIcon(_exp: ExperienceWithGuide, highlighted: boolean): L.DivIcon {
+  return highlighted ? pinIconHover() : pinIcon()
 }
 
 // ─── Map click clearer ─────────────────────────────────────────────────────────
@@ -280,16 +240,9 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
         {exp.location_country} · {exp.fish_types.slice(0, 2).join(', ')}
       </p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {exp.booking_type === 'icelandic' ? (
-          <span style={{ fontSize: '13px', color: 'rgba(10,46,77,0.5)', fontStyle: 'italic' }}>
-            Price on request
-          </span>
-        ) : (
-          <span style={{ fontWeight: 700, fontSize: '15px', color: '#0A2E4D' }}>
-            €{exp.price_per_person_eur}
-            <span style={{ fontWeight: 400, fontSize: '11px', color: 'rgba(10,46,77,0.4)' }}>/pp</span>
-          </span>
-        )}
+        <span style={{ fontSize: '13px', color: 'rgba(10,46,77,0.5)', fontStyle: 'italic' }}>
+          Price on request
+        </span>
         <a
           href={`/trips/${exp.id}`}
           style={{
@@ -299,7 +252,7 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
             textDecoration: 'none',
           }}
         >
-          View →
+          Inquire →
         </a>
       </div>
     </div>

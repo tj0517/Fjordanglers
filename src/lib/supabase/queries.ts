@@ -660,3 +660,47 @@ export async function getGuideExperiences(guideId: string): Promise<ExperienceWi
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
 }
+
+// ─── Country stats ────────────────────────────────────────────────────────────
+
+export type CountryStat = {
+  country: string
+  guideCount: number
+  experienceCount: number
+}
+
+/**
+ * Guide and experience counts per country.
+ * Used by the home page destinations section.
+ */
+export async function getCountryStats(): Promise<CountryStat[]> {
+  return unstable_cache(
+    async () => {
+      const db = createPublicClient()
+
+      const [guidesRes, expsRes] = await Promise.all([
+        db.from('guides').select('country').or('status.eq.active,verified_at.not.is.null').eq('is_hidden', false),
+        db.from('experiences').select('location_country').eq('published', true),
+      ])
+
+      const guideCounts: Record<string, number> = {}
+      for (const g of guidesRes.data ?? []) {
+        if (g.country) guideCounts[g.country] = (guideCounts[g.country] ?? 0) + 1
+      }
+
+      const expCounts: Record<string, number> = {}
+      for (const e of expsRes.data ?? []) {
+        if (e.location_country) expCounts[e.location_country] = (expCounts[e.location_country] ?? 0) + 1
+      }
+
+      const allCountries = new Set([...Object.keys(guideCounts), ...Object.keys(expCounts)])
+      return Array.from(allCountries).map(country => ({
+        country,
+        guideCount: guideCounts[country] ?? 0,
+        experienceCount: expCounts[country] ?? 0,
+      }))
+    },
+    ['country-stats'],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
+  )()
+}
