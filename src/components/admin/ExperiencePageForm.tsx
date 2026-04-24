@@ -437,7 +437,7 @@ export default function ExperiencePageForm({
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleSubmit} noValidate className="max-w-[760px]">
+    <form onSubmit={e => e.preventDefault()} noValidate className="max-w-[760px]">
 
       {/* ── 1. Identity ── */}
       <SectionLabel step={1} title="Identity" desc="Core details shown in listings and SEO" />
@@ -771,7 +771,7 @@ export default function ExperiencePageForm({
 
       {/* ── Submit ── */}
       <div className="mt-8 flex items-center gap-4">
-        <button type="submit" disabled={isPending}
+        <button type="button" onClick={handleSubmit} disabled={isPending}
           className="flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-bold f-body transition-all"
           style={{
             background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
