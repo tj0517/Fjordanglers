@@ -407,7 +407,7 @@ export default function ExperiencePageForm({
         const result = await updateExperiencePage(experienceId, payload)
         if (result.success) {
           router.push(`/admin/experiences/${experienceId}`)
-          router.refresh()
+          // setIsPending stays true during navigation — component will unmount
         } else {
           setServerError(result.error)
           setIsPending(false)
@@ -416,6 +416,7 @@ export default function ExperiencePageForm({
         const result = await createExperiencePage(payload)
         if (result.success) {
           router.push(`/admin/experiences/${result.id}`)
+          // setIsPending stays true during navigation — component will unmount
         } else {
           setServerError(result.error)
           setIsPending(false)
