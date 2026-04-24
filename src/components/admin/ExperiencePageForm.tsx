@@ -16,7 +16,7 @@
  * Supports both create and edit modes via the `mode` prop.
  */
 
-import { useState, useCallback, useTransition } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2, ChevronRight } from 'lucide-react'
 import { FISH_ALL } from '@/lib/fish'
@@ -341,7 +341,7 @@ export default function ExperiencePageForm({
   )
 
   // ── Submit state
-  const [isPending,    startTransition]  = useTransition()
+  const [isPending,    setIsPending]    = useState(false)
   const [serverError,  setServerError]   = useState<string | null>(null)
   const [hasAttempted, setHasAttempted]  = useState(false)
 
@@ -401,7 +401,8 @@ export default function ExperiencePageForm({
       location_lng:              locationLng,
     }
 
-    startTransition(async () => {
+    setIsPending(true)
+    try {
       if (isEdit && experienceId) {
         const result = await updateExperiencePage(experienceId, payload)
         if (result.success) {
@@ -409,6 +410,7 @@ export default function ExperiencePageForm({
           router.refresh()
         } else {
           setServerError(result.error)
+          setIsPending(false)
         }
       } else {
         const result = await createExperiencePage(payload)
@@ -416,9 +418,13 @@ export default function ExperiencePageForm({
           router.push(`/admin/experiences/${result.id}`)
         } else {
           setServerError(result.error)
+          setIsPending(false)
         }
       }
-    })
+    } catch {
+      setServerError('Unexpected error — please try again.')
+      setIsPending(false)
+    }
   }, [
     canSubmit, experienceName, slug, country, region, priceFrom, seasonStart, seasonEnd,
     status, difficulty, effort, nonAnglerFriendly, technique, targetSpecies, environment,
