@@ -11,46 +11,63 @@ import { createServiceClient } from '@/lib/supabase/server'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface SpeciesDetailItem {
+  name:          string
+  description:   string
+  image_url:     string
+  season_months: number[]
+  peak_months:   number[]
+}
+
 export interface ExperiencePagePayload {
-  trip_id?:                   string | null
-  guide_id?:                  string | null
-  experience_name:            string
-  slug:                       string
-  country:                    string
-  region:                     string
-  season_start?:              string | null
-  season_end?:                string | null
-  price_from:                 number
-  currency?:                  string
-  status?:                    string
+  trip_id?:                          string | null
+  guide_id?:                         string | null
+  experience_name:                   string
+  slug:                              string
+  country:                           string
+  region:                            string
+  season_start?:                     string | null
+  season_end?:                       string | null
+  price_from:                        number
+  currency?:                         string
+  status?:                           string
   // Quick fit
-  difficulty?:                string | null
-  physical_effort?:           string | null
-  non_angler_friendly?:       boolean
-  technique?:                 string[]
-  target_species?:            string[]
-  environment?:               string[]
+  difficulty?:                       string | null
+  physical_effort?:                  string | null
+  non_angler_friendly?:              boolean
+  technique?:                        string[]
+  target_species?:                   string[]
+  environment?:                      string[]
   // Content
-  hero_image_url?:            string | null
-  gallery_image_urls?:        string[]
-  story_text?:                string | null
-  meeting_point_name?:        string | null
-  meeting_point_description?: string | null
-  catches_text?:              string | null
-  rod_setup?:                 string | null
-  best_months?:               string | null
-  season_months?:             number[]
-  peak_months?:               number[]
+  intro_text?:                       string | null
+  hero_image_url?:                   string | null
+  gallery_image_urls?:               string[]
+  story_text?:                       string | null
+  meeting_point_name?:               string | null
+  meeting_point_description?:        string | null
+  catches_text?:                     string | null
+  rod_setup?:                        string | null
+  best_months?:                      string | null
+  season_months?:                    number[]
+  peak_months?:                      number[]
+  // Per-fish species details
+  species_details?:                  SpeciesDetailItem[]
+  // Boat section
+  boat_description?:                 string | null
+  boat_image_url?:                   string | null
+  // Special attraction section
+  special_attraction_text?:          string | null
+  special_attraction_image_url?:     string | null
   // Includes / Excludes
-  includes?:                  string[]
-  excludes?:                  string[]
+  includes?:                         string[]
+  excludes?:                         string[]
   // SEO
-  meta_title?:                string | null
-  meta_description?:          string | null
-  og_image_url?:              string | null
+  meta_title?:                       string | null
+  meta_description?:                 string | null
+  og_image_url?:                     string | null
   // Map pin
-  location_lat?:              number | null
-  location_lng?:              number | null
+  location_lat?:                     number | null
+  location_lng?:                     number | null
 }
 
 export type ExperiencePageResult =
@@ -85,40 +102,46 @@ export async function createExperiencePage(
   const { data, error } = await svc
     .from('experience_pages')
     .insert({
-      trip_id:                   payload.trip_id ?? null,
-      guide_id:                  payload.guide_id ?? null,
-      experience_name:           payload.experience_name.trim(),
-      slug:                      cleanSlug,
-      country:                   payload.country,
-      region:                    payload.region.trim(),
-      season_start:              payload.season_start?.trim() || null,
-      season_end:                payload.season_end?.trim()   || null,
-      price_from:                payload.price_from,
-      currency:                  payload.currency ?? 'EUR',
-      status:                    payload.status ?? 'draft',
-      difficulty:                payload.difficulty   ?? null,
-      physical_effort:           payload.physical_effort ?? null,
-      non_angler_friendly:       payload.non_angler_friendly ?? false,
-      technique:                 payload.technique       ?? [],
-      target_species:            payload.target_species  ?? [],
-      environment:               payload.environment     ?? [],
-      hero_image_url:            payload.hero_image_url  ?? null,
-      gallery_image_urls:        payload.gallery_image_urls ?? [],
-      story_text:                payload.story_text        ?? null,
-      meeting_point_name:        payload.meeting_point_name ?? null,
-      meeting_point_description: payload.meeting_point_description ?? null,
-      catches_text:              payload.catches_text  ?? null,
-      rod_setup:                 payload.rod_setup     ?? null,
-      best_months:               payload.best_months   ?? null,
-      season_months:             payload.season_months ?? [],
-      peak_months:               payload.peak_months   ?? [],
-      includes:                  payload.includes ?? [],
-      excludes:                  payload.excludes ?? [],
-      meta_title:                payload.meta_title       ?? null,
-      meta_description:          payload.meta_description ?? null,
-      og_image_url:              payload.og_image_url     ?? null,
-      location_lat:              payload.location_lat     ?? null,
-      location_lng:              payload.location_lng     ?? null,
+      trip_id:                          payload.trip_id ?? null,
+      guide_id:                         payload.guide_id ?? null,
+      experience_name:                  payload.experience_name.trim(),
+      slug:                             cleanSlug,
+      country:                          payload.country,
+      region:                           payload.region.trim(),
+      season_start:                     payload.season_start?.trim() || null,
+      season_end:                       payload.season_end?.trim()   || null,
+      price_from:                       payload.price_from,
+      currency:                         payload.currency ?? 'EUR',
+      status:                           payload.status ?? 'draft',
+      difficulty:                       payload.difficulty   ?? null,
+      physical_effort:                  payload.physical_effort ?? null,
+      non_angler_friendly:              payload.non_angler_friendly ?? false,
+      technique:                        payload.technique       ?? [],
+      target_species:                   payload.target_species  ?? [],
+      environment:                      payload.environment     ?? [],
+      intro_text:                       payload.intro_text      ?? null,
+      hero_image_url:                   payload.hero_image_url  ?? null,
+      gallery_image_urls:               payload.gallery_image_urls ?? [],
+      story_text:                       payload.story_text        ?? null,
+      meeting_point_name:               payload.meeting_point_name ?? null,
+      meeting_point_description:        payload.meeting_point_description ?? null,
+      catches_text:                     payload.catches_text  ?? null,
+      rod_setup:                        payload.rod_setup     ?? null,
+      best_months:                      payload.best_months   ?? null,
+      season_months:                    payload.season_months ?? [],
+      peak_months:                      payload.peak_months   ?? [],
+      species_details:                  payload.species_details ?? [],
+      boat_description:                 payload.boat_description ?? null,
+      boat_image_url:                   payload.boat_image_url   ?? null,
+      special_attraction_text:          payload.special_attraction_text          ?? null,
+      special_attraction_image_url:     payload.special_attraction_image_url     ?? null,
+      includes:                         payload.includes ?? [],
+      excludes:                         payload.excludes ?? [],
+      meta_title:                       payload.meta_title       ?? null,
+      meta_description:                 payload.meta_description ?? null,
+      og_image_url:                     payload.og_image_url     ?? null,
+      location_lat:                     payload.location_lat     ?? null,
+      location_lng:                     payload.location_lng     ?? null,
     })
     .select('id, slug')
     .single()
@@ -280,38 +303,44 @@ export async function updateExperiencePage(
   if (existing == null) return { success: false, error: 'Experience page not found' }
 
   const update: Record<string, unknown> = {}
-  if (payload.experience_name   != null) update.experience_name           = payload.experience_name.trim()
-  if (payload.slug              != null) update.slug                      = payload.slug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
-  if (payload.country           != null) update.country                   = payload.country
-  if (payload.region            != null) update.region                    = payload.region.trim()
-  if (payload.season_start      !== undefined) update.season_start        = payload.season_start?.trim() || null
-  if (payload.season_end        !== undefined) update.season_end          = payload.season_end?.trim()   || null
-  if (payload.price_from        != null) update.price_from                = payload.price_from
-  if (payload.currency          != null) update.currency                  = payload.currency
-  if (payload.status            != null) update.status                    = payload.status
-  if (payload.difficulty        !== undefined) update.difficulty          = payload.difficulty
-  if (payload.physical_effort   !== undefined) update.physical_effort     = payload.physical_effort
-  if (payload.non_angler_friendly !== undefined) update.non_angler_friendly = payload.non_angler_friendly
-  if (payload.technique         != null) update.technique                 = payload.technique
-  if (payload.target_species    != null) update.target_species            = payload.target_species
-  if (payload.environment       != null) update.environment               = payload.environment
-  if (payload.hero_image_url    !== undefined) update.hero_image_url      = payload.hero_image_url
-  if (payload.gallery_image_urls != null) update.gallery_image_urls       = payload.gallery_image_urls
-  if (payload.story_text        !== undefined) update.story_text          = payload.story_text
-  if (payload.meeting_point_name !== undefined) update.meeting_point_name = payload.meeting_point_name
+  if (payload.experience_name   != null) update.experience_name              = payload.experience_name.trim()
+  if (payload.slug              != null) update.slug                         = payload.slug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  if (payload.country           != null) update.country                      = payload.country
+  if (payload.region            != null) update.region                       = payload.region.trim()
+  if (payload.season_start      !== undefined) update.season_start           = payload.season_start?.trim() || null
+  if (payload.season_end        !== undefined) update.season_end             = payload.season_end?.trim()   || null
+  if (payload.price_from        != null) update.price_from                   = payload.price_from
+  if (payload.currency          != null) update.currency                     = payload.currency
+  if (payload.status            != null) update.status                       = payload.status
+  if (payload.difficulty        !== undefined) update.difficulty             = payload.difficulty
+  if (payload.physical_effort   !== undefined) update.physical_effort        = payload.physical_effort
+  if (payload.non_angler_friendly !== undefined) update.non_angler_friendly  = payload.non_angler_friendly
+  if (payload.technique         != null) update.technique                    = payload.technique
+  if (payload.target_species    != null) update.target_species               = payload.target_species
+  if (payload.environment       != null) update.environment                  = payload.environment
+  if (payload.intro_text        !== undefined) update.intro_text             = payload.intro_text
+  if (payload.hero_image_url    !== undefined) update.hero_image_url         = payload.hero_image_url
+  if (payload.gallery_image_urls != null) update.gallery_image_urls          = payload.gallery_image_urls
+  if (payload.story_text        !== undefined) update.story_text             = payload.story_text
+  if (payload.meeting_point_name !== undefined) update.meeting_point_name    = payload.meeting_point_name
   if (payload.meeting_point_description !== undefined) update.meeting_point_description = payload.meeting_point_description
-  if (payload.catches_text      !== undefined) update.catches_text        = payload.catches_text
-  if (payload.rod_setup         !== undefined) update.rod_setup           = payload.rod_setup
-  if (payload.best_months       !== undefined) update.best_months         = payload.best_months
-  if (payload.season_months     != null)       update.season_months       = payload.season_months
-  if (payload.peak_months       != null)       update.peak_months         = payload.peak_months
-  if (payload.includes          != null) update.includes                  = payload.includes
-  if (payload.excludes          != null) update.excludes                  = payload.excludes
-  if (payload.meta_title        !== undefined) update.meta_title          = payload.meta_title
-  if (payload.meta_description  !== undefined) update.meta_description    = payload.meta_description
-  if (payload.og_image_url      !== undefined) update.og_image_url        = payload.og_image_url
-  if (payload.location_lat      !== undefined) update.location_lat        = payload.location_lat
-  if (payload.location_lng      !== undefined) update.location_lng        = payload.location_lng
+  if (payload.catches_text      !== undefined) update.catches_text           = payload.catches_text
+  if (payload.rod_setup         !== undefined) update.rod_setup              = payload.rod_setup
+  if (payload.best_months       !== undefined) update.best_months            = payload.best_months
+  if (payload.season_months     != null)       update.season_months          = payload.season_months
+  if (payload.peak_months       != null)       update.peak_months            = payload.peak_months
+  if (payload.species_details   != null)       update.species_details        = payload.species_details
+  if (payload.boat_description  !== undefined) update.boat_description       = payload.boat_description
+  if (payload.boat_image_url    !== undefined) update.boat_image_url         = payload.boat_image_url
+  if (payload.special_attraction_text          !== undefined) update.special_attraction_text          = payload.special_attraction_text
+  if (payload.special_attraction_image_url     !== undefined) update.special_attraction_image_url     = payload.special_attraction_image_url
+  if (payload.includes          != null) update.includes                     = payload.includes
+  if (payload.excludes          != null) update.excludes                     = payload.excludes
+  if (payload.meta_title        !== undefined) update.meta_title             = payload.meta_title
+  if (payload.meta_description  !== undefined) update.meta_description       = payload.meta_description
+  if (payload.og_image_url      !== undefined) update.og_image_url           = payload.og_image_url
+  if (payload.location_lat      !== undefined) update.location_lat           = payload.location_lat
+  if (payload.location_lng      !== undefined) update.location_lng           = payload.location_lng
   update.updated_at = new Date().toISOString()
 
   const { data, error } = await svc

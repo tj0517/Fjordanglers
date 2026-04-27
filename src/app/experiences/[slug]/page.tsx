@@ -9,14 +9,16 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { HomeNav } from '@/components/home/home-nav'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Footer } from '@/components/layout/footer'
+import type { SpeciesDetailItem } from '@/actions/experience-pages'
 
 /**
  * /experiences/[slug] — Public editorial experience page.
  *
- * Layout:
- *   1. Gallery bento grid — same width as content columns below (not full-bleed)
- *   2. Title block — breadcrumb, location, h1, price + pills
- *   3. Two-column grid — left: all content | right: sticky inquiry widget
+ * Layout (per PDF spec):
+ *   PHOTO → INTRODUCE → QUICK FIT → ABOUT THIS EXPERIENCE → PHOTOS
+ *   → WHAT YOU CAN CATCH (alternating fish|photo + per-fish season)
+ *   → ROD SETUP → BOAT | PHOTO → PHOTO | SPECIAL ATTRACTION
+ *   → LOCATION → WHAT'S INCLUDED → PRICE
  */
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -137,14 +139,26 @@ export default async function ExperiencePublicPage({
   const { slug } = await params
   const svc = createServiceClient()
 
-  const { data: page } = await svc
+  const { data: rawPage } = await svc
     .from('experience_pages')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'active')
     .single()
 
-  if (page == null) notFound()
+  if (rawPage == null) notFound()
+
+  // Cast to include columns added in 20260427_experience_pages_v2.sql
+  // (not yet in auto-generated DB types — will be updated after migration runs)
+  type PageWithNewCols = typeof rawPage & {
+    intro_text:                   string | null
+    species_details:              unknown
+    boat_description:             string | null
+    boat_image_url:               string | null
+    special_attraction_text:      string | null
+    special_attraction_image_url: string | null
+  }
+  const page = rawPage as unknown as PageWithNewCols
 
   // Fetch blocked dates for InquiryWidget if trip_id is set
   let blockedRanges: Array<{ date_start: string; date_end: string }> = []
@@ -189,7 +203,7 @@ export default async function ExperiencePublicPage({
         .single()
     : { data: null }
 
-  // Similar experience pages — same country first, fall back to any active pages
+  // Similar experience pages
   const { data: sameCountryRaw } = await svc
     .from('experience_pages')
     .select('id, slug, experience_name, country, region, price_from, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
@@ -200,7 +214,6 @@ export default async function ExperiencePublicPage({
 
   let similarTrips = sameCountryRaw ?? []
 
-  // Fallback: if no same-country results, show any other active experience pages
   if (similarTrips.length === 0) {
     const { data: anyRaw } = await svc
       .from('experience_pages')
@@ -211,16 +224,16 @@ export default async function ExperiencePublicPage({
     similarTrips = anyRaw ?? []
   }
 
-  const species      = (page.target_species     as string[] | null) ?? []
-  const technique    = (page.technique          as string[] | null) ?? []
-  const env          = (page.environment        as string[] | null) ?? []
-  const includes     = (page.includes           as string[] | null) ?? []
-  const excludes     = (page.excludes           as string[] | null) ?? []
-  const gallery      = (page.gallery_image_urls as string[] | null) ?? []
-  const seasonMonths = (page.season_months      as number[] | null) ?? []
-  const peakMonths   = (page.peak_months        as number[] | null) ?? []
+  const species         = (page.target_species     as string[] | null) ?? []
+  const technique       = (page.technique          as string[] | null) ?? []
+  const env             = (page.environment        as string[] | null) ?? []
+  const includes        = (page.includes           as string[] | null) ?? []
+  const excludes        = (page.excludes           as string[] | null) ?? []
+  const gallery         = (page.gallery_image_urls as string[] | null) ?? []
+  const seasonMonths    = (page.season_months      as number[] | null) ?? []
+  const peakMonths      = (page.peak_months        as number[] | null) ?? []
+  const speciesDetails  = (page.species_details    as SpeciesDetailItem[] | null) ?? []
 
-  // Use gallery images; fall back to hero_image_url as single image
   const topImages = gallery.length > 0
     ? gallery
     : page.hero_image_url
@@ -238,11 +251,10 @@ export default async function ExperiencePublicPage({
     <>
       <HomeNav pinned />
 
-      {/* ── OUTER CONTAINER — same width for gallery + everything below ── */}
-      {/* pt-[72px] clears the fixed nav */}
+      {/* ── OUTER CONTAINER ── */}
       <div className="pt-[90px] max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-16">
 
-        {/* ── GALLERY — top of page, constrained to content width ── */}
+        {/* ──────────── PHOTO ──────────── */}
         {topImages.length > 0 && (
           <div className="pt-8 md:pt-10">
             <ExperienceGallery
@@ -252,7 +264,7 @@ export default async function ExperiencePublicPage({
           </div>
         )}
 
-        {/* ── TITLE BLOCK ─────────────────────────────────────────── */}
+        {/* ── TITLE BLOCK ── */}
         <div className="pb-6 lg:pb-8" style={{ borderBottom: '1px solid rgba(10,46,77,0.08)' }}>
 
           {/* Breadcrumb */}
@@ -314,13 +326,23 @@ export default async function ExperiencePublicPage({
           </div>
         </div>
 
-        {/* ── TWO-COLUMN CONTENT GRID ─────────────────────────────── */}
+        {/* ── TWO-COLUMN CONTENT GRID ── */}
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 py-12 lg:py-14">
 
-          {/* ── LEFT COLUMN ───────────────────────────────── */}
+          {/* ── LEFT COLUMN ── */}
           <div className="flex-1 min-w-0">
 
-            {/* Quick Fit Matrix */}
+            {/* ──────────── INTRODUCE ──────────── */}
+            {page.intro_text && (
+              <section className="mb-10">
+                <p className="text-lg sm:text-xl f-body leading-relaxed font-medium"
+                  style={{ color: '#0A2E4D' }}>
+                  {page.intro_text}
+                </p>
+              </section>
+            )}
+
+            {/* ──────────── QUICK FIT ──────────── */}
             {(species.length > 0 || technique.length > 0 || env.length > 0 || page.difficulty || page.physical_effort) && (
               <section className="mb-12 p-6 rounded-2xl"
                 style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
@@ -386,7 +408,7 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
-            {/* Story */}
+            {/* ──────────── ABOUT THIS EXPERIENCE ──────────── */}
             {page.story_text && (
               <section className="mb-12">
                 <SalmonRule />
@@ -401,36 +423,127 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
-            {/* Target species with fish images */}
-            {species.length > 0 && (
+            {/* ──────────── PHOTOS ──────────── */}
+            {gallery.length > 1 && (
               <section className="mb-12">
                 <SalmonRule />
-                <SectionLabel label="What you can catch" />
-                {page.catches_text && (
-                  <p className="text-base f-body leading-relaxed mb-6" style={{ color: 'rgba(10,46,77,0.7)' }}>
-                    {page.catches_text}
+                <SectionLabel label="Photos" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {gallery.slice(0, 6).map((url, i) => (
+                    <div key={i} className="relative rounded-2xl overflow-hidden aspect-[4/3]">
+                      <Image
+                        src={url}
+                        alt={`${page.experience_name} photo ${i + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 640px) 33vw, 50vw"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {gallery.length > 6 && (
+                  <p className="text-xs f-body mt-3" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                    + {gallery.length - 6} more photos
                   </p>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {species.map(s => {
-                    const img = FISH_IMG[s as keyof typeof FISH_IMG]
-                    return (
-                      <div key={s} className="flex items-center gap-4 px-4 py-4 rounded-2xl"
-                        style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}>
-                        {img && (
-                          <div className="relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden">
-                            <Image src={img} alt={s} fill className="object-contain" />
-                          </div>
-                        )}
-                        <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{s}</p>
-                      </div>
-                    )
-                  })}
-                </div>
               </section>
             )}
 
-            {/* Rod setup */}
+            {/* ──────────── WHAT YOU CAN CATCH ──────────── */}
+            {(species.length > 0 || speciesDetails.length > 0) && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="What you can catch" />
+
+                {page.catches_text && (
+                  <p className="text-base f-body leading-relaxed mb-8" style={{ color: 'rgba(10,46,77,0.7)' }}>
+                    {page.catches_text}
+                  </p>
+                )}
+
+                {/* Rich per-fish layout (alternating) */}
+                {speciesDetails.length > 0 ? (
+                  <div className="space-y-12">
+                    {speciesDetails.map((fish, idx) => {
+                      const isEven    = idx % 2 === 0
+                      const fishImg   = fish.image_url || FISH_IMG[fish.name as keyof typeof FISH_IMG] || null
+                      const hasDetail = fish.description || fishImg
+                      const hasSeason = fish.season_months.length > 0
+
+                      return (
+                        <div key={fish.name} className="space-y-6">
+                          {/* Fish row — alternating layout */}
+                          {hasDetail ? (
+                            <div className={`flex flex-col sm:flex-row gap-6 items-start ${isEven ? '' : 'sm:flex-row-reverse'}`}>
+                              {/* Text side */}
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
+                                  {fish.name}
+                                </h3>
+                                {fish.description && (
+                                  <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                                    {fish.description}
+                                  </p>
+                                )}
+                              </div>
+                              {/* Photo side */}
+                              {fishImg && (
+                                <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[220px] aspect-[4/3] sm:aspect-[3/2]">
+                                  <Image
+                                    src={fishImg}
+                                    alt={fish.name}
+                                    fill
+                                    className="object-cover"
+                                    sizes="(min-width: 640px) 220px, 100vw"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <h3 className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                              {fish.name}
+                            </h3>
+                          )}
+
+                          {/* Per-fish season */}
+                          {hasSeason && (
+                            <div className="pl-0 sm:pl-4"
+                              style={{ borderLeft: '2px solid rgba(230,126,80,0.25)', paddingLeft: '16px' }}>
+                              <p className="text-[10px] uppercase tracking-[0.2em] font-bold f-body mb-3"
+                                style={{ color: '#E67E50' }}>Season for {fish.name}</p>
+                              <SeasonCalendarGrid
+                                seasonMonths={fish.season_months}
+                                peakMonths={fish.peak_months}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  /* Fallback: simple grid when no species_details */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {species.map(s => {
+                      const img = FISH_IMG[s as keyof typeof FISH_IMG]
+                      return (
+                        <div key={s} className="flex items-center gap-4 px-4 py-4 rounded-2xl"
+                          style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}>
+                          {img && (
+                            <div className="relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden">
+                              <Image src={img} alt={s} fill className="object-contain" />
+                            </div>
+                          )}
+                          <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{s}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* ──────────── ROD SETUP & GEAR ──────────── */}
             {page.rod_setup && (
               <section className="mb-12">
                 <SalmonRule />
@@ -444,8 +557,9 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
-            {/* Season — visual calendar */}
-            {(seasonMonths.length > 0 || page.season_start || page.best_months) && (
+            {/* ──────────── SEASON (overall) ──────────── */}
+            {!speciesDetails.some(s => s.season_months.length > 0) &&
+              (seasonMonths.length > 0 || page.season_start || page.best_months) && (
               <section className="mb-12">
                 <SalmonRule />
                 <SectionLabel label="Season" />
@@ -467,11 +581,71 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
-            {/* Meeting point */}
+            {/* ──────────── BOAT | PHOTO ──────────── */}
+            {(page.boat_description || page.boat_image_url) && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="The boat" />
+                <div className="flex flex-col sm:flex-row gap-6 items-start">
+                  {/* Boat text */}
+                  {page.boat_description && (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                        {page.boat_description}
+                      </p>
+                    </div>
+                  )}
+                  {/* Boat photo */}
+                  {page.boat_image_url && (
+                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[260px] aspect-[4/3]">
+                      <Image
+                        src={page.boat_image_url}
+                        alt="The boat"
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 640px) 260px, 100vw"
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* ──────────── PHOTO | SPECIAL ATTRACTION ──────────── */}
+            {(page.special_attraction_text || page.special_attraction_image_url) && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="Special attraction" />
+                <div className="flex flex-col sm:flex-row-reverse gap-6 items-start">
+                  {/* Special attraction text (right on desktop) */}
+                  {page.special_attraction_text && (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                        {page.special_attraction_text}
+                      </p>
+                    </div>
+                  )}
+                  {/* Photo (left on desktop) */}
+                  {page.special_attraction_image_url && (
+                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[260px] aspect-[4/3]">
+                      <Image
+                        src={page.special_attraction_image_url}
+                        alt="Special attraction"
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 640px) 260px, 100vw"
+                      />
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* ──────────── LOCATION ──────────── */}
             {(page.meeting_point_name || page.meeting_point_description) && (
               <section className="mb-12">
                 <SalmonRule />
-                <SectionLabel label="Meeting point" />
+                <SectionLabel label="Location" />
                 {page.meeting_point_name && (
                   <div className="flex items-center gap-2 mb-2">
                     <MapPin size={15} strokeWidth={1.5} style={{ color: '#E67E50', flexShrink: 0 }} />
@@ -486,7 +660,7 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
-            {/* Includes / Excludes */}
+            {/* ──────────── WHAT'S INCLUDED ──────────── */}
             {(includes.length > 0 || excludes.length > 0) && (
               <section className="mb-12">
                 <SalmonRule />
@@ -515,7 +689,7 @@ export default async function ExperiencePublicPage({
                         {excludes.map(item => (
                           <li key={item} className="flex items-start gap-2.5">
                             <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                              style={{ background: 'rgba(239,68,68,0.08)' }}>
+              style={{ background: 'rgba(239,68,68,0.08)' }}>
                               <XIcon size={10} strokeWidth={2.5} style={{ color: '#DC2626' }} />
                             </div>
                             <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>{item}</span>
@@ -528,9 +702,43 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
+            {/* ──────────── PRICE ──────────── */}
+            <section className="mb-4">
+              <SalmonRule />
+              <SectionLabel label="Price" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-6 rounded-2xl"
+                style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                <div className="flex-1">
+                  <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                    from €{page.price_from}
+                  </p>
+                  {page.currency && page.currency !== 'EUR' && (
+                    <p className="text-xs f-body mt-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                      Prices in {page.currency}
+                    </p>
+                  )}
+                  <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                    Per person · includes guide service
+                  </p>
+                </div>
+                {/* Mobile CTA — visible only on mobile since desktop has the sidebar widget */}
+                <div className="lg:hidden">
+                  {page.trip_id ? null : (
+                    <Link
+                      href={`mailto:contact@fjordanglers.com?subject=Inquiry: ${encodeURIComponent(page.experience_name)}`}
+                      className="inline-flex items-center justify-center px-6 py-3.5 rounded-xl font-bold f-body text-sm"
+                      style={{ background: '#E67E50', color: '#fff', boxShadow: '0 4px 14px rgba(230,126,80,0.35)' }}
+                    >
+                      Book this trip →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </section>
+
           </div>
 
-          {/* ── RIGHT COLUMN — sticky widget ─────────────── */}
+          {/* ── RIGHT COLUMN — sticky widget ── */}
           <div className="hidden lg:block lg:w-[360px] flex-shrink-0">
             <div className="sticky top-28">
               {page.trip_id ? (
@@ -572,7 +780,7 @@ export default async function ExperiencePublicPage({
         </div>
       </div>
 
-      {/* ── MOBILE BAR ──────────────────────────────────────────── */}
+      {/* ── MOBILE BAR ── */}
       {page.trip_id ? (
         <MobileInquiryBar tripId={page.trip_id} />
       ) : (
@@ -593,15 +801,14 @@ export default async function ExperiencePublicPage({
       )}
 
       {/* ════════════════════════════════════════════════════════════
-          BOTTOM SECTIONS — different background, full-width
+          BOTTOM SECTIONS — different background
           ════════════════════════════════════════════════════════════ */}
 
-      {/* ── GUIDE SECTION ───────────────────────────────────────── */}
+      {/* ── GUIDE SECTION ── */}
       {guide && (
         <section style={{ background: '#0A2E4D' }}>
           <div className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-16 py-16 lg:py-20">
 
-            {/* Label */}
             <div className="flex items-center gap-3 mb-8">
               <div className="w-10 h-px" style={{ background: '#E67E50' }} />
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] f-body" style={{ color: '#E67E50' }}>
@@ -611,17 +818,11 @@ export default async function ExperiencePublicPage({
 
             <div className="flex flex-col sm:flex-row gap-8 lg:gap-12 items-start">
 
-              {/* Avatar */}
               <div className="flex-shrink-0">
                 <div className="relative rounded-2xl overflow-hidden"
                   style={{ width: '100px', height: '100px', border: '2px solid rgba(255,255,255,0.12)' }}>
                   {guide.avatar_url ? (
-                    <Image
-                      src={guide.avatar_url}
-                      alt={guide.full_name}
-                      fill
-                      className="object-cover"
-                    />
+                    <Image src={guide.avatar_url} alt={guide.full_name} fill className="object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center f-display text-3xl font-bold"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
@@ -631,7 +832,6 @@ export default async function ExperiencePublicPage({
                 </div>
               </div>
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-3 mb-2">
                   <h2 className="text-2xl font-bold f-display text-white">{guide.full_name}</h2>
@@ -646,7 +846,6 @@ export default async function ExperiencePublicPage({
                   )}
                 </div>
 
-                {/* Meta row */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4">
                   {(guide.city || guide.country) && (
                     <span className="flex items-center gap-1.5 text-sm f-body" style={{ color: 'rgba(255,255,255,0.5)' }}>
@@ -666,14 +865,12 @@ export default async function ExperiencePublicPage({
                   )}
                 </div>
 
-                {/* Tagline / bio */}
                 {(guide.tagline || guide.bio) && (
                   <p className="text-sm f-body leading-relaxed mb-6" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '560px' }}>
                     {guide.tagline ?? (guide.bio ? guide.bio.slice(0, 180) + (guide.bio.length > 180 ? '…' : '') : null)}
                   </p>
                 )}
 
-                {/* Fish expertise tags */}
                 {Array.isArray(guide.fish_expertise) && guide.fish_expertise.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-6">
                     {(guide.fish_expertise as string[]).slice(0, 5).map(f => (
@@ -685,7 +882,6 @@ export default async function ExperiencePublicPage({
                   </div>
                 )}
 
-                {/* CTA */}
                 <Link
                   href={`/guides/${guide.id}`}
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold f-body transition-all hover:opacity-90"
@@ -700,12 +896,11 @@ export default async function ExperiencePublicPage({
         </section>
       )}
 
-      {/* ── SIMILAR TRIPS ───────────────────────────────────────── */}
+      {/* ── SIMILAR TRIPS ── */}
       {similarTrips.length > 0 && (
         <section style={{ background: '#F3EDE4' }}>
           <div className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-16 py-16 lg:py-20">
 
-            {/* Header */}
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-px" style={{ background: '#E67E50' }} />
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] f-body" style={{ color: '#E67E50' }}>
@@ -718,7 +913,6 @@ export default async function ExperiencePublicPage({
                 : 'More curated experiences'}
             </h2>
 
-            {/* Cards grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {similarTrips.map(trip => {
                 const tripGallery = (trip.gallery_image_urls as string[] | null) ?? []
@@ -744,7 +938,6 @@ export default async function ExperiencePublicPage({
                       boxShadow: '0 4px 24px rgba(10,46,77,0.07)',
                     }}
                   >
-                    {/* Image */}
                     <div className="relative overflow-hidden" style={{ height: '200px' }}>
                       {thumbUrl ? (
                         <Image
@@ -757,7 +950,6 @@ export default async function ExperiencePublicPage({
                       ) : (
                         <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, #0A2E4D, #1a4a6e)' }} />
                       )}
-                      {/* Country tag */}
                       <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full"
                         style={{ background: 'rgba(10,46,77,0.72)', backdropFilter: 'blur(8px)' }}>
                         <CountryFlag country={trip.country} size={12} />
@@ -765,7 +957,6 @@ export default async function ExperiencePublicPage({
                       </div>
                     </div>
 
-                    {/* Content */}
                     <div className="px-5 py-5">
                       <h3 className="text-base font-bold f-display leading-snug mb-3" style={{ color: '#0A2E4D' }}>
                         {trip.experience_name}
@@ -791,8 +982,7 @@ export default async function ExperiencePublicPage({
                         <span className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
                           from €{trip.price_from}
                         </span>
-                        <span className="text-xs font-semibold f-body transition-colors"
-                          style={{ color: '#E67E50' }}>
+                        <span className="text-xs font-semibold f-body transition-colors" style={{ color: '#E67E50' }}>
                           View →
                         </span>
                       </div>
@@ -802,7 +992,6 @@ export default async function ExperiencePublicPage({
               })}
             </div>
 
-            {/* See all link */}
             <div className="mt-10 text-center">
               <Link
                 href={`/trips?country=${encodeURIComponent(page.country)}`}

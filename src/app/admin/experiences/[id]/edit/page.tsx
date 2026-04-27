@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExperiencePageForm, { type ExperiencePageFormInitialData } from '@/components/admin/ExperiencePageForm'
+import type { SpeciesDetailItem } from '@/actions/experience-pages'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -18,13 +19,24 @@ export default async function AdminExperienceEditPage({
   const { id } = await params
   const svc = createServiceClient()
 
-  const { data: page } = await svc
+  const { data: rawPage } = await svc
     .from('experience_pages')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (page == null) notFound()
+  if (rawPage == null) notFound()
+
+  // Cast to include columns added in 20260427_experience_pages_v2.sql
+  type PageWithNewCols = typeof rawPage & {
+    intro_text:                   string | null
+    species_details:              unknown
+    boat_description:             string | null
+    boat_image_url:               string | null
+    special_attraction_text:      string | null
+    special_attraction_image_url: string | null
+  }
+  const page = rawPage as unknown as PageWithNewCols
 
   // Fetch guide photos if a guide is linked
   let guidePhotos: string[] = []
@@ -64,11 +76,17 @@ export default async function AdminExperienceEditPage({
     meeting_point_description: page.meeting_point_description ?? null,
     includes:                  (page.includes as string[] | null) ?? [],
     excludes:                  (page.excludes as string[] | null) ?? [],
-    meta_title:                page.meta_title ?? null,
-    meta_description:          page.meta_description ?? null,
-    og_image_url:              page.og_image_url ?? null,
-    location_lat:              page.location_lat ?? null,
-    location_lng:              page.location_lng ?? null,
+    meta_title:                   page.meta_title ?? null,
+    meta_description:             page.meta_description ?? null,
+    og_image_url:                 page.og_image_url ?? null,
+    location_lat:                 page.location_lat ?? null,
+    location_lng:                 page.location_lng ?? null,
+    intro_text:                   page.intro_text ?? null,
+    species_details:              (page.species_details as SpeciesDetailItem[] | null) ?? [],
+    boat_description:             page.boat_description ?? null,
+    boat_image_url:               page.boat_image_url ?? null,
+    special_attraction_text:      page.special_attraction_text ?? null,
+    special_attraction_image_url: page.special_attraction_image_url ?? null,
   }
 
   return (

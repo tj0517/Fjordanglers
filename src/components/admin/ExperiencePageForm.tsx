@@ -4,24 +4,31 @@
  * ExperiencePageForm — admin form for creating/editing experience_pages.
  *
  * FA fills this after reviewing a guide submission. Sections:
- *  1. Identity   — name, slug, country, region, price, season, status
- *  2. Quick fit  — difficulty, effort, technique[], species[], environment[]
- *  3. Story      — hero image, story text, catches text, rod setup, best months
- *  4. Gallery    — gallery image URLs (one per line)
- *  5. Season     — visual month picker (open season + peak months)
- *  6. Meet       — meeting point name + description
- *  7. What's inc — includes[], excludes[]
- *  8. SEO        — meta_title, meta_description, og_image_url
- *
- * Supports both create and edit modes via the `mode` prop.
+ *  1. Identity      — name, slug, country, region, price, season, status
+ *  2. Map pin       — lat/lng picker
+ *  3. Quick fit     — difficulty, effort, technique[], species[], environment[]
+ *  4. Content       — intro text, hero image, story text, catches text, rod setup
+ *  5. Gallery       — gallery image URLs
+ *  6. Season        — visual month picker (open + peak)
+ *  7. Species details — per-fish: description, photo, season
+ *  8. Boat          — boat description + photo
+ *  9. Special attr  — special attraction text + photo
+ * 10. Location      — meeting point name + description
+ * 11. What's inc    — includes[], excludes[]
+ * 12. SEO           — meta_title, meta_description, og_image_url
  */
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Loader2, ChevronRight } from 'lucide-react'
+import { Check, Loader2, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { FISH_ALL } from '@/lib/fish'
 import { COUNTRIES } from '@/lib/countries'
-import { createExperiencePage, updateExperiencePage, type ExperiencePagePayload } from '@/actions/experience-pages'
+import {
+  createExperiencePage,
+  updateExperiencePage,
+  type ExperiencePagePayload,
+  type SpeciesDetailItem,
+} from '@/actions/experience-pages'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
 import LatLngPicker from '@/components/admin/LatLngPicker'
@@ -31,7 +38,10 @@ import LatLngPicker from '@/components/admin/LatLngPicker'
 const DIFFICULTIES    = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
 const EFFORTS         = ['Low', 'Medium', 'High']
 const ENVIRONMENTS    = ['River', 'Lake', 'Sea', 'Fjord', 'Estuary', 'Coast']
-const TECHNIQUES      = ['Fly fishing', 'Spinning', 'Trolling', 'Jigging', 'Ice fishing', 'Baitcasting', 'Shore fishing', 'Sea fishing']
+const TECHNIQUES      = [
+  'Fly fishing', 'Spinning', 'Trolling', 'Jigging', 'Ice fishing',
+  'Baitcasting', 'Shore fishing', 'Sea fishing', 'Vertical fishing',
+]
 const MONTHS          = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const MONTHS_SHORT    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const STATUS_OPTIONS  = [
@@ -39,6 +49,15 @@ const STATUS_OPTIONS  = [
   { v: 'active',   l: 'Active'   },
   { v: 'archived', l: 'Archived' },
 ]
+
+// ─── Internal type ─────────────────────────────────────────────────────────────
+
+interface SpeciesDetailRecord {
+  description:   string
+  image_url:     string
+  season_months: number[]
+  peak_months:   number[]
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,9 +110,6 @@ function Divider() {
 }
 
 // ─── Visual month picker ───────────────────────────────────────────────────────
-// Each month tile cycles: off-season → open season → peak (on double click,
-// or use two separate rows: one for season, one for peak).
-// We use two rows: top = open season, bottom = peak months.
 
 function MonthPicker({
   seasonMonths,
@@ -109,19 +125,17 @@ function MonthPicker({
   const toggleSeason = (m: number) => {
     const next = toggleItem(seasonMonths, m)
     onSeasonChange(next)
-    // Remove from peak if removed from season
     if (!next.includes(m)) {
       onPeakChange(peakMonths.filter(pm => pm !== m))
     }
   }
   const togglePeak = (m: number) => {
-    if (!seasonMonths.includes(m)) return // must be in season first
+    if (!seasonMonths.includes(m)) return
     onPeakChange(toggleItem(peakMonths, m))
   }
 
   return (
     <div className="space-y-4">
-      {/* Row 1 — open season */}
       <div>
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-2.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
           Open season — click to mark which months the experience runs
@@ -167,7 +181,6 @@ function MonthPicker({
         </div>
       </div>
 
-      {/* Row 2 — peak months (subset selector) */}
       {seasonMonths.length > 0 && (
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-2.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
@@ -203,40 +216,129 @@ function MonthPicker({
   )
 }
 
+// ─── Species detail accordion item ────────────────────────────────────────────
+
+function SpeciesDetailEditor({
+  name,
+  detail,
+  onChange,
+}: {
+  name:     string
+  detail:   SpeciesDetailRecord
+  onChange: (d: SpeciesDetailRecord) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="rounded-xl overflow-hidden"
+      style={{ border: '1.5px solid rgba(10,46,77,0.1)' }}>
+
+      {/* Header */}
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-4 py-3 transition-colors"
+        style={{ background: open ? 'rgba(230,126,80,0.06)' : 'rgba(10,46,77,0.02)' }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ background: detail.description || detail.image_url || detail.season_months.length > 0 ? '#E67E50' : 'rgba(10,46,77,0.2)' }} />
+          <span className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{name}</span>
+          {detail.season_months.length > 0 && (
+            <span className="text-[10px] f-body px-2 py-0.5 rounded-full"
+              style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}>
+              {detail.season_months.length} season months
+            </span>
+          )}
+        </div>
+        {open ? <ChevronUp size={14} style={{ color: 'rgba(10,46,77,0.4)' }} /> : <ChevronDown size={14} style={{ color: 'rgba(10,46,77,0.4)' }} />}
+      </button>
+
+      {/* Content */}
+      {open && (
+        <div className="px-4 py-4 space-y-3" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+          <div>
+            <label className={lbl}>Description</label>
+            <textarea
+              value={detail.description}
+              onChange={e => onChange({ ...detail, description: e.target.value })}
+              placeholder={`Tell anglers about ${name} — size, fight, where they're found, what makes them special…`}
+              rows={3} maxLength={600}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={iStyle}
+            />
+          </div>
+
+          <div>
+            <label className={lbl}>Photo URL</label>
+            <input
+              type="url"
+              value={detail.image_url}
+              onChange={e => onChange({ ...detail, image_url: e.target.value })}
+              placeholder="https://cdn.fjordanglers.com/fish/atlantic-salmon.jpg"
+              className={inp}
+              style={iStyle}
+            />
+            <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
+              Shown alternating with description on the public page. Landscape preferred.
+            </p>
+          </div>
+
+          <div>
+            <label className={lbl}>Season for this species</label>
+            <MonthPicker
+              seasonMonths={detail.season_months}
+              peakMonths={detail.peak_months}
+              onSeasonChange={sm => onChange({ ...detail, season_months: sm })}
+              onPeakChange={pm => onChange({ ...detail, peak_months: pm })}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface ExperiencePageFormInitialData {
-  experience_name:           string
-  slug:                      string
-  country:                   string
-  region:                    string
-  price_from:                number
-  season_start:              string | null
-  season_end:                string | null
-  status:                    'draft' | 'active' | 'archived'
-  difficulty:                string | null
-  physical_effort:           string | null
-  non_angler_friendly:       boolean
-  technique:                 string[]
-  target_species:            string[]
-  environment:               string[]
-  hero_image_url:            string | null
-  gallery_image_urls:        string[]
-  story_text:                string | null
-  catches_text:              string | null
-  rod_setup:                 string | null
-  best_months:               string | null
-  season_months:             number[]
-  peak_months:               number[]
-  meeting_point_name:        string | null
-  meeting_point_description: string | null
-  includes:                  string[]
-  excludes:                  string[]
-  meta_title:                string | null
-  meta_description:          string | null
-  og_image_url:              string | null
-  location_lat:              number | null
-  location_lng:              number | null
+  experience_name:              string
+  slug:                         string
+  country:                      string
+  region:                       string
+  price_from:                   number
+  season_start:                 string | null
+  season_end:                   string | null
+  status:                       'draft' | 'active' | 'archived'
+  difficulty:                   string | null
+  physical_effort:              string | null
+  non_angler_friendly:          boolean
+  technique:                    string[]
+  target_species:               string[]
+  environment:                  string[]
+  intro_text:                   string | null
+  hero_image_url:               string | null
+  gallery_image_urls:           string[]
+  story_text:                   string | null
+  catches_text:                 string | null
+  rod_setup:                    string | null
+  best_months:                  string | null
+  season_months:                number[]
+  peak_months:                  number[]
+  species_details:              SpeciesDetailItem[]
+  boat_description:             string | null
+  boat_image_url:               string | null
+  special_attraction_text:      string | null
+  special_attraction_image_url: string | null
+  meeting_point_name:           string | null
+  meeting_point_description:    string | null
+  includes:                     string[]
+  excludes:                     string[]
+  meta_title:                   string | null
+  meta_description:             string | null
+  og_image_url:                 string | null
+  location_lat:                 number | null
+  location_lng:                 number | null
 }
 
 export interface ExperiencePageFormProps {
@@ -277,7 +379,7 @@ export default function ExperiencePageForm({
   // ── Section 1: Identity
   const [experienceName, setExperienceName] = useState(initialData?.experience_name ?? '')
   const [slug,           setSlug]           = useState(initialData?.slug ?? '')
-  const [slugEdited,     setSlugEdited]     = useState(isEdit) // In edit mode, don't auto-generate slug
+  const [slugEdited,     setSlugEdited]     = useState(isEdit)
   const [country,        setCountry]        = useState(initialData?.country ?? prefill?.country ?? '')
   const [region,         setRegion]         = useState(initialData?.region ?? prefill?.region ?? prefill?.location_name ?? '')
   const [priceFrom,      setPriceFrom]      = useState(initialData?.price_from?.toString() ?? prefill?.price_approx?.toString() ?? '')
@@ -285,7 +387,7 @@ export default function ExperiencePageForm({
   const [seasonEnd,      setSeasonEnd]      = useState(initialData?.season_end ?? '')
   const [status,         setStatus]         = useState<'draft' | 'active' | 'archived'>(initialData?.status ?? 'draft')
 
-  // ── Section 2: Quick fit
+  // ── Section 3: Quick fit
   const [difficulty,        setDifficulty]        = useState(initialData?.difficulty ?? '')
   const [effort,            setEffort]            = useState(initialData?.physical_effort ?? '')
   const [nonAnglerFriendly, setNonAnglerFriendly] = useState(initialData?.non_angler_friendly ?? false)
@@ -293,7 +395,8 @@ export default function ExperiencePageForm({
   const [targetSpecies,     setTargetSpecies]     = useState<string[]>(initialData?.target_species ?? prefill?.species ?? [])
   const [environment,       setEnvironment]       = useState<string[]>(initialData?.environment ?? [])
 
-  // ── Section 3: Story
+  // ── Section 4: Content
+  const [introText,    setIntroText]    = useState(initialData?.intro_text ?? '')
   const [heroImageUrl, setHeroImageUrl] = useState(initialData?.hero_image_url ?? '')
   const [storyText,    setStoryText]    = useState(initialData?.story_text ?? '')
   const [catchesText,  setCatchesText]  = useState(initialData?.catches_text ?? '')
@@ -304,26 +407,52 @@ export default function ExperiencePageForm({
     return prefill.season_months.map(m => MONTHS[m - 1] ?? '').filter(Boolean).join(', ')
   })
 
-  // ── Section 4: Gallery
+  // ── Section 5: Gallery
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(
     () => (initialData?.gallery_image_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))
   )
 
-  // ── Section 5: Season months
+  // ── Section 6: Season months
   const [seasonMonths, setSeasonMonths] = useState<number[]>(
     initialData?.season_months ?? prefill?.season_months ?? []
   )
   const [peakMonths, setPeakMonths] = useState<number[]>(initialData?.peak_months ?? [])
 
-  // ── Section 6: Meeting point
+  // ── Section 7: Species details (per-fish)
+  const [speciesDetails, setSpeciesDetails] = useState<Record<string, SpeciesDetailRecord>>(() => {
+    const rec: Record<string, SpeciesDetailRecord> = {}
+    for (const item of (initialData?.species_details ?? [])) {
+      rec[item.name] = {
+        description:   item.description,
+        image_url:     item.image_url,
+        season_months: item.season_months,
+        peak_months:   item.peak_months,
+      }
+    }
+    return rec
+  })
+
+  const updateSpeciesDetail = useCallback((name: string, detail: SpeciesDetailRecord) => {
+    setSpeciesDetails(prev => ({ ...prev, [name]: detail }))
+  }, [])
+
+  // ── Section 8: Boat
+  const [boatDescription, setBoatDescription] = useState(initialData?.boat_description ?? '')
+  const [boatImageUrl,    setBoatImageUrl]    = useState(initialData?.boat_image_url ?? '')
+
+  // ── Section 9: Special attraction
+  const [specialAttractionText,     setSpecialAttractionText]     = useState(initialData?.special_attraction_text ?? '')
+  const [specialAttractionImageUrl, setSpecialAttractionImageUrl] = useState(initialData?.special_attraction_image_url ?? '')
+
+  // ── Section 10: Meeting point
   const [meetingName, setMeetingName] = useState(initialData?.meeting_point_name ?? '')
   const [meetingDesc, setMeetingDesc] = useState(initialData?.meeting_point_description ?? '')
 
-  // ── Section 7: Includes/Excludes
+  // ── Section 11: Includes/Excludes
   const [includes, setIncludes] = useState(initialData?.includes?.join('\n') ?? 'Guide service')
   const [excludes, setExcludes] = useState(initialData?.excludes?.join('\n') ?? '')
 
-  // ── Section 8: SEO
+  // ── Section 12: SEO
   const [metaTitle, setMetaTitle] = useState(initialData?.meta_title ?? '')
   const [metaDesc,  setMetaDesc]  = useState(initialData?.meta_description ?? '')
   const [ogImage,   setOgImage]   = useState(initialData?.og_image_url ?? '')
@@ -353,7 +482,6 @@ export default function ExperiencePageForm({
   const priceValid   = priceFrom !== '' && parseFloat(priceFrom) > 0
   const canSubmit    = nameValid && slugValid && countryValid && regionValid && priceValid
 
-  // Auto-generate slug from name (until manually edited)
   const handleNameChange = useCallback((val: string) => {
     setExperienceName(val)
     if (!slugEdited) setSlug(slugify(val))
@@ -366,39 +494,54 @@ export default function ExperiencePageForm({
 
     setServerError(null)
 
+    // Build species_details array from current targetSpecies + detail records
+    const speciesDetailItems: SpeciesDetailItem[] = targetSpecies.map(name => ({
+      name,
+      description:   speciesDetails[name]?.description   ?? '',
+      image_url:     speciesDetails[name]?.image_url     ?? '',
+      season_months: speciesDetails[name]?.season_months ?? [],
+      peak_months:   speciesDetails[name]?.peak_months   ?? [],
+    }))
+
     const payload: ExperiencePagePayload = {
-      guide_id:                  prefill?.guide_id ?? null,
-      experience_name:           experienceName.trim(),
-      slug:                      slug.trim(),
+      guide_id:                         prefill?.guide_id ?? null,
+      experience_name:                  experienceName.trim(),
+      slug:                             slug.trim(),
       country,
-      region:                    region.trim(),
-      price_from:                parseFloat(priceFrom),
-      season_start:              seasonStart.trim() || null,
-      season_end:                seasonEnd.trim()   || null,
+      region:                           region.trim(),
+      price_from:                       parseFloat(priceFrom),
+      season_start:                     seasonStart.trim() || null,
+      season_end:                       seasonEnd.trim()   || null,
       status,
-      difficulty:                difficulty  || null,
-      physical_effort:           effort      || null,
-      non_angler_friendly:       nonAnglerFriendly,
+      difficulty:                       difficulty  || null,
+      physical_effort:                  effort      || null,
+      non_angler_friendly:              nonAnglerFriendly,
       technique,
-      target_species:            targetSpecies,
+      target_species:                   targetSpecies,
       environment,
-      hero_image_url:            heroImageUrl.trim() || null,
-      gallery_image_urls:        galleryImages.map(g => g.url),
-      story_text:                storyText.trim()   || null,
-      catches_text:              catchesText.trim() || null,
-      rod_setup:                 rodSetup.trim()    || null,
-      best_months:               bestMonths.trim()  || null,
-      season_months:             seasonMonths,
-      peak_months:               peakMonths,
-      meeting_point_name:        meetingName.trim() || null,
-      meeting_point_description: meetingDesc.trim() || null,
-      includes:                  parseLines(includes),
-      excludes:                  parseLines(excludes),
-      meta_title:                metaTitle.trim()   || null,
-      meta_description:          metaDesc.trim()    || null,
-      og_image_url:              ogImage.trim()     || null,
-      location_lat:              locationLat,
-      location_lng:              locationLng,
+      intro_text:                       introText.trim()    || null,
+      hero_image_url:                   heroImageUrl.trim() || null,
+      gallery_image_urls:               galleryImages.map(g => g.url),
+      story_text:                       storyText.trim()   || null,
+      catches_text:                     catchesText.trim() || null,
+      rod_setup:                        rodSetup.trim()    || null,
+      best_months:                      bestMonths.trim()  || null,
+      season_months:                    seasonMonths,
+      peak_months:                      peakMonths,
+      species_details:                  speciesDetailItems,
+      boat_description:                 boatDescription.trim()             || null,
+      boat_image_url:                   boatImageUrl.trim()                || null,
+      special_attraction_text:          specialAttractionText.trim()       || null,
+      special_attraction_image_url:     specialAttractionImageUrl.trim()   || null,
+      meeting_point_name:               meetingName.trim() || null,
+      meeting_point_description:        meetingDesc.trim() || null,
+      includes:                         parseLines(includes),
+      excludes:                         parseLines(excludes),
+      meta_title:                       metaTitle.trim()   || null,
+      meta_description:                 metaDesc.trim()    || null,
+      og_image_url:                     ogImage.trim()     || null,
+      location_lat:                     locationLat,
+      location_lng:                     locationLng,
     }
 
     setIsPending(true)
@@ -407,7 +550,6 @@ export default function ExperiencePageForm({
         const result = await updateExperiencePage(experienceId, payload)
         if (result.success) {
           router.push(`/admin/experiences/${experienceId}`)
-          // setIsPending stays true during navigation — component will unmount
         } else {
           setServerError(result.error)
           setIsPending(false)
@@ -416,7 +558,6 @@ export default function ExperiencePageForm({
         const result = await createExperiencePage(payload)
         if (result.success) {
           router.push(`/admin/experiences/${result.id}`)
-          // setIsPending stays true during navigation — component will unmount
         } else {
           setServerError(result.error)
           setIsPending(false)
@@ -429,8 +570,9 @@ export default function ExperiencePageForm({
   }, [
     canSubmit, experienceName, slug, country, region, priceFrom, seasonStart, seasonEnd,
     status, difficulty, effort, nonAnglerFriendly, technique, targetSpecies, environment,
-    heroImageUrl, galleryImages, storyText, catchesText, rodSetup, bestMonths,
-    seasonMonths, peakMonths,
+    introText, heroImageUrl, galleryImages, storyText, catchesText, rodSetup, bestMonths,
+    seasonMonths, peakMonths, speciesDetails,
+    boatDescription, boatImageUrl, specialAttractionText, specialAttractionImageUrl,
     meetingName, meetingDesc, includes, excludes, metaTitle, metaDesc, ogImage,
     locationLat, locationLng,
     prefill, router, isEdit, experienceId,
@@ -518,7 +660,7 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── Map Pin Location ── */}
+      {/* ── 2. Map Pin Location ── */}
       <SectionLabel
         step={2}
         title="Map Pin Location"
@@ -600,10 +742,22 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 3. Story & Content ── */}
-      <SectionLabel step={3} title="Story & Content" desc="Editorial copy — this is what sells the trip" />
+      {/* ── 4. Content ── */}
+      <SectionLabel step={4} title="Content" desc="Editorial copy — this is what sells the trip" />
 
       <div className="space-y-3">
+        <div>
+          <label className={lbl}>Introduction <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(shown first, before Quick Fit)</span></label>
+          <textarea value={introText} onChange={e => setIntroText(e.target.value)}
+            placeholder="One powerful sentence that hooks the reader. E.g. 'Where the Gaula meets the sea — Norway's most iconic salmon river, with a local guide who has fished it for 20 years.'"
+            rows={2} maxLength={300}
+            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+            style={iStyle} />
+          <p className="text-[10px] f-body mt-0.5 text-right" style={{ color: 'rgba(10,46,77,0.3)' }}>
+            {introText.length} / 300
+          </p>
+        </div>
+
         <ImageUpload
           label="Hero image"
           variant="cover"
@@ -617,7 +771,7 @@ export default function ExperiencePageForm({
         />
 
         <div>
-          <label className={lbl}>Story text</label>
+          <label className={lbl}>About this experience <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(main story)</span></label>
           <textarea value={storyText} onChange={e => setStoryText(e.target.value)}
             placeholder="The Gaula flows from the mountains of Røros through the valleys of Trøndelag before meeting the sea at Trondheim fjord. For Atlantic salmon, it is one of Europe's premier destinations…"
             rows={6} maxLength={5000}
@@ -629,10 +783,10 @@ export default function ExperiencePageForm({
         </div>
 
         <div>
-          <label className={lbl}>What to expect — catches & experience</label>
+          <label className={lbl}>What you can catch — intro paragraph</label>
           <textarea value={catchesText} onChange={e => setCatchesText(e.target.value)}
             placeholder="Gaula salmon run from June through August, peaking in mid-July. Expect fish between 4–15 kg with occasional monsters over 20 kg…"
-            rows={4} maxLength={2000}
+            rows={3} maxLength={2000}
             className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
             style={iStyle} />
         </div>
@@ -651,17 +805,14 @@ export default function ExperiencePageForm({
           <input type="text" value={bestMonths} onChange={e => setBestMonths(e.target.value)}
             placeholder="June–August, with peak salmon runs in mid-July"
             className={inp} style={iStyle} />
-          <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
-            Short free-text description — shown below the visual season calendar.
-          </p>
         </div>
       </div>
 
       <Divider />
 
-      {/* ── 4. Gallery ── */}
+      {/* ── 5. Gallery ── */}
       <SectionLabel
-        step={4}
+        step={5}
         title="Gallery"
         desc={guidePhotos.length > 0
           ? `Pick from the guide's ${guidePhotos.length} existing photos or upload new ones`
@@ -678,11 +829,11 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 5. Season Calendar ── */}
+      {/* ── 6. Season Calendar ── */}
       <SectionLabel
-        step={5}
+        step={6}
         title="Season Calendar"
-        desc="Visual month-by-month availability shown on the public page. Orange = peak, cream = open season."
+        desc="Overall season for the experience. Orange = peak, cream = open season."
       />
       <MonthPicker
         seasonMonths={seasonMonths}
@@ -693,8 +844,93 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 6. Meeting Point ── */}
-      <SectionLabel step={6} title="Meeting Point" />
+      {/* ── 7. Species Details ── */}
+      <SectionLabel
+        step={7}
+        title="Species Details"
+        desc="Per-fish description, photo and season — powers the alternating fish layout on the public page."
+      />
+
+      {targetSpecies.length === 0 ? (
+        <p className="text-sm f-body py-4" style={{ color: 'rgba(10,46,77,0.38)' }}>
+          Select target species in the Quick Fit section first.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {targetSpecies.map(name => (
+            <SpeciesDetailEditor
+              key={name}
+              name={name}
+              detail={speciesDetails[name] ?? { description: '', image_url: '', season_months: [], peak_months: [] }}
+              onChange={d => updateSpeciesDetail(name, d)}
+            />
+          ))}
+          <p className="text-[10px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.35)' }}>
+            Click each species to expand and fill details. Even partial data improves the page.
+          </p>
+        </div>
+      )}
+
+      <Divider />
+
+      {/* ── 8. Boat ── */}
+      <SectionLabel
+        step={8}
+        title="Boat"
+        desc="Shown as two-column section: description left, photo right."
+      />
+      <div className="space-y-3">
+        <div>
+          <label className={lbl}>Boat description</label>
+          <textarea value={boatDescription} onChange={e => setBoatDescription(e.target.value)}
+            placeholder="Our 24-foot aluminium RIB handles anything the North Sea throws at it. Equipped with radar, VHF, safety equipment and a live bait tank…"
+            rows={4} maxLength={800}
+            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+            style={iStyle} />
+        </div>
+        <div>
+          <label className={lbl}>Boat photo URL</label>
+          <input type="url" value={boatImageUrl} onChange={e => setBoatImageUrl(e.target.value)}
+            placeholder="https://cdn.fjordanglers.com/boat/rib-nord.jpg"
+            className={inp} style={iStyle} />
+          <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
+            Landscape photo — shown to the right of the description.
+          </p>
+        </div>
+      </div>
+
+      <Divider />
+
+      {/* ── 9. Special Attraction ── */}
+      <SectionLabel
+        step={9}
+        title="Special Attraction"
+        desc="Shown as two-column section: photo left, text right."
+      />
+      <div className="space-y-3">
+        <div>
+          <label className={lbl}>Special attraction photo URL</label>
+          <input type="url" value={specialAttractionImageUrl} onChange={e => setSpecialAttractionImageUrl(e.target.value)}
+            placeholder="https://cdn.fjordanglers.com/photo/midnight-sun.jpg"
+            className={inp} style={iStyle} />
+          <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
+            Landscape photo — shown to the left of the text.
+          </p>
+        </div>
+        <div>
+          <label className={lbl}>Special attraction text</label>
+          <textarea value={specialAttractionText} onChange={e => setSpecialAttractionText(e.target.value)}
+            placeholder="Fish under the midnight sun from late June to mid-July. Above the Arctic Circle, the sun never sets — you can cast at 2am with full daylight…"
+            rows={4} maxLength={800}
+            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+            style={iStyle} />
+        </div>
+      </div>
+
+      <Divider />
+
+      {/* ── 10. Location ── */}
+      <SectionLabel step={10} title="Location" desc="Meeting point and directions for the angler" />
       <div className="space-y-3">
         <div>
           <label className={lbl}>Meeting point name</label>
@@ -714,8 +950,8 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 7. Includes / Excludes ── */}
-      <SectionLabel step={7} title="What's Included / Excluded" desc="One item per line" />
+      {/* ── 11. Includes / Excludes ── */}
+      <SectionLabel step={11} title="What's Included / Excluded" desc="One item per line" />
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={lbl}>Included</label>
@@ -737,8 +973,8 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 8. SEO ── */}
-      <SectionLabel step={8} title="SEO" desc="Optional — if left blank, we auto-generate from the content above" />
+      {/* ── 12. SEO ── */}
+      <SectionLabel step={12} title="SEO" desc="Optional — if left blank, we auto-generate from the content above" />
       <div className="space-y-3">
         <div>
           <label className={lbl}>Meta title</label>
