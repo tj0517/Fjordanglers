@@ -222,10 +222,14 @@ function SpeciesDetailEditor({
   name,
   detail,
   onChange,
+  guidePhotos,
+  guideId,
 }: {
-  name:     string
-  detail:   SpeciesDetailRecord
-  onChange: (d: SpeciesDetailRecord) => void
+  name:        string
+  detail:      SpeciesDetailRecord
+  onChange:    (d: SpeciesDetailRecord) => void
+  guidePhotos: string[]
+  guideId?:    string
 }) {
   const [open, setOpen] = useState(false)
 
@@ -269,20 +273,17 @@ function SpeciesDetailEditor({
             />
           </div>
 
-          <div>
-            <label className={lbl}>Photo URL</label>
-            <input
-              type="url"
-              value={detail.image_url}
-              onChange={e => onChange({ ...detail, image_url: e.target.value })}
-              placeholder="https://cdn.fjordanglers.com/fish/atlantic-salmon.jpg"
-              className={inp}
-              style={iStyle}
-            />
-            <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
-              Shown alternating with description on the public page. Landscape preferred.
-            </p>
-          </div>
+          <ImageUpload
+            label="Photo"
+            variant="cover"
+            aspect="wide"
+            cropAspect={4 / 3}
+            currentUrl={detail.image_url || null}
+            onUpload={(url) => onChange({ ...detail, image_url: url })}
+            pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+            guideId={guideId}
+            hint="Landscape — shown alternating with description on the public page."
+          />
 
           <div>
             <label className={lbl}>Season for this species</label>
@@ -863,6 +864,8 @@ export default function ExperiencePageForm({
               name={name}
               detail={speciesDetails[name] ?? { description: '', image_url: '', season_months: [], peak_months: [] }}
               onChange={d => updateSpeciesDetail(name, d)}
+              guidePhotos={guidePhotos}
+              guideId={prefill?.guide_id}
             />
           ))}
           <p className="text-[10px] f-body mt-2" style={{ color: 'rgba(10,46,77,0.35)' }}>
@@ -888,15 +891,17 @@ export default function ExperiencePageForm({
             className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
             style={iStyle} />
         </div>
-        <div>
-          <label className={lbl}>Boat photo URL</label>
-          <input type="url" value={boatImageUrl} onChange={e => setBoatImageUrl(e.target.value)}
-            placeholder="https://cdn.fjordanglers.com/boat/rib-nord.jpg"
-            className={inp} style={iStyle} />
-          <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
-            Landscape photo — shown to the right of the description.
-          </p>
-        </div>
+        <ImageUpload
+          label="Boat photo"
+          variant="cover"
+          aspect="wide"
+          cropAspect={4 / 3}
+          currentUrl={boatImageUrl || null}
+          onUpload={(url) => setBoatImageUrl(url)}
+          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          guideId={prefill?.guide_id ?? undefined}
+          hint="Landscape — shown to the right of the boat description."
+        />
       </div>
 
       <Divider />
@@ -908,15 +913,17 @@ export default function ExperiencePageForm({
         desc="Shown as two-column section: photo left, text right."
       />
       <div className="space-y-3">
-        <div>
-          <label className={lbl}>Special attraction photo URL</label>
-          <input type="url" value={specialAttractionImageUrl} onChange={e => setSpecialAttractionImageUrl(e.target.value)}
-            placeholder="https://cdn.fjordanglers.com/photo/midnight-sun.jpg"
-            className={inp} style={iStyle} />
-          <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.3)' }}>
-            Landscape photo — shown to the left of the text.
-          </p>
-        </div>
+        <ImageUpload
+          label="Special attraction photo"
+          variant="cover"
+          aspect="wide"
+          cropAspect={4 / 3}
+          currentUrl={specialAttractionImageUrl || null}
+          onUpload={(url) => setSpecialAttractionImageUrl(url)}
+          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          guideId={prefill?.guide_id ?? undefined}
+          hint="Landscape — shown to the left of the special attraction text."
+        />
         <div>
           <label className={lbl}>Special attraction text</label>
           <textarea value={specialAttractionText} onChange={e => setSpecialAttractionText(e.target.value)}
