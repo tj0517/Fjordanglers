@@ -3,13 +3,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { MapPin, Check, X as XIcon } from 'lucide-react'
+import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
 import { FISH_IMG } from '@/lib/fish'
 import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { HomeNav } from '@/components/home/home-nav'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Footer } from '@/components/layout/footer'
-import type { SpeciesDetailItem } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction } from '@/actions/experience-pages'
 
 /**
  * /experiences/[slug] — Public editorial experience page.
@@ -151,12 +152,12 @@ export default async function ExperiencePublicPage({
   // Cast to include columns added in 20260427_experience_pages_v2.sql
   // (not yet in auto-generated DB types — will be updated after migration runs)
   type PageWithNewCols = typeof rawPage & {
-    intro_text:                   string | null
-    species_details:              unknown
-    boat_description:             string | null
-    boat_image_url:               string | null
-    special_attraction_text:      string | null
-    special_attraction_image_url: string | null
+    intro_text:          string | null
+    species_details:     unknown
+    boat_description:    string | null
+    boat_image_url:      string | null
+    special_attractions: unknown
+    what_to_bring:       unknown
   }
   const page = rawPage as unknown as PageWithNewCols
 
@@ -232,7 +233,10 @@ export default async function ExperiencePublicPage({
   const gallery         = (page.gallery_image_urls as string[] | null) ?? []
   const seasonMonths    = (page.season_months      as number[] | null) ?? []
   const peakMonths      = (page.peak_months        as number[] | null) ?? []
-  const speciesDetails  = (page.species_details    as SpeciesDetailItem[] | null) ?? []
+  const speciesDetails       = (page.species_details    as SpeciesDetailItem[]  | null) ?? []
+  const specialAttractions   = (page.special_attractions as SpecialAttraction[]  | null) ?? []
+  const whatToBring          = (page.what_to_bring      as string[]             | null) ?? []
+  const guideLanguages       = (guide?.languages        as string[]             | null) ?? []
 
   const topImages = gallery.length > 0
     ? gallery
@@ -301,27 +305,16 @@ export default async function ExperiencePublicPage({
             <span className="font-bold f-display text-xl" style={{ color: '#0A2E4D' }}>
               from €{page.price_from}
             </span>
-            {page.difficulty && (() => {
-              const dc = difficultyColor[page.difficulty] ?? { bg: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }
-              return (
-                <>
-                  <span style={{ color: 'rgba(10,46,77,0.2)' }}>·</span>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full f-body"
-                    style={{ background: dc.bg, color: dc.color }}>{page.difficulty}</span>
-                </>
-              )
-            })()}
-            {technique.slice(0, 2).map(t => (
-              <span key={t} className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
-                style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.65)', border: '1px solid rgba(10,46,77,0.1)' }}>
-                {t}
-              </span>
-            ))}
-            {page.non_angler_friendly && (
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
-                style={{ background: 'rgba(74,222,128,0.1)', color: '#16A34A' }}>
-                Family-friendly
-              </span>
+            {env.length > 0 && (
+              <>
+                <span style={{ color: 'rgba(10,46,77,0.2)' }}>·</span>
+                {env.map(e => (
+                  <span key={e} className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
+                    style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.65)', border: '1px solid rgba(10,46,77,0.1)' }}>
+                    {e}
+                  </span>
+                ))}
+              </>
             )}
           </div>
         </div>
@@ -335,7 +328,7 @@ export default async function ExperiencePublicPage({
             {/* ──────────── INTRODUCE ──────────── */}
             {page.intro_text && (
               <section className="mb-10">
-                <p className="text-lg sm:text-xl f-body leading-relaxed font-medium"
+                <p className="text-lg sm:text-xl f-body leading-relaxed text-justify font-medium"
                   style={{ color: '#0A2E4D' }}>
                   {page.intro_text}
                 </p>
@@ -343,18 +336,42 @@ export default async function ExperiencePublicPage({
             )}
 
             {/* ──────────── QUICK FIT ──────────── */}
-            {(species.length > 0 || technique.length > 0 || env.length > 0 || page.difficulty || page.physical_effort) && (
+            {(species.length > 0 || technique.length > 0 || guideLanguages.length > 0 || page.difficulty || page.physical_effort || page.non_angler_friendly) && (
               <section className="mb-12 p-6 rounded-2xl"
                 style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
                 <SalmonRule />
                 <SectionLabel label="Quick Fit" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(page.difficulty || page.physical_effort || page.non_angler_friendly) && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Level</p>
+                      <div className="flex flex-wrap gap-2">
+                        {page.difficulty && (() => {
+                          const dc = difficultyColor[page.difficulty] ?? { bg: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }
+                          return <span className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: dc.bg, color: dc.color }}>{page.difficulty}</span>
+                        })()}
+                        {page.physical_effort && (
+                          <span className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>
+                            {page.physical_effort} effort
+                          </span>
+                        )}
+                        {page.non_angler_friendly && (
+                          <span className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(74,222,128,0.1)', color: '#16A34A' }}>
+                            Family-friendly
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {species.length > 0 && (
                     <div>
                       <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Target species</p>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-2">
                         {species.map(s => (
-                          <span key={s} className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
+                          <span key={s} className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
                             style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}>{s}</span>
                         ))}
                       </div>
@@ -363,44 +380,22 @@ export default async function ExperiencePublicPage({
                   {technique.length > 0 && (
                     <div>
                       <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Technique</p>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-2">
                         {technique.map(t => (
-                          <span key={t} className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
+                          <span key={t} className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
                             style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>{t}</span>
                         ))}
                       </div>
                     </div>
                   )}
-                  {env.length > 0 && (
+                  {guideLanguages.length > 0 && (
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Environment</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {env.map(e => (
-                          <span key={e} className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
-                            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>{e}</span>
+                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Guide speaks</p>
+                      <div className="flex flex-wrap gap-2">
+                        {guideLanguages.map(lang => (
+                          <span key={lang} className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>{lang}</span>
                         ))}
-                      </div>
-                    </div>
-                  )}
-                  {(page.difficulty || page.physical_effort) && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Level</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {page.difficulty && (() => {
-                          const dc = difficultyColor[page.difficulty] ?? { bg: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }
-                          return <span className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
-                            style={{ background: dc.bg, color: dc.color }}>{page.difficulty}</span>
-                        })()}
-                        {page.physical_effort && (
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
-                            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>
-                            {page.physical_effort} effort
-                          </span>
-                        )}
-                        {page.non_angler_friendly && (
-                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full f-body"
-                            style={{ background: 'rgba(74,222,128,0.1)', color: '#16A34A' }}>Family-friendly</span>
-                        )}
                       </div>
                     </div>
                   )}
@@ -415,7 +410,7 @@ export default async function ExperiencePublicPage({
                 <SectionLabel label="About this experience" />
                 <div className="space-y-4">
                   {page.story_text.split('\n\n').filter(Boolean).map((para, i) => (
-                    <p key={i} className="text-base f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.75)' }}>
+                    <p key={i} className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.75)' }}>
                       {para}
                     </p>
                   ))}
@@ -456,7 +451,7 @@ export default async function ExperiencePublicPage({
                 <SectionLabel label="What you can catch" />
 
                 {page.catches_text && (
-                  <p className="text-base f-body leading-relaxed mb-8" style={{ color: 'rgba(10,46,77,0.7)' }}>
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify mb-8" style={{ color: 'rgba(10,46,77,0.7)' }}>
                     {page.catches_text}
                   </p>
                 )}
@@ -481,20 +476,20 @@ export default async function ExperiencePublicPage({
                                   {fish.name}
                                 </h3>
                                 {fish.description && (
-                                  <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
                                     {fish.description}
                                   </p>
                                 )}
                               </div>
                               {/* Photo side */}
                               {fishImg && (
-                                <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[220px] aspect-[4/3] sm:aspect-[3/2]">
+                                <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[300px] aspect-[4/3]">
                                   <Image
                                     src={fishImg}
                                     alt={fish.name}
                                     fill
                                     className="object-cover"
-                                    sizes="(min-width: 640px) 220px, 100vw"
+                                    sizes="(min-width: 640px) 300px, 100vw"
                                   />
                                 </div>
                               )}
@@ -550,7 +545,7 @@ export default async function ExperiencePublicPage({
                 <SectionLabel label="Rod setup & recommended gear" />
                 <div className="px-5 py-4 rounded-2xl"
                   style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
-                  <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
                     {page.rod_setup}
                   </p>
                 </div>
@@ -574,7 +569,7 @@ export default async function ExperiencePublicPage({
                   </div>
                 )}
                 {page.best_months && (
-                  <p className="text-sm f-body leading-relaxed mt-3" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                  <p className="text-sm f-body leading-relaxed text-justify mt-3" style={{ color: 'rgba(10,46,77,0.6)' }}>
                     {page.best_months}
                   </p>
                 )}
@@ -590,20 +585,20 @@ export default async function ExperiencePublicPage({
                   {/* Boat text */}
                   {page.boat_description && (
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                      <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
                         {page.boat_description}
                       </p>
                     </div>
                   )}
                   {/* Boat photo */}
                   {page.boat_image_url && (
-                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[260px] aspect-[4/3]">
+                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
                       <Image
                         src={page.boat_image_url}
                         alt="The boat"
                         fill
                         className="object-cover"
-                        sizes="(min-width: 640px) 260px, 100vw"
+                        sizes="(min-width: 640px) 340px, 100vw"
                       />
                     </div>
                   )}
@@ -611,38 +606,42 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
-            {/* ──────────── PHOTO | SPECIAL ATTRACTION ──────────── */}
-            {(page.special_attraction_text || page.special_attraction_image_url) && (
+            {/* ──────────── SPECIAL ATTRACTIONS (multi) ──────────── */}
+            {specialAttractions.length > 0 && (
               <section className="mb-12">
                 <SalmonRule />
-                <SectionLabel label="Special attraction" />
-                <div className="flex flex-col sm:flex-row-reverse gap-6 items-start">
-                  {/* Special attraction text (right on desktop) */}
-                  {page.special_attraction_text && (
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.72)' }}>
-                        {page.special_attraction_text}
-                      </p>
+                <SectionLabel label="Special attractions" />
+                <div className="space-y-10">
+                  {specialAttractions.map((attr, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row-reverse gap-6 items-start">
+                      {/* Text (right on desktop) */}
+                      {attr.text && (
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                            {attr.text}
+                          </p>
+                        </div>
+                      )}
+                      {/* Photo (left on desktop) */}
+                      {attr.image_url && (
+                        <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
+                          <Image
+                            src={attr.image_url}
+                            alt={`Special attraction ${idx + 1}`}
+                            fill
+                            className="object-cover"
+                            sizes="(min-width: 640px) 340px, 100vw"
+                          />
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {/* Photo (left on desktop) */}
-                  {page.special_attraction_image_url && (
-                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[260px] aspect-[4/3]">
-                      <Image
-                        src={page.special_attraction_image_url}
-                        alt="Special attraction"
-                        fill
-                        className="object-cover"
-                        sizes="(min-width: 640px) 260px, 100vw"
-                      />
-                    </div>
-                  )}
+                  ))}
                 </div>
               </section>
             )}
 
             {/* ──────────── LOCATION ──────────── */}
-            {(page.meeting_point_name || page.meeting_point_description) && (
+            {(page.meeting_point_name || page.meeting_point_description || page.location_lat != null) && (
               <section className="mb-12">
                 <SalmonRule />
                 <SectionLabel label="Location" />
@@ -653,10 +652,36 @@ export default async function ExperiencePublicPage({
                   </div>
                 )}
                 {page.meeting_point_description && (
-                  <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify mb-6" style={{ color: 'rgba(10,46,77,0.65)' }}>
                     {page.meeting_point_description}
                   </p>
                 )}
+                {page.location_lat != null && page.location_lng != null && (
+                  <div className="rounded-2xl overflow-hidden" style={{ height: '320px' }}>
+                    <ExperienceLocationMap
+                      lat={page.location_lat}
+                      lng={page.location_lng}
+                      area={(rawPage as unknown as { location_area: import('geojson').Polygon | null }).location_area ?? null}
+                      spots={(rawPage as unknown as { location_spots: import('@/types').LocationSpot[] | null }).location_spots ?? null}
+                    />
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* ──────────── WHAT TO BRING ──────────── */}
+            {whatToBring.length > 0 && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="What to bring" />
+                <div className="flex flex-wrap gap-2">
+                  {whatToBring.map(item => (
+                    <span key={item} className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                      style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </section>
             )}
 
@@ -866,7 +891,7 @@ export default async function ExperiencePublicPage({
                 </div>
 
                 {(guide.tagline || guide.bio) && (
-                  <p className="text-sm f-body leading-relaxed mb-6" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '560px' }}>
+                  <p className="text-sm f-body leading-relaxed text-justify mb-6" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '560px' }}>
                     {guide.tagline ?? (guide.bio ? guide.bio.slice(0, 180) + (guide.bio.length > 180 ? '…' : '') : null)}
                   </p>
                 )}

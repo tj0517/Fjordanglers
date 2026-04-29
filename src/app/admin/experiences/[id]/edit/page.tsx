@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExperiencePageForm, { type ExperiencePageFormInitialData } from '@/components/admin/ExperiencePageForm'
-import type { SpeciesDetailItem } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction } from '@/actions/experience-pages'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -29,12 +29,12 @@ export default async function AdminExperienceEditPage({
 
   // Cast to include columns added in 20260427_experience_pages_v2.sql
   type PageWithNewCols = typeof rawPage & {
-    intro_text:                   string | null
-    species_details:              unknown
-    boat_description:             string | null
-    boat_image_url:               string | null
-    special_attraction_text:      string | null
-    special_attraction_image_url: string | null
+    intro_text:           string | null
+    species_details:      unknown
+    boat_description:     string | null
+    boat_image_url:       string | null
+    special_attractions:  unknown
+    what_to_bring:        unknown
   }
   const page = rawPage as unknown as PageWithNewCols
 
@@ -83,10 +83,10 @@ export default async function AdminExperienceEditPage({
     location_lng:                 page.location_lng ?? null,
     intro_text:                   page.intro_text ?? null,
     species_details:              (page.species_details as SpeciesDetailItem[] | null) ?? [],
-    boat_description:             page.boat_description ?? null,
-    boat_image_url:               page.boat_image_url ?? null,
-    special_attraction_text:      page.special_attraction_text ?? null,
-    special_attraction_image_url: page.special_attraction_image_url ?? null,
+    boat_description:    page.boat_description ?? null,
+    boat_image_url:      page.boat_image_url ?? null,
+    special_attractions: (page.special_attractions as SpecialAttraction[] | null) ?? [],
+    what_to_bring:       (page.what_to_bring as string[] | null) ?? [],
   }
 
   return (
