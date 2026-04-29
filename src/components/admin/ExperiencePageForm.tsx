@@ -28,6 +28,7 @@ import {
   updateExperiencePage,
   type ExperiencePagePayload,
   type SpeciesDetailItem,
+  type SpecialAttraction,
 } from '@/actions/experience-pages'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
@@ -329,8 +330,8 @@ export interface ExperiencePageFormInitialData {
   species_details:              SpeciesDetailItem[]
   boat_description:             string | null
   boat_image_url:               string | null
-  special_attraction_text:      string | null
-  special_attraction_image_url: string | null
+  special_attractions:          SpecialAttraction[]
+  what_to_bring:                string[]
   meeting_point_name:           string | null
   meeting_point_description:    string | null
   includes:                     string[]
@@ -441,15 +442,19 @@ export default function ExperiencePageForm({
   const [boatDescription, setBoatDescription] = useState(initialData?.boat_description ?? '')
   const [boatImageUrl,    setBoatImageUrl]    = useState(initialData?.boat_image_url ?? '')
 
-  // ── Section 9: Special attraction
-  const [specialAttractionText,     setSpecialAttractionText]     = useState(initialData?.special_attraction_text ?? '')
-  const [specialAttractionImageUrl, setSpecialAttractionImageUrl] = useState(initialData?.special_attraction_image_url ?? '')
+  // ── Section 9: Special attractions (multi-item)
+  const [specialAttractions, setSpecialAttractions] = useState<SpecialAttraction[]>(
+    initialData?.special_attractions ?? []
+  )
 
   // ── Section 10: Meeting point
   const [meetingName, setMeetingName] = useState(initialData?.meeting_point_name ?? '')
   const [meetingDesc, setMeetingDesc] = useState(initialData?.meeting_point_description ?? '')
 
-  // ── Section 11: Includes/Excludes
+  // ── Section 11: What to bring
+  const [whatToBring, setWhatToBring] = useState(initialData?.what_to_bring?.join('\n') ?? '')
+
+  // ── Section 12: Includes/Excludes
   const [includes, setIncludes] = useState(initialData?.includes?.join('\n') ?? 'Guide service')
   const [excludes, setExcludes] = useState(initialData?.excludes?.join('\n') ?? '')
 
@@ -532,8 +537,8 @@ export default function ExperiencePageForm({
       species_details:                  speciesDetailItems,
       boat_description:                 boatDescription.trim()             || null,
       boat_image_url:                   boatImageUrl.trim()                || null,
-      special_attraction_text:          specialAttractionText.trim()       || null,
-      special_attraction_image_url:     specialAttractionImageUrl.trim()   || null,
+      special_attractions:              specialAttractions.filter(a => a.text.trim()),
+      what_to_bring:                    parseLines(whatToBring),
       meeting_point_name:               meetingName.trim() || null,
       meeting_point_description:        meetingDesc.trim() || null,
       includes:                         parseLines(includes),
@@ -573,7 +578,7 @@ export default function ExperiencePageForm({
     status, difficulty, effort, nonAnglerFriendly, technique, targetSpecies, environment,
     introText, heroImageUrl, galleryImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
-    boatDescription, boatImageUrl, specialAttractionText, specialAttractionImageUrl,
+    boatDescription, boatImageUrl, specialAttractions, whatToBring,
     meetingName, meetingDesc, includes, excludes, metaTitle, metaDesc, ogImage,
     locationLat, locationLng,
     prefill, router, isEdit, experienceId,
@@ -906,32 +911,60 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 9. Special Attraction ── */}
+      {/* ── 9. Special Attractions ── */}
       <SectionLabel
         step={9}
-        title="Special Attraction"
-        desc="Shown as two-column section: photo left, text right."
+        title="Special Attractions"
+        desc="Each attraction is shown as a two-column block: photo left, text right. Add as many as you like."
       />
-      <div className="space-y-3">
-        <ImageUpload
-          label="Special attraction photo"
-          variant="cover"
-          aspect="wide"
-          cropAspect={4 / 3}
-          currentUrl={specialAttractionImageUrl || null}
-          onUpload={(url) => setSpecialAttractionImageUrl(url)}
-          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
-          guideId={prefill?.guide_id ?? undefined}
-          hint="Landscape — shown to the left of the special attraction text."
-        />
-        <div>
-          <label className={lbl}>Special attraction text</label>
-          <textarea value={specialAttractionText} onChange={e => setSpecialAttractionText(e.target.value)}
-            placeholder="Fish under the midnight sun from late June to mid-July. Above the Arctic Circle, the sun never sets — you can cast at 2am with full daylight…"
-            rows={4} maxLength={800}
-            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
-            style={iStyle} />
-        </div>
+      <div className="space-y-4">
+        {specialAttractions.map((attr, idx) => (
+          <div key={idx} className="space-y-3 p-4 rounded-2xl" style={{ border: '1px solid rgba(10,46,77,0.1)', background: 'rgba(10,46,77,0.02)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                Attraction {idx + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSpecialAttractions(prev => prev.filter((_, i) => i !== idx))}
+                className="text-xs font-semibold f-body px-2.5 py-1 rounded-lg"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
+              >
+                Remove
+              </button>
+            </div>
+            <ImageUpload
+              label="Photo"
+              variant="cover"
+              aspect="wide"
+              cropAspect={4 / 3}
+              currentUrl={attr.image_url || null}
+              onUpload={(url) => setSpecialAttractions(prev => prev.map((a, i) => i === idx ? { ...a, image_url: url } : a))}
+              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              guideId={prefill?.guide_id ?? undefined}
+              hint="Landscape — shown to the left of the text."
+            />
+            <div>
+              <label className={lbl}>Text</label>
+              <textarea
+                value={attr.text}
+                onChange={e => setSpecialAttractions(prev => prev.map((a, i) => i === idx ? { ...a, text: e.target.value } : a))}
+                placeholder="Fish under the midnight sun from late June to mid-July…"
+                rows={4} maxLength={800}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                style={iStyle}
+              />
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setSpecialAttractions(prev => [...prev, { text: '', image_url: '' }])}
+          className="text-sm font-semibold f-body px-4 py-2 rounded-xl transition-colors"
+          style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}
+        >
+          + Add attraction
+        </button>
       </div>
 
       <Divider />
@@ -957,8 +990,21 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 11. Includes / Excludes ── */}
-      <SectionLabel step={11} title="What's Included / Excluded" desc="One item per line" />
+      {/* ── 11. What to Bring ── */}
+      <SectionLabel step={11} title="What to Bring" desc="One item per line — gear and items anglers should bring" />
+      <textarea
+        value={whatToBring}
+        onChange={e => setWhatToBring(e.target.value)}
+        placeholder={"Waders and wading boots\nRod and reel\nPolarised sunglasses\nWaterproof jacket\nSunscreen"}
+        rows={5}
+        className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+        style={iStyle}
+      />
+
+      <Divider />
+
+      {/* ── 12. Includes / Excludes ── */}
+      <SectionLabel step={12} title="What's Included / Excluded" desc="One item per line" />
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className={lbl}>Included</label>
