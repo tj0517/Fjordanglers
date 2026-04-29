@@ -4,7 +4,6 @@ import { getAnglerBookingDetail, getBookingMessages } from '@/actions/bookings'
 import { createClient } from '@/lib/supabase/server'
 import BookingChat from '@/components/booking/BookingChat'
 import AnglerOfferActions from './AnglerOfferActions'
-import AnglerPaymentButton from './AnglerPaymentButton'
 
 export const revalidate = 0
 
@@ -185,9 +184,8 @@ export default async function AnglerBookingDetailPage({
   const isOfferSent = booking.status === 'offer_sent'
   const isConfirmed = booking.status === 'confirmed' || booking.status === 'completed'
 
-  // Payment fee banner (Tier B: Direct Payment)
+  // Payment fee banner
   const bookingFeeEur = Math.round((booking.platform_fee_eur + booking.service_fee_eur) * 100) / 100
-  const feeDue        = isConfirmed && booking.balance_paid_at == null && bookingFeeEur > 0
   const feePaid       = isConfirmed && booking.balance_paid_at != null
   const dates = isConfirmed && booking.confirmed_days?.length
     ? booking.confirmed_days
@@ -350,56 +348,6 @@ export default async function AnglerBookingDetailPage({
                 </div>
               )}
 
-              {feeDue && (
-                <div
-                  className="mx-5 mb-5 rounded-xl overflow-hidden"
-                  style={{ border: '1px solid rgba(10,46,77,0.12)', background: '#FFFFFF' }}
-                >
-                  {/* Fee due header */}
-                  <div
-                    className="px-4 py-3 flex items-center gap-2"
-                    style={{ background: 'rgba(10,46,77,0.04)', borderBottom: '1px solid rgba(10,46,77,0.08)' }}
-                  >
-                    <span className="inline-block w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
-                    <p className="text-xs font-bold uppercase tracking-wider f-body" style={{ color: '#C05621' }}>
-                      Action required — booking fee due
-                    </p>
-                  </div>
-
-                  {/* Breakdown */}
-                  <div className="px-4 py-4">
-                    <div className="space-y-1.5 mb-4">
-                      <div className="flex justify-between text-sm f-body">
-                        <span style={{ color: 'rgba(10,46,77,0.5)' }}>Platform commission</span>
-                        <span style={{ color: '#0A2E4D' }}>€{booking.platform_fee_eur.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm f-body">
-                        <span style={{ color: 'rgba(10,46,77,0.5)' }}>Service fee</span>
-                        <span style={{ color: '#0A2E4D' }}>€{booking.service_fee_eur.toFixed(2)}</span>
-                      </div>
-                      <div
-                        className="flex justify-between text-sm font-bold f-body pt-2"
-                        style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}
-                      >
-                        <span style={{ color: '#0A2E4D' }}>Total due now</span>
-                        <span style={{ color: '#E67E50' }}>€{bookingFeeEur.toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    <AnglerPaymentButton
-                      bookingId={booking.id}
-                      bookingFeeEur={bookingFeeEur}
-                    />
-
-                    <p className="text-[11px] f-body mt-3" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                      {booking.guide_stripe_enabled
-                        ? `The remaining €${booking.guide_payout_eur.toFixed(2)} trip payment is charged via Stripe automatically.`
-                        : `The guide receives the remaining €${booking.guide_payout_eur.toFixed(2)} directly from you (cash, bank transfer, etc.).`
-                      }
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

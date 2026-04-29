@@ -1,6 +1,72 @@
 # CLAUDE.md — FjordAnglers
 
-Fishing guide marketplace connecting Nordic fishing guides with European anglers.
+Curated guided fishing trips marketplace connecting passionate Central European anglers with local Nordic guides.
+
+---
+
+## Company & Brand
+
+### What we are
+- **Not** a travel agency
+- **Not** just a marketplace — we build a **brand**, not a listing platform
+- Positioning: *"For passionate anglers, the best guided fishing trips with local guides in the Scandinavian market"*
+
+### Origin
+Founded April 2026 by Polish students in their 20s who travel to Nordic countries with a rod — Norway, Sweden, Iceland — exploring nature through fishing.
+
+### Mission / Vision / Values
+
+| | |
+|---|---|
+| **Mission** | Give anglers from Central Europe the best experience of nature and fishing in Nordic countries |
+| **Vision** | Biggest guided fishing agency in Nordic → eventually world's biggest fly fishing travel agency |
+
+**Values (non-negotiable):**
+- Care for nature — we take care of the environment we operate in
+- Authentic experience — we provide trips we'd want to go on ourselves
+- Real talk — no marketing BS, straight with the community
+
+### Customers
+
+| Persona | Who | What they want |
+|---|---|---|
+| Primary | Experienced angler | Amazing trips, pure nature, guides who help catch their dream fish |
+| Secondary | Angler with family / amateur | Discover new places with local guides, great atmosphere, better chances of catching fish |
+
+### Business Model
+- Revenue: commission on every guided experience sold through the site
+- Avg. transaction: €500 · Our take: ~€100 · Target CPA: €25
+- Future: brand deals with gear shops featured on the site
+- Pricing: we know the net guide price → set offer price so `(offer price − net price) = our commission`
+
+### Competitors
+
+| Competitor | Weakness | Our edge |
+|---|---|---|
+| FishingBooker | Just a marketplace, no brand | They focus on USA, not Scandinavia |
+| Rod Society | Poor website, underused social | Same model but in Scandinavia (they cover Italy/France/Spain/Argentina) |
+
+### Visual Identity
+
+| Element | Value |
+|---|---|
+| Primary color | `#0A2E4D` Fjord Blue |
+| Accent color | `#E67E50` Salmon Orange |
+| Display font | Fraunces (serif) — `f-display` |
+| Body font | DM Sans (sans-serif) — `f-body` |
+
+### Legal
+
+| Field | Value |
+|---|---|
+| Legal name | Fjordanglers |
+| Entity | JDG (Polish sole proprietorship) |
+| NIP / VAT | 5833564870 |
+| Address | Otwarta 38b/11, Gdańsk, Poland |
+| Website | fjordanglers.com |
+| Social | @fjordanglers |
+
+---
 
 ## Tech Stack
 

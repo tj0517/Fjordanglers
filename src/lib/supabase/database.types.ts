@@ -668,6 +668,126 @@ export type Database = {
           },
         ]
       }
+      experience_pages: {
+        Row: {
+          id:                        string
+          trip_id:                   string | null
+          guide_id:                  string | null
+          experience_name:           string
+          slug:                      string
+          country:                   string
+          region:                    string
+          season_start:              string | null
+          season_end:                string | null
+          price_from:                number
+          currency:                  string
+          status:                    string
+          difficulty:                string | null
+          physical_effort:           string | null
+          non_angler_friendly:       boolean
+          technique:                 string[] | null
+          target_species:            string[] | null
+          environment:               string[] | null
+          hero_image_url:            string | null
+          gallery_image_urls:        string[] | null
+          story_text:                string | null
+          meeting_point_name:        string | null
+          meeting_point_description: string | null
+          catches_text:              string | null
+          rod_setup:                 string | null
+          best_months:               string | null
+          season_months:             number[] | null
+          peak_months:               number[] | null
+          includes:                  string[] | null
+          excludes:                  string[] | null
+          meta_title:                string | null
+          meta_description:          string | null
+          og_image_url:              string | null
+          location_lat:              number | null
+          location_lng:              number | null
+          created_at:                string
+          updated_at:                string
+        }
+        Insert: {
+          id?:                        string
+          trip_id?:                   string | null
+          guide_id?:                  string | null
+          experience_name:            string
+          slug:                       string
+          country:                    string
+          region:                     string
+          season_start?:              string | null
+          season_end?:                string | null
+          price_from:                 number
+          currency?:                  string
+          status?:                    string
+          difficulty?:                string | null
+          physical_effort?:           string | null
+          non_angler_friendly?:       boolean
+          technique?:                 string[] | null
+          target_species?:            string[] | null
+          environment?:               string[] | null
+          hero_image_url?:            string | null
+          gallery_image_urls?:        string[] | null
+          story_text?:                string | null
+          meeting_point_name?:        string | null
+          meeting_point_description?: string | null
+          catches_text?:              string | null
+          rod_setup?:                 string | null
+          best_months?:               string | null
+          season_months?:             number[] | null
+          peak_months?:               number[] | null
+          includes?:                  string[] | null
+          excludes?:                  string[] | null
+          meta_title?:                string | null
+          meta_description?:          string | null
+          og_image_url?:              string | null
+          location_lat?:              number | null
+          location_lng?:              number | null
+          created_at?:                string
+          updated_at?:                string
+        }
+        Update: {
+          id?:                        string
+          trip_id?:                   string | null
+          guide_id?:                  string | null
+          experience_name?:           string
+          slug?:                      string
+          country?:                   string
+          region?:                    string
+          season_start?:              string | null
+          season_end?:                string | null
+          price_from?:                number
+          currency?:                  string
+          status?:                    string
+          difficulty?:                string | null
+          physical_effort?:           string | null
+          non_angler_friendly?:       boolean
+          technique?:                 string[] | null
+          target_species?:            string[] | null
+          environment?:               string[] | null
+          hero_image_url?:            string | null
+          gallery_image_urls?:        string[] | null
+          story_text?:                string | null
+          meeting_point_name?:        string | null
+          meeting_point_description?: string | null
+          catches_text?:              string | null
+          rod_setup?:                 string | null
+          best_months?:               string | null
+          season_months?:             number[] | null
+          peak_months?:               number[] | null
+          includes?:                  string[] | null
+          excludes?:                  string[] | null
+          meta_title?:                string | null
+          meta_description?:          string | null
+          og_image_url?:              string | null
+          location_lat?:              number | null
+          location_lng?:              number | null
+          created_at?:                string
+          updated_at?:                string
+        }
+        Relationships: []
+      }
       guide_calendars: {
         Row: {
           created_at: string
@@ -997,6 +1117,173 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_submissions: {
+        Row: {
+          id:               string
+          guide_id:         string
+          // Location
+          location_name:    string
+          country:          string
+          region:           string | null
+          // Fishing
+          species:          string[]
+          fishing_methods:  string[] | null
+          season_months:    number[] | null
+          // Trip details
+          trip_types:       string[] | null
+          max_anglers:      number | null
+          price_approx_eur: number | null
+          // What's included
+          includes:         string[] | null
+          includes_notes:   string | null
+          // About
+          personal_note:    string | null
+          // Status & link
+          status:           string
+          fa_notes:         string | null
+          experience_id:    string | null
+          created_at:       string
+          updated_at:       string
+        }
+        Insert: {
+          id?:              string
+          guide_id:         string
+          location_name:    string
+          country:          string
+          region?:          string | null
+          species:          string[]
+          fishing_methods?: string[] | null
+          season_months?:   number[] | null
+          trip_types?:      string[] | null
+          max_anglers?:     number | null
+          price_approx_eur?: number | null
+          includes?:        string[] | null
+          includes_notes?:  string | null
+          personal_note?:   string | null
+          status?:          string
+          fa_notes?:        string | null
+          experience_id?:   string | null
+          created_at?:      string
+          updated_at?:      string
+        }
+        Update: {
+          id?:              string
+          guide_id?:        string
+          location_name?:   string
+          country?:         string
+          region?:          string | null
+          species?:         string[]
+          fishing_methods?: string[] | null
+          season_months?:   number[] | null
+          trip_types?:      string[] | null
+          max_anglers?:     number | null
+          price_approx_eur?: number | null
+          includes?:        string[] | null
+          includes_notes?:  string | null
+          personal_note?:   string | null
+          status?:          string
+          fa_notes?:        string | null
+          experience_id?:   string | null
+          created_at?:      string
+          updated_at?:      string
+        }
+        Relationships: []
+      }
+      guide_photos: {
+        Row: {
+          id:         string
+          guide_id:   string
+          url:        string
+          caption:    string | null
+          sort_order: number
+          is_cover:   boolean
+          created_at: string
+        }
+        Insert: {
+          id?:         string
+          guide_id:    string
+          url:         string
+          caption?:    string | null
+          sort_order?: number
+          is_cover?:   boolean
+          created_at?: string
+        }
+        Update: {
+          id?:         string
+          guide_id?:   string
+          url?:        string
+          caption?:    string | null
+          sort_order?: number
+          is_cover?:   boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      inquiries: {
+        Row: {
+          id: string
+          trip_id: string
+          guide_id: string | null
+          angler_name: string
+          angler_email: string
+          angler_country: string
+          requested_dates: string[] | null
+          party_size: number
+          message: string | null
+          status: string
+          fa_notes: string | null
+          deposit_amount: number | null
+          deposit_stripe_session_id: string | null
+          deposit_paid_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          trip_id: string
+          guide_id?: string | null
+          angler_name: string
+          angler_email: string
+          angler_country: string
+          requested_dates?: string[] | null
+          party_size?: number
+          message?: string | null
+          status?: string
+          fa_notes?: string | null
+          deposit_amount?: number | null
+          deposit_stripe_session_id?: string | null
+          deposit_paid_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          trip_id?: string
+          guide_id?: string | null
+          angler_name?: string
+          angler_email?: string
+          angler_country?: string
+          requested_dates?: string[] | null
+          party_size?: number
+          message?: string | null
+          status?: string
+          fa_notes?: string | null
+          deposit_amount?: number | null
+          deposit_stripe_session_id?: string | null
+          deposit_paid_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiries_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "experiences"
             referencedColumns: ["id"]
           },
         ]

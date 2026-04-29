@@ -3,8 +3,9 @@
  *
  * Handles:
  *   account.updated            → sync guide Stripe Connect account flags
- *   checkout.session.completed → mark booking fee as paid (Icelandic inquiry flow)
+ *   checkout.session.completed → mark booking fee as paid (Icelandic inquiry flow only)
  *
+ * Deposit payments for FA inquiries are handled by /api/webhooks/stripe-deposit.
  * Always returns 200 to prevent infinite Stripe retries.
  */
 
@@ -12,7 +13,6 @@ import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
-import { finalizeBookingFromSession } from '@/actions/bookings'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -65,12 +65,6 @@ export async function POST(req: Request): Promise<Response> {
  * Idempotent: if balance_paid_at is already set, skip gracefully.
  */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  // Direct booking flow: identified by experience_id in metadata (no booking_id yet)
-  if (session.metadata?.experience_id != null && session.metadata?.booking_id == null) {
-    await finalizeBookingFromSession(session.id)
-    return
-  }
-
   // Icelandic inquiry flow: booking_id + payment_type='booking_fee'
   const bookingId   = session.metadata?.booking_id
   const paymentType = session.metadata?.payment_type

@@ -19,11 +19,6 @@ export interface SpeciesDetailItem {
   peak_months:   number[]
 }
 
-export interface SpecialAttraction {
-  text:      string
-  image_url: string
-}
-
 export interface ExperiencePagePayload {
   trip_id?:                          string | null
   guide_id?:                         string | null
@@ -60,10 +55,9 @@ export interface ExperiencePagePayload {
   // Boat section
   boat_description?:                 string | null
   boat_image_url?:                   string | null
-  // Special attractions (multi-item, replaces old single special_attraction_* fields)
-  special_attractions?:              SpecialAttraction[]
-  // What to bring
-  what_to_bring?:                    string[]
+  // Special attraction section
+  special_attraction_text?:          string | null
+  special_attraction_image_url?:     string | null
   // Includes / Excludes
   includes?:                         string[]
   excludes?:                         string[]
@@ -139,8 +133,8 @@ export async function createExperiencePage(
       species_details:                  payload.species_details ?? [],
       boat_description:                 payload.boat_description ?? null,
       boat_image_url:                   payload.boat_image_url   ?? null,
-      special_attractions:              payload.special_attractions ?? [],
-      what_to_bring:                    payload.what_to_bring ?? [],
+      special_attraction_text:          payload.special_attraction_text          ?? null,
+      special_attraction_image_url:     payload.special_attraction_image_url     ?? null,
       includes:                         payload.includes ?? [],
       excludes:                         payload.excludes ?? [],
       meta_title:                       payload.meta_title       ?? null,
@@ -338,9 +332,9 @@ export async function updateExperiencePage(
   if (payload.species_details   != null)       update.species_details        = payload.species_details
   if (payload.boat_description  !== undefined) update.boat_description       = payload.boat_description
   if (payload.boat_image_url    !== undefined) update.boat_image_url         = payload.boat_image_url
-  if (payload.special_attractions != null) update.special_attractions           = payload.special_attractions
-  if (payload.what_to_bring      != null) update.what_to_bring                 = payload.what_to_bring
-  if (payload.includes          != null) update.includes                       = payload.includes
+  if (payload.special_attraction_text          !== undefined) update.special_attraction_text          = payload.special_attraction_text
+  if (payload.special_attraction_image_url     !== undefined) update.special_attraction_image_url     = payload.special_attraction_image_url
+  if (payload.includes          != null) update.includes                     = payload.includes
   if (payload.excludes          != null) update.excludes                     = payload.excludes
   if (payload.meta_title        !== undefined) update.meta_title             = payload.meta_title
   if (payload.meta_description  !== undefined) update.meta_description       = payload.meta_description

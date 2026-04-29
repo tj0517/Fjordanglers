@@ -65,6 +65,11 @@ type ImageUploadProps = {
    * cropAspect is set, otherwise directly).
    */
   pickFrom?: string[]
+  /**
+   * Guide's ID. New uploads are stored at {guideId}/{uuid}.ext so files
+   * are organised per guide in the bucket (no more flat random UUIDs).
+   */
+  guideId?: string
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -160,12 +165,15 @@ async function compressImage(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Generate a random UUID-based storage path preserving the original extension. */
-function buildStoragePath(file: File, compress: boolean): string {
-  const ext = compress
-    ? 'jpg'
-    : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg')
-  return `${crypto.randomUUID()}.${ext}`
+/**
+ * Generate a storage path for a new upload.
+ * With guideId:  {guideId}/{uuid}.ext  — organised per guide
+ * Without:       {uuid}.ext            — legacy flat path
+ */
+function buildStoragePath(file: File, compress: boolean, guideId?: string): string {
+  const ext      = compress ? 'jpg' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg')
+  const filename = `${crypto.randomUUID()}.${ext}`
+  return guideId != null ? `${guideId}/${filename}` : filename
 }
 
 /** Validate file type and size against variant config. */
@@ -191,6 +199,7 @@ export default function ImageUpload({
   hint,
   cropAspect,
   pickFrom,
+  guideId,
 }: ImageUploadProps) {
   const cfg = VARIANT_CONFIG[variant]
   const inputRef = useRef<HTMLInputElement>(null)
@@ -237,7 +246,7 @@ export default function ImageUpload({
     try {
       // 4. Upload to Supabase Storage
       const supabase   = createClient()
-      const path       = buildStoragePath(file, cfg.compress)
+      const path       = buildStoragePath(file, cfg.compress, guideId)
       const uploadType = cfg.compress ? 'image/jpeg' : file.type
 
       const { error: uploadError } = await supabase.storage

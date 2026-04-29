@@ -1,17 +1,18 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import ExperienceForm from '@/components/trips/experience-form'
+import GuideSubmissionForm from '@/components/guide/GuideSubmissionForm'
 
 /**
- * /dashboard/trips/new — Guide creates their own experience.
+ * /dashboard/trips/new — Guide submits their trip info for FA to build.
  *
- * Server component: fetches guide ID from auth, then mounts ExperienceForm.
- * Redirects to login if not authenticated, to /guides/apply if no guide profile.
+ * New flow: guide provides raw info (location, species, season, pricing, includes,
+ * personal note). FA reviews and builds a polished experience page.
+ * No more complex self-serve form.
  */
 
 export const metadata = {
-  title: 'New Trip — Guide Dashboard',
+  title: 'Submit Trip Info — Guide Dashboard',
 }
 
 export default async function DashboardNewExperiencePage() {
@@ -22,17 +23,11 @@ export default async function DashboardNewExperiencePage() {
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name')
+    .select('id')
     .eq('user_id', user.id)
     .single()
 
   if (guide == null) redirect('/guides/apply')
-
-  const { data: guideAccommodations } = await supabase
-    .from('guide_accommodations')
-    .select('id, name, type, description, max_guests, location_note')
-    .eq('guide_id', guide.id)
-    .order('name')
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-[840px]">
@@ -43,49 +38,49 @@ export default async function DashboardNewExperiencePage() {
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
         <Link href="/dashboard/trips" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70" style={{ color: 'rgba(10,46,77,0.38)' }}>Trips</Link>
         <span style={{ color: 'rgba(10,46,77,0.22)' }}>›</span>
-        <span className="text-xs f-body font-semibold" style={{ color: '#E67E50' }}>New</span>
+        <span className="text-xs f-body font-semibold" style={{ color: '#E67E50' }}>Submit Info</span>
       </div>
 
       {/* ─── Header ─────────────────────────────────────────────────── */}
-      <div className="mb-8">
+      <div className="mb-10">
         <p className="text-[11px] uppercase tracking-[0.22em] mb-2 f-body font-semibold" style={{ color: '#E67E50' }}>
-          Create Trip
+          New trip
         </p>
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-2">
-          Add a new <span style={{ fontStyle: 'italic' }}>fishing trip</span>
+          Tell us about your <span style={{ fontStyle: 'italic' }}>fishing spot</span>
         </h1>
-        <p className="text-[#0A2E4D]/45 text-sm f-body leading-relaxed" style={{ maxWidth: '520px' }}>
-          Describe your trip, set your price, add photos. You can save as a draft
-          and publish later when you&apos;re ready.
+        <p className="text-[#0A2E4D]/45 text-sm f-body leading-relaxed" style={{ maxWidth: '560px' }}>
+          Fill in the details below and FjordAnglers will build your experience page.
+          We aim to deliver a polished, professional listing within{' '}
+          <strong className="font-semibold" style={{ color: 'rgba(10,46,77,0.65)' }}>3–5 business days</strong>.
         </p>
 
-        <div className="flex flex-wrap items-center gap-3 mt-5">
+        {/* How it works */}
+        <div
+          className="mt-6 flex flex-col sm:flex-row gap-3"
+        >
           {[
-            { icon: '💶', text: 'You set the price' },
-            { icon: '📅', text: 'Publish anytime' },
-            { icon: '⚡', text: 'Live immediately on /trips' },
-          ].map(pill => (
-            <span
-              key={pill.text}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full f-body"
-              style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.55)' }}
+            { icon: '✍️', title: 'You fill the form', desc: 'Location, species, season, price' },
+            { icon: '🎨', title: 'We build the page', desc: 'Professional copy, design & SEO' },
+            { icon: '🚀', title: 'Goes live', desc: 'You review & approve before publish' },
+          ].map(step => (
+            <div
+              key={step.title}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl flex-1"
+              style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}
             >
-              <span>{pill.icon}</span>
-              {pill.text}
-            </span>
+              <span className="text-xl flex-shrink-0">{step.icon}</span>
+              <div>
+                <p className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>{step.title}</p>
+                <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>{step.desc}</p>
+              </div>
+            </div>
           ))}
         </div>
       </div>
 
       {/* ─── Form ─────────────────────────────────────────────────────── */}
-      <ExperienceForm
-        guideId={guide.id}
-        mode="create"
-        guideName={guide.full_name}
-        context="guide"
-        successPath="/dashboard/trips"
-        guideAccommodations={guideAccommodations ?? []}
-      />
+      <GuideSubmissionForm />
     </div>
   )
 }

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { COUNTRY_OPTIONS as COUNTRIES } from '@/lib/countries'
 import { CountryFlag } from '@/components/ui/country-flag'
-import { Check, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
@@ -316,14 +316,28 @@ export function SearchBar() {
   const [dateFrom, setDateFrom] = useState(sp.get('dateFrom') ?? '')
   const [dateTo,   setDateTo]   = useState(sp.get('dateTo')   ?? '')
 
-  function handleSearch() {
+  function doSearch(newCountries: string[], newFrom: string, newTo: string) {
     const p = new URLSearchParams(sp.toString())
-    if (countries.length) p.set('country', countries.join(',')) ; else p.delete('country')
-    if (dateFrom)         p.set('dateFrom', dateFrom)           ; else p.delete('dateFrom')
-    if (dateTo)           p.set('dateTo',   dateTo)             ; else p.delete('dateTo')
+    if (newCountries.length) p.set('country', newCountries.join(',')) ; else p.delete('country')
+    if (newFrom)             p.set('dateFrom', newFrom)               ; else p.delete('dateFrom')
+    if (newTo)               p.set('dateTo',   newTo)                 ; else p.delete('dateTo')
     p.delete('duration')
     p.delete('page')
     router.push(`/trips?${p.toString()}`)
+  }
+
+  function handleCountryChange(newCountries: string[]) {
+    setCountries(newCountries)
+    doSearch(newCountries, dateFrom, dateTo)
+  }
+
+  function handleDateChange(from: string, to: string) {
+    setDateFrom(from)
+    setDateTo(to)
+    // Auto-search when range is complete or when dates are cleared
+    if ((from && to) || (!from && !to)) {
+      doSearch(countries, from, to)
+    }
   }
 
   const countryOptions = COUNTRIES.map(c => ({ value: c.value, label: c.value, meta: c.code }))
@@ -352,7 +366,7 @@ export function SearchBar() {
         <MultiDropdown
           options={countryOptions}
           values={countries}
-          onChange={setCountries}
+          onChange={handleCountryChange}
           label="Destination"
           emptyLabel="Anywhere"
           renderItem={o => (
@@ -369,20 +383,8 @@ export function SearchBar() {
         <CalendarDropdown
           dateFrom={dateFrom}
           dateTo={dateTo}
-          onChange={(from, to) => { setDateFrom(from); setDateTo(to) }}
+          onChange={handleDateChange}
         />
-
-        {/* ── Search button ── */}
-        <div className="flex-shrink-0 pr-1.5">
-          <button
-            onClick={handleSearch}
-            className="flex items-center justify-center rounded-full transition-all hover:brightness-110 active:scale-[0.95]"
-            style={{ background: '#E67E50', width: '40px', height: '40px' }}
-            aria-label="Search"
-          >
-            <Search size={16} strokeWidth={2.5} style={{ color: 'white' }} />
-          </button>
-        </div>
       </div>
     </>
   )

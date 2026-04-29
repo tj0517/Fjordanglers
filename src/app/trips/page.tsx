@@ -1,21 +1,18 @@
 import Link from 'next/link'
-import { Suspense } from 'react'
-import { getExperiences } from '@/lib/supabase/queries'
-import { SearchBar } from './search-bar'
-import { FiltersModal } from './filters-modal'
-import { ExperiencesNav } from './experiences-nav'
-import MapSection from './map-section'
+import { HomeNav } from '@/components/home/home-nav'
+import { Footer } from '@/components/layout/footer'
+import { createServiceClient } from '@/lib/supabase/server'
+import ExpPageMapSection from './exp-page-map-section'
+import type { ExpPage } from './exp-page-map-section'
 
 const PAGE_SIZE = 12
 
 type SearchParams = {
-  country?: string; fish?: string; difficulty?: string
-  sort?: string; minPrice?: string; maxPrice?: string
-  technique?: string; duration?: string; catchRelease?: string; guests?: string
-  dateFrom?: string; dateTo?: string; page?: string
+  country?: string
+  page?: string
 }
 
-// ── Inline Pagination — Server Component (only Link, no hooks) ─────────────
+// ─── Inline Pagination — Server Component (Link only) ─────────────────────────
 
 function Pagination({
   page,
@@ -32,7 +29,6 @@ function Pagination({
     return `/trips?${sp.toString()}`
   }
 
-  // Smart page-number list: always show 1 and last, collapse middle with …
   const items: (number | '…')[] = []
   if (totalPages <= 7) {
     for (let i = 1; i <= totalPages; i++) items.push(i)
@@ -51,7 +47,8 @@ function Pagination({
   return (
     <nav aria-label="Pagination" className="flex items-center justify-center gap-1.5 mt-8 pb-2">
       {page > 1 ? (
-        <Link href={pageHref(page - 1)} className={pill} style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
+        <Link href={pageHref(page - 1)} className={pill}
+          style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
           ← Prev
         </Link>
       ) : (
@@ -60,20 +57,25 @@ function Pagination({
 
       {items.map((item, idx) =>
         item === '…' ? (
-          <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>…</span>
+          <span key={`ellipsis-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm f-body"
+            style={{ color: 'rgba(10,46,77,0.3)' }}>…</span>
         ) : item === page ? (
-          <span key={item} className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold f-body" style={{ background: '#0A2E4D', color: '#fff' }}>
+          <span key={item} className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold f-body"
+            style={{ background: '#0A2E4D', color: '#fff' }}>
             {item}
           </span>
         ) : (
-          <Link key={item} href={pageHref(item)} className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium f-body transition-colors" style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
+          <Link key={item} href={pageHref(item)}
+            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium f-body transition-colors"
+            style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
             {item}
           </Link>
         )
       )}
 
       {page < totalPages ? (
-        <Link href={pageHref(page + 1)} className={pill} style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
+        <Link href={pageHref(page + 1)} className={pill}
+          style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
           Next →
         </Link>
       ) : (
@@ -83,24 +85,48 @@ function Pagination({
   )
 }
 
+// ─── Metadata ─────────────────────────────────────────────────────────────────
+
 export const revalidate = 60
 export const metadata = {
-  title: 'Browse Fishing Trips',
-  description: 'Find day trips and multi-day expeditions with verified Scandinavian fishing guides.',
+  title: 'Curated Fishing Experiences | FjordAnglers',
+  description: 'Hand-picked guided fishing trips in Norway, Sweden, Iceland and beyond — curated by FjordAnglers.',
 }
 
-export default async function ExperiencesPage({
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default async function TripsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>
 }) {
-  const params = await searchParams
-  const { experiences, total } = await getExperiences(params)
-
+  const params      = await searchParams
   const currentPage = Math.max(1, Number(params.page ?? '1'))
-  const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const offset      = (currentPage - 1) * PAGE_SIZE
 
-  // Preserve all active filters in pagination links (strip 'page' key)
+  const svc = createServiceClient()
+
+  let query = svc
+    .from('experience_pages')
+    .select(
+      'id, slug, experience_name, country, region, price_from, hero_image_url, gallery_image_urls, difficulty, technique, target_species, non_angler_friendly, location_lat, location_lng',
+      { count: 'exact' },
+    )
+    .eq('status', 'active')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1)
+
+  if (params.country) {
+    query = query.ilike('country', params.country)
+  }
+
+  const { data, count } = await query
+
+  const pages      = (data ?? []) as ExpPage[]
+  const total      = count ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  // Preserve active filters in pagination links (strip 'page' key)
   const baseParams = new URLSearchParams(
     Object.entries(params).filter(([k, v]) => k !== 'page' && v != null) as [string, string][]
   ).toString()
@@ -108,22 +134,14 @@ export default async function ExperiencesPage({
   return (
     <div style={{ background: '#F3EDE4' }}>
 
-      {/* ── NAVBAR ── */}
-      <ExperiencesNav>
-        <Suspense fallback={<div className="rounded-full animate-pulse" style={{ flex: 1, height: '44px', background: 'rgba(10,46,77,0.06)' }} />}>
-          <SearchBar />
-        </Suspense>
-        <Suspense fallback={null}>
-          <FiltersModal />
-        </Suspense>
-      </ExperiencesNav>
+      <HomeNav pinned initialVariant="light" />
 
-      {/* Spacer: height matches the fixed nav exactly via --nav-h CSS variable */}
-      <div style={{ height: 'var(--nav-h, 120px)' }} />
+      {/* Spacer for fixed nav */}
+      <div style={{ height: '90px' }} />
 
-      {/* ── TWO-COLUMN (viewport-filtered map + list) ── */}
-      <MapSection
-        initialExperiences={experiences}
+      {/* ── TWO-COLUMN (map + list) ── */}
+      <ExpPageMapSection
+        initialPages={pages}
         initialTotal={total}
         filterKey={baseParams}
         paginationNode={
@@ -132,6 +150,7 @@ export default async function ExperiencesPage({
             : null
         }
       />
+      <Footer />
     </div>
   )
 }

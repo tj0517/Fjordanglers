@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from '@/actions/auth'
 import {
   LayoutGrid, Compass, Calendar, Inbox,
-  User, Settings, ArrowLeft, LogOut, BedDouble,
+  User, Settings, ArrowLeft, LogOut, BedDouble, Images,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -34,6 +34,7 @@ const NAV = [
   { label: 'Trips',          href: '/dashboard/trips',           icon: <Compass      size={15} strokeWidth={1.5} />, exact: false, soon: false },
   { label: 'Calendar',       href: '/dashboard/calendar',        icon: <Calendar     size={15} strokeWidth={1.5} />, exact: false, soon: false },
   { label: 'Bookings',       href: '/dashboard/bookings',        icon: <Inbox        size={15} strokeWidth={1.5} />, exact: false, soon: false },
+  { label: 'Photos',         href: '/dashboard/photos',          icon: <Images       size={15} strokeWidth={1.5} />, exact: false, soon: false },
   { label: 'Accommodations', href: '/dashboard/accommodations',  icon: <BedDouble    size={15} strokeWidth={1.5} />, exact: false, soon: false },
   // ─── Guide identity ─────────────────────────────────────────────────────────
   { label: 'Profile',        href: '/dashboard/profile',         icon: <User         size={15} strokeWidth={1.5} />, exact: false, soon: false },

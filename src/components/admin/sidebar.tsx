@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from '@/actions/auth'
 import {
   LayoutGrid, Users, Plus, Inbox, List, MessageSquare,
-  ArrowLeft, LogOut,
+  ClipboardList, ArrowLeft, LogOut,
 } from 'lucide-react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,12 +23,13 @@ const GRAIN_BG = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/s
 // ─── Nav config ───────────────────────────────────────────────────────────────
 
 const NAV = [
-  { label: 'Overview',          href: '/admin',             icon: <LayoutGrid    size={15} strokeWidth={1.5} />, exact: true  },
-  { label: 'Guides',            href: '/admin/guides',      icon: <Users         size={15} strokeWidth={1.5} />, exact: false },
-  { label: 'Trips',             href: '/admin/trips',       icon: <List          size={15} strokeWidth={1.5} />, exact: false },
-  { label: 'Leads',             href: '/admin/leads',       icon: <Inbox         size={15} strokeWidth={1.5} />, exact: false },
-  { label: 'Inquiries',         href: '/admin/inquiries',   icon: <MessageSquare size={15} strokeWidth={1.5} />, exact: false },
-  { label: 'Add Guide Profile', href: '/admin/guides/new',  icon: <Plus          size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Overview',          href: '/admin',                  icon: <LayoutGrid    size={15} strokeWidth={1.5} />, exact: true  },
+  { label: 'Guides',            href: '/admin/guides',           icon: <Users         size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Experiences',       href: '/admin/experiences',      icon: <List          size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Submissions',       href: '/admin/submissions',      icon: <ClipboardList size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Leads',             href: '/admin/leads',            icon: <Inbox         size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Inquiries',         href: '/admin/inquiries',        icon: <MessageSquare size={15} strokeWidth={1.5} />, exact: false },
+  { label: 'Add Guide Profile', href: '/admin/guides/new',       icon: <Plus          size={15} strokeWidth={1.5} />, exact: false },
 ] as const
 
 // ─── Component ────────────────────────────────────────────────────────────────

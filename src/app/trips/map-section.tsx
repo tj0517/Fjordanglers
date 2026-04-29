@@ -7,7 +7,7 @@ import type { ExperienceWithGuide, LocationSpot } from '@/types'
 import { cardThumb } from '@/lib/image'
 import { CountryFlag } from '@/components/ui/country-flag'
 import MapWrapper from './map-wrapper'
-import { Menu, MapPin } from 'lucide-react'
+import { Menu, MapPin, Star } from 'lucide-react'
 import { fetchGeoExperiences } from './geo-action'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
@@ -93,15 +93,12 @@ function SheetCard({
           ) : (
             <div className="w-full h-full" style={{ background: '#EDE6DB' }} />
           )}
-          {/* Price badge */}
+          {/* Inquire badge */}
           <div
             className="absolute bottom-2.5 left-2.5 text-xs font-bold px-2.5 py-1 rounded-full f-body"
             style={{ background: 'rgba(5,12,22,0.72)', color: '#fff', backdropFilter: 'blur(8px)' }}
           >
-            {exp.booking_type === 'icelandic'
-              ? 'Custom'
-              : `€${exp.price_per_person_eur}/pp`
-            }
+            Inquire
           </div>
         </div>
 
@@ -275,9 +272,9 @@ export default function MapSection({
             <EmptyState isFiltered={isFiltered} onClear={() => setBounds(null)} />
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 {visibleExperiences.map((exp, idx) => (
-                  <DesktopCard
+                  <TripCard
                     key={exp.id}
                     exp={exp}
                     hovered={hoveredExpId === exp.id}
@@ -445,16 +442,9 @@ export default function MapSection({
         <EmptyState isFiltered={false} onClear={() => {}} />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {initialExperiences.map((exp, idx) => (
-              <DesktopCard
-                key={exp.id}
-                exp={exp}
-                hovered={false}
-                onMouseEnter={() => {}}
-                onMouseLeave={() => {}}
-                priority={idx < 4}
-              />
+              <TripCard key={exp.id} exp={exp} priority={idx < 3} />
             ))}
           </div>
           {paginationNode}
@@ -527,59 +517,62 @@ function EmptyState({ isFiltered, onClear }: { isFiltered: boolean; onClear: () 
   )
 }
 
-function DesktopCard({
+// ─── Unified trip card (all screen sizes) ────────────────────────────────────
+
+function TripCard({
   exp,
-  hovered,
+  priority = false,
+  hovered = false,
   onMouseEnter,
   onMouseLeave,
-  priority = false,
 }: {
   exp: ExperienceWithGuide
-  hovered: boolean
-  onMouseEnter: () => void
-  onMouseLeave: () => void
   priority?: boolean
+  hovered?: boolean
+  onMouseEnter?: () => void
+  onMouseLeave?: () => void
 }) {
-  const coverUrl = cardThumb(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url ?? null)
+  const coverUrl  = cardThumb(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url ?? null)
+  const rating    = exp.guide.average_rating
   const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
   const hasSeason = exp.season_from != null && exp.season_to != null
-  const duration  =
-    exp.duration_hours != null ? `${exp.duration_hours}h`
-    : exp.duration_days != null ? `${exp.duration_days} days`
-    : null
+  const fish      = exp.fish_types ?? []
 
   return (
     <Link
       href={`/trips/${exp.id}`}
-      className="group block"
+      className="block group"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       <article
-        className="overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
-        style={{ borderRadius: '16px' }}
+        className="transition-all duration-200 group-hover:-translate-y-0.5"
+        style={{
+          borderRadius: '20px',
+        }}
       >
-        {/* Photo */}
+        {/* ── Image ─────────────────────────────────────────────────────── */}
         <div
           className="relative overflow-hidden"
-          style={{ height: '200px', borderRadius: '12px', background: '#EDE6DB' }}
+          style={{ height: '240px', borderRadius: '16px', background: '#EDE6DB' }}
         >
           {coverUrl != null && (
             <Image
               src={coverUrl}
               alt={exp.title}
               fill
-              sizes="(min-width: 1280px) 560px, (min-width: 640px) 50vw, 100vw"
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               priority={priority}
               className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             />
           )}
 
+          {/* Top-left badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5">
             {diffLabel != null && (
               <div
                 className="text-[11px] font-semibold px-2.5 py-1 rounded-full f-body"
-                style={{ background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', color: '#0A2E4D' }}
+                style={{ background: 'rgba(255,255,255,0.93)', backdropFilter: 'blur(8px)', color: '#0A2E4D' }}
               >
                 {diffLabel}
               </div>
@@ -587,75 +580,114 @@ function DesktopCard({
             {hasSeason && (
               <div
                 className="text-[10px] font-semibold px-2.5 py-1 rounded-full f-body"
-                style={{ background: 'rgba(10,46,77,0.65)', backdropFilter: 'blur(8px)', color: '#fff' }}
+                style={{ background: 'rgba(10,46,77,0.72)', backdropFilter: 'blur(8px)', color: '#fff' }}
               >
                 {MONTHS[exp.season_from!]} – {MONTHS[exp.season_to!]}
               </div>
             )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 hidden md:flex justify-center pb-3 opacity-0 translate-y-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-y-0">
+          {/* Bottom bar — stats left, CTA right */}
+          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+
+            {/* Rating pill (shown only if guide has a rating) */}
+            {rating != null && (
+              <div
+                className="inline-flex items-center gap-1.5 f-body text-[12px] font-semibold px-3 py-2 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.93)', backdropFilter: 'blur(14px)', color: '#0A2E4D' }}
+              >
+                <Star size={11} strokeWidth={0} fill="#E67E50" style={{ color: '#E67E50' }} />
+                {rating.toFixed(1)}
+              </div>
+            )}
+
+            {/* CTA pill */}
             <span
-              className="text-[12px] font-semibold f-body px-4 py-1.5 rounded-full"
-              style={{ background: '#E67E50', color: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.2)' }}
+              className="flex-shrink-0 text-[12px] font-bold px-4 py-2 rounded-full f-body ml-auto"
+              style={{ background: '#E67E50', color: '#fff', boxShadow: '0 2px 12px rgba(230,126,80,0.45)' }}
             >
-              View trip →
+              Inquire →
             </span>
+
           </div>
         </div>
 
-        {/* Info */}
+        {/* ── Text info ─────────────────────────────────────────────────── */}
         <div className="pt-3 px-0.5">
-          <div className="flex items-start justify-between gap-2 mb-0.5">
-            <h3 className="font-semibold leading-snug line-clamp-1 f-body" style={{ fontSize: '14px', color: '#0A2E4D' }}>
+
+          {/* Title + rating */}
+          <div className="flex items-start justify-between gap-2">
+            <h3
+              className="font-semibold leading-snug f-body line-clamp-2"
+              style={{ fontSize: '15px', color: '#0A2E4D', flex: 1 }}
+            >
               {exp.title}
             </h3>
+            {rating != null && (
+              <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
+                <Star size={12} fill="#0A2E4D" strokeWidth={0} style={{ color: '#0A2E4D' }} />
+                <span className="text-[13px] font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                  {rating.toFixed(1)}
+                </span>
+              </div>
+            )}
           </div>
 
-          <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+          {/* Location */}
+          <div className="flex items-center gap-1 mt-1">
+            <MapPin size={11} strokeWidth={2} style={{ color: 'rgba(10,46,77,0.4)', flexShrink: 0 }} />
+            <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              {exp.location_city != null ? `${exp.location_city}, ` : ''}{exp.location_country}
+            </p>
             <CountryFlag country={exp.location_country} />
-            {exp.location_city != null ? ` ${exp.location_city},` : ''} {exp.location_country}
-          </p>
+          </div>
 
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0" style={{ border: '1.5px solid rgba(10,46,77,0.1)' }}>
+          {/* Fish type pills */}
+          {fish.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {fish.slice(0, 4).map(f => (
+                <span
+                  key={f}
+                  className="text-[11px] font-semibold px-2.5 py-[3px] rounded-full f-body"
+                  style={{
+                    background: 'rgba(230,126,80,0.11)',
+                    color: '#B85C2C',
+                    border: '1px solid rgba(230,126,80,0.25)',
+                  }}
+                >
+                  {f}
+                </span>
+              ))}
+              {fish.length > 4 && (
+                <span
+                  className="text-[11px] font-medium px-2.5 py-[3px] rounded-full f-body"
+                  style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.45)' }}
+                >
+                  +{fish.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Guide */}
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <div
+              className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0"
+              style={{ border: '1.5px solid rgba(10,46,77,0.1)' }}
+            >
               {exp.guide.avatar_url != null ? (
-                <Image src={exp.guide.avatar_url} alt={exp.guide.full_name} width={28} height={28} className="object-cover w-full h-full" />
+                <Image src={exp.guide.avatar_url} alt={exp.guide.full_name} width={20} height={20} className="object-cover w-full h-full" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-bold f-body" style={{ background: '#0A2E4D' }}>
+                <div className="w-full h-full flex items-center justify-center text-white text-[8px] font-bold f-body" style={{ background: '#0A2E4D' }}>
                   {exp.guide.full_name[0]}
                 </div>
               )}
             </div>
-            <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+            <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
               {exp.guide.full_name}
             </p>
           </div>
 
-          {duration != null && (
-            <p className="text-[12px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.65)' }}>{duration}</p>
-          )}
-
-          <div className="flex items-center justify-between mt-1">
-            {exp.booking_type === 'icelandic' ? (
-              <p className="text-[12px] f-body" style={{ color: 'rgba(10,46,77,0.45)', fontStyle: 'italic' }}>
-                Custom — price on request
-              </p>
-            ) : (
-              <p className="text-[13px] f-body" style={{ color: '#0A2E4D' }}>
-                <span className="font-semibold">€{exp.price_per_person_eur}</span>
-                <span style={{ color: 'rgba(10,46,77,0.65)' }}> /pp</span>
-              </p>
-            )}
-
-            {/* CTA — always visible on mobile, hidden on desktop (desktop uses hover overlay) */}
-            <span
-              className="md:hidden flex-shrink-0 text-[12px] font-semibold f-body px-3.5 py-1.5 rounded-full"
-              style={{ background: '#E67E50', color: '#fff' }}
-            >
-              {exp.booking_type === 'icelandic' ? 'Enquire →' : 'View trip →'}
-            </span>
-          </div>
         </div>
       </article>
     </Link>

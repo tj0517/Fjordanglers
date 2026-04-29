@@ -14,9 +14,11 @@ interface GalleryImage {
 interface Props {
   images: GalleryImage[]
   title: string
+  topMobile?: boolean  // full-bleed top carousel for mobile hero
+  square?: boolean     // remove rounded corners + bottom margin (for full-bleed top placement)
 }
 
-export function ExperienceGallery({ images, title }: Props) {
+export function ExperienceGallery({ images, title, topMobile = false, square = false }: Props) {
   const [current, setCurrent] = useState(0)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
@@ -53,10 +55,53 @@ export function ExperienceGallery({ images, title }: Props) {
 
   return (
     <>
+      {/* ─── TOP-MOBILE CAROUSEL (full-bleed, topMobile mode) ───────── */}
+      {topMobile && (
+        <div className="select-none">
+          <div className="relative overflow-hidden" style={{ height: '300px', background: '#07111C' }}>
+            <button
+              className="w-full h-full block"
+              onClick={() => setLightboxIndex(current)}
+              aria-label="Open photo"
+            >
+              <Image
+                src={heroFull(sorted[current].url) ?? sorted[current].url}
+                alt={`${title} — photo ${current + 1}`}
+                fill
+                sizes="100vw"
+                className="object-cover"
+                priority
+              />
+            </button>
+
+            {sorted.length > 1 && (
+              <>
+                <button
+                  onClick={e => { e.stopPropagation(); slidePrev() }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(0,0,0,0.18)', color: 'rgba(255,255,255,0.9)' }}
+                  aria-label="Previous photo"
+                >
+                  <ChevronLeft size={16} strokeWidth={2} />
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); slideNext() }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(0,0,0,0.18)', color: 'rgba(255,255,255,0.9)' }}
+                  aria-label="Next photo"
+                >
+                  <ChevronRight size={16} strokeWidth={2} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ─── DESKTOP BENTO GRID ────────────────────────────────────── */}
-      <div className="hidden md:block mb-8 select-none">
+      <div className={`hidden md:block select-none${square ? '' : ' mb-8'}`}>
         <div
-          className="overflow-hidden rounded-3xl"
+          className={`overflow-hidden${square ? '' : ' rounded-3xl'}`}
           style={{
             display: 'grid',
             gridTemplateColumns: secondary.length === 0 ? '1fr' : secondary.length <= 2 ? '2fr 1fr' : '2fr 1fr 1fr',
@@ -118,7 +163,7 @@ export function ExperienceGallery({ images, title }: Props) {
       </div>
 
       {/* ─── MOBILE CAROUSEL ───────────────────────────────────────── */}
-      <div className="md:hidden mb-8 select-none">
+      {!topMobile && <div className="md:hidden mb-8 select-none">
 
         {/* Main slide */}
         <div className="relative overflow-hidden rounded-3xl mb-3" style={{ height: '300px' }}>
@@ -166,7 +211,7 @@ export function ExperienceGallery({ images, title }: Props) {
           </div>
         </div>
 
-      </div>
+      </div>}
 
       {/* ─── LIGHTBOX ──────────────────────────────────────────────── */}
       {lightboxIndex != null && (

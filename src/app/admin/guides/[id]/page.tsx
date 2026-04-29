@@ -8,7 +8,8 @@ import LinkGuideButton from '@/components/admin/link-guide-button'
 import LinkGuidePanel from '@/components/admin/link-guide-panel'
 import CopyInviteLink from '@/components/admin/copy-invite-link'
 import { AdminGuideActions } from './AdminGuideActions'
-import { ExternalLink, Pencil, Mail, Plus } from 'lucide-react'
+import { MigratePhotosButton } from './MigratePhotosButton'
+import { ExternalLink, Pencil, Mail, Plus, Images } from 'lucide-react'
 
 const STATUS_STYLES = {
   active:    { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Active'    },
@@ -85,7 +86,7 @@ export default async function AdminGuideDetailPage({
   const { id } = await params
   const supabase = createServiceClient()
 
-  const [{ data: guide }, { data: experiences }, { data: bookings }] = await Promise.all([
+  const [{ data: guide }, { data: experiences }, { data: bookings }, { data: guidePhotosRaw }] = await Promise.all([
     supabase
       .from('guides')
       .select(`
@@ -112,12 +113,18 @@ export default async function AdminGuideDetailPage({
       .from('bookings')
       .select('status, total_eur, guide_payout_eur')
       .eq('guide_id', id),
+    supabase
+      .from('guide_photos')
+      .select('id, url, sort_order')
+      .eq('guide_id', id)
+      .order('sort_order', { ascending: true }),
   ])
 
   if (guide == null) notFound()
 
-  const exps = experiences ?? []
+  const exps        = experiences ?? []
   const allBookings = bookings ?? []
+  const guidePhotos = guidePhotosRaw ?? []
   const s = STATUS_STYLES[guide.status as keyof typeof STATUS_STYLES] ?? STATUS_STYLES.pending
 
   // ── Booking stats ─────────────────────────────────────────────────────────
@@ -592,6 +599,13 @@ export default async function AdminGuideDetailPage({
                         {exp.published ? 'Live' : 'Draft'}
                       </span>
                       <Link href={`/admin/guides/${guide.id}/trips/${exp.id}/edit`} className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]" style={{ color: 'rgba(10,46,77,0.38)' }}>Edit</Link>
+                      <Link
+                        href={`/admin/experiences/new?experience_id=${exp.id}&guide_id=${guide.id}`}
+                        className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full transition-all"
+                        style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}
+                      >
+                        + Exp page
+                      </Link>
                       <DeleteExperienceButton experienceId={exp.id} title={exp.title} />
                     </div>
                   </div>
@@ -601,6 +615,94 @@ export default async function AdminGuideDetailPage({
           </div>
         </div>
       )}
+
+      {/* ─── Guide Photo Gallery ──────────────────────────────────── */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <h2 className="text-[#0A2E4D] text-lg font-bold f-display flex items-center gap-2">
+              <Images size={18} style={{ color: '#E67E50' }} />
+              Photo Gallery
+              <span className="text-[#0A2E4D]/35 text-sm font-normal f-body">
+                ({guidePhotos.length})
+              </span>
+            </h2>
+            <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+              These photos are used in the experience page builder — no re-uploads needed.
+            </p>
+          </div>
+          {/* Migration button — moves existing flat-path files to {guide_id}/ folder */}
+          {guidePhotos.length > 0 && (
+            <MigratePhotosButton guideId={guide.id} />
+          )}
+        </div>
+
+        {guidePhotos.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center py-12 text-center rounded-3xl"
+            style={{ background: '#FDFAF7', border: '2px dashed rgba(10,46,77,0.1)' }}
+          >
+            <Images size={28} strokeWidth={1.2} style={{ color: 'rgba(10,46,77,0.18)', marginBottom: 10 }} />
+            <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              No photos uploaded yet.
+            </p>
+            <p className="text-[11px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.28)' }}>
+              Guide uploads photos at /dashboard/photos
+            </p>
+          </div>
+        ) : (
+          <div
+            className="rounded-[24px] p-5"
+            style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)' }}
+          >
+            <div className="flex flex-wrap gap-2.5">
+              {guidePhotos.map((photo, idx) => (
+                <div
+                  key={photo.id}
+                  className="relative overflow-hidden rounded-2xl flex-shrink-0"
+                  style={{
+                    width:  idx === 0 ? 140 : 100,
+                    height: idx === 0 ? 100 : 72,
+                  }}
+                >
+                  <Image
+                    src={photo.url}
+                    alt={`Photo ${idx + 1}`}
+                    fill
+                    sizes="140px"
+                    className="object-cover"
+                  />
+                  {idx === 0 && (
+                    <div
+                      className="absolute top-1.5 left-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full f-body"
+                      style={{ background: '#E67E50', color: '#fff' }}
+                    >
+                      Cover
+                    </div>
+                  )}
+                  {/* Is this photo already in the guide's organised folder? */}
+                  {photo.url.includes(`/${guide.id}/`) && (
+                    <div
+                      className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                      style={{ background: 'rgba(74,222,128,0.9)' }}
+                      title="Organised in guide folder"
+                    >
+                      <svg width="7" height="7" viewBox="0 0 7 7" fill="none">
+                        <path d="M1 3.5L2.8 5.5L6 1.5" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] f-body mt-3" style={{ color: 'rgba(10,46,77,0.35)' }}>
+              Green dot = file organised in guide&apos;s folder ({guide.id.slice(0, 8)}…).
+              Click &quot;Move to guide folder&quot; above to migrate any remaining flat-path files.
+            </p>
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }

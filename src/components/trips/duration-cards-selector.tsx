@@ -43,9 +43,19 @@ type Props = {
 export default function DurationCardsSelector({ options }: Props) {
   const { selectedPkg, setSelectedPkg } = useBookingState()
 
-  // Derive selected index from shared context state
+  // Derive selected index from shared context state.
+  // Compare by reference first (same object from server props), then fall back to
+  // property comparison — label alone is nullable so it can't be the only key.
   const selectedIdx = useMemo(() => {
-    const idx = options.findIndex(o => o.label === selectedPkg?.label)
+    if (selectedPkg == null) return 0
+    const refIdx = options.indexOf(selectedPkg)
+    if (refIdx >= 0) return refIdx
+    const idx = options.findIndex(o =>
+      o.price_eur === selectedPkg.price_eur &&
+      o.days      === selectedPkg.days &&
+      o.hours     === selectedPkg.hours &&
+      o.label     === selectedPkg.label
+    )
     return idx >= 0 ? idx : 0
   }, [options, selectedPkg])
 

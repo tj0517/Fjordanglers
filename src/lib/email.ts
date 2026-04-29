@@ -16,8 +16,6 @@ import { GuideApplicationEmail } from '@/emails/guide-application'
 import { GuideWelcomeEmail } from '@/emails/guide-welcome'
 import { PasswordResetEmail } from '@/emails/password-reset'
 import { EmailVerificationEmail } from '@/emails/email-verification'
-import { BookingRequestGuideEmail } from '@/emails/booking-request-guide'
-import { BookingRequestAnglerEmail } from '@/emails/booking-request-angler'
 import { BookingConfirmedAnglerEmail } from '@/emails/booking-confirmed-angler'
 import { BookingDeclinedAnglerEmail } from '@/emails/booking-declined-angler'
 import { InquiryRequestGuideEmail } from '@/emails/inquiry-request-guide'
@@ -25,12 +23,17 @@ import { InquiryRequestAnglerEmail } from '@/emails/inquiry-request-angler'
 import { OfferSentAnglerEmail } from '@/emails/offer-sent-angler'
 import { OfferAcceptedGuideEmail } from '@/emails/offer-accepted-guide'
 import { OfferDeclinedGuideEmail } from '@/emails/offer-declined-guide'
+// FA inquiry flow emails
+import { InquiryReceivedFaEmail } from '@/emails/inquiry-received-fa'
+import { InquiryReceivedAnglerEmail } from '@/emails/inquiry-received-angler'
+import { DepositLinkAnglerEmail } from '@/emails/deposit-link-angler'
+import { DepositConfirmedAnglerEmail } from '@/emails/deposit-confirmed-angler'
+import { DepositConfirmedFaEmail } from '@/emails/deposit-confirmed-fa'
+import { BookingConfirmedGuideEmail } from '@/emails/booking-confirmed-guide'
 import type { GuideApplicationEmailProps } from '@/emails/guide-application'
 import type { GuideWelcomeEmailProps } from '@/emails/guide-welcome'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
 import type { EmailVerificationProps } from '@/emails/email-verification'
-import type { BookingRequestGuideEmailProps } from '@/emails/booking-request-guide'
-import type { BookingRequestAnglerEmailProps } from '@/emails/booking-request-angler'
 import type { BookingConfirmedAnglerEmailProps } from '@/emails/booking-confirmed-angler'
 import type { BookingDeclinedAnglerEmailProps } from '@/emails/booking-declined-angler'
 import type { InquiryRequestGuideEmailProps } from '@/emails/inquiry-request-guide'
@@ -38,6 +41,12 @@ import type { InquiryRequestAnglerEmailProps } from '@/emails/inquiry-request-an
 import type { OfferSentAnglerEmailProps } from '@/emails/offer-sent-angler'
 import type { OfferAcceptedGuideEmailProps } from '@/emails/offer-accepted-guide'
 import type { OfferDeclinedGuideEmailProps } from '@/emails/offer-declined-guide'
+import type { InquiryReceivedFaEmailProps } from '@/emails/inquiry-received-fa'
+import type { InquiryReceivedAnglerEmailProps } from '@/emails/inquiry-received-angler'
+import type { DepositLinkAnglerEmailProps } from '@/emails/deposit-link-angler'
+import type { DepositConfirmedAnglerEmailProps } from '@/emails/deposit-confirmed-angler'
+import type { DepositConfirmedFaEmailProps } from '@/emails/deposit-confirmed-fa'
+import type { BookingConfirmedGuideEmailProps } from '@/emails/booking-confirmed-guide'
 
 const FROM = 'FjordAnglers <contact@fjordanglers.com>'
 
@@ -133,80 +142,6 @@ export async function sendPasswordResetEmail(
     subject: 'Reset your FjordAnglers password',
     react: createElement(PasswordResetEmail, templateProps),
   })
-}
-
-// ─── Booking request emails ───────────────────────────────────────────────────
-
-export type BookingRequestEmailParams = {
-  guideEmail: string
-  anglerEmail: string
-  anglerName: string
-  guideName: string
-  experienceTitle: string
-  bookingId: string
-  bookingDate: string
-  dateTo: string | null
-  requestedDates: string[]
-  guests: number
-  packageLabel: string | null
-  totalEur: number
-  specialRequests: string | null
-}
-
-/**
- * Sends booking request notification emails to both the guide and the angler.
- * Guide gets: new request alert with angler details and CTA to dashboard.
- * Angler gets: confirmation that their request was sent with a summary.
- * Non-blocking: callers should fire-and-forget with .catch().
- */
-export async function sendBookingRequestEmails(
-  params: BookingRequestEmailParams,
-): Promise<void> {
-  const baseUrl = env.NEXT_PUBLIC_APP_URL
-
-  const guideProps: BookingRequestGuideEmailProps = {
-    guideName:       params.guideName,
-    anglerName:      params.anglerName,
-    anglerEmail:     params.anglerEmail,
-    experienceTitle: params.experienceTitle,
-    bookingId:       params.bookingId,
-    bookingDate:     params.bookingDate,
-    dateTo:          params.dateTo,
-    requestedDates:  params.requestedDates,
-    guests:          params.guests,
-    packageLabel:    params.packageLabel,
-    totalEur:        params.totalEur,
-    specialRequests: params.specialRequests,
-    bookingUrl:      `${baseUrl}/dashboard/bookings/${params.bookingId}`,
-  }
-
-  const anglerProps: BookingRequestAnglerEmailProps = {
-    anglerName:      params.anglerName,
-    guideName:       params.guideName,
-    experienceTitle: params.experienceTitle,
-    bookingId:       params.bookingId,
-    bookingDate:     params.bookingDate,
-    dateTo:          params.dateTo,
-    requestedDates:  params.requestedDates,
-    guests:          params.guests,
-    packageLabel:    params.packageLabel,
-    totalEur:        params.totalEur,
-    specialRequests: params.specialRequests,
-    bookingUrl:      `${baseUrl}/account/bookings/${params.bookingId}`,
-  }
-
-  await Promise.all([
-    sendEmail({
-      to:      params.guideEmail,
-      subject: `New booking request — ${params.experienceTitle}`,
-      react:   createElement(BookingRequestGuideEmail, guideProps),
-    }),
-    sendEmail({
-      to:      params.anglerEmail,
-      subject: `Your booking request to ${params.guideName}`,
-      react:   createElement(BookingRequestAnglerEmail, anglerProps),
-    }),
-  ])
 }
 
 // ─── Booking confirmed email ───────────────────────────────────────────────────
@@ -355,5 +290,98 @@ export async function sendOfferDeclinedEmail(
     to,
     subject: `Proposal declined — ${templateProps.experienceTitle}`,
     react:   createElement(OfferDeclinedGuideEmail, templateProps),
+  })
+}
+
+// ─── FA Inquiry Flow emails ───────────────────────────────────────────────────
+
+/**
+ * Sent to FA when a new inquiry is submitted via POST /api/inquiries.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendInquiryReceivedFaEmail(
+  props: { to: string } & InquiryReceivedFaEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `New inquiry — ${templateProps.tripTitle} from ${templateProps.anglerName}`,
+    react:   createElement(InquiryReceivedFaEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to the angler confirming their inquiry was received.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendInquiryReceivedAnglerEmail(
+  props: { to: string } & InquiryReceivedAnglerEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `Inquiry received — ${templateProps.tripTitle}`,
+    react:   createElement(InquiryReceivedAnglerEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to the angler when FA sends a deposit link.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendDepositLinkAnglerEmail(
+  props: { to: string } & DepositLinkAnglerEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `Action required — secure your booking for ${templateProps.tripTitle}`,
+    react:   createElement(DepositLinkAnglerEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to the angler when their deposit is confirmed (webhook fires).
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendDepositConfirmedAnglerEmail(
+  props: { to: string } & DepositConfirmedAnglerEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `Booking confirmed — ${templateProps.tripTitle}`,
+    react:   createElement(DepositConfirmedAnglerEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to FA when a deposit is confirmed (webhook fires).
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendDepositConfirmedFaEmail(
+  props: { to: string } & DepositConfirmedFaEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `Deposit received — ${templateProps.tripTitle} — €${templateProps.depositAmountEur.toFixed(2)}`,
+    react:   createElement(DepositConfirmedFaEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to the guide when a deposit is paid and the booking is confirmed.
+ * No financial details — only angler info, date, party size.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendBookingConfirmedGuideEmail(
+  props: { to: string } & BookingConfirmedGuideEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `New booking confirmed — ${templateProps.anglerName} · ${(templateProps.requestedDates ?? [])[0] ?? 'TBD'}`,
+    react:   createElement(BookingConfirmedGuideEmail, templateProps),
   })
 }
