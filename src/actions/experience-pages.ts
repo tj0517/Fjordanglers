@@ -363,3 +363,136 @@ export async function updateExperiencePage(
 
   return { success: true, id: data.id, slug: data.slug }
 }
+
+// ─── Experience Page Options CRUD ─────────────────────────────────────────────
+//
+// Trip options let FA add multiple variants (Full Day / Half Day / Multi-Day)
+// to a single experience page. Each option has its own price, catches, boat,
+// special attractions, location, what-to-bring, includes, and excludes.
+//
+// Species sharing: each option references species by name (target_species[]).
+// Full species details (description, photo, season) live on the parent page's
+// species_details JSONB — no duplication.
+
+export interface ExperiencePageOptionPayload {
+  label:                     string
+  price_from:                number
+  catches_text?:             string | null
+  target_species?:           string[]
+  boat_description?:         string | null
+  boat_image_url?:           string | null
+  special_attractions?:      SpecialAttraction[]
+  meeting_point_name?:       string | null
+  meeting_point_description?: string | null
+  location_lat?:             number | null
+  location_lng?:             number | null
+  what_to_bring?:            string[]
+  includes?:                 string[]
+  excludes?:                 string[]
+  sort_order?:               number
+}
+
+export type ExperiencePageOptionResult =
+  | { success: true;  id: string }
+  | { success: false; error: string }
+
+export async function createExperiencePageOption(
+  experiencePageId: string,
+  payload: ExperiencePageOptionPayload,
+): Promise<ExperiencePageOptionResult> {
+  const svc = createServiceClient()
+
+  // Determine next sort_order
+  const { count } = await svc
+    .from('experience_page_options')
+    .select('id', { count: 'exact', head: true })
+    .eq('experience_page_id', experiencePageId)
+
+  const sortOrder = payload.sort_order ?? (count ?? 0)
+
+  const { data, error } = await svc
+    .from('experience_page_options')
+    .insert({
+      experience_page_id:        experiencePageId,
+      sort_order:                sortOrder,
+      label:                     payload.label.trim(),
+      price_from:                payload.price_from,
+      catches_text:              payload.catches_text  ?? null,
+      target_species:            payload.target_species ?? [],
+      boat_description:          payload.boat_description ?? null,
+      boat_image_url:            payload.boat_image_url   ?? null,
+      special_attractions:       (payload.special_attractions ?? []) as unknown as import('@/lib/supabase/database.types').Json,
+      meeting_point_name:        payload.meeting_point_name        ?? null,
+      meeting_point_description: payload.meeting_point_description ?? null,
+      location_lat:              payload.location_lat ?? null,
+      location_lng:              payload.location_lng ?? null,
+      what_to_bring:             payload.what_to_bring ?? [],
+      includes:                  payload.includes ?? [],
+      excludes:                  payload.excludes ?? [],
+    })
+    .select('id')
+    .single()
+
+  if (error != null || data == null) {
+    console.error('[createExperiencePageOption] DB error:', error)
+    return { success: false, error: 'Failed to create trip option' }
+  }
+
+  console.log(`[createExperiencePageOption] Created option ${data.id} for page ${experiencePageId}`)
+  return { success: true, id: data.id }
+}
+
+export async function updateExperiencePageOption(
+  optionId: string,
+  payload: Partial<ExperiencePageOptionPayload>,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const svc = createServiceClient()
+
+  const update: Record<string, unknown> = {}
+  if (payload.label               != null)      update.label                     = payload.label.trim()
+  if (payload.price_from          != null)      update.price_from                = payload.price_from
+  if (payload.catches_text        !== undefined) update.catches_text              = payload.catches_text
+  if (payload.target_species      != null)      update.target_species            = payload.target_species
+  if (payload.boat_description    !== undefined) update.boat_description          = payload.boat_description
+  if (payload.boat_image_url      !== undefined) update.boat_image_url            = payload.boat_image_url
+  if (payload.special_attractions != null)      update.special_attractions       = payload.special_attractions as unknown as import('@/lib/supabase/database.types').Json
+  if (payload.meeting_point_name  !== undefined) update.meeting_point_name        = payload.meeting_point_name
+  if (payload.meeting_point_description !== undefined) update.meeting_point_description = payload.meeting_point_description
+  if (payload.location_lat        !== undefined) update.location_lat              = payload.location_lat
+  if (payload.location_lng        !== undefined) update.location_lng              = payload.location_lng
+  if (payload.what_to_bring       != null)      update.what_to_bring             = payload.what_to_bring
+  if (payload.includes            != null)      update.includes                  = payload.includes
+  if (payload.excludes            != null)      update.excludes                  = payload.excludes
+  if (payload.sort_order          != null)      update.sort_order                = payload.sort_order
+  update.updated_at = new Date().toISOString()
+
+  const { error } = await svc
+    .from('experience_page_options')
+    .update(update)
+    .eq('id', optionId)
+
+  if (error != null) {
+    console.error('[updateExperiencePageOption] DB error:', error)
+    return { success: false, error: 'Failed to update trip option' }
+  }
+
+  return { success: true }
+}
+
+export async function deleteExperiencePageOption(
+  optionId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const svc = createServiceClient()
+
+  const { error } = await svc
+    .from('experience_page_options')
+    .delete()
+    .eq('id', optionId)
+
+  if (error != null) {
+    console.error('[deleteExperiencePageOption] DB error:', error)
+    return { success: false, error: 'Failed to delete trip option' }
+  }
+
+  return { success: true }
+}

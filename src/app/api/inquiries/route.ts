@@ -33,6 +33,7 @@ const InquirySchema = z.object({
     .max(30),
   party_size:      z.number().int().min(1).max(20),
   message:         z.string().max(2000).optional().nullable(),
+  selected_option: z.string().max(200).optional().nullable(),
 })
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       requested_dates: sortedDates,
       party_size:      parsed.data.party_size,
       message:         parsed.data.message ?? null,
+      selected_option: parsed.data.selected_option ?? null,
       status:          'pending_fa_review',
     })
     .select('id, status')
@@ -106,6 +108,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       requestedDates: sortedDates,
       partySize:      parsed.data.party_size,
       message:        parsed.data.message ?? null,
+      selectedOption: parsed.data.selected_option ?? null,
       inquiryId:      inquiry.id,
       dashboardUrl,
     }),

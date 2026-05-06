@@ -38,6 +38,36 @@ export default async function AdminExperienceEditPage({
   }
   const page = rawPage as unknown as PageWithNewCols
 
+  // Fetch trip options for this page
+  const { data: rawOptions } = await svc
+    .from('experience_page_options')
+    .select('*')
+    .eq('experience_page_id', id)
+    .order('sort_order', { ascending: true })
+
+  type OptionRow = {
+    id: string
+    experience_page_id: string
+    sort_order: number
+    label: string
+    price_from: number
+    catches_text: string | null
+    target_species: string[]
+    boat_description: string | null
+    boat_image_url: string | null
+    special_attractions: unknown
+    meeting_point_name: string | null
+    meeting_point_description: string | null
+    location_lat: number | null
+    location_lng: number | null
+    what_to_bring: string[]
+    includes: string[]
+    excludes: string[]
+    created_at: string
+    updated_at: string
+  }
+  const initialOptions = (rawOptions ?? []) as OptionRow[]
+
   // Fetch guide photos if a guide is linked
   let guidePhotos: string[] = []
   if (page.guide_id) {
@@ -119,6 +149,7 @@ export default async function AdminExperienceEditPage({
         experienceId={id}
         initialData={initialData}
         guidePhotos={guidePhotos}
+        initialOptions={initialOptions}
       />
     </div>
   )

@@ -668,6 +668,80 @@ export type Database = {
           },
         ]
       }
+      experience_page_options: {
+        Row: {
+          id:                        string
+          experience_page_id:        string
+          sort_order:                number
+          label:                     string
+          price_from:                number
+          catches_text:              string | null
+          target_species:            string[]
+          boat_description:          string | null
+          boat_image_url:            string | null
+          special_attractions:       Json
+          meeting_point_name:        string | null
+          meeting_point_description: string | null
+          location_lat:              number | null
+          location_lng:              number | null
+          what_to_bring:             string[]
+          includes:                  string[]
+          excludes:                  string[]
+          created_at:                string
+          updated_at:                string
+        }
+        Insert: {
+          id?:                        string
+          experience_page_id:         string
+          sort_order?:                number
+          label?:                     string
+          price_from?:                number
+          catches_text?:              string | null
+          target_species?:            string[]
+          boat_description?:          string | null
+          boat_image_url?:            string | null
+          special_attractions?:       Json
+          meeting_point_name?:        string | null
+          meeting_point_description?: string | null
+          location_lat?:              number | null
+          location_lng?:              number | null
+          what_to_bring?:             string[]
+          includes?:                  string[]
+          excludes?:                  string[]
+          created_at?:                string
+          updated_at?:                string
+        }
+        Update: {
+          id?:                        string
+          experience_page_id?:        string
+          sort_order?:                number
+          label?:                     string
+          price_from?:                number
+          catches_text?:              string | null
+          target_species?:            string[]
+          boat_description?:          string | null
+          boat_image_url?:            string | null
+          special_attractions?:       Json
+          meeting_point_name?:        string | null
+          meeting_point_description?: string | null
+          location_lat?:              number | null
+          location_lng?:              number | null
+          what_to_bring?:             string[]
+          includes?:                  string[]
+          excludes?:                  string[]
+          created_at?:                string
+          updated_at?:                string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_page_options_experience_page_id_fkey"
+            columns: ["experience_page_id"]
+            isOneToOne: false
+            referencedRelation: "experience_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       experience_pages: {
         Row: {
           id:                        string
@@ -1239,6 +1313,7 @@ export type Database = {
           deposit_amount: number | null
           deposit_stripe_session_id: string | null
           deposit_paid_at: string | null
+          selected_option: string | null
           created_at: string
           updated_at: string
         }
@@ -1257,6 +1332,7 @@ export type Database = {
           deposit_amount?: number | null
           deposit_stripe_session_id?: string | null
           deposit_paid_at?: string | null
+          selected_option?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1275,6 +1351,7 @@ export type Database = {
           deposit_amount?: number | null
           deposit_stripe_session_id?: string | null
           deposit_paid_at?: string | null
+          selected_option?: string | null
           created_at?: string
           updated_at?: string
         }

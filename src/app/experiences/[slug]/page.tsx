@@ -10,7 +10,9 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { HomeNav } from '@/components/home/home-nav'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Footer } from '@/components/layout/footer'
+import { ExperiencePageWithOptions } from '@/components/trips/ExperiencePageWithOptions'
 import type { SpeciesDetailItem, SpecialAttraction } from '@/actions/experience-pages'
+import type { TripOption } from '@/components/trips/TripOptionsAccordion'
 
 /**
  * /experiences/[slug] — Public editorial experience page.
@@ -204,6 +206,34 @@ export default async function ExperiencePublicPage({
         .single()
     : { data: null }
 
+  // Trip options for this page
+  const { data: rawOptions } = await svc
+    .from('experience_page_options')
+    .select('*')
+    .eq('experience_page_id', page.id)
+    .order('sort_order', { ascending: true })
+
+  const tripOptions: TripOption[] = (rawOptions ?? []).map(o => ({
+    id:                        o.id,
+    sort_order:                o.sort_order,
+    label:                     o.label,
+    price_from:                Number(o.price_from),
+    catches_text:              o.catches_text ?? null,
+    target_species:            (o.target_species as string[] | null) ?? [],
+    boat_description:          o.boat_description ?? null,
+    boat_image_url:            o.boat_image_url ?? null,
+    special_attractions:       (o.special_attractions as SpecialAttraction[] | null) ?? [],
+    meeting_point_name:        o.meeting_point_name ?? null,
+    meeting_point_description: o.meeting_point_description ?? null,
+    location_lat:              o.location_lat ?? null,
+    location_lng:              o.location_lng ?? null,
+    what_to_bring:             (o.what_to_bring as string[] | null) ?? [],
+    includes:                  (o.includes as string[] | null) ?? [],
+    excludes:                  (o.excludes as string[] | null) ?? [],
+  }))
+
+  const hasOptions = tripOptions.length > 0
+
   // Similar experience pages
   const { data: sameCountryRaw } = await svc
     .from('experience_pages')
@@ -225,7 +255,11 @@ export default async function ExperiencePublicPage({
     similarTrips = anyRaw ?? []
   }
 
-  const species         = (page.target_species     as string[] | null) ?? []
+  // Quick Fit: when options exist, aggregate all target_species across options (union)
+  const pageSpecies     = (page.target_species as string[] | null) ?? []
+  const species = hasOptions
+    ? Array.from(new Set(tripOptions.flatMap(o => o.target_species)))
+    : pageSpecies
   const technique       = (page.technique          as string[] | null) ?? []
   const env             = (page.environment        as string[] | null) ?? []
   const includes        = (page.includes           as string[] | null) ?? []
@@ -320,6 +354,166 @@ export default async function ExperiencePublicPage({
         </div>
 
         {/* ── TWO-COLUMN CONTENT GRID ── */}
+        {hasOptions ? (
+          /* ─── OPTIONS MODE: ExperiencePageWithOptions manages both columns ─── */
+          <ExperiencePageWithOptions
+            options={tripOptions}
+            speciesLibrary={speciesDetails}
+            tripId={page.trip_id}
+            tripTitle={page.experience_name}
+            maxGuests={maxGuests}
+            blockedRanges={blockedRanges}
+          >
+            {/* These server-rendered sections go in the left column */}
+
+            {/* INTRODUCE */}
+            {page.intro_text && (
+              <section className="mb-10">
+                <p className="text-lg sm:text-xl f-body leading-relaxed text-justify font-medium"
+                  style={{ color: '#0A2E4D' }}>
+                  {page.intro_text}
+                </p>
+              </section>
+            )}
+
+            {/* QUICK FIT */}
+            {(species.length > 0 || technique.length > 0 || guideLanguages.length > 0 || page.difficulty || page.physical_effort || page.non_angler_friendly) && (
+              <section className="mb-12 p-6 rounded-2xl"
+                style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                <SalmonRule />
+                <SectionLabel label="Quick Fit" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(page.difficulty || page.physical_effort || page.non_angler_friendly) && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Level</p>
+                      <div className="flex flex-wrap gap-2">
+                        {page.difficulty && (() => {
+                          const dc = difficultyColor[page.difficulty] ?? { bg: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }
+                          return <span className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: dc.bg, color: dc.color }}>{page.difficulty}</span>
+                        })()}
+                        {page.physical_effort && (
+                          <span className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>
+                            {page.physical_effort} effort
+                          </span>
+                        )}
+                        {page.non_angler_friendly && (
+                          <span className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(74,222,128,0.1)', color: '#16A34A' }}>
+                            Family-friendly
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {species.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Target species</p>
+                      <div className="flex flex-wrap gap-2">
+                        {species.map(s => (
+                          <span key={s} className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {technique.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Technique</p>
+                      <div className="flex flex-wrap gap-2">
+                        {technique.map(t => (
+                          <span key={t} className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>{t}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {guideLanguages.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Guide speaks</p>
+                      <div className="flex flex-wrap gap-2">
+                        {guideLanguages.map(lang => (
+                          <span key={lang} className="text-xs font-semibold px-3 py-1.5 rounded-full f-body"
+                            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}>{lang}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* ABOUT */}
+            {page.story_text && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="About this experience" />
+                <div className="space-y-4">
+                  {page.story_text.split('\n\n').filter(Boolean).map((para, i) => (
+                    <p key={i} className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.75)' }}>
+                      {para}
+                    </p>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* PHOTOS */}
+            {gallery.length > 1 && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="Photos" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {gallery.slice(0, 6).map((url, i) => (
+                    <div key={i} className="relative rounded-2xl overflow-hidden aspect-[4/3]">
+                      <Image src={url} alt={`${page.experience_name} photo ${i + 1}`} fill className="object-cover"
+                        sizes="(min-width: 640px) 33vw, 50vw" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ROD SETUP */}
+            {page.rod_setup && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="Rod setup & recommended gear" />
+                <div className="px-5 py-4 rounded-2xl"
+                  style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                    {page.rod_setup}
+                  </p>
+                </div>
+              </section>
+            )}
+
+            {/* SEASON */}
+            {(seasonMonths.length > 0 || page.season_start || page.best_months) && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="Season" />
+                {page.season_start && page.season_end && (
+                  <p className="text-lg font-bold f-display mb-4" style={{ color: '#0A2E4D' }}>
+                    {page.season_start} – {page.season_end}
+                  </p>
+                )}
+                {seasonMonths.length > 0 && (
+                  <div className="mb-4">
+                    <SeasonCalendarGrid seasonMonths={seasonMonths} peakMonths={peakMonths} />
+                  </div>
+                )}
+                {page.best_months && (
+                  <p className="text-sm f-body leading-relaxed text-justify mt-3" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                    {page.best_months}
+                  </p>
+                )}
+              </section>
+            )}
+          </ExperiencePageWithOptions>
+        ) : (
+        /* ─── FLAT MODE: no options → original two-column layout ─── */
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 py-12 lg:py-14">
 
           {/* ── LEFT COLUMN ── */}
@@ -803,6 +997,7 @@ export default async function ExperiencePublicPage({
           </div>
 
         </div>
+        )} {/* end of ternary: hasOptions ? <ExperiencePageWithOptions> : <flat div> */}
       </div>
 
       {/* ── MOBILE BAR ── */}
