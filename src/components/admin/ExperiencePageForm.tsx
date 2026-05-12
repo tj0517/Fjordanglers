@@ -355,7 +355,6 @@ function OptionEditor({
   const [incl,        setIncl]        = useState((option.includes ?? []).join('\n'))
   const [excl,        setExcl]        = useState((option.excludes ?? []).join('\n'))
   const [blocks,      setBlocks]      = useState<ContentBlock[]>(() => parseJsonField<ContentBlock>(option.content_blocks))
-  const [faqItems,    setFaqItems]    = useState<FaqItem[]>(() => parseJsonField<FaqItem>(option.faq))
   const [saving,      setSaving]      = useState(false)
   const [deleting,    setDeleting]    = useState(false)
   const [saveError,   setSaveError]   = useState<string | null>(null)
@@ -380,7 +379,6 @@ function OptionEditor({
         includes:                  parseLines(incl),
         excludes:                  parseLines(excl),
         content_blocks:            blocks.filter(b => b.headline.trim() || b.text.trim()),
-        faq:                       faqItems.filter(f => f.question.trim() || f.answer.trim()),
       }
       const result = await updateExperiencePageOption(option.id, payload)
       if (result.success) {
@@ -401,7 +399,6 @@ function OptionEditor({
           includes:                  payload.includes ?? [],
           excludes:                  payload.excludes ?? [],
           content_blocks:            payload.content_blocks ?? [],
-          faq:                       payload.faq ?? [],
           updated_at:                new Date().toISOString(),
         })
       } else {
@@ -692,49 +689,6 @@ function OptionEditor({
             )}
           </div>
 
-          {/* FAQ */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className={lbl}>FAQ</label>
-              <button
-                type="button"
-                onClick={() => setFaqItems(prev => [...prev, { question: '', answer: '' }])}
-                className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
-                style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
-                + Add FAQ
-              </button>
-            </div>
-            {faqItems.map((item, fi) => (
-              <div key={fi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={item.question}
-                    onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, question: e.target.value } : f))}
-                    placeholder="Question…"
-                    className={inp} style={{ ...iStyle, flex: 1 }} />
-                  <button
-                    type="button"
-                    onClick={() => setFaqItems(prev => prev.filter((_, i) => i !== fi))}
-                    className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
-                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
-                    Remove
-                  </button>
-                </div>
-                <textarea
-                  value={item.answer}
-                  onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, answer: e.target.value } : f))}
-                  placeholder="Answer…"
-                  rows={3}
-                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
-                  style={iStyle} />
-              </div>
-            ))}
-            {faqItems.length === 0 && (
-              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No FAQ items yet. Click &quot;+ Add FAQ&quot; to add one.</p>
-            )}
-          </div>
-
           {/* Save */}
           {saveError && (
             <p className="text-xs f-body px-3 py-2 rounded-xl"
@@ -794,6 +748,7 @@ export interface ExperiencePageFormInitialData {
   meeting_point_description:    string | null
   includes:                     string[]
   excludes:                     string[]
+  faq:                          unknown   // FaqItem[] stored as JSONB
   meta_title:                   string | null
   meta_description:             string | null
   og_image_url:                 string | null
@@ -822,7 +777,6 @@ export interface ExperiencePageOptionRow {
   includes:                  string[]
   excludes:                  string[]
   content_blocks:            unknown   // ContentBlock[] stored as JSONB
-  faq:                       unknown   // FaqItem[] stored as JSONB
   created_at:                string
   updated_at:                string
 }
@@ -950,6 +904,9 @@ export default function ExperiencePageForm({
   const [includes, setIncludes] = useState(initialData?.includes?.join('\n') ?? 'Guide service')
   const [excludes, setExcludes] = useState(initialData?.excludes?.join('\n') ?? '')
 
+  // ── Section 12b: FAQ (global)
+  const [faqItems, setFaqItems] = useState<FaqItem[]>(() => parseJsonField<FaqItem>(initialData?.faq))
+
   // ── Section 12: SEO
   const [metaTitle, setMetaTitle] = useState(initialData?.meta_title ?? '')
   const [metaDesc,  setMetaDesc]  = useState(initialData?.meta_description ?? '')
@@ -1035,6 +992,7 @@ export default function ExperiencePageForm({
       meeting_point_description:        meetingDesc.trim() || null,
       includes:                         parseLines(includes),
       excludes:                         parseLines(excludes),
+      faq:                              faqItems.filter(f => f.question.trim() || f.answer.trim()),
       meta_title:                       metaTitle.trim()   || null,
       meta_description:                 metaDesc.trim()    || null,
       og_image_url:                     ogImage.trim()     || null,
@@ -1545,9 +1503,53 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 13. Trip Options ── */}
+      {/* ── 13. FAQ ── */}
+      <SectionLabel step={13} title="FAQ" desc="Frequently asked questions — shown on the experience page" />
+      <div className="space-y-3">
+        {faqItems.map((item, fi) => (
+          <div key={fi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={item.question}
+                onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, question: e.target.value } : f))}
+                placeholder="Question…"
+                className="flex-1 px-3 py-2 rounded-xl text-sm f-body outline-none transition-all"
+                style={{ background: 'rgba(10,46,77,0.04)', border: '1.5px solid rgba(10,46,77,0.1)', color: '#0A2E4D' }} />
+              <button
+                type="button"
+                onClick={() => setFaqItems(prev => prev.filter((_, i) => i !== fi))}
+                className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                Remove
+              </button>
+            </div>
+            <textarea
+              value={item.answer}
+              onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, answer: e.target.value } : f))}
+              placeholder="Answer…"
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={{ background: 'rgba(10,46,77,0.04)', border: '1.5px solid rgba(10,46,77,0.1)', color: '#0A2E4D' }} />
+          </div>
+        ))}
+        {faqItems.length === 0 && (
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No FAQ items yet. Click &quot;+ Add FAQ&quot; to add one.</p>
+        )}
+        <button
+          type="button"
+          onClick={() => setFaqItems(prev => [...prev, { question: '', answer: '' }])}
+          className="text-sm font-semibold f-body px-4 py-2 rounded-xl transition-colors"
+          style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+          + Add FAQ
+        </button>
+      </div>
+
+      <Divider />
+
+      {/* ── 14. Trip Options ── */}
       <SectionLabel
-        step={13}
+        step={14}
         title="Trip Options"
         desc="Add variants like Full Day / Half Day. Each option has its own price, catches, boat, location and inclusions. Species details come from the shared library above."
       />
@@ -1611,7 +1613,6 @@ export default function ExperiencePageForm({
                     includes:                  [],
                     excludes:                  [],
                     content_blocks:            [],
-                    faq:                       [],
                     created_at:                new Date().toISOString(),
                     updated_at:                new Date().toISOString(),
                   }

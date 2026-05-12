@@ -689,7 +689,6 @@ export type Database = {
           includes:                  string[]
           excludes:                  string[]
           content_blocks:            Json
-          faq:                       Json
           created_at:                string
           updated_at:                string
         }
@@ -713,7 +712,6 @@ export type Database = {
           includes?:                  string[]
           excludes?:                  string[]
           content_blocks?:            Json | null
-          faq?:                       Json | null
           created_at?:                string
           updated_at?:                string
         }
@@ -737,7 +735,6 @@ export type Database = {
           includes?:                  string[]
           excludes?:                  string[]
           content_blocks?:            Json | null
-          faq?:                       Json | null
           created_at?:                string
           updated_at?:                string
         }
@@ -796,6 +793,7 @@ export type Database = {
           special_attraction_image_url: string | null
           what_to_bring:             string[]
           special_attractions:       Json
+          faq:                       Json
           created_at:                string
           updated_at:                string
         }
@@ -843,6 +841,7 @@ export type Database = {
           special_attraction_image_url?: string | null
           what_to_bring?:             string[] | null
           special_attractions?:       Json | null
+          faq?:                       Json | null
           created_at?:                string
           updated_at?:                string
         }
@@ -890,6 +889,7 @@ export type Database = {
           special_attraction_image_url?: string | null
           what_to_bring?:             string[] | null
           special_attractions?:       Json | null
+          faq?:                       Json | null
           created_at?:                string
           updated_at?:                string
         }

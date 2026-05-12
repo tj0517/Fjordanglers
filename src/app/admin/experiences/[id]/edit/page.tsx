@@ -120,6 +120,7 @@ export default async function AdminExperienceEditPage({
     boat_image_url:      page.boat_image_url ?? null,
     special_attractions: (page.special_attractions as SpecialAttraction[] | null) ?? [],
     what_to_bring:       (page.what_to_bring as string[] | null) ?? [],
+    faq:                 page.faq ?? [],
   }
 
   return (

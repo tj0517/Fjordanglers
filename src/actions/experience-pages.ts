@@ -77,6 +77,8 @@ export interface ExperiencePagePayload {
   // Includes / Excludes
   includes?:                         string[]
   excludes?:                         string[]
+  // FAQ
+  faq?:                              FaqItem[]
   // SEO
   meta_title?:                       string | null
   meta_description?:                 string | null
@@ -352,6 +354,7 @@ export async function updateExperiencePage(
   if (payload.what_to_bring      != null) update.what_to_bring                 = payload.what_to_bring
   if (payload.includes          != null) update.includes                       = payload.includes
   if (payload.excludes          != null) update.excludes                     = payload.excludes
+  if (payload.faq               != null) update.faq                          = payload.faq as unknown as import('@/lib/supabase/database.types').Json
   if (payload.meta_title        !== undefined) update.meta_title             = payload.meta_title
   if (payload.meta_description  !== undefined) update.meta_description       = payload.meta_description
   if (payload.og_image_url      !== undefined) update.og_image_url           = payload.og_image_url
@@ -401,7 +404,6 @@ export interface ExperiencePageOptionPayload {
   includes?:                 string[]
   excludes?:                 string[]
   content_blocks?:           ContentBlock[]
-  faq?:                      FaqItem[]
   sort_order?:               number
 }
 
@@ -444,7 +446,6 @@ export async function createExperiencePageOption(
       excludes:                  payload.excludes ?? [],
       description:               payload.description ?? null,
       content_blocks:            (payload.content_blocks ?? []) as unknown as import('@/lib/supabase/database.types').Json,
-      faq:                       (payload.faq ?? []) as unknown as import('@/lib/supabase/database.types').Json,
     })
     .select('id')
     .single()
@@ -482,7 +483,6 @@ export async function updateExperiencePageOption(
   if (payload.sort_order          != null)      update.sort_order                = payload.sort_order
   if (payload.description         !== undefined) update.description              = payload.description
   if (payload.content_blocks      != null)      update.content_blocks            = payload.content_blocks as unknown as import('@/lib/supabase/database.types').Json
-  if (payload.faq                 != null)      update.faq                       = payload.faq as unknown as import('@/lib/supabase/database.types').Json
   update.updated_at = new Date().toISOString()
 
   const { error } = await svc
