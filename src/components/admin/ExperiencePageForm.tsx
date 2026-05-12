@@ -340,7 +340,6 @@ function OptionEditor({
 }) {
   const [label,       setLabel]       = useState(option.label)
   const [price,       setPrice]       = useState(String(option.price_from))
-  const [catches,     setCatches]     = useState(option.catches_text ?? '')
   const [species,     setSpecies]     = useState<string[]>(option.target_species ?? [])
   const [boatDesc,    setBoatDesc]    = useState(option.boat_description ?? '')
   const [boatImg,     setBoatImg]     = useState(option.boat_image_url ?? '')
@@ -366,7 +365,6 @@ function OptionEditor({
       const payload: Partial<ExperiencePageOptionPayload> = {
         label:                     label.trim() || `Option ${index + 1}`,
         price_from:                parseFloat(price) || 0,
-        catches_text:              catches.trim() || null,
         target_species:            species,
         boat_description:          boatDesc.trim() || null,
         boat_image_url:            boatImg.trim() || null,
@@ -386,7 +384,6 @@ function OptionEditor({
           ...option,
           label:                     payload.label!,
           price_from:                payload.price_from!,
-          catches_text:              payload.catches_text ?? null,
           target_species:            payload.target_species ?? [],
           boat_description:          payload.boat_description ?? null,
           boat_image_url:            payload.boat_image_url ?? null,
@@ -490,14 +487,47 @@ function OptionEditor({
             </div>
           </div>
 
-          {/* Catches intro */}
-          <div>
-            <label className={lbl}>What you can catch — intro paragraph</label>
-            <textarea value={catches} onChange={e => setCatches(e.target.value)}
-              placeholder="Describe what anglers can expect to catch on this option…"
-              rows={3} maxLength={2000}
-              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
-              style={iStyle} />
+          {/* Content blocks */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className={lbl}>Text blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
+              <button
+                type="button"
+                onClick={() => setBlocks(prev => [...prev, { headline: '', text: '' }])}
+                className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+                style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+                + Add block
+              </button>
+            </div>
+            {blocks.map((block, bi) => (
+              <div key={bi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={block.headline}
+                    onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, headline: e.target.value } : b))}
+                    placeholder="Section headline…"
+                    className={inp} style={{ ...iStyle, flex: 1 }} />
+                  <button
+                    type="button"
+                    onClick={() => setBlocks(prev => prev.filter((_, i) => i !== bi))}
+                    className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                    Remove
+                  </button>
+                </div>
+                <textarea
+                  value={block.text}
+                  onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
+                  placeholder="Block text…"
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                  style={iStyle} />
+              </div>
+            ))}
+            {blocks.length === 0 && (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No text blocks yet. Click &quot;+ Add block&quot; to add one.</p>
+            )}
           </div>
 
           {/* Target species — checkboxes from page-level species library */}
@@ -644,49 +674,6 @@ function OptionEditor({
                 className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
                 style={iStyle} />
             </div>
-          </div>
-
-          {/* Content blocks */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className={lbl}>Content blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
-              <button
-                type="button"
-                onClick={() => setBlocks(prev => [...prev, { headline: '', text: '' }])}
-                className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
-                style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
-                + Add block
-              </button>
-            </div>
-            {blocks.map((block, bi) => (
-              <div key={bi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={block.headline}
-                    onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, headline: e.target.value } : b))}
-                    placeholder="Section headline…"
-                    className={inp} style={{ ...iStyle, flex: 1 }} />
-                  <button
-                    type="button"
-                    onClick={() => setBlocks(prev => prev.filter((_, i) => i !== bi))}
-                    className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
-                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
-                    Remove
-                  </button>
-                </div>
-                <textarea
-                  value={block.text}
-                  onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
-                  placeholder="Block text…"
-                  rows={3}
-                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
-                  style={iStyle} />
-              </div>
-            ))}
-            {blocks.length === 0 && (
-              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No content blocks. Click &quot;+ Add block&quot; to add one.</p>
-            )}
           </div>
 
           {/* Save */}
