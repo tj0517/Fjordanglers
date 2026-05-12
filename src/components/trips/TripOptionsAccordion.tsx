@@ -19,7 +19,7 @@
 import Image from 'next/image'
 import { MapPin, Check, X as XIcon, ChevronDown, ChevronUp } from 'lucide-react'
 import { FISH_IMG } from '@/lib/fish'
-import type { SpeciesDetailItem, SpecialAttraction } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction, ContentBlock } from '@/actions/experience-pages'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +28,7 @@ export interface TripOption {
   sort_order:                number
   label:                     string
   price_from:                number
+  content_blocks:            ContentBlock[]
   catches_text:              string | null
   target_species:            string[]
   boat_description:          string | null
@@ -92,6 +93,22 @@ function OptionPanel({ option, speciesLibrary }: { option: TripOption; speciesLi
 
   return (
     <div className="space-y-10 px-6 py-8">
+
+      {/* ── Content blocks ── */}
+      {option.content_blocks.length > 0 && option.content_blocks.map((block, i) => (
+        <section key={i}>
+          {block.headline && (
+            <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
+              {block.headline}
+            </h4>
+          )}
+          {block.text && (
+            <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+              {block.text}
+            </p>
+          )}
+        </section>
+      ))}
 
       {/* ── What you can catch ── */}
       {(option.target_species.length > 0 || option.catches_text) && (

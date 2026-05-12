@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
-import { MapPin, Check, X as XIcon } from 'lucide-react'
+import { MapPin, Check, X as XIcon, ChevronDown } from 'lucide-react'
 import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
 import { FISH_IMG } from '@/lib/fish'
 import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
@@ -11,7 +11,7 @@ import { HomeNav } from '@/components/home/home-nav'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Footer } from '@/components/layout/footer'
 import { ExperiencePageWithOptions } from '@/components/trips/ExperiencePageWithOptions'
-import type { SpeciesDetailItem, SpecialAttraction } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem } from '@/actions/experience-pages'
 import type { TripOption } from '@/components/trips/TripOptionsAccordion'
 
 /**
@@ -152,6 +152,7 @@ export default async function ExperiencePublicPage({
   if (rawPage == null) notFound()
 
   // Cast to include columns added in 20260427_experience_pages_v2.sql
+  // and 20260512_move_faq_to_experience_pages.sql
   // (not yet in auto-generated DB types — will be updated after migration runs)
   type PageWithNewCols = typeof rawPage & {
     intro_text:          string | null
@@ -160,6 +161,7 @@ export default async function ExperiencePublicPage({
     boat_image_url:      string | null
     special_attractions: unknown
     what_to_bring:       unknown
+    faq:                 unknown
   }
   const page = rawPage as unknown as PageWithNewCols
 
@@ -218,6 +220,7 @@ export default async function ExperiencePublicPage({
     sort_order:                o.sort_order,
     label:                     o.label,
     price_from:                Number(o.price_from),
+    content_blocks:            (o.content_blocks as ContentBlock[] | null) ?? [],
     catches_text:              o.catches_text ?? null,
     target_species:            (o.target_species as string[] | null) ?? [],
     boat_description:          o.boat_description ?? null,
@@ -270,6 +273,7 @@ export default async function ExperiencePublicPage({
   const speciesDetails       = (page.species_details    as SpeciesDetailItem[]  | null) ?? []
   const specialAttractions   = (page.special_attractions as SpecialAttraction[]  | null) ?? []
   const whatToBring          = (page.what_to_bring      as string[]             | null) ?? []
+  const faq                  = (page.faq               as FaqItem[]            | null) ?? []
   const guideLanguages       = (guide?.languages        as string[]             | null) ?? []
 
   const topImages = gallery.length > 0
@@ -359,6 +363,7 @@ export default async function ExperiencePublicPage({
           <ExperiencePageWithOptions
             options={tripOptions}
             speciesLibrary={speciesDetails}
+            faq={faq}
             tripId={page.trip_id}
             tripTitle={page.experience_name}
             maxGuests={maxGuests}
@@ -917,6 +922,34 @@ export default async function ExperiencePublicPage({
                       </ul>
                     </div>
                   )}
+                </div>
+              </section>
+            )}
+
+            {/* ──────────── FAQ ──────────── */}
+            {faq.length > 0 && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="FAQ" />
+                <div className="space-y-2">
+                  {faq.map((item, i) => (
+                    <details key={i} className="group rounded-2xl overflow-hidden"
+                      style={{ border: '1.5px solid rgba(10,46,77,0.08)' }}>
+                      <summary className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
+                        style={{ background: 'rgba(10,46,77,0.02)', listStyle: 'none' }}>
+                        <span className="text-sm font-semibold f-body pr-4" style={{ color: '#0A2E4D' }}>
+                          {item.question}
+                        </span>
+                        <ChevronDown size={15} className="flex-shrink-0 transition-transform group-open:rotate-180"
+                          style={{ color: 'rgba(10,46,77,0.4)' }} />
+                      </summary>
+                      <div className="px-5 py-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+                        <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                          {item.answer}
+                        </p>
+                      </div>
+                    </details>
+                  ))}
                 </div>
               </section>
             )}

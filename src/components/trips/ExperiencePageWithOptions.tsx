@@ -29,13 +29,15 @@
  */
 
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { TripOptionsAccordion, type TripOption } from '@/components/trips/TripOptionsAccordion'
 import { InquiryWidget } from '@/components/inquiry/InquiryWidget'
-import type { SpeciesDetailItem } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, FaqItem } from '@/actions/experience-pages'
 
 interface ExperiencePageWithOptionsProps {
   options:        TripOption[]
   speciesLibrary: SpeciesDetailItem[]
+  faq?:           FaqItem[]
   tripId:         string | null
   tripTitle:      string
   maxGuests:      number
@@ -46,6 +48,7 @@ interface ExperiencePageWithOptionsProps {
 export function ExperiencePageWithOptions({
   options,
   speciesLibrary,
+  faq = [],
   tripId,
   tripTitle,
   maxGuests,
@@ -73,6 +76,36 @@ export function ExperiencePageWithOptions({
           selectedIdx={selectedIdx}
           onSelect={setSelectedIdx}
         />
+
+        {/* FAQ */}
+        {faq.length > 0 && (
+          <section className="mt-10">
+            <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>
+              FAQ
+            </p>
+            <div className="space-y-2">
+              {faq.map((item, i) => (
+                <details key={i} className="group rounded-2xl overflow-hidden"
+                  style={{ border: '1.5px solid rgba(10,46,77,0.08)' }}>
+                  <summary className="flex items-center justify-between px-5 py-4 cursor-pointer select-none"
+                    style={{ background: 'rgba(10,46,77,0.02)', listStyle: 'none' }}>
+                    <span className="text-sm font-semibold f-body pr-4" style={{ color: '#0A2E4D' }}>
+                      {item.question}
+                    </span>
+                    <ChevronDown size={15} className="flex-shrink-0 transition-transform group-open:rotate-180"
+                      style={{ color: 'rgba(10,46,77,0.4)' }} />
+                  </summary>
+                  <div className="px-5 py-4" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+                    <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                      {item.answer}
+                    </p>
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* ── Right column — sticky widget ── */}
