@@ -51,6 +51,7 @@ export default async function AdminExperienceEditPage({
     sort_order: number
     label: string
     price_from: number
+    description: string | null
     catches_text: string | null
     target_species: string[]
     boat_description: string | null
@@ -63,6 +64,8 @@ export default async function AdminExperienceEditPage({
     what_to_bring: string[]
     includes: string[]
     excludes: string[]
+    content_blocks: unknown
+    faq: unknown
     created_at: string
     updated_at: string
   }

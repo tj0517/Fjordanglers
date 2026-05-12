@@ -32,6 +32,8 @@ import {
   type ExperiencePagePayload,
   type SpeciesDetailItem,
   type SpecialAttraction,
+  type ContentBlock,
+  type FaqItem,
   type ExperiencePageOptionPayload,
 } from '@/actions/experience-pages'
 import ImageUpload from '@/components/admin/image-upload'
@@ -72,6 +74,14 @@ function slugify(s: string): string {
 
 function parseLines(s: string): string[] {
   return s.split('\n').map(l => l.trim()).filter(Boolean)
+}
+
+function parseJsonField<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[]
+  if (typeof value === 'string') {
+    try { return JSON.parse(value) as T[] } catch { return [] }
+  }
+  return []
 }
 
 function toggleItem<T>(arr: T[], item: T): T[] {
@@ -344,6 +354,8 @@ function OptionEditor({
   const [bring,       setBring]       = useState((option.what_to_bring ?? []).join('\n'))
   const [incl,        setIncl]        = useState((option.includes ?? []).join('\n'))
   const [excl,        setExcl]        = useState((option.excludes ?? []).join('\n'))
+  const [blocks,      setBlocks]      = useState<ContentBlock[]>(() => parseJsonField<ContentBlock>(option.content_blocks))
+  const [faqItems,    setFaqItems]    = useState<FaqItem[]>(() => parseJsonField<FaqItem>(option.faq))
   const [saving,      setSaving]      = useState(false)
   const [deleting,    setDeleting]    = useState(false)
   const [saveError,   setSaveError]   = useState<string | null>(null)
@@ -367,6 +379,8 @@ function OptionEditor({
         what_to_bring:             parseLines(bring),
         includes:                  parseLines(incl),
         excludes:                  parseLines(excl),
+        content_blocks:            blocks.filter(b => b.headline.trim() || b.text.trim()),
+        faq:                       faqItems.filter(f => f.question.trim() || f.answer.trim()),
       }
       const result = await updateExperiencePageOption(option.id, payload)
       if (result.success) {
@@ -386,6 +400,8 @@ function OptionEditor({
           what_to_bring:             payload.what_to_bring ?? [],
           includes:                  payload.includes ?? [],
           excludes:                  payload.excludes ?? [],
+          content_blocks:            payload.content_blocks ?? [],
+          faq:                       payload.faq ?? [],
           updated_at:                new Date().toISOString(),
         })
       } else {
@@ -633,6 +649,92 @@ function OptionEditor({
             </div>
           </div>
 
+          {/* Content blocks */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className={lbl}>Content blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
+              <button
+                type="button"
+                onClick={() => setBlocks(prev => [...prev, { headline: '', text: '' }])}
+                className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+                style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+                + Add block
+              </button>
+            </div>
+            {blocks.map((block, bi) => (
+              <div key={bi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={block.headline}
+                    onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, headline: e.target.value } : b))}
+                    placeholder="Section headline…"
+                    className={inp} style={{ ...iStyle, flex: 1 }} />
+                  <button
+                    type="button"
+                    onClick={() => setBlocks(prev => prev.filter((_, i) => i !== bi))}
+                    className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                    Remove
+                  </button>
+                </div>
+                <textarea
+                  value={block.text}
+                  onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
+                  placeholder="Block text…"
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                  style={iStyle} />
+              </div>
+            ))}
+            {blocks.length === 0 && (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No content blocks. Click &quot;+ Add block&quot; to add one.</p>
+            )}
+          </div>
+
+          {/* FAQ */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className={lbl}>FAQ</label>
+              <button
+                type="button"
+                onClick={() => setFaqItems(prev => [...prev, { question: '', answer: '' }])}
+                className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+                style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+                + Add FAQ
+              </button>
+            </div>
+            {faqItems.map((item, fi) => (
+              <div key={fi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={item.question}
+                    onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, question: e.target.value } : f))}
+                    placeholder="Question…"
+                    className={inp} style={{ ...iStyle, flex: 1 }} />
+                  <button
+                    type="button"
+                    onClick={() => setFaqItems(prev => prev.filter((_, i) => i !== fi))}
+                    className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                    Remove
+                  </button>
+                </div>
+                <textarea
+                  value={item.answer}
+                  onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, answer: e.target.value } : f))}
+                  placeholder="Answer…"
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                  style={iStyle} />
+              </div>
+            ))}
+            {faqItems.length === 0 && (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No FAQ items yet. Click &quot;+ Add FAQ&quot; to add one.</p>
+            )}
+          </div>
+
           {/* Save */}
           {saveError && (
             <p className="text-xs f-body px-3 py-2 rounded-xl"
@@ -706,6 +808,7 @@ export interface ExperiencePageOptionRow {
   sort_order:                number
   label:                     string
   price_from:                number
+  description:               string | null
   catches_text:              string | null
   target_species:            string[]
   boat_description:          string | null
@@ -718,6 +821,8 @@ export interface ExperiencePageOptionRow {
   what_to_bring:             string[]
   includes:                  string[]
   excludes:                  string[]
+  content_blocks:            unknown   // ContentBlock[] stored as JSONB
+  faq:                       unknown   // FaqItem[] stored as JSONB
   created_at:                string
   updated_at:                string
 }
@@ -1492,6 +1597,7 @@ export default function ExperiencePageForm({
                     sort_order:                tripOptions.length,
                     label:                     `Option ${tripOptions.length + 1}`,
                     price_from:                0,
+                    description:               null,
                     catches_text:              null,
                     target_species:            [],
                     boat_description:          null,
@@ -1504,6 +1610,8 @@ export default function ExperiencePageForm({
                     what_to_bring:             [],
                     includes:                  [],
                     excludes:                  [],
+                    content_blocks:            [],
+                    faq:                       [],
                     created_at:                new Date().toISOString(),
                     updated_at:                new Date().toISOString(),
                   }

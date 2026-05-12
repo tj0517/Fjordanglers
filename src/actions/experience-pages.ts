@@ -24,6 +24,16 @@ export interface SpecialAttraction {
   image_url: string
 }
 
+export interface ContentBlock {
+  headline: string
+  text:     string
+}
+
+export interface FaqItem {
+  question: string
+  answer:   string
+}
+
 export interface ExperiencePagePayload {
   trip_id?:                          string | null
   guide_id?:                         string | null
@@ -136,10 +146,10 @@ export async function createExperiencePage(
       best_months:                      payload.best_months   ?? null,
       season_months:                    payload.season_months ?? [],
       peak_months:                      payload.peak_months   ?? [],
-      species_details:                  payload.species_details ?? [],
+      species_details:                  (payload.species_details ?? []) as unknown as import('@/lib/supabase/database.types').Json,
       boat_description:                 payload.boat_description ?? null,
       boat_image_url:                   payload.boat_image_url   ?? null,
-      special_attractions:              payload.special_attractions ?? [],
+      special_attractions:              (payload.special_attractions ?? []) as unknown as import('@/lib/supabase/database.types').Json,
       what_to_bring:                    payload.what_to_bring ?? [],
       includes:                         payload.includes ?? [],
       excludes:                         payload.excludes ?? [],
@@ -377,6 +387,7 @@ export async function updateExperiencePage(
 export interface ExperiencePageOptionPayload {
   label:                     string
   price_from:                number
+  description?:              string | null
   catches_text?:             string | null
   target_species?:           string[]
   boat_description?:         string | null
@@ -389,6 +400,8 @@ export interface ExperiencePageOptionPayload {
   what_to_bring?:            string[]
   includes?:                 string[]
   excludes?:                 string[]
+  content_blocks?:           ContentBlock[]
+  faq?:                      FaqItem[]
   sort_order?:               number
 }
 
@@ -429,6 +442,9 @@ export async function createExperiencePageOption(
       what_to_bring:             payload.what_to_bring ?? [],
       includes:                  payload.includes ?? [],
       excludes:                  payload.excludes ?? [],
+      description:               payload.description ?? null,
+      content_blocks:            (payload.content_blocks ?? []) as unknown as import('@/lib/supabase/database.types').Json,
+      faq:                       (payload.faq ?? []) as unknown as import('@/lib/supabase/database.types').Json,
     })
     .select('id')
     .single()
@@ -464,6 +480,9 @@ export async function updateExperiencePageOption(
   if (payload.includes            != null)      update.includes                  = payload.includes
   if (payload.excludes            != null)      update.excludes                  = payload.excludes
   if (payload.sort_order          != null)      update.sort_order                = payload.sort_order
+  if (payload.description         !== undefined) update.description              = payload.description
+  if (payload.content_blocks      != null)      update.content_blocks            = payload.content_blocks as unknown as import('@/lib/supabase/database.types').Json
+  if (payload.faq                 != null)      update.faq                       = payload.faq as unknown as import('@/lib/supabase/database.types').Json
   update.updated_at = new Date().toISOString()
 
   const { error } = await svc

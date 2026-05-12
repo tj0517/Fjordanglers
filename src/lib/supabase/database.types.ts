@@ -675,6 +675,7 @@ export type Database = {
           sort_order:                number
           label:                     string
           price_from:                number
+          description:               string | null
           catches_text:              string | null
           target_species:            string[]
           boat_description:          string | null
@@ -687,6 +688,8 @@ export type Database = {
           what_to_bring:             string[]
           includes:                  string[]
           excludes:                  string[]
+          content_blocks:            Json
+          faq:                       Json
           created_at:                string
           updated_at:                string
         }
@@ -696,6 +699,7 @@ export type Database = {
           sort_order?:                number
           label?:                     string
           price_from?:                number
+          description?:               string | null
           catches_text?:              string | null
           target_species?:            string[]
           boat_description?:          string | null
@@ -708,6 +712,8 @@ export type Database = {
           what_to_bring?:             string[]
           includes?:                  string[]
           excludes?:                  string[]
+          content_blocks?:            Json | null
+          faq?:                       Json | null
           created_at?:                string
           updated_at?:                string
         }
@@ -717,6 +723,7 @@ export type Database = {
           sort_order?:                number
           label?:                     string
           price_from?:                number
+          description?:               string | null
           catches_text?:              string | null
           target_species?:            string[]
           boat_description?:          string | null
@@ -729,6 +736,8 @@ export type Database = {
           what_to_bring?:             string[]
           includes?:                  string[]
           excludes?:                  string[]
+          content_blocks?:            Json | null
+          faq?:                       Json | null
           created_at?:                string
           updated_at?:                string
         }
@@ -779,6 +788,14 @@ export type Database = {
           og_image_url:              string | null
           location_lat:              number | null
           location_lng:              number | null
+          intro_text:                string | null
+          species_details:           Json
+          boat_description:          string | null
+          boat_image_url:            string | null
+          special_attraction_text:   string | null
+          special_attraction_image_url: string | null
+          what_to_bring:             string[]
+          special_attractions:       Json
           created_at:                string
           updated_at:                string
         }
@@ -818,6 +835,14 @@ export type Database = {
           og_image_url?:              string | null
           location_lat?:              number | null
           location_lng?:              number | null
+          intro_text?:                string | null
+          species_details?:           Json | null
+          boat_description?:          string | null
+          boat_image_url?:            string | null
+          special_attraction_text?:   string | null
+          special_attraction_image_url?: string | null
+          what_to_bring?:             string[] | null
+          special_attractions?:       Json | null
           created_at?:                string
           updated_at?:                string
         }
@@ -857,6 +882,14 @@ export type Database = {
           og_image_url?:              string | null
           location_lat?:              number | null
           location_lng?:              number | null
+          intro_text?:                string | null
+          species_details?:           Json | null
+          boat_description?:          string | null
+          boat_image_url?:            string | null
+          special_attraction_text?:   string | null
+          special_attraction_image_url?: string | null
+          what_to_bring?:             string[] | null
+          special_attractions?:       Json | null
           created_at?:                string
           updated_at?:                string
         }
@@ -1068,8 +1101,9 @@ export type Database = {
           iban_holder_name: string | null
           iban_bic: string | null
           iban_bank_name: string | null
+          founding_guide_until: string | null
           /** Auto-computed generated column. true = Stripe Connect active OR IBAN saved. Read-only. */
-          payment_ready: boolean
+          payment_ready: boolean | null
         }
         Insert: {
           accepted_payment_methods?: string[] | null
@@ -1127,6 +1161,7 @@ export type Database = {
           iban_holder_name?: string | null
           iban_bic?: string | null
           iban_bank_name?: string | null
+          founding_guide_until?: string | null
         }
         Update: {
           accepted_payment_methods?: string[] | null
@@ -1184,6 +1219,7 @@ export type Database = {
           iban_holder_name?: string | null
           iban_bic?: string | null
           iban_bank_name?: string | null
+          founding_guide_until?: string | null
         }
         Relationships: [
           {
