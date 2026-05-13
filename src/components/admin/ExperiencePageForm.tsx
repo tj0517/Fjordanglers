@@ -1016,7 +1016,7 @@ export default function ExperiencePageForm({
     introText, heroImageUrl, galleryImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
     boatDescription, boatImageUrl, specialAttractions, whatToBring,
-    meetingName, meetingDesc, includes, excludes, metaTitle, metaDesc, ogImage,
+    meetingName, meetingDesc, includes, excludes, faqItems, metaTitle, metaDesc, ogImage,
     locationLat, locationLng,
     prefill, router, isEdit, experienceId,
   ])
