@@ -9,6 +9,7 @@ import { HomeNav } from '@/components/home/home-nav'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { Footer } from '@/components/layout/footer'
 import { ExperiencePageWithOptions } from '@/components/trips/ExperiencePageWithOptions'
+import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem, Accommodation } from '@/actions/experience-pages'
 import type { TripOption } from '@/components/trips/TripOptionsAccordion'
@@ -33,69 +34,6 @@ function SectionLabel({ label }: { label: string }) {
   return (
     <p className="text-xs font-semibold uppercase tracking-[0.25em] mt-4 mb-5 f-body"
       style={{ color: '#E67E50' }}>{label}</p>
-  )
-}
-
-// ─── Season Calendar ───────────────────────────────────────────────────────────
-
-const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-
-function SeasonCalendarGrid({
-  seasonMonths,
-  peakMonths,
-}: {
-  seasonMonths: number[]
-  peakMonths:   number[]
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-6 sm:grid-cols-12 gap-2">
-        {MONTH_SHORT.map((label, i) => {
-          const m      = i + 1
-          const isPeak = peakMonths.includes(m)
-          const isOpen = seasonMonths.includes(m)
-
-          let bg: string, textColor: string, dotBg: string, statusText: string
-          if (isPeak) {
-            bg = '#E67E50'; textColor = '#fff'; dotBg = 'rgba(255,255,255,0.7)'; statusText = 'Peak'
-          } else if (isOpen) {
-            bg = 'rgba(230,126,80,0.08)'; textColor = 'rgba(10,46,77,0.65)'; dotBg = 'rgba(230,126,80,0.5)'; statusText = 'Open'
-          } else {
-            bg = 'rgba(10,46,77,0.035)'; textColor = 'rgba(10,46,77,0.2)'; dotBg = 'rgba(10,46,77,0.1)'; statusText = '—'
-          }
-
-          return (
-            <div
-              key={label}
-              className="flex flex-col items-center justify-between rounded-2xl py-4 px-1"
-              style={{ background: bg, minHeight: '88px' }}
-            >
-              <span className="text-[11px] font-semibold uppercase tracking-wide f-body" style={{ color: textColor }}>
-                {label}
-              </span>
-              <span className="w-2 h-2 rounded-full" style={{ background: dotBg }} />
-              <span className="text-[9px] font-bold uppercase tracking-[0.1em] f-body text-center" style={{ color: textColor }}>
-                {statusText}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-6 flex-wrap">
-        {[
-          { dot: '#E67E50',               label: 'Peak season' },
-          { dot: 'rgba(230,126,80,0.5)',   label: 'Open season' },
-          { dot: 'rgba(10,46,77,0.12)',    label: 'Off season'  },
-        ].map(item => (
-          <div key={item.label} className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: item.dot }} />
-            <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>{item.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -368,6 +306,7 @@ export default async function ExperiencePublicPage({
             options={tripOptions}
             faq={faq}
             pageContentBlocks={pageContentBlocks}
+            speciesDetails={speciesDetails}
             tripId={page.trip_id}
             tripTitle={page.experience_name}
             maxGuests={maxGuests}
@@ -485,6 +424,46 @@ export default async function ExperiencePublicPage({
                   <p className="mt-3 text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
                     + {contentPhotos.length - 6} more photos
                   </p>
+                )}
+              </section>
+            )}
+
+            {/* WHAT YOU CAN CATCH */}
+            {(page.catches_text || speciesDetails.length > 0) && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="What you can catch" />
+                {page.catches_text && (
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify mb-8" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                    {page.catches_text}
+                  </p>
+                )}
+                {speciesDetails.length > 0 && (
+                  <div className="space-y-12">
+                    {speciesDetails.map((fish, idx) => (
+                      <div key={fish.name} className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-2xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>{fish.name}</h3>
+                          {fish.description && (
+                            <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                              {fish.description}
+                            </p>
+                          )}
+                          {fish.season_months.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
+                              <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
+                            </div>
+                          )}
+                        </div>
+                        {fish.image_url && (
+                          <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
+                            <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </section>
             )}
@@ -686,6 +665,46 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
+
+            {/* ──────────── WHAT YOU CAN CATCH ──────────── */}
+            {(page.catches_text || speciesDetails.length > 0) && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="What you can catch" />
+                {page.catches_text && (
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify mb-8" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                    {page.catches_text}
+                  </p>
+                )}
+                {speciesDetails.length > 0 && (
+                  <div className="space-y-12">
+                    {speciesDetails.map((fish, idx) => (
+                      <div key={fish.name} className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-2xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>{fish.name}</h3>
+                          {fish.description && (
+                            <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                              {fish.description}
+                            </p>
+                          )}
+                          {fish.season_months.length > 0 && (
+                            <div className="mt-5">
+                              <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
+                              <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
+                            </div>
+                          )}
+                        </div>
+                        {fish.image_url && (
+                          <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
+                            <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* ──────────── ROD SETUP & GEAR ──────────── */}
             {page.rod_setup && (

@@ -32,12 +32,13 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { TripOptionsAccordion, type TripOption } from '@/components/trips/TripOptionsAccordion'
 import { InquiryWidget } from '@/components/inquiry/InquiryWidget'
-import type { FaqItem, ContentBlock } from '@/actions/experience-pages'
+import type { FaqItem, ContentBlock, SpeciesDetailItem } from '@/actions/experience-pages'
 
 interface ExperiencePageWithOptionsProps {
   options:            TripOption[]
   faq?:               FaqItem[]
   pageContentBlocks?: ContentBlock[]
+  speciesDetails?:    SpeciesDetailItem[]
   tripId:             string | null
   tripTitle:          string
   maxGuests:          number
@@ -49,6 +50,7 @@ export function ExperiencePageWithOptions({
   options,
   faq = [],
   pageContentBlocks = [],
+  speciesDetails = [],
   tripId,
   tripTitle,
   maxGuests,
@@ -94,6 +96,7 @@ export function ExperiencePageWithOptions({
           options={options}
           selectedIdx={selectedIdx}
           onSelect={setSelectedIdx}
+          speciesDetails={speciesDetails}
         />
 
         {/* FAQ */}

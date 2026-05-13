@@ -18,7 +18,8 @@
 
 import Image from 'next/image'
 import { MapPin, Check, X as XIcon, ChevronDown, ChevronUp } from 'lucide-react'
-import type { SpecialAttraction, ContentBlock } from '@/actions/experience-pages'
+import type { SpecialAttraction, ContentBlock, SpeciesDetailItem } from '@/actions/experience-pages'
+import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,14 +44,17 @@ export interface TripOption {
 }
 
 interface TripOptionsAccordionProps {
-  options:     TripOption[]
-  selectedIdx: number
-  onSelect:    (idx: number) => void
+  options:        TripOption[]
+  selectedIdx:    number
+  onSelect:       (idx: number) => void
+  speciesDetails?: SpeciesDetailItem[]
 }
 
 // ─── Per-option content panel ─────────────────────────────────────────────────
 
-function OptionPanel({ option }: { option: TripOption }) {
+function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; speciesDetails?: SpeciesDetailItem[] }) {
+  const filteredSpecies = speciesDetails.filter(s => option.target_species.includes(s.name))
+
   return (
     <div className="space-y-10 px-6 py-8">
 
@@ -70,6 +74,46 @@ function OptionPanel({ option }: { option: TripOption }) {
         </section>
       ))}
 
+
+      {/* ── What you can catch ── */}
+      {(option.catches_text || filteredSpecies.length > 0) && (
+        <section>
+          <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>What you can catch</p>
+          {option.catches_text && (
+            <p className="text-base sm:text-lg f-body leading-relaxed text-justify mb-8" style={{ color: 'rgba(10,46,77,0.72)' }}>
+              {option.catches_text}
+            </p>
+          )}
+          {filteredSpecies.length > 0 && (
+            <div className="space-y-10">
+              {filteredSpecies.map((fish, idx) => (
+                <div key={fish.name} className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xl font-bold f-display mb-2" style={{ color: '#0A2E4D' }}>{fish.name}</h4>
+                    {fish.description && (
+                      <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                        {fish.description}
+                      </p>
+                    )}
+                    {fish.season_months.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
+                        <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
+                      </div>
+                    )}
+                  </div>
+                  {fish.image_url && (
+                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[320px] aspect-[4/3]">
+                      <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 320px, 100vw" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Boat ── */}
       {(option.boat_description || option.boat_image_url) && (
@@ -216,7 +260,7 @@ function OptionPanel({ option }: { option: TripOption }) {
 
 // ─── Accordion ────────────────────────────────────────────────────────────────
 
-export function TripOptionsAccordion({ options, selectedIdx, onSelect }: TripOptionsAccordionProps) {
+export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDetails }: TripOptionsAccordionProps) {
   if (options.length === 0) return null
 
   return (
@@ -276,7 +320,7 @@ export function TripOptionsAccordion({ options, selectedIdx, onSelect }: TripOpt
               {/* Expandable content */}
               {isOpen && (
                 <div style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-                  <OptionPanel option={option} />
+                  <OptionPanel option={option} speciesDetails={speciesDetails} />
                 </div>
               )}
             </div>
