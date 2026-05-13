@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExperiencePageForm, { type ExperiencePageFormInitialData } from '@/components/admin/ExperiencePageForm'
-import type { SpeciesDetailItem, SpecialAttraction, Accommodation } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction, Accommodation, ContentBlock } from '@/actions/experience-pages'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -38,6 +38,7 @@ export default async function AdminExperienceEditPage({
     accommodations:       unknown
     faq:                  unknown
     content_photo_urls:   unknown
+    content_blocks:       unknown
   }
   const page = rawPage as unknown as PageWithNewCols
 
@@ -126,6 +127,7 @@ export default async function AdminExperienceEditPage({
     accommodations:      (page.accommodations as Accommodation[] | null) ?? [],
     faq:                 page.faq ?? [],
     content_photo_urls:  (page.content_photo_urls as string[] | null) ?? [],
+    content_blocks:      (page.content_blocks as ContentBlock[] | null) ?? [],
   }
 
   return (

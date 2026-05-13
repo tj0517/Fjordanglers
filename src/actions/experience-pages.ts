@@ -87,6 +87,8 @@ export interface ExperiencePagePayload {
   excludes?:                         string[]
   // Content photos (shown in the "Photos" section — independent from gallery_image_urls)
   content_photo_urls?:               string[]
+  // Page-level content blocks (shown after Season, before Trip Options)
+  content_blocks?:                   ContentBlock[]
   // FAQ
   faq?:                              FaqItem[]
   // SEO
@@ -368,6 +370,7 @@ export async function updateExperiencePage(
   if (payload.what_to_bring      != null) update.what_to_bring                 = payload.what_to_bring
   if (payload.includes          != null) update.includes                       = payload.includes
   if (payload.excludes          != null) update.excludes                     = payload.excludes
+  if (payload.content_blocks    != null) update.content_blocks               = payload.content_blocks as unknown as import('@/lib/supabase/database.types').Json
   if (payload.faq               != null) update.faq                          = payload.faq as unknown as import('@/lib/supabase/database.types').Json
   if (payload.meta_title        !== undefined) update.meta_title             = payload.meta_title
   if (payload.meta_description  !== undefined) update.meta_description       = payload.meta_description

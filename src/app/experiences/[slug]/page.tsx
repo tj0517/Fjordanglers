@@ -163,6 +163,7 @@ export default async function ExperiencePublicPage({
     accommodations:      unknown
     faq:                 unknown
     content_photo_urls:  unknown
+    content_blocks:      unknown
   }
   const page = rawPage as unknown as PageWithNewCols
 
@@ -277,6 +278,7 @@ export default async function ExperiencePublicPage({
   const accommodations       = (page.accommodations      as Accommodation[]      | null) ?? []
   const whatToBring          = (page.what_to_bring      as string[]             | null) ?? []
   const faq                  = (page.faq               as FaqItem[]            | null) ?? []
+  const pageContentBlocks    = (page.content_blocks     as ContentBlock[]       | null) ?? []
   const guideLanguages       = (guide?.languages        as string[]             | null) ?? []
 
 
@@ -365,6 +367,7 @@ export default async function ExperiencePublicPage({
           <ExperiencePageWithOptions
             options={tripOptions}
             faq={faq}
+            pageContentBlocks={pageContentBlocks}
             tripId={page.trip_id}
             tripTitle={page.experience_name}
             maxGuests={maxGuests}
@@ -720,6 +723,26 @@ export default async function ExperiencePublicPage({
                   </p>
                 )}
               </section>
+            )}
+
+            {/* ──────────── PAGE CONTENT BLOCKS ──────────── */}
+            {pageContentBlocks.length > 0 && (
+              <div className="space-y-10 mb-12">
+                {pageContentBlocks.map((block, i) => (
+                  <section key={i}>
+                    {block.headline && (
+                      <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
+                        {block.headline}
+                      </h4>
+                    )}
+                    {block.text && (
+                      <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                        {block.text}
+                      </p>
+                    )}
+                  </section>
+                ))}
+              </div>
             )}
 
             {/* ──────────── BOAT | PHOTO ──────────── */}

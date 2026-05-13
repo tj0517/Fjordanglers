@@ -740,6 +740,7 @@ export interface ExperiencePageFormInitialData {
   meeting_point_description:    string | null
   includes:                     string[]
   excludes:                     string[]
+  content_blocks?:              ContentBlock[]
   faq:                          unknown   // FaqItem[] stored as JSONB
   meta_title:                   string | null
   meta_description:             string | null
@@ -902,6 +903,9 @@ export default function ExperiencePageForm({
   const [includes, setIncludes] = useState(initialData?.includes?.join('\n') ?? 'Guide service')
   const [excludes, setExcludes] = useState(initialData?.excludes?.join('\n') ?? '')
 
+  // ── Page-level content blocks
+  const [pageBlocks, setPageBlocks] = useState<ContentBlock[]>(initialData?.content_blocks ?? [])
+
   // ── Section 12b: FAQ (global)
   const [faqItems, setFaqItems] = useState<FaqItem[]>(() => parseJsonField<FaqItem>(initialData?.faq))
 
@@ -992,6 +996,7 @@ export default function ExperiencePageForm({
       meeting_point_description:        meetingDesc.trim() || null,
       includes:                         parseLines(includes),
       excludes:                         parseLines(excludes),
+      content_blocks:                   pageBlocks.filter(b => b.headline.trim() || b.text.trim()),
       faq:                              faqItems.filter(f => f.question.trim() || f.answer.trim()),
       meta_title:                       metaTitle.trim()   || null,
       meta_description:                 metaDesc.trim()    || null,
@@ -1029,7 +1034,7 @@ export default function ExperiencePageForm({
     introText, heroImageUrl, galleryImages, contentPhotoImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
     boatDescription, boatImageUrl, specialAttractions, accommodationItems, whatToBring,
-    meetingName, meetingDesc, includes, excludes, faqItems, metaTitle, metaDesc, ogImage,
+    meetingName, meetingDesc, includes, excludes, pageBlocks, faqItems, metaTitle, metaDesc, ogImage,
     locationLat, locationLng,
     prefill, router, isEdit, experienceId,
   ])
@@ -1314,6 +1319,56 @@ export default function ExperiencePageForm({
         onSeasonChange={setSeasonMonths}
         onPeakChange={setPeakMonths}
       />
+
+      <Divider />
+
+      {/* ── 6b. Page-level text blocks ── */}
+      <SectionLabel
+        step={6}
+        title="Text blocks"
+        desc="Headline + text pairs shown after the season section and before trip options."
+      />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className={lbl}>Text blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
+          <button
+            type="button"
+            onClick={() => setPageBlocks(prev => [...prev, { headline: '', text: '' }])}
+            className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+            style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+            + Add block
+          </button>
+        </div>
+        {pageBlocks.map((block, bi) => (
+          <div key={bi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={block.headline}
+                onChange={e => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, headline: e.target.value } : b))}
+                placeholder="Section headline…"
+                className={inp} style={{ ...iStyle, flex: 1 }} />
+              <button
+                type="button"
+                onClick={() => setPageBlocks(prev => prev.filter((_, i) => i !== bi))}
+                className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                Remove
+              </button>
+            </div>
+            <textarea
+              value={block.text}
+              onChange={e => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
+              placeholder="Block text…"
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={iStyle} />
+          </div>
+        ))}
+        {pageBlocks.length === 0 && (
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No text blocks yet. Click &quot;+ Add block&quot; to add one.</p>
+        )}
+      </div>
 
       <Divider />
 

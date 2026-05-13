@@ -32,21 +32,23 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { TripOptionsAccordion, type TripOption } from '@/components/trips/TripOptionsAccordion'
 import { InquiryWidget } from '@/components/inquiry/InquiryWidget'
-import type { FaqItem } from '@/actions/experience-pages'
+import type { FaqItem, ContentBlock } from '@/actions/experience-pages'
 
 interface ExperiencePageWithOptionsProps {
-  options:       TripOption[]
-  faq?:          FaqItem[]
-  tripId:        string | null
-  tripTitle:     string
-  maxGuests:     number
-  blockedRanges: Array<{ date_start: string; date_end: string }>
-  children?:     React.ReactNode
+  options:            TripOption[]
+  faq?:               FaqItem[]
+  pageContentBlocks?: ContentBlock[]
+  tripId:             string | null
+  tripTitle:          string
+  maxGuests:          number
+  blockedRanges:      Array<{ date_start: string; date_end: string }>
+  children?:          React.ReactNode
 }
 
 export function ExperiencePageWithOptions({
   options,
   faq = [],
+  pageContentBlocks = [],
   tripId,
   tripTitle,
   maxGuests,
@@ -66,6 +68,26 @@ export function ExperiencePageWithOptions({
       <div className="flex-1 min-w-0">
         {/* Server-rendered page-level sections (intro, quick fit, about, photos, etc.) */}
         {children}
+
+        {/* Page-level content blocks — shown after season, before trip options */}
+        {pageContentBlocks.length > 0 && (
+          <div className="space-y-10 mb-10">
+            {pageContentBlocks.map((block, i) => (
+              <section key={i}>
+                {block.headline && (
+                  <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
+                    {block.headline}
+                  </h4>
+                )}
+                {block.text && (
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                    {block.text}
+                  </p>
+                )}
+              </section>
+            ))}
+          </div>
+        )}
 
         {/* Client-side accordion for trip options */}
         <TripOptionsAccordion
