@@ -118,27 +118,22 @@ export default function MultiImageUpload({
 
   // ── Gallery picker: toggle a photo in/out ────────────────────────────────
   const toggleGalleryPhoto = useCallback((url: string) => {
-    const curPendingCount = pending.length
-    setCommitted(prev => {
-      const has = prev.some(g => g.url === url)
-      if (has) {
-        // Remove — re-index sort_order + is_cover
-        const updated = prev
-          .filter(g => g.url !== url)
-          .map((g, i) => ({ ...g, is_cover: i === 0, sort_order: i }))
-        onChange(updated)
-        return updated
-      }
-      // Add — only if under max
-      if (prev.length + curPendingCount >= max) return prev
-      const updated: GalleryImage[] = [
-        ...prev,
-        { url, is_cover: prev.length === 0, sort_order: prev.length },
+    const has = committed.some(g => g.url === url)
+    let updated: GalleryImage[]
+    if (has) {
+      updated = committed
+        .filter(g => g.url !== url)
+        .map((g, i) => ({ ...g, is_cover: i === 0, sort_order: i }))
+    } else {
+      if (committed.length + pending.length >= max) return
+      updated = [
+        ...committed,
+        { url, is_cover: committed.length === 0, sort_order: committed.length },
       ]
-      onChange(updated)
-      return updated
-    })
-  }, [onChange, pending, max])
+    }
+    setCommitted(updated)
+    onChange(updated)
+  }, [onChange, committed, pending, max])
 
   // ── Upload a single new file ──────────────────────────────────────────────
   const uploadAndAdd = useCallback(async (file: File) => {
@@ -157,7 +152,7 @@ export default function MultiImageUpload({
           ...prev,
           { url, is_cover: prev.length === 0, sort_order: prev.length },
         ]
-        onChange(updated)
+        queueMicrotask(() => onChange(updated))
         return updated
       })
     }
@@ -178,7 +173,7 @@ export default function MultiImageUpload({
     if (url != null) {
       setCommitted(prev => {
         const updated = prev.map((img, i) => i === idx ? { ...img, url } : img)
-        onChange(updated)
+        queueMicrotask(() => onChange(updated))
         return updated
       })
     }
@@ -204,13 +199,11 @@ export default function MultiImageUpload({
   }
 
   const removeImage = (idx: number) => {
-    setCommitted(prev => {
-      const updated = prev
-        .filter((_, i) => i !== idx)
-        .map((img, i) => ({ ...img, is_cover: i === 0, sort_order: i }))
-      onChange(updated)
-      return updated
-    })
+    const updated = committed
+      .filter((_, i) => i !== idx)
+      .map((img, i) => ({ ...img, is_cover: i === 0, sort_order: i }))
+    setCommitted(updated)
+    onChange(updated)
   }
 
   // ─── Render ─────────────────────────────────────────────────────────────────

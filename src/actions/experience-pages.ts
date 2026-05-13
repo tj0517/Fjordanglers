@@ -24,6 +24,12 @@ export interface SpecialAttraction {
   image_url: string
 }
 
+export interface Accommodation {
+  heading:     string
+  description: string
+  image_url:   string
+}
+
 export interface ContentBlock {
   headline: string
   text:     string
@@ -72,11 +78,15 @@ export interface ExperiencePagePayload {
   boat_image_url?:                   string | null
   // Special attractions (multi-item, replaces old single special_attraction_* fields)
   special_attractions?:              SpecialAttraction[]
+  // Accommodations (multi-item)
+  accommodations?:                   Accommodation[]
   // What to bring
   what_to_bring?:                    string[]
   // Includes / Excludes
   includes?:                         string[]
   excludes?:                         string[]
+  // Content photos (shown in the "Photos" section — independent from gallery_image_urls)
+  content_photo_urls?:               string[]
   // FAQ
   faq?:                              FaqItem[]
   // SEO
@@ -140,6 +150,7 @@ export async function createExperiencePage(
       intro_text:                       payload.intro_text      ?? null,
       hero_image_url:                   payload.hero_image_url  ?? null,
       gallery_image_urls:               payload.gallery_image_urls ?? [],
+      content_photo_urls:               payload.content_photo_urls ?? [],
       story_text:                       payload.story_text        ?? null,
       meeting_point_name:               payload.meeting_point_name ?? null,
       meeting_point_description:        payload.meeting_point_description ?? null,
@@ -152,6 +163,7 @@ export async function createExperiencePage(
       boat_description:                 payload.boat_description ?? null,
       boat_image_url:                   payload.boat_image_url   ?? null,
       special_attractions:              (payload.special_attractions ?? []) as unknown as import('@/lib/supabase/database.types').Json,
+      accommodations:                   (payload.accommodations ?? []) as unknown as import('@/lib/supabase/database.types').Json,
       what_to_bring:                    payload.what_to_bring ?? [],
       includes:                         payload.includes ?? [],
       excludes:                         payload.excludes ?? [],
@@ -339,6 +351,7 @@ export async function updateExperiencePage(
   if (payload.intro_text        !== undefined) update.intro_text             = payload.intro_text
   if (payload.hero_image_url    !== undefined) update.hero_image_url         = payload.hero_image_url
   if (payload.gallery_image_urls != null) update.gallery_image_urls          = payload.gallery_image_urls
+  if (payload.content_photo_urls != null) update.content_photo_urls          = payload.content_photo_urls
   if (payload.story_text        !== undefined) update.story_text             = payload.story_text
   if (payload.meeting_point_name !== undefined) update.meeting_point_name    = payload.meeting_point_name
   if (payload.meeting_point_description !== undefined) update.meeting_point_description = payload.meeting_point_description
@@ -351,6 +364,7 @@ export async function updateExperiencePage(
   if (payload.boat_description  !== undefined) update.boat_description       = payload.boat_description
   if (payload.boat_image_url    !== undefined) update.boat_image_url         = payload.boat_image_url
   if (payload.special_attractions != null) update.special_attractions           = payload.special_attractions
+  if (payload.accommodations      != null) update.accommodations                = payload.accommodations as unknown as import('@/lib/supabase/database.types').Json
   if (payload.what_to_bring      != null) update.what_to_bring                 = payload.what_to_bring
   if (payload.includes          != null) update.includes                       = payload.includes
   if (payload.excludes          != null) update.excludes                     = payload.excludes

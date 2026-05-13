@@ -32,6 +32,7 @@ import {
   type ExperiencePagePayload,
   type SpeciesDetailItem,
   type SpecialAttraction,
+  type Accommodation,
   type ContentBlock,
   type FaqItem,
   type ExperiencePageOptionPayload,
@@ -429,17 +430,19 @@ function OptionEditor({
     <div className="rounded-2xl overflow-hidden" style={{
       border: isOpen ? '1.5px solid rgba(230,126,80,0.35)' : '1.5px solid rgba(10,46,77,0.1)',
     }}>
-      {/* Header */}
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+      {/* Header — intentionally a div so the Delete button is not nested inside a button */}
+      <div
+        className="w-full flex items-center justify-between px-4 py-3 transition-colors"
         style={{ background: isOpen ? 'rgba(230,126,80,0.04)' : 'rgba(10,46,77,0.02)' }}
       >
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+        >
           {isOpen
-            ? <ChevronUp size={14} style={{ color: '#E67E50' }} />
-            : <ChevronDown size={14} style={{ color: 'rgba(10,46,77,0.4)' }} />}
+            ? <ChevronUp size={14} style={{ color: '#E67E50', flexShrink: 0 }} />
+            : <ChevronDown size={14} style={{ color: 'rgba(10,46,77,0.4)', flexShrink: 0 }} />}
           <div>
             <span className="text-sm font-bold f-body" style={{ color: isOpen ? '#E67E50' : '#0A2E4D' }}>
               {label || `Option ${index + 1}`}
@@ -450,17 +453,17 @@ function OptionEditor({
               </span>
             )}
           </div>
-        </div>
+        </button>
         <button
           type="button"
-          onClick={e => { e.stopPropagation(); handleDelete() }}
+          onClick={handleDelete}
           disabled={deleting}
           className="text-xs font-semibold f-body px-2.5 py-1 rounded-lg ml-4 flex-shrink-0"
           style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
         >
           {deleting ? 'Deleting…' : 'Delete'}
         </button>
-      </button>
+      </div>
 
       {/* Body */}
       {isOpen && (
@@ -720,6 +723,7 @@ export interface ExperiencePageFormInitialData {
   intro_text:                   string | null
   hero_image_url:               string | null
   gallery_image_urls:           string[]
+  content_photo_urls?:          string[]
   story_text:                   string | null
   catches_text:                 string | null
   rod_setup:                    string | null
@@ -730,6 +734,7 @@ export interface ExperiencePageFormInitialData {
   boat_description:             string | null
   boat_image_url:               string | null
   special_attractions:          SpecialAttraction[]
+  accommodations:               Accommodation[]
   what_to_bring:                string[]
   meeting_point_name:           string | null
   meeting_point_description:    string | null
@@ -846,6 +851,9 @@ export default function ExperiencePageForm({
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(
     () => (initialData?.gallery_image_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))
   )
+  const [contentPhotoImages, setContentPhotoImages] = useState<GalleryImage[]>(
+    () => (initialData?.content_photo_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))
+  )
 
   // ── Section 6: Season months
   const [seasonMonths, setSeasonMonths] = useState<number[]>(
@@ -878,6 +886,9 @@ export default function ExperiencePageForm({
   // ── Section 9: Special attractions (multi-item)
   const [specialAttractions, setSpecialAttractions] = useState<SpecialAttraction[]>(
     initialData?.special_attractions ?? []
+  )
+  const [accommodationItems, setAccommodationItems] = useState<Accommodation[]>(
+    initialData?.accommodations ?? []
   )
 
   // ── Section 10: Meeting point
@@ -964,6 +975,7 @@ export default function ExperiencePageForm({
       intro_text:                       introText.trim()    || null,
       hero_image_url:                   heroImageUrl.trim() || null,
       gallery_image_urls:               galleryImages.map(g => g.url),
+      content_photo_urls:               contentPhotoImages.map(g => g.url),
       story_text:                       storyText.trim()   || null,
       catches_text:                     catchesText.trim() || null,
       rod_setup:                        rodSetup.trim()    || null,
@@ -974,6 +986,7 @@ export default function ExperiencePageForm({
       boat_description:                 boatDescription.trim()             || null,
       boat_image_url:                   boatImageUrl.trim()                || null,
       special_attractions:              specialAttractions.filter(a => a.text.trim()),
+      accommodations:                   accommodationItems.filter(a => a.description.trim() || a.heading.trim()),
       what_to_bring:                    parseLines(whatToBring),
       meeting_point_name:               meetingName.trim() || null,
       meeting_point_description:        meetingDesc.trim() || null,
@@ -1013,9 +1026,9 @@ export default function ExperiencePageForm({
   }, [
     canSubmit, experienceName, slug, country, region, priceFrom, seasonStart, seasonEnd,
     status, difficulty, effort, nonAnglerFriendly, technique, targetSpecies, environment,
-    introText, heroImageUrl, galleryImages, storyText, catchesText, rodSetup, bestMonths,
+    introText, heroImageUrl, galleryImages, contentPhotoImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
-    boatDescription, boatImageUrl, specialAttractions, whatToBring,
+    boatDescription, boatImageUrl, specialAttractions, accommodationItems, whatToBring,
     meetingName, meetingDesc, includes, excludes, faqItems, metaTitle, metaDesc, ogImage,
     locationLat, locationLng,
     prefill, router, isEdit, experienceId,
@@ -1269,6 +1282,23 @@ export default function ExperiencePageForm({
         pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
         guideId={prefill?.guide_id ?? undefined}
       />
+      <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+        Shown in the top bento gallery on the experience page
+      </p>
+
+      <div className="mt-6">
+        <MultiImageUpload
+          label="Content photos"
+          initial={contentPhotoImages}
+          max={12}
+          onChange={setContentPhotoImages}
+          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          guideId={prefill?.guide_id ?? undefined}
+        />
+        <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+          Shown in the Photos section of the page — independent from the top gallery
+        </p>
+      </div>
 
       <Divider />
 
@@ -1348,7 +1378,77 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 9. Special Attractions ── */}
+      {/* ── 9. Accommodation ── */}
+      <SectionLabel
+        step={9}
+        title="Accommodation"
+        desc="Each item is shown as a section with heading, description and photo. Add as many as you like."
+      />
+      <div className="space-y-4">
+        {accommodationItems.map((item, idx) => (
+          <div key={idx} className="space-y-3 p-4 rounded-2xl" style={{ border: '1px solid rgba(10,46,77,0.1)', background: 'rgba(10,46,77,0.02)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                Accommodation {idx + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAccommodationItems(prev => prev.filter((_, i) => i !== idx))}
+                className="text-xs font-semibold f-body px-2.5 py-1 rounded-lg"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
+              >
+                Remove
+              </button>
+            </div>
+            <div>
+              <label className={lbl}>Heading</label>
+              <input
+                type="text"
+                value={item.heading}
+                onChange={e => setAccommodationItems(prev => prev.map((a, i) => i === idx ? { ...a, heading: e.target.value } : a))}
+                placeholder="Riverside Cabin, Hotel Fjord, etc."
+                maxLength={120}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"
+                style={iStyle}
+              />
+            </div>
+            <ImageUpload
+              label="Photo"
+              variant="cover"
+              aspect="wide"
+              cropAspect={4 / 3}
+              currentUrl={item.image_url || null}
+              onUpload={(url) => setAccommodationItems(prev => prev.map((a, i) => i === idx ? { ...a, image_url: url } : a))}
+              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              guideId={prefill?.guide_id ?? undefined}
+              hint="Landscape — shown alongside the description."
+            />
+            <div>
+              <label className={lbl}>Description</label>
+              <textarea
+                value={item.description}
+                onChange={e => setAccommodationItems(prev => prev.map((a, i) => i === idx ? { ...a, description: e.target.value } : a))}
+                placeholder="A cosy riverside cabin sleeping up to 6, with a sauna and direct river access…"
+                rows={4} maxLength={800}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                style={iStyle}
+              />
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setAccommodationItems(prev => [...prev, { heading: '', description: '', image_url: '' }])}
+          className="text-sm font-semibold f-body px-4 py-2 rounded-xl transition-colors"
+          style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}
+        >
+          + Add accommodation
+        </button>
+      </div>
+
+      <Divider />
+
+      {/* ── 10. Special Attractions ── */}
       <SectionLabel
         step={9}
         title="Special Attractions"

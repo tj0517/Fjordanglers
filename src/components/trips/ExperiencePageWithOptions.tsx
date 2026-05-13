@@ -32,22 +32,20 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { TripOptionsAccordion, type TripOption } from '@/components/trips/TripOptionsAccordion'
 import { InquiryWidget } from '@/components/inquiry/InquiryWidget'
-import type { SpeciesDetailItem, FaqItem } from '@/actions/experience-pages'
+import type { FaqItem } from '@/actions/experience-pages'
 
 interface ExperiencePageWithOptionsProps {
-  options:        TripOption[]
-  speciesLibrary: SpeciesDetailItem[]
-  faq?:           FaqItem[]
-  tripId:         string | null
-  tripTitle:      string
-  maxGuests:      number
-  blockedRanges:  Array<{ date_start: string; date_end: string }>
-  children?:      React.ReactNode
+  options:       TripOption[]
+  faq?:          FaqItem[]
+  tripId:        string | null
+  tripTitle:     string
+  maxGuests:     number
+  blockedRanges: Array<{ date_start: string; date_end: string }>
+  children?:     React.ReactNode
 }
 
 export function ExperiencePageWithOptions({
   options,
-  speciesLibrary,
   faq = [],
   tripId,
   tripTitle,
@@ -72,7 +70,6 @@ export function ExperiencePageWithOptions({
         {/* Client-side accordion for trip options */}
         <TripOptionsAccordion
           options={options}
-          speciesLibrary={speciesLibrary}
           selectedIdx={selectedIdx}
           onSelect={setSelectedIdx}
         />
