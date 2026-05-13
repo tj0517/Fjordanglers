@@ -88,24 +88,26 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
           {filteredSpecies.length > 0 && (
             <div className="space-y-10">
               {filteredSpecies.map((fish, idx) => (
-                <div key={fish.name} className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xl font-bold f-display mb-2" style={{ color: '#0A2E4D' }}>{fish.name}</h4>
-                    {fish.description && (
-                      <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
-                        {fish.description}
-                      </p>
-                    )}
-                    {fish.season_months.length > 0 && (
-                      <div className="mt-4">
-                        <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
-                        <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
+                <div key={fish.name}>
+                  <div className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xl font-bold f-display mb-2" style={{ color: '#0A2E4D' }}>{fish.name}</h4>
+                      {fish.description && (
+                        <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                          {fish.description}
+                        </p>
+                      )}
+                    </div>
+                    {fish.image_url && (
+                      <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[320px] aspect-[4/3]">
+                        <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 320px, 100vw" />
                       </div>
                     )}
                   </div>
-                  {fish.image_url && (
-                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[320px] aspect-[4/3]">
-                      <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 320px, 100vw" />
+                  {fish.season_months.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
+                      <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
                     </div>
                   )}
                 </div>
