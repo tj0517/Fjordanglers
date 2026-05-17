@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { HomeNav } from '@/components/home/home-nav'
-import { Footer } from '@/components/layout/footer'
+import { SiteNav } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
 
 export const metadata = {
   title: 'Thanks — FjordAnglers',
@@ -10,8 +10,7 @@ export const metadata = {
 export default function ThankYouPage() {
   return (
     <>
-      <HomeNav pinned initialVariant="light" />
-
+      <SiteNav />
       <main
 
         className="min-h-screen flex items-center justify-center px-4"
@@ -115,7 +114,7 @@ export default function ThankYouPage() {
           </p>
         </div>
       </main>
-      <Footer />
+      <SiteFooter />
     </>
   )
 }

@@ -64,7 +64,7 @@ export function ExperiencePageWithOptions({
     : null
 
   return (
-    <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 py-12 lg:py-14">
+    <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 pt-5 pb-12 lg:py-14">
 
       {/* ── Left column ── */}
       <div className="flex-1 min-w-0">

@@ -1,12 +1,14 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { HomeNav } from '@/components/home/home-nav'
-import { Footer } from '@/components/layout/footer'
+import { SiteNav } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 
 export const metadata = {
-  title: 'About — FjordAnglers',
-  description: 'Three anglers from Gdańsk who built what they actually wanted.',
+  title: 'Our Story — Who We Are',
+  description: 'FjordAnglers was built by three Polish anglers who backpacked Norway, Sweden and Iceland with a rod. We only list guided fishing trips we\'d book ourselves.',
+  alternates: { canonical: 'https://fjordanglers.com/about' },
+  openGraph: { url: 'https://fjordanglers.com/about', type: 'website' },
 }
 
 const GALLERY_IMAGES = [
@@ -20,20 +22,20 @@ const GALLERY_IMAGES = [
 const FOUNDERS = [
   {
     name:  'Tymon',
-    role:  'Co-founder',
-    line:  'Grew up on Polish rivers. First Norway trip — wrong flies, zero fish. Never stopped going back.',
+    role:  'CEO & Co-founder',
+    line:  'Passionate angler and builder. The one who actually built the website you&apos;re looking at.',
     photo: '/about/tymon.jpg',
   },
   {
     name:  'Krzychu',
-    role:  'Co-founder',
-    line:  'Fly fishing obsessive. Seven countries, keeps a spreadsheet of every hatch.',
+    role:  'Head of Fishing & Co-founder',
+    line:  'The biggest fishing passionate of the group. The one who would fish every day if he could.',
     photo: '/about/krzychu.jpg',
   },
   {
     name:  'Lukas',
-    role:  'Co-founder',
-    line:  'Handles guide relationships and quality control. The one who reads the regulations.',
+    role:  'Co-founder & Social Media Manager',
+    line:  'The one who makes sure you see our photos on Instagram and keeps the vibe right.',
     photo: '/about/lukas.jpg',
   },
 ]
@@ -41,12 +43,11 @@ const FOUNDERS = [
 export default function AboutPage() {
   return (
     <>
-      <HomeNav pinned initialVariant="light" />
-
+      <SiteNav />
       <main style={{ background: '#F3EDE4' }}>
 
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <section className="px-5 md:px-14 lg:px-20 pt-28 md:pt-36 pb-12">
+        <section className="px-4 sm:px-8 md:px-14 lg:px-20 pt-28 md:pt-36 pb-12">
           <div className="max-w-[1200px] mx-auto">
             <p
               className="f-body font-semibold uppercase tracking-[0.18em] mb-6"
@@ -72,14 +73,14 @@ export default function AboutPage() {
         </section>
 
         {/* ── Gallery ─────────────────────────────────────────────────── */}
-        <section className="px-5 md:px-14 lg:px-20 pb-20 md:pb-28">
+        <section className="px-4 sm:px-8 md:px-14 lg:px-20 pb-20 md:pb-28">
           <div className="max-w-[1200px] mx-auto">
             <ExperienceGallery images={GALLERY_IMAGES} title="FjordAnglers" />
           </div>
         </section>
 
         {/* ── Story ───────────────────────────────────────────────────── */}
-        <section className="px-5 md:px-14 lg:px-20 pb-20 md:pb-28">
+        <section className="px-4 sm:px-8 md:px-14 lg:px-20 pb-20 md:pb-28">
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start">
 
             {/* Left: pull quote */}
@@ -94,17 +95,20 @@ export default function AboutPage() {
                   letterSpacing: '-0.01em',
                 }}
               >
-                "We drove 24 hours to Norway to fish with a guide who'd never seen a salmon."
+                "We&apos;ve slept in tents on Norwegian coastlines with rods propped against the tent. We know the water. We found the guides who know it even better."
               </p>
             </div>
 
             {/* Right: story text */}
             <div className="flex flex-col gap-5" style={{ paddingTop: '28px' }}>
               <p className="f-body" style={{ fontSize: '16px', color: 'rgba(10,46,77,0.6)', lineHeight: 1.85 }}>
-                It was 2023. Three students from Gdańsk, one car, one rod each. We booked through a travel agency. The guide arrived late, didn't know the river, and spent most of the day on his phone. Zero fish.
+                We&apos;re students from Gdańsk who&apos;ve been backpacking Nordic countires every summer we could - with rods, sleeping in tents. Not package tours. We fell in love with Nordic nature the hard way: figuring it out ourselves.
               </p>
               <p className="f-body" style={{ fontSize: '16px', color: 'rgba(10,46,77,0.6)', lineHeight: 1.85 }}>
-                We drove home with one question we couldn't shake: why is there no alternative? So we started calling guides directly — fishing with them, building relationships. FjordAnglers is still a small list. Not a platform. Twenty guides we know personally, across four countries we love.
+                The problem is real: when you&apos;re surrounded by hundreds of rivers, lakes, and miles of coastline, knowing where to fish — and when — is everything. Without local knowledge, you&apos;re guessing. So we started reaching out to local guides cold — some found us first — and built a list of the ones we&apos;d actually book ourselves.
+              </p>
+              <p className="f-body" style={{ fontSize: '16px', color: 'rgba(10,46,77,0.6)', lineHeight: 1.85 }}>
+                Every trip we list is one we&apos;d go on ourselves. We don&apos;t force a lodge package on you — if you want to fly in and stay in a cabin for a week, we have that. If you want to backpack the country and just hire a guide for a day to learn the water and catch something serious, we have that too. You choose how you travel. We just make sure the guide is worth it.
               </p>
             </div>
 
@@ -113,7 +117,7 @@ export default function AboutPage() {
 
         {/* ── Founders ────────────────────────────────────────────────── */}
         <section
-          className="px-5 md:px-14 lg:px-20 py-16 md:py-24"
+          className="px-4 sm:px-8 md:px-14 lg:px-20 py-16 md:py-24"
           style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}
         >
           <div className="max-w-[1200px] mx-auto">
@@ -125,7 +129,7 @@ export default function AboutPage() {
               Who we are
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 md:gap-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 md:gap-10">
               {FOUNDERS.map(f => (
                 <div key={f.name}>
                   {/* Photo */}
@@ -167,7 +171,7 @@ export default function AboutPage() {
 
         {/* ── Footer strip ────────────────────────────────────────────── */}
         <div
-          className="px-5 md:px-14 lg:px-20 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+          className="px-4 sm:px-8 md:px-14 lg:px-20 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
           style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}
         >
           <p className="f-body text-[13px]" style={{ color: 'rgba(10,46,77,0.38)' }}>
@@ -191,9 +195,8 @@ export default function AboutPage() {
           </div>
         </div>
 
-        <Footer />
-
       </main>
+      <SiteFooter />
     </>
   )
 }

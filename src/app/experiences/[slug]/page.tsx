@@ -1,13 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { SiteNav } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import { MapPin, Check, X as XIcon, ChevronDown } from 'lucide-react'
 import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
 import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
-import { HomeNav } from '@/components/home/home-nav'
 import { CountryFlag } from '@/components/ui/country-flag'
-import { Footer } from '@/components/layout/footer'
 import { ExperiencePageWithOptions } from '@/components/trips/ExperiencePageWithOptions'
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
@@ -60,9 +60,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title,
     description,
+    alternates: { canonical: `https://fjordanglers.com/experiences/${slug}` },
     openGraph: {
       title,
       description,
+      url: `https://fjordanglers.com/experiences/${slug}`,
       images: ogImage ? [{ url: ogImage, width: 1200, height: 630, alt: page.experience_name }] : [],
     },
     twitter: { card: 'summary_large_image' as const, title, description, images: ogImage ? [ogImage] : [] },
@@ -227,29 +229,156 @@ export default async function ExperiencePublicPage({
     Expert:       { bg: 'rgba(139,0,0,0.1)',      color: '#8B0000' },
   }
 
+  const topImages = gallery.length > 0
+    ? gallery.map((url, i) => ({ id: String(i), url, is_cover: i === 0 }))
+    : page.hero_image_url
+      ? [{ id: '0', url: page.hero_image_url, is_cover: true }]
+      : []
+
+  const tripSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'TouristTrip',
+    name: page.experience_name,
+    description: page.meta_description ?? `Guided fishing trip in ${page.region}, ${page.country}. Book with verified local guides via FjordAnglers.`,
+    ...(page.hero_image_url != null ? { image: page.hero_image_url } : {}),
+    url: `https://fjordanglers.com/experiences/${slug}`,
+    touristType: ['Fishing', 'Outdoor Activity'],
+    ...(page.price_from != null ? {
+      offers: {
+        '@type': 'Offer',
+        price: page.price_from,
+        priceCurrency: 'EUR',
+        availability: 'https://schema.org/InStock',
+        url: `https://fjordanglers.com/experiences/${slug}`,
+      },
+    } : {}),
+    provider: { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' },
+    ...(guide != null ? {
+      subjectOf: {
+        '@type': 'Person',
+        name: guide.full_name,
+        url: `https://fjordanglers.com/guides/${guide.id}`,
+      },
+    } : {}),
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fjordanglers.com' },
+      { '@type': 'ListItem', position: 2, name: 'Trips', item: 'https://fjordanglers.com/trips' },
+      { '@type': 'ListItem', position: 3, name: page.experience_name, item: `https://fjordanglers.com/experiences/${slug}` },
+    ],
+  }
+
+  const faqSchema = faq.length > 0 ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map(item => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
+    })),
+  } : null
+
   return (
     <>
-      <HomeNav pinned />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(tripSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      {faqSchema != null && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
+      <SiteNav />
+      {/* ─── MOBILE GALLERY (below nav, compact height) ── */}
+      {topImages.length > 0 && (
+        <div className="md:hidden pt-[72px] relative">
+          <ExperienceGallery images={topImages} title={page.experience_name} topMobile />
+          {/* Back button — absolute over photo, just under nav */}
+          <Link
+            href="/trips"
+            className="absolute left-4 inline-flex items-center gap-1.5 f-body text-[13px] font-medium z-10"
+            style={{
+              top: '80px',
+              color: 'rgba(255,255,255,0.9)',
+              textDecoration: 'none',
+              background: 'rgba(0,0,0,0.32)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              padding: '5px 11px',
+              borderRadius: '20px',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11L5 7l4-4"/>
+            </svg>
+            All trips
+          </Link>
+          {/* Price overlay — absolute on photo */}
+          <div className="absolute bottom-10 left-4 z-10 pointer-events-none">
+            <span className="font-bold f-display text-white" style={{ fontSize: '22px', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+              from €{page.price_from}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MOBILE TITLE CARD (overlays gallery bottom) ── */}
+      <div
+        className="md:hidden relative z-10"
+        style={{ marginTop: topImages.length > 0 ? '-28px' : '72px', background: '#F3EDE4', borderRadius: '28px 28px 0 0' }}
+      >
+        {/* Drag-handle pill */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(10,46,77,0.15)' }} />
+        </div>
+        <div className="px-5 pt-4 pb-5">
+          <div className="flex items-center gap-1.5 mb-2">
+            <MapPin size={12} strokeWidth={1.5} style={{ color: '#E67E50', flexShrink: 0 }} />
+            <span className="text-xs f-body font-semibold" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              {page.region}, {page.country}
+            </span>
+            {page.season_start != null && page.season_end != null && (
+              <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                · {page.season_start}–{page.season_end}
+              </span>
+            )}
+          </div>
+          <h1
+            className="font-bold f-display leading-tight"
+            style={{ fontSize: 'clamp(22px, 6.5vw, 30px)', color: '#0A2E4D' }}
+          >
+            {page.experience_name}
+          </h1>
+        </div>
+      </div>
+
+      {/* ── BACK BUTTON (desktop only — mobile version is overlaid on gallery) ── */}
+      <div className="hidden md:block max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-16 pt-[110px] pb-2">
+        <Link
+          href="/trips"
+          className="inline-flex items-center gap-1.5 f-body text-[13px] font-medium transition-opacity hover:opacity-60"
+          style={{ color: 'rgba(10,46,77,0.5)', textDecoration: 'none' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 11L5 7l4-4"/>
+          </svg>
+          All trips
+        </Link>
+      </div>
 
       {/* ── OUTER CONTAINER ── */}
-      <div className="pt-[90px] max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-16">
+      <div className="pt-0 md:pt-2 max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-16">
 
-        {/* ──────────── GALLERY BENTO ──────────── */}
-        {(() => {
-          const topImages = gallery.length > 0
-            ? gallery.map((url, i) => ({ id: String(i), url, is_cover: i === 0 }))
-            : page.hero_image_url
-              ? [{ id: '0', url: page.hero_image_url, is_cover: true }]
-              : []
-          return topImages.length > 0 ? (
-            <div className="pt-8 md:pt-10">
-              <ExperienceGallery images={topImages} title={page.experience_name} />
-            </div>
-          ) : null
-        })()}
+        {/* ──────────── GALLERY BENTO (desktop only) ──────────── */}
+        {topImages.length > 0 && (
+          <div className="hidden md:block pt-8 md:pt-10">
+            <ExperienceGallery images={topImages} title={page.experience_name} />
+          </div>
+        )}
 
-        {/* ── TITLE BLOCK ── */}
-        <div className="pb-6 lg:pb-8" style={{ borderBottom: '1px solid rgba(10,46,77,0.08)' }}>
+        {/* ── TITLE BLOCK (desktop only) ── */}
+        <div className="hidden md:block pb-6 lg:pb-8" style={{ borderBottom: '1px solid rgba(10,46,77,0.08)' }}>
 
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 mb-5 text-xs f-body flex-wrap"
@@ -1062,7 +1191,7 @@ export default async function ExperiencePublicPage({
 
       {/* ── MOBILE BAR ── */}
       {page.trip_id ? (
-        <MobileInquiryBar tripId={page.trip_id} />
+        <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_from} />
       ) : (
         <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-5"
           style={{
@@ -1087,7 +1216,7 @@ export default async function ExperiencePublicPage({
       {/* ── GUIDE SECTION ── */}
       {guide && (
         <section style={{ background: '#0A2E4D' }}>
-          <div className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-16 py-16 lg:py-20">
+          <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-16 py-16 lg:py-20">
 
             <div className="flex items-center gap-3 mb-8">
               <div className="w-10 h-px" style={{ background: '#E67E50' }} />
@@ -1179,7 +1308,7 @@ export default async function ExperiencePublicPage({
       {/* ── SIMILAR TRIPS ── */}
       {similarTrips.length > 0 && (
         <section style={{ background: '#F3EDE4' }}>
-          <div className="max-w-[1280px] mx-auto px-4 sm:px-8 lg:px-16 py-16 lg:py-20">
+          <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-16 py-16 lg:py-20">
 
             <div className="flex items-center gap-3 mb-3">
               <div className="w-10 h-px" style={{ background: '#E67E50' }} />
@@ -1286,7 +1415,7 @@ export default async function ExperiencePublicPage({
         </section>
       )}
 
-      <Footer />
+      <SiteFooter />
     </>
   )
 }

@@ -3,8 +3,8 @@
 /**
  * Guide Calendar Server Actions — CRUD for named calendar groups.
  *
- * A guide can create multiple calendars and assign any subset of their
- * experiences to each. Used by the CalendarsPanel component.
+ * Each guide has exactly ONE calendar (enforced since migration 20260517).
+ * The calendar is automatically linked to all of the guide's experiences.
  *
  * Blocking model (as of 2026-04-02):
  *   Availability blocks are stored in `calendar_blocked_dates` at the calendar
@@ -62,6 +62,16 @@ export async function createCalendar(name: string): Promise<CalendarActionResult
     if (!trimmed)            return { error: 'Calendar name is required.' }
     if (trimmed.length > 80) return { error: 'Name must be 80 characters or fewer.' }
 
+    // Enforce one calendar per guide
+    const { count } = await supabase
+      .from('guide_calendars')
+      .select('id', { count: 'exact', head: true })
+      .eq('guide_id', guideId)
+
+    if ((count ?? 0) > 0) {
+      return { error: 'You already have a calendar. Each guide can only have one calendar.' }
+    }
+
     const { data, error } = await supabase
       .from('guide_calendars')
       .insert({ guide_id: guideId, name: trimmed })
@@ -115,6 +125,16 @@ export async function updateCalendar(id: string, name: string): Promise<Calendar
 export async function deleteCalendar(id: string): Promise<CalendarActionResult> {
   try {
     const { supabase, guideId } = await requireGuide()
+
+    // Each guide must keep exactly one calendar
+    const { count } = await supabase
+      .from('guide_calendars')
+      .select('id', { count: 'exact', head: true })
+      .eq('guide_id', guideId)
+
+    if ((count ?? 0) <= 1) {
+      return { error: 'You cannot delete your only calendar.' }
+    }
 
     const { error } = await supabase
       .from('guide_calendars')

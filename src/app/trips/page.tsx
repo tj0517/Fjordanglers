@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { HomeNav } from '@/components/home/home-nav'
-import { Footer } from '@/components/layout/footer'
+import { SiteNav } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExpPageMapSection from './exp-page-map-section'
 import type { ExpPage } from './exp-page-map-section'
@@ -89,8 +89,10 @@ function Pagination({
 
 export const revalidate = 60
 export const metadata = {
-  title: 'Curated Fishing Experiences | FjordAnglers',
-  description: 'Hand-picked guided fishing trips in Norway, Sweden, Iceland and beyond — curated by FjordAnglers.',
+  title: 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland | FjordAnglers',
+  description: 'Browse 20+ hand-picked guided fishing trips across Norway, Sweden, Iceland and Finland. Salmon, sea trout, pike & fly fishing. Filter by species, country, and difficulty.',
+  alternates: { canonical: 'https://fjordanglers.com/trips' },
+  openGraph: { url: 'https://fjordanglers.com/trips' },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -134,10 +136,10 @@ export default async function TripsPage({
   return (
     <div style={{ background: '#F3EDE4' }}>
 
-      <HomeNav pinned initialVariant="light" />
+      <SiteNav />
 
       {/* Spacer for fixed nav */}
-      <div style={{ height: '90px' }} />
+      <div style={{ height: '72px' }} />
 
       {/* ── TWO-COLUMN (map + list) ── */}
       <ExpPageMapSection
@@ -149,8 +151,9 @@ export default async function TripsPage({
             ? <Pagination page={currentPage} totalPages={totalPages} baseParams={baseParams} />
             : null
         }
+
       />
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

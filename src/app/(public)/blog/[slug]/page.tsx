@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { BLOG_POSTS } from '@/lib/blog-data'
-import { HomeNav } from '@/components/home/home-nav'
+
 import { NorwayRegulationsContent, NORWAY_SECTIONS } from '@/lib/blog-content/norway-regulations-2026'
 import { ReadingProgress } from '@/components/blog/reading-progress'
 import { TableOfContents } from '@/components/blog/table-of-contents'
@@ -31,10 +31,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${post.title} — FjordAnglers`,
     description: post.excerpt,
+    alternates: { canonical: `https://fjordanglers.com/blog/${slug}` },
     openGraph: {
       title: `${post.title} — FjordAnglers`,
       description: post.excerpt,
       type: 'article',
+      url: `https://fjordanglers.com/blog/${slug}`,
       images: [{ url: post.img, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
@@ -54,9 +56,26 @@ export default async function BlogPostPage({ params }: Props) {
   const ContentComponent = ARTICLE_CONTENT[slug]
   const sections = ARTICLE_SECTIONS[slug]
 
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title,
+    description: post.excerpt,
+    image: post.img,
+    author: { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'FjordAnglers',
+      logo: { '@type': 'ImageObject', url: 'https://fjordanglers.com/brand/sygnet.png' },
+    },
+    datePublished: new Date(post.date).toISOString(),
+    url: `https://fjordanglers.com/blog/${slug}`,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': `https://fjordanglers.com/blog/${slug}` },
+  }
+
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <HomeNav />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       {ContentComponent && <ReadingProgress />}
 
       {/* ── Hero ─────────────────────────────────────────────────── */}

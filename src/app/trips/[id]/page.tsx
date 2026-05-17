@@ -16,9 +16,9 @@ import { FISH_IMG } from '@/lib/fish'
 import { heroFull, gallerySlide, cardThumb, avatarImg } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
 import { CountryFlag } from '@/components/ui/country-flag'
-import { HomeNav } from '@/components/home/home-nav'
 import { BookingStateProvider } from '@/contexts/booking-context'
 import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
+import { SiteNav } from '@/components/layout/nav'
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -591,8 +591,7 @@ export default async function ExperienceDetailPage({
   return (
     <div className="relative min-h-screen" style={{ background: '#F3EDE4' }}>
 
-      {/* ─── NAV ─────────────────────────────────────────────────── */}
-      <HomeNav />
+      <SiteNav />
 
       {/* ─── DRAFT PREVIEW BANNER ────────────────────────────────── */}
       {isDraft && (
@@ -629,10 +628,38 @@ export default async function ExperienceDetailPage({
         </div>
       )}
 
-      {/* ─── MOBILE GALLERY (full-bleed, floats under transparent nav) */}
+      {/* ─── MOBILE GALLERY (below nav, compact height) */}
       {exp.images.length > 0 && (
-        <div className="md:hidden">
+        <div className="md:hidden pt-[72px] relative">
           <ExperienceGallery images={exp.images} title={exp.title} topMobile />
+          {/* Back button — absolute over photo, just under nav */}
+          <Link
+            href="/trips"
+            className="absolute left-4 inline-flex items-center gap-1.5 f-body text-[13px] font-medium z-10"
+            style={{
+              top: '80px',
+              color: 'rgba(255,255,255,0.9)',
+              textDecoration: 'none',
+              background: 'rgba(0,0,0,0.32)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              padding: '5px 11px',
+              borderRadius: '20px',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11L5 7l4-4"/>
+            </svg>
+            All trips
+          </Link>
+          {/* Price overlay — absolute on photo */}
+          {exp.price_per_person_eur != null && (
+            <div className="absolute bottom-10 left-4 z-10 pointer-events-none">
+              <span className="font-bold f-display text-white" style={{ fontSize: '22px', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
+                from €{exp.price_per_person_eur}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -664,7 +691,7 @@ export default async function ExperienceDetailPage({
         <GrainOverlay />
 
         <div
-          className="absolute bottom-0 inset-x-0 px-4 md:px-8 pb-8 md:pb-12 hidden md:block"
+          className="absolute bottom-0 inset-x-0 px-5 md:px-8 pb-8 md:pb-12 hidden md:block"
           style={{ zIndex: 3 }}
         >
           <div className="max-w-7xl mx-auto">
@@ -746,10 +773,14 @@ export default async function ExperienceDetailPage({
 
       {/* ─── MOBILE TITLE CARD (hidden on md+) ──────────────────── */}
       <div
-        className="md:hidden relative -mt-7 z-10"
-        style={{ background: '#F3EDE4', borderRadius: '24px 24px 0 0' }}
+        className="md:hidden relative z-10"
+        style={{ marginTop: '-28px', background: '#F3EDE4', borderRadius: '28px 28px 0 0' }}
       >
-        <div className="px-5 pt-7 pb-4">
+        {/* Drag-handle pill */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-9 h-1 rounded-full" style={{ background: 'rgba(10,46,77,0.15)' }} />
+        </div>
+        <div className="px-5 pt-4 pb-4">
 
           {/* Fish badges */}
           <div className="flex flex-wrap gap-1.5 mb-3 justify-center">
@@ -860,8 +891,22 @@ export default async function ExperienceDetailPage({
 
       {/* ─── MAIN CONTENT ────────────────────────────────────────── */}
 
-      <div className="px-4 md:px-8 pb-12 md:pb-24" style={{ background: '#F3EDE4' }}>
+      <div className="px-5 md:px-8 pb-12 md:pb-24" style={{ background: '#F3EDE4' }}>
         <div className="max-w-7xl mx-auto">
+
+          {/* ─── Back button (desktop only — mobile overlaid on gallery) ─── */}
+          <div className="hidden md:block pt-5 md:pt-8 pb-2">
+            <Link
+              href="/trips"
+              className="inline-flex items-center gap-1.5 f-body text-[13px] font-medium transition-opacity hover:opacity-60"
+              style={{ color: 'rgba(10,46,77,0.5)', textDecoration: 'none' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11L5 7l4-4"/>
+              </svg>
+              All trips
+            </Link>
+          </div>
 
           {/* ─── Gallery + trip meta (desktop only — mobile gallery is above hero) */}
           <div id="gallery" className="hidden md:block pt-8 md:pt-10">
@@ -1530,7 +1575,7 @@ export default async function ExperienceDetailPage({
           </div>
 
           {/* ─── Mobile inquiry bar ── */}
-          {showWidget && <MobileInquiryBar tripId={exp.id} />}
+          {showWidget && <MobileInquiryBar tripId={exp.id} pricePerPerson={exp.price_per_person_eur} />}
 
           </BookingStateProvider>
         </div>
@@ -1538,7 +1583,7 @@ export default async function ExperienceDetailPage({
 
       {/* ─── MORE FROM GUIDE ─────────────────────────────────────── */}
       {moreFromGuide.length > 0 && (
-        <section className="px-4 md:px-8 py-12 md:py-20" style={{ background: '#F3EDE4' }}>
+        <section className="px-5 md:px-8 py-12 md:py-20" style={{ background: '#F3EDE4' }}>
           <div className="max-w-7xl mx-auto">
             <div
               className="mb-12 pb-0 flex items-end justify-between"

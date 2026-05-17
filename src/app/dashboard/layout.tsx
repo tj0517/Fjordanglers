@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import DashboardSidebar from '@/components/dashboard/sidebar'
 import { TermsGate } from '@/components/dashboard/terms-gate'
 
 /**
@@ -97,9 +96,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // ── Normal dashboard layout ───────────────────────────────────────────────
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <DashboardSidebar guide={resolvedGuide} />
-      {/* pt-14 = mobile top bar height; lg:pt-0 removes it on desktop */}
-      <main className="lg:ml-[240px] pt-14 lg:pt-0" style={{ minHeight: '100vh' }}>
+      <main style={{ minHeight: '100vh' }}>
         {children}
       </main>
       <TermsGate

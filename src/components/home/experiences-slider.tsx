@@ -4,10 +4,10 @@ import { useRef } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { CountryFlag } from '@/components/ui/country-flag'
-import type { ExperienceWithGuide } from '@/types'
+import type { FeaturedExperiencePage } from '@/lib/supabase/queries'
 
 interface Props {
-  experiences: ExperienceWithGuide[]
+  experiences: FeaturedExperiencePage[]
 }
 
 export function ExperiencesSlider({ experiences }: Props) {
@@ -47,67 +47,57 @@ export function ExperiencesSlider({ experiences }: Props) {
         className="flex gap-4 overflow-x-auto pl-4 md:pl-8 lg:pl-14 pr-4"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: '4px' }}
       >
-        {experiences.map(exp => {
-          const cover = exp.images.find(img => img.is_cover)?.url ?? exp.images[0]?.url ?? null
-          const dur =
-            exp.duration_hours != null
-              ? `${exp.duration_hours}h`
-              : exp.duration_days != null
-              ? `${exp.duration_days} days`
-              : null
-
-          return (
-            <Link
-              key={exp.id}
-              href={`/trips/${exp.id}`}
-              className="group flex-shrink-0"
-              style={{ width: 'clamp(240px, 26vw, 320px)' }}
+        {experiences.map(exp => (
+          <Link
+            key={exp.id}
+            href={`/experiences/${exp.slug}`}
+            className="group flex-shrink-0"
+            style={{ width: 'clamp(240px, 26vw, 320px)' }}
+          >
+            <div
+              className="relative overflow-hidden"
+              style={{ height: 'clamp(220px, 42vw, 300px)', borderRadius: '16px', background: '#1a3a5c' }}
             >
-              <div
-                className="relative overflow-hidden"
-                style={{ height: '300px', borderRadius: '16px', background: '#1a3a5c' }}
-              >
-                {cover != null && (
-                  <Image
-                    src={cover}
-                    alt={exp.title}
-                    fill
-                    sizes="320px"
-                    className="object-cover transition-transform duration-700 group-hover:scale-[1.05]"
-                  />
-                )}
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    background:
-                      'linear-gradient(to top, rgba(5,10,20,0.75) 0%, rgba(5,10,20,0.08) 55%, transparent 100%)',
-                  }}
+              {exp.hero_image_url != null && (
+                <Image
+                  src={exp.hero_image_url}
+                  alt={exp.experience_name}
+                  fill
+                  sizes="320px"
+                  className="object-cover transition-transform duration-700 group-hover:scale-[1.05]"
                 />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <CountryFlag country={exp.location_country ?? ''} />
-                    <span
-                      className="f-body font-semibold uppercase tracking-[0.14em]"
-                      style={{ fontSize: '10px', color: '#E67E50' }}
-                    >
-                      {exp.location_country}
-                    </span>
-                  </div>
-                  <h3
-                    className="f-display font-bold text-white leading-tight"
-                    style={{ fontSize: '16px' }}
+              )}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(to top, rgba(5,10,20,0.75) 0%, rgba(5,10,20,0.08) 55%, transparent 100%)',
+                }}
+              />
+              <div className="absolute bottom-4 left-4 right-4">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <CountryFlag country={exp.country} />
+                  <span
+                    className="f-body font-semibold uppercase tracking-[0.14em]"
+                    style={{ fontSize: '10px', color: '#E67E50' }}
                   >
-                    {exp.title}
-                  </h3>
-                  <p className="f-body mt-1" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.48)' }}>
-                    {exp.guide.full_name}
-                    {dur != null ? ` · ${dur}` : ''}
-                  </p>
+                    {exp.country}
+                  </span>
                 </div>
+                <h3
+                  className="f-display font-bold text-white leading-tight"
+                  style={{ fontSize: '16px' }}
+                >
+                  {exp.experience_name}
+                </h3>
+                <p className="f-body mt-1" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.48)' }}>
+                  {exp.guide?.full_name ?? exp.region}
+                  {` · from €${exp.price_from}`}
+                </p>
               </div>
-            </Link>
-          )
-        })}
+            </div>
+          </Link>
+        ))}
 
         {/* Trailing "see all" card */}
         <Link
@@ -118,7 +108,7 @@ export function ExperiencesSlider({ experiences }: Props) {
           <div
             className="flex flex-col items-center justify-center gap-3 w-full"
             style={{
-              height: '300px',
+              height: 'clamp(220px, 42vw, 300px)',
               borderRadius: '16px',
               background: 'rgba(10,46,77,0.06)',
               border: '1px solid rgba(10,46,77,0.10)',

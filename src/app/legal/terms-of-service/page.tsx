@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Footer } from '@/components/layout/footer'
+import { SiteNav } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -174,32 +175,7 @@ export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
 
-      {/* ── Nav ──────────────────────────────────────────────────────── */}
-      <nav
-        className="sticky top-0 z-50 flex items-center justify-between px-5 md:px-8 h-[68px]"
-        style={{
-          background: 'rgba(243,237,228,0.92)',
-          backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(10,46,77,0.07)',
-        }}
-      >
-        <Link href="/" className="flex-shrink-0">
-          <Image
-            src="/brand/dark-logo.png"
-            alt="FjordAnglers"
-            width={120}
-            height={32}
-            className="h-7 w-auto"
-          />
-        </Link>
-        <Link
-          href="/trips"
-          className="text-xs font-semibold f-body transition-colors hover:text-[#E67E50]"
-          style={{ color: 'rgba(10,46,77,0.5)' }}
-        >
-          ← Browse trips
-        </Link>
-      </nav>
+      <SiteNav />
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <header className="px-5 md:px-8 pt-14 pb-12 max-w-[860px] mx-auto">
@@ -1083,8 +1059,7 @@ export default function TermsOfServicePage() {
 
         </div>
       </main>
-
-      <Footer />
+      <SiteFooter />
     </div>
   )
 }

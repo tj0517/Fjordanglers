@@ -6,7 +6,7 @@ import { getExperiences } from '@/lib/supabase/queries'
 import type { ExperienceWithGuide } from '@/types'
 import { FISH_IMG_BY_PAGE_SLUG } from '@/lib/fish'
 import { CountryFlag } from '@/components/ui/country-flag'
-import { HomeNav } from '@/components/home/home-nav'
+
 
 export const revalidate = 3600
 
@@ -188,6 +188,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${fish.name} Fishing in Scandinavia | FjordAnglers`,
     description: fish.description,
+    alternates: { canonical: `https://fjordanglers.com/species/${slug}` },
+    openGraph: {
+      title: `${fish.name} Fishing in Norway, Sweden & Iceland | FjordAnglers`,
+      description: fish.description,
+      url: `https://fjordanglers.com/species/${slug}`,
+      images: fish.image ? [{ url: fish.image, width: 1200, height: 630, alt: `${fish.name} fishing in Scandinavia` }] : [],
+    },
   }
 }
 
@@ -205,8 +212,6 @@ export default async function SpeciesPage({ params }: Props) {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <HomeNav />
-
       {/* ─── HERO ──────────────────────────────────────────────────────── */}
       <section className="relative" style={{ height: '72vh', minHeight: '520px' }}>
         <Image
@@ -286,7 +291,7 @@ export default async function SpeciesPage({ params }: Props) {
       </section>
 
       {/* ─── SEASON CALENDAR ───────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-16 px-6" style={{ background: '#07111C' }}>
+      <section className="relative overflow-hidden py-12 md:py-16 px-4 md:px-6" style={{ background: '#07111C' }}>
         <div className="max-w-[1440px] mx-auto">
 
           {/* Header */}
@@ -310,7 +315,7 @@ export default async function SpeciesPage({ params }: Props) {
           </div>
 
           {/* 12-month calendar grid */}
-          <div className="grid grid-cols-6 md:grid-cols-12 gap-2 mb-8">
+          <div className="grid grid-cols-3 sm:grid-cols-6 md:grid-cols-12 gap-2 mb-8">
             {fish.season.map(m => {
               const cfg = STATUS_CONFIG[m.status]
               return (
@@ -548,7 +553,7 @@ function ExperienceCard({ exp }: { exp: ExperienceWithGuide }) {
     : null
 
   return (
-    <Link href={`/trips/${exp.id}`} className="group block">
+    <Link href={exp.slug != null ? `/experiences/${exp.slug}` : `/trips/${exp.id}`} className="group block">
       <article
         className="overflow-hidden transition-all duration-300 hover:shadow-[0_24px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1.5 h-full flex flex-col"
         style={{

@@ -50,28 +50,29 @@ function collectPoints(pages: ExpPage[]): L.LatLngTuple[] {
 // ─── MapPositioner ────────────────────────────────────────────────────────────
 function MapPositioner({ pages, countries }: { pages: ExpPage[]; countries: string[] }) {
   const map = useMap()
-  const prevKey = useRef('')
+  const mounted = useRef(false)
 
   useEffect(() => {
-    prevKey.current = countries.join(',')
+    const isFirst = !mounted.current
+    mounted.current = true
+
     if (countries.length > 0) {
       const b = computeCountryBounds(countries)
-      if (b) map.fitBounds(b as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 8 })
+      if (b) {
+        if (isFirst) {
+          map.fitBounds(b as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 8, animate: false })
+        } else {
+          map.flyToBounds(b as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 8, duration: 0.5 })
+        }
+      }
       return
     }
-    const pts = collectPoints(pages)
-    if (pts.length >= 2) map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 7 })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
-  useEffect(() => {
-    const key = countries.join(',')
-    if (key === prevKey.current) return
-    prevKey.current = key
-    if (countries.length === 0) return
-    const b = computeCountryBounds(countries)
-    if (b) map.flyToBounds(b as L.LatLngBoundsExpression, { padding: [40, 40], duration: 0.5 })
-  }, [countries, map])
+    const pts = collectPoints(pages)
+    if (pts.length >= 2) {
+      map.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 7, animate: !isFirst })
+    }
+  }, [pages, countries, map])
 
   return null
 }

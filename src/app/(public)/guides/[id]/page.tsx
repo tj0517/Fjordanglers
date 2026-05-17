@@ -6,7 +6,7 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
-import { HomeNav } from '@/components/home/home-nav'
+
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -60,13 +60,18 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const guide = await getGuide(id)
   if (guide == null) return {}
+  const desc = guide.bio != null ? guide.bio.slice(0, 160) : `Fish with ${guide.full_name} — a verified local guide in ${guide.country}. Book via FjordAnglers.`
   return {
     title: `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`,
-    description: guide.bio != null ? guide.bio.slice(0, 160) : undefined,
+    description: desc,
+    alternates: { canonical: `https://fjordanglers.com/guides/${id}` },
     openGraph: {
-      title: `${guide.full_name} — FjordAnglers`,
-      description: guide.bio != null ? guide.bio.slice(0, 160) : undefined,
-      images: guide.cover_url != null ? [guide.cover_url] : [],
+      title: `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`,
+      description: desc,
+      url: `https://fjordanglers.com/guides/${id}`,
+      images: guide.cover_url != null
+        ? [{ url: guide.cover_url, width: 1200, height: 630, alt: `${guide.full_name} — fishing guide in ${guide.country}` }]
+        : [],
     },
   }
 }
@@ -91,11 +96,44 @@ export default async function GuideProfilePage({
   // flag rendered as <CountryFlag> below
   const landscapeUrl = (guide as { landscape_url?: string | null }).landscape_url ?? getLandscapeUrl(guide.country, guide.id)
 
+  const personSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: guide.full_name,
+    ...(guide.bio != null ? { description: guide.bio } : {}),
+    ...(guide.avatar_url != null ? { image: guide.avatar_url } : {}),
+    url: `https://fjordanglers.com/guides/${id}`,
+    jobTitle: 'Fishing Guide',
+    address: {
+      '@type': 'PostalAddress',
+      addressCountry: guide.country,
+      ...(guide.city != null ? { addressLocality: guide.city } : {}),
+    },
+    ...(guide.fish_expertise.length > 0 ? { knowsAbout: guide.fish_expertise } : {}),
+    ...(guide.average_rating != null ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: guide.average_rating,
+        reviewCount: guide.total_reviews,
+      },
+    } : {}),
+    worksFor: { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' },
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fjordanglers.com' },
+      { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://fjordanglers.com/guides' },
+      { '@type': 'ListItem', position: 3, name: guide.full_name, item: `https://fjordanglers.com/guides/${id}` },
+    ],
+  }
+
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-
-      {/* ─── NAV — transparent over dark hero ───────────────────── */}
-      <HomeNav />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
       {/* ─── HERO ────────────────────────────────────────────────── */}
       <section
@@ -120,7 +158,7 @@ export default async function GuideProfilePage({
         <GrainOverlay />
 
         {/* Back button */}
-        <div className="absolute top-0 inset-x-0 px-8" style={{ paddingTop: 'calc(88px + 12px)', zIndex: 3 }}>
+        <div className="absolute top-0 inset-x-0 px-4 md:px-8" style={{ paddingTop: 'calc(88px + 12px)', zIndex: 3 }}>
           <div className="max-w-7xl mx-auto">
             <Link
               href="/guides"
@@ -398,7 +436,7 @@ export default async function GuideProfilePage({
                       const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} days` : null
 
                       return (
-                        <Link key={exp.id} href={`/trips/${exp.id}`} className="group block">
+                        <Link key={exp.id} href={exp.slug != null ? `/experiences/${exp.slug}` : `/trips/${exp.id}`} className="group block">
                           <article
                             className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
                             style={{ borderRadius: '28px', background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)' }}
@@ -469,8 +507,8 @@ export default async function GuideProfilePage({
 
             {/* ─── RIGHT — sticky contact card ─────────────────── */}
             <aside
-              className="hidden lg:block flex-shrink-0"
-              style={{ width: '340px', position: 'sticky', top: '81px', alignSelf: 'flex-start' }}
+              className="hidden lg:block flex-shrink-0 lg:w-[32%] xl:w-[340px]"
+              style={{ position: 'sticky', top: '81px', alignSelf: 'flex-start' }}
             >
               <div className="p-7" style={{ background: '#FDFAF7', borderRadius: '28px', border: '1px solid rgba(10,46,77,0.08)', boxShadow: '0 8px 40px rgba(10,46,77,0.1)' }}>
                 <div className="flex items-center gap-4 mb-6">

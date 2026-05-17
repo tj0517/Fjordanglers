@@ -24,26 +24,38 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL('https://fjordanglers.com'),
   title: {
-    default: 'FjordAnglers — Epic Fjord Fishing Trips',
+    default: 'FjordAnglers — Guided Fishing Trips in Nordic Countries',
     template: '%s | FjordAnglers',
   },
   description:
-    'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures. Salmon, trout, cod and more.',
-  keywords: ['fishing', 'fjord', 'Norway', 'Scandinavia', 'fishing guide', 'salmon fishing'],
+    'Book guided fishing trips in Norway, Sweden, Iceland & Finland with verified local guides. Salmon, sea trout, pike & fly fishing. Free to browse — only pay when you confirm.',
+  keywords: [
+    'guided fishing trips Norway', 'salmon fishing Norway', 'fly fishing Iceland',
+    'fishing guide Scandinavia', 'sea trout fishing Sweden', 'Nordic fishing guide',
+    'guided salmon fishing', 'fjord fishing', 'wędkowanie Norwegia', 'Angelreisen Norwegen',
+  ],
   openGraph: {
     type: 'website',
     locale: 'en_US',
+    alternateLocale: ['pl_PL', 'de_DE'],
     url: 'https://fjordanglers.com',
     siteName: 'FjordAnglers',
-    title: 'FjordAnglers — Epic Fjord Fishing Trips',
-    description: 'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures.',
-    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'FjordAnglers — Epic Fjord Fishing Trips' }],
+    title: 'FjordAnglers — Guided Fishing Trips in Nordic Countries',
+    description: 'Book guided fishing trips in Norway, Sweden, Iceland & Finland with verified local guides. Salmon, trout, pike & more.',
+    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'FjordAnglers — Guided Fishing Trips in Nordic Countries' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FjordAnglers — Epic Fjord Fishing Trips',
-    description: 'Connect with expert Scandinavian fishing guides for unforgettable fjord fishing adventures.',
+    title: 'FjordAnglers — Guided Fishing Trips in Nordic Countries',
+    description: 'Book guided fishing trips in Norway, Sweden, Iceland & Finland. Salmon, trout, pike & fly fishing.',
     images: ['/brand/og-default.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    'max-snippet': -1,
+    'max-image-preview': 'large',
+    'max-video-preview': -1,
   },
 }
 
@@ -54,6 +66,42 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Preconnect to Supabase CDN — speeds up all guide/experience images */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+        {/* Organization + LocalBusiness structured data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': ['Organization', 'LocalBusiness'],
+              name: 'FjordAnglers',
+              url: 'https://fjordanglers.com',
+              logo: 'https://fjordanglers.com/brand/sygnet.png',
+              description: 'Guided fishing trips marketplace connecting Central European anglers with verified local guides across Norway, Sweden, Iceland and Finland.',
+              email: 'contact@fjordanglers.com',
+              address: {
+                '@type': 'PostalAddress',
+                streetAddress: 'Otwarta 38b/11',
+                addressLocality: 'Gdańsk',
+                addressRegion: 'Pomeranian',
+                addressCountry: 'PL',
+              },
+              foundingDate: '2026-04',
+              founder: [
+                { '@type': 'Person', name: 'Tymon' },
+                { '@type': 'Person', name: 'Krzychu' },
+                { '@type': 'Person', name: 'Lukas' },
+              ],
+              sameAs: ['https://instagram.com/fjordanglers'],
+              areaServed: [
+                { '@type': 'Country', name: 'Norway' },
+                { '@type': 'Country', name: 'Sweden' },
+                { '@type': 'Country', name: 'Iceland' },
+                { '@type': 'Country', name: 'Finland' },
+              ],
+              knowsAbout: ['Salmon fishing', 'Sea trout fishing', 'Fly fishing', 'Nordic fishing guides', 'Pike fishing'],
+            }),
+          }}
+        />
       </head>
       <body>
         {children}

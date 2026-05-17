@@ -282,7 +282,7 @@ function InquiryModal({
   return (
     /* Backdrop */
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center"
       style={{ background: 'rgba(10,46,77,0.55)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
       onPointerDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
@@ -715,7 +715,7 @@ export function InquiryWidget({
 
 // ─── MobileInquiryBar ─────────────────────────────────────────────────────────
 
-export function MobileInquiryBar({ tripId: _tripId }: { tripId: string }) {
+export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId: string; pricePerPerson?: number | null }) {
   const handleClick = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-inquiry-modal'))
   }, [])
@@ -733,22 +733,35 @@ export function MobileInquiryBar({ tripId: _tripId }: { tripId: string }) {
         paddingBottom:        'calc(14px + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <div className="mb-2">
-        <p className="text-base font-bold f-body leading-tight" style={{ color: '#0A2E4D' }}>
-          Interested? Send an inquiry
-        </p>
-        <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.42)' }}>
-          Free to request · no payment now
-        </p>
+      <div className="flex items-center gap-4">
+        {/* Price side */}
+        <div className="flex-1 min-w-0">
+          {pricePerPerson != null ? (
+            <>
+              <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.42)' }}>From</p>
+              <p className="font-bold f-body leading-tight" style={{ color: '#0A2E4D', fontSize: '18px' }}>
+                €{pricePerPerson}
+                <span className="text-xs font-normal ml-1" style={{ color: 'rgba(10,46,77,0.42)' }}>/person</span>
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold f-body leading-tight" style={{ color: '#0A2E4D' }}>Free to enquire</p>
+              <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.42)' }}>No payment now</p>
+            </>
+          )}
+        </div>
+
+        {/* CTA */}
+        <button
+          type="button"
+          onClick={handleClick}
+          className="flex-shrink-0 flex items-center justify-center px-6 py-3.5 rounded-2xl font-bold text-white f-body"
+          style={{ background: '#E67E50', fontSize: '15px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
+        >
+          Send Inquiry →
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={handleClick}
-        className="flex items-center justify-center w-full py-4 rounded-2xl font-bold text-white f-body"
-        style={{ background: '#E67E50', fontSize: '16px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
-      >
-        Send Inquiry →
-      </button>
     </div>
   )
 }
