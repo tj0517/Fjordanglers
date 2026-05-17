@@ -9,6 +9,7 @@ export interface InquiryReceivedFaEmailProps {
   requestedDates: string[]   // YYYY-MM-DD[]
   partySize: number
   message: string | null
+  selectedOption?: string | null
   inquiryId: string
   dashboardUrl: string    // /dashboard/inquiries/[id]
 }
@@ -21,6 +22,7 @@ export function InquiryReceivedFaEmail({
   requestedDates,
   partySize,
   message,
+  selectedOption,
   inquiryId,
   dashboardUrl,
 }: InquiryReceivedFaEmailProps) {
@@ -42,6 +44,7 @@ export function InquiryReceivedFaEmail({
             { label: 'Trip',            value: tripTitle },
             { label: 'Requested dates', value: fmtDates(requestedDates) },
             { label: 'Party size',      value: `${partySize} ${partySize === 1 ? 'angler' : 'anglers'}` },
+            ...(selectedOption ? [{ label: 'Selected option', value: selectedOption }] : []),
             { label: 'Inquiry ID',      value: inquiryId, last: true },
           ]} />
         </tbody>

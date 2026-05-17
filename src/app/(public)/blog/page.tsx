@@ -2,11 +2,13 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { BLOG_POSTS } from '@/lib/blog-data'
-import { HomeNav } from '@/components/home/home-nav'
+
 
 export const metadata: Metadata = {
-  title: 'Journal — FjordAnglers',
-  description: 'Guides, tips, and destination stories from the world of Scandinavian fishing.',
+  title: 'Fishing Journal — Tips, Guides & Destination Stories',
+  description: 'Expert fishing tips, regulation guides, and destination stories for anglers heading to Norway, Sweden, Iceland and Finland. Written by anglers, for anglers.',
+  alternates: { canonical: 'https://fjordanglers.com/blog' },
+  openGraph: { url: 'https://fjordanglers.com/blog', type: 'website' },
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -22,8 +24,6 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <HomeNav initialVariant="light" />
-
       {/* ─── HERO ─────────────────────────────────────────────────────── */}
       <section className="pt-32 pb-16 px-4 md:px-6">
         <div className="max-w-[1440px] mx-auto">

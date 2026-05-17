@@ -79,7 +79,7 @@ function SheetCard({
       href={`/experiences/${page.slug}`}
       onClick={onClick}
       className="group flex-shrink-0 text-left transition-transform duration-200 active:scale-[0.98]"
-      style={{ width: '248px' }}
+      style={{ width: 'min(248px, 80vw)' }}
       aria-label={page.experience_name}
     >
       <div
@@ -108,29 +108,37 @@ function SheetCard({
           ) : (
             <div className="w-full h-full" style={{ background: '#EDE6DB' }} />
           )}
-          <div
-            className="absolute bottom-2.5 left-2.5 text-xs font-bold px-2.5 py-1 rounded-full f-body"
-            style={{ background: 'rgba(5,12,22,0.72)', color: '#fff', backdropFilter: 'blur(8px)' }}
-          >
-            Inquire
-          </div>
         </div>
 
         {/* Info */}
-        <div className="px-3.5 py-3">
+        <div className="px-3.5 pt-3 pb-3.5">
           <p
-            className="font-semibold text-[13px] leading-snug line-clamp-1 f-body mb-0.5"
+            className="font-semibold text-[13px] leading-snug line-clamp-1 f-body mb-1"
             style={{ color: '#0A2E4D' }}
           >
             {page.experience_name}
           </p>
-          <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
-            <CountryFlag country={page.country} />
-            {' '}{page.region}, {page.country}
-          </p>
-          <p className="text-[12px] font-bold f-body mt-2" style={{ color: '#0A2E4D' }}>
-            from €{page.price_from}
-          </p>
+
+          {/* Location — one line */}
+          <div className="flex items-center gap-1 overflow-hidden">
+            <span className="flex-shrink-0"><CountryFlag country={page.country} size={12} /></span>
+            <p className="text-[11px] f-body truncate min-w-0" style={{ color: 'rgba(10,46,77,0.5)' }}>
+              {page.region}, {page.country}
+            </p>
+          </div>
+
+          {/* Price + CTA */}
+          <div className="flex items-center justify-between mt-2.5">
+            <span className="text-[13px] font-bold f-display" style={{ color: '#0A2E4D' }}>
+              from €{page.price_from}
+            </span>
+            <span
+              className="text-[11px] font-bold px-3 py-1.5 rounded-full f-body flex-shrink-0"
+              style={{ background: '#E67E50', color: '#fff' }}
+            >
+              Inquire →
+            </span>
+          </div>
         </div>
       </div>
     </Link>
@@ -221,7 +229,7 @@ function ExpCard({
         </div>
 
         {/* ── Text info ─────────────────────────────────────────── */}
-        <div className="pt-3 px-0.5">
+        <div className="pt-3 px-0.5 overflow-hidden" style={{ height: '84px' }}>
 
           <h3
             className="font-semibold leading-snug f-body line-clamp-2"
@@ -231,13 +239,13 @@ function ExpCard({
           </h3>
 
           {/* Location */}
-          <div className="inline-flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-full"
+          <div className="flex items-center gap-1 mt-1.5 px-2.5 py-1 rounded-full overflow-hidden"
             style={{ background: 'rgba(10,46,77,0.07)' }}>
             <MapPin size={10} strokeWidth={2} style={{ color: 'rgba(10,46,77,0.45)', flexShrink: 0 }} />
-            <p className="text-[11px] font-medium f-body" style={{ color: 'rgba(10,46,77,0.65)' }}>
+            <p className="text-[11px] font-medium f-body truncate min-w-0" style={{ color: 'rgba(10,46,77,0.65)' }}>
               {page.region}, {page.country}
             </p>
-            <CountryFlag country={page.country} />
+            <span className="flex-shrink-0"><CountryFlag country={page.country} /></span>
           </div>
 
         </div>
@@ -328,10 +336,10 @@ export default function ExpPageMapSection({
 
   // ── Detect desktop ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const desktop = window.innerWidth >= 1024
+    const desktop = window.innerWidth >= 768
     setIsDesktop(desktop)
     if (desktop) void loadGeoData()
-    const check = () => setIsDesktop(window.innerWidth >= 1024)
+    const check = () => setIsDesktop(window.innerWidth >= 768)
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,7 +383,7 @@ export default function ExpPageMapSection({
     if (!isDesktop && sheetScrollRef.current) {
       const idx = visiblePages.findIndex(p => p.id === id)
       if (idx >= 0) {
-        const CARD_W = 248 + 12
+        const CARD_W = Math.min(248, Math.round(window.innerWidth * 0.8)) + 12
         sheetScrollRef.current.scrollTo({ left: idx * CARD_W, behavior: 'smooth' })
       }
     }
@@ -385,74 +393,84 @@ export default function ExpPageMapSection({
 
   if (isDesktop) {
     return (
-      <div className="flex lg:h-[calc(100vh-90px)]">
+      <>
+        <div className="flex items-start">
 
-        <main
-          className="w-full lg:w-1/2 lg:overflow-y-auto px-4 sm:px-8 lg:px-14 py-7"
-          style={{ scrollbarWidth: 'none' } as React.CSSProperties}
-        >
-          <div className="flex items-center gap-2 mb-5">
-            <p className="text-xs font-medium f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              <span className="font-bold" style={{ color: '#0A2E4D' }}>{visibleCount}</span>
-              {isFiltered ? ' in this area' : ` experience${visibleCount !== 1 ? 's' : ''} found`}
-            </p>
-            {isFiltered && (
-              <button
-                onClick={() => setBounds(null)}
-                className="text-[11px] font-semibold f-body px-2.5 py-0.5 rounded-full transition-opacity hover:opacity-70"
-                style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}
-              >
-                Clear map filter ✕
-              </button>
+          <main
+            className="w-full md:w-1/2 px-4 sm:px-8 lg:px-14 py-7"
+          >
+            <div className="flex items-center gap-2 mb-5">
+              <p className="text-xs font-medium f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+                <span className="font-bold" style={{ color: '#0A2E4D' }}>{visibleCount}</span>
+                {isFiltered ? ' in this area' : ` experience${visibleCount !== 1 ? 's' : ''} found`}
+              </p>
+              {isFiltered && (
+                <button
+                  onClick={() => setBounds(null)}
+                  className="text-[11px] font-semibold f-body px-2.5 py-0.5 rounded-full transition-opacity hover:opacity-70"
+                  style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50' }}
+                >
+                  Clear map filter ✕
+                </button>
+              )}
+            </div>
+
+            {visiblePages.length === 0 ? (
+              <EmptyState isFiltered={isFiltered} onClear={() => setBounds(null)} />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  {visiblePages.map((page, idx) => (
+                    <ExpCard
+                      key={page.id}
+                      page={page}
+                      hovered={hoveredPageId === page.id}
+                      onMouseEnter={() => setHoveredPageId(page.id)}
+                      onMouseLeave={() => setHoveredPageId(null)}
+                      priority={idx < 4}
+                    />
+                  ))}
+                </div>
+                {!isFiltered && paginationNode}
+              </>
             )}
-          </div>
+          </main>
 
-          {visiblePages.length === 0 ? (
-            <EmptyState isFiltered={isFiltered} onClear={() => setBounds(null)} />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {visiblePages.map((page, idx) => (
-                  <ExpCard
-                    key={page.id}
-                    page={page}
-                    hovered={hoveredPageId === page.id}
-                    onMouseEnter={() => setHoveredPageId(page.id)}
-                    onMouseLeave={() => setHoveredPageId(null)}
-                    priority={idx < 4}
-                  />
-                ))}
-              </div>
-              {!isFiltered && paginationNode}
-            </>
-          )}
-        </main>
+          <aside
+            className="hidden md:block flex-shrink-0 md:w-1/2"
+            style={{
+              position: 'sticky',
+              top: '72px',
+              height: 'calc(100dvh - 72px)',
+              padding: '12px 16px 12px 0',
+            }}
+          >
+            <div className="w-full h-full overflow-hidden" style={{ borderRadius: '20px', isolation: 'isolate' }}>
+              <ExpPageMapWrapper
+                pages={mapPinPages}
+                onBoundsChange={setBounds}
+                hoveredPageId={hoveredPageId}
+                onPinClick={handlePinClick}
+                countries={countries}
+              />
+            </div>
+          </aside>
 
-        <aside className="flex-shrink-0 lg:w-1/2" style={{ padding: '12px 16px 12px 0' }}>
-          <div className="w-full h-full overflow-hidden" style={{ borderRadius: '20px' }}>
-            <ExpPageMapWrapper
-              pages={mapPinPages}
-              onBoundsChange={setBounds}
-              hoveredPageId={hoveredPageId}
-              onPinClick={handlePinClick}
-              countries={countries}
-            />
-          </div>
-        </aside>
+        </div>
 
-      </div>
+      </>
     )
   }
 
   // ─── MOBILE MAP view ─────────────────────────────────────────────────────────
 
   if (mobileView === 'map') {
-    const SHEET_H = 290
+    const SHEET_H = Math.min(290, Math.round(window.innerHeight * 0.45))
 
     return (
       <div
         className="relative overflow-hidden"
-        style={{ height: 'calc(100dvh - var(--nav-h, 120px))' }}
+        style={{ height: 'calc(100dvh - var(--nav-h, 120px))', isolation: 'isolate' }}
       >
         <div className="absolute inset-0" style={{ bottom: `${SHEET_H}px` }}>
           <ExpPageMapWrapper
@@ -557,7 +575,7 @@ export default function ExpPageMapSection({
   // ─── MOBILE LIST view ─────────────────────────────────────────────────────────
 
   return (
-    <main className="px-4 sm:px-6 py-6 pb-28">
+    <main className="px-5 sm:px-6 py-6 pb-28">
 
       <p className="text-xs font-medium f-body mb-5" style={{ color: 'rgba(10,46,77,0.6)' }}>
         <span className="font-bold" style={{ color: '#0A2E4D' }}>{initialTotal}</span>

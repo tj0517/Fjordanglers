@@ -2,18 +2,33 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
-import { getFeaturedExperiences, getSpeciesCounts, getFeaturedGuides } from '@/lib/supabase/queries'
+import { SiteNav } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
+import { getFeaturedExperiencePages, getSpeciesCounts, getFeaturedGuides } from '@/lib/supabase/queries'
 import type { FeaturedGuide } from '@/lib/supabase/queries'
-import { HomeFaq } from '@/components/home/home-faq'
 import { FISH_CATALOG } from '@/lib/fish'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { SpeciesSlider } from '@/components/home/species-slider'
 import { ExperiencesSlider } from '@/components/home/experiences-slider'
-import { HomeNav } from '@/components/home/home-nav'
 import { BgVideo } from '@/components/home/bg-video'
-import { Footer } from '@/components/layout/footer'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = {
+  alternates: { canonical: 'https://fjordanglers.com' },
+}
+
+const HOW_IT_WORKS_SCHEMA = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: 'How to book a guided fishing trip on FjordAnglers',
+  description: 'Three simple steps to book a guided fishing trip in Norway, Sweden, Iceland or Finland.',
+  step: [
+    { '@type': 'HowToStep', name: 'Browse trips & pick a guide', text: 'Every listing shows the guide, the water, the species, and the price. Pick what matches what you want to catch.' },
+    { '@type': 'HowToStep', name: 'Send a booking request', text: 'Select your dates, add a short message. Takes 2 minutes. Free until the deal is done.' },
+    { '@type': 'HowToStep', name: 'Guide confirms within 48h', text: 'The guide reviews your request and confirms availability — or proposes alternative dates if yours are taken.' },
+  ],
+}
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -21,50 +36,46 @@ export const dynamic = 'force-dynamic'
 const DESTINATIONS = [
   {
     country: 'Norway',
-    tagline: 'Barents Sea, Voss salmon, Lofoten halibut.',
-    detail: 'Sea & river fly fishing · May to September',
+    tagline: 'Trophy brown trout on the Mistra. Cod and wolffish from the coast. Arctic char on tundra lakes near Alta.',
+    detail: 'River, shore & tundra · May to October',
     bg: 'linear-gradient(160deg, #071824 0%, #0D2E47 100%)',
   },
   {
     country: 'Sweden',
-    tagline: "Brown trout and grayling in Lapland's forests. Silence you won't find in Central Europe.",
-    detail: 'Fly fishing · June to August',
+    tagline: 'Pike, zander and perch on Mälaren and Vänern. Baltic sea trout on the Blekinge coast. Salmon on the Kalix and Torne rivers.',
+    detail: 'Lake, river & coast · April to December',
     bg: 'linear-gradient(160deg, #071410 0%, #0E2C1A 100%)',
   },
   {
     country: 'Iceland',
-    tagline: 'Atlantic salmon and sea trout on rivers only the initiated fish.',
-    detail: 'Salmon & sea trout · July to September',
+    tagline: 'Brown trout and sea trout on highland rivers near Hella. Arctic char in glacial lakes. Salmon by season.',
+    detail: 'Fly fishing · April to October',
     bg: 'linear-gradient(160deg, #141018 0%, #221C30 100%)',
   },
   {
     country: 'Finland',
-    tagline: 'Taimen, grayling and pike in the land of a thousand lakes.',
-    detail: 'Freshwater fly fishing · May to October',
+    tagline: 'Pike, perch and zander on Lake Saimaa — with live sonar. Baltic salmon and grayling on the Tornio river in Lapland.',
+    detail: 'Lake & river · May to November',
     bg: 'linear-gradient(160deg, #071410 0%, #101C10 100%)',
   },
 ]
 
+
 const HOW_IT_WORKS = [
   {
     n: '01',
-    title: 'Tell us what you\'re looking for',
-    body: 'Fill in a short form: target species, region, dates, budget, style. Takes 3 minutes.',
+    title: 'Browse trips & pick a guide',
+    body: 'Every listing shows the guide, the water, the species, and the price. Pick what matches what you want to catch.',
   },
   {
     n: '02',
-    title: 'We find your guide',
-    body: 'Tymon and Krzychu read your brief, call 1–2 of our guides, and check availability. 24–48 hours.',
+    title: 'Send a booking request',
+    body: 'Select your dates, add a short message. Takes 2 minutes. Free until the deal is done.',
   },
   {
     n: '03',
-    title: 'You get a concrete offer',
-    body: 'A specific guide, a specific river or boat, a specific price. No asterisks. Accept or ask further.',
-  },
-  {
-    n: '04',
-    title: 'You fish',
-    body: "From this point you have direct contact with your guide. We're in the background if anything goes wrong.",
+    title: 'Guide confirms within 48h',
+    body: 'The guide reviews your request and confirms availability — or proposes alternative dates if yours are taken.',
   },
 ]
 
@@ -72,7 +83,7 @@ const HOW_IT_WORKS = [
 
 export default async function HomePage() {
   const [featured, speciesCounts, featuredGuides] = await Promise.all([
-    getFeaturedExperiences(8),
+    getFeaturedExperiencePages(8),
     getSpeciesCounts(),
     getFeaturedGuides(6),
   ])
@@ -82,12 +93,13 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(HOW_IT_WORKS_SCHEMA) }} />
 
-      <HomeNav />
+      <SiteNav />
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
-      <section className="relative" style={{ height: '100vh', minHeight: '640px' }}>
-        <Image src="/hero.jpg" alt="" fill priority className="object-cover object-center" />
+      <section className="relative" style={{ height: '100vh', minHeight: '640px', background: '#050e1a' }}>
+        <Image src="/hero.jpg" alt="Angler fishing on a Nordic fjord river at midnight sun" fill priority className="object-cover object-center" />
         <BgVideo
           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/videos/bg-cta.mp4`}
           className="absolute inset-0 w-full h-full object-cover"
@@ -105,14 +117,14 @@ export default async function HomePage() {
         {/* ── Centred text block ─────────────────────────────────────── */}
         <div
           className="absolute inset-0 flex flex-col items-center justify-center text-center px-5"
-          style={{ zIndex: 3, paddingBottom: 'clamp(220px, 28vh, 300px)' }}
+          style={{ zIndex: 3, paddingBottom: 'clamp(120px, 20vh, 300px)' }}
         >
           {/* Eyebrow */}
           <p
             className="f-body font-semibold uppercase tracking-[0.14em] mb-5 px-4 py-1.5 rounded-full"
             style={{ fontSize: '12px', color: '#E67E50', background: 'rgba(230,126,80,0.12)', border: '1px solid rgba(230,126,80,0.25)' }}
           >
-            Guided fishing in Scandinavia
+            Guided fishing in the Nordic countries
           </p>
 
           <h1
@@ -127,7 +139,7 @@ export default async function HomePage() {
             className="f-body mt-5 max-w-[460px]"
             style={{ fontSize: 'clamp(14px, 1.4vw, 17px)', color: 'rgba(255,255,255,0.60)', lineHeight: 1.75 }}
           >
-            Guided fishing trips across Norway, Sweden and Iceland — hand-picked local guides, real rivers, no tourist routes.
+            Guided fishing trips across Norway, Sweden, Iceland and Finland — hand-picked local guides, real rivers, no tourist routes.
           </p>
           <Link
             href="/trips"
@@ -143,12 +155,12 @@ export default async function HomePage() {
           className="absolute bottom-0 left-0 right-0 px-4 md:px-8 lg:px-14 pb-8 md:pb-12"
           style={{ zIndex: 3 }}
         >
-          <div className="max-w-[1360px] mx-auto grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+          <div className="max-w-[1360px] mx-auto grid grid-cols-3 gap-2 md:gap-4 lg:gap-5">
             {([
               {
                 stat:  '20+',
-                title: 'Verified Nordic Guides',
-                desc:  'Every guide is personally tested — we waded the rivers with them before they appeared on this site.',
+                title: 'Curated Nordic Guides',
+                desc:  'We reached out cold, they applied. We listed only the ones whose trips we\'d actually book ourselves.',
               },
               {
                 stat:  '4',
@@ -163,7 +175,7 @@ export default async function HomePage() {
             ] as const).map(card => (
               <div
                 key={card.stat}
-                className="px-6 py-7 md:px-8 md:py-8"
+                className="px-3 py-4 md:px-6 md:py-7 lg:px-8 lg:py-8"
                 style={{
                   background:           'rgba(10,46,77,0.55)',
                   backdropFilter:       'blur(22px)',
@@ -174,15 +186,15 @@ export default async function HomePage() {
                 }}
               >
                 <p
-                  className="f-display font-bold mb-2"
-                  style={{ fontSize: 'clamp(34px, 3.5vw, 50px)', lineHeight: 1, color: '#E67E50' }}
+                  className="f-display font-bold mb-1 md:mb-2"
+                  style={{ fontSize: 'clamp(22px, 3.5vw, 50px)', lineHeight: 1, color: '#E67E50' }}
                 >
                   {card.stat}
                 </p>
-                <p className="f-body font-semibold text-white mb-2" style={{ fontSize: '15px' }}>
+                <p className="f-body font-semibold text-white text-[11px] md:text-[13px] lg:text-[15px] leading-tight mb-1 md:mb-2">
                   {card.title}
                 </p>
-                <p className="f-body" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>
+                <p className="f-body hidden md:block" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.45)', lineHeight: 1.7 }}>
                   {card.desc}
                 </p>
               </div>
@@ -218,7 +230,7 @@ export default async function HomePage() {
               {/* Right: prose */}
               <div className="flex flex-col justify-center gap-7">
                 <p className="f-body leading-relaxed" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.9 }}>
-                  FjordAnglers started because we went through the same thing you&apos;re going through — we wanted to fish the Lofoten but didn&apos;t know who to trust. We found those people. Twenty guides across Norway, Sweden, and Iceland that we waded rivers with before they ever appeared on this site.
+                  FjordAnglers started because we went through the same thing you&apos;re going through. We&apos;ve been backpacking Norway, Sweden, and Iceland with rods, sleeping in tents — and the hardest part was never the fishing. It was knowing where to go. Hundreds of rivers, lakes, and coastlines, and no straightforward way to find someone local who actually knows them. So we started building that list ourselves.
                 </p>
                 <p className="f-body leading-relaxed" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.9 }}>
                   We don&apos;t package you a &ldquo;Lofoten 7-day all-inclusive&rdquo;. We listen to what you want to catch and how you want to experience it. Then we call the right guide. It takes two days instead of two clicks — and that&apos;s why it works.
@@ -229,9 +241,13 @@ export default async function HomePage() {
             {/* Founders signature */}
             <div className="mt-16 pt-8 flex items-center gap-4" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
               <div className="flex -space-x-2">
-                {['T','K','L'].map((initial, i) => (
-                  <div key={i} className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold f-body text-white flex-shrink-0" style={{ background: i === 0 ? '#E67E50' : i === 1 ? '#0A2E4D' : '#1a4a6b', border: '2px solid rgba(255,255,255,0.12)' }}>
-                    {initial}
+                {[
+                  { name: 'Tymon',   photo: '/about/tymon.jpg' },
+                  { name: 'Krzychu', photo: '/about/krzychu.jpg' },
+                  { name: 'Lukas',   photo: '/about/lukas.jpg' },
+                ].map((f, i) => (
+                  <div key={f.name} className="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid rgba(255,255,255,0.12)', zIndex: 3 - i }}>
+                    <Image src={f.photo} alt={f.name} fill className="object-cover" sizes="36px" />
                   </div>
                 ))}
               </div>
@@ -281,7 +297,6 @@ export default async function HomePage() {
       {/* ─── S3: HOW IT WORKS ─────────────────────────────────────────── */}
       <section className="pb-4" style={{ background: '#F3EDE4' }}>
         <div className="relative overflow-hidden" style={{ background: '#07111C' }}>
-
           <div className="relative px-4 md:px-8 lg:px-14 py-16 md:py-24" style={{ zIndex: 3 }}>
             <div className="max-w-[1360px] mx-auto">
 
@@ -297,11 +312,11 @@ export default async function HomePage() {
                   </h2>
                 </div>
                 <p className="text-sm f-body md:text-right md:max-w-[260px]" style={{ color: 'rgba(255,255,255,0.28)', lineHeight: 1.7 }}>
-                  The same process in Norway, Sweden, Iceland and Finland — personal, not automated.
+                  Norway, Sweden, Iceland and Finland — same process everywhere.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {HOW_IT_WORKS.map(item => (
                   <div
                     key={item.n}
@@ -322,10 +337,13 @@ export default async function HomePage() {
                 ))}
               </div>
 
-              <div className="flex justify-center mt-12">
+              <div className="flex flex-col items-center gap-3 mt-12">
                 <Link href="/trips" className="flex items-center gap-2 text-sm font-semibold px-8 py-3.5 rounded-full transition-all hover:brightness-110 active:scale-[0.97] f-body" style={{ background: '#E67E50', color: '#fff' }}>
-                  Plan my trip <ArrowRight size={14} strokeWidth={2.5} />
+                  Browse trips <ArrowRight size={14} strokeWidth={2.5} />
                 </Link>
+                <p className="f-body text-xs" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                  Free to browse and request — you only pay when you confirm.
+                </p>
               </div>
             </div>
           </div>
@@ -352,7 +370,7 @@ export default async function HomePage() {
                   {/* Background photo from /public/{country}.jpg */}
                   <Image
                     src={`/${dest.country.toLowerCase()}.jpg`}
-                    alt={dest.country}
+                    alt={`Guided fishing in ${dest.country} — ${dest.detail}`}
                     fill
                     sizes="(max-width:768px) 100vw, (max-width:1280px) 50vw, 25vw"
                     className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
@@ -400,7 +418,7 @@ export default async function HomePage() {
                   People you&apos;ll fish with.
                 </h2>
                 <p className="f-body mt-3 max-w-[400px]" style={{ fontSize: '15px', color: 'rgba(10,46,77,0.48)', lineHeight: 1.7 }}>
-                  Every one of them we know personally. Some for years.
+                  We reached out cold or they found us. We list only the ones whose trips we'd actually book.
                 </p>
               </div>
               <Link href="/guides" className="hidden md:block text-sm font-medium f-body hover:text-[#E67E50] transition-colors" style={{ color: 'rgba(10,46,77,0.38)' }}>
@@ -408,7 +426,7 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               {featuredGuides.map((guide: FeaturedGuide, idx) => (
                 <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
                   <div className="relative overflow-hidden" style={{ borderRadius: '16px', aspectRatio: '3/4', background: '#0A2E4D' }}>
@@ -462,25 +480,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ─── S8: FAQ ──────────────────────────────────────────────────── */}
-      <section className="px-4 md:px-8 lg:px-14 py-20 md:py-28" style={{ background: '#F3EDE4' }}>
-        <div className="max-w-[1360px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-20">
-            <div>
-              <div className="w-10 h-px mb-6" style={{ background: '#E67E50' }} />
-              <h2 className="f-display font-bold text-[#0A2E4D]" style={{ fontSize: 'clamp(28px, 3.5vw, 46px)', lineHeight: 1.12 }}>
-                Questions<br />before you write.
-              </h2>
-              <p className="f-body mt-5" style={{ fontSize: '15px', color: 'rgba(10,46,77,0.48)', lineHeight: 1.75 }}>
-                If yours isn&apos;t here, just ask. We reply within 24 hours — in Polish, English, or German.
-              </p>
-            </div>
-            <div className="lg:col-span-2">
-              <HomeFaq />
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ─── S9: FINAL CTA ────────────────────────────────────────────── */}
       <section style={{ background: '#F3EDE4' }}>
@@ -489,19 +488,19 @@ export default async function HomePage() {
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(4,12,22,0.70) 0%, rgba(4,12,22,0.55) 100%)' }} />
   
           <div className="relative flex flex-col items-center justify-center text-center px-4 py-24 md:py-36" style={{ zIndex: 3, minHeight: '580px' }}>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>Season 2026</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>Season 2026 is open</p>
             <h2 className="f-display font-bold text-white max-w-[680px]" style={{ fontSize: 'clamp(32px, 5vw, 66px)', lineHeight: 1.08 }}>
-              The next season starts in May.
+              The best weeks are filling now.
             </h2>
             <p className="f-body mt-5 max-w-[460px]" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.52)', lineHeight: 1.8 }}>
-              The best guides fill their calendars by January. Write before they do.
+              Peak salmon weeks go fast. Write to us before the dates you want are gone.
             </p>
             <Link
               href="/trips"
               className="inline-flex items-center gap-2 mt-10 font-semibold px-10 py-4 rounded-full text-base transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
               style={{ background: '#E67E50', color: '#fff' }}
             >
-              Plan my trip <ArrowRight size={15} strokeWidth={2.5} />
+              Explore trips <ArrowRight size={15} strokeWidth={2.5} />
             </Link>
             <p className="f-body mt-4 text-xs" style={{ color: 'rgba(255,255,255,0.28)' }}>
               We reply within 24 hours. In Polish, English or German.
@@ -510,11 +509,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ─── FOOTER ──────────────────────────────────────────────────── */}
-      <Footer />
-
       </div>{/* end scroll-over wrapper */}
 
+      <SiteFooter />
     </div>
   )
 }

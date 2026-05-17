@@ -30,6 +30,8 @@ import { DepositLinkAnglerEmail } from '@/emails/deposit-link-angler'
 import { DepositConfirmedAnglerEmail } from '@/emails/deposit-confirmed-angler'
 import { DepositConfirmedFaEmail } from '@/emails/deposit-confirmed-fa'
 import { BookingConfirmedGuideEmail } from '@/emails/booking-confirmed-guide'
+import { InquiryMessageAnglerEmail } from '@/emails/inquiry-message-angler'
+import { InquiryOfferAnglerEmail } from '@/emails/inquiry-offer-angler'
 import type { GuideApplicationEmailProps } from '@/emails/guide-application'
 import type { GuideWelcomeEmailProps } from '@/emails/guide-welcome'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
@@ -47,6 +49,8 @@ import type { DepositLinkAnglerEmailProps } from '@/emails/deposit-link-angler'
 import type { DepositConfirmedAnglerEmailProps } from '@/emails/deposit-confirmed-angler'
 import type { DepositConfirmedFaEmailProps } from '@/emails/deposit-confirmed-fa'
 import type { BookingConfirmedGuideEmailProps } from '@/emails/booking-confirmed-guide'
+import type { InquiryMessageAnglerEmailProps } from '@/emails/inquiry-message-angler'
+import type { InquiryOfferAnglerEmailProps } from '@/emails/inquiry-offer-angler'
 
 const FROM = 'FjordAnglers <contact@fjordanglers.com>'
 
@@ -383,5 +387,38 @@ export async function sendBookingConfirmedGuideEmail(
     to,
     subject: `New booking confirmed — ${templateProps.anglerName} · ${(templateProps.requestedDates ?? [])[0] ?? 'TBD'}`,
     react:   createElement(BookingConfirmedGuideEmail, templateProps),
+  })
+}
+
+// ─── FA → Angler direct messaging ────────────────────────────────────────────
+
+/**
+ * Sent to the angler when FA sends them a direct message from the admin.
+ * Subject is set by FA. Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendInquiryMessageAnglerEmail(
+  props: { to: string } & InquiryMessageAnglerEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: templateProps.subject,
+    react:   createElement(InquiryMessageAnglerEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to the angler when FA creates and sends a personalised offer.
+ * Includes total price, deposit amount, balance, and optional FA notes.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendInquiryOfferAnglerEmail(
+  props: { to: string } & InquiryOfferAnglerEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `Your offer — ${templateProps.tripTitle} — €${templateProps.offerTotalEur.toFixed(2)} total`,
+    react:   createElement(InquiryOfferAnglerEmail, templateProps),
   })
 }

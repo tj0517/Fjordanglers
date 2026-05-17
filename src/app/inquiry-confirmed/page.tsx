@@ -6,7 +6,8 @@
  */
 
 import Link from 'next/link'
-import { Footer } from '@/components/layout/footer'
+import { SiteNav } from '@/components/layout/nav'
+import { SiteFooter } from '@/components/layout/footer'
 
 export default async function InquiryConfirmedPage({
   searchParams,
@@ -18,6 +19,7 @@ export default async function InquiryConfirmedPage({
 
   return (
     <>
+    <SiteNav />
     <div className="min-h-screen flex items-center justify-center px-4"
       style={{ background: '#F8FAFB' }}>
       <div className="max-w-md w-full text-center">
@@ -66,7 +68,7 @@ export default async function InquiryConfirmedPage({
 
       </div>
     </div>
-    <Footer />
+    <SiteFooter />
     </>
   )
 }

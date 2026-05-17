@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExperiencePageForm, { type ExperiencePageFormInitialData } from '@/components/admin/ExperiencePageForm'
-import type { SpeciesDetailItem, SpecialAttraction } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction, Accommodation, ContentBlock } from '@/actions/experience-pages'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -35,8 +35,45 @@ export default async function AdminExperienceEditPage({
     boat_image_url:       string | null
     special_attractions:  unknown
     what_to_bring:        unknown
+    accommodations:       unknown
+    faq:                  unknown
+    content_photo_urls:   unknown
+    content_blocks:       unknown
   }
   const page = rawPage as unknown as PageWithNewCols
+
+  // Fetch trip options for this page
+  const { data: rawOptions } = await svc
+    .from('experience_page_options')
+    .select('*')
+    .eq('experience_page_id', id)
+    .order('sort_order', { ascending: true })
+
+  type OptionRow = {
+    id: string
+    experience_page_id: string
+    sort_order: number
+    label: string
+    price_from: number
+    description: string | null
+    catches_text: string | null
+    target_species: string[]
+    boat_description: string | null
+    boat_image_url: string | null
+    special_attractions: unknown
+    meeting_point_name: string | null
+    meeting_point_description: string | null
+    location_lat: number | null
+    location_lng: number | null
+    what_to_bring: string[]
+    includes: string[]
+    excludes: string[]
+    content_blocks: unknown
+    faq: unknown
+    created_at: string
+    updated_at: string
+  }
+  const initialOptions = (rawOptions ?? []) as OptionRow[]
 
   // Fetch guide photos if a guide is linked
   let guidePhotos: string[] = []
@@ -87,6 +124,10 @@ export default async function AdminExperienceEditPage({
     boat_image_url:      page.boat_image_url ?? null,
     special_attractions: (page.special_attractions as SpecialAttraction[] | null) ?? [],
     what_to_bring:       (page.what_to_bring as string[] | null) ?? [],
+    accommodations:      (page.accommodations as Accommodation[] | null) ?? [],
+    faq:                 page.faq ?? [],
+    content_photo_urls:  (page.content_photo_urls as string[] | null) ?? [],
+    content_blocks:      (page.content_blocks as ContentBlock[] | null) ?? [],
   }
 
   return (
@@ -119,6 +160,7 @@ export default async function AdminExperienceEditPage({
         experienceId={id}
         initialData={initialData}
         guidePhotos={guidePhotos}
+        initialOptions={initialOptions}
       />
     </div>
   )

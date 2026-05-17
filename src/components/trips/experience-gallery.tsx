@@ -14,11 +14,12 @@ interface GalleryImage {
 interface Props {
   images: GalleryImage[]
   title: string
-  topMobile?: boolean  // full-bleed top carousel for mobile hero
-  square?: boolean     // remove rounded corners + bottom margin (for full-bleed top placement)
+  topMobile?: boolean    // full-bleed top carousel for mobile hero
+  square?: boolean       // remove rounded corners + bottom margin (for full-bleed top placement)
+  mobileHeight?: string  // CSS height override for topMobile mode (default: clamp(280px,42svh,440px))
 }
 
-export function ExperienceGallery({ images, title, topMobile = false, square = false }: Props) {
+export function ExperienceGallery({ images, title, topMobile = false, square = false, mobileHeight }: Props) {
   const [current, setCurrent] = useState(0)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
@@ -58,7 +59,10 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
       {/* ─── TOP-MOBILE CAROUSEL (full-bleed, topMobile mode) ───────── */}
       {topMobile && (
         <div className="select-none">
-          <div className="relative overflow-hidden" style={{ height: '300px', background: '#07111C' }}>
+          <div
+            className="relative overflow-hidden"
+            style={{ height: mobileHeight ?? '100vw', background: '#07111C' }}
+          >
             <button
               className="w-full h-full block"
               onClick={() => setLightboxIndex(current)}
@@ -74,12 +78,21 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
               />
             </button>
 
+            {/* Gradient fade at bottom for counter legibility */}
+            <div
+              className="absolute inset-x-0 bottom-0 pointer-events-none"
+              style={{
+                height: '60px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.38) 0%, transparent 100%)',
+              }}
+            />
+
             {sorted.length > 1 && (
               <>
                 <button
                   onClick={e => { e.stopPropagation(); slidePrev() }}
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: 'rgba(0,0,0,0.18)', color: 'rgba(255,255,255,0.9)' }}
+                  style={{ background: 'rgba(243,237,228,0.92)', color: '#0A2E4D', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
                   aria-label="Previous photo"
                 >
                   <ChevronLeft size={16} strokeWidth={2} />
@@ -87,11 +100,19 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
                 <button
                   onClick={e => { e.stopPropagation(); slideNext() }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: 'rgba(0,0,0,0.18)', color: 'rgba(255,255,255,0.9)' }}
+                  style={{ background: 'rgba(243,237,228,0.92)', color: '#0A2E4D', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
                   aria-label="Next photo"
                 >
                   <ChevronRight size={16} strokeWidth={2} />
                 </button>
+
+                {/* Photo counter — bottom-right */}
+                <div
+                  className="absolute bottom-3 right-3 text-xs font-semibold px-2.5 py-1 rounded-full f-body pointer-events-none"
+                  style={{ background: 'rgba(0,0,0,0.46)', color: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(6px)' }}
+                >
+                  {current + 1} / {sorted.length}
+                </div>
               </>
             )}
           </div>
@@ -216,7 +237,7 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
       {/* ─── LIGHTBOX ──────────────────────────────────────────────── */}
       {lightboxIndex != null && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center"
+          className="fixed inset-0 z-[10000] flex items-center justify-center"
           style={{ background: 'rgba(3,8,15,0.94)', backdropFilter: 'blur(8px)' }}
           onClick={close}
         >

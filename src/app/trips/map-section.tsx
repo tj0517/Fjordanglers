@@ -64,7 +64,7 @@ function SheetCard({
       href={`/trips/${exp.id}`}
       onClick={onClick}
       className="group flex-shrink-0 text-left transition-transform duration-200 active:scale-[0.98]"
-      style={{ width: '248px' }}
+      style={{ width: 'min(248px, 80vw)' }}
       aria-label={exp.title}
     >
       <div
@@ -184,11 +184,11 @@ export default function MapSection({
 
   // ── Detect desktop ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const desktop = window.innerWidth >= 1024
+    const desktop = window.innerWidth >= 768
     setIsDesktop(desktop)
     // Desktop: load geo data immediately on mount (non-blocking — page already rendered)
     if (desktop) void loadGeoData()
-    const check = () => setIsDesktop(window.innerWidth >= 1024)
+    const check = () => setIsDesktop(window.innerWidth >= 768)
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -236,7 +236,7 @@ export default function MapSection({
     if (!isDesktop && sheetScrollRef.current) {
       const idx = visibleExperiences.findIndex(e => e.id === id)
       if (idx >= 0) {
-        const CARD_W = 248 + 12
+        const CARD_W = Math.min(248, Math.round(window.innerWidth * 0.8)) + 12
         sheetScrollRef.current.scrollTo({ left: idx * CARD_W, behavior: 'smooth' })
       }
     }
@@ -246,10 +246,10 @@ export default function MapSection({
 
   if (isDesktop) {
     return (
-      <div className="flex lg:h-[calc(100vh-72px)]">
+      <div className="flex md:h-[calc(100vh-72px)]">
 
         <main
-          className="w-full lg:w-1/2 lg:overflow-y-auto px-4 sm:px-8 lg:px-14 py-7"
+          className="w-full md:w-1/2 md:overflow-y-auto px-4 sm:px-8 lg:px-14 py-7"
           style={{ scrollbarWidth: 'none' } as React.CSSProperties}
         >
           <div className="flex items-center gap-2 mb-5">
@@ -289,7 +289,7 @@ export default function MapSection({
           )}
         </main>
 
-        <aside className="flex-shrink-0 lg:w-1/2" style={{ padding: '12px 16px 12px 0' }}>
+        <aside className="flex-shrink-0 md:w-1/2" style={{ padding: '12px 16px 12px 0' }}>
           <div className="w-full h-full overflow-hidden" style={{ borderRadius: '20px' }}>
             <MapWrapper
               experiences={mapPinExps}
@@ -308,7 +308,7 @@ export default function MapSection({
   // ─── MOBILE MAP view ────────────────────────────────────────────────────────
 
   if (mobileView === 'map') {
-    const SHEET_H = 290
+    const SHEET_H = Math.min(290, Math.round(window.innerHeight * 0.45))
 
     return (
       <div

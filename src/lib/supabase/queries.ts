@@ -661,6 +661,55 @@ export async function getGuideExperiences(guideId: string): Promise<ExperienceWi
   )()
 }
 
+// ─── Featured experience pages (home slider) ──────────────────────────────────
+
+export type FeaturedExperiencePage = {
+  id: string
+  slug: string
+  experience_name: string
+  country: string
+  region: string
+  price_from: number
+  hero_image_url: string | null
+  guide: { id: string; full_name: string } | null
+}
+
+/**
+ * Random active experience pages — used in the home page "Trips you can book" slider.
+ * Fetches from experience_pages (not the legacy experiences table) so cards link
+ * to /experiences/[slug].
+ */
+export async function getFeaturedExperiencePages(limit = 8): Promise<FeaturedExperiencePage[]> {
+  return unstable_cache(
+    async () => {
+      const db = createPublicClient()
+
+      const { data, error } = await db
+        .from('experience_pages')
+        .select('id, slug, experience_name, country, region, price_from, hero_image_url, guide:guides!guide_id ( id, full_name )')
+        .eq('status', 'active')
+        .limit(40)
+
+      if (error) {
+        console.error('[getFeaturedExperiencePages]', error.message)
+        return []
+      }
+
+      const all = (data ?? []) as unknown as FeaturedExperiencePage[]
+
+      // Fisher-Yates shuffle
+      for (let i = all.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [all[i], all[j]] = [all[j], all[i]]
+      }
+
+      return all.slice(0, limit)
+    },
+    ['featured-experience-pages', String(limit)],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
+  )()
+}
+
 // ─── Country stats ────────────────────────────────────────────────────────────
 
 export type CountryStat = {

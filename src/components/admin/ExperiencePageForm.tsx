@@ -26,9 +26,16 @@ import { COUNTRIES } from '@/lib/countries'
 import {
   createExperiencePage,
   updateExperiencePage,
+  createExperiencePageOption,
+  updateExperiencePageOption,
+  deleteExperiencePageOption,
   type ExperiencePagePayload,
   type SpeciesDetailItem,
   type SpecialAttraction,
+  type Accommodation,
+  type ContentBlock,
+  type FaqItem,
+  type ExperiencePageOptionPayload,
 } from '@/actions/experience-pages'
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
@@ -68,6 +75,14 @@ function slugify(s: string): string {
 
 function parseLines(s: string): string[] {
   return s.split('\n').map(l => l.trim()).filter(Boolean)
+}
+
+function parseJsonField<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[]
+  if (typeof value === 'string') {
+    try { return JSON.parse(value) as T[] } catch { return [] }
+  }
+  return []
 }
 
 function toggleItem<T>(arr: T[], item: T): T[] {
@@ -301,6 +316,393 @@ function SpeciesDetailEditor({
   )
 }
 
+// ─── OptionEditor sub-component ───────────────────────────────────────────────
+
+function OptionEditor({
+  option,
+  index,
+  isOpen,
+  onToggle,
+  speciesLibrary,
+  guidePhotos,
+  guideId,
+  onSaved,
+  onDeleted,
+}: {
+  option:        ExperiencePageOptionRow
+  index:         number
+  isOpen:        boolean
+  onToggle:      () => void
+  speciesLibrary: string[]   // page-level target_species names
+  guidePhotos:   string[]
+  guideId?:      string
+  onSaved:       (updated: ExperiencePageOptionRow) => void
+  onDeleted:     (id: string) => void
+}) {
+  const [label,       setLabel]       = useState(option.label)
+  const [price,       setPrice]       = useState(String(option.price_from))
+  const [species,     setSpecies]     = useState<string[]>(option.target_species ?? [])
+  const [boatDesc,    setBoatDesc]    = useState(option.boat_description ?? '')
+  const [boatImg,     setBoatImg]     = useState(option.boat_image_url ?? '')
+  const [attractions, setAttractions] = useState<SpecialAttraction[]>(
+    (option.special_attractions as SpecialAttraction[] | null) ?? []
+  )
+  const [meetName,    setMeetName]    = useState(option.meeting_point_name ?? '')
+  const [meetDesc,    setMeetDesc]    = useState(option.meeting_point_description ?? '')
+  const [lat,         setLat]         = useState<number | null>(option.location_lat ?? null)
+  const [lng,         setLng]         = useState<number | null>(option.location_lng ?? null)
+  const [bring,       setBring]       = useState((option.what_to_bring ?? []).join('\n'))
+  const [incl,        setIncl]        = useState((option.includes ?? []).join('\n'))
+  const [excl,        setExcl]        = useState((option.excludes ?? []).join('\n'))
+  const [blocks,      setBlocks]      = useState<ContentBlock[]>(() => parseJsonField<ContentBlock>(option.content_blocks))
+  const [saving,      setSaving]      = useState(false)
+  const [deleting,    setDeleting]    = useState(false)
+  const [saveError,   setSaveError]   = useState<string | null>(null)
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const payload: Partial<ExperiencePageOptionPayload> = {
+        label:                     label.trim() || `Option ${index + 1}`,
+        price_from:                parseFloat(price) || 0,
+        target_species:            species,
+        boat_description:          boatDesc.trim() || null,
+        boat_image_url:            boatImg.trim() || null,
+        special_attractions:       attractions.filter(a => a.text.trim()),
+        meeting_point_name:        meetName.trim() || null,
+        meeting_point_description: meetDesc.trim() || null,
+        location_lat:              lat,
+        location_lng:              lng,
+        what_to_bring:             parseLines(bring),
+        includes:                  parseLines(incl),
+        excludes:                  parseLines(excl),
+        content_blocks:            blocks.filter(b => b.headline.trim() || b.text.trim()),
+      }
+      const result = await updateExperiencePageOption(option.id, payload)
+      if (result.success) {
+        onSaved({
+          ...option,
+          label:                     payload.label!,
+          price_from:                payload.price_from!,
+          target_species:            payload.target_species ?? [],
+          boat_description:          payload.boat_description ?? null,
+          boat_image_url:            payload.boat_image_url ?? null,
+          special_attractions:       payload.special_attractions ?? [],
+          meeting_point_name:        payload.meeting_point_name ?? null,
+          meeting_point_description: payload.meeting_point_description ?? null,
+          location_lat:              payload.location_lat ?? null,
+          location_lng:              payload.location_lng ?? null,
+          what_to_bring:             payload.what_to_bring ?? [],
+          includes:                  payload.includes ?? [],
+          excludes:                  payload.excludes ?? [],
+          content_blocks:            payload.content_blocks ?? [],
+          updated_at:                new Date().toISOString(),
+        })
+      } else {
+        setSaveError(result.error)
+      }
+    } catch {
+      setSaveError('Unexpected error — try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm(`Delete "${label || `Option ${index + 1}`}"? This cannot be undone.`)) return
+    setDeleting(true)
+    try {
+      const result = await deleteExperiencePageOption(option.id)
+      if (result.success) {
+        onDeleted(option.id)
+      } else {
+        alert(result.error)
+      }
+    } catch {
+      alert('Failed to delete option.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{
+      border: isOpen ? '1.5px solid rgba(230,126,80,0.35)' : '1.5px solid rgba(10,46,77,0.1)',
+    }}>
+      {/* Header — intentionally a div so the Delete button is not nested inside a button */}
+      <div
+        className="w-full flex items-center justify-between px-4 py-3 transition-colors"
+        style={{ background: isOpen ? 'rgba(230,126,80,0.04)' : 'rgba(10,46,77,0.02)' }}
+      >
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+        >
+          {isOpen
+            ? <ChevronUp size={14} style={{ color: '#E67E50', flexShrink: 0 }} />
+            : <ChevronDown size={14} style={{ color: 'rgba(10,46,77,0.4)', flexShrink: 0 }} />}
+          <div>
+            <span className="text-sm font-bold f-body" style={{ color: isOpen ? '#E67E50' : '#0A2E4D' }}>
+              {label || `Option ${index + 1}`}
+            </span>
+            {!isOpen && (
+              <span className="text-xs f-body ml-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                from €{option.price_from}
+              </span>
+            )}
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-xs font-semibold f-body px-2.5 py-1 rounded-lg ml-4 flex-shrink-0"
+          style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
+        >
+          {deleting ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
+
+      {/* Body */}
+      {isOpen && (
+        <div className="px-4 py-4 space-y-4" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+
+          {/* Label + Price */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Option label <Req /></label>
+              <input type="text" value={label} onChange={e => setLabel(e.target.value)}
+                placeholder="Full Day Trip"
+                className={inp} style={iStyle} />
+            </div>
+            <div>
+              <label className={lbl}>Price from (€) <Req /></label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body font-semibold"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}>€</span>
+                <input type="number" min="0" step="10" value={price}
+                  onChange={e => setPrice(e.target.value)}
+                  placeholder="350"
+                  className={inp + ' pl-7'} style={iStyle} />
+              </div>
+            </div>
+          </div>
+
+          {/* Content blocks */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className={lbl}>Text blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
+              <button
+                type="button"
+                onClick={() => setBlocks(prev => [...prev, { headline: '', text: '' }])}
+                className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+                style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+                + Add block
+              </button>
+            </div>
+            {blocks.map((block, bi) => (
+              <div key={bi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={block.headline}
+                    onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, headline: e.target.value } : b))}
+                    placeholder="Section headline…"
+                    className={inp} style={{ ...iStyle, flex: 1 }} />
+                  <button
+                    type="button"
+                    onClick={() => setBlocks(prev => prev.filter((_, i) => i !== bi))}
+                    className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                    Remove
+                  </button>
+                </div>
+                <textarea
+                  value={block.text}
+                  onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
+                  placeholder="Block text…"
+                  rows={3}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                  style={iStyle} />
+              </div>
+            ))}
+            {blocks.length === 0 && (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No text blocks yet. Click &quot;+ Add block&quot; to add one.</p>
+            )}
+          </div>
+
+          {/* Target species — checkboxes from page-level species library */}
+          <div>
+            <label className={lbl}>Target species for this option</label>
+            {speciesLibrary.length === 0 ? (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                Add target species in the Quick Fit section first, then assign them per option here.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2 mt-1">
+                {speciesLibrary.map(name => {
+                  const checked = species.includes(name)
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => setSpecies(prev => toggleItem(prev, name))}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
+                      style={{
+                        background: checked ? '#E67E50' : 'rgba(10,46,77,0.06)',
+                        color:      checked ? '#fff'    : 'rgba(10,46,77,0.6)',
+                        border:     checked ? '1.5px solid transparent' : '1.5px solid rgba(10,46,77,0.1)',
+                      }}
+                    >
+                      {checked && <Check size={10} strokeWidth={3} />}
+                      {name}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Boat */}
+          <div className="space-y-3">
+            <label className={lbl}>Boat (optional)</label>
+            <textarea value={boatDesc} onChange={e => setBoatDesc(e.target.value)}
+              placeholder="Describe the boat used for this option…"
+              rows={3} maxLength={800}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={iStyle} />
+            <ImageUpload
+              label="Boat photo"
+              variant="cover"
+              aspect="wide"
+              cropAspect={4 / 3}
+              currentUrl={boatImg || null}
+              onUpload={url => setBoatImg(url)}
+              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              guideId={guideId}
+              hint="Landscape — shown next to the boat description."
+            />
+          </div>
+
+          {/* Special attractions */}
+          <div className="space-y-3">
+            <label className={lbl}>Special attractions</label>
+            {attractions.map((attr, i) => (
+              <div key={i} className="space-y-2 p-3 rounded-xl"
+                style={{ border: '1px solid rgba(10,46,77,0.1)', background: 'rgba(10,46,77,0.02)' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}>Attraction {i + 1}</span>
+                  <button type="button"
+                    onClick={() => setAttractions(prev => prev.filter((_, j) => j !== i))}
+                    className="text-xs font-semibold f-body px-2 py-0.5 rounded-lg"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                    Remove
+                  </button>
+                </div>
+                <ImageUpload
+                  label="Photo"
+                  variant="cover"
+                  aspect="wide"
+                  cropAspect={4 / 3}
+                  currentUrl={attr.image_url || null}
+                  onUpload={url => setAttractions(prev => prev.map((a, j) => j === i ? { ...a, image_url: url } : a))}
+                  pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+                  guideId={guideId}
+                  hint="Shown to the left of the text."
+                />
+                <textarea
+                  value={attr.text}
+                  onChange={e => setAttractions(prev => prev.map((a, j) => j === i ? { ...a, text: e.target.value } : a))}
+                  placeholder="Describe this attraction…"
+                  rows={3} maxLength={800}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                  style={iStyle} />
+              </div>
+            ))}
+            <button type="button"
+              onClick={() => setAttractions(prev => [...prev, { text: '', image_url: '' }])}
+              className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+              style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+              + Add attraction
+            </button>
+          </div>
+
+          {/* Meeting point */}
+          <div className="space-y-2">
+            <label className={lbl}>Meeting point</label>
+            <input type="text" value={meetName} onChange={e => setMeetName(e.target.value)}
+              placeholder="Harbour car park, Bodø"
+              className={inp} style={iStyle} />
+            <textarea value={meetDesc} onChange={e => setMeetDesc(e.target.value)}
+              placeholder="Directions to the meeting point…"
+              rows={2}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={iStyle} />
+          </div>
+
+          {/* Location map pin */}
+          <div>
+            <label className={lbl}>Location pin (optional — overrides page-level pin for this option)</label>
+            <LatLngPicker lat={lat} lng={lng} onChange={(la, ln) => { setLat(la); setLng(ln) }} />
+          </div>
+
+          {/* What to bring */}
+          <div>
+            <label className={lbl}>What to bring <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(one item per line)</span></label>
+            <textarea value={bring} onChange={e => setBring(e.target.value)}
+              placeholder={"Waders and wading boots\nRod and reel\nPolarised sunglasses"}
+              rows={4}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={iStyle} />
+          </div>
+
+          {/* Includes / Excludes */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={lbl}>Included</label>
+              <textarea value={incl} onChange={e => setIncl(e.target.value)}
+                placeholder={"Guide service\nBeat access permit"}
+                rows={5}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                style={iStyle} />
+            </div>
+            <div>
+              <label className={lbl}>Excluded</label>
+              <textarea value={excl} onChange={e => setExcl(e.target.value)}
+                placeholder={"Travel\nAccommodation\nMeals"}
+                rows={5}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                style={iStyle} />
+            </div>
+          </div>
+
+          {/* Save */}
+          {saveError && (
+            <p className="text-xs f-body px-3 py-2 rounded-xl"
+              style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>{saveError}</p>
+          )}
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold f-body transition-all"
+            style={{
+              background: saving ? 'rgba(230,126,80,0.6)' : '#E67E50',
+              color:      '#fff',
+              cursor:     saving ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {saving ? <><Loader2 size={13} className="animate-spin" /> Saving…</> : 'Save option'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface ExperiencePageFormInitialData {
@@ -321,6 +723,7 @@ export interface ExperiencePageFormInitialData {
   intro_text:                   string | null
   hero_image_url:               string | null
   gallery_image_urls:           string[]
+  content_photo_urls?:          string[]
   story_text:                   string | null
   catches_text:                 string | null
   rod_setup:                    string | null
@@ -331,16 +734,44 @@ export interface ExperiencePageFormInitialData {
   boat_description:             string | null
   boat_image_url:               string | null
   special_attractions:          SpecialAttraction[]
+  accommodations:               Accommodation[]
   what_to_bring:                string[]
   meeting_point_name:           string | null
   meeting_point_description:    string | null
   includes:                     string[]
   excludes:                     string[]
+  content_blocks?:              ContentBlock[]
+  faq:                          unknown   // FaqItem[] stored as JSONB
   meta_title:                   string | null
   meta_description:             string | null
   og_image_url:                 string | null
   location_lat:                 number | null
   location_lng:                 number | null
+}
+
+// Row shape returned from DB — mirrors experience_page_options table
+export interface ExperiencePageOptionRow {
+  id:                        string
+  experience_page_id:        string
+  sort_order:                number
+  label:                     string
+  price_from:                number
+  description:               string | null
+  catches_text:              string | null
+  target_species:            string[]
+  boat_description:          string | null
+  boat_image_url:            string | null
+  special_attractions:       unknown   // SpecialAttraction[] stored as JSONB
+  meeting_point_name:        string | null
+  meeting_point_description: string | null
+  location_lat:              number | null
+  location_lng:              number | null
+  what_to_bring:             string[]
+  includes:                  string[]
+  excludes:                  string[]
+  content_blocks:            unknown   // ContentBlock[] stored as JSONB
+  created_at:                string
+  updated_at:                string
 }
 
 export interface ExperiencePageFormProps {
@@ -364,6 +795,8 @@ export interface ExperiencePageFormProps {
    * When provided, the hero image and gallery pickers show a "From gallery" tab.
    */
   guidePhotos?: string[]
+  /** Trip options fetched from experience_page_options table */
+  initialOptions?: ExperiencePageOptionRow[]
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -374,9 +807,15 @@ export default function ExperiencePageForm({
   prefill,
   initialData,
   guidePhotos = [],
+  initialOptions = [],
 }: ExperiencePageFormProps) {
   const router = useRouter()
   const isEdit = mode === 'edit'
+
+  // ── Trip Options (Section 13) ─────────────────────────────────────────────
+  const [tripOptions, setTripOptions] = useState<ExperiencePageOptionRow[]>(initialOptions)
+  const [optionCreating, setOptionCreating] = useState(false)
+  const [optionOpenIdx, setOptionOpenIdx] = useState<number | null>(null)
 
   // ── Section 1: Identity
   const [experienceName, setExperienceName] = useState(initialData?.experience_name ?? '')
@@ -413,6 +852,9 @@ export default function ExperiencePageForm({
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(
     () => (initialData?.gallery_image_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))
   )
+  const [contentPhotoImages, setContentPhotoImages] = useState<GalleryImage[]>(
+    () => (initialData?.content_photo_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))
+  )
 
   // ── Section 6: Season months
   const [seasonMonths, setSeasonMonths] = useState<number[]>(
@@ -446,6 +888,9 @@ export default function ExperiencePageForm({
   const [specialAttractions, setSpecialAttractions] = useState<SpecialAttraction[]>(
     initialData?.special_attractions ?? []
   )
+  const [accommodationItems, setAccommodationItems] = useState<Accommodation[]>(
+    initialData?.accommodations ?? []
+  )
 
   // ── Section 10: Meeting point
   const [meetingName, setMeetingName] = useState(initialData?.meeting_point_name ?? '')
@@ -457,6 +902,12 @@ export default function ExperiencePageForm({
   // ── Section 12: Includes/Excludes
   const [includes, setIncludes] = useState(initialData?.includes?.join('\n') ?? 'Guide service')
   const [excludes, setExcludes] = useState(initialData?.excludes?.join('\n') ?? '')
+
+  // ── Page-level content blocks
+  const [pageBlocks, setPageBlocks] = useState<ContentBlock[]>(initialData?.content_blocks ?? [])
+
+  // ── Section 12b: FAQ (global)
+  const [faqItems, setFaqItems] = useState<FaqItem[]>(() => parseJsonField<FaqItem>(initialData?.faq))
 
   // ── Section 12: SEO
   const [metaTitle, setMetaTitle] = useState(initialData?.meta_title ?? '')
@@ -528,6 +979,7 @@ export default function ExperiencePageForm({
       intro_text:                       introText.trim()    || null,
       hero_image_url:                   heroImageUrl.trim() || null,
       gallery_image_urls:               galleryImages.map(g => g.url),
+      content_photo_urls:               contentPhotoImages.map(g => g.url),
       story_text:                       storyText.trim()   || null,
       catches_text:                     catchesText.trim() || null,
       rod_setup:                        rodSetup.trim()    || null,
@@ -538,11 +990,14 @@ export default function ExperiencePageForm({
       boat_description:                 boatDescription.trim()             || null,
       boat_image_url:                   boatImageUrl.trim()                || null,
       special_attractions:              specialAttractions.filter(a => a.text.trim()),
+      accommodations:                   accommodationItems.filter(a => a.description.trim() || a.heading.trim()),
       what_to_bring:                    parseLines(whatToBring),
       meeting_point_name:               meetingName.trim() || null,
       meeting_point_description:        meetingDesc.trim() || null,
       includes:                         parseLines(includes),
       excludes:                         parseLines(excludes),
+      content_blocks:                   pageBlocks.filter(b => b.headline.trim() || b.text.trim()),
+      faq:                              faqItems.filter(f => f.question.trim() || f.answer.trim()),
       meta_title:                       metaTitle.trim()   || null,
       meta_description:                 metaDesc.trim()    || null,
       og_image_url:                     ogImage.trim()     || null,
@@ -576,10 +1031,10 @@ export default function ExperiencePageForm({
   }, [
     canSubmit, experienceName, slug, country, region, priceFrom, seasonStart, seasonEnd,
     status, difficulty, effort, nonAnglerFriendly, technique, targetSpecies, environment,
-    introText, heroImageUrl, galleryImages, storyText, catchesText, rodSetup, bestMonths,
+    introText, heroImageUrl, galleryImages, contentPhotoImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
-    boatDescription, boatImageUrl, specialAttractions, whatToBring,
-    meetingName, meetingDesc, includes, excludes, metaTitle, metaDesc, ogImage,
+    boatDescription, boatImageUrl, specialAttractions, accommodationItems, whatToBring,
+    meetingName, meetingDesc, includes, excludes, pageBlocks, faqItems, metaTitle, metaDesc, ogImage,
     locationLat, locationLng,
     prefill, router, isEdit, experienceId,
   ])
@@ -832,6 +1287,23 @@ export default function ExperiencePageForm({
         pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
         guideId={prefill?.guide_id ?? undefined}
       />
+      <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+        Shown in the top bento gallery on the experience page
+      </p>
+
+      <div className="mt-6">
+        <MultiImageUpload
+          label="Content photos"
+          initial={contentPhotoImages}
+          max={12}
+          onChange={setContentPhotoImages}
+          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          guideId={prefill?.guide_id ?? undefined}
+        />
+        <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+          Shown in the Photos section of the page — independent from the top gallery
+        </p>
+      </div>
 
       <Divider />
 
@@ -847,6 +1319,56 @@ export default function ExperiencePageForm({
         onSeasonChange={setSeasonMonths}
         onPeakChange={setPeakMonths}
       />
+
+      <Divider />
+
+      {/* ── 6b. Page-level text blocks ── */}
+      <SectionLabel
+        step={6}
+        title="Text blocks"
+        desc="Headline + text pairs shown after the season section and before trip options."
+      />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className={lbl}>Text blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
+          <button
+            type="button"
+            onClick={() => setPageBlocks(prev => [...prev, { headline: '', text: '' }])}
+            className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+            style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+            + Add block
+          </button>
+        </div>
+        {pageBlocks.map((block, bi) => (
+          <div key={bi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={block.headline}
+                onChange={e => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, headline: e.target.value } : b))}
+                placeholder="Section headline…"
+                className={inp} style={{ ...iStyle, flex: 1 }} />
+              <button
+                type="button"
+                onClick={() => setPageBlocks(prev => prev.filter((_, i) => i !== bi))}
+                className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                Remove
+              </button>
+            </div>
+            <textarea
+              value={block.text}
+              onChange={e => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
+              placeholder="Block text…"
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={iStyle} />
+          </div>
+        ))}
+        {pageBlocks.length === 0 && (
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No text blocks yet. Click &quot;+ Add block&quot; to add one.</p>
+        )}
+      </div>
 
       <Divider />
 
@@ -911,7 +1433,77 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 9. Special Attractions ── */}
+      {/* ── 9. Accommodation ── */}
+      <SectionLabel
+        step={9}
+        title="Accommodation"
+        desc="Each item is shown as a section with heading, description and photo. Add as many as you like."
+      />
+      <div className="space-y-4">
+        {accommodationItems.map((item, idx) => (
+          <div key={idx} className="space-y-3 p-4 rounded-2xl" style={{ border: '1px solid rgba(10,46,77,0.1)', background: 'rgba(10,46,77,0.02)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                Accommodation {idx + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => setAccommodationItems(prev => prev.filter((_, i) => i !== idx))}
+                className="text-xs font-semibold f-body px-2.5 py-1 rounded-lg"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
+              >
+                Remove
+              </button>
+            </div>
+            <div>
+              <label className={lbl}>Heading</label>
+              <input
+                type="text"
+                value={item.heading}
+                onChange={e => setAccommodationItems(prev => prev.map((a, i) => i === idx ? { ...a, heading: e.target.value } : a))}
+                placeholder="Riverside Cabin, Hotel Fjord, etc."
+                maxLength={120}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"
+                style={iStyle}
+              />
+            </div>
+            <ImageUpload
+              label="Photo"
+              variant="cover"
+              aspect="wide"
+              cropAspect={4 / 3}
+              currentUrl={item.image_url || null}
+              onUpload={(url) => setAccommodationItems(prev => prev.map((a, i) => i === idx ? { ...a, image_url: url } : a))}
+              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              guideId={prefill?.guide_id ?? undefined}
+              hint="Landscape — shown alongside the description."
+            />
+            <div>
+              <label className={lbl}>Description</label>
+              <textarea
+                value={item.description}
+                onChange={e => setAccommodationItems(prev => prev.map((a, i) => i === idx ? { ...a, description: e.target.value } : a))}
+                placeholder="A cosy riverside cabin sleeping up to 6, with a sauna and direct river access…"
+                rows={4} maxLength={800}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                style={iStyle}
+              />
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setAccommodationItems(prev => [...prev, { heading: '', description: '', image_url: '' }])}
+          className="text-sm font-semibold f-body px-4 py-2 rounded-xl transition-colors"
+          style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}
+        >
+          + Add accommodation
+        </button>
+      </div>
+
+      <Divider />
+
+      {/* ── 10. Special Attractions ── */}
       <SectionLabel
         step={9}
         title="Special Attractions"
@@ -1050,6 +1642,144 @@ export default function ExperiencePageForm({
             className={inp} style={iStyle} />
         </div>
       </div>
+
+      <Divider />
+
+      {/* ── 13. FAQ ── */}
+      <SectionLabel step={13} title="FAQ" desc="Frequently asked questions — shown on the experience page" />
+      <div className="space-y-3">
+        {faqItems.map((item, fi) => (
+          <div key={fi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={item.question}
+                onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, question: e.target.value } : f))}
+                placeholder="Question…"
+                className="flex-1 px-3 py-2 rounded-xl text-sm f-body outline-none transition-all"
+                style={{ background: 'rgba(10,46,77,0.04)', border: '1.5px solid rgba(10,46,77,0.1)', color: '#0A2E4D' }} />
+              <button
+                type="button"
+                onClick={() => setFaqItems(prev => prev.filter((_, i) => i !== fi))}
+                className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                Remove
+              </button>
+            </div>
+            <textarea
+              value={item.answer}
+              onChange={e => setFaqItems(prev => prev.map((f, i) => i === fi ? { ...f, answer: e.target.value } : f))}
+              placeholder="Answer…"
+              rows={3}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+              style={{ background: 'rgba(10,46,77,0.04)', border: '1.5px solid rgba(10,46,77,0.1)', color: '#0A2E4D' }} />
+          </div>
+        ))}
+        {faqItems.length === 0 && (
+          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No FAQ items yet. Click &quot;+ Add FAQ&quot; to add one.</p>
+        )}
+        <button
+          type="button"
+          onClick={() => setFaqItems(prev => [...prev, { question: '', answer: '' }])}
+          className="text-sm font-semibold f-body px-4 py-2 rounded-xl transition-colors"
+          style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+          + Add FAQ
+        </button>
+      </div>
+
+      <Divider />
+
+      {/* ── 14. Trip Options ── */}
+      <SectionLabel
+        step={14}
+        title="Trip Options"
+        desc="Add variants like Full Day / Half Day. Each option has its own price, catches, boat, location and inclusions. Species details come from the shared library above."
+      />
+
+      {!isEdit && (
+        <p className="text-sm f-body py-2 mb-3" style={{ color: 'rgba(10,46,77,0.45)' }}>
+          Save the experience page first, then add trip options in edit mode.
+        </p>
+      )}
+
+      {isEdit && experienceId && (
+        <div className="space-y-3">
+          {tripOptions.map((opt, idx) => (
+            <OptionEditor
+              key={opt.id}
+              option={opt}
+              index={idx}
+              isOpen={optionOpenIdx === idx}
+              onToggle={() => setOptionOpenIdx(prev => prev === idx ? null : idx)}
+              speciesLibrary={targetSpecies}
+              guidePhotos={guidePhotos}
+              guideId={prefill?.guide_id}
+              onSaved={(updated) => setTripOptions(prev => prev.map(o => o.id === updated.id ? updated : o))}
+              onDeleted={(id) => {
+                setTripOptions(prev => prev.filter(o => o.id !== id))
+                setOptionOpenIdx(null)
+              }}
+            />
+          ))}
+
+          <button
+            type="button"
+            disabled={optionCreating}
+            onClick={async () => {
+              if (!experienceId) return
+              setOptionCreating(true)
+              try {
+                const result = await createExperiencePageOption(experienceId, {
+                  label: `Option ${tripOptions.length + 1}`,
+                  price_from: 0,
+                  sort_order: tripOptions.length,
+                })
+                if (result.success) {
+                  const newOpt: ExperiencePageOptionRow = {
+                    id:                        result.id,
+                    experience_page_id:        experienceId,
+                    sort_order:                tripOptions.length,
+                    label:                     `Option ${tripOptions.length + 1}`,
+                    price_from:                0,
+                    description:               null,
+                    catches_text:              null,
+                    target_species:            [],
+                    boat_description:          null,
+                    boat_image_url:            null,
+                    special_attractions:       [],
+                    meeting_point_name:        null,
+                    meeting_point_description: null,
+                    location_lat:              null,
+                    location_lng:              null,
+                    what_to_bring:             [],
+                    includes:                  [],
+                    excludes:                  [],
+                    content_blocks:            [],
+                    created_at:                new Date().toISOString(),
+                    updated_at:                new Date().toISOString(),
+                  }
+                  setTripOptions(prev => [...prev, newOpt])
+                  setOptionOpenIdx(tripOptions.length)
+                } else {
+                  alert(result.error)
+                }
+              } finally {
+                setOptionCreating(false)
+              }
+            }}
+            className="text-sm font-semibold f-body px-4 py-2.5 rounded-xl transition-colors flex items-center gap-2"
+            style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D', cursor: optionCreating ? 'not-allowed' : 'pointer' }}
+          >
+            {optionCreating ? <><Loader2 size={14} className="animate-spin" /> Creating…</> : '+ Add trip option'}
+          </button>
+
+          {tripOptions.length === 0 && (
+            <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+              No trip options yet. Click &quot;+ Add trip option&quot; to add variants like Full Day, Half Day, etc.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── Error ── */}
       {serverError != null && (

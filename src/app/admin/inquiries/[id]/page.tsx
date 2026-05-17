@@ -1,19 +1,35 @@
 /**
  * /admin/inquiries/[id] — FA inquiry detail.
  *
- * Shows full angler + trip info and the "Send Deposit Link" CTA panel.
- * FA can adjust the deposit % and send the Stripe Checkout link directly to the angler.
+ * Left column : angler info · booking details · original message · correspondence thread
+ * Right column: InquiryActionPanel (sticky) — offer builder, message composer, deposit link
+ *
+ * DB migration required for offer fields + inquiry_messages table:
+ *   ALTER TABLE inquiries
+ *     ADD COLUMN IF NOT EXISTS offer_total_eur   NUMERIC,
+ *     ADD COLUMN IF NOT EXISTS offer_deposit_eur  NUMERIC,
+ *     ADD COLUMN IF NOT EXISTS offer_notes        TEXT,
+ *     ADD COLUMN IF NOT EXISTS offer_sent_at      TIMESTAMPTZ;
+ *
+ *   CREATE TABLE IF NOT EXISTS inquiry_messages (
+ *     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+ *     inquiry_id UUID REFERENCES inquiries(id) ON DELETE CASCADE NOT NULL,
+ *     subject TEXT,
+ *     body TEXT NOT NULL,
+ *     sent_at TIMESTAMPTZ DEFAULT NOW()
+ *   );
+ *   ALTER TABLE inquiry_messages ENABLE ROW LEVEL SECURITY;
  */
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
-import { SendDepositButton } from './SendDepositButton'
-import { ChevronLeft } from 'lucide-react'
+import { InquiryActionPanel } from './InquiryActionPanel'
+import type { InquiryForPanel } from './InquiryActionPanel'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Status helpers ───────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
   pending_fa_review: 'Pending review',
@@ -24,16 +40,25 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  pending_fa_review: { color: '#92400E', bg: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)' },
+  pending_fa_review: { color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)' },
   deposit_sent:      { color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)' },
-  deposit_paid:      { color: '#065F46', bg: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)' },
+  deposit_paid:      { color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)' },
   completed:         { color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)' },
-  cancelled:         { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',  border: '1px solid rgba(239,68,68,0.25)' },
+  cancelled:         { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)' },
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string): string {
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
+  })
+}
+
+function fmtDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   })
 }
 
@@ -43,11 +68,22 @@ function Row({ label, value }: { label: string; value: string | null | undefined
     <div className="flex items-start justify-between gap-4 py-3"
       style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}>
       <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body flex-shrink-0"
-        style={{ color: 'rgba(10,46,77,0.38)', minWidth: '110px' }}>{label}</span>
+        style={{ color: 'rgba(10,46,77,0.38)', minWidth: '110px' }}>
+        {label}
+      </span>
       <span className="text-sm f-body text-right" style={{ color: '#0A2E4D' }}>{value}</span>
     </div>
   )
 }
+
+// ─── Correspondence thread item types ─────────────────────────────────────────
+
+type ThreadItem =
+  | { kind: 'angler_inquiry'; body: string; sentAt: string }
+  | { kind: 'offer_sent'; totalEur: number; depositEur: number; notes: string | null; sentAt: string }
+  | { kind: 'fa_message'; subject: string; body: string; sentAt: string }
+  | { kind: 'deposit_sent'; depositEur: number; sentAt: string }
+  | { kind: 'deposit_paid'; depositEur: number; paidAt: string }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -57,37 +93,112 @@ export default async function AdminInquiryDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const svc = createServiceClient()
+  const svc     = createServiceClient()
 
-  const { data: inquiry } = await svc
+  // ── Fetch inquiry (offer fields added by migration) ────────────────────────
+  const { data: rawInquiry } = await svc
     .from('inquiries')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (inquiry == null) notFound()
+  if (rawInquiry == null) notFound()
 
-  // Fetch trip
+  // Cast to include offer fields from migration
+  const inquiry = rawInquiry as typeof rawInquiry & {
+    offer_total_eur:   number | null
+    offer_deposit_eur: number | null
+    offer_notes:       string | null
+    offer_sent_at:     string | null
+  }
+
+  // ── Fetch messages (graceful if table doesn't exist yet) ───────────────────
+  type InquiryMessage = { id: string; subject: string | null; body: string; sent_at: string }
+  let messages: InquiryMessage[] = []
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (svc as any).from('inquiry_messages')
+      .select('id, subject, body, sent_at')
+      .eq('inquiry_id', id)
+      .order('sent_at', { ascending: true })
+    if (!error && data != null) messages = data as InquiryMessage[]
+  } catch {
+    // Table doesn't exist yet — safe to ignore until migration is run
+  }
+
+  // ── Fetch trip ─────────────────────────────────────────────────────────────
   const { data: trip } = await svc
     .from('experiences')
     .select('id, title, price_per_person_eur, guide_id')
     .eq('id', inquiry.trip_id)
     .single()
 
-  // Fetch guide
+  // ── Fetch guide ────────────────────────────────────────────────────────────
   const { data: guide } = trip?.guide_id
     ? await svc.from('guides').select('full_name, invite_email').eq('id', trip.guide_id).single()
     : { data: null }
 
   const st             = STATUS_STYLE[inquiry.status] ?? STATUS_STYLE.pending_fa_review
   const tripPriceEur   = (trip?.price_per_person_eur ?? 0) * (inquiry.party_size ?? 1)
-  const deposit30Eur   = Math.round(tripPriceEur * 0.30 * 100) / 100
   const requestedDates = inquiry.requested_dates as string[] | null
 
-  return (
-    <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[900px]">
+  // ── Build correspondence thread ────────────────────────────────────────────
+  const thread: ThreadItem[] = []
 
-      {/* ─── Breadcrumb ──────────────────────────────────────── */}
+  // Original angler message (if any)
+  if (inquiry.message != null && inquiry.message.trim() !== '') {
+    thread.push({ kind: 'angler_inquiry', body: inquiry.message, sentAt: inquiry.created_at })
+  }
+
+  // Offer sent
+  if (inquiry.offer_sent_at != null && inquiry.offer_total_eur != null && inquiry.offer_deposit_eur != null) {
+    thread.push({
+      kind:       'offer_sent',
+      totalEur:   inquiry.offer_total_eur,
+      depositEur: inquiry.offer_deposit_eur,
+      notes:      inquiry.offer_notes,
+      sentAt:     inquiry.offer_sent_at,
+    })
+  }
+
+  // FA messages
+  for (const msg of messages) {
+    thread.push({ kind: 'fa_message', subject: msg.subject ?? '(no subject)', body: msg.body, sentAt: msg.sent_at })
+  }
+
+  // Deposit link sent
+  if (inquiry.deposit_stripe_session_id != null && inquiry.deposit_paid_at == null) {
+    thread.push({ kind: 'deposit_sent', depositEur: inquiry.deposit_amount ?? 0, sentAt: inquiry.updated_at ?? inquiry.created_at })
+  }
+
+  // Deposit paid
+  if (inquiry.deposit_paid_at != null) {
+    thread.push({ kind: 'deposit_paid', depositEur: inquiry.deposit_amount ?? 0, paidAt: inquiry.deposit_paid_at })
+  }
+
+  // Sort by date
+  thread.sort((a, b) => {
+    const ta = 'sentAt' in a ? a.sentAt : a.paidAt
+    const tb = 'sentAt' in b ? b.sentAt : b.paidAt
+    return new Date(ta).getTime() - new Date(tb).getTime()
+  })
+
+  // Panel props
+  const panelInquiry: InquiryForPanel = {
+    id:                inquiry.id,
+    status:            inquiry.status,
+    offer_total_eur:   inquiry.offer_total_eur,
+    offer_deposit_eur: inquiry.offer_deposit_eur,
+    offer_notes:       inquiry.offer_notes,
+    offer_sent_at:     inquiry.offer_sent_at,
+    deposit_amount:    inquiry.deposit_amount,
+    deposit_paid_at:   inquiry.deposit_paid_at,
+  }
+
+  return (
+    <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1100px]">
+
+      {/* ─── Breadcrumb ──────────────────────────── */}
       <div className="flex items-center gap-2 mb-8 flex-wrap">
         <Link href="/admin" className="text-xs f-body transition-colors hover:text-[#0A2E4D]/70"
           style={{ color: 'rgba(10,46,77,0.38)' }}>Admin</Link>
@@ -100,7 +211,7 @@ export default async function AdminInquiryDetailPage({
         </span>
       </div>
 
-      {/* ─── Header ──────────────────────────────────────────── */}
+      {/* ─── Header ──────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 mb-8 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold f-display text-[#0A2E4D]">{inquiry.angler_name}</h1>
@@ -114,11 +225,11 @@ export default async function AdminInquiryDetailPage({
         </span>
       </div>
 
-      {/* ─── Two-column layout ───────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+      {/* ─── Two-column layout ───────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
 
-        {/* ── Left: details ── */}
-        <div className="flex flex-col gap-4">
+        {/* ── Left: details + correspondence ─────── */}
+        <div className="flex flex-col gap-4 min-w-0">
 
           {/* Angler info */}
           <div className="rounded-[22px] overflow-hidden"
@@ -133,16 +244,16 @@ export default async function AdminInquiryDetailPage({
             </div>
           </div>
 
-          {/* Trip + booking details */}
+          {/* Booking request */}
           <div className="rounded-[22px] overflow-hidden"
             style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
             <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(10,46,77,0.08)', background: 'rgba(230,126,80,0.03)' }}>
               <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Booking Request</h2>
             </div>
             <div className="px-6 pb-2">
-              <Row label="Trip"       value={trip?.title ?? '—'} />
-              <Row label="Guide"      value={guide?.full_name ?? '—'} />
-              <Row label="Guide email" value={guide?.invite_email ?? '—'} />
+              <Row label="Trip"            value={trip?.title ?? '—'} />
+              <Row label="Guide"           value={guide?.full_name ?? '—'} />
+              <Row label="Guide email"     value={guide?.invite_email ?? '—'} />
               <Row
                 label="Requested dates"
                 value={
@@ -151,48 +262,153 @@ export default async function AdminInquiryDetailPage({
                     : '—'
                 }
               />
-              <Row label="Party size"  value={`${inquiry.party_size} ${inquiry.party_size === 1 ? 'person' : 'people'}`} />
-              <Row label="Trip total"  value={tripPriceEur > 0 ? `€${tripPriceEur.toFixed(2)} (${inquiry.party_size}×€${trip?.price_per_person_eur?.toFixed(2) ?? '0.00'}/person)` : '—'} />
+              <Row label="Party size"   value={`${inquiry.party_size} ${inquiry.party_size === 1 ? 'person' : 'people'}`} />
+              <Row
+                label="List price"
+                value={tripPriceEur > 0
+                  ? `€${tripPriceEur.toFixed(2)} (${inquiry.party_size}× €${trip?.price_per_person_eur?.toFixed(2) ?? '0.00'}/person)`
+                  : '—'
+                }
+              />
+              {inquiry.selected_option != null && (
+                <Row label="Option" value={inquiry.selected_option} />
+              )}
             </div>
           </div>
 
-          {/* Message */}
-          {inquiry.message != null && inquiry.message.trim() !== '' && (
+          {/* Correspondence thread */}
+          {thread.length > 0 && (
             <div className="rounded-[22px] overflow-hidden"
               style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
               <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(10,46,77,0.08)', background: 'rgba(230,126,80,0.03)' }}>
-                <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Message from angler</h2>
+                <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Correspondence</h2>
               </div>
-              <div className="px-6 py-4">
-                <p className="text-sm f-body leading-relaxed" style={{ color: '#374151', fontStyle: 'italic' }}>
-                  &ldquo;{inquiry.message}&rdquo;
-                </p>
+              <div className="px-6 py-4 space-y-4">
+                {thread.map((item, i) => {
+
+                  /* ── Angler's original message ── */
+                  if (item.kind === 'angler_inquiry') return (
+                    <div key={i} className="flex gap-3">
+                      <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold f-body"
+                        style={{ background: 'rgba(10,46,77,0.1)', color: '#0A2E4D' }}>
+                        {inquiry.angler_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>
+                            {inquiry.angler_name}
+                          </span>
+                          <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                            {fmtDateTime(item.sentAt)}
+                          </span>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded f-body"
+                            style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.4)' }}>
+                            Inquiry
+                          </span>
+                        </div>
+                        <div className="px-3 py-2.5 rounded-xl text-sm f-body leading-relaxed italic"
+                          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)', color: '#374151' }}>
+                          &ldquo;{item.body}&rdquo;
+                        </div>
+                      </div>
+                    </div>
+                  )
+
+                  /* ── Offer sent ── */
+                  if (item.kind === 'offer_sent') return (
+                    <div key={i} className="flex gap-3">
+                      <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px]"
+                        style={{ background: '#E67E50', color: '#fff' }}>
+                        FA
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>FjordAnglers</span>
+                          <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                            {fmtDateTime(item.sentAt)}
+                          </span>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded f-body"
+                            style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50', border: '1px solid rgba(230,126,80,0.25)' }}>
+                            Offer sent
+                          </span>
+                        </div>
+                        <div className="px-4 py-3 rounded-xl"
+                          style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.18)' }}>
+                          <div className="flex flex-wrap gap-x-6 gap-y-1 mb-1">
+                            <span className="text-xs f-body" style={{ color: '#0A2E4D' }}>
+                              Total: <strong>€{item.totalEur.toFixed(2)}</strong>
+                            </span>
+                            <span className="text-xs f-body" style={{ color: '#0A2E4D' }}>
+                              Deposit: <strong>€{item.depositEur.toFixed(2)}</strong>
+                            </span>
+                            <span className="text-xs f-body" style={{ color: '#0A2E4D' }}>
+                              Balance to guide: <strong>€{(item.totalEur - item.depositEur).toFixed(2)}</strong>
+                            </span>
+                          </div>
+                          {item.notes != null && item.notes.trim() !== '' && (
+                            <p className="text-xs f-body italic mt-1.5" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                              &ldquo;{item.notes}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+
+                  /* ── FA message ── */
+                  if (item.kind === 'fa_message') return (
+                    <div key={i} className="flex gap-3">
+                      <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px]"
+                        style={{ background: '#0A2E4D', color: '#fff' }}>
+                        FA
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>FjordAnglers</span>
+                          <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                            {fmtDateTime(item.sentAt)}
+                          </span>
+                        </div>
+                        <div className="px-3 py-2.5 rounded-xl"
+                          style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}>
+                          <p className="text-xs font-bold f-body mb-1" style={{ color: '#0A2E4D' }}>
+                            {item.subject}
+                          </p>
+                          <p className="text-sm f-body leading-relaxed" style={{ color: '#374151', whiteSpace: 'pre-wrap' }}>
+                            {item.body}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+
+                  /* ── Deposit link sent ── */
+                  if (item.kind === 'deposit_sent') return (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                      style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                      <span className="text-[11px] f-body" style={{ color: '#1E40AF' }}>
+                        🔗 Deposit link sent — €{item.depositEur.toFixed(2)} — awaiting payment
+                      </span>
+                    </div>
+                  )
+
+                  /* ── Deposit paid ── */
+                  if (item.kind === 'deposit_paid') return (
+                    <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+                      style={{ background: 'rgba(16,185,129,0.09)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                      <span className="text-[11px] f-body font-semibold" style={{ color: '#065F46' }}>
+                        ✅ Deposit paid — €{item.depositEur.toFixed(2)} — {fmtDateTime(item.paidAt)}
+                      </span>
+                    </div>
+                  )
+
+                  return null
+                })}
               </div>
             </div>
           )}
 
-          {/* Deposit info (if already processed) */}
-          {(inquiry.deposit_amount != null || inquiry.deposit_stripe_session_id != null) && (
-            <div className="rounded-[22px] overflow-hidden"
-              style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-              <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(10,46,77,0.08)', background: 'rgba(230,126,80,0.03)' }}>
-                <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Deposit</h2>
-              </div>
-              <div className="px-6 pb-2">
-                {inquiry.deposit_amount != null && (
-                  <Row label="Amount" value={`€${Number(inquiry.deposit_amount).toFixed(2)}`} />
-                )}
-                {inquiry.deposit_stripe_session_id != null && (
-                  <Row label="Stripe session" value={inquiry.deposit_stripe_session_id} />
-                )}
-                {inquiry.deposit_paid_at != null && (
-                  <Row label="Paid at" value={new Date(inquiry.deposit_paid_at).toLocaleString('en-GB')} />
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Internal metadata */}
+          {/* Metadata footer */}
           <div className="px-4 py-3 rounded-xl"
             style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}>
             <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
@@ -201,78 +417,9 @@ export default async function AdminInquiryDetailPage({
           </div>
         </div>
 
-        {/* ── Right: action panel ── */}
-        <div>
-          <div className="sticky top-6 p-6 rounded-[22px]"
-            style={{
-              background:  '#0A2E4D',
-              border:      '1px solid rgba(255,255,255,0.08)',
-              boxShadow:   '0 8px 32px rgba(10,46,77,0.25)',
-            }}>
-
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1"
-              style={{ color: 'rgba(255,255,255,0.35)' }}>FA Action</p>
-            <p className="text-base font-semibold f-body mb-4" style={{ color: '#FFFFFF' }}>
-              {inquiry.status === 'pending_fa_review'
-                ? 'Send deposit link to angler'
-                : STATUS_LABEL[inquiry.status] ?? inquiry.status}
-            </p>
-
-            {/* Deposit estimate */}
-            {inquiry.status === 'pending_fa_review' && deposit30Eur > 0 && (
-              <div className="mb-4 px-3 py-2.5 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <p className="text-[10px] f-body mb-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  Estimated 30% deposit
-                </p>
-                <p className="text-xl font-bold f-body" style={{ color: '#E67E50' }}>
-                  €{deposit30Eur.toFixed(2)}
-                </p>
-                <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  Based on €{tripPriceEur.toFixed(2)} trip total
-                </p>
-              </div>
-            )}
-
-            {/* CTA */}
-            {inquiry.status === 'pending_fa_review' ? (
-              <SendDepositButton inquiryId={inquiry.id} defaultPercent={30} />
-            ) : inquiry.status === 'deposit_sent' ? (
-              <div className="space-y-3">
-                <div className="px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
-                  <p className="text-sm f-body" style={{ color: '#93C5FD' }}>
-                    Deposit link already sent. Waiting for angler payment.
-                  </p>
-                </div>
-                <SendDepositButton inquiryId={inquiry.id} defaultPercent={30} />
-              </div>
-            ) : inquiry.status === 'deposit_paid' ? (
-              <div className="px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <p className="text-sm f-body" style={{ color: '#6EE7B7' }}>
-                  ✅ Deposit received. Booking confirmed.
-                </p>
-              </div>
-            ) : (
-              <div className="px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <p className="text-sm f-body" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                  No actions available for this status.
-                </p>
-              </div>
-            )}
-
-            {/* Back link */}
-            <Link
-              href="/admin/inquiries"
-              className="flex items-center gap-1.5 mt-4 text-xs f-body transition-opacity hover:opacity-70"
-              style={{ color: 'rgba(255,255,255,0.3)' }}
-            >
-              <ChevronLeft size={13} />
-              All inquiries
-            </Link>
-          </div>
+        {/* ── Right: action panel (sticky) ────────── */}
+        <div className="lg:sticky lg:top-6">
+          <InquiryActionPanel inquiry={panelInquiry} />
         </div>
 
       </div>

@@ -2,18 +2,17 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ApplyForm } from '@/components/guides/apply-form'
-import { HomeNav } from '@/components/home/home-nav'
+
 
 export const metadata: Metadata = {
-  title: 'Join as a Guide',
-  description: 'Apply to become a verified FjordAnglers guide and reach anglers from across Europe.',
+  title: 'Join as a Fishing Guide — List Your Trips on FjordAnglers',
+  description: 'Apply to become a verified guide on FjordAnglers. Reach anglers from Poland, Germany and Central Europe looking for salmon, trout and sea fishing in Norway, Sweden, Iceland or Finland.',
+  alternates: { canonical: 'https://fjordanglers.com/guides/apply' },
 }
 
 export default function GuideApplyPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <HomeNav />
-
       {/* ─── LEFT — photo hero ───────────────────────────────────── */}
       <div className="relative md:sticky md:top-0 md:h-screen md:w-1/2 flex-shrink-0 overflow-hidden" style={{ minHeight: '420px' }}>
 
@@ -48,7 +47,7 @@ export default function GuideApplyPage() {
 
           {/* Trust chips */}
           <div className="flex flex-wrap gap-2 mt-8">
-            {['✓ Verified within 48h', '🌍 Anglers from 20+ countries', '€ You set your price'].map(t => (
+            {['✓ We review every application', '🌍 Anglers from 20+ countries', '€ You set your price'].map(t => (
               <span
                 key={t}
                 className="text-[11px] f-body px-3 py-1.5 rounded-full"

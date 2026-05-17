@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getGuides, getPlatformStats } from '@/lib/supabase/queries'
 import { GuidesFilters } from './guides-filters'
 import { CountryFlag } from '@/components/ui/country-flag'
-import { HomeNav } from '@/components/home/home-nav'
+
 
 const PAGE_SIZE = 12
 
@@ -35,10 +35,10 @@ function Pagination({
     items.push(totalPages)
   }
 
-  const pill = 'min-w-[36px] h-9 rounded-full flex items-center justify-center text-sm font-medium f-body transition-all px-3'
+  const pill = 'min-w-[32px] h-8 sm:min-w-[36px] sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium f-body transition-all px-2 sm:px-3'
 
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-center gap-1.5 mt-10 pb-2">
+    <nav aria-label="Pagination" className="flex flex-wrap items-center justify-center gap-1.5 mt-10 pb-2">
       {page > 1 ? (
         <Link href={pageHref(page - 1)} className={pill} style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
           ← Prev
@@ -49,13 +49,13 @@ function Pagination({
 
       {items.map((item, idx) =>
         item === '…' ? (
-          <span key={`e-${idx}`} className="w-9 h-9 flex items-center justify-center text-sm f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>…</span>
+          <span key={`e-${idx}`} className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-xs sm:text-sm f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>…</span>
         ) : item === page ? (
-          <span key={item} className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold f-body" style={{ background: '#0A2E4D', color: '#fff' }}>
+          <span key={item} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold f-body" style={{ background: '#0A2E4D', color: '#fff' }}>
             {item}
           </span>
         ) : (
-          <Link key={item} href={pageHref(item)} className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium f-body transition-colors" style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
+          <Link key={item} href={pageHref(item)} className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium f-body transition-colors" style={{ border: '1px solid rgba(10,46,77,0.18)', color: 'rgba(10,46,77,0.65)' }}>
             {item}
           </Link>
         )
@@ -105,9 +105,11 @@ const GrainOverlay = () => (
 // ─── METADATA ─────────────────────────────────────────────────────────────────
 
 export const metadata = {
-  title: 'Meet the Guides — FjordAnglers',
+  title: 'Fishing Guides in Norway, Sweden, Iceland & Finland',
   description:
-    'Verified local fishing experts across Norway, Sweden and Finland. Filter by country and language to find your perfect guide.',
+    'Curated local fishing guides across Norway, Sweden, Finland and Iceland. Salmon, trout, pike & sea fishing. Filter by country and language to find your perfect guide.',
+  alternates: { canonical: 'https://fjordanglers.com/guides' },
+  openGraph: { url: 'https://fjordanglers.com/guides', type: 'website' },
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
@@ -132,8 +134,6 @@ export default async function GuidesPage({
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <HomeNav initialVariant="light" />
-
       {/* ─── PHOTO HERO ──────────────────────────────────────────── */}
       <header className="relative overflow-hidden" style={{ minHeight: '380px', height: 'clamp(380px, 55vw, 580px)' }}>
 
@@ -146,8 +146,8 @@ export default async function GuidesPage({
           className="object-cover object-center"
         />
 
-        {/* Dark overlay */}
-        <div className="absolute inset-0" style={{ background: 'rgba(5,10,20,0.48)' }} />
+        {/* Dark overlay — gradient darker at top so nav links stay readable */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(5,10,20,0.65) 0%, rgba(5,10,20,0.48) 40%, rgba(5,10,20,0.48) 100%)' }} />
 
         <GrainOverlay />
 
@@ -170,7 +170,7 @@ export default async function GuidesPage({
                 <span style={{ fontStyle: 'italic', color: '#E67E50' }}>who know every fish.</span>
               </h1>
               <p className="mt-5 text-sm leading-relaxed f-body" style={{ color: 'rgba(255,255,255,0.55)', maxWidth: '420px' }}>
-                Verified local experts across Norway, Sweden, Finland and Iceland.
+                Curated local guides across Norway, Sweden, Finland and Iceland. Only the ones we&apos;d book ourselves.
               </p>
             </div>
 
@@ -363,9 +363,9 @@ export default async function GuidesPage({
       </main>
 
       {/* ─── GUIDE CTA BAND ──────────────────────────────────────── */}
-      <section className="px-8 py-20" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+      <section className="px-4 md:px-8 py-12 md:py-20" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
         <div
-          className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 px-10 py-10 rounded-3xl"
+          className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 px-5 py-6 md:px-10 md:py-10 rounded-2xl md:rounded-3xl"
           style={{ background: '#07111C', border: '1px solid rgba(255,255,255,0.04)' }}
         >
           <div>

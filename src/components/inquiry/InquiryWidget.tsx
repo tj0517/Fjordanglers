@@ -26,10 +26,11 @@ import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check } from 'lucid
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface InquiryWidgetProps {
-  tripId:        string
-  tripTitle:     string
-  maxGuests?:    number
-  blockedRanges?: Array<{ date_start: string; date_end: string }>
+  tripId:               string
+  tripTitle:            string
+  maxGuests?:           number
+  blockedRanges?:       Array<{ date_start: string; date_end: string }>
+  selectedOptionLabel?: string | null
 }
 
 type Step        = 'calendar' | 'form'
@@ -182,13 +183,15 @@ function InquiryModal({
   tripTitle,
   maxGuests,
   blockedRanges,
+  selectedOptionLabel,
   onClose,
 }: {
-  tripId:        string
-  tripTitle:     string
-  maxGuests:     number
-  blockedRanges: Array<{ date_start: string; date_end: string }>
-  onClose:       () => void
+  tripId:               string
+  tripTitle:            string
+  maxGuests:            number
+  blockedRanges:        Array<{ date_start: string; date_end: string }>
+  selectedOptionLabel?: string | null
+  onClose:              () => void
 }) {
   const [step,          setStep]          = useState<Step>('calendar')
   const [selectedDates, setSelectedDates] = useState<string[]>([])
@@ -257,6 +260,7 @@ function InquiryModal({
           requested_dates: selectedDates,
           party_size:      partySize,
           message:         message.trim() || null,
+          selected_option: selectedOptionLabel ?? null,
         }),
       })
 
@@ -273,12 +277,12 @@ function InquiryModal({
         err instanceof Error ? err.message : 'Something went wrong — please try again.',
       )
     }
-  }, [canSubmit, tripId, firstName, lastName, email, country, selectedDates, partySize, message])
+  }, [canSubmit, tripId, firstName, lastName, email, country, selectedDates, partySize, message, selectedOptionLabel])
 
   return (
     /* Backdrop */
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center"
       style={{ background: 'rgba(10,46,77,0.55)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
       onPointerDown={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
@@ -446,13 +450,21 @@ function InquiryModal({
                 <form onSubmit={handleSubmit} noValidate>
                   <div className="px-5 pt-4 pb-6 space-y-0">
 
-                    {/* Trip name + selected dates summary */}
+                    {/* Trip name + selected option + selected dates summary */}
                     <div className="mb-4 px-3.5 py-3 rounded-xl"
                       style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.07)' }}>
                       <p className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5"
                         style={{ color: 'rgba(10,46,77,0.38)' }}>
                         {tripTitle}
                       </p>
+                      {selectedOptionLabel && (
+                        <p className="text-xs font-semibold f-body mb-1.5 flex items-center gap-1.5"
+                          style={{ color: '#E67E50' }}>
+                          <span className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0"
+                            style={{ background: '#E67E50' }} />
+                          {selectedOptionLabel}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-1">
                         {selectedDates.map(d => (
                           <span
@@ -596,8 +608,9 @@ function InquiryModal({
 export function InquiryWidget({
   tripId,
   tripTitle,
-  maxGuests     = 12,
-  blockedRanges = [],
+  maxGuests            = 12,
+  blockedRanges        = [],
+  selectedOptionLabel,
 }: InquiryWidgetProps) {
   const [isOpen,   setIsOpen]   = useState(false)
   const [mounted,  setMounted]  = useState(false)
@@ -629,6 +642,15 @@ export function InquiryWidget({
           <p className="text-lg font-bold f-display leading-snug" style={{ color: '#FFFFFF' }}>
             {tripTitle}
           </p>
+          {selectedOptionLabel && (
+            <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+              style={{ background: 'rgba(230,126,80,0.22)', border: '1px solid rgba(230,126,80,0.35)' }}>
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
+              <span className="text-xs font-semibold f-body" style={{ color: '#E67E50' }}>
+                {selectedOptionLabel}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* How it works */}
@@ -682,6 +704,7 @@ export function InquiryWidget({
           tripTitle={tripTitle}
           maxGuests={maxGuests}
           blockedRanges={blockedRanges}
+          selectedOptionLabel={selectedOptionLabel}
           onClose={closeModal}
         />,
         document.body,
@@ -692,7 +715,7 @@ export function InquiryWidget({
 
 // ─── MobileInquiryBar ─────────────────────────────────────────────────────────
 
-export function MobileInquiryBar({ tripId: _tripId }: { tripId: string }) {
+export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId: string; pricePerPerson?: number | null }) {
   const handleClick = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-inquiry-modal'))
   }, [])
@@ -710,22 +733,35 @@ export function MobileInquiryBar({ tripId: _tripId }: { tripId: string }) {
         paddingBottom:        'calc(14px + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <div className="mb-2">
-        <p className="text-base font-bold f-body leading-tight" style={{ color: '#0A2E4D' }}>
-          Interested? Send an inquiry
-        </p>
-        <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.42)' }}>
-          Free to request · no payment now
-        </p>
+      <div className="flex items-center gap-4">
+        {/* Price side */}
+        <div className="flex-1 min-w-0">
+          {pricePerPerson != null ? (
+            <>
+              <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.42)' }}>From</p>
+              <p className="font-bold f-body leading-tight" style={{ color: '#0A2E4D', fontSize: '18px' }}>
+                €{pricePerPerson}
+                <span className="text-xs font-normal ml-1" style={{ color: 'rgba(10,46,77,0.42)' }}>/person</span>
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold f-body leading-tight" style={{ color: '#0A2E4D' }}>Free to enquire</p>
+              <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.42)' }}>No payment now</p>
+            </>
+          )}
+        </div>
+
+        {/* CTA */}
+        <button
+          type="button"
+          onClick={handleClick}
+          className="flex-shrink-0 flex items-center justify-center px-6 py-3.5 rounded-2xl font-bold text-white f-body"
+          style={{ background: '#E67E50', fontSize: '15px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
+        >
+          Send Inquiry →
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={handleClick}
-        className="flex items-center justify-center w-full py-4 rounded-2xl font-bold text-white f-body"
-        style={{ background: '#E67E50', fontSize: '16px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
-      >
-        Send Inquiry →
-      </button>
     </div>
   )
 }
