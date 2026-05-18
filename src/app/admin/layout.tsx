@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { AdminSidenav } from '@/components/admin/sidenav'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -20,8 +21,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <main style={{ minHeight: '100vh' }}>
+    <div className="min-h-screen lg:flex" style={{ background: '#F3EDE4' }}>
+      <AdminSidenav />
+      <main className="flex-1 min-w-0">
         {children}
       </main>
     </div>

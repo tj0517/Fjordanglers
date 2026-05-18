@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { TermsGate } from '@/components/dashboard/terms-gate'
+import { DashboardSidenav } from '@/components/dashboard/sidenav'
 
 /**
  * Dashboard layout — server component.
@@ -95,8 +96,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // ── Normal dashboard layout ───────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <main style={{ minHeight: '100vh' }}>
+    <div className="min-h-screen lg:flex" style={{ background: '#F3EDE4' }}>
+      <DashboardSidenav
+        guideName={resolvedGuide.full_name ?? ''}
+        avatarUrl={resolvedGuide.avatar_url ?? null}
+      />
+      <main className="flex-1 min-w-0">
         {children}
       </main>
       <TermsGate
