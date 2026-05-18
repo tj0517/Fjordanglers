@@ -71,26 +71,6 @@ export function ExperiencePageWithOptions({
         {/* Server-rendered page-level sections (intro, quick fit, about, photos, etc.) */}
         {children}
 
-        {/* Page-level content blocks — shown after season, before trip options */}
-        {pageContentBlocks.length > 0 && (
-          <div className="space-y-10 mb-10">
-            {pageContentBlocks.map((block, i) => (
-              <section key={i}>
-                {block.headline && (
-                  <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
-                    {block.headline}
-                  </h4>
-                )}
-                {block.text && (
-                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
-                    {block.text}
-                  </p>
-                )}
-              </section>
-            ))}
-          </div>
-        )}
-
         {/* Client-side accordion for trip options */}
         <TripOptionsAccordion
           options={options}

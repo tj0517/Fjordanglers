@@ -19,7 +19,7 @@
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { MapPin, Check, X as XIcon, ArrowRight } from 'lucide-react'
-import type { SpecialAttraction, ContentBlock, SpeciesDetailItem } from '@/actions/experience-pages'
+import type { SpecialAttraction, ContentBlock, SpeciesDetailItem, Boat } from '@/actions/experience-pages'
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,8 +32,9 @@ export interface TripOption {
   content_blocks:            ContentBlock[]
   catches_text:              string | null
   target_species:            string[]
-  boat_description:          string | null
-  boat_image_url:            string | null
+  boats:                     Boat[]
+  season_months:             number[]
+  peak_months:               number[]
   special_attractions:       SpecialAttraction[]
   meeting_point_name:        string | null
   meeting_point_description: string | null
@@ -67,7 +68,20 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
               {block.headline}
             </h4>
           )}
-          {block.text && (
+          {block.image_url ? (
+            <div className="flex flex-col sm:flex-row gap-6 items-start">
+              <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[280px] aspect-[4/3]">
+                <Image src={block.image_url} alt={block.headline || `Photo ${i + 1}`} fill className="object-cover" sizes="(min-width: 640px) 280px, 100vw" />
+              </div>
+              {block.text && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                    {block.text}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : block.text && (
             <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
               {block.text}
             </p>
@@ -118,24 +132,42 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
         </section>
       )}
 
+      {/* ── Season ── */}
+      {option.season_months.length > 0 && (
+        <section>
+          <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>Season</p>
+          <SeasonCalendarGrid seasonMonths={option.season_months} peakMonths={option.peak_months} />
+        </section>
+      )}
+
       {/* ── Boat ── */}
-      {(option.boat_description || option.boat_image_url) && (
+      {option.boats.length > 0 && (
         <section>
           <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
           <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>The boat</p>
-          <div className="flex flex-col sm:flex-row gap-6 items-start">
-            {option.boat_description && (
-              <div className="flex-1 min-w-0">
-                <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
-                  {option.boat_description}
-                </p>
+          <div className="space-y-10">
+            {option.boats.map((boat, idx) => (
+              <div key={idx}>
+                {boat.heading && (
+                  <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>{boat.heading}</h4>
+                )}
+                <div className="flex flex-col sm:flex-row gap-6 items-start">
+                  {boat.description && (
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                        {boat.description}
+                      </p>
+                    </div>
+                  )}
+                  {boat.image_url && (
+                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[320px] aspect-[4/3]">
+                      <Image src={boat.image_url} alt={boat.heading || `Boat ${idx + 1}`} fill className="object-cover" sizes="(min-width: 640px) 320px, 100vw" />
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            {option.boat_image_url && (
-              <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[320px] aspect-[4/3]">
-                <Image src={option.boat_image_url} alt="The boat" fill className="object-cover" sizes="(min-width: 640px) 320px, 100vw" />
-              </div>
-            )}
+            ))}
           </div>
         </section>
       )}
@@ -361,36 +393,66 @@ export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDe
         {options.map((option, idx) => {
           const isSelected = selectedIdx === idx
           return (
-            <button
+            <div
               key={option.id}
-              type="button"
-              onClick={() => { onSelect(idx); setOpenIdx(idx) }}
-              className="w-full flex items-center justify-between px-6 py-4 text-left rounded-2xl transition-all hover:shadow-sm"
+              className="rounded-2xl overflow-hidden transition-all"
               style={{
-                border:     isSelected ? '2px solid rgba(230,126,80,0.45)' : '1.5px solid rgba(10,46,77,0.1)',
-                background: isSelected ? 'rgba(230,126,80,0.04)' : 'rgba(10,46,77,0.015)',
-                cursor: 'pointer',
+                border:     isSelected ? '2px solid #E67E50' : '1.5px solid rgba(10,46,77,0.12)',
+                background: isSelected ? 'rgba(230,126,80,0.06)' : '#fff',
+                boxShadow:  isSelected ? '0 2px 14px rgba(230,126,80,0.18)' : '0 1px 4px rgba(10,46,77,0.05)',
               }}
             >
-              <div className="flex items-center gap-3">
+              {/* ── Select row ── */}
+              <button
+                type="button"
+                onClick={() => onSelect(idx)}
+                className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors"
+                style={{ cursor: 'pointer', background: 'transparent' }}
+              >
+                {/* Radio indicator */}
                 <div
-                  className="w-2 h-2 rounded-full flex-shrink-0 transition-colors"
-                  style={{ background: isSelected ? '#E67E50' : 'rgba(10,46,77,0.18)' }}
-                />
+                  className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
+                  style={{
+                    border:     isSelected ? 'none' : '2px solid rgba(10,46,77,0.22)',
+                    background: isSelected ? '#E67E50' : 'transparent',
+                    boxShadow:  isSelected ? '0 0 0 3px rgba(230,126,80,0.18)' : 'none',
+                  }}
+                >
+                  {isSelected && (
+                    <div className="w-2 h-2 rounded-full" style={{ background: '#fff' }} />
+                  )}
+                </div>
+
+                {/* Label */}
                 <span
-                  className="text-base font-bold f-display"
-                  style={{ color: isSelected ? '#0A2E4D' : 'rgba(10,46,77,0.7)' }}
+                  className="flex-1 text-base font-bold f-display"
+                  style={{ color: isSelected ? '#0A2E4D' : 'rgba(10,46,77,0.65)' }}
                 >
                   {option.label}
                 </span>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="font-bold f-display text-sm" style={{ color: '#E67E50' }}>
+
+                {/* Price */}
+                <span className="font-bold f-display text-sm flex-shrink-0" style={{ color: '#E67E50' }}>
                   from €{option.price_from}
                 </span>
-                <ArrowRight size={15} style={{ color: isSelected ? '#E67E50' : 'rgba(10,46,77,0.3)' }} />
+              </button>
+
+              {/* ── Details link ── */}
+              <div
+                className="px-5 pb-3.5"
+                style={{ borderTop: '1px solid rgba(10,46,77,0.06)', paddingTop: '10px' }}
+              >
+                <button
+                  type="button"
+                  onClick={() => { onSelect(idx); setOpenIdx(idx) }}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold f-body transition-opacity hover:opacity-70"
+                  style={{ color: isSelected ? '#E67E50' : 'rgba(10,46,77,0.38)', cursor: 'pointer', background: 'none' }}
+                >
+                  View full details
+                  <ArrowRight size={12} strokeWidth={2.5} />
+                </button>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>

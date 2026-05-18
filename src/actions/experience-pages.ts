@@ -30,9 +30,16 @@ export interface Accommodation {
   image_url:   string
 }
 
+export interface Boat {
+  heading:     string
+  description: string
+  image_url:   string
+}
+
 export interface ContentBlock {
-  headline: string
-  text:     string
+  headline:  string
+  text:      string
+  image_url?: string
 }
 
 export interface FaqItem {
@@ -73,9 +80,8 @@ export interface ExperiencePagePayload {
   peak_months?:                      number[]
   // Per-fish species details
   species_details?:                  SpeciesDetailItem[]
-  // Boat section
-  boat_description?:                 string | null
-  boat_image_url?:                   string | null
+  // Boat section (multi-block — replaces legacy boat_description/boat_image_url)
+  boats?:                            Boat[]
   // Special attractions (multi-item, replaces old single special_attraction_* fields)
   special_attractions?:              SpecialAttraction[]
   // Accommodations (multi-item)
@@ -162,8 +168,7 @@ export async function createExperiencePage(
       season_months:                    payload.season_months ?? [],
       peak_months:                      payload.peak_months   ?? [],
       species_details:                  (payload.species_details ?? []) as unknown as import('@/lib/supabase/database.types').Json,
-      boat_description:                 payload.boat_description ?? null,
-      boat_image_url:                   payload.boat_image_url   ?? null,
+      boats:                            (payload.boats ?? []) as unknown as import('@/lib/supabase/database.types').Json,
       special_attractions:              (payload.special_attractions ?? []) as unknown as import('@/lib/supabase/database.types').Json,
       accommodations:                   (payload.accommodations ?? []) as unknown as import('@/lib/supabase/database.types').Json,
       what_to_bring:                    payload.what_to_bring ?? [],
@@ -363,8 +368,7 @@ export async function updateExperiencePage(
   if (payload.season_months     != null)       update.season_months          = payload.season_months
   if (payload.peak_months       != null)       update.peak_months            = payload.peak_months
   if (payload.species_details   != null)       update.species_details        = payload.species_details
-  if (payload.boat_description  !== undefined) update.boat_description       = payload.boat_description
-  if (payload.boat_image_url    !== undefined) update.boat_image_url         = payload.boat_image_url
+  if (payload.boats             != null)       update.boats                  = payload.boats as unknown as import('@/lib/supabase/database.types').Json
   if (payload.special_attractions != null) update.special_attractions           = payload.special_attractions
   if (payload.accommodations      != null) update.accommodations                = payload.accommodations as unknown as import('@/lib/supabase/database.types').Json
   if (payload.what_to_bring      != null) update.what_to_bring                 = payload.what_to_bring
@@ -410,8 +414,9 @@ export interface ExperiencePageOptionPayload {
   description?:              string | null
   catches_text?:             string | null
   target_species?:           string[]
-  boat_description?:         string | null
-  boat_image_url?:           string | null
+  boats?:                    Boat[]
+  season_months?:            number[]
+  peak_months?:              number[]
   special_attractions?:      SpecialAttraction[]
   meeting_point_name?:       string | null
   meeting_point_description?: string | null
@@ -451,8 +456,9 @@ export async function createExperiencePageOption(
       price_from:                payload.price_from,
       catches_text:              payload.catches_text  ?? null,
       target_species:            payload.target_species ?? [],
-      boat_description:          payload.boat_description ?? null,
-      boat_image_url:            payload.boat_image_url   ?? null,
+      boats:                     (payload.boats ?? []) as unknown as import('@/lib/supabase/database.types').Json,
+      season_months:             payload.season_months ?? [],
+      peak_months:               payload.peak_months   ?? [],
       special_attractions:       (payload.special_attractions ?? []) as unknown as import('@/lib/supabase/database.types').Json,
       meeting_point_name:        payload.meeting_point_name        ?? null,
       meeting_point_description: payload.meeting_point_description ?? null,
@@ -487,8 +493,9 @@ export async function updateExperiencePageOption(
   if (payload.price_from          != null)      update.price_from                = payload.price_from
   if (payload.catches_text        !== undefined) update.catches_text              = payload.catches_text
   if (payload.target_species      != null)      update.target_species            = payload.target_species
-  if (payload.boat_description    !== undefined) update.boat_description          = payload.boat_description
-  if (payload.boat_image_url      !== undefined) update.boat_image_url            = payload.boat_image_url
+  if (payload.boats               != null)      update.boats                     = payload.boats as unknown as import('@/lib/supabase/database.types').Json
+  if (payload.season_months       != null)      update.season_months             = payload.season_months
+  if (payload.peak_months         != null)      update.peak_months               = payload.peak_months
   if (payload.special_attractions != null)      update.special_attractions       = payload.special_attractions as unknown as import('@/lib/supabase/database.types').Json
   if (payload.meeting_point_name  !== undefined) update.meeting_point_name        = payload.meeting_point_name
   if (payload.meeting_point_description !== undefined) update.meeting_point_description = payload.meeting_point_description

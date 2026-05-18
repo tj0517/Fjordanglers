@@ -16,6 +16,7 @@ export const FISH_ALL = [
   'Pike',
   'Perch',
   'Zander',
+  'Burbot',
   // ── Saltwater — demersal ───────────────────────────────────────────────
   'Cod',
   'Pollock',
@@ -47,6 +48,7 @@ export const FISH_FILTER = [
   'Pike',
   'Perch',
   'Zander',
+  'Burbot',
   'Cod',
   'Pollock',
   'Brosme',
@@ -80,6 +82,7 @@ export const FISH_IMG: Record<string, string> = {
   'Pike':             '/fish_catalog/pike.png',
   'Perch':            '/fish_catalog/perch.png',
   'Zander':           '/fish_catalog/zander.png',
+  'Burbot':           '/fish_catalog/ling.png',
   // Saltwater — demersal
   'Cod':              '/fish_catalog/cod.png',
   'Pollock':          '/fish_catalog/pollock.png',

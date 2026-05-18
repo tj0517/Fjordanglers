@@ -21,7 +21,18 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
+
+function buildWhatsAppUrl(tripTitle: string, optionLabel?: string | null): string {
+  const context = optionLabel ? `${tripTitle} — ${optionLabel}` : tripTitle
+  const text = encodeURIComponent(
+    `Hi! I have a question about "${context}". Can you help me plan this trip?`
+  )
+  return `https://wa.me/48698936563?text=${text}`
+}
+
+const EMAIL_URL =
+  'mailto:contact@fjordanglers.com?subject=Question%20about%20a%20guided%20fishing%20trip'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -203,6 +214,9 @@ function InquiryModal({
   const [partySize,    setPartySize]    = useState(1)
   const [message,      setMessage]      = useState('')
 
+  const [attribution,      setAttribution]      = useState('')
+  const [attributionOpen,  setAttributionOpen]  = useState(false)
+
   const [submitState,  setSubmitState]  = useState<SubmitState>('idle')
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null)
   const [hasAttempted, setHasAttempted] = useState(false)
@@ -261,6 +275,7 @@ function InquiryModal({
           party_size:      partySize,
           message:         message.trim() || null,
           selected_option: selectedOptionLabel ?? null,
+          attribution:     attribution.trim() || null,
         }),
       })
 
@@ -433,9 +448,9 @@ function InquiryModal({
                   {/* Trust signals */}
                   <div className="space-y-1.5 mt-4">
                     {[
+                      'We confirm availability within 24 hours',
                       'No payment required to send an inquiry',
-                      'FA reviews & confirms with the guide within 24h',
-                      'Deposit link sent only after availability confirmed',
+                      'Deposit link only sent after availability confirmed',
                     ].map(text => (
                       <div key={text} className="flex items-center gap-2">
                         <div className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: '#E67E50', opacity: 0.6 }} />
@@ -550,19 +565,56 @@ function InquiryModal({
 
                     {/* Message */}
                     <div className="mb-4">
-                      <label className={labelCls}>
-                        Message{' '}
-                        <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(optional)</span>
-                      </label>
+                      <label className={labelCls}>Your trip</label>
                       <textarea
                         value={message}
                         onChange={e => setMessage(e.target.value)}
-                        placeholder="Any specific preferences, questions, or details about your trip…"
+                        placeholder="What matters most to you on this trip? (species, technique, group size, dates flexibility...)"
                         rows={3}
                         maxLength={1000}
                         className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
                         style={inputStyle}
                       />
+                    </div>
+
+                    {/* Attribution */}
+                    <div className="mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setAttributionOpen(o => !o)}
+                        className="flex items-center gap-1.5 transition-opacity hover:opacity-70 mb-2"
+                      >
+                        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                          How did you hear about us?{' '}
+                          <span style={{ color: 'rgba(10,46,77,0.25)' }}>(optional)</span>
+                        </span>
+                        <ChevronDown
+                          size={11}
+                          style={{
+                            color: 'rgba(10,46,77,0.3)',
+                            transform: attributionOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                            transition: 'transform 0.15s',
+                          }}
+                        />
+                      </button>
+                      {attributionOpen && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {(['Instagram', 'Google', 'Friend', 'Already knew the guide', 'Other'] as const).map(opt => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setAttribution(a => a === opt ? '' : opt)}
+                              className="px-3 py-1.5 rounded-full text-xs f-body font-medium transition-all"
+                              style={attribution === opt
+                                ? { background: 'rgba(10,46,77,0.1)', color: '#0A2E4D', border: '1.5px solid rgba(10,46,77,0.22)' }
+                                : { background: 'transparent', color: 'rgba(10,46,77,0.38)', border: '1px solid rgba(10,46,77,0.12)' }
+                              }
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Error */}
@@ -591,6 +643,25 @@ function InquiryModal({
                         'Send Inquiry →'
                       )}
                     </button>
+
+                    {/* WhatsApp CTA */}
+                    <div className="mt-4 pt-4 text-center" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
+                      <p className="text-[11px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.42)' }}>
+                        💬 Prefer to message?
+                      </p>
+                      <a
+                        href={buildWhatsAppUrl(tripTitle, selectedOptionLabel)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[13px] font-semibold f-body"
+                        style={{ color: '#E67E50', textDecoration: 'none' }}
+                      >
+                        Ask on WhatsApp →
+                      </a>
+                      <p className="text-[10px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.3)' }}>
+                        Usually replies within a few hours
+                      </p>
+                    </div>
 
                   </div>
                 </form>
@@ -694,6 +765,36 @@ export function InquiryWidget({
           <p className="text-center text-[11px] f-body mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
             Free to enquire · no payment now · reply within 24h
           </p>
+        </div>
+
+        {/* Not sure yet? */}
+        <div className="px-5 pb-5" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] f-body pt-4 pb-3 text-center"
+            style={{ color: 'rgba(255,255,255,0.28)' }}>
+            Not sure yet? Talk to us
+          </p>
+          <div className="flex gap-2">
+            <a
+              href={buildWhatsAppUrl(tripTitle, selectedOptionLabel)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold f-body transition-all hover:brightness-110"
+              style={{ background: 'rgba(37,211,102,0.14)', color: '#25D366', border: '1px solid rgba(37,211,102,0.2)', textDecoration: 'none' }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+              </svg>
+              WhatsApp
+            </a>
+            <a
+              href={EMAIL_URL}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold f-body transition-all hover:brightness-110"
+              style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}
+            >
+              <Mail size={13} />
+              Email us
+            </a>
+          </div>
         </div>
       </div>
 

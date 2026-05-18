@@ -33,6 +33,7 @@ import {
   type SpeciesDetailItem,
   type SpecialAttraction,
   type Accommodation,
+  type Boat,
   type ContentBlock,
   type FaqItem,
   type ExperiencePageOptionPayload,
@@ -40,6 +41,7 @@ import {
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
 import LatLngPicker from '@/components/admin/LatLngPicker'
+import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -339,12 +341,21 @@ function OptionEditor({
   onSaved:       (updated: ExperiencePageOptionRow) => void
   onDeleted:     (id: string) => void
 }) {
-  const [label,       setLabel]       = useState(option.label)
-  const [price,       setPrice]       = useState(String(option.price_from))
-  const [species,     setSpecies]     = useState<string[]>(option.target_species ?? [])
-  const [boatDesc,    setBoatDesc]    = useState(option.boat_description ?? '')
-  const [boatImg,     setBoatImg]     = useState(option.boat_image_url ?? '')
-  const [attractions, setAttractions] = useState<SpecialAttraction[]>(
+  const [label,            setLabel]            = useState(option.label)
+  const [price,            setPrice]            = useState(String(option.price_from))
+  const [species,          setSpecies]          = useState<string[]>(option.target_species ?? [])
+  const [boatItems,        setBoatItems]        = useState<Boat[]>(() => {
+    const parsed = parseJsonField<Boat>(option.boats)
+    if (parsed.length > 0) return parsed
+    // Fallback: convert legacy single-boat fields
+    if (option.boat_description || option.boat_image_url) {
+      return [{ heading: '', description: option.boat_description ?? '', image_url: option.boat_image_url ?? '' }]
+    }
+    return []
+  })
+  const [optSeasonMonths,  setOptSeasonMonths]  = useState<number[]>(option.season_months ?? [])
+  const [optPeakMonths,    setOptPeakMonths]    = useState<number[]>(option.peak_months ?? [])
+  const [attractions,      setAttractions]      = useState<SpecialAttraction[]>(
     (option.special_attractions as SpecialAttraction[] | null) ?? []
   )
   const [meetName,    setMeetName]    = useState(option.meeting_point_name ?? '')
@@ -367,8 +378,9 @@ function OptionEditor({
         label:                     label.trim() || `Option ${index + 1}`,
         price_from:                parseFloat(price) || 0,
         target_species:            species,
-        boat_description:          boatDesc.trim() || null,
-        boat_image_url:            boatImg.trim() || null,
+        boats:                     boatItems.filter(b => b.description.trim() || b.heading.trim()),
+        season_months:             optSeasonMonths,
+        peak_months:               optPeakMonths,
         special_attractions:       attractions.filter(a => a.text.trim()),
         meeting_point_name:        meetName.trim() || null,
         meeting_point_description: meetDesc.trim() || null,
@@ -386,8 +398,9 @@ function OptionEditor({
           label:                     payload.label!,
           price_from:                payload.price_from!,
           target_species:            payload.target_species ?? [],
-          boat_description:          payload.boat_description ?? null,
-          boat_image_url:            payload.boat_image_url ?? null,
+          boats:                     payload.boats ?? [],
+          season_months:             payload.season_months ?? [],
+          peak_months:               payload.peak_months ?? [],
           special_attractions:       payload.special_attractions ?? [],
           meeting_point_name:        payload.meeting_point_name ?? null,
           meeting_point_description: payload.meeting_point_description ?? null,
@@ -519,6 +532,17 @@ function OptionEditor({
                     Remove
                   </button>
                 </div>
+                <ImageUpload
+                  label="Photo (optional — if set, photo is on left, text on right)"
+                  variant="cover"
+                  aspect="wide"
+                  cropAspect={4 / 3}
+                  currentUrl={block.image_url || null}
+                  onUpload={url => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, image_url: url } : b))}
+                  pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+                  guideId={guideId}
+                  hint="Landscape — if present the heading is full width, then photo left and text right."
+                />
                 <textarea
                   value={block.text}
                   onChange={e => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
@@ -565,25 +589,102 @@ function OptionEditor({
             )}
           </div>
 
-          {/* Boat */}
+          {/* Season */}
+          <div className="space-y-3">
+            <label className={lbl}>Season for this option (optional)</label>
+            <div className="flex flex-wrap gap-1.5">
+              {MONTHS_SHORT.map((m, idx) => {
+                const n = idx + 1
+                const isSeason = optSeasonMonths.includes(n)
+                const isPeak   = optPeakMonths.includes(n)
+                return (
+                  <div key={m} className="flex flex-col items-center gap-1">
+                    <button
+                      type="button"
+                      title={`Toggle ${MONTHS[idx]} as season`}
+                      onClick={() => setOptSeasonMonths(prev =>
+                        prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n].sort((a, b) => a - b)
+                      )}
+                      className="w-10 h-8 rounded-lg text-xs font-semibold f-body transition-all"
+                      style={{
+                        background: isSeason ? 'rgba(10,46,77,0.15)' : 'rgba(10,46,77,0.04)',
+                        color:      isSeason ? '#0A2E4D'              : 'rgba(10,46,77,0.35)',
+                        border:     isSeason ? '1.5px solid rgba(10,46,77,0.3)' : '1.5px solid rgba(10,46,77,0.1)',
+                      }}
+                    >{m}</button>
+                    <button
+                      type="button"
+                      title={`Toggle ${MONTHS[idx]} as peak`}
+                      onClick={() => setOptPeakMonths(prev =>
+                        prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n].sort((a, b) => a - b)
+                      )}
+                      className="w-10 h-4 rounded text-[9px] font-bold f-body transition-all"
+                      style={{
+                        background: isPeak ? '#E67E50' : 'rgba(10,46,77,0.04)',
+                        color:      isPeak ? '#fff'    : 'rgba(10,46,77,0.25)',
+                        border:     isPeak ? '1px solid #E67E50' : '1px solid rgba(10,46,77,0.1)',
+                      }}
+                    >Peak</button>
+                  </div>
+                )
+              })}
+            </div>
+            {(optSeasonMonths.length > 0) && (
+              <div className="mt-1">
+                <SeasonCalendarGrid seasonMonths={optSeasonMonths} peakMonths={optPeakMonths} />
+              </div>
+            )}
+          </div>
+
+          {/* Boat — multi-block */}
           <div className="space-y-3">
             <label className={lbl}>Boat (optional)</label>
-            <textarea value={boatDesc} onChange={e => setBoatDesc(e.target.value)}
-              placeholder="Describe the boat used for this option…"
-              rows={3} maxLength={800}
-              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
-              style={iStyle} />
-            <ImageUpload
-              label="Boat photo"
-              variant="cover"
-              aspect="wide"
-              cropAspect={4 / 3}
-              currentUrl={boatImg || null}
-              onUpload={url => setBoatImg(url)}
-              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
-              guideId={guideId}
-              hint="Landscape — shown next to the boat description."
-            />
+            {boatItems.map((boat, bi) => (
+              <div key={bi} className="space-y-2 p-3 rounded-xl"
+                style={{ border: '1px solid rgba(10,46,77,0.1)', background: 'rgba(10,46,77,0.02)' }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}>Boat {bi + 1}</span>
+                  <button type="button"
+                    onClick={() => setBoatItems(prev => prev.filter((_, j) => j !== bi))}
+                    className="text-xs font-semibold f-body px-2 py-0.5 rounded-lg"
+                    style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+                    Remove
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={boat.heading}
+                  onChange={e => setBoatItems(prev => prev.map((b, j) => j === bi ? { ...b, heading: e.target.value } : b))}
+                  placeholder="e.g. 24-ft Aluminium RIB"
+                  maxLength={120}
+                  className={inp} style={iStyle} />
+                <ImageUpload
+                  label="Boat photo"
+                  variant="cover"
+                  aspect="wide"
+                  cropAspect={4 / 3}
+                  currentUrl={boat.image_url || null}
+                  onUpload={url => setBoatItems(prev => prev.map((b, j) => j === bi ? { ...b, image_url: url } : b))}
+                  pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+                  guideId={guideId}
+                  hint="Landscape — shown next to the boat description."
+                />
+                <textarea
+                  value={boat.description}
+                  onChange={e => setBoatItems(prev => prev.map((b, j) => j === bi ? { ...b, description: e.target.value } : b))}
+                  placeholder="Describe the boat…"
+                  rows={3} maxLength={800}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                  style={iStyle} />
+              </div>
+            ))}
+            <button type="button"
+              onClick={() => setBoatItems(prev => [...prev, { heading: '', description: '', image_url: '' }])}
+              className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+              style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+              + Add boat
+            </button>
           </div>
 
           {/* Special attractions */}
@@ -731,8 +832,7 @@ export interface ExperiencePageFormInitialData {
   season_months:                number[]
   peak_months:                  number[]
   species_details:              SpeciesDetailItem[]
-  boat_description:             string | null
-  boat_image_url:               string | null
+  boats:                        Boat[]
   special_attractions:          SpecialAttraction[]
   accommodations:               Accommodation[]
   what_to_bring:                string[]
@@ -759,6 +859,10 @@ export interface ExperiencePageOptionRow {
   description:               string | null
   catches_text:              string | null
   target_species:            string[]
+  boats:                     unknown   // Boat[] stored as JSONB (null if migration not yet applied)
+  season_months:             number[]  // may be absent as [] before migration
+  peak_months:               number[]  // same
+  // Legacy single-boat fields — still present in DB, used as fallback
   boat_description:          string | null
   boat_image_url:            string | null
   special_attractions:       unknown   // SpecialAttraction[] stored as JSONB
@@ -880,9 +984,8 @@ export default function ExperiencePageForm({
     setSpeciesDetails(prev => ({ ...prev, [name]: detail }))
   }, [])
 
-  // ── Section 8: Boat
-  const [boatDescription, setBoatDescription] = useState(initialData?.boat_description ?? '')
-  const [boatImageUrl,    setBoatImageUrl]    = useState(initialData?.boat_image_url ?? '')
+  // ── Section 8: Boat (multi-block)
+  const [boatItems, setBoatItems] = useState<Boat[]>(initialData?.boats ?? [])
 
   // ── Section 9: Special attractions (multi-item)
   const [specialAttractions, setSpecialAttractions] = useState<SpecialAttraction[]>(
@@ -987,8 +1090,7 @@ export default function ExperiencePageForm({
       season_months:                    seasonMonths,
       peak_months:                      peakMonths,
       species_details:                  speciesDetailItems,
-      boat_description:                 boatDescription.trim()             || null,
-      boat_image_url:                   boatImageUrl.trim()                || null,
+      boats:                            boatItems.filter(b => b.description.trim() || b.heading.trim()),
       special_attractions:              specialAttractions.filter(a => a.text.trim()),
       accommodations:                   accommodationItems.filter(a => a.description.trim() || a.heading.trim()),
       what_to_bring:                    parseLines(whatToBring),
@@ -1033,7 +1135,7 @@ export default function ExperiencePageForm({
     status, difficulty, effort, nonAnglerFriendly, technique, targetSpecies, environment,
     introText, heroImageUrl, galleryImages, contentPhotoImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
-    boatDescription, boatImageUrl, specialAttractions, accommodationItems, whatToBring,
+    boatItems, specialAttractions, accommodationItems, whatToBring,
     meetingName, meetingDesc, includes, excludes, pageBlocks, faqItems, metaTitle, metaDesc, ogImage,
     locationLat, locationLng,
     prefill, router, isEdit, experienceId,
@@ -1356,6 +1458,17 @@ export default function ExperiencePageForm({
                 Remove
               </button>
             </div>
+            <ImageUpload
+              label="Photo (optional — if set, photo is on left, text on right)"
+              variant="cover"
+              aspect="wide"
+              cropAspect={4 / 3}
+              currentUrl={block.image_url || null}
+              onUpload={url => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, image_url: url } : b))}
+              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              guideId={prefill?.guide_id ?? undefined}
+              hint="Landscape — if present the heading is full width, then photo left and text right."
+            />
             <textarea
               value={block.text}
               onChange={e => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
@@ -1407,28 +1520,68 @@ export default function ExperiencePageForm({
       <SectionLabel
         step={8}
         title="Boat"
-        desc="Shown as two-column section: description left, photo right."
+        desc="Each block shown with heading, photo and description. Add as many as needed (e.g. different boats for different options)."
       />
-      <div className="space-y-3">
-        <div>
-          <label className={lbl}>Boat description</label>
-          <textarea value={boatDescription} onChange={e => setBoatDescription(e.target.value)}
-            placeholder="Our 24-foot aluminium RIB handles anything the North Sea throws at it. Equipped with radar, VHF, safety equipment and a live bait tank…"
-            rows={4} maxLength={800}
-            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
-            style={iStyle} />
-        </div>
-        <ImageUpload
-          label="Boat photo"
-          variant="cover"
-          aspect="wide"
-          cropAspect={4 / 3}
-          currentUrl={boatImageUrl || null}
-          onUpload={(url) => setBoatImageUrl(url)}
-          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
-          guideId={prefill?.guide_id ?? undefined}
-          hint="Landscape — shown to the right of the boat description."
-        />
+      <div className="space-y-4">
+        {boatItems.map((boat, idx) => (
+          <div key={idx} className="space-y-3 p-4 rounded-2xl" style={{ border: '1px solid rgba(10,46,77,0.1)', background: 'rgba(10,46,77,0.02)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                Boat {idx + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => setBoatItems(prev => prev.filter((_, i) => i !== idx))}
+                className="text-xs font-semibold f-body px-2.5 py-1 rounded-lg"
+                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}
+              >
+                Remove
+              </button>
+            </div>
+            <div>
+              <label className={lbl}>Heading</label>
+              <input
+                type="text"
+                value={boat.heading}
+                onChange={e => setBoatItems(prev => prev.map((b, i) => i === idx ? { ...b, heading: e.target.value } : b))}
+                placeholder="24-ft Aluminium RIB, etc."
+                maxLength={120}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"
+                style={iStyle}
+              />
+            </div>
+            <ImageUpload
+              label="Photo"
+              variant="cover"
+              aspect="wide"
+              cropAspect={4 / 3}
+              currentUrl={boat.image_url || null}
+              onUpload={(url) => setBoatItems(prev => prev.map((b, i) => i === idx ? { ...b, image_url: url } : b))}
+              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              guideId={prefill?.guide_id ?? undefined}
+              hint="Landscape — shown alongside the description."
+            />
+            <div>
+              <label className={lbl}>Description</label>
+              <textarea
+                value={boat.description}
+                onChange={e => setBoatItems(prev => prev.map((b, i) => i === idx ? { ...b, description: e.target.value } : b))}
+                placeholder="Our 24-foot aluminium RIB handles anything the North Sea throws at it…"
+                rows={4} maxLength={800}
+                className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+                style={iStyle}
+              />
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setBoatItems(prev => [...prev, { heading: '', description: '', image_url: '' }])}
+          className="text-sm font-semibold f-body px-4 py-2 rounded-xl transition-colors"
+          style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}
+        >
+          + Add boat
+        </button>
       </div>
 
       <Divider />
@@ -1744,8 +1897,11 @@ export default function ExperiencePageForm({
                     description:               null,
                     catches_text:              null,
                     target_species:            [],
+                    boats:                     [],
                     boat_description:          null,
                     boat_image_url:            null,
+                    season_months:             [],
+                    peak_months:               [],
                     special_attractions:       [],
                     meeting_point_name:        null,
                     meeting_point_description: null,

@@ -11,7 +11,7 @@ import { CountryFlag } from '@/components/ui/country-flag'
 import { ExperiencePageWithOptions } from '@/components/trips/ExperiencePageWithOptions'
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
-import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem, Accommodation } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem, Accommodation, Boat } from '@/actions/experience-pages'
 import type { TripOption } from '@/components/trips/TripOptionsAccordion'
 
 /**
@@ -96,8 +96,7 @@ export default async function ExperiencePublicPage({
   type PageWithNewCols = typeof rawPage & {
     intro_text:          string | null
     species_details:     unknown
-    boat_description:    string | null
-    boat_image_url:      string | null
+    boats:               unknown
     special_attractions: unknown
     what_to_bring:       unknown
     accommodations:      unknown
@@ -157,7 +156,8 @@ export default async function ExperiencePublicPage({
     .eq('experience_page_id', page.id)
     .order('sort_order', { ascending: true })
 
-  const tripOptions: TripOption[] = (rawOptions ?? []).map(o => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tripOptions: TripOption[] = ((rawOptions ?? []) as unknown as any[]).map((o: any) => ({
     id:                        o.id,
     sort_order:                o.sort_order,
     label:                     o.label,
@@ -165,8 +165,9 @@ export default async function ExperiencePublicPage({
     content_blocks:            (o.content_blocks as ContentBlock[] | null) ?? [],
     catches_text:              o.catches_text ?? null,
     target_species:            (o.target_species as string[] | null) ?? [],
-    boat_description:          o.boat_description ?? null,
-    boat_image_url:            o.boat_image_url ?? null,
+    boats:                     (o.boats as Boat[] | null) ?? [],
+    season_months:             o.season_months ?? [],
+    peak_months:               o.peak_months   ?? [],
     special_attractions:       (o.special_attractions as SpecialAttraction[] | null) ?? [],
     meeting_point_name:        o.meeting_point_name ?? null,
     meeting_point_description: o.meeting_point_description ?? null,
@@ -214,6 +215,7 @@ export default async function ExperiencePublicPage({
   const seasonMonths    = (page.season_months      as number[] | null) ?? []
   const peakMonths      = (page.peak_months        as number[] | null) ?? []
   const speciesDetails       = (page.species_details    as SpeciesDetailItem[]  | null) ?? []
+  const boats                = (page.boats              as Boat[]               | null) ?? []
   const specialAttractions   = (page.special_attractions as SpecialAttraction[]  | null) ?? []
   const accommodations       = (page.accommodations      as Accommodation[]      | null) ?? []
   const whatToBring          = (page.what_to_bring      as string[]             | null) ?? []
@@ -613,6 +615,70 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
+            {/* PAGE CONTENT BLOCKS */}
+            {pageContentBlocks.length > 0 && (
+              <div className="space-y-10 mb-12">
+                {pageContentBlocks.map((block, i) => (
+                  <section key={i}>
+                    {block.headline && (
+                      <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
+                        {block.headline}
+                      </h4>
+                    )}
+                    {block.image_url ? (
+                      <div className="flex flex-col sm:flex-row gap-6 items-start">
+                        <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[300px] aspect-[4/3]">
+                          <Image src={block.image_url} alt={block.headline || `Photo ${i + 1}`} fill className="object-cover" sizes="(min-width: 640px) 300px, 100vw" />
+                        </div>
+                        {block.text && (
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                              {block.text}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : block.text && (
+                      <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                        {block.text}
+                      </p>
+                    )}
+                  </section>
+                ))}
+              </div>
+            )}
+
+            {/* BOAT */}
+            {boats.length > 0 && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="The boat" />
+                <div className="space-y-10">
+                  {boats.map((boat, idx) => (
+                    <div key={idx}>
+                      {boat.heading && (
+                        <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>{boat.heading}</h4>
+                      )}
+                      <div className="flex flex-col sm:flex-row gap-6 items-start">
+                        {boat.description && (
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                              {boat.description}
+                            </p>
+                          </div>
+                        )}
+                        {boat.image_url && (
+                          <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
+                            <Image src={boat.image_url} alt={boat.heading || `Boat ${idx + 1}`} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* SEASON */}
             {(seasonMonths.length > 0 || page.season_start || page.best_months) && (
               <section className="mb-12">
@@ -887,7 +953,20 @@ export default async function ExperiencePublicPage({
                         {block.headline}
                       </h4>
                     )}
-                    {block.text && (
+                    {block.image_url ? (
+                      <div className="flex flex-col sm:flex-row gap-6 items-start">
+                        <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[300px] aspect-[4/3]">
+                          <Image src={block.image_url} alt={block.headline || `Photo ${i + 1}`} fill className="object-cover" sizes="(min-width: 640px) 300px, 100vw" />
+                        </div>
+                        {block.text && (
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                              {block.text}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : block.text && (
                       <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
                         {block.text}
                       </p>
@@ -897,32 +976,33 @@ export default async function ExperiencePublicPage({
               </div>
             )}
 
-            {/* ──────────── BOAT | PHOTO ──────────── */}
-            {(page.boat_description || page.boat_image_url) && (
+            {/* ──────────── BOAT ──────────── */}
+            {boats.length > 0 && (
               <section className="mb-12">
                 <SalmonRule />
                 <SectionLabel label="The boat" />
-                <div className="flex flex-col sm:flex-row gap-6 items-start">
-                  {/* Boat text */}
-                  {page.boat_description && (
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
-                        {page.boat_description}
-                      </p>
+                <div className="space-y-10">
+                  {boats.map((boat, idx) => (
+                    <div key={idx}>
+                      {boat.heading && (
+                        <h4 className="text-xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>{boat.heading}</h4>
+                      )}
+                      <div className="flex flex-col sm:flex-row gap-6 items-start">
+                        {boat.description && (
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base sm:text-lg f-body leading-relaxed text-justify" style={{ color: 'rgba(10,46,77,0.72)' }}>
+                              {boat.description}
+                            </p>
+                          </div>
+                        )}
+                        {boat.image_url && (
+                          <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
+                            <Image src={boat.image_url} alt={boat.heading || `Boat ${idx + 1}`} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  {/* Boat photo */}
-                  {page.boat_image_url && (
-                    <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
-                      <Image
-                        src={page.boat_image_url}
-                        alt="The boat"
-                        fill
-                        className="object-cover"
-                        sizes="(min-width: 640px) 340px, 100vw"
-                      />
-                    </div>
-                  )}
+                  ))}
                 </div>
               </section>
             )}

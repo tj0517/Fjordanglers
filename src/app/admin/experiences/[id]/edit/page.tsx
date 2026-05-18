@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExperiencePageForm, { type ExperiencePageFormInitialData } from '@/components/admin/ExperiencePageForm'
-import type { SpeciesDetailItem, SpecialAttraction, Accommodation, ContentBlock } from '@/actions/experience-pages'
+import type { SpeciesDetailItem, SpecialAttraction, Accommodation, Boat, ContentBlock } from '@/actions/experience-pages'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -27,10 +27,14 @@ export default async function AdminExperienceEditPage({
 
   if (rawPage == null) notFound()
 
-  // Cast to include columns added in 20260427_experience_pages_v2.sql
+  // Cast to include columns added in subsequent migrations
+  // Legacy boat fields kept so we can convert them to the new boats[] format
   type PageWithNewCols = typeof rawPage & {
     intro_text:           string | null
     species_details:      unknown
+    // New multi-block boats column (may be null if migration hasn't run yet)
+    boats:                unknown
+    // Legacy single-boat columns (still in DB, used as fallback)
     boat_description:     string | null
     boat_image_url:       string | null
     special_attractions:  unknown
@@ -58,6 +62,9 @@ export default async function AdminExperienceEditPage({
     description: string | null
     catches_text: string | null
     target_species: string[]
+    boats: unknown
+    season_months: number[]
+    peak_months: number[]
     boat_description: string | null
     boat_image_url: string | null
     special_attractions: unknown
@@ -73,7 +80,7 @@ export default async function AdminExperienceEditPage({
     created_at: string
     updated_at: string
   }
-  const initialOptions = (rawOptions ?? []) as OptionRow[]
+  const initialOptions = (rawOptions ?? []) as unknown as OptionRow[]
 
   // Fetch guide photos if a guide is linked
   let guidePhotos: string[] = []
@@ -120,8 +127,15 @@ export default async function AdminExperienceEditPage({
     location_lng:                 page.location_lng ?? null,
     intro_text:                   page.intro_text ?? null,
     species_details:              (page.species_details as SpeciesDetailItem[] | null) ?? [],
-    boat_description:    page.boat_description ?? null,
-    boat_image_url:      page.boat_image_url ?? null,
+    boats: (() => {
+      const b = (page.boats as Boat[] | null)
+      if (b && b.length > 0) return b
+      // Fallback: convert legacy single-boat fields to first boats block
+      if (page.boat_description || page.boat_image_url) {
+        return [{ heading: '', description: page.boat_description ?? '', image_url: page.boat_image_url ?? '' }]
+      }
+      return []
+    })(),
     special_attractions: (page.special_attractions as SpecialAttraction[] | null) ?? [],
     what_to_bring:       (page.what_to_bring as string[] | null) ?? [],
     accommodations:      (page.accommodations as Accommodation[] | null) ?? [],

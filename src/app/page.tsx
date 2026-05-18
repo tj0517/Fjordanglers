@@ -11,6 +11,7 @@ import { CountryFlag } from '@/components/ui/country-flag'
 import { SpeciesSlider } from '@/components/home/species-slider'
 import { ExperiencesSlider } from '@/components/home/experiences-slider'
 import { BgVideo } from '@/components/home/bg-video'
+import { ContactExpertButton } from '@/components/ui/contact-expert-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -495,13 +496,16 @@ export default async function HomePage() {
             <p className="f-body mt-5 max-w-[460px]" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.52)', lineHeight: 1.8 }}>
               Peak salmon weeks go fast. Write to us before the dates you want are gone.
             </p>
-            <Link
-              href="/trips"
-              className="inline-flex items-center gap-2 mt-10 font-semibold px-10 py-4 rounded-full text-base transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
-              style={{ background: '#E67E50', color: '#fff' }}
-            >
-              Explore trips <ArrowRight size={15} strokeWidth={2.5} />
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center gap-3 mt-10">
+              <Link
+                href="/trips"
+                className="inline-flex items-center gap-2 font-semibold px-10 py-4 rounded-full text-base transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] f-body"
+                style={{ background: '#E67E50', color: '#fff' }}
+              >
+                Explore trips <ArrowRight size={15} strokeWidth={2.5} />
+              </Link>
+              <ContactExpertButton variant="on-dark" popoverPosition="above" />
+            </div>
             <p className="f-body mt-4 text-xs" style={{ color: 'rgba(255,255,255,0.28)' }}>
               We reply within 24 hours. In Polish, English or German.
             </p>
