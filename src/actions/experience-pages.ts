@@ -7,6 +7,7 @@
  * updateExperiencePage  — FA updates an existing page.
  */
 
+import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -188,6 +189,7 @@ export async function createExperiencePage(
     return { success: false, error: 'Failed to create experience page' }
   }
 
+  revalidatePath('/admin/experiences')
   console.log(`[createExperiencePage] Created ${data.id} — /experiences/${data.slug}`)
   return { success: true, id: data.id, slug: data.slug }
 }
@@ -394,6 +396,11 @@ export async function updateExperiencePage(
     console.error('[updateExperiencePage] DB error:', error)
     return { success: false, error: 'Failed to update experience page' }
   }
+
+  // Revalidate admin + public routes so changes appear immediately
+  revalidatePath(`/admin/experiences/${id}`)
+  revalidatePath(`/admin/experiences/${id}/edit`)
+  if (data.slug) revalidatePath(`/experiences/${data.slug}`)
 
   return { success: true, id: data.id, slug: data.slug }
 }
