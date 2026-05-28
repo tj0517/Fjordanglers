@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useRef, useState, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import Supercluster from 'supercluster'
 import 'leaflet/dist/leaflet.css'
@@ -15,6 +15,13 @@ type PointProps = {
   slug: string
   price: number
 }
+
+// ─── Area color palette ───────────────────────────────────────────────────────
+// Distinct colors for overlapping area polygons so users can tell them apart.
+const AREA_PALETTE = [
+  '#E67E50', // Salmon Orange
+  '#0A2E4D', // Fjord Blue
+]
 
 // ─── Country bounding boxes ───────────────────────────────────────────────────
 const COUNTRY_BOUNDS: Record<string, [[number, number], [number, number]]> = {
@@ -47,6 +54,54 @@ function collectPoints(pages: ExpPage[]): L.LatLngTuple[] {
   return pts
 }
 
+// ─── Area polygon layer ────────────────────────────────────────────────────────
+// Only renders polygons for pages whose pin is currently shown as an individual
+// marker (not merged into a cluster). This prevents visual clutter when zoomed out.
+// Pages with an area but no lat/lng (no clusterable pin) are always shown.
+function AreaLayer({
+  pages,
+  areaColors,
+  visibleIds,
+}: {
+  pages: ExpPage[]
+  areaColors: Record<string, string>
+  visibleIds: Set<string>
+}) {
+  const areas = useMemo(
+    () => pages.filter(p => {
+      if (p.location_area == null) return false
+      // No lat/lng → can't be in a cluster → always visible
+      if (p.location_lat == null) return true
+      return visibleIds.has(p.id)
+    }),
+    [pages, visibleIds],
+  )
+  if (areas.length === 0) return null
+  return (
+    <>
+      {areas.map(p => {
+        const polygon = p.location_area as import('geojson').Polygon
+        const positions = polygon.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])
+        const color = areaColors[p.id] ?? AREA_PALETTE[0]
+        return (
+          <Polygon
+            key={p.id}
+            positions={positions}
+            pathOptions={{
+              color,
+              fillColor: color,
+              fillOpacity: 0.10,
+              weight: 1.5,
+              opacity: 0.55,
+              dashArray: '5 4',
+            }}
+          />
+        )
+      })}
+    </>
+  )
+}
+
 // ─── MapPositioner ────────────────────────────────────────────────────────────
 function MapPositioner({ pages, countries }: { pages: ExpPage[]; countries: string[] }) {
   const map = useMap()
@@ -64,6 +119,22 @@ function MapPositioner({ pages, countries }: { pages: ExpPage[]; countries: stri
         } else {
           map.flyToBounds(b as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 8, duration: 0.5 })
         }
+      }
+      return
+    }
+
+    // Single page: fit to area polygon, or center on lat/lng
+    if (pages.length === 1) {
+      const p = pages[0]
+      const area = p.location_area as import('geojson').Polygon | null
+      if (area?.coordinates?.[0]) {
+        const latlngs = area.coordinates[0].map(([lng, lat]) => [lat, lng] as [number, number])
+        const bounds = L.latLngBounds(latlngs)
+        if (isFirst) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, animate: false })
+        else map.flyToBounds(bounds, { padding: [40, 40], maxZoom: 13, duration: 0.5 })
+      } else if (p.location_lat != null && p.location_lng != null) {
+        if (isFirst) map.setView([p.location_lat, p.location_lng], 9, { animate: false })
+        else map.flyTo([p.location_lat, p.location_lng], 9, { duration: 0.5 })
       }
       return
     }
@@ -103,6 +174,8 @@ function MapClickClearer({ onClear }: { onClear: () => void }) {
 }
 
 // ─── Pin icons ────────────────────────────────────────────────────────────────
+
+// Standard pin (no area)
 function pinIcon() {
   return L.divIcon({
     className: '',
@@ -121,6 +194,32 @@ function pinIcon() {
   })
 }
 
+// Pin with a colored outer ring — visually connects it to its area polygon
+function pinIconWithArea(areaColor: string) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:36px;height:36px;">
+      <div style="
+        position:absolute;inset:0;border-radius:50%;
+        border:2.5px solid ${areaColor};opacity:0.65;
+        box-shadow:0 0 0 1px ${areaColor}22;
+      "></div>
+      <div style="
+        position:absolute;inset:4px;
+        background:#0A2E4D;border-radius:50%;
+        border:2px solid white;
+        box-shadow:0 2px 10px rgba(10,46,77,0.40);
+        cursor:pointer;
+        display:flex;align-items:center;justify-content:center;overflow:hidden;
+      ">
+        <img src="/brand/sygnet.png" style="width:14px;height:14px;object-fit:contain;" draggable="false"/>
+      </div>
+    </div>`,
+    iconSize: [36, 36], iconAnchor: [18, 18], popupAnchor: [0, -20],
+  })
+}
+
+// Highlighted / hovered pin (no area)
 function pinIconHover() {
   return L.divIcon({
     className: '',
@@ -136,6 +235,30 @@ function pinIconHover() {
       <img src="/brand/sygnet-black.png" style="width:21px;height:21px;object-fit:contain;opacity:0.85;" draggable="false"/>
     </div>`,
     iconSize: [38, 38], iconAnchor: [19, 19], popupAnchor: [0, -22],
+  })
+}
+
+// Highlighted pin with area color ring
+function pinIconHoverWithArea(areaColor: string) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:44px;height:44px;">
+      <div style="
+        position:absolute;inset:0;border-radius:50%;
+        border:2.5px solid ${areaColor};opacity:0.7;
+      "></div>
+      <div style="
+        position:absolute;inset:3px;
+        background:#E67E50;border-radius:50%;
+        border:3px solid white;
+        box-shadow:0 3px 18px rgba(230,126,80,0.65);
+        cursor:pointer;
+        display:flex;align-items:center;justify-content:center;overflow:hidden;
+      ">
+        <img src="/brand/sygnet-black.png" style="width:18px;height:18px;object-fit:contain;opacity:0.85;" draggable="false"/>
+      </div>
+    </div>`,
+    iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -24],
   })
 }
 
@@ -186,7 +309,7 @@ function ExpPagePopup({ page }: { page: ExpPage }) {
       </p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: '13px', fontWeight: 700, color: '#0A2E4D' }}>
-          from €{page.price_from}
+          {page.price_type === 'request' ? 'Price on request' : page.price_type === 'flat' ? `from €${page.price_from} for the group` : `from €${page.price_from} / person`}
         </span>
         <a
           href={`/experiences/${page.slug}`}
@@ -225,6 +348,8 @@ type ClusterLayerProps = {
   setMapHoveredId: (id: string | null) => void
   onMarkerClick: (e: L.LeafletMouseEvent, pageId: string) => void
   showPopups: boolean
+  areaColors: Record<string, string>
+  onIndividualIdsChange: (ids: Set<string>) => void
 }
 
 function ClusterLayer({
@@ -233,6 +358,8 @@ function ClusterLayer({
   setMapHoveredId,
   onMarkerClick,
   showPopups,
+  areaColors,
+  onIndividualIdsChange,
 }: ClusterLayerProps) {
   const map = useMap()
 
@@ -253,8 +380,18 @@ function ClusterLayer({
     const bbox: [number, number, number, number] = [
       bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth(),
     ]
-    setClusters(idx.getClusters(bbox, zoom))
-  }, [map])
+    const next = idx.getClusters(bbox, zoom)
+    setClusters(next)
+
+    // Tell the parent which pages are currently visible as individual pins
+    // so AreaLayer can hide polygons for clustered pages.
+    const individualIds = new Set<string>()
+    for (const f of next) {
+      const props = f.properties as (Supercluster.ClusterProperties & PointProps)
+      if (props.cluster !== true) individualIds.add(props.pageId)
+    }
+    onIndividualIdsChange(individualIds)
+  }, [map, onIndividualIdsChange])
 
   useEffect(() => {
     const points = buildPoints(pages)
@@ -294,12 +431,16 @@ function ClusterLayer({
         if (page == null) return null
 
         const highlighted = isHighlighted(pageId)
+        const areaColor = areaColors[pageId]
+        const icon = areaColor != null
+          ? (highlighted ? pinIconHoverWithArea(areaColor) : pinIconWithArea(areaColor))
+          : (highlighted ? pinIconHover() : pinIcon())
 
         return (
           <Marker
             key={pageId}
             position={[lat, lng]}
-            icon={highlighted ? pinIconHover() : pinIcon()}
+            icon={icon}
             eventHandlers={{
               mouseover: () => setMapHoveredId(pageId),
               mouseout:  () => setMapHoveredId(null),
@@ -326,6 +467,7 @@ type Props = {
   onPinClick?: (id: string) => void
   showPopups?: boolean
   countries?: string[]
+  interactive?: boolean
 }
 
 export default function ExpPageMapView({
@@ -335,9 +477,25 @@ export default function ExpPageMapView({
   onPinClick,
   showPopups = true,
   countries = [],
+  interactive = true,
 }: Props) {
   const [mapHoveredId, setMapHoveredId] = useState<string | null>(null)
   const [pinnedId, setPinnedId]         = useState<string | null>(null)
+  const [individualIds, setIndividualIds] = useState<Set<string>>(new Set())
+
+  // Assign a distinct color to each experience that has an area polygon.
+  // Colors stay stable as long as the pages array reference is stable.
+  const areaColors = useMemo(() => {
+    const map: Record<string, string> = {}
+    let i = 0
+    for (const p of pages) {
+      if (p.location_area != null) {
+        map[p.id] = AREA_PALETTE[i % AREA_PALETTE.length]
+        i++
+      }
+    }
+    return map
+  }, [pages])
 
   const isHighlighted = useCallback(
     (id: string) =>
@@ -356,13 +514,21 @@ export default function ExpPageMapView({
     [onPinClick],
   )
 
+  const handleIndividualIdsChange = useCallback((ids: Set<string>) => {
+    setIndividualIds(ids)
+  }, [])
+
   return (
     <MapContainer
       center={[63.5, 2.0]}
       zoom={4}
       style={{ width: '100%', height: '100%' }}
       zoomControl={false}
-      scrollWheelZoom
+      scrollWheelZoom={interactive}
+      dragging={interactive}
+      doubleClickZoom={interactive}
+      touchZoom={interactive}
+      keyboard={interactive}
     >
       <MapPositioner pages={pages} countries={countries} />
       {onBoundsChange != null && <BoundsTracker onBoundsChange={onBoundsChange} />}
@@ -374,12 +540,17 @@ export default function ExpPageMapView({
         maxZoom={19}
       />
 
+      {/* Area polygons — hidden when their pin is inside a cluster */}
+      <AreaLayer pages={pages} areaColors={areaColors} visibleIds={individualIds} />
+
       <ClusterLayer
         pages={pages}
         isHighlighted={isHighlighted}
         setMapHoveredId={setMapHoveredId}
         onMarkerClick={handleMarkerClick}
         showPopups={showPopups}
+        areaColors={areaColors}
+        onIndividualIdsChange={handleIndividualIdsChange}
       />
     </MapContainer>
   )

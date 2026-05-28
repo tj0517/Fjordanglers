@@ -139,7 +139,7 @@ export default async function GuidesPage({
 
         {/* Background photo */}
         <Image
-          src="/vanern.jpg"
+          src="/hero.jpg"
           alt="Fishing guide"
           fill
           priority

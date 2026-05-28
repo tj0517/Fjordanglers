@@ -1,14 +1,16 @@
 /**
  * /dashboard/inquiries/[id] — FA inquiry detail.
  *
- * Shows full inquiry info + "Send Deposit Link" CTA (for pending inquiries).
+ * Shows full inquiry info + rich offer builder (right panel).
  */
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { OfferBuilder } from './OfferBuilder'
 import { SendDepositButton } from './SendDepositButton'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, ExternalLink } from 'lucide-react'
+import { env } from '@/lib/env'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,7 +63,8 @@ export default async function InquiryDetailPage({
 
   const svc = createServiceClient()
 
-  const { data: inquiry } = await svc
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
     .from('inquiries')
     .select('*')
     .eq('id', id)
@@ -69,28 +72,30 @@ export default async function InquiryDetailPage({
 
   if (inquiry == null) notFound()
 
-  // Fetch trip
   const { data: trip } = await svc
     .from('experiences')
     .select('id, title, price_per_person_eur, guide_id')
     .eq('id', inquiry.trip_id)
     .single()
 
-  // Fetch guide
   const { data: guide } = trip?.guide_id
     ? await svc.from('guides').select('full_name, invite_email').eq('id', trip.guide_id).single()
     : { data: null }
 
   const statusStyle = STATUS_COLOR[inquiry.status] ?? STATUS_COLOR.pending_fa_review
 
-  // Compute estimated deposit
-  const tripPriceEur = (trip?.price_per_person_eur ?? 0) * (inquiry.party_size ?? 1)
-  const estimatedDeposit30 = Math.round(tripPriceEur * 0.30 * 100) / 100
+  const tripPriceEur       = (trip?.price_per_person_eur ?? 0) * (inquiry.party_size ?? 1)
+  const offerToken         = inquiry.offer_token as string | null
+  const offerUrl           = offerToken ? `${env.NEXT_PUBLIC_APP_URL}/offers/${offerToken}` : null
+  const offerTotalEur      = inquiry.offer_total_eur  != null ? Number(inquiry.offer_total_eur) : null
+  const offerDepositEur    = inquiry.offer_deposit_eur != null ? Number(inquiry.offer_deposit_eur) : null
+
+  const canBuildOffer = ['pending_fa_review', 'deposit_sent'].includes(inquiry.status)
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
 
-      {/* Back link */}
+      {/* Back */}
       <Link href="/dashboard/inquiries"
         className="inline-flex items-center gap-1.5 text-sm f-body mb-6 transition-opacity hover:opacity-70"
         style={{ color: 'rgba(10,46,77,0.5)' }}>
@@ -119,7 +124,7 @@ export default async function InquiryDetailPage({
         {/* ── Left: inquiry details ── */}
         <div className="lg:col-span-2 space-y-4">
 
-          {/* Angler info */}
+          {/* Angler */}
           <div className="p-6 rounded-2xl"
             style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}>
             <p className="text-xs font-bold uppercase tracking-[0.15em] f-body mb-4"
@@ -129,32 +134,66 @@ export default async function InquiryDetailPage({
             <DetailRow label="Country" value={inquiry.angler_country} />
           </div>
 
-          {/* Trip details */}
+          {/* Trip */}
           <div className="p-6 rounded-2xl"
             style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}>
             <p className="text-xs font-bold uppercase tracking-[0.15em] f-body mb-4"
               style={{ color: '#E67E50' }}>Trip</p>
-            <DetailRow label="Trip"           value={trip?.title ?? '—'} />
-            <DetailRow label="Guide"          value={guide?.full_name ?? '—'} />
-            <DetailRow label="Guide email"    value={guide?.invite_email ?? '—'} />
+            <DetailRow label="Trip"            value={trip?.title ?? '—'} />
+            <DetailRow label="Guide"           value={guide?.full_name ?? '—'} />
+            <DetailRow label="Guide email"     value={guide?.invite_email ?? '—'} />
             <DetailRow label="Requested dates" value={
-              inquiry.requested_dates != null && inquiry.requested_dates.length > 0
-                ? inquiry.requested_dates.map(fmtDate).join(', ')
+              inquiry.requested_dates != null && (inquiry.requested_dates as string[]).length > 0
+                ? (inquiry.requested_dates as string[]).map(fmtDate).join(', ')
                 : '—'
             } />
-            <DetailRow label="Party size"     value={`${inquiry.party_size} ${inquiry.party_size === 1 ? 'person' : 'people'}`} />
-            <DetailRow label="Trip price"     value={tripPriceEur > 0 ? `€${tripPriceEur.toFixed(2)} (${inquiry.party_size}×)` : '—'} />
+            <DetailRow label="Party size"  value={`${inquiry.party_size} ${inquiry.party_size === 1 ? 'person' : 'people'}`} />
+            <DetailRow label="Trip price"  value={tripPriceEur > 0 ? `€${tripPriceEur.toFixed(2)} (${inquiry.party_size}×)` : '—'} />
+            {inquiry.selected_option != null && (
+              <DetailRow label="Option" value={inquiry.selected_option as string} />
+            )}
           </div>
 
-          {/* Message */}
-          {inquiry.message != null && inquiry.message.trim() !== '' && (
+          {/* Angler message */}
+          {inquiry.message != null && (inquiry.message as string).trim() !== '' && (
             <div className="p-6 rounded-2xl"
               style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}>
               <p className="text-xs font-bold uppercase tracking-[0.15em] f-body mb-3"
-                style={{ color: '#E67E50' }}>Message</p>
+                style={{ color: '#E67E50' }}>Message from angler</p>
               <p className="text-sm f-body leading-relaxed" style={{ color: '#374151', fontStyle: 'italic' }}>
                 &ldquo;{inquiry.message}&rdquo;
               </p>
+            </div>
+          )}
+
+          {/* Existing offer summary (if already sent) */}
+          {offerTotalEur != null && (
+            <div className="p-6 rounded-2xl"
+              style={{ background: '#F0F7FF', border: '1px solid #DBEAFE' }}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-bold uppercase tracking-[0.15em] f-body"
+                  style={{ color: '#1E40AF' }}>Offer sent</p>
+                {offerUrl != null && (
+                  <a href={offerUrl} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold f-body"
+                    style={{ color: '#E67E50' }}>
+                    <ExternalLink size={12} /> View offer page
+                  </a>
+                )}
+              </div>
+              <DetailRow label="Total price"  value={`€${offerTotalEur.toFixed(2)}`} />
+              {offerDepositEur != null && (
+                <DetailRow label="Deposit"    value={`€${offerDepositEur.toFixed(2)}`} />
+              )}
+              {offerDepositEur != null && (
+                <DetailRow label="Balance to guide" value={`€${(offerTotalEur - offerDepositEur).toFixed(2)}`} />
+              )}
+              {inquiry.offer_notes != null && (
+                <DetailRow label="Notes"      value={inquiry.offer_notes as string} />
+              )}
+              {inquiry.offer_sent_at != null && (
+                <DetailRow label="Sent at" value={new Date(inquiry.offer_sent_at as string).toLocaleString('en-GB')} />
+              )}
             </div>
           )}
 
@@ -163,86 +202,82 @@ export default async function InquiryDetailPage({
             <div className="p-6 rounded-2xl"
               style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}>
               <p className="text-xs font-bold uppercase tracking-[0.15em] f-body mb-4"
-                style={{ color: '#E67E50' }}>Deposit</p>
+                style={{ color: '#E67E50' }}>Deposit payment</p>
               {inquiry.deposit_amount != null && (
-                <DetailRow label="Amount" value={`€${Number(inquiry.deposit_amount).toFixed(2)}`} />
+                <DetailRow label="Amount"         value={`€${Number(inquiry.deposit_amount).toFixed(2)}`} />
               )}
               {inquiry.deposit_stripe_session_id != null && (
-                <DetailRow label="Stripe session" value={inquiry.deposit_stripe_session_id} />
+                <DetailRow label="Stripe session" value={inquiry.deposit_stripe_session_id as string} />
               )}
               {inquiry.deposit_paid_at != null && (
-                <DetailRow label="Paid at" value={new Date(inquiry.deposit_paid_at).toLocaleString('en-GB')} />
+                <DetailRow label="Paid at"        value={new Date(inquiry.deposit_paid_at as string).toLocaleString('en-GB')} />
               )}
             </div>
           )}
 
-          {/* Internal: inquiry metadata */}
+          {/* Metadata */}
           <div className="px-4 py-3 rounded-xl"
             style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}>
             <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>
-              ID: {inquiry.id} · Created: {new Date(inquiry.created_at).toLocaleString('en-GB')}
+              ID: {inquiry.id} · Created: {new Date(inquiry.created_at as string).toLocaleString('en-GB')}
             </p>
           </div>
         </div>
 
         {/* ── Right: action panel ── */}
         <div>
-          <div className="sticky top-6 p-6 rounded-2xl"
-            style={{ background: '#0A2E4D', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(10,46,77,0.2)' }}>
+          <div className="sticky top-6 space-y-4">
 
-            <p className="text-xs font-bold uppercase tracking-[0.15em] f-body mb-1"
-              style={{ color: 'rgba(255,255,255,0.4)' }}>Actions</p>
-            <p className="text-sm font-semibold f-body mb-4" style={{ color: '#FFFFFF' }}>
-              {inquiry.status === 'pending_fa_review'
-                ? 'Send deposit link to angler'
-                : STATUS_LABEL[inquiry.status] ?? inquiry.status}
-            </p>
+            {/* Offer builder panel */}
+            <div className="p-5 rounded-2xl"
+              style={{ background: '#0A2E4D', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(10,46,77,0.2)' }}>
 
-            {/* Estimated deposit info */}
-            {inquiry.status === 'pending_fa_review' && estimatedDeposit30 > 0 && (
-              <div className="mb-4 px-3 py-2.5 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <p className="text-[10px] f-body mb-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  Estimated deposit (30%)
-                </p>
-                <p className="text-lg font-bold f-body" style={{ color: '#E67E50' }}>
-                  €{estimatedDeposit30.toFixed(2)}
-                </p>
-                <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  Based on €{tripPriceEur.toFixed(2)} trip total
-                </p>
-              </div>
-            )}
+              <p className="text-xs font-bold uppercase tracking-[0.15em] f-body mb-1"
+                style={{ color: 'rgba(255,255,255,0.4)' }}>
+                {canBuildOffer ? 'Send Offer' : STATUS_LABEL[inquiry.status] ?? inquiry.status}
+              </p>
+              <p className="text-sm font-semibold f-body mb-4" style={{ color: '#FFFFFF' }}>
+                {canBuildOffer
+                  ? 'Build & send a personalised offer'
+                  : 'No actions available'}
+              </p>
 
-            {/* CTA */}
-            {inquiry.status === 'pending_fa_review' ? (
-              <SendDepositButton inquiryId={inquiry.id} defaultPercent={30} />
-            ) : inquiry.status === 'deposit_sent' ? (
-              <div>
-                <div className="px-4 py-3 rounded-xl mb-3"
-                  style={{ background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)' }}>
-                  <p className="text-sm f-body" style={{ color: '#93C5FD' }}>
-                    Deposit link already sent. Waiting for angler payment.
+              {canBuildOffer ? (
+                <OfferBuilder
+                  inquiryId={inquiry.id}
+                  tripTitle={trip?.title ?? 'Your trip'}
+                  estimatedTotalEur={tripPriceEur}
+                />
+              ) : inquiry.status === 'deposit_paid' ? (
+                <div className="px-4 py-3 rounded-xl"
+                  style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
+                  <p className="text-sm f-body" style={{ color: '#6EE7B7' }}>
+                    ✅ Deposit received. Booking confirmed.
                   </p>
                 </div>
-                {/* Allow resending */}
+              ) : (
+                <div className="px-4 py-3 rounded-xl"
+                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <p className="text-sm f-body" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    No actions available for this status.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Quick deposit link (secondary) */}
+            {canBuildOffer && (
+              <div className="p-4 rounded-2xl"
+                style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.08)' }}>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] f-body mb-1"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}>Quick send</p>
+                <p className="text-xs f-body mb-3" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                  Skip the offer builder — send a deposit link directly.
+                </p>
                 <SendDepositButton inquiryId={inquiry.id} defaultPercent={30} />
               </div>
-            ) : inquiry.status === 'deposit_paid' ? (
-              <div className="px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <p className="text-sm f-body" style={{ color: '#6EE7B7' }}>
-                  ✅ Deposit received. Booking confirmed.
-                </p>
-              </div>
-            ) : (
-              <div className="px-4 py-3 rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <p className="text-sm f-body" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                  No actions available for status: {inquiry.status}
-                </p>
-              </div>
             )}
+
           </div>
         </div>
 

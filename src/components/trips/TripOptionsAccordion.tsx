@@ -29,6 +29,7 @@ export interface TripOption {
   sort_order:                number
   label:                     string
   price_from:                number
+  price_type:                string
   content_blocks:            ContentBlock[]
   catches_text:              string | null
   target_species:            string[]
@@ -43,6 +44,12 @@ export interface TripOption {
   what_to_bring:             string[]
   includes:                  string[]
   excludes:                  string[]
+}
+
+function formatPrice(priceFrom: number, priceType: string): string {
+  if (priceType === 'request') return 'Price on request'
+  if (priceType === 'flat') return `from €${priceFrom} for the group`
+  return `from €${priceFrom} / person`
 }
 
 interface TripOptionsAccordionProps {
@@ -102,7 +109,9 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
           )}
           {filteredSpecies.length > 0 && (
             <div className="space-y-10">
-              {filteredSpecies.map((fish, idx) => (
+              {filteredSpecies.map((fish, idx) => {
+                const fishPhotos = fish.image_urls?.length ? fish.image_urls : (fish.image_url ? [fish.image_url] : [])
+                return (
                 <div key={fish.name}>
                   <div className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
                     <div className="flex-1 min-w-0">
@@ -113,12 +122,21 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
                         </p>
                       )}
                     </div>
-                    {fish.image_url && (
+                    {fishPhotos[0] && (
                       <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[320px] aspect-[4/3]">
-                        <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 320px, 100vw" />
+                        <Image src={fishPhotos[0]} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 320px, 100vw" />
                       </div>
                     )}
                   </div>
+                  {fishPhotos.length > 1 && (
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {fishPhotos.slice(1, 4).map((url, pi) => (
+                        <div key={pi} className="relative aspect-[4/3] rounded-xl overflow-hidden">
+                          <Image src={url} alt={`${fish.name} photo ${pi + 2}`} fill className="object-cover" sizes="(min-width: 640px) 200px, 30vw" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {fish.season_months.length > 0 && (
                     <div className="mt-4">
                       <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
@@ -126,7 +144,8 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
                     </div>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>
@@ -281,11 +300,13 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
         <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>Price</p>
         <div className="px-6 py-5 rounded-2xl" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
           <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-            from €{option.price_from}
+            {formatPrice(option.price_from, option.price_type)}
           </p>
-          <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
-            Per person · includes guide service
-          </p>
+          {option.price_type !== 'request' && (
+            <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
+              {option.price_type === 'flat' ? 'Flat rate for the group · includes guide service' : 'Per person · includes guide service'}
+            </p>
+          )}
         </div>
       </section>
 
@@ -350,7 +371,7 @@ function OptionModal({
           </div>
           <div className="flex items-center gap-4">
             <span className="font-bold f-display" style={{ color: '#E67E50', fontSize: '16px' }}>
-              from €{option.price_from}
+              {formatPrice(option.price_from, option.price_type)}
             </span>
             <button
               onClick={onClose}
@@ -433,7 +454,7 @@ export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDe
 
                 {/* Price */}
                 <span className="font-bold f-display text-sm flex-shrink-0" style={{ color: '#E67E50' }}>
-                  from €{option.price_from}
+                  {formatPrice(option.price_from, option.price_type)}
                 </span>
               </button>
 

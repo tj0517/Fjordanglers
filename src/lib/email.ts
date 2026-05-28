@@ -32,6 +32,7 @@ import { DepositConfirmedFaEmail } from '@/emails/deposit-confirmed-fa'
 import { BookingConfirmedGuideEmail } from '@/emails/booking-confirmed-guide'
 import { InquiryMessageAnglerEmail } from '@/emails/inquiry-message-angler'
 import { InquiryOfferAnglerEmail } from '@/emails/inquiry-offer-angler'
+import { InquiryRichOfferAnglerEmail } from '@/emails/inquiry-rich-offer-angler'
 import type { GuideApplicationEmailProps } from '@/emails/guide-application'
 import type { GuideWelcomeEmailProps } from '@/emails/guide-welcome'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
@@ -51,6 +52,7 @@ import type { DepositConfirmedFaEmailProps } from '@/emails/deposit-confirmed-fa
 import type { BookingConfirmedGuideEmailProps } from '@/emails/booking-confirmed-guide'
 import type { InquiryMessageAnglerEmailProps } from '@/emails/inquiry-message-angler'
 import type { InquiryOfferAnglerEmailProps } from '@/emails/inquiry-offer-angler'
+import type { InquiryRichOfferAnglerEmailProps } from '@/emails/inquiry-rich-offer-angler'
 
 const FROM = 'FjordAnglers <contact@fjordanglers.com>'
 
@@ -420,5 +422,21 @@ export async function sendInquiryOfferAnglerEmail(
     to,
     subject: `Your offer — ${templateProps.tripTitle} — €${templateProps.offerTotalEur.toFixed(2)} total`,
     react:   createElement(InquiryOfferAnglerEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to the angler when FA creates a rich offer with magic link.
+ * Email contains a CTA to /offers/[token] page.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendRichOfferAnglerEmail(
+  props: { to: string } & InquiryRichOfferAnglerEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `Your personalised offer — ${templateProps.tripTitle} — €${templateProps.offerTotalEur.toFixed(2)}`,
+    react:   createElement(InquiryRichOfferAnglerEmail, templateProps),
   })
 }

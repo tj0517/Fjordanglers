@@ -3,31 +3,25 @@
 /**
  * FA Inquiry Server Actions.
  *
- * sendDepositLink(inquiryId) — FA sends a Stripe Checkout deposit link to the angler.
- *   Uses offer_deposit_eur from the inquiry if an offer has been saved (preferred).
- *   Falls back to depositPercent calculation against trip price for legacy dashboard flow.
+ * sendDepositLink(inquiryId)
+ *   FA sends a Stripe Checkout deposit link to the angler.
  *
- * saveOffer(inquiryId, { totalPriceEur, depositEur, notes }) — FA sets a custom offer
- *   with an exact EUR total + EUR deposit (not %). Saves to DB and emails the angler.
+ * saveRichOffer(inquiryId, params)
+ *   FA builds a full offer: trip plan, license, inclusions, questions, price,
+ *   deposit, refund reason. Generates a unique magic-link token, saves everything
+ *   to the inquiry, and sends the offer email to the angler.
  *
- * sendMessageToAngler(inquiryId, subject, body) — FA sends a plain-text email to the
- *   angler from the admin. Message is stored in inquiry_messages for audit trail.
+ * submitOfferAnswers(token, answers)
+ *   Angler submits their answers on the public /offers/[token] page.
+ *   Returns a Stripe Checkout URL for the deposit payment.
  *
- * DB migration required before saveOffer / sendMessageToAngler will work:
- *   ALTER TABLE inquiries
- *     ADD COLUMN IF NOT EXISTS offer_total_eur   NUMERIC,
- *     ADD COLUMN IF NOT EXISTS offer_deposit_eur  NUMERIC,
- *     ADD COLUMN IF NOT EXISTS offer_notes        TEXT,
- *     ADD COLUMN IF NOT EXISTS offer_sent_at      TIMESTAMPTZ;
+ * getOfferByToken(token)
+ *   Fetches an inquiry (with guide + trip) by its offer token.
+ *   Public — no auth required; token IS the authentication.
  *
- *   CREATE TABLE IF NOT EXISTS inquiry_messages (
- *     id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
- *     inquiry_id  UUID REFERENCES inquiries(id) ON DELETE CASCADE NOT NULL,
- *     subject     TEXT,
- *     body        TEXT NOT NULL,
- *     sent_at     TIMESTAMPTZ DEFAULT NOW()
- *   );
- *   ALTER TABLE inquiry_messages ENABLE ROW LEVEL SECURITY;
+ * sendMessageToAngler(inquiryId, subject, body)
+ *   FA sends a plain-text email to the angler from the admin.
+ *   Message is stored in inquiry_messages for audit trail.
  */
 
 import { createServiceClient } from '@/lib/supabase/server'
@@ -36,7 +30,7 @@ import { env } from '@/lib/env'
 import {
   sendDepositLinkAnglerEmail,
   sendInquiryMessageAnglerEmail,
-  sendInquiryOfferAnglerEmail,
+  sendRichOfferAnglerEmail,
 } from '@/lib/email'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,6 +43,75 @@ export type ActionResult =
   | { success: true }
   | { success: false; error: string }
 
+export interface OfferQuestion {
+  id: string
+  question: string
+}
+
+export interface ScheduleEntry {
+  id: string
+  label: string       // "Day 1", "Evening", "Arrival"
+  title: string       // "Arrival & Briefing"
+  description: string
+}
+
+export interface OfferAnswer {
+  id: string
+  question: string
+  answer: string
+}
+
+export interface RichOfferParams {
+  totalPriceEur: number
+  depositEur: number
+  notes: string | null
+  tripPlan: string | null
+  licenseInfo: string | null
+  licenseHeading: string | null
+  inclusions: string[]
+  questions: OfferQuestion[]
+  refundReason: string | null
+  photos: string[]
+  location: string | null
+  whatToBring: string[]
+  schedule: ScheduleEntry[]
+  locationLat: number | null
+  locationLng: number | null
+  locationZoom: number
+  locationGeoJson: object | null
+}
+
+export interface OfferPageData {
+  inquiryId: string
+  anglerName: string
+  anglerCountry: string
+  tripTitle: string
+  guideName: string
+  guidePhotoUrl: string | null
+  guideBio: string | null
+  requestedDates: string[]
+  partySize: number
+  offerTotalEur: number
+  offerDepositEur: number
+  notes: string | null
+  tripPlan: string | null
+  licenseInfo: string | null
+  licenseHeading: string | null
+  inclusions: string[]
+  questions: OfferQuestion[]
+  answers: OfferAnswer[]
+  refundReason: string | null
+  status: string
+  photos: string[]
+  location: string | null
+  whatToBring: string[]
+  schedule: ScheduleEntry[]
+  locationLat: number | null
+  locationLng: number | null
+  locationZoom: number
+  locationGeoJson: object | null
+}
+
 // ─── sendDepositLink ──────────────────────────────────────────────────────────
 
 /**
@@ -56,14 +119,13 @@ export type ActionResult =
  *
  * Deposit amount priority:
  *   1. inquiry.offer_deposit_eur — if FA created an offer, always use that exact amount.
- *   2. depositPercent × trip price — legacy fallback for the /dashboard/inquiries panel.
+ *   2. depositPercent × trip price — legacy fallback.
  *
  * Allowed statuses: pending_fa_review, deposit_sent (resend).
  * Blocked statuses: deposit_paid, completed, cancelled.
  */
 export async function sendDepositLink(
   inquiryId: string,
-  /** Fallback deposit % — only used when no offer has been set. Default 30%. */
   depositPercent: number = 30,
 ): Promise<SendDepositLinkResult> {
   if (depositPercent < 1 || depositPercent > 100) {
@@ -72,10 +134,10 @@ export async function sendDepositLink(
 
   const svc = createServiceClient()
 
-  // Fetch inquiry — include offer fields (added via migration)
-  const { data: rawInquiry } = await svc
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rawInquiry } = await (svc as any)
     .from('inquiries')
-    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, message')
+    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, message, offer_deposit_eur')
     .eq('id', inquiryId)
     .single()
 
@@ -83,17 +145,13 @@ export async function sendDepositLink(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  // Block terminal statuses
   const blocked = ['deposit_paid', 'completed', 'cancelled']
   if (blocked.includes(rawInquiry.status)) {
     return { success: false, error: `Cannot send deposit link — inquiry is ${rawInquiry.status}` }
   }
 
-  // Read offer_deposit_eur — field added by migration (cast needed until types are regenerated)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const offerDepositEur = (rawInquiry as any).offer_deposit_eur as number | null
+  const offerDepositEur = rawInquiry.offer_deposit_eur as number | null
 
-  // Fetch trip for title (+ price as fallback)
   const { data: trip } = await svc
     .from('experiences')
     .select('id, title, price_per_person_eur, guide_id')
@@ -104,16 +162,13 @@ export async function sendDepositLink(
     return { success: false, error: 'Trip not found' }
   }
 
-  // ── Determine deposit amount ───────────────────────────────────────────────
   let depositCents: number
   let depositPctUsed: number
 
   if (offerDepositEur != null && offerDepositEur > 0) {
-    // FA set an explicit EUR amount — use it exactly
     depositCents   = Math.round(offerDepositEur * 100)
-    depositPctUsed = 0 // Not meaningful when using fixed amount
+    depositPctUsed = 0
   } else {
-    // Fallback: calculate from trip price and percent
     const tripPriceEur = (trip.price_per_person_eur ?? 0) * (rawInquiry.party_size ?? 1)
     depositCents       = Math.round(tripPriceEur * (depositPercent / 100) * 100)
     depositPctUsed     = depositPercent
@@ -133,7 +188,6 @@ export async function sendDepositLink(
     ? `Deposit · ${rawInquiry.party_size} person(s) · ${datesLabel}`
     : `${depositPctUsed}% deposit · ${rawInquiry.party_size} person(s) · ${datesLabel}`
 
-  // ── Create Stripe Checkout session ────────────────────────────────────────
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
   try {
     session = await stripe.checkout.sessions.create(
@@ -161,8 +215,6 @@ export async function sendDepositLink(
         cancel_url:  `${baseUrl}/trips/${rawInquiry.trip_id}`,
       },
       {
-        // Idempotency key ensures resends don't create duplicate sessions;
-        // append timestamp so FA can resend if angler's link expired.
         idempotencyKey: `deposit-${inquiryId}-${Date.now()}`,
       },
     )
@@ -171,8 +223,8 @@ export async function sendDepositLink(
     return { success: false, error: 'Failed to create Stripe checkout session' }
   }
 
-  // ── Update inquiry ─────────────────────────────────────────────────────────
-  const { error: updateError } = await svc
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (svc as any)
     .from('inquiries')
     .update({
       status:                    'deposit_sent',
@@ -185,7 +237,6 @@ export async function sendDepositLink(
     console.error('[sendDepositLink] DB update error:', updateError)
   }
 
-  // ── Send email (fire-and-forget) ───────────────────────────────────────────
   sendDepositLinkAnglerEmail({
     to:               rawInquiry.angler_email,
     anglerName:       rawInquiry.angler_name,
@@ -203,27 +254,25 @@ export async function sendDepositLink(
   return { success: true, checkoutUrl: session.url! }
 }
 
-// ─── saveOffer ────────────────────────────────────────────────────────────────
+// ─── saveRichOffer ────────────────────────────────────────────────────────────
 
 /**
- * FA creates or updates a custom offer for the angler.
- * Saves offer_total_eur, offer_deposit_eur, offer_notes, offer_sent_at to the inquiry.
- * Sends an offer email to the angler with the full breakdown.
- *
- * The offer deposit is in EUR (not %) — FA sets the exact amount.
- * The balance (total − deposit) is noted as "paid directly to guide".
+ * FA creates a rich personalised offer.
+ * Generates a unique magic-link token, saves all offer fields, and sends the
+ * offer email containing a link to /offers/[token].
  */
-export async function saveOffer(
+export async function saveRichOffer(
   inquiryId: string,
-  params: {
-    totalPriceEur: number
-    depositEur: number
-    notes: string | null
-  },
-): Promise<ActionResult> {
-  const { totalPriceEur, depositEur, notes } = params
+  params: RichOfferParams,
+): Promise<ActionResult & { offerUrl?: string }> {
+  const {
+    totalPriceEur, depositEur, notes,
+    tripPlan, licenseInfo, licenseHeading, inclusions,
+    questions, refundReason,
+    photos, location, whatToBring,
+    schedule, locationLat, locationLng, locationZoom, locationGeoJson,
+  } = params
 
-  // ── Validate ───────────────────────────────────────────────────────────────
   if (!Number.isFinite(totalPriceEur) || totalPriceEur <= 0) {
     return { success: false, error: 'Total price must be greater than €0' }
   }
@@ -236,8 +285,8 @@ export async function saveOffer(
 
   const svc = createServiceClient()
 
-  // ── Fetch inquiry ─────────────────────────────────────────────────────────
-  const { data: inquiry } = await svc
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
     .from('inquiries')
     .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, status')
     .eq('id', inquiryId)
@@ -251,53 +300,282 @@ export async function saveOffer(
     return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
   }
 
-  // ── Fetch trip title ──────────────────────────────────────────────────────
+  const { data: trip } = await svc
+    .from('experiences')
+    .select('title, guide_id')
+    .eq('id', inquiry.trip_id)
+    .single()
+
+  // Generate unique token (crypto.randomUUID is available in Node 19+/Edge)
+  const token = crypto.randomUUID().replace(/-/g, '')
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
+
+  const baseUrl  = env.NEXT_PUBLIC_APP_URL
+  const offerUrl = `${baseUrl}/offers/${token}`
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (svc as any)
+    .from('inquiries')
+    .update({
+      offer_total_eur:         totalPriceEur,
+      offer_deposit_eur:       depositEur,
+      offer_notes:             notes?.trim() || null,
+      offer_trip_plan:         tripPlan?.trim() || null,
+      offer_license_info:      licenseInfo?.trim() || null,
+      offer_inclusions:        inclusions,
+      offer_questions:         questions,
+      offer_refund_reason:     refundReason?.trim() || null,
+      offer_photos:            photos,
+      offer_location:          location?.trim() || null,
+      offer_what_to_bring:     whatToBring,
+      offer_schedule:          schedule,
+      offer_license_heading:   licenseHeading?.trim() || null,
+      offer_location_lat:      locationLat,
+      offer_location_lng:      locationLng,
+      offer_location_zoom:     locationZoom,
+      offer_location_geojson:  locationGeoJson,
+      offer_token:             token,
+      offer_token_expires_at:  expiresAt,
+      offer_sent_at:           new Date().toISOString(),
+    })
+    .eq('id', inquiryId)
+
+  if (updateError != null) {
+    console.error('[saveRichOffer] DB error:', updateError)
+    return { success: false, error: 'Failed to save offer' }
+  }
+
+  // Fetch guide info for the email
+  const guideId = trip?.guide_id
+  const { data: guide } = guideId
+    ? await svc.from('guides').select('full_name').eq('id', guideId).single()
+    : { data: null }
+
+  await sendRichOfferAnglerEmail({
+    to:              inquiry.angler_email,
+    anglerName:      inquiry.angler_name,
+    tripTitle:       trip?.title ?? 'Your trip',
+    guideName:       guide?.full_name ?? 'Your guide',
+    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
+    partySize:       inquiry.party_size ?? 1,
+    offerTotalEur:   totalPriceEur,
+    offerDepositEur: depositEur,
+    notes:           notes?.trim() || null,
+    offerUrl,
+    inquiryId,
+  })
+
+  console.log(`[saveRichOffer] Rich offer saved for inquiry ${inquiryId} — total €${totalPriceEur}, deposit €${depositEur} — token ${token}`)
+
+  return { success: true, offerUrl }
+}
+
+// ─── getOfferByToken ──────────────────────────────────────────────────────────
+
+/**
+ * Public action — fetches an inquiry with guide + trip data by offer token.
+ * Returns null if token not found or expired.
+ */
+export async function getOfferByToken(token: string): Promise<OfferPageData | null> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('*, trip_id, guide_id')
+    .eq('offer_token', token)
+    .single()
+
+  if (inquiry == null) return null
+
+  // Check expiry
+  if (inquiry.offer_token_expires_at != null) {
+    const expires = new Date(inquiry.offer_token_expires_at)
+    if (expires < new Date()) return null
+  }
+
+  const { data: trip } = await svc
+    .from('experiences')
+    .select('title, guide_id')
+    .eq('id', inquiry.trip_id)
+    .single()
+
+  const guideId = trip?.guide_id ?? inquiry.guide_id
+  const { data: guide } = guideId
+    ? await svc
+        .from('guides')
+        .select('full_name, bio, avatar_url')
+        .eq('id', guideId)
+        .single()
+    : { data: null }
+
+  return {
+    inquiryId:       inquiry.id,
+    anglerName:      inquiry.angler_name,
+    anglerCountry:   (inquiry.angler_country as string | null) ?? '',
+    tripTitle:       trip?.title ?? 'Your trip',
+    guideName:       guide?.full_name ?? 'Your guide',
+    guidePhotoUrl:   guide?.avatar_url ?? null,
+    guideBio:        guide?.bio ?? null,
+    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
+    partySize:       inquiry.party_size ?? 1,
+    offerTotalEur:   Number(inquiry.offer_total_eur ?? 0),
+    offerDepositEur: Number(inquiry.offer_deposit_eur ?? 0),
+    notes:           inquiry.offer_notes ?? null,
+    tripPlan:        inquiry.offer_trip_plan ?? null,
+    licenseInfo:     inquiry.offer_license_info ?? null,
+    inclusions:      (inquiry.offer_inclusions as string[] | null) ?? [],
+    questions:       (inquiry.offer_questions as OfferQuestion[] | null) ?? [],
+    answers:         (inquiry.offer_answers as OfferAnswer[] | null) ?? [],
+    refundReason:    inquiry.offer_refund_reason ?? null,
+    status:          inquiry.status,
+    photos:          (inquiry.offer_photos as string[] | null) ?? [],
+    location:        inquiry.offer_location ?? null,
+    whatToBring:     (inquiry.offer_what_to_bring as string[] | null) ?? [],
+    schedule:        (inquiry.offer_schedule as ScheduleEntry[] | null) ?? [],
+    licenseHeading:  inquiry.offer_license_heading ?? null,
+    locationLat:     inquiry.offer_location_lat != null ? Number(inquiry.offer_location_lat) : null,
+    locationLng:     inquiry.offer_location_lng != null ? Number(inquiry.offer_location_lng) : null,
+    locationZoom:    inquiry.offer_location_zoom != null ? Number(inquiry.offer_location_zoom) : 10,
+    locationGeoJson: (inquiry.offer_location_geojson as object | null) ?? null,
+  }
+}
+
+// ─── submitOfferAnswers ───────────────────────────────────────────────────────
+
+/**
+ * Angler submits answers to FA's questions on the public offer page.
+ * Returns a Stripe Checkout URL for the deposit payment.
+ */
+export async function submitOfferAnswers(
+  token: string,
+  answers: OfferAnswer[],
+): Promise<SendDepositLinkResult> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('id, status, angler_email, angler_name, trip_id, party_size, offer_deposit_eur, offer_token_expires_at')
+    .eq('offer_token', token)
+    .single()
+
+  if (inquiry == null) {
+    return { success: false, error: 'Offer not found or link has expired' }
+  }
+
+  if (inquiry.offer_token_expires_at != null && new Date(inquiry.offer_token_expires_at) < new Date()) {
+    return { success: false, error: 'This offer link has expired. Please contact us for a new one.' }
+  }
+
+  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
+    return { success: false, error: `Inquiry is already ${inquiry.status}` }
+  }
+
+  // Save answers
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('inquiries')
+    .update({ offer_answers: answers })
+    .eq('id', inquiry.id)
+
   const { data: trip } = await svc
     .from('experiences')
     .select('title')
     .eq('id', inquiry.trip_id)
     .single()
 
-  // ── Save to DB ────────────────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc.from('inquiries') as any)
-    .update({
-      offer_total_eur:   totalPriceEur,
-      offer_deposit_eur: depositEur,
-      offer_notes:       notes?.trim() || null,
-      offer_sent_at:     new Date().toISOString(),
-    })
-    .eq('id', inquiryId)
-
-  if (updateError != null) {
-    console.error('[saveOffer] DB error:', updateError)
-    return { success: false, error: 'Failed to save offer' }
+  const depositCents = Math.round(Number(inquiry.offer_deposit_eur ?? 0) * 100)
+  if (depositCents < 50) {
+    return { success: false, error: 'Deposit amount is too low' }
   }
 
-  // ── Send offer email to angler ─────────────────────────────────────────────
-  await sendInquiryOfferAnglerEmail({
-    to:              inquiry.angler_email,
-    anglerName:      inquiry.angler_name,
-    tripTitle:       trip?.title ?? 'Your trip',
-    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
-    partySize:       inquiry.party_size ?? 1,
-    offerTotalEur:   totalPriceEur,
-    offerDepositEur: depositEur,
-    notes:           notes?.trim() || null,
-    inquiryId,
+  const baseUrl = env.NEXT_PUBLIC_APP_URL
+
+  let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
+  try {
+    session = await stripe.checkout.sessions.create(
+      {
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [{
+          price_data: {
+            currency: 'eur',
+            unit_amount: depositCents,
+            product_data: {
+              name: `Refundable Deposit — ${trip?.title ?? 'Your Trip'}`,
+              description: `Secures your spot. The deposit is refundable — ${inquiry.party_size} person(s).`,
+            },
+          },
+          quantity: 1,
+        }],
+        customer_email: inquiry.angler_email,
+        metadata: {
+          inquiry_id:   inquiry.id,
+          trip_id:      inquiry.trip_id,
+          payment_type: 'inquiry_deposit',
+        },
+        success_url: `${baseUrl}/inquiry-confirmed?inquiry_id=${inquiry.id}`,
+        cancel_url:  `${baseUrl}/offers/${token}`,
+      },
+      {
+        idempotencyKey: `offer-deposit-${inquiry.id}-${Date.now()}`,
+      },
+    )
+  } catch (err) {
+    console.error('[submitOfferAnswers] Stripe error:', err)
+    return { success: false, error: 'Failed to create payment session. Please try again.' }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('inquiries')
+    .update({
+      status:                    'deposit_sent',
+      deposit_amount:            depositCents / 100,
+      deposit_stripe_session_id: session.id,
+    })
+    .eq('id', inquiry.id)
+
+  return { success: true, checkoutUrl: session.url! }
+}
+
+// ─── saveOffer (compatibility alias) ─────────────────────────────────────────
+
+/**
+ * Legacy alias — used by the admin InquiryActionPanel.
+ * Wraps saveRichOffer with the old minimal interface.
+ */
+export async function saveOffer(
+  inquiryId: string,
+  params: { totalPriceEur: number; depositEur: number; notes: string | null },
+): Promise<ActionResult> {
+  return saveRichOffer(inquiryId, {
+    totalPriceEur:  params.totalPriceEur,
+    depositEur:     params.depositEur,
+    notes:          params.notes,
+    tripPlan:       null,
+    licenseInfo:    null,
+    inclusions:     [],
+    questions:      [],
+    refundReason:   null,
+    photos:         [],
+    location:       null,
+    whatToBring:    [],
+    schedule:       [],
+    licenseHeading: null,
+    locationLat:    null,
+    locationLng:    null,
+    locationZoom:   10,
+    locationGeoJson: null,
   })
-
-  console.log(`[saveOffer] Offer saved for inquiry ${inquiryId} — total €${totalPriceEur}, deposit €${depositEur}`)
-
-  return { success: true }
 }
 
 // ─── sendMessageToAngler ──────────────────────────────────────────────────────
 
 /**
  * FA sends a plain-text message to the angler via email.
- * The message is stored in inquiry_messages for an audit trail.
- * Subject is set by FA and used verbatim as the email subject line.
+ * Stored in inquiry_messages for audit trail.
  */
 export async function sendMessageToAngler(
   inquiryId: string,
@@ -309,7 +587,6 @@ export async function sendMessageToAngler(
 
   const svc = createServiceClient()
 
-  // ── Fetch inquiry ─────────────────────────────────────────────────────────
   const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, angler_name, angler_email, trip_id')
@@ -320,14 +597,12 @@ export async function sendMessageToAngler(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  // ── Fetch trip title ──────────────────────────────────────────────────────
   const { data: trip } = await svc
     .from('experiences')
     .select('title')
     .eq('id', inquiry.trip_id)
     .single()
 
-  // ── Store message in DB ───────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: insertError } = await (svc as any).from('inquiry_messages')
     .insert({
@@ -338,10 +613,8 @@ export async function sendMessageToAngler(
 
   if (insertError != null) {
     console.error('[sendMessageToAngler] DB error:', insertError)
-    // Don't block sending — the email is more important than the audit record
   }
 
-  // ── Send email ────────────────────────────────────────────────────────────
   await sendInquiryMessageAnglerEmail({
     to:          inquiry.angler_email,
     anglerName:  inquiry.angler_name,

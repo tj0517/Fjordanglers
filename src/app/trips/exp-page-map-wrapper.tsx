@@ -21,6 +21,7 @@ export default function ExpPageMapWrapper({
   onPinClick,
   showPopups,
   countries,
+  interactive,
 }: {
   pages: ExpPage[]
   onBoundsChange?: (bounds: MapBounds) => void
@@ -28,6 +29,7 @@ export default function ExpPageMapWrapper({
   onPinClick?: (id: string) => void
   showPopups?: boolean
   countries?: string[]
+  interactive?: boolean
 }) {
   return (
     <ExpPageMapView
@@ -37,6 +39,7 @@ export default function ExpPageMapWrapper({
       onPinClick={onPinClick}
       showPopups={showPopups}
       countries={countries}
+      interactive={interactive}
     />
   )
 }

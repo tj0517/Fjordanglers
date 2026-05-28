@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getGuide, getGuideExperiences } from '@/lib/supabase/queries'
+import { getGuide, getGuideExperiencePages } from '@/lib/supabase/queries'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
@@ -88,7 +88,7 @@ export default async function GuideProfilePage({
   // Parallel fetch: guide profile + their published experiences
   const [guide, guideExperiences] = await Promise.all([
     getGuide(id),
-    getGuideExperiences(id),
+    getGuideExperiencePages(id),
   ])
 
   if (guide == null) notFound()
@@ -430,20 +430,19 @@ export default async function GuideProfilePage({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {guideExperiences.map(exp => {
-                      const coverUrl = cardThumb(exp.images.find(i => i.is_cover)?.url ?? exp.images[0]?.url)
-                      // expFlag rendered as <CountryFlag> below
+                      const coverUrl = exp.hero_image_url ?? exp.gallery_image_urls?.[0] ?? null
                       const diffLabel = exp.difficulty != null ? (DIFFICULTY_LABEL[exp.difficulty] ?? exp.difficulty) : null
-                      const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : exp.duration_days != null ? `${exp.duration_days} days` : null
+                      const species = exp.target_species ?? []
 
                       return (
-                        <Link key={exp.id} href={exp.slug != null ? `/experiences/${exp.slug}` : `/trips/${exp.id}`} className="group block">
+                        <Link key={exp.id} href={`/experiences/${exp.slug}`} className="group block">
                           <article
                             className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
                             style={{ borderRadius: '28px', background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)' }}
                           >
                             <div className="relative overflow-hidden" style={{ height: '200px' }}>
                               {coverUrl != null ? (
-                                <Image src={coverUrl} alt={exp.title} fill className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
+                                <Image src={coverUrl} alt={exp.experience_name} fill sizes="(min-width: 640px) 50vw, 100vw" className="object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
                               ) : (
                                 <div className="w-full h-full" style={{ background: '#EDE6DB' }} />
                               )}
@@ -452,19 +451,19 @@ export default async function GuideProfilePage({
                                 style={{ background: 'rgba(7,17,28,0.28)' }}
                               >
                                 <span className="text-white text-sm font-semibold px-5 py-2 rounded-full translate-y-3 group-hover:translate-y-0 transition-transform duration-200 f-body" style={{ background: '#E67E50' }}>
-                                  View Trip →
+                                  View Experience →
                                 </span>
                               </div>
                               <div className="absolute top-3 right-3 text-white text-sm font-bold px-3 py-1.5 rounded-full f-body" style={{ background: 'rgba(5,12,22,0.72)', backdropFilter: 'blur(8px)' }}>
-                                €{exp.price_per_person_eur}<span className="text-xs font-normal opacity-55">/pp</span>
+                                €{exp.price_from}<span className="text-xs font-normal opacity-55">/pp</span>
                               </div>
                             </div>
 
                             <div className="p-5">
                               <div className="flex items-center gap-1.5 mb-2.5 flex-wrap">
-                                <span className="text-xs f-body flex items-center gap-1" style={{ color: 'rgba(10,46,77,0.5)' }}><CountryFlag country={exp.location_country} /> {exp.location_country}</span>
-                                <span className="text-xs" style={{ color: 'rgba(10,46,77,0.2)' }}>·</span>
-                                {exp.fish_types.slice(0, 2).map(fish => (
+                                <span className="text-xs f-body flex items-center gap-1" style={{ color: 'rgba(10,46,77,0.5)' }}><CountryFlag country={exp.country} /> {exp.country}</span>
+                                {species.length > 0 && <span className="text-xs" style={{ color: 'rgba(10,46,77,0.2)' }}>·</span>}
+                                {species.slice(0, 2).map(fish => (
                                   <span key={fish} className="text-xs font-medium px-2.5 py-1 rounded-full f-body" style={{ background: 'rgba(201,107,56,0.09)', color: '#9E4820' }}>
                                     {fish}
                                   </span>
@@ -476,13 +475,8 @@ export default async function GuideProfilePage({
                                 )}
                               </div>
                               <h3 className="font-semibold text-sm leading-snug mb-3 line-clamp-2 f-display" style={{ color: '#0A2E4D' }}>
-                                {exp.title}
+                                {exp.experience_name}
                               </h3>
-                              {(duration != null || exp.max_guests != null) && (
-                                <p className="text-xs f-body mb-3" style={{ color: 'rgba(10,46,77,0.35)' }}>
-                                  {duration}{duration != null && exp.max_guests != null && ' · '}{exp.max_guests != null && `max ${exp.max_guests}`}
-                                </p>
-                              )}
                               {guide.languages.length > 0 && (
                                 <div className="flex items-center gap-1.5 pt-3" style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
                                   <span className="text-[10px] font-semibold uppercase tracking-[0.18em] f-body flex-shrink-0" style={{ color: 'rgba(10,46,77,0.35)' }}>Speaks</span>
@@ -532,7 +526,7 @@ export default async function GuideProfilePage({
                 <div className="flex gap-4 pb-6 mb-6" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
                   {[
                     { label: 'Experience', value: guide.years_experience != null ? `${guide.years_experience} yrs` : '—' },
-                    { label: 'Trips',       value: guideExperiences.length.toString() },
+                    { label: 'Experiences', value: guideExperiences.length.toString() },
                     { label: 'Rating',      value: guide.average_rating != null ? `★ ${guide.average_rating.toFixed(1)}` : '—' },
                   ].map(stat => (
                     <div key={stat.label} className="flex-1">

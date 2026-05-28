@@ -5,7 +5,8 @@ import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import { MapPin, Check, X as XIcon, ChevronDown } from 'lucide-react'
-import { ExperienceLocationMap } from '@/components/trips/experience-location-map-client'
+import ExpPageMapWrapper from '@/app/trips/exp-page-map-wrapper'
+import type { ExpPage } from '@/app/trips/exp-page-map-section'
 import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { ExperiencePageWithOptions } from '@/components/trips/ExperiencePageWithOptions'
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const svc = createServiceClient()
   const { data: page } = await svc
     .from('experience_pages')
-    .select('experience_name, meta_title, meta_description, hero_image_url, og_image_url, gallery_image_urls, country, region, price_from')
+    .select('experience_name, meta_title, meta_description, hero_image_url, og_image_url, gallery_image_urls, country, region, price_from, price_type')
     .eq('slug', slug)
     .eq('status', 'active')
     .single()
@@ -53,7 +54,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const title      = page.meta_title ?? `${page.experience_name} | FjordAnglers`
   const description = page.meta_description
-    ?? `Fish with an expert guide in ${page.region}, ${page.country}. From €${page.price_from}. Book via FjordAnglers.`
+    ?? (page.price_type === 'request'
+      ? `Guided fishing in ${page.region}, ${page.country}. Price on request. Book via FjordAnglers.`
+      : `Fish with an expert guide in ${page.region}, ${page.country}. From €${page.price_from}. Book via FjordAnglers.`)
   const gallery    = (page.gallery_image_urls as string[] | null) ?? []
   const ogImage    = page.og_image_url ?? gallery[0] ?? page.hero_image_url
 
@@ -103,8 +106,15 @@ export default async function ExperiencePublicPage({
     faq:                 unknown
     content_photo_urls:  unknown
     content_blocks:      unknown
+    price_type:          string
   }
   const page = rawPage as unknown as PageWithNewCols
+
+  function formatPrice(priceFrom: number, priceType: string): string {
+    if (priceType === 'request') return 'Price on request'
+    if (priceType === 'flat') return `from €${priceFrom} for the group`
+    return `from €${priceFrom} / person`
+  }
 
   // Fetch blocked dates for InquiryWidget if trip_id is set
   let blockedRanges: Array<{ date_start: string; date_end: string }> = []
@@ -162,6 +172,7 @@ export default async function ExperiencePublicPage({
     sort_order:                o.sort_order,
     label:                     o.label,
     price_from:                Number(o.price_from),
+    price_type:                (o.price_type as string | null) ?? 'per_person',
     content_blocks:            (o.content_blocks as ContentBlock[] | null) ?? [],
     catches_text:              o.catches_text ?? null,
     target_species:            (o.target_species as string[] | null) ?? [],
@@ -183,7 +194,7 @@ export default async function ExperiencePublicPage({
   // Similar experience pages
   const { data: sameCountryRaw } = await svc
     .from('experience_pages')
-    .select('id, slug, experience_name, country, region, price_from, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
+    .select('id, slug, experience_name, country, region, price_from, price_type, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
     .eq('status', 'active')
     .eq('country', page.country)
     .neq('id', page.id)
@@ -194,7 +205,7 @@ export default async function ExperiencePublicPage({
   if (similarTrips.length === 0) {
     const { data: anyRaw } = await svc
       .from('experience_pages')
-      .select('id, slug, experience_name, country, region, price_from, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
+      .select('id, slug, experience_name, country, region, price_from, price_type, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
       .eq('status', 'active')
       .neq('id', page.id)
       .limit(3)
@@ -212,6 +223,7 @@ export default async function ExperiencePublicPage({
   const excludes        = (page.excludes           as string[] | null) ?? []
   const gallery         = (page.gallery_image_urls as string[] | null) ?? []
   const contentPhotos   = (page.content_photo_urls  as string[] | null) ?? []
+  const viewsPhotos     = (page.views_image_urls    as string[] | null) ?? []
   const seasonMonths    = (page.season_months      as number[] | null) ?? []
   const peakMonths      = (page.peak_months        as number[] | null) ?? []
   const speciesDetails       = (page.species_details    as SpeciesDetailItem[]  | null) ?? []
@@ -223,6 +235,28 @@ export default async function ExperiencePublicPage({
   const pageContentBlocks    = (page.content_blocks     as ContentBlock[]       | null) ?? []
   const guideLanguages       = (guide?.languages        as string[]             | null) ?? []
 
+
+  // Build ExpPage for the map — used in both mobile and desktop LOCATION sections
+  const currentExpPage: ExpPage = {
+    id:                  rawPage.id,
+    slug:                rawPage.slug,
+    experience_name:     rawPage.experience_name,
+    country:             rawPage.country,
+    region:              rawPage.region,
+    price_from:          rawPage.price_from,
+    price_type:          page.price_type,
+    hero_image_url:      rawPage.hero_image_url,
+    gallery_image_urls:  rawPage.gallery_image_urls,
+    difficulty:          rawPage.difficulty,
+    technique:           rawPage.technique,
+    target_species:      rawPage.target_species,
+    non_angler_friendly: rawPage.non_angler_friendly,
+    location_lat:        rawPage.location_lat,
+    location_lng:        rawPage.location_lng,
+    location_area:       rawPage.location_area,
+    location_spots:      rawPage.location_spots,
+  }
+  const hasMap = rawPage.location_lat != null || rawPage.location_area != null
 
   const difficultyColor: Record<string, { bg: string; color: string }> = {
     Beginner:     { bg: 'rgba(74,222,128,0.12)',  color: '#16A34A' },
@@ -245,7 +279,7 @@ export default async function ExperiencePublicPage({
     ...(page.hero_image_url != null ? { image: page.hero_image_url } : {}),
     url: `https://fjordanglers.com/experiences/${slug}`,
     touristType: ['Fishing', 'Outdoor Activity'],
-    ...(page.price_from != null ? {
+    ...(page.price_from != null && page.price_type !== 'request' ? {
       offers: {
         '@type': 'Offer',
         price: page.price_from,
@@ -319,7 +353,7 @@ export default async function ExperiencePublicPage({
           {/* Price overlay — absolute on photo */}
           <div className="absolute bottom-10 left-4 z-10 pointer-events-none">
             <span className="font-bold f-display text-white" style={{ fontSize: '22px', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
-              from €{page.price_from}
+              {formatPrice(page.price_from, page.price_type)}
             </span>
           </div>
         </div>
@@ -414,7 +448,7 @@ export default async function ExperiencePublicPage({
           {/* Pills */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold f-display text-xl" style={{ color: '#0A2E4D' }}>
-              from €{page.price_from}
+              {formatPrice(page.price_from, page.price_type)}
             </span>
             {env.length > 0 && (
               <>
@@ -559,6 +593,27 @@ export default async function ExperiencePublicPage({
               </section>
             )}
 
+            {/* VIEWS */}
+            {viewsPhotos.length > 0 && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="Views" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {viewsPhotos.slice(0, 6).map((url, i) => (
+                    <div key={i} className="relative aspect-[4/3] rounded-2xl overflow-hidden">
+                      <Image src={url} alt={`${page.experience_name} view ${i + 1}`} fill className="object-cover"
+                        sizes="(min-width: 1280px) 260px, (min-width: 640px) 30vw, 48vw" />
+                    </div>
+                  ))}
+                </div>
+                {viewsPhotos.length > 6 && (
+                  <p className="mt-3 text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    + {viewsPhotos.length - 6} more views
+                  </p>
+                )}
+              </section>
+            )}
+
             {/* WHAT YOU CAN CATCH */}
             {(page.catches_text || speciesDetails.length > 0) && (
               <section className="mb-12">
@@ -571,7 +626,9 @@ export default async function ExperiencePublicPage({
                 )}
                 {speciesDetails.length > 0 && (
                   <div className="space-y-12">
-                    {speciesDetails.map((fish, idx) => (
+                    {speciesDetails.map((fish, idx) => {
+                      const fishPhotos = fish.image_urls?.length ? fish.image_urls : (fish.image_url ? [fish.image_url] : [])
+                      return (
                       <div key={fish.name}>
                         <div className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
                           <div className="flex-1 min-w-0">
@@ -582,12 +639,21 @@ export default async function ExperiencePublicPage({
                               </p>
                             )}
                           </div>
-                          {fish.image_url && (
+                          {fishPhotos[0] && (
                             <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
-                              <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
+                              <Image src={fishPhotos[0]} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
                             </div>
                           )}
                         </div>
+                        {fishPhotos.length > 1 && (
+                          <div className="grid grid-cols-3 gap-2 mt-3">
+                            {fishPhotos.slice(1, 4).map((url, pi) => (
+                              <div key={pi} className="relative aspect-[4/3] rounded-xl overflow-hidden">
+                                <Image src={url} alt={`${fish.name} photo ${pi + 2}`} fill className="object-cover" sizes="(min-width: 640px) 220px, 30vw" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {fish.season_months.length > 0 && (
                           <div className="mt-5">
                             <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
@@ -595,7 +661,8 @@ export default async function ExperiencePublicPage({
                           </div>
                         )}
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </section>
@@ -735,6 +802,35 @@ export default async function ExperiencePublicPage({
                 </div>
               </section>
             )}
+
+            {/* LOCATION + MAP */}
+            {(page.meeting_point_name || page.meeting_point_description || hasMap) && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="Location" />
+                {page.meeting_point_name && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin size={15} strokeWidth={1.5} style={{ color: '#E67E50', flexShrink: 0 }} />
+                    <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{page.meeting_point_name}</p>
+                  </div>
+                )}
+                {page.meeting_point_description && (
+                  <p className="text-base sm:text-lg f-body leading-relaxed text-justify mb-6" style={{ color: 'rgba(10,46,77,0.65)' }}>
+                    {page.meeting_point_description}
+                  </p>
+                )}
+                {hasMap && (
+                  <div className="rounded-2xl overflow-hidden" style={{ height: '320px', position: 'relative', zIndex: 0 }}>
+                    <ExpPageMapWrapper
+                      pages={[currentExpPage]}
+                      hoveredPageId={rawPage.id}
+                      showPopups={false}
+                      interactive={false}
+                    />
+                  </div>
+                )}
+              </section>
+            )}
           </ExperiencePageWithOptions>
         ) : (
         /* ─── FLAT MODE: no options → original two-column layout ─── */
@@ -863,6 +959,32 @@ export default async function ExperiencePublicPage({
             )}
 
 
+            {/* ──────────── VIEWS ──────────── */}
+            {viewsPhotos.length > 0 && (
+              <section className="mb-12">
+                <SalmonRule />
+                <SectionLabel label="Views" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {viewsPhotos.slice(0, 6).map((url, i) => (
+                    <div key={i} className="relative aspect-[4/3] rounded-2xl overflow-hidden">
+                      <Image
+                        src={url}
+                        alt={`${page.experience_name} view ${i + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 1280px) 260px, (min-width: 640px) 30vw, 48vw"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {viewsPhotos.length > 6 && (
+                  <p className="mt-3 text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+                    + {viewsPhotos.length - 6} more views
+                  </p>
+                )}
+              </section>
+            )}
+
             {/* ──────────── WHAT YOU CAN CATCH ──────────── */}
             {(page.catches_text || speciesDetails.length > 0) && (
               <section className="mb-12">
@@ -875,7 +997,9 @@ export default async function ExperiencePublicPage({
                 )}
                 {speciesDetails.length > 0 && (
                   <div className="space-y-12">
-                    {speciesDetails.map((fish, idx) => (
+                    {speciesDetails.map((fish, idx) => {
+                      const fishPhotos = fish.image_urls?.length ? fish.image_urls : (fish.image_url ? [fish.image_url] : [])
+                      return (
                       <div key={fish.name}>
                         <div className={`flex flex-col sm:flex-row${idx % 2 === 1 ? '-reverse' : ''} gap-6 items-start`}>
                           <div className="flex-1 min-w-0">
@@ -886,12 +1010,21 @@ export default async function ExperiencePublicPage({
                               </p>
                             )}
                           </div>
-                          {fish.image_url && (
+                          {fishPhotos[0] && (
                             <div className="relative rounded-2xl overflow-hidden flex-shrink-0 w-full sm:w-[340px] aspect-[4/3]">
-                              <Image src={fish.image_url} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
+                              <Image src={fishPhotos[0]} alt={fish.name} fill className="object-cover" sizes="(min-width: 640px) 340px, 100vw" />
                             </div>
                           )}
                         </div>
+                        {fishPhotos.length > 1 && (
+                          <div className="grid grid-cols-3 gap-2 mt-3">
+                            {fishPhotos.slice(1, 4).map((url, pi) => (
+                              <div key={pi} className="relative aspect-[4/3] rounded-xl overflow-hidden">
+                                <Image src={url} alt={`${fish.name} photo ${pi + 2}`} fill className="object-cover" sizes="(min-width: 640px) 220px, 30vw" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {fish.season_months.length > 0 && (
                           <div className="mt-5">
                             <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
@@ -899,7 +1032,8 @@ export default async function ExperiencePublicPage({
                           </div>
                         )}
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </section>
@@ -1076,7 +1210,7 @@ export default async function ExperiencePublicPage({
             )}
 
             {/* ──────────── LOCATION ──────────── */}
-            {(page.meeting_point_name || page.meeting_point_description || page.location_lat != null) && (
+            {(page.meeting_point_name || page.meeting_point_description || hasMap) && (
               <section className="mb-12">
                 <SalmonRule />
                 <SectionLabel label="Location" />
@@ -1091,13 +1225,13 @@ export default async function ExperiencePublicPage({
                     {page.meeting_point_description}
                   </p>
                 )}
-                {page.location_lat != null && page.location_lng != null && (
-                  <div className="rounded-2xl overflow-hidden" style={{ height: '320px' }}>
-                    <ExperienceLocationMap
-                      lat={page.location_lat}
-                      lng={page.location_lng}
-                      area={(rawPage as unknown as { location_area: import('geojson').Polygon | null }).location_area ?? null}
-                      spots={(rawPage as unknown as { location_spots: import('@/types').LocationSpot[] | null }).location_spots ?? null}
+                {hasMap && (
+                  <div className="rounded-2xl overflow-hidden" style={{ height: '320px', position: 'relative', zIndex: 0 }}>
+                    <ExpPageMapWrapper
+                      pages={[currentExpPage]}
+                      hoveredPageId={rawPage.id}
+                      showPopups={false}
+                      interactive={false}
                     />
                   </div>
                 )}
@@ -1198,16 +1332,18 @@ export default async function ExperiencePublicPage({
                 style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
                 <div className="flex-1">
                   <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                    from €{page.price_from}
+                    {formatPrice(page.price_from, page.price_type)}
                   </p>
-                  {page.currency && page.currency !== 'EUR' && (
+                  {page.currency && page.currency !== 'EUR' && page.price_type !== 'request' && (
                     <p className="text-xs f-body mt-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
                       Prices in {page.currency}
                     </p>
                   )}
-                  <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                    Per person · includes guide service
-                  </p>
+                  {page.price_type !== 'request' && (
+                    <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                      {page.price_type === 'flat' ? 'Flat rate for the group · includes guide service' : 'Per person · includes guide service'}
+                    </p>
+                  )}
                 </div>
                 {/* Mobile CTA — visible only on mobile since desktop has the sidebar widget */}
                 <div className="lg:hidden">
@@ -1245,7 +1381,7 @@ export default async function ExperiencePublicPage({
                     </p>
                     <p className="text-lg font-bold f-display leading-snug text-white">{page.experience_name}</p>
                     <p className="text-sm f-body mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                      from €{page.price_from}
+                      {formatPrice(page.price_from, page.price_type)}
                     </p>
                   </div>
                   <div className="px-5 py-5">
@@ -1271,7 +1407,7 @@ export default async function ExperiencePublicPage({
 
       {/* ── MOBILE BAR ── */}
       {page.trip_id ? (
-        <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_from} />
+        <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_type === 'request' ? null : page.price_from} />
       ) : (
         <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-5"
           style={{
@@ -1469,7 +1605,7 @@ export default async function ExperiencePublicPage({
 
                       <div className="flex items-center justify-between">
                         <span className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-                          from €{trip.price_from}
+                          {(trip as {price_type?: string}).price_type === 'request' ? 'Price on request' : `from €${trip.price_from}`}
                         </span>
                         <span className="text-xs font-semibold f-body transition-colors" style={{ color: '#E67E50' }}>
                           View →

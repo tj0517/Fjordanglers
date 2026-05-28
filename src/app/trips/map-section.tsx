@@ -61,7 +61,7 @@ function SheetCard({
 
   return (
     <Link
-      href={`/trips/${exp.id}`}
+      href={exp.slug != null ? `/experiences/${exp.slug}` : '#'}
       onClick={onClick}
       className="group flex-shrink-0 text-left transition-transform duration-200 active:scale-[0.98]"
       style={{ width: 'min(248px, 80vw)' }}
@@ -540,7 +540,7 @@ function TripCard({
 
   return (
     <Link
-      href={`/trips/${exp.id}`}
+      href={exp.slug != null ? `/experiences/${exp.slug}` : '#'}
       className="block group"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

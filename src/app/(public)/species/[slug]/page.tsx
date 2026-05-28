@@ -553,7 +553,7 @@ function ExperienceCard({ exp }: { exp: ExperienceWithGuide }) {
     : null
 
   return (
-    <Link href={exp.slug != null ? `/experiences/${exp.slug}` : `/trips/${exp.id}`} className="group block">
+    <Link href={exp.slug != null ? `/experiences/${exp.slug}` : '#'} className="group block">
       <article
         className="overflow-hidden transition-all duration-300 hover:shadow-[0_24px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1.5 h-full flex flex-col"
         style={{

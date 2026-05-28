@@ -16,6 +16,7 @@ export interface SpeciesDetailItem {
   name:          string
   description:   string
   image_url:     string
+  image_urls?:   string[]
   season_months: number[]
   peak_months:   number[]
 }
@@ -58,6 +59,7 @@ export interface ExperiencePagePayload {
   season_start?:                     string | null
   season_end?:                       string | null
   price_from:                        number
+  price_type?:                       'per_person' | 'flat' | 'request'
   currency?:                         string
   status?:                           string
   // Quick fit
@@ -94,6 +96,8 @@ export interface ExperiencePagePayload {
   excludes?:                         string[]
   // Content photos (shown in the "Photos" section — independent from gallery_image_urls)
   content_photo_urls?:               string[]
+  // Views photos (shown in the "Views" section — scenic/landscape photos)
+  views_image_urls?:                 string[]
   // Page-level content blocks (shown after Season, before Trip Options)
   content_blocks?:                   ContentBlock[]
   // FAQ
@@ -102,9 +106,11 @@ export interface ExperiencePagePayload {
   meta_title?:                       string | null
   meta_description?:                 string | null
   og_image_url?:                     string | null
-  // Map pin
+  // Map pin / area / spots
   location_lat?:                     number | null
   location_lng?:                     number | null
+  location_area?:                    import('geojson').Polygon | null
+  location_spots?:                   import('@/types').LocationSpot[] | null
 }
 
 export type ExperiencePageResult =
@@ -134,7 +140,8 @@ export async function createExperiencePage(
   if (!payload.experience_name.trim()) return { success: false, error: 'Experience name is required' }
   if (!payload.country)               return { success: false, error: 'Country is required' }
   if (!payload.region.trim())         return { success: false, error: 'Region is required' }
-  if (payload.price_from <= 0)        return { success: false, error: 'Price must be greater than 0' }
+  if (payload.price_type !== 'request' && payload.price_from <= 0)
+    return { success: false, error: 'Price must be greater than 0' }
 
   const { data, error } = await svc
     .from('experience_pages')
@@ -148,6 +155,7 @@ export async function createExperiencePage(
       season_start:                     payload.season_start?.trim() || null,
       season_end:                       payload.season_end?.trim()   || null,
       price_from:                       payload.price_from,
+      price_type:                       payload.price_type ?? 'per_person',
       currency:                         payload.currency ?? 'EUR',
       status:                           payload.status ?? 'draft',
       difficulty:                       payload.difficulty   ?? null,
@@ -160,6 +168,7 @@ export async function createExperiencePage(
       hero_image_url:                   payload.hero_image_url  ?? null,
       gallery_image_urls:               payload.gallery_image_urls ?? [],
       content_photo_urls:               payload.content_photo_urls ?? [],
+      views_image_urls:                 payload.views_image_urls ?? [],
       story_text:                       payload.story_text        ?? null,
       meeting_point_name:               payload.meeting_point_name ?? null,
       meeting_point_description:        payload.meeting_point_description ?? null,
@@ -180,6 +189,8 @@ export async function createExperiencePage(
       og_image_url:                     payload.og_image_url     ?? null,
       location_lat:                     payload.location_lat     ?? null,
       location_lng:                     payload.location_lng     ?? null,
+      location_area:                    (payload.location_area   ?? null) as unknown as import('@/lib/supabase/database.types').Json,
+      location_spots:                   (payload.location_spots  ?? null) as unknown as import('@/lib/supabase/database.types').Json,
     })
     .select('id, slug')
     .single()
@@ -349,6 +360,7 @@ export async function updateExperiencePage(
   if (payload.season_start      !== undefined) update.season_start           = payload.season_start?.trim() || null
   if (payload.season_end        !== undefined) update.season_end             = payload.season_end?.trim()   || null
   if (payload.price_from        != null) update.price_from                   = payload.price_from
+  if (payload.price_type        != null) update.price_type                   = payload.price_type
   if (payload.currency          != null) update.currency                     = payload.currency
   if (payload.status            != null) update.status                       = payload.status
   if (payload.difficulty        !== undefined) update.difficulty             = payload.difficulty
@@ -361,6 +373,7 @@ export async function updateExperiencePage(
   if (payload.hero_image_url    !== undefined) update.hero_image_url         = payload.hero_image_url
   if (payload.gallery_image_urls != null) update.gallery_image_urls          = payload.gallery_image_urls
   if (payload.content_photo_urls != null) update.content_photo_urls          = payload.content_photo_urls
+  if (payload.views_image_urls   != null) update.views_image_urls            = payload.views_image_urls
   if (payload.story_text        !== undefined) update.story_text             = payload.story_text
   if (payload.meeting_point_name !== undefined) update.meeting_point_name    = payload.meeting_point_name
   if (payload.meeting_point_description !== undefined) update.meeting_point_description = payload.meeting_point_description
@@ -383,6 +396,8 @@ export async function updateExperiencePage(
   if (payload.og_image_url      !== undefined) update.og_image_url           = payload.og_image_url
   if (payload.location_lat      !== undefined) update.location_lat           = payload.location_lat
   if (payload.location_lng      !== undefined) update.location_lng           = payload.location_lng
+  if (payload.location_area     !== undefined) update.location_area          = (payload.location_area ?? null) as unknown as import('@/lib/supabase/database.types').Json
+  if (payload.location_spots    !== undefined) update.location_spots         = (payload.location_spots ?? null) as unknown as import('@/lib/supabase/database.types').Json
   update.updated_at = new Date().toISOString()
 
   const { data, error } = await svc
@@ -418,6 +433,7 @@ export async function updateExperiencePage(
 export interface ExperiencePageOptionPayload {
   label:                     string
   price_from:                number
+  price_type?:               'per_person' | 'flat' | 'request'
   description?:              string | null
   catches_text?:             string | null
   target_species?:           string[]
@@ -461,6 +477,7 @@ export async function createExperiencePageOption(
       sort_order:                sortOrder,
       label:                     payload.label.trim(),
       price_from:                payload.price_from,
+      price_type:                payload.price_type ?? 'per_person',
       catches_text:              payload.catches_text  ?? null,
       target_species:            payload.target_species ?? [],
       boats:                     (payload.boats ?? []) as unknown as import('@/lib/supabase/database.types').Json,
@@ -498,6 +515,7 @@ export async function updateExperiencePageOption(
   const update: Record<string, unknown> = {}
   if (payload.label               != null)      update.label                     = payload.label.trim()
   if (payload.price_from          != null)      update.price_from                = payload.price_from
+  if (payload.price_type          != null)      update.price_type                = payload.price_type
   if (payload.catches_text        !== undefined) update.catches_text              = payload.catches_text
   if (payload.target_species      != null)      update.target_species            = payload.target_species
   if (payload.boats               != null)      update.boats                     = payload.boats as unknown as import('@/lib/supabase/database.types').Json

@@ -50,7 +50,7 @@ const EXP_SELECT =
  * guide embedding to just the 3 fields the card actually renders.
  */
 const MAP_SELECT =
-  'id, title, location_lat, location_lng, location_spots, location_area, location_city, location_country, ' +
+  'id, slug, title, location_lat, location_lng, location_spots, location_area, location_city, location_country, ' +
   'price_per_person_eur, fish_types, booking_type, difficulty, season_from, season_to, ' +
   'duration_hours, duration_days, ' +
   'guide:guides!inner ( id, full_name, avatar_url, is_hidden ), ' +
@@ -657,6 +657,45 @@ export async function getGuideExperiences(guideId: string): Promise<ExperienceWi
       }))
     },
     ['guide-experiences', guideId],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
+  )()
+}
+
+// ─── Guide experience pages (guide profile) ───────────────────────────────────
+
+export type GuideExperiencePage = {
+  id: string
+  slug: string
+  experience_name: string
+  country: string
+  hero_image_url: string | null
+  gallery_image_urls: string[] | null
+  price_from: number
+  target_species: string[] | null
+  difficulty: string | null
+}
+
+/**
+ * Active experience pages belonging to a specific guide.
+ * Used on the public guide profile page — returns /experiences/[slug] cards.
+ */
+export async function getGuideExperiencePages(guideId: string): Promise<GuideExperiencePage[]> {
+  return unstable_cache(
+    async () => {
+      const db = createPublicClient()
+
+      const { data, error } = await db
+        .from('experience_pages')
+        .select('id, slug, experience_name, country, hero_image_url, gallery_image_urls, price_from, target_species, difficulty')
+        .eq('guide_id', guideId)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+      if (error) return []
+
+      return (data ?? []) as GuideExperiencePage[]
+    },
+    ['guide-experience-pages', guideId],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
 }

@@ -41,6 +41,15 @@ import {
 import ImageUpload from '@/components/admin/image-upload'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
 import LatLngPicker from '@/components/admin/LatLngPicker'
+import dynamic from 'next/dynamic'
+import type { LocationPickerMapProps } from '@/components/trips/location-picker-map'
+import type { LocationSpot } from '@/types'
+import type * as GeoJSON from 'geojson'
+
+const LocationPickerMap = dynamic<LocationPickerMapProps>(
+  () => import('@/components/trips/location-picker-map').then(m => m.default),
+  { ssr: false, loading: () => <div style={{ height: 340, background: '#EDE6DB', borderRadius: 16 }} /> },
+)
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -65,6 +74,7 @@ const STATUS_OPTIONS  = [
 interface SpeciesDetailRecord {
   description:   string
   image_url:     string
+  image_urls:    string[]
   season_months: number[]
   peak_months:   number[]
 }
@@ -264,7 +274,7 @@ function SpeciesDetailEditor({
       >
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: detail.description || detail.image_url || detail.season_months.length > 0 ? '#E67E50' : 'rgba(10,46,77,0.2)' }} />
+            style={{ background: detail.description || detail.image_urls.length > 0 || detail.season_months.length > 0 ? '#E67E50' : 'rgba(10,46,77,0.2)' }} />
           <span className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{name}</span>
           {detail.season_months.length > 0 && (
             <span className="text-[10px] f-body px-2 py-0.5 rounded-full"
@@ -291,16 +301,17 @@ function SpeciesDetailEditor({
             />
           </div>
 
-          <ImageUpload
-            label="Photo"
-            variant="cover"
-            aspect="wide"
-            cropAspect={4 / 3}
-            currentUrl={detail.image_url || null}
-            onUpload={(url) => onChange({ ...detail, image_url: url })}
+          <MultiImageUpload
+            label="Photos (up to 6 — first shown beside description, rest in a row below)"
+            initial={detail.image_urls.map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))}
+            max={6}
+            onChange={(imgs) => onChange({
+              ...detail,
+              image_urls: imgs.map(g => g.url),
+              image_url:  imgs[0]?.url ?? '',
+            })}
             pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
             guideId={guideId}
-            hint="Landscape — shown alternating with description on the public page."
           />
 
           <div>
@@ -343,6 +354,7 @@ function OptionEditor({
 }) {
   const [label,            setLabel]            = useState(option.label)
   const [price,            setPrice]            = useState(String(option.price_from))
+  const [optPriceType,     setOptPriceType]     = useState<'per_person' | 'flat' | 'request'>((option.price_type as 'per_person' | 'flat' | 'request') ?? 'per_person')
   const [species,          setSpecies]          = useState<string[]>(option.target_species ?? [])
   const [boatItems,        setBoatItems]        = useState<Boat[]>(() => {
     const parsed = parseJsonField<Boat>(option.boats)
@@ -377,6 +389,7 @@ function OptionEditor({
       const payload: Partial<ExperiencePageOptionPayload> = {
         label:                     label.trim() || `Option ${index + 1}`,
         price_from:                parseFloat(price) || 0,
+        price_type:                optPriceType,
         target_species:            species,
         boats:                     boatItems.filter(b => b.description.trim() || b.heading.trim()),
         season_months:             optSeasonMonths,
@@ -397,6 +410,7 @@ function OptionEditor({
           ...option,
           label:                     payload.label!,
           price_from:                payload.price_from!,
+          price_type:                payload.price_type,
           target_species:            payload.target_species ?? [],
           boats:                     payload.boats ?? [],
           season_months:             payload.season_months ?? [],
@@ -462,7 +476,7 @@ function OptionEditor({
             </span>
             {!isOpen && (
               <span className="text-xs f-body ml-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                from €{option.price_from}
+                {option.price_type === 'request' ? 'Price on request' : option.price_type === 'flat' ? `from €${option.price_from} (group)` : `from €${option.price_from}`}
               </span>
             )}
           </div>
@@ -491,6 +505,20 @@ function OptionEditor({
                 className={inp} style={iStyle} />
             </div>
             <div>
+              <label className={lbl}>Price type</label>
+              <div className="flex gap-1">
+                {(['per_person', 'flat', 'request'] as const).map(pt => (
+                  <button key={pt} type="button" onClick={() => setOptPriceType(pt)}
+                    className="flex-1 px-2 py-1.5 rounded-lg text-[11px] font-semibold f-body transition-all"
+                    style={{ background: optPriceType === pt ? '#E67E50' : 'rgba(10,46,77,0.06)', color: optPriceType === pt ? '#fff' : 'rgba(10,46,77,0.55)' }}>
+                    {pt === 'per_person' ? '/person' : pt === 'flat' ? 'Group' : 'Request'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          {optPriceType !== 'request' && (
+            <div>
               <label className={lbl}>Price from (€) <Req /></label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body font-semibold"
@@ -501,7 +529,7 @@ function OptionEditor({
                   className={inp + ' pl-7'} style={iStyle} />
               </div>
             </div>
-          </div>
+          )}
 
           {/* Content blocks */}
           <div className="space-y-3">
@@ -812,6 +840,7 @@ export interface ExperiencePageFormInitialData {
   country:                      string
   region:                       string
   price_from:                   number
+  price_type?:                  'per_person' | 'flat' | 'request'
   season_start:                 string | null
   season_end:                   string | null
   status:                       'draft' | 'active' | 'archived'
@@ -825,6 +854,7 @@ export interface ExperiencePageFormInitialData {
   hero_image_url:               string | null
   gallery_image_urls:           string[]
   content_photo_urls?:          string[]
+  views_image_urls?:            string[]
   story_text:                   string | null
   catches_text:                 string | null
   rod_setup:                    string | null
@@ -847,6 +877,8 @@ export interface ExperiencePageFormInitialData {
   og_image_url:                 string | null
   location_lat:                 number | null
   location_lng:                 number | null
+  location_area?:               GeoJSON.Polygon | null
+  location_spots?:              LocationSpot[] | null
 }
 
 // Row shape returned from DB — mirrors experience_page_options table
@@ -856,6 +888,7 @@ export interface ExperiencePageOptionRow {
   sort_order:                number
   label:                     string
   price_from:                number
+  price_type?:               string
   description:               string | null
   catches_text:              string | null
   target_species:            string[]
@@ -928,6 +961,7 @@ export default function ExperiencePageForm({
   const [country,        setCountry]        = useState(initialData?.country ?? prefill?.country ?? '')
   const [region,         setRegion]         = useState(initialData?.region ?? prefill?.region ?? prefill?.location_name ?? '')
   const [priceFrom,      setPriceFrom]      = useState(initialData?.price_from?.toString() ?? prefill?.price_approx?.toString() ?? '')
+  const [priceType,      setPriceType]      = useState<'per_person' | 'flat' | 'request'>(initialData?.price_type ?? 'per_person')
   const [seasonStart,    setSeasonStart]    = useState(initialData?.season_start ?? '')
   const [seasonEnd,      setSeasonEnd]      = useState(initialData?.season_end ?? '')
   const [status,         setStatus]         = useState<'draft' | 'active' | 'archived'>(initialData?.status ?? 'draft')
@@ -959,6 +993,9 @@ export default function ExperiencePageForm({
   const [contentPhotoImages, setContentPhotoImages] = useState<GalleryImage[]>(
     () => (initialData?.content_photo_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))
   )
+  const [viewsImages, setViewsImages] = useState<GalleryImage[]>(
+    () => (initialData?.views_image_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))
+  )
 
   // ── Section 6: Season months
   const [seasonMonths, setSeasonMonths] = useState<number[]>(
@@ -973,6 +1010,7 @@ export default function ExperiencePageForm({
       rec[item.name] = {
         description:   item.description,
         image_url:     item.image_url,
+        image_urls:    item.image_urls?.length ? item.image_urls : (item.image_url ? [item.image_url] : []),
         season_months: item.season_months,
         peak_months:   item.peak_months,
       }
@@ -1017,17 +1055,44 @@ export default function ExperiencePageForm({
   const [metaDesc,  setMetaDesc]  = useState(initialData?.meta_description ?? '')
   const [ogImage,   setOgImage]   = useState(initialData?.og_image_url ?? '')
 
-  // ── Location (map pin)
+  // ── Location (pin / area / spots)
+  const [locationMode, setLocationMode] = useState<'pin' | 'area' | 'spots'>(() => {
+    if ((initialData?.location_spots?.length ?? 0) > 0) return 'spots'
+    if (initialData?.location_area != null) return 'area'
+    return 'pin'
+  })
   const [locationLat, setLocationLat] = useState<number | null>(initialData?.location_lat ?? null)
   const [locationLng, setLocationLng] = useState<number | null>(initialData?.location_lng ?? null)
+  const [locationArea, setLocationArea] = useState<GeoJSON.Polygon | null>(initialData?.location_area ?? null)
+  const [locationSpots, setLocationSpots] = useState<LocationSpot[]>(initialData?.location_spots ?? [])
 
-  const handleLocationChange = useCallback(
-    (lat: number | null, lng: number | null) => {
-      setLocationLat(lat)
-      setLocationLng(lng)
-    },
-    [],
-  )
+  const handlePinChange = useCallback((lat: number, lng: number) => {
+    setLocationLat(lat); setLocationLng(lng)
+  }, [])
+
+  const handleAreaChange = useCallback((area: GeoJSON.Polygon | null) => {
+    setLocationArea(area)
+    if (area != null) {
+      const ring = area.coordinates[0]
+      const n = ring.length - 1
+      if (n > 0) {
+        let lat = 0, lng = 0
+        for (let i = 0; i < n; i++) { lng += ring[i][0]; lat += ring[i][1] }
+        setLocationLat(parseFloat((lat / n).toFixed(6)))
+        setLocationLng(parseFloat((lng / n).toFixed(6)))
+      }
+    }
+  }, [])
+
+  const handleSpotsChange = useCallback((spots: LocationSpot[]) => {
+    setLocationSpots(spots)
+    if (spots.length > 0) {
+      const lat = spots.reduce((s, p) => s + p.lat, 0) / spots.length
+      const lng = spots.reduce((s, p) => s + p.lng, 0) / spots.length
+      setLocationLat(parseFloat(lat.toFixed(6)))
+      setLocationLng(parseFloat(lng.toFixed(6)))
+    }
+  }, [])
 
   // ── Submit state
   const [isPending,    setIsPending]    = useState(false)
@@ -1039,7 +1104,7 @@ export default function ExperiencePageForm({
   const slugValid    = slug.trim() !== ''
   const countryValid = country !== ''
   const regionValid  = region.trim() !== ''
-  const priceValid   = priceFrom !== '' && parseFloat(priceFrom) > 0
+  const priceValid   = priceType === 'request' || (priceFrom !== '' && parseFloat(priceFrom) > 0)
   const canSubmit    = nameValid && slugValid && countryValid && regionValid && priceValid
 
   const handleNameChange = useCallback((val: string) => {
@@ -1058,7 +1123,8 @@ export default function ExperiencePageForm({
     const speciesDetailItems: SpeciesDetailItem[] = targetSpecies.map(name => ({
       name,
       description:   speciesDetails[name]?.description   ?? '',
-      image_url:     speciesDetails[name]?.image_url     ?? '',
+      image_url:     speciesDetails[name]?.image_urls?.[0] ?? speciesDetails[name]?.image_url ?? '',
+      image_urls:    speciesDetails[name]?.image_urls    ?? [],
       season_months: speciesDetails[name]?.season_months ?? [],
       peak_months:   speciesDetails[name]?.peak_months   ?? [],
     }))
@@ -1069,7 +1135,8 @@ export default function ExperiencePageForm({
       slug:                             slug.trim(),
       country,
       region:                           region.trim(),
-      price_from:                       parseFloat(priceFrom),
+      price_from:                       parseFloat(priceFrom) || 0,
+      price_type:                       priceType,
       season_start:                     seasonStart.trim() || null,
       season_end:                       seasonEnd.trim()   || null,
       status,
@@ -1083,6 +1150,7 @@ export default function ExperiencePageForm({
       hero_image_url:                   heroImageUrl.trim() || null,
       gallery_image_urls:               galleryImages.map(g => g.url),
       content_photo_urls:               contentPhotoImages.map(g => g.url),
+      views_image_urls:                 viewsImages.map(g => g.url),
       story_text:                       storyText.trim()   || null,
       catches_text:                     catchesText.trim() || null,
       rod_setup:                        rodSetup.trim()    || null,
@@ -1105,6 +1173,8 @@ export default function ExperiencePageForm({
       og_image_url:                     ogImage.trim()     || null,
       location_lat:                     locationLat,
       location_lng:                     locationLng,
+      location_area:                    locationMode === 'area'  ? locationArea  : null,
+      location_spots:                   locationMode === 'spots' ? locationSpots : null,
     }
 
     setIsPending(true)
@@ -1131,13 +1201,13 @@ export default function ExperiencePageForm({
       setIsPending(false)
     }
   }, [
-    canSubmit, experienceName, slug, country, region, priceFrom, seasonStart, seasonEnd,
+    canSubmit, experienceName, slug, country, region, priceFrom, priceType, seasonStart, seasonEnd,
     status, difficulty, effort, nonAnglerFriendly, technique, targetSpecies, environment,
-    introText, heroImageUrl, galleryImages, contentPhotoImages, storyText, catchesText, rodSetup, bestMonths,
+    introText, heroImageUrl, galleryImages, contentPhotoImages, viewsImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
     boatItems, specialAttractions, accommodationItems, whatToBring,
     meetingName, meetingDesc, includes, excludes, pageBlocks, faqItems, metaTitle, metaDesc, ogImage,
-    locationLat, locationLng,
+    locationLat, locationLng, locationMode, locationArea, locationSpots,
     prefill, router, isEdit, experienceId,
   ])
 
@@ -1198,15 +1268,35 @@ export default function ExperiencePageForm({
 
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className={lbl}>Price from <Req /></label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body font-semibold"
-                style={{ color: 'rgba(10,46,77,0.4)' }}>€</span>
-              <input type="number" min="1" step="10" value={priceFrom}
-                onChange={e => setPriceFrom(e.target.value)}
-                placeholder="350"
-                className={inp + ' pl-7'} style={{ ...iStyle, border: hasAttempted && !priceValid ? errB : iStyle.border }} />
+            <label className={lbl}>Price type</label>
+            <div className="flex gap-1">
+              {(['per_person', 'flat', 'request'] as const).map(pt => (
+                <button key={pt} type="button" onClick={() => setPriceType(pt)}
+                  className="flex-1 px-2 py-2 rounded-xl text-[11px] font-semibold f-body transition-all"
+                  style={{ background: priceType === pt ? '#E67E50' : 'rgba(10,46,77,0.06)', color: priceType === pt ? '#fff' : 'rgba(10,46,77,0.55)' }}>
+                  {pt === 'per_person' ? '/person' : pt === 'flat' ? 'Group' : 'Request'}
+                </button>
+              ))}
             </div>
+          </div>
+          <div>
+            {priceType !== 'request' ? (
+              <>
+                <label className={lbl}>Price from <Req /></label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm f-body font-semibold"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}>€</span>
+                  <input type="number" min="1" step="10" value={priceFrom}
+                    onChange={e => setPriceFrom(e.target.value)}
+                    placeholder="350"
+                    className={inp + ' pl-7'} style={{ ...iStyle, border: hasAttempted && !priceValid ? errB : iStyle.border }} />
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center h-full pt-5">
+                <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>No price shown on page</span>
+              </div>
+            )}
           </div>
           <div>
             <label className={lbl}>Season start</label>
@@ -1223,17 +1313,39 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 2. Map Pin Location ── */}
+      {/* ── 2. Map Location ── */}
       <SectionLabel
         step={2}
-        title="Map Pin Location"
-        desc="Place a pin so the experience appears on the /trips map. Click the map or drag the pin to adjust."
+        title="Map Location"
+        desc="Choose how this experience appears on the /trips map — a single pin, a drawn area, or multiple named fishing spots."
       />
 
-      <LatLngPicker
+      {/* Mode tabs */}
+      <div className="flex gap-2 mb-3">
+        {(['pin', 'area', 'spots'] as const).map(m => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => setLocationMode(m)}
+            className="px-4 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
+            style={locationMode === m
+              ? { background: '#0A2E4D', color: '#fff' }
+              : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }}
+          >
+            {m === 'pin' ? 'Pin' : m === 'area' ? 'Draw area' : 'Spots'}
+          </button>
+        ))}
+      </div>
+
+      <LocationPickerMap
+        mode={locationMode}
         lat={locationLat}
         lng={locationLng}
-        onChange={handleLocationChange}
+        onChange={handlePinChange}
+        area={locationArea}
+        onAreaChange={handleAreaChange}
+        spots={locationSpots}
+        onSpotsChange={handleSpotsChange}
       />
 
       <Divider />
@@ -1404,6 +1516,20 @@ export default function ExperiencePageForm({
         />
         <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
           Shown in the Photos section of the page — independent from the top gallery
+        </p>
+      </div>
+
+      <div className="mt-6">
+        <MultiImageUpload
+          label="Views"
+          initial={viewsImages}
+          max={6}
+          onChange={setViewsImages}
+          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          guideId={prefill?.guide_id ?? undefined}
+        />
+        <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+          Scenic views — shown in the &apos;Views&apos; section on the experience page
         </p>
       </div>
 

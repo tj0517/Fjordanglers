@@ -18,6 +18,7 @@ export type ExpPage = {
   country: string
   region: string
   price_from: number
+  price_type: string
   hero_image_url: string | null
   gallery_image_urls: unknown
   difficulty: string | null
@@ -26,6 +27,14 @@ export type ExpPage = {
   non_angler_friendly: boolean | null
   location_lat: number | null
   location_lng: number | null
+  location_area: unknown   // GeoJSON.Polygon | null
+  location_spots: unknown  // LocationSpot[] | null
+}
+
+function formatPrice(priceFrom: number, priceType: string): string {
+  if (priceType === 'request') return 'Price on request'
+  if (priceType === 'flat') return `from €${priceFrom} for the group`
+  return `from €${priceFrom} / person`
 }
 
 // ─── Difficulty colours ───────────────────────────────────────────────────────
@@ -40,11 +49,24 @@ const DIFFICULTY_COLOR: Record<string, { bg: string; color: string }> = {
 // ─── Bounds helper ────────────────────────────────────────────────────────────
 
 function isInBounds(page: ExpPage, b: MapBounds): boolean {
+  // Primary pin
   if (page.location_lat != null && page.location_lng != null) {
-    return (
+    if (
       page.location_lat >= b.south && page.location_lat <= b.north &&
       page.location_lng >= b.west  && page.location_lng <= b.east
-    )
+    ) return true
+  }
+  // Area polygon vertices
+  const area = page.location_area as import('geojson').Polygon | null
+  if (area?.coordinates?.[0]) {
+    if (area.coordinates[0].some(([lng, lat]) =>
+      lat >= b.south && lat <= b.north && lng >= b.west && lng <= b.east
+    )) return true
+  }
+  // Named spots
+  const spots = page.location_spots as Array<{ lat: number; lng: number }> | null
+  if (spots) {
+    if (spots.some(s => s.lat >= b.south && s.lat <= b.north && s.lng >= b.west && s.lng <= b.east)) return true
   }
   return false
 }
@@ -130,7 +152,7 @@ function SheetCard({
           {/* Price + CTA */}
           <div className="flex items-center justify-between mt-2.5">
             <span className="text-[13px] font-bold f-display" style={{ color: '#0A2E4D' }}>
-              from €{page.price_from}
+              {formatPrice(page.price_from, page.price_type)}
             </span>
             <span
               className="text-[11px] font-bold px-3 py-1.5 rounded-full f-body flex-shrink-0"
@@ -217,7 +239,7 @@ function ExpCard({
               className="text-[13px] font-bold px-3.5 py-1.5 rounded-full f-body"
               style={{ background: 'rgba(5,12,22,0.72)', color: '#fff', backdropFilter: 'blur(8px)' }}
             >
-              from €{page.price_from}
+              {formatPrice(page.price_from, page.price_type)}
             </span>
             <span
               className="flex-shrink-0 text-[12px] font-bold px-4 py-2 rounded-full f-body"
@@ -398,6 +420,7 @@ export default function ExpPageMapSection({
 
           <main
             className="w-full md:w-1/2 px-4 sm:px-8 lg:px-14 py-7"
+            style={{ minHeight: 'calc(100dvh - 72px)' }}
           >
             <div className="flex items-center gap-2 mb-5">
               <p className="text-xs font-medium f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>

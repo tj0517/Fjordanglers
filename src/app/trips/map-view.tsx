@@ -243,17 +243,19 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
         <span style={{ fontSize: '13px', color: 'rgba(10,46,77,0.5)', fontStyle: 'italic' }}>
           Price on request
         </span>
-        <a
-          href={`/trips/${exp.id}`}
-          style={{
-            background: '#E67E50', color: 'white',
-            borderRadius: '12px', padding: '5px 12px',
-            fontSize: '12px', fontWeight: 600,
-            textDecoration: 'none',
-          }}
-        >
-          Inquire →
-        </a>
+        {exp.slug != null && (
+          <a
+            href={`/experiences/${exp.slug}`}
+            style={{
+              background: '#E67E50', color: 'white',
+              borderRadius: '12px', padding: '5px 12px',
+              fontSize: '12px', fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            Inquire →
+          </a>
+        )}
       </div>
     </div>
   )

@@ -111,7 +111,7 @@ export default async function TripsPage({
   let query = svc
     .from('experience_pages')
     .select(
-      'id, slug, experience_name, country, region, price_from, hero_image_url, gallery_image_urls, difficulty, technique, target_species, non_angler_friendly, location_lat, location_lng',
+      'id, slug, experience_name, country, region, price_from, price_type, hero_image_url, gallery_image_urls, difficulty, technique, target_species, non_angler_friendly, location_lat, location_lng, location_area, location_spots',
       { count: 'exact' },
     )
     .eq('status', 'active')

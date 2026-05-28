@@ -24,8 +24,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
-import { InquiryActionPanel } from './InquiryActionPanel'
-import type { InquiryForPanel } from './InquiryActionPanel'
+import { OfferBuilderModal } from './OfferBuilderModal'
+import { MessageComposer } from './MessageComposer'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -183,17 +183,7 @@ export default async function AdminInquiryDetailPage({
     return new Date(ta).getTime() - new Date(tb).getTime()
   })
 
-  // Panel props
-  const panelInquiry: InquiryForPanel = {
-    id:                inquiry.id,
-    status:            inquiry.status,
-    offer_total_eur:   inquiry.offer_total_eur,
-    offer_deposit_eur: inquiry.offer_deposit_eur,
-    offer_notes:       inquiry.offer_notes,
-    offer_sent_at:     inquiry.offer_sent_at,
-    deposit_amount:    inquiry.deposit_amount,
-    deposit_paid_at:   inquiry.deposit_paid_at,
-  }
+  const canBuildOffer = ['pending_fa_review', 'deposit_sent'].includes(inquiry.status)
 
   return (
     <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1100px]">
@@ -417,9 +407,61 @@ export default async function AdminInquiryDetailPage({
           </div>
         </div>
 
-        {/* ── Right: action panel (sticky) ────────── */}
-        <div className="lg:sticky lg:top-6">
-          <InquiryActionPanel inquiry={panelInquiry} />
+        {/* ── Right: action buttons ─────────────────── */}
+        <div className="lg:sticky lg:top-6 space-y-3">
+
+          {/* Status card */}
+          <div className="rounded-[20px] px-5 py-4"
+            style={{ background: '#0A2E4D', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(10,46,77,0.2)' }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1"
+              style={{ color: 'rgba(255,255,255,0.3)' }}>Actions</p>
+            <p className="text-sm font-semibold f-body mb-4" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              {inquiry.angler_name} · {inquiry.party_size} {inquiry.party_size === 1 ? 'person' : 'people'}
+            </p>
+
+            {/* Build offer button → modal */}
+            {canBuildOffer ? (
+              <OfferBuilderModal
+                inquiryId={inquiry.id}
+                tripTitle={trip?.title ?? 'Your trip'}
+                estimatedTotalEur={tripPriceEur}
+              />
+            ) : (
+              <div className="px-4 py-3 rounded-xl"
+                style={{
+                  background: inquiry.status === 'deposit_paid'
+                    ? 'rgba(16,185,129,0.15)'
+                    : 'rgba(255,255,255,0.06)',
+                  border: inquiry.status === 'deposit_paid'
+                    ? '1px solid rgba(16,185,129,0.3)'
+                    : '1px solid rgba(255,255,255,0.1)',
+                }}>
+                <p className="text-sm f-body" style={{
+                  color: inquiry.status === 'deposit_paid' ? '#6EE7B7' : 'rgba(255,255,255,0.5)',
+                }}>
+                  {inquiry.status === 'deposit_paid' && '✅ Deposit received — booking confirmed'}
+                  {inquiry.status === 'completed'    && '✅ Trip completed'}
+                  {inquiry.status === 'cancelled'    && '❌ Inquiry cancelled'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Message composer */}
+          <div className="rounded-[20px] overflow-hidden"
+            style={{ background: 'rgba(10,46,77,0.75)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
+                style={{ color: 'rgba(255,255,255,0.28)' }}>Anytime</p>
+              <p className="text-sm font-bold f-body mt-0.5" style={{ color: '#FFFFFF' }}>
+                Send message to angler
+              </p>
+            </div>
+            <div className="px-5 py-4">
+              <MessageComposer inquiryId={inquiry.id} />
+            </div>
+          </div>
+
         </div>
 
       </div>

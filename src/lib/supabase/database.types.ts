@@ -675,6 +675,7 @@ export type Database = {
           sort_order:                number
           label:                     string
           price_from:                number
+          price_type:                string
           description:               string | null
           catches_text:              string | null
           target_species:            string[]
@@ -698,6 +699,7 @@ export type Database = {
           sort_order?:                number
           label?:                     string
           price_from?:                number
+          price_type?:                string
           description?:               string | null
           catches_text?:              string | null
           target_species?:            string[]
@@ -721,6 +723,7 @@ export type Database = {
           sort_order?:                number
           label?:                     string
           price_from?:                number
+          price_type?:                string
           description?:               string | null
           catches_text?:              string | null
           target_species?:            string[]
@@ -760,6 +763,7 @@ export type Database = {
           season_start:              string | null
           season_end:                string | null
           price_from:                number
+          price_type:                string
           currency:                  string
           status:                    string
           difficulty:                string | null
@@ -785,6 +789,8 @@ export type Database = {
           og_image_url:              string | null
           location_lat:              number | null
           location_lng:              number | null
+          location_area:             Json | null
+          location_spots:            Json | null
           intro_text:                string | null
           species_details:           Json
           boat_description:          string | null
@@ -794,6 +800,7 @@ export type Database = {
           what_to_bring:             string[]
           special_attractions:       Json
           faq:                       Json
+          views_image_urls:          string[] | null
           created_at:                string
           updated_at:                string
         }
@@ -808,6 +815,7 @@ export type Database = {
           season_start?:              string | null
           season_end?:                string | null
           price_from:                 number
+          price_type?:                string
           currency?:                  string
           status?:                    string
           difficulty?:                string | null
@@ -833,6 +841,8 @@ export type Database = {
           og_image_url?:              string | null
           location_lat?:              number | null
           location_lng?:              number | null
+          location_area?:             Json | null
+          location_spots?:            Json | null
           intro_text?:                string | null
           species_details?:           Json | null
           boat_description?:          string | null
@@ -842,6 +852,7 @@ export type Database = {
           what_to_bring?:             string[] | null
           special_attractions?:       Json | null
           faq?:                       Json | null
+          views_image_urls?:          string[] | null
           created_at?:                string
           updated_at?:                string
         }
@@ -856,6 +867,7 @@ export type Database = {
           season_start?:              string | null
           season_end?:                string | null
           price_from?:                number
+          price_type?:                string
           currency?:                  string
           status?:                    string
           difficulty?:                string | null
@@ -881,6 +893,8 @@ export type Database = {
           og_image_url?:              string | null
           location_lat?:              number | null
           location_lng?:              number | null
+          location_area?:             Json | null
+          location_spots?:            Json | null
           intro_text?:                string | null
           species_details?:           Json | null
           boat_description?:          string | null
@@ -890,6 +904,7 @@ export type Database = {
           what_to_bring?:             string[] | null
           special_attractions?:       Json | null
           faq?:                       Json | null
+          views_image_urls?:          string[] | null
           created_at?:                string
           updated_at?:                string
         }
