@@ -251,7 +251,6 @@ function InquiryModal({
     firstName.trim() !== '' &&
     lastName.trim()  !== '' &&
     emailValid &&
-    country.trim()   !== '' &&
     selectedDates.length > 0
   )
 
@@ -528,6 +527,20 @@ function InquiryModal({
                         autoComplete="email" />
                     </div>
 
+                    {/* Phone */}
+                    <div className="mb-3">
+                      <label className={labelCls}>WhatsApp number</label>
+                      <p className="text-[10px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                        We&apos;ll use it to quickly discuss the details of your trip on WhatsApp.
+                      </p>
+                      <input type="tel" value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        placeholder="+48 123 456 789"
+                        className={inputCls}
+                        style={inputStyle}
+                        autoComplete="tel" />
+                    </div>
+
                     {/* Country */}
                     <div className="mb-3">
                       <label className={labelCls}>Country</label>
@@ -535,7 +548,7 @@ function InquiryModal({
                         onChange={e => setCountry(e.target.value)}
                         placeholder="Germany"
                         className={inputCls}
-                        style={{ ...inputStyle, border: hasAttempted && country.trim() === '' ? '1.5px solid rgba(239,68,68,0.6)' : inputStyle.border }}
+                        style={inputStyle}
                         autoComplete="country-name" />
                     </div>
 
@@ -577,20 +590,6 @@ function InquiryModal({
                         className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
                         style={inputStyle}
                       />
-                    </div>
-
-                    {/* Phone */}
-                    <div className="mb-4">
-                      <label className={labelCls}>WhatsApp number</label>
-                      <p className="text-[10px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                        Share your number so we can reach you on WhatsApp.
-                      </p>
-                      <input type="tel" value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        placeholder="+48 123 456 789"
-                        className={inputCls}
-                        style={inputStyle}
-                        autoComplete="tel" />
                     </div>
 
                     {/* Attribution */}
