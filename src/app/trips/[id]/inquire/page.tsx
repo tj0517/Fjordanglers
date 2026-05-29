@@ -42,7 +42,7 @@ export default async function IcelandicInquirePage({
 
   const { data: rawExp } = await supabase
     .from('experiences')
-    .select('id, title, booking_type, max_guests, inquiry_form_config, fish_types, fishing_methods, guide_id, published, guide:guides(id, full_name, avatar_url)')
+    .select('id, title, booking_type, max_guests, price_per_person_eur, inquiry_form_config, fish_types, fishing_methods, guide_id, published, guide:guides(id, full_name, avatar_url)')
     .eq('id', id)
     .eq('published', true)
     .single()
@@ -113,6 +113,7 @@ export default async function IcelandicInquirePage({
         id:                  exp.id,
         title:               exp.title,
         max_guests:          exp.max_guests ?? 99,
+        price_per_person_eur: (rawExp as typeof rawExp & { price_per_person_eur?: number | null }).price_per_person_eur ?? null,
         inquiry_form_config: (exp.inquiry_form_config as unknown as IcelandicFormConfig | null) ?? null,
         targetSpecies:       rawExp.fish_types ?? [],
         fishingMethods:      rawExp.fishing_methods ?? [],

@@ -48,6 +48,7 @@ interface Props {
     id:                  string
     title:               string
     max_guests:          number
+    price_per_person_eur: number | null
     inquiry_form_config: IcelandicFormConfig | null
     /** Species that can be caught on this trip — rendered as multi-select chips. */
     targetSpecies:       string[]
@@ -254,6 +255,7 @@ export function IcelandicInquireForm({
   // ── Step 2 form state ─────────────────────────────────────────────────
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({})
   const [notes,         setNotes]         = useState('')
+  const [phone,         setPhone]         = useState('')
 
   // ── Auth state ────────────────────────────────────────────────────────
   const [currentUser,  setCurrentUser]  = useState(initialUser)
@@ -307,6 +309,7 @@ export function IcelandicInquireForm({
         fieldLabels,
         notes:              notes.trim() || null,
         durationPreference: `${durationDays} ${durationDays === 1 ? 'day' : 'days'}`,
+        phone:              phone.trim() || null,
       })
       if (res.success) {
         window.dataLayer = window.dataLayer || []
@@ -927,6 +930,25 @@ export function IcelandicInquireForm({
                 onBlur={e => (e.currentTarget.style.borderColor = 'rgba(10,46,77,0.14)')} />
             </section>
 
+            {/* Phone */}
+            <section className="p-6 rounded-3xl" style={sectionCard}>
+              <label htmlFor="phone"
+                className="block text-[10px] font-bold uppercase tracking-[0.2em] mb-1 f-body"
+                style={{ color: '#E67E50' }}>
+                WhatsApp number
+              </label>
+              <p className="text-xs f-body mb-4" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                Share your number so the guide can reach you on WhatsApp.
+              </p>
+              <input id="phone" type="tel"
+                placeholder="+47 123 456 789"
+                value={phone} onChange={e => setPhone(e.target.value)}
+                className="w-full rounded-2xl px-4 py-3 text-sm f-body outline-none transition-all"
+                style={fieldStyle}
+                onFocus={e => (e.currentTarget.style.borderColor = '#E67E50')}
+                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(10,46,77,0.14)')} />
+            </section>
+
             {/* Auth or Submit */}
             <section className="p-6 rounded-3xl" style={sectionCard}>
               {currentUser == null ? (
@@ -1010,7 +1032,13 @@ export function IcelandicInquireForm({
                     </div>
                     <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
                       <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>Price</span>
-                      <span className="text-sm font-bold f-body" style={{ color: '#E67E50' }}>On request</span>
+                      {experience.price_per_person_eur != null ? (
+                        <span className="text-sm font-bold f-body" style={{ color: '#E67E50' }}>
+                          from €{(experience.price_per_person_eur * guests).toLocaleString('en')}
+                        </span>
+                      ) : (
+                        <span className="text-sm font-bold f-body" style={{ color: '#E67E50' }}>On request</span>
+                      )}
                     </div>
                   </div>
 

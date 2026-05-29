@@ -165,6 +165,8 @@ export type IcelandicInquiryInput = {
   notes: string | null
   /** Angler's preferred trip duration ("Half day", "1 day", "2 days", etc.) */
   durationPreference: string | null
+  /** Angler's WhatsApp phone number */
+  phone?: string | null
 }
 
 export type IcelandicInquiryResult =
@@ -177,6 +179,7 @@ export type IcelandicPreferences = {
   individualDates?:   string[]
   customAnswers?:     Record<string, string>
   durationPreference?: string | null
+  phone?:             string | null
 }
 
 export async function createIcelandicInquiry(
@@ -294,6 +297,7 @@ export async function createIcelandicInquiry(
           individualDates:    input.individualDates,
           customAnswers:      input.customAnswers,
           durationPreference: input.durationPreference,
+          phone:              input.phone ?? null,
         },
       })
       .select('id')
