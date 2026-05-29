@@ -34,6 +34,7 @@ const InquirySchema = z.object({
   party_size:      z.number().int().min(1).max(20),
   message:         z.string().max(2000).optional().nullable(),
   selected_option: z.string().max(200).optional().nullable(),
+  angler_phone:    z.string().max(30).optional().nullable(),
 })
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       party_size:      parsed.data.party_size,
       message:         parsed.data.message ?? null,
       selected_option: parsed.data.selected_option ?? null,
+      angler_phone:    parsed.data.angler_phone ?? null,
       status:          'pending_fa_review',
     })
     .select('id, status')

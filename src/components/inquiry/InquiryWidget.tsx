@@ -213,6 +213,7 @@ function InquiryModal({
   const [country,      setCountry]      = useState('')
   const [partySize,    setPartySize]    = useState(1)
   const [message,      setMessage]      = useState('')
+  const [phone,        setPhone]        = useState('')
 
   const [attribution,      setAttribution]      = useState('')
   const [attributionOpen,  setAttributionOpen]  = useState(false)
@@ -276,6 +277,7 @@ function InquiryModal({
           message:         message.trim() || null,
           selected_option: selectedOptionLabel ?? null,
           attribution:     attribution.trim() || null,
+          angler_phone:    phone.trim() || null,
         }),
       })
 
@@ -292,7 +294,7 @@ function InquiryModal({
         err instanceof Error ? err.message : 'Something went wrong — please try again.',
       )
     }
-  }, [canSubmit, tripId, firstName, lastName, email, country, selectedDates, partySize, message, selectedOptionLabel])
+  }, [canSubmit, tripId, firstName, lastName, email, country, selectedDates, partySize, message, phone, selectedOptionLabel])
 
   return (
     /* Backdrop */
@@ -575,6 +577,20 @@ function InquiryModal({
                         className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
                         style={inputStyle}
                       />
+                    </div>
+
+                    {/* Phone */}
+                    <div className="mb-4">
+                      <label className={labelCls}>WhatsApp number</label>
+                      <p className="text-[10px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                        Share your number so we can reach you on WhatsApp.
+                      </p>
+                      <input type="tel" value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        placeholder="+48 123 456 789"
+                        className={inputCls}
+                        style={inputStyle}
+                        autoComplete="tel" />
                     </div>
 
                     {/* Attribution */}
