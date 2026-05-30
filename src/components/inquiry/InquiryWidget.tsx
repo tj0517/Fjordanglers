@@ -34,10 +34,15 @@ function buildWhatsAppUrl(tripTitle: string, optionLabel?: string | null): strin
 const EMAIL_URL =
   'mailto:contact@fjordanglers.com?subject=Question%20about%20a%20guided%20fishing%20trip'
 
+const INSTAGRAM_URL = 'https://www.instagram.com/fjordanglers/'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface InquiryWidgetProps {
-  tripId:               string
+  /** UUID from `experiences` table — present when trip has a linked guide */
+  tripId?:              string
+  /** UUID from `experience_pages` table — used when no guide is linked yet */
+  experiencePageId?:    string
   tripTitle:            string
   maxGuests?:           number
   blockedRanges?:       Array<{ date_start: string; date_end: string }>
@@ -191,13 +196,15 @@ function InlineMultiCalendar({
 
 function InquiryModal({
   tripId,
+  experiencePageId,
   tripTitle,
   maxGuests,
   blockedRanges,
   selectedOptionLabel,
   onClose,
 }: {
-  tripId:               string
+  tripId?:              string
+  experiencePageId?:    string
   tripTitle:            string
   maxGuests:            number
   blockedRanges:        Array<{ date_start: string; date_end: string }>
@@ -267,7 +274,7 @@ function InquiryModal({
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          trip_id:         tripId,
+          ...(tripId ? { trip_id: tripId } : { experience_page_id: experiencePageId }),
           angler_name:     `${firstName.trim()} ${lastName.trim()}`,
           angler_email:    email.trim(),
           angler_country:  country.trim(),
@@ -293,7 +300,7 @@ function InquiryModal({
         err instanceof Error ? err.message : 'Something went wrong — please try again.',
       )
     }
-  }, [canSubmit, tripId, firstName, lastName, email, country, selectedDates, partySize, message, phone, selectedOptionLabel])
+  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, country, selectedDates, partySize, message, phone, selectedOptionLabel])
 
   return (
     /* Backdrop */
@@ -693,6 +700,7 @@ function InquiryModal({
 
 export function InquiryWidget({
   tripId,
+  experiencePageId,
   tripTitle,
   maxGuests            = 12,
   blockedRanges        = [],
@@ -788,26 +796,38 @@ export function InquiryWidget({
             style={{ color: 'rgba(255,255,255,0.28)' }}>
             Not sure yet? Talk to us
           </p>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             <a
               href={buildWhatsAppUrl(tripTitle, selectedOptionLabel)}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold f-body transition-all hover:brightness-110"
+              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"
               style={{ background: 'rgba(37,211,102,0.14)', color: '#25D366', border: '1px solid rgba(37,211,102,0.2)', textDecoration: 'none' }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
               </svg>
               WhatsApp
             </a>
             <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"
+              style={{ background: 'rgba(225,48,108,0.12)', color: '#E1306C', border: '1px solid rgba(225,48,108,0.2)', textDecoration: 'none' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#E1306C" aria-hidden="true">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              </svg>
+              Instagram
+            </a>
+            <a
               href={EMAIL_URL}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold f-body transition-all hover:brightness-110"
+              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"
               style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}
             >
-              <Mail size={13} />
-              Email us
+              <Mail size={14} />
+              Email
             </a>
           </div>
         </div>
@@ -817,6 +837,7 @@ export function InquiryWidget({
       {mounted && isOpen && createPortal(
         <InquiryModal
           tripId={tripId}
+          experiencePageId={experiencePageId}
           tripTitle={tripTitle}
           maxGuests={maxGuests}
           blockedRanges={blockedRanges}
@@ -829,9 +850,177 @@ export function InquiryWidget({
   )
 }
 
+// ─── StaticMonthCalendar ──────────────────────────────────────────────────────
+
+function StaticMonthCalendar() {
+  const now         = new Date()
+  const year        = now.getFullYear()
+  const month       = now.getMonth()
+  const monthLabel  = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  const firstDay    = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const offset      = (firstDay + 6) % 7
+  const today       = now.getDate()
+
+  const cells: Array<number | null> = [
+    ...Array<null>(offset).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
+
+  return (
+    <div className="select-none px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-3 f-body"
+        style={{ color: 'rgba(255,255,255,0.3)' }}>
+        Availability
+      </p>
+      <p className="text-xs font-semibold f-body mb-2 text-center" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        {monthLabel}
+      </p>
+      {/* Day headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {['M','T','W','T','F','S','S'].map((d, i) => (
+          <div key={i} className="text-center f-body py-0.5"
+            style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.2)' }}>{d}</div>
+        ))}
+      </div>
+      {/* Days */}
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (day == null) return <div key={`e-${i}`} />
+          const isToday = day === today
+          return (
+            <div key={day}
+              className="aspect-square flex items-center justify-center rounded-lg f-body"
+              style={{
+                fontSize:   '10px',
+                color:      isToday ? '#E67E50' : 'rgba(255,255,255,0.3)',
+                fontWeight: isToday ? '700' : '400',
+                background: isToday ? 'rgba(230,126,80,0.15)' : 'transparent',
+              }}>
+              {day}
+            </div>
+          )
+        })}
+      </div>
+      <p className="text-[10px] f-body mt-3 text-center" style={{ color: 'rgba(255,255,255,0.22)' }}>
+        Contact us to check availability
+      </p>
+    </div>
+  )
+}
+
+// ─── NoGuideContactCard ───────────────────────────────────────────────────────
+
+export function NoGuideContactCard({ tripTitle, selectedLabel }: {
+  tripTitle:     string
+  selectedLabel?: string | null
+}) {
+  return (
+    <div className="rounded-3xl overflow-hidden" style={card}>
+
+      {/* Trip identity */}
+      <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body"
+          style={{ color: 'rgba(255,255,255,0.35)' }}>
+          Book this trip
+        </p>
+        <p className="text-lg font-bold f-display leading-snug" style={{ color: '#FFFFFF' }}>
+          {tripTitle}
+        </p>
+        {selectedLabel && (
+          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+            style={{ background: 'rgba(230,126,80,0.22)', border: '1px solid rgba(230,126,80,0.35)' }}>
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
+            <span className="text-xs font-semibold f-body" style={{ color: '#E67E50' }}>{selectedLabel}</span>
+          </div>
+        )}
+      </div>
+
+      {/* How it works */}
+      <div className="px-5 pt-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-3 f-body"
+          style={{ color: 'rgba(255,255,255,0.3)' }}>
+          How it works
+        </p>
+        <div className="space-y-2.5">
+          {([
+            ['1', 'Send a free inquiry'],
+            ['2', 'FA confirms availability'],
+            ['3', 'Secure with a deposit'],
+          ] as [string, string][]).map(([num, title]) => (
+            <div key={num} className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: 'rgba(230,126,80,0.25)', color: '#E67E50' }}>
+                <span className="text-[10px] font-bold f-body">{num}</span>
+              </div>
+              <p className="text-sm font-semibold f-body" style={{ color: '#FFFFFF' }}>{title}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="px-5 pt-4 pb-5">
+        <a
+          href={`mailto:contact@fjordanglers.com?subject=Inquiry: ${encodeURIComponent(tripTitle)}`}
+          className="block w-full py-3.5 text-center rounded-xl text-sm font-bold f-body transition-all hover:brightness-110"
+          style={{ background: '#E67E50', color: '#fff', boxShadow: '0 4px 14px rgba(230,126,80,0.4)', textDecoration: 'none' }}
+        >
+          Contact FjordAnglers →
+        </a>
+        <p className="text-center text-[11px] f-body mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          Free to enquire · no payment now · reply within 24h
+        </p>
+      </div>
+
+      {/* Not sure yet? */}
+      <div className="px-5 pb-5" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] f-body pt-4 pb-3 text-center"
+          style={{ color: 'rgba(255,255,255,0.28)' }}>
+          Talk to us
+        </p>
+        <div className="grid grid-cols-3 gap-1.5">
+          <a
+            href={buildWhatsAppUrl(tripTitle, selectedLabel)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"
+            style={{ background: 'rgba(37,211,102,0.14)', color: '#25D366', border: '1px solid rgba(37,211,102,0.2)', textDecoration: 'none' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+            </svg>
+            WhatsApp
+          </a>
+          <a
+            href={INSTAGRAM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"
+            style={{ background: 'rgba(225,48,108,0.12)', color: '#E1306C', border: '1px solid rgba(225,48,108,0.2)', textDecoration: 'none' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#E1306C" aria-hidden="true">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+            </svg>
+            Instagram
+          </a>
+          <a
+            href={EMAIL_URL}
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"
+            style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.1)', textDecoration: 'none' }}
+          >
+            <Mail size={14} />
+            Email
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── MobileInquiryBar ─────────────────────────────────────────────────────────
 
-export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId: string; pricePerPerson?: number | null }) {
+export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId?: string | null; pricePerPerson?: number | null }) {
   const handleClick = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-inquiry-modal'))
   }, [])

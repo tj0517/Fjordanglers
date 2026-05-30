@@ -6,6 +6,10 @@
  *   • FA: new inquiry notification (with dashboard link)
  *   • Angler: inquiry received confirmation
  *
+ * Accepts either:
+ *   - trip_id (UUID) — experience linked to a guide via `experiences` table
+ *   - experience_page_id (UUID) — editorial page without a linked guide yet
+ *
  * No auth required — anglers do not need an account to submit an inquiry.
  */
 
@@ -23,10 +27,13 @@ export const dynamic  = 'force-dynamic'
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/
 
 const InquirySchema = z.object({
-  trip_id:         z.string().uuid(),
+  // Exactly one of these must be present
+  trip_id:            z.string().uuid().optional().nullable(),
+  experience_page_id: z.string().uuid().optional().nullable(),
+
   angler_name:     z.string().min(1).max(100).transform(s => s.trim()),
   angler_email:    z.string().email(),
-  angler_country:  z.string().min(2).max(80).transform(s => s.trim()),
+  angler_country:  z.string().max(80).transform(s => s.trim()),
   requested_dates: z
     .array(z.string().regex(dateRegex, 'Each date must be YYYY-MM-DD'))
     .min(1, 'At least one date is required')
@@ -35,7 +42,11 @@ const InquirySchema = z.object({
   message:         z.string().max(2000).optional().nullable(),
   selected_option: z.string().max(200).optional().nullable(),
   angler_phone:    z.string().max(30).optional().nullable(),
-})
+  attribution:     z.string().max(100).optional().nullable(),
+}).refine(
+  d => d.trip_id != null || d.experience_page_id != null,
+  { message: 'Either trip_id or experience_page_id is required' },
+)
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
@@ -57,36 +68,61 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const svc = createServiceClient()
 
-  // Fetch trip for guide_id + title (also validates trip exists)
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('id, guide_id, title')
-    .eq('id', parsed.data.trip_id)
-    .eq('published', true)
-    .single()
+  let tripTitle: string
+  let guideId: string | null = null
 
-  if (trip == null) {
-    return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+  if (parsed.data.trip_id != null) {
+    // Fetch trip for guide_id + title (also validates trip exists)
+    const { data: trip } = await svc
+      .from('experiences')
+      .select('id, guide_id, title')
+      .eq('id', parsed.data.trip_id)
+      .eq('published', true)
+      .single()
+
+    if (trip == null) {
+      return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+    }
+
+    tripTitle = trip.title
+    guideId   = trip.guide_id
+  } else {
+    // Fetch experience page title
+    const { data: expPage } = await svc
+      .from('experience_pages')
+      .select('id, experience_name')
+      .eq('id', parsed.data.experience_page_id!)
+      .eq('status', 'active')
+      .single()
+
+    if (expPage == null) {
+      return NextResponse.json({ error: 'Experience not found' }, { status: 404 })
+    }
+
+    tripTitle = expPage.experience_name
   }
 
   // Sort dates before storing
   const sortedDates = [...parsed.data.requested_dates].sort()
 
   // Insert inquiry
+  // Cast needed until generated types catch up with the migration that makes
+  // trip_id nullable and adds experience_page_id.
   const { data: inquiry, error: dbError } = await svc
     .from('inquiries')
     .insert({
-      trip_id:         parsed.data.trip_id,
-      guide_id:        trip.guide_id,
-      angler_name:     parsed.data.angler_name,
-      angler_email:    parsed.data.angler_email,
-      angler_country:  parsed.data.angler_country,
-      requested_dates: sortedDates,
-      party_size:      parsed.data.party_size,
-      message:         parsed.data.message ?? null,
-      selected_option: parsed.data.selected_option ?? null,
-      angler_phone:    parsed.data.angler_phone ?? null,
-      status:          'pending_fa_review',
+      trip_id:            (parsed.data.trip_id ?? null) as unknown as string,
+      experience_page_id: parsed.data.experience_page_id ?? null,
+      guide_id:           guideId,
+      angler_name:        parsed.data.angler_name,
+      angler_email:       parsed.data.angler_email,
+      angler_country:     parsed.data.angler_country || 'Unknown',
+      requested_dates:    sortedDates,
+      party_size:         parsed.data.party_size,
+      message:            parsed.data.message ?? null,
+      selected_option:    parsed.data.selected_option ?? null,
+      angler_phone:       parsed.data.angler_phone ?? null,
+      status:             'pending_fa_review',
     })
     .select('id, status')
     .single()
@@ -105,8 +141,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       to:             env.FA_EMAIL ?? 'contact@fjordanglers.com',
       anglerName:     parsed.data.angler_name,
       anglerEmail:    parsed.data.angler_email,
-      anglerCountry:  parsed.data.angler_country,
-      tripTitle:      trip.title,
+      anglerCountry:  parsed.data.angler_country || 'Unknown',
+      tripTitle,
       requestedDates: sortedDates,
       partySize:      parsed.data.party_size,
       message:        parsed.data.message ?? null,
@@ -117,14 +153,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     sendInquiryReceivedAnglerEmail({
       to:             parsed.data.angler_email,
       anglerName:     parsed.data.angler_name,
-      tripTitle:      trip.title,
+      tripTitle,
       requestedDates: sortedDates,
       partySize:      parsed.data.party_size,
       inquiryId:      inquiry.id,
     }),
   ]).catch(err => console.error('[inquiries/POST] Email error:', err))
 
-  console.log(`[inquiries/POST] Created inquiry ${inquiry.id} for trip ${trip.id}`)
+  console.log(`[inquiries/POST] Created inquiry ${inquiry.id} (${parsed.data.trip_id ? `trip ${parsed.data.trip_id}` : `page ${parsed.data.experience_page_id}`})`)
 
   return NextResponse.json({ id: inquiry.id, status: inquiry.status }, { status: 201 })
 }

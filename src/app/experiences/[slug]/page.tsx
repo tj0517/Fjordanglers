@@ -472,7 +472,8 @@ export default async function ExperiencePublicPage({
             faq={faq}
             pageContentBlocks={pageContentBlocks}
             speciesDetails={speciesDetails}
-            tripId={page.trip_id}
+            tripId={page.trip_id ?? null}
+            experiencePageId={page.trip_id ? undefined : page.id}
             tripTitle={page.experience_name}
             maxGuests={maxGuests}
             blockedRanges={blockedRanges}
@@ -1365,39 +1366,13 @@ export default async function ExperiencePublicPage({
           {/* ── RIGHT COLUMN — sticky widget ── */}
           <div className="hidden lg:block lg:w-[360px] flex-shrink-0">
             <div className="sticky top-28">
-              {page.trip_id ? (
-                <InquiryWidget
-                  tripId={page.trip_id}
-                  tripTitle={page.experience_name}
-                  maxGuests={maxGuests}
-                  blockedRanges={blockedRanges}
-                />
-              ) : (
-                <div className="rounded-3xl overflow-hidden"
-                  style={{ background: '#0A2E4D', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(10,46,77,0.3)' }}>
-                  <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                      Book this experience
-                    </p>
-                    <p className="text-lg font-bold f-display leading-snug text-white">{page.experience_name}</p>
-                    <p className="text-sm f-body mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                      {formatPrice(page.price_from, page.price_type)}
-                    </p>
-                  </div>
-                  <div className="px-5 py-5">
-                    <Link
-                      href={`mailto:contact@fjordanglers.com?subject=Inquiry: ${encodeURIComponent(page.experience_name)}`}
-                      className="block w-full py-3.5 text-center rounded-xl text-sm font-bold f-body"
-                      style={{ background: '#E67E50', color: '#fff', boxShadow: '0 4px 14px rgba(230,126,80,0.4)' }}
-                    >
-                      Contact FjordAnglers →
-                    </Link>
-                    <p className="text-center text-[11px] f-body mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      Free to enquire · reply within 24h
-                    </p>
-                  </div>
-                </div>
-              )}
+              <InquiryWidget
+                tripId={page.trip_id ?? undefined}
+                experiencePageId={page.trip_id ? undefined : page.id}
+                tripTitle={page.experience_name}
+                maxGuests={maxGuests}
+                blockedRanges={blockedRanges}
+              />
             </div>
           </div>
 
@@ -1406,24 +1381,7 @@ export default async function ExperiencePublicPage({
       </div>
 
       {/* ── MOBILE BAR ── */}
-      {page.trip_id ? (
-        <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_type === 'request' ? null : page.price_from} />
-      ) : (
-        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-5"
-          style={{
-            background: 'rgba(243,237,228,0.97)', backdropFilter: 'blur(20px)',
-            borderTop: '1px solid rgba(10,46,77,0.1)', boxShadow: '0 -8px 32px rgba(0,0,0,0.1)',
-            paddingTop: '14px', paddingBottom: 'calc(14px + env(safe-area-inset-bottom, 0px))',
-          }}>
-          <Link
-            href={`mailto:contact@fjordanglers.com?subject=Inquiry: ${encodeURIComponent(page.experience_name)}`}
-            className="flex items-center justify-center w-full py-4 rounded-2xl font-bold text-white f-body"
-            style={{ background: '#E67E50', fontSize: '16px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
-          >
-            Contact FjordAnglers →
-          </Link>
-        </div>
-      )}
+      <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_type === 'request' ? null : page.price_from} />
 
       {/* ════════════════════════════════════════════════════════════
           BOTTOM SECTIONS — different background
