@@ -256,8 +256,7 @@ function InquiryModal({
   const canSubmit  = (
     firstName.trim() !== '' &&
     lastName.trim()  !== '' &&
-    emailValid &&
-    selectedDates.length > 0
+    emailValid
   )
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
