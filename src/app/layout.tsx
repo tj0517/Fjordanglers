@@ -66,6 +66,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Preconnect to Supabase CDN — speeds up all guide/experience images */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+
+        {/* ── Google Consent Mode v2 defaults — MUST be first, before GTM ── */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('consent', 'default', {
+            analytics_storage: 'denied',
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            wait_for_update: 500,
+          });
+        `}} />
+
         {/* Organization + LocalBusiness structured data */}
         <script
           type="application/ld+json"
@@ -106,6 +120,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         {GTM_ID && <CookieBanner gtmId={GTM_ID} />}
+
+        {/* ── GTM — loads unconditionally, consent mode controls what fires ── */}
+        {GTM_ID && (
+          <Script id="gtm-init" strategy="afterInteractive">{`
+            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${GTM_ID}');
+          `}</Script>
+        )}
+
+        {/* ── Google Ads — unconditional, consent mode governs ad cookies ── */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=AW-18008446689"
           strategy="afterInteractive"

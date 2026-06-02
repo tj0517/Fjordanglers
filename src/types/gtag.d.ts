@@ -7,7 +7,7 @@ declare global {
   interface Window {
     // ── Google Tag Manager / GA4 ─────────────────────────────────────────────
     gtag: (
-      command: 'event' | 'config' | 'js' | 'set',
+      command: 'event' | 'config' | 'js' | 'set' | 'consent',
       targetId: string | Date,
       params?: Record<string, unknown>,
     ) => void

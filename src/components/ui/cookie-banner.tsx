@@ -4,24 +4,42 @@ import { useState, useEffect } from 'react'
 import Script from 'next/script'
 import Link from 'next/link'
 
-const CONSENT_KEY    = 'fa_cookie_consent'
-const META_PIXEL_ID  = process.env.NEXT_PUBLIC_META_PIXEL_ID
+const CONSENT_KEY   = 'fa_cookie_consent'
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
+const CLARITY_ID    = process.env.NEXT_PUBLIC_CLARITY_ID
 
-export function CookieBanner({ gtmId }: { gtmId: string }) {
+function grantConsent() {
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+    window.gtag('consent', 'update', {
+      analytics_storage:  'granted',
+      ad_storage:         'granted',
+      ad_user_data:       'granted',
+      ad_personalization: 'granted',
+    })
+  }
+}
+
+export function CookieBanner({ gtmId: _gtmId }: { gtmId: string }) {
   const [consent, setConsent] = useState<'accepted' | 'declined' | null>(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem(CONSENT_KEY)
-    if (stored === 'accepted') setConsent('accepted')
-    else if (stored === 'declined') setConsent('declined')
-    else setVisible(true)
+    if (stored === 'accepted') {
+      setConsent('accepted')
+      grantConsent() // returning visitor — update immediately
+    } else if (stored === 'declined') {
+      setConsent('declined')
+    } else {
+      setVisible(true)
+    }
   }, [])
 
   function accept() {
     localStorage.setItem(CONSENT_KEY, 'accepted')
     setConsent('accepted')
     setVisible(false)
+    grantConsent()
   }
 
   function decline() {
@@ -32,24 +50,12 @@ export function CookieBanner({ gtmId }: { gtmId: string }) {
 
   return (
     <>
-      {/* ── GTM — loaded only after consent ─────────────────────────── */}
-      {consent === 'accepted' && (
-        <>
-          {/* GTM script tag */}
-          <Script id="gtm-init" strategy="afterInteractive">
-            {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${gtmId}');`}
-          </Script>
 
-          {/* GTM noscript fallback — also consent-gated */}
-          <noscript>
-            <iframe
-              src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
-              height="0"
-              width="0"
-              style={{ display: 'none', visibility: 'hidden' }}
-            />
-          </noscript>
-        </>
+      {/* ── Clarity — loaded once after consent, direct (not via GTM) ── */}
+      {consent === 'accepted' && CLARITY_ID != null && (
+        <Script id="clarity-init" strategy="afterInteractive">{`
+          (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${CLARITY_ID}");
+        `}</Script>
       )}
 
       {/* ── Meta Pixel — loaded only after consent ───────────────────── */}

@@ -8,6 +8,8 @@
 import Link from 'next/link'
 import { SiteNav } from '@/components/layout/nav'
 import { SiteFooter } from '@/components/layout/footer'
+import { GaEvent } from '@/components/analytics/ga-event'
+import { createServiceClient } from '@/lib/supabase/server'
 
 export default async function InquiryConfirmedPage({
   searchParams,
@@ -17,8 +19,29 @@ export default async function InquiryConfirmedPage({
   const sp = await searchParams
   const inquiryId = sp.inquiry_id ?? null
 
+  // Fetch deposit amount for purchase event
+  let depositAmount = 0
+  if (inquiryId != null) {
+    const svc = createServiceClient()
+    const { data } = await svc
+      .from('inquiries')
+      .select('deposit_amount')
+      .eq('id', inquiryId)
+      .single()
+    depositAmount = Number(data?.deposit_amount ?? 0)
+  }
+
   return (
     <>
+    <GaEvent
+      action="purchase"
+      params={{
+        transaction_id: inquiryId ?? 'unknown',
+        value: depositAmount,
+        currency: 'EUR',
+        items: [{ item_name: 'Fishing trip deposit', price: depositAmount, quantity: 1 }],
+      }}
+    />
     <SiteNav />
     <div className="min-h-screen flex items-center justify-center px-4"
       style={{ background: '#F8FAFB' }}>

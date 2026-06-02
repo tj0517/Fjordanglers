@@ -22,6 +22,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
+import { trackFormStart, trackQualifyLead } from '@/lib/gtag'
 
 function buildWhatsAppUrl(tripTitle: string, optionLabel?: string | null): string {
   const context = optionLabel ? `${tripTitle} — ${optionLabel}` : tripTitle
@@ -244,6 +245,13 @@ function InquiryModal({
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
 
+  // form_start — fire once when angler proceeds to the contact form step
+  useEffect(() => {
+    if (step === 'form') {
+      trackFormStart({ form_id: 'inquiry_modal', form_name: 'Trip Inquiry' })
+    }
+  }, [step])
+
   const toggleDate = useCallback((date: string) => {
     setSelectedDates(prev =>
       prev.includes(date)
@@ -291,6 +299,7 @@ function InquiryModal({
       }
 
       setSubmitState('success')
+      trackQualifyLead({ value: 0, trip_name: tripTitle })
     } catch (err) {
       console.error('[InquiryModal] submit error:', err)
       setSubmitState('error')
