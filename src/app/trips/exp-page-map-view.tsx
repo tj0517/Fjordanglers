@@ -320,7 +320,7 @@ function ExpPagePopup({ page }: { page: ExpPage }) {
             textDecoration: 'none',
           }}
         >
-          Inquire →
+          Check it out →
         </a>
       </div>
     </div>

@@ -98,7 +98,7 @@ function SheetCard({
             className="absolute bottom-2.5 left-2.5 text-xs font-bold px-2.5 py-1 rounded-full f-body"
             style={{ background: 'rgba(5,12,22,0.72)', color: '#fff', backdropFilter: 'blur(8px)' }}
           >
-            Inquire
+            Check it out
           </div>
         </div>
 
@@ -606,7 +606,7 @@ function TripCard({
               className="flex-shrink-0 text-[12px] font-bold px-4 py-2 rounded-full f-body ml-auto"
               style={{ background: '#E67E50', color: '#fff', boxShadow: '0 2px 12px rgba(230,126,80,0.45)' }}
             >
-              Inquire →
+              Check it out →
             </span>
 
           </div>

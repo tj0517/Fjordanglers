@@ -253,7 +253,7 @@ function ExpPopup({ exp }: { exp: ExperienceWithGuide }) {
               textDecoration: 'none',
             }}
           >
-            Inquire →
+            Check it out →
           </a>
         )}
       </div>

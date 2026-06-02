@@ -149,16 +149,10 @@ function SheetCard({
             </p>
           </div>
 
-          {/* Price + CTA */}
-          <div className="flex items-center justify-between mt-2.5">
+          {/* Price */}
+          <div className="flex items-center mt-2.5">
             <span className="text-[13px] font-bold f-display" style={{ color: '#0A2E4D' }}>
               {formatPrice(page.price_from, page.price_type)}
-            </span>
-            <span
-              className="text-[11px] font-bold px-3 py-1.5 rounded-full f-body flex-shrink-0"
-              style={{ background: '#E67E50', color: '#fff' }}
-            >
-              Inquire →
             </span>
           </div>
         </div>
@@ -234,24 +228,18 @@ function ExpCard({
           </div>
 
           {/* Bottom bar */}
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+          <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
             <span
               className="text-[13px] font-bold px-3.5 py-1.5 rounded-full f-body"
               style={{ background: 'rgba(5,12,22,0.72)', color: '#fff', backdropFilter: 'blur(8px)' }}
             >
               {formatPrice(page.price_from, page.price_type)}
             </span>
-            <span
-              className="flex-shrink-0 text-[12px] font-bold px-4 py-2 rounded-full f-body"
-              style={{ background: '#E67E50', color: '#fff', boxShadow: '0 2px 12px rgba(230,126,80,0.45)' }}
-            >
-              Inquire →
-            </span>
           </div>
         </div>
 
         {/* ── Text info ─────────────────────────────────────────── */}
-        <div className="pt-3 px-0.5 overflow-hidden" style={{ height: '84px' }}>
+        <div className="pt-3 px-0.5 pb-3">
 
           <h3
             className="font-semibold leading-snug f-body line-clamp-2"

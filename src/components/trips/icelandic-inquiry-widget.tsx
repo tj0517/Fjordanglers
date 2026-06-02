@@ -477,7 +477,7 @@ export function IcelandicInquiryWidget({
                 boxShadow:      '0 4px 14px rgba(230,126,80,0.35)',
                 textDecoration: 'none',
               }}>
-              Continue to enquiry →
+              Ask about this trip →
             </a>
           ) : (
             <div className="w-full py-3 rounded-xl text-sm font-bold text-center f-body"

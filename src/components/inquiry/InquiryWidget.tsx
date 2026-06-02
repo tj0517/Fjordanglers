@@ -21,7 +21,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ChevronRight, ChevronDown, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
 
 function buildWhatsAppUrl(tripTitle: string, optionLabel?: string | null): string {
   const context = optionLabel ? `${tripTitle} — ${optionLabel}` : tripTitle
@@ -222,8 +222,7 @@ function InquiryModal({
   const [message,      setMessage]      = useState('')
   const [phone,        setPhone]        = useState('')
 
-  const [attribution,      setAttribution]      = useState('')
-  const [attributionOpen,  setAttributionOpen]  = useState(false)
+  const [attribution, setAttribution] = useState('')
 
   const [submitState,  setSubmitState]  = useState<SubmitState>('idle')
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null)
@@ -330,10 +329,10 @@ function InquiryModal({
               <Check size={32} style={{ color: '#E67E50' }} strokeWidth={2.5} />
             </div>
             <p className="text-xl font-bold f-display mb-2" style={{ color: '#0A2E4D' }}>
-              Inquiry sent!
+              Message sent!
             </p>
             <p className="text-sm f-body leading-relaxed mb-6" style={{ color: 'rgba(10,46,77,0.55)' }}>
-              Your inquiry has been received by FjordAnglers.
+              We've received your message.
               We&apos;ll be in touch within 24 hours.
             </p>
             <button
@@ -383,7 +382,7 @@ function InquiryModal({
             </div>
 
             {/* ── Scrollable body ── */}
-            <div className="overflow-y-auto flex-1">
+            <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(230,126,80,0.4) transparent' }}>
 
               {step === 'calendar' ? (
                 /* ── Step 1: Calendar ── */
@@ -394,18 +393,6 @@ function InquiryModal({
                     blockedSet={blockedSet}
                     onToggle={toggleDate}
                   />
-
-                  {/* Legend */}
-                  <div className="flex items-center gap-4 mt-3 mb-4">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-sm" style={{ background: '#E67E50' }} />
-                      <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>Selected</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-sm" style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.1)' }} />
-                      <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>Unavailable</span>
-                    </div>
-                  </div>
 
                   {/* Selected date chips */}
                   {selectedDates.length > 0 && (
@@ -434,21 +421,32 @@ function InquiryModal({
                     </div>
                   )}
 
+                  {/* Hint when no dates selected */}
+                  {selectedDates.length === 0 && (
+                    <div className="mb-3 px-3 py-2.5 rounded-xl flex items-center gap-3"
+                      style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.2)' }}>
+                      <div className="w-6 h-6 rounded-md flex-shrink-0"
+                        style={{ background: '#E67E50' }} />
+                      <p className="text-[13px] f-body leading-snug" style={{ color: '#E67E50' }}>
+                        Pick dates above
+                      </p>
+                    </div>
+                  )}
+
                   {/* Continue button */}
                   <button
                     type="button"
-                    disabled={selectedDates.length === 0}
                     onClick={() => setStep('form')}
                     className="w-full py-3.5 rounded-xl text-sm font-bold f-body transition-all"
                     style={{
-                      background: selectedDates.length > 0 ? '#E67E50' : 'rgba(10,46,77,0.07)',
-                      color:      selectedDates.length > 0 ? '#fff' : 'rgba(10,46,77,0.25)',
-                      cursor:     selectedDates.length > 0 ? 'pointer' : 'not-allowed',
-                      boxShadow:  selectedDates.length > 0 ? '0 4px 14px rgba(230,126,80,0.3)' : 'none',
+                      background: selectedDates.length > 0 ? '#E67E50' : '#0A2E4D',
+                      color:      '#fff',
+                      cursor:     'pointer',
+                      boxShadow:  selectedDates.length > 0 ? '0 4px 14px rgba(230,126,80,0.3)' : '0 4px 14px rgba(10,46,77,0.2)',
                     }}
                   >
                     {selectedDates.length === 0
-                      ? 'Select at least one date'
+                      ? 'Discuss dates later →'
                       : `Continue with ${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} →`
                     }
                   </button>
@@ -470,7 +468,7 @@ function InquiryModal({
 
               ) : (
                 /* ── Step 2: Form ── */
-                <form onSubmit={handleSubmit} noValidate>
+                <form id="inquiry-form" onSubmit={handleSubmit} noValidate>
                   <div className="px-5 pt-4 pb-6 space-y-0">
 
                     {/* Trip name + selected option + selected dates summary */}
@@ -591,7 +589,7 @@ function InquiryModal({
                       <textarea
                         value={message}
                         onChange={e => setMessage(e.target.value)}
-                        placeholder="What matters most to you on this trip? (species, technique, group size, dates flexibility...)"
+                        placeholder="Tell us what you're after — species, technique, vibe, anything on your mind..."
                         rows={3}
                         maxLength={1000}
                         className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
@@ -601,70 +599,26 @@ function InquiryModal({
 
                     {/* Attribution */}
                     <div className="mb-4">
-                      <button
-                        type="button"
-                        onClick={() => setAttributionOpen(o => !o)}
-                        className="flex items-center gap-1.5 transition-opacity hover:opacity-70 mb-2"
-                      >
-                        <span className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                          How did you hear about us?{' '}
-                          <span style={{ color: 'rgba(10,46,77,0.25)' }}>(optional)</span>
-                        </span>
-                        <ChevronDown
-                          size={11}
-                          style={{
-                            color: 'rgba(10,46,77,0.3)',
-                            transform: attributionOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                            transition: 'transform 0.15s',
-                          }}
-                        />
-                      </button>
-                      {attributionOpen && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {(['Instagram', 'Google', 'Friend', 'Already knew the guide', 'Other'] as const).map(opt => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setAttribution(a => a === opt ? '' : opt)}
-                              className="px-3 py-1.5 rounded-full text-xs f-body font-medium transition-all"
-                              style={attribution === opt
-                                ? { background: 'rgba(10,46,77,0.1)', color: '#0A2E4D', border: '1.5px solid rgba(10,46,77,0.22)' }
-                                : { background: 'transparent', color: 'rgba(10,46,77,0.38)', border: '1px solid rgba(10,46,77,0.12)' }
-                              }
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Error */}
-                    {submitState === 'error' && errorMsg != null && (
-                      <div className="mb-3 px-3 py-2.5 rounded-xl"
-                        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' }}>
-                        <p className="text-[12px] f-body" style={{ color: '#DC2626', margin: 0 }}>{errorMsg}</p>
+                      <p className="text-[11px] f-body mb-2" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                        How did you hear about us? <span style={{ color: 'rgba(10,46,77,0.25)' }}>(optional)</span>
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(['Instagram', 'Google', 'Friend', 'Already knew the guide', 'Other'] as const).map(opt => (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setAttribution(a => a === opt ? '' : opt)}
+                            className="px-3 py-1.5 rounded-full text-xs f-body font-medium transition-all"
+                            style={attribution === opt
+                              ? { background: 'rgba(10,46,77,0.1)', color: '#0A2E4D', border: '1.5px solid rgba(10,46,77,0.22)' }
+                              : { background: 'transparent', color: 'rgba(10,46,77,0.38)', border: '1px solid rgba(10,46,77,0.12)' }
+                            }
+                          >
+                            {opt}
+                          </button>
+                        ))}
                       </div>
-                    )}
-
-                    {/* Submit */}
-                    <button
-                      type="submit"
-                      disabled={submitState === 'loading'}
-                      className="w-full py-3.5 rounded-xl text-sm font-bold f-body transition-all flex items-center justify-center gap-2"
-                      style={{
-                        background: submitState === 'loading' ? 'rgba(230,126,80,0.6)' : '#E67E50',
-                        color:      '#fff',
-                        cursor:     submitState === 'loading' ? 'not-allowed' : 'pointer',
-                        boxShadow:  submitState === 'loading' ? 'none' : '0 4px 14px rgba(230,126,80,0.3)',
-                      }}
-                    >
-                      {submitState === 'loading' ? (
-                        <><Loader2 size={14} className="animate-spin" /> Sending…</>
-                      ) : (
-                        'Send Inquiry →'
-                      )}
-                    </button>
+                    </div>
 
                     {/* WhatsApp CTA */}
                     <div className="mt-4 pt-4 text-center" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
@@ -689,6 +643,37 @@ function InquiryModal({
                 </form>
               )}
             </div>
+
+            {/* ── Sticky submit footer (form step only) ── */}
+            {step === 'form' && (
+              <div className="flex-shrink-0 px-5 py-4"
+                style={{ borderTop: '1px solid rgba(10,46,77,0.07)', background: '#fff', borderBottomLeftRadius: '24px', borderBottomRightRadius: '24px' }}>
+                {submitState === 'error' && errorMsg != null && (
+                  <div className="mb-3 px-3 py-2.5 rounded-xl"
+                    style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' }}>
+                    <p className="text-[12px] f-body" style={{ color: '#DC2626', margin: 0 }}>{errorMsg}</p>
+                  </div>
+                )}
+                <button
+                  type="submit"
+                  form="inquiry-form"
+                  disabled={submitState === 'loading'}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold f-body transition-all flex items-center justify-center gap-2"
+                  style={{
+                    background: submitState === 'loading' ? 'rgba(230,126,80,0.6)' : '#E67E50',
+                    color:      '#fff',
+                    cursor:     submitState === 'loading' ? 'not-allowed' : 'pointer',
+                    boxShadow:  submitState === 'loading' ? 'none' : '0 4px 14px rgba(230,126,80,0.3)',
+                  }}
+                >
+                  {submitState === 'loading' ? (
+                    <><Loader2 size={14} className="animate-spin" /> Sending…</>
+                  ) : (
+                    'Ask about this trip →'
+                  )}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -755,7 +740,7 @@ export function InquiryWidget({
           </p>
           <div className="space-y-2.5">
             {([
-              ['1', 'Send a free inquiry'],
+              ['1', 'Ask about your dates'],
               ['2', 'FA confirms availability'],
               ['3', 'Secure with a deposit'],
             ] as [string, string][]).map(([num, title]) => (
@@ -782,11 +767,11 @@ export function InquiryWidget({
               boxShadow:  '0 4px 14px rgba(230,126,80,0.4)',
             }}
           >
-            Send Inquiry →
+            Ask about this trip →
           </button>
 
           <p className="text-center text-[11px] f-body mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            Free to enquire · no payment now · reply within 24h
+            Free to ask · no payment now · reply within 24h
           </p>
         </div>
 
@@ -944,7 +929,7 @@ export function NoGuideContactCard({ tripTitle, selectedLabel }: {
         </p>
         <div className="space-y-2.5">
           {([
-            ['1', 'Send a free inquiry'],
+            ['1', 'Ask about your dates'],
             ['2', 'FA confirms availability'],
             ['3', 'Secure with a deposit'],
           ] as [string, string][]).map(([num, title]) => (
@@ -1064,7 +1049,7 @@ export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId?:
           className="flex-shrink-0 flex items-center justify-center px-6 py-3.5 rounded-2xl font-bold text-white f-body"
           style={{ background: '#E67E50', fontSize: '15px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
         >
-          Send Inquiry →
+          Ask about this trip →
         </button>
       </div>
     </div>
