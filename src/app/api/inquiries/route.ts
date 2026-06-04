@@ -40,7 +40,7 @@ const InquirySchema = z.object({
   party_size:      z.number().int().min(1).max(20),
   message:         z.string().max(2000).optional().nullable(),
   selected_option: z.string().max(200).optional().nullable(),
-  angler_phone:    z.string().max(30).optional().nullable(),
+  angler_phone:    z.string().max(50).optional().nullable(),
 }).refine(
   d => d.trip_id != null || d.experience_page_id != null,
   { message: 'Either trip_id or experience_page_id is required' },

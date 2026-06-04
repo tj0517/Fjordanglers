@@ -541,7 +541,7 @@ function InquiryModal({
                       <p className="text-[10px] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.38)' }}>
                         We&apos;ll use it to quickly discuss the details of your trip on WhatsApp.
                       </p>
-                      <input type="tel" value={phone}
+                      <input type="text" inputMode="tel" value={phone}
                         onChange={e => setPhone(e.target.value)}
                         placeholder="+48 123 456 789"
                         className={inputCls}
