@@ -134,7 +134,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // Fire-and-forget both emails
   const baseUrl      = env.NEXT_PUBLIC_APP_URL
-  const dashboardUrl = `${baseUrl}/dashboard/inquiries/${inquiry.id}`
+  const dashboardUrl = `${baseUrl}/admin/inquiries/${inquiry.id}`
 
   Promise.all([
     sendInquiryReceivedFaEmail({

@@ -455,7 +455,7 @@ function InquiryModal({
                   >
                     {selectedDates.length === 0
                       ? 'Discuss dates later →'
-                      : `Continue with ${selectedDates.length} date${selectedDates.length > 1 ? 's' : ''} →`
+                      : 'Continue →'
                     }
                   </button>
 
@@ -677,7 +677,7 @@ function InquiryModal({
                   {submitState === 'loading' ? (
                     <><Loader2 size={14} className="animate-spin" /> Sending…</>
                   ) : (
-                    'Ask about this trip →'
+                    'Send'
                   )}
                 </button>
               </div>

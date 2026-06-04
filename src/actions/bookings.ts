@@ -1073,7 +1073,7 @@ export async function acceptOffer(bookingId: string): Promise<AcceptOfferResult>
           experienceTitle: (expRow as { title: string } | null)?.title ?? 'Your trip',
           bookingId,
           confirmedDates:  offeredDays,
-          bookingUrl:      `${baseUrl}/dashboard/bookings/${bookingId}`,
+          bookingUrl:      `${baseUrl}/dashboard`,
         })
       })().catch(err => console.error('[bookings/acceptOffer] Email error:', err))
     }
@@ -1154,7 +1154,7 @@ export async function declineOffer(
           experienceTitle: (expRow as { title: string } | null)?.title ?? 'Your trip',
           bookingId,
           declineReason,
-          bookingUrl:      `${baseUrl}/dashboard/bookings/${bookingId}`,
+          bookingUrl:      `${baseUrl}/dashboard`,
         })
       })().catch(err => console.error('[bookings/declineOffer] Email error:', err))
     }

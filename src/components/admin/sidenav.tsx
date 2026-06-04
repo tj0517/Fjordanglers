@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, Users, Map, MessageSquare, ClipboardList,
-  Anchor, Zap, Menu, X, ShieldCheck,
+  Anchor, Zap, Menu, X, ShieldCheck, BarChart2,
 } from 'lucide-react'
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
   { label: 'Inquiries',    href: '/admin/inquiries',   icon: <MessageSquare size={16} strokeWidth={1.6} /> },
   { label: 'Submissions',  href: '/admin/submissions', icon: <ClipboardList size={16} strokeWidth={1.6} /> },
   { label: 'Leads',        href: '/admin/leads',       icon: <Zap size={16} strokeWidth={1.6} /> },
+  { label: 'Ads',          href: '/admin/ads',         icon: <BarChart2 size={16} strokeWidth={1.6} /> },
 ]
 
 // ─── Component ────────────────────────────────────────────────────────────────

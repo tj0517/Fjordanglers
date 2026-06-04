@@ -11,7 +11,7 @@ export interface InquiryReceivedFaEmailProps {
   message: string | null
   selectedOption?: string | null
   inquiryId: string
-  dashboardUrl: string    // /dashboard/inquiries/[id]
+  dashboardUrl: string    // /admin/inquiries/[id]
 }
 
 export function InquiryReceivedFaEmail({

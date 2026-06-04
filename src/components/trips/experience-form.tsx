@@ -1955,15 +1955,7 @@ export default function ExperienceForm({
             {guideAccommodations.length === 0 ? (
               <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
                 No accommodations saved yet.{' '}
-                <a
-                  href="/dashboard/accommodations"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                  style={{ color: '#E67E50' }}
-                >
-                  Add in Accommodations →
-                </a>
+                <span style={{ color: 'rgba(10,46,77,0.35)' }}>Contact FA to add accommodations.</span>
               </p>
             ) : (
               <div className="flex flex-col gap-2">

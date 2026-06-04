@@ -1372,11 +1372,10 @@ export default function CalendarGrid({
                         inq.status === 'confirmed'      ? 'Confirmed'  :
                         inq.status === 'completed'      ? 'Completed'  : inq.status
                       return (
-                        <a
+                        <div
                           key={inq.id}
-                          href={`/dashboard/inquiries/${inq.id}`}
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-opacity hover:opacity-80"
-                          style={{ background: bgInq, border: bdrInq, textDecoration: 'none' }}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                          style={{ background: bgInq, border: bdrInq }}
                         >
                           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotInq }} />
                           <div className="min-w-0 flex-1">
@@ -1391,7 +1390,7 @@ export default function CalendarGrid({
                                 style={{ background: bgInq, color: dotInq, border: bdrInq }}>
                             {statusLabel}
                           </span>
-                        </a>
+                        </div>
                       )
                     })}
                   </div>

@@ -5,8 +5,8 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
-  LayoutDashboard, Inbox, Anchor, CalendarDays, MessageSquare,
-  Image as ImageIcon, BedDouble, User, Settings, Menu, X,
+  LayoutDashboard, CalendarDays, User,
+  Image as ImageIcon, Settings, Menu, X,
 } from 'lucide-react'
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
@@ -19,21 +19,16 @@ interface NavItem {
 }
 
 const mainItems: NavItem[] = [
-  { label: 'Overview',      href: '/dashboard',              icon: <LayoutDashboard size={16} strokeWidth={1.6} />, exact: true },
-  { label: 'Bookings',      href: '/dashboard/bookings',     icon: <Inbox size={16} strokeWidth={1.6} /> },
-  { label: 'Trips',         href: '/dashboard/trips',        icon: <Anchor size={16} strokeWidth={1.6} /> },
-  { label: 'Calendar',      href: '/dashboard/calendar',     icon: <CalendarDays size={16} strokeWidth={1.6} /> },
-  { label: 'Inquiries',     href: '/dashboard/inquiries',    icon: <MessageSquare size={16} strokeWidth={1.6} /> },
+  { label: 'Overview', href: '/dashboard',          icon: <LayoutDashboard size={16} strokeWidth={1.6} />, exact: true },
+  { label: 'Calendar', href: '/dashboard/calendar', icon: <CalendarDays size={16} strokeWidth={1.6} /> },
+  { label: 'Profile',  href: '/dashboard/profile',  icon: <User size={16} strokeWidth={1.6} /> },
+  { label: 'Photos',   href: '/dashboard/photos',   icon: <ImageIcon size={16} strokeWidth={1.6} /> },
 ]
 
-const contentItems: NavItem[] = [
-  { label: 'Photos',          href: '/dashboard/photos',         icon: <ImageIcon size={16} strokeWidth={1.6} /> },
-  { label: 'Accommodations',  href: '/dashboard/accommodations', icon: <BedDouble size={16} strokeWidth={1.6} /> },
-]
+const contentItems: NavItem[] = []
 
 const bottomItems: NavItem[] = [
-  { label: 'Profile',   href: '/dashboard/profile',  icon: <User size={16} strokeWidth={1.6} /> },
-  { label: 'Settings',  href: '/dashboard/account',  icon: <Settings size={16} strokeWidth={1.6} /> },
+  { label: 'Settings', href: '/dashboard/account', icon: <Settings size={16} strokeWidth={1.6} /> },
 ]
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -119,10 +114,6 @@ export function DashboardSidenav({ guideName, avatarUrl }: Props) {
       {/* Primary nav */}
       <nav className="flex-1 px-3 py-3 flex flex-col gap-0.5 overflow-y-auto">
         {mainItems.map(item => <NavLink key={item.href} item={item} />)}
-
-        <div style={{ height: 1, background: 'rgba(10,46,77,0.07)', margin: '8px 4px' }} />
-
-        {contentItems.map(item => <NavLink key={item.href} item={item} />)}
       </nav>
 
       {/* Bottom nav */}

@@ -1,13 +1,12 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { env } from '@/lib/env'
 import { stripe } from '@/lib/stripe/client'
 import { PasswordResetButton } from './AccountActions'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
-import { HideListingToggle } from './HideListingToggle'
 import { PayoutSettingsCard } from './PayoutSettingsCard'
 import { HelpWidget } from '@/components/ui/help-widget'
-import { Lock, Check } from 'lucide-react'
+import { Lock, Check, LogOut } from 'lucide-react'
+import { signOut } from '@/actions/auth'
 
 export const revalidate = 0
 
@@ -30,24 +29,11 @@ export default async function AccountPage({
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, pricing_model, country, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, accepted_payment_methods, photo_marketing_consent, is_hidden, created_at')
+    .select('id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, photo_marketing_consent')
     .eq('user_id', user.id)
     .single()
 
   if (guide == null) redirect('/dashboard')
-
-  // ── Commission rate — Founding Guide gets 8% for first 24 months ──────────
-  const FOUNDING_RATE    = 0.08
-  const STANDARD_RATE    = env.PLATFORM_COMMISSION_RATE
-  const monthsSinceJoin  = (Date.now() - new Date(guide.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
-  const isFoundingGuide  = monthsSinceJoin <= 24
-  const commissionRate   = guide.pricing_model === 'commission'
-    ? (isFoundingGuide ? FOUNDING_RATE : STANDARD_RATE)
-    : null
-
-  const commissionLabel  = commissionRate != null
-    ? `${Math.round(commissionRate * 100)}% per confirmed booking${isFoundingGuide ? ' (Founding Guide rate)' : ''}`
-    : '—'
 
   // ── Stripe account settings — payout schedule, currency, requirements ────
   let payoutScheduleLabel   = '—'
@@ -113,8 +99,6 @@ export default async function AccountPage({
     : hasStripeAccount
     ? { label: 'Under review',               dot: '#E67E50', glow: false }
     : { label: 'Not connected',              dot: 'rgba(10,46,77,0.2)', glow: false }
-
-  const isCommission = guide.pricing_model === 'commission'
 
   // Pre-format Stripe requirement labels so PayoutSettingsCard (Client Component) gets plain data
   const requirementLabels   = formatStripeRequirements(stripeCurrentlyDue)
@@ -228,56 +212,6 @@ export default async function AccountPage({
           </div>
         )}
 
-        {/* ── Plan ─────────────────────────────────────────────────────────── */}
-        <Card title="Your plan" help={
-          <HelpWidget title="Your plan" items={[
-            { icon: '💰', title: 'Commission', text: 'FjordAnglers charges a percentage of each confirmed booking total (excluding the 5% service fee). Founding Guides get a lower rate for 24 months.' },
-            { icon: '⭐', title: 'Founding Guide', text: 'Guides who joined within the first 24 months get an 8% commission rate instead of the standard 10%, locked for their first 24 months.' },
-            { icon: '✅', title: 'Account status', text: 'Active: your profile is live and visible to anglers. Pending: under review by FjordAnglers. Suspended: contact support.' },
-          ]} />
-        }>
-          <Row label="Plan">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>
-                {isCommission ? 'Bookable Plan' : 'Listing Plan'}
-              </span>
-              <span
-                className="text-[9px] font-bold uppercase tracking-[0.14em] px-2 py-0.5 rounded-full f-body"
-                style={{
-                  background: isCommission ? 'rgba(230,126,80,0.1)' : 'rgba(27,79,114,0.1)',
-                  color:      isCommission ? '#E67E50'              : '#1B4F72',
-                }}
-              >
-                {isCommission ? 'Full bookings' : 'Listing only'}
-              </span>
-            </div>
-          </Row>
-          <Row label="Commission rate">
-            <span className="text-sm f-body" style={{ color: '#0A2E4D' }}>
-              {commissionLabel}
-            </span>
-          </Row>
-          <Row label="Account status">
-            <span
-              className="text-xs font-bold uppercase tracking-[0.12em] px-2.5 py-1 rounded-full f-body"
-              style={{
-                background: (guide.status === 'active' || guide.status === 'verified')
-                  ? 'rgba(74,222,128,0.1)'
-                  : guide.status === 'pending'
-                  ? 'rgba(217,119,6,0.1)'
-                  : 'rgba(239,68,68,0.1)',
-                color: (guide.status === 'active' || guide.status === 'verified') ? '#16A34A'
-                     : guide.status === 'pending' ? '#B45309'
-                     : '#DC2626',
-              }}
-            >
-              {(guide.status === 'active' || guide.status === 'verified') ? 'Active'
-               : guide.status === 'pending' ? 'Pending review'
-               : 'Suspended'}
-            </span>
-          </Row>
-        </Card>
-
         {/* ── Photo & marketing consent ─────────────────────────────────────── */}
         <Card title="Photo & marketing consent" help={
           <HelpWidget title="Photo & marketing consent" items={[
@@ -295,23 +229,20 @@ export default async function AccountPage({
           <MarketingConsentToggle current={guide.photo_marketing_consent ?? false} />
         </Card>
 
-        {/* ── Listing visibility ────────────────────────────────────────────── */}
-        <Card title="Listing visibility" help={
-          <HelpWidget title="Listing visibility" items={[
-            { icon: '👁️', title: 'Visible', text: 'Your profile and trips appear in search results. Anglers can find and book you.' },
-            { icon: '🙈', title: 'Hidden', text: 'Your profile and all trips are removed from public listings. Existing bookings are not affected.' },
-            { icon: '🔄', title: 'Can be changed', text: 'Toggle visibility at any time from this page.' },
-          ]} />
-        }>
-          <div className="px-6 pt-4 pb-2">
-            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              Control whether your profile and trips appear in public listings and search results.
-            </p>
-          </div>
-          <HideListingToggle current={guide.is_hidden ?? true} />
-        </Card>
-
       </div>
+
+      {/* Logout */}
+      <form action={signOut} className="mt-6">
+        <button
+          type="submit"
+          className="flex items-center gap-2 text-sm f-body font-semibold px-4 py-2.5 rounded-xl transition-all"
+          style={{ color: 'rgba(10,46,77,0.4)', background: 'transparent' }}
+        >
+          <LogOut size={14} strokeWidth={1.6} />
+          Log out
+        </button>
+      </form>
+
     </div>
   )
 }

@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { X, FileText } from 'lucide-react'
-import { OfferBuilder } from '@/app/dashboard/inquiries/[id]/OfferBuilder'
+import { OfferBuilder } from './OfferBuilder'
 
 interface Props {
   inquiryId: string

@@ -207,7 +207,7 @@ export async function sendInquiryRequestEmails(
     labeledAnswers:     params.labeledAnswers,
     notes:              params.notes,
     durationPreference: params.durationPreference ?? null,
-    inquiryUrl:         `${baseUrl}/dashboard/bookings/${params.inquiryId}`,
+    inquiryUrl:         `${baseUrl}/admin/inquiries/${params.inquiryId}`,
   }
 
   const anglerProps: InquiryRequestAnglerEmailProps = {
