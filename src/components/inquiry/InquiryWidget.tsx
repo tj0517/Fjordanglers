@@ -218,12 +218,9 @@ function InquiryModal({
   const [firstName,    setFirstName]    = useState('')
   const [lastName,     setLastName]     = useState('')
   const [email,        setEmail]        = useState('')
-  const [country,      setCountry]      = useState('')
   const [partySize,    setPartySize]    = useState(1)
   const [message,      setMessage]      = useState('')
   const [phone,        setPhone]        = useState('')
-
-  const [attribution, setAttribution] = useState('')
 
   const [submitState,  setSubmitState]  = useState<SubmitState>('idle')
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null)
@@ -283,12 +280,10 @@ function InquiryModal({
           ...(tripId ? { trip_id: tripId } : { experience_page_id: experiencePageId }),
           angler_name:     `${firstName.trim()} ${lastName.trim()}`,
           angler_email:    email.trim(),
-          angler_country:  country.trim(),
           requested_dates: selectedDates,
           party_size:      partySize,
           message:         message.trim() || null,
           selected_option: selectedOptionLabel ?? null,
-          attribution:     attribution.trim() || null,
           angler_phone:    phone.trim() || null,
         }),
       })
@@ -307,7 +302,7 @@ function InquiryModal({
         err instanceof Error ? err.message : 'Something went wrong — please try again.',
       )
     }
-  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, country, selectedDates, partySize, message, phone, selectedOptionLabel])
+  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, message, phone, selectedOptionLabel])
 
   return (
     /* Backdrop */
@@ -554,17 +549,6 @@ function InquiryModal({
                         autoComplete="tel" />
                     </div>
 
-                    {/* Country */}
-                    <div className="mb-3">
-                      <label className={labelCls}>Country</label>
-                      <input type="text" value={country}
-                        onChange={e => setCountry(e.target.value)}
-                        placeholder="Germany"
-                        className={inputCls}
-                        style={inputStyle}
-                        autoComplete="country-name" />
-                    </div>
-
                     {/* Party size */}
                     <div className="mb-3">
                       <label className={labelCls}>Anglers</label>
@@ -603,29 +587,6 @@ function InquiryModal({
                         className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
                         style={inputStyle}
                       />
-                    </div>
-
-                    {/* Attribution */}
-                    <div className="mb-4">
-                      <p className="text-[11px] f-body mb-2" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                        How did you hear about us? <span style={{ color: 'rgba(10,46,77,0.25)' }}>(optional)</span>
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(['Instagram', 'Google', 'Friend', 'Already knew the guide', 'Other'] as const).map(opt => (
-                          <button
-                            key={opt}
-                            type="button"
-                            onClick={() => setAttribution(a => a === opt ? '' : opt)}
-                            className="px-3 py-1.5 rounded-full text-xs f-body font-medium transition-all"
-                            style={attribution === opt
-                              ? { background: 'rgba(10,46,77,0.1)', color: '#0A2E4D', border: '1.5px solid rgba(10,46,77,0.22)' }
-                              : { background: 'transparent', color: 'rgba(10,46,77,0.38)', border: '1px solid rgba(10,46,77,0.12)' }
-                            }
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
                     </div>
 
                     {/* WhatsApp CTA */}
