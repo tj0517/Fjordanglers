@@ -4,7 +4,6 @@ import { EmailLayout, h1, text, textSmall, button, ctaSection, summaryBox, label
 export interface InquiryReceivedFaEmailProps {
   anglerName: string
   anglerEmail: string
-  anglerCountry: string
   tripTitle: string
   requestedDates: string[]   // YYYY-MM-DD[]
   partySize: number
@@ -17,7 +16,6 @@ export interface InquiryReceivedFaEmailProps {
 export function InquiryReceivedFaEmail({
   anglerName,
   anglerEmail,
-  anglerCountry,
   tripTitle,
   requestedDates,
   partySize,
@@ -40,7 +38,6 @@ export function InquiryReceivedFaEmail({
         <tbody>
           <DetailRows rows={[
             { label: 'Angler',          value: `${anglerName} (${anglerEmail})` },
-            { label: 'Country',         value: anglerCountry },
             { label: 'Trip',            value: tripTitle },
             { label: 'Requested dates', value: fmtDates(requestedDates) },
             { label: 'Party size',      value: `${partySize} ${partySize === 1 ? 'angler' : 'anglers'}` },

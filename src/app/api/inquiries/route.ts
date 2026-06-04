@@ -33,7 +33,6 @@ const InquirySchema = z.object({
 
   angler_name:     z.string().min(1).max(100).transform(s => s.trim()),
   angler_email:    z.string().email(),
-  angler_country:  z.string().max(80).transform(s => s.trim()),
   requested_dates: z
     .array(z.string().regex(dateRegex, 'Each date must be YYYY-MM-DD'))
     .min(1, 'At least one date is required')
@@ -42,7 +41,6 @@ const InquirySchema = z.object({
   message:         z.string().max(2000).optional().nullable(),
   selected_option: z.string().max(200).optional().nullable(),
   angler_phone:    z.string().max(30).optional().nullable(),
-  attribution:     z.string().max(100).optional().nullable(),
 }).refine(
   d => d.trip_id != null || d.experience_page_id != null,
   { message: 'Either trip_id or experience_page_id is required' },
@@ -108,15 +106,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Insert inquiry
   // Cast needed until generated types catch up with the migration that makes
   // trip_id nullable and adds experience_page_id.
-  const { data: inquiry, error: dbError } = await svc
-    .from('inquiries')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry, error: dbError } = await (svc.from('inquiries') as any)
     .insert({
-      trip_id:            (parsed.data.trip_id ?? null) as unknown as string,
+      trip_id:            parsed.data.trip_id ?? null,
       experience_page_id: parsed.data.experience_page_id ?? null,
       guide_id:           guideId,
       angler_name:        parsed.data.angler_name,
       angler_email:       parsed.data.angler_email,
-      angler_country:     parsed.data.angler_country || 'Unknown',
       requested_dates:    sortedDates,
       party_size:         parsed.data.party_size,
       message:            parsed.data.message ?? null,
@@ -141,7 +138,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       to:             env.FA_EMAIL ?? 'contact@fjordanglers.com',
       anglerName:     parsed.data.angler_name,
       anglerEmail:    parsed.data.angler_email,
-      anglerCountry:  parsed.data.angler_country || 'Unknown',
       tripTitle,
       requestedDates: sortedDates,
       partySize:      parsed.data.party_size,
