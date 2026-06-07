@@ -112,6 +112,58 @@ export interface OfferPageData {
   locationGeoJson: object | null
 }
 
+// ─── createManualInquiry ──────────────────────────────────────────────────────
+
+/**
+ * FA creates an inquiry manually — for leads that came via Instagram, WhatsApp,
+ * email, or any channel outside the website form.
+ */
+export async function createManualInquiry(params: {
+  anglerName:     string
+  anglerEmail:    string
+  partySize:      number
+  tripId:         string | null
+  requestedDates: string[]
+  message:        string | null
+  source:         string | null
+  status:         string
+}): Promise<ActionResult & { inquiryId?: string }> {
+  if (params.anglerName.trim() === '') return { success: false, error: 'Name is required' }
+  if (params.anglerEmail.trim() === '') return { success: false, error: 'Email is required' }
+  if (params.partySize < 1) return { success: false, error: 'Party size must be at least 1' }
+
+  const svc = createServiceClient()
+
+  const row: Record<string, unknown> = {
+    angler_name:     params.anglerName.trim(),
+    angler_email:    params.anglerEmail.trim().toLowerCase(),
+    party_size:      params.partySize,
+    status:          params.status,
+    requested_dates: params.requestedDates,
+  }
+  if (params.tripId != null && params.tripId !== '') row.trip_id = params.tripId
+  if (params.message != null && params.message.trim() !== '') row.message = params.message.trim()
+  // Store source in internal_notes so it's visible in the deal tracker
+  if (params.source != null && params.source.trim() !== '') {
+    row.internal_notes = `Source: ${params.source.trim()}`
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (svc as any)
+    .from('inquiries')
+    .insert(row)
+    .select('id')
+    .single()
+
+  if (error != null) {
+    console.error('[createManualInquiry] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  console.log(`[createManualInquiry] Created inquiry ${data.id} for ${params.anglerName} (source: ${params.source ?? 'manual'})`)
+  return { success: true, inquiryId: data.id }
+}
+
 // ─── sendDepositLink ──────────────────────────────────────────────────────────
 
 /**
@@ -569,6 +621,71 @@ export async function saveOffer(
     locationZoom:   10,
     locationGeoJson: null,
   })
+}
+
+// ─── updateInquiryStatus ──────────────────────────────────────────────────────
+
+/**
+ * Manually update an inquiry's status.
+ * Used by FA from the admin panel — communication with angler happens via
+ * external email, so the status must be manually kept in sync.
+ *
+ * When marking as 'lost', optionally supply a reason (stored in lost_reason).
+ * All other status transitions clear lost_reason.
+ */
+export async function updateInquiryStatus(
+  inquiryId: string,
+  status: string,
+  lostReason?: string | null,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const update: Record<string, any> = { status }
+  if (status === 'lost') {
+    update.lost_reason = lostReason?.trim() || null
+  } else {
+    update.lost_reason = null
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update(update)
+    .eq('id', inquiryId)
+
+  if (error != null) return { success: false, error: error.message }
+  console.log(`[updateInquiryStatus] Inquiry ${inquiryId} → ${status}`)
+  return { success: true }
+}
+
+// ─── saveInternalDeal ─────────────────────────────────────────────────────────
+
+/**
+ * Save deal amounts for FA's internal tracking — no email sent to angler.
+ * Used to track the agreed deal total and FA's commission for stats/reporting.
+ */
+export async function saveInternalDeal(
+  inquiryId: string,
+  params: {
+    dealTotalEur:  number | null
+    commissionEur: number | null
+    internalNotes: string | null
+  },
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({
+      internal_deal_total_eur: params.dealTotalEur,
+      internal_commission_eur: params.commissionEur,
+      internal_notes:          params.internalNotes,
+    })
+    .eq('id', inquiryId)
+
+  if (error != null) return { success: false, error: error.message }
+  console.log(`[saveInternalDeal] Inquiry ${inquiryId} — total €${params.dealTotalEur}, commission €${params.commissionEur}`)
+  return { success: true }
 }
 
 // ─── sendMessageToAngler ──────────────────────────────────────────────────────

@@ -12,16 +12,16 @@ interface SummaryMetrics {
   totalSpend: number
   cpc: number | null
   ctr: number | null
+  cpa: number | null
   totalClicks: number
   totalImpressions: number
   totalConversions: number
 }
 
-function computeMetrics(rows: AdCampaignRow[]): SummaryMetrics {
+function computeMetrics(rows: AdCampaignRow[], totalConversions = 0): SummaryMetrics {
   const totalSpend       = rows.reduce((s, r) => s + r.spend, 0)
   const totalClicks      = rows.reduce((s, r) => s + r.clicks, 0)
   const totalImpressions = rows.reduce((s, r) => s + r.impressions, 0)
-  const totalConversions = rows.reduce((s, r) => s + (r.conversions ?? 0), 0)
   // Use stored avg_cpc if present, otherwise derive from spend/clicks
   const weightedCpc      = rows.reduce((s, r) => {
     const cpc = r.avg_cpc > 0 ? r.avg_cpc : (r.clicks > 0 ? r.spend / r.clicks : 0)
@@ -32,6 +32,7 @@ function computeMetrics(rows: AdCampaignRow[]): SummaryMetrics {
     totalSpend,
     cpc:              totalClicks > 0 ? weightedCpc / totalClicks : null,
     ctr:              totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null,
+    cpa:              totalConversions > 0 ? totalSpend / totalConversions : null,
     totalClicks,
     totalImpressions,
     totalConversions,
@@ -48,11 +49,6 @@ export default async function AdsPage({
   const { date_from, date_to, platforms } = await searchParams
   const supabase = createServiceClient()
 
-  // Current month bounds for summary cards
-  const now        = new Date()
-  const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
-  const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
-
   const buildTableQuery = () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase.from as any)('ad_campaigns').select('*')
@@ -66,17 +62,10 @@ export default async function AdsPage({
   }
 
   const [
-    { data: summaryData },
     { data: tableData },
     { data: campaignDefsData },
+    { data: inquiryDates },
   ] = await Promise.all([
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('ad_campaigns')
-      .select('*')
-      .gte('date', monthStart)
-      .lte('date', monthEnd)
-      .order('date', { ascending: false }),
-
     buildTableQuery(),
 
     // Campaign definitions from DB
@@ -85,14 +74,32 @@ export default async function AdsPage({
       .select('*')
       .eq('active', true)
       .order('sort_order', { ascending: true }),
+
+    // Conversions = inquiries, keyed by date (YYYY-MM-DD)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from as any)('inquiries').select('created_at'),
   ])
 
-  const summaryRows  = (summaryData      ?? []) as AdCampaignRow[]
+  // Build date → count map for all inquiries
+  const inquiriesByDate: Record<string, number> = {}
+  for (const row of (inquiryDates ?? []) as { created_at: string }[]) {
+    const d = row.created_at.slice(0, 10)
+    inquiriesByDate[d] = (inquiriesByDate[d] ?? 0) + 1
+  }
+
   const tableRows    = (tableData        ?? []) as AdCampaignRow[]
   const campaignDefs = (campaignDefsData ?? []) as CampaignDefRow[]
-  const metrics      = computeMetrics(summaryRows)
 
-  const monthLabel = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  // Conversions scoped to the same date range as the table
+  const periodConversions = Object.entries(inquiriesByDate)
+    .filter(([d]) => (!date_from || d >= date_from) && (!date_to || d <= date_to))
+    .reduce((s, [, c]) => s + c, 0)
+  const metrics = computeMetrics(tableRows, periodConversions)
+
+  // Period label for subtitle
+  const periodLabel = date_from || date_to
+    ? [date_from, date_to].filter(Boolean).join(' → ')
+    : 'All time'
 
   return (
     <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1400px]">
@@ -106,12 +113,12 @@ export default async function AdsPage({
           Ads <span style={{ fontStyle: 'italic' }}>Analytics</span>
         </h1>
         <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
-          Summary cards · {monthLabel} &nbsp;·&nbsp; Conversions = inquiries received · Table reflects applied filters
+          Summary cards · {periodLabel} &nbsp;·&nbsp; Conversions = inquiries received
         </p>
       </div>
 
       {/* ─── Summary cards ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
         <MetricCard
           label="Total Spend"
           value={`${metrics.totalSpend.toLocaleString('pl', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`}
@@ -135,7 +142,12 @@ export default async function AdsPage({
         <MetricCard
           label="Conversions"
           value={metrics.totalConversions.toLocaleString('en')}
-          sub="inquiries this month"
+          sub="inquiries in period"
+        />
+        <MetricCard
+          label="Cost / Conv."
+          value={metrics.cpa != null ? `${metrics.cpa.toFixed(2)} zł` : '—'}
+          sub="spend ÷ inquiries"
         />
       </div>
 
@@ -145,6 +157,7 @@ export default async function AdsPage({
         dateFrom={date_from ?? ''}
         dateTo={date_to ?? ''}
         platforms={platforms ?? ''}
+        inquiriesByDate={inquiriesByDate}
         campaignDefs={campaignDefs}
       />
 

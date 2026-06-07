@@ -89,14 +89,18 @@ function InlineMultiCalendar({
   selectedDates,
   blockedSet,
   onToggle,
+  initialViewYear,
+  initialViewMonth,
 }: {
-  selectedDates: string[]
-  blockedSet:    Set<string>
-  onToggle:      (date: string) => void
+  selectedDates:     string[]
+  blockedSet:        Set<string>
+  onToggle:          (date: string) => void
+  initialViewYear?:  number
+  initialViewMonth?: number  // 0-indexed JS month
 }) {
   const today = isoToday()
-  const [viewYear,  setViewYear]  = useState(() => new Date().getFullYear())
-  const [viewMonth, setViewMonth] = useState(() => new Date().getMonth())
+  const [viewYear,  setViewYear]  = useState(() => initialViewYear  ?? new Date().getFullYear())
+  const [viewMonth, setViewMonth] = useState(() => initialViewMonth ?? new Date().getMonth())
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11) }
@@ -202,6 +206,8 @@ function InquiryModal({
   maxGuests,
   blockedRanges,
   selectedOptionLabel,
+  initialViewYear,
+  initialViewMonth,
   onClose,
 }: {
   tripId?:              string
@@ -210,6 +216,8 @@ function InquiryModal({
   maxGuests:            number
   blockedRanges:        Array<{ date_start: string; date_end: string }>
   selectedOptionLabel?: string | null
+  initialViewYear?:     number
+  initialViewMonth?:    number
   onClose:              () => void
 }) {
   const [step,          setStep]          = useState<Step>('calendar')
@@ -395,6 +403,8 @@ function InquiryModal({
                     selectedDates={selectedDates}
                     blockedSet={blockedSet}
                     onToggle={toggleDate}
+                    initialViewYear={initialViewYear}
+                    initialViewMonth={initialViewMonth}
                   />
 
                   {/* Selected date chips */}
@@ -660,21 +670,33 @@ export function InquiryWidget({
   blockedRanges        = [],
   selectedOptionLabel,
 }: InquiryWidgetProps) {
-  const [isOpen,   setIsOpen]   = useState(false)
-  const [mounted,  setMounted]  = useState(false)
+  const [isOpen,      setIsOpen]      = useState(false)
+  const [mounted,     setMounted]     = useState(false)
+  const [initialMonth, setInitialMonth] = useState<{ year: number; month0: number } | null>(null)
 
   // Needed for createPortal (SSR-safe)
   useEffect(() => { setMounted(true) }, [])
 
-  // Listen for 'open-inquiry-modal' dispatched by MobileInquiryBar
+  // Listen for 'open-inquiry-modal' dispatched by MobileInquiryBar or SeasonCalendarGrid
   useEffect(() => {
-    const handle = () => setIsOpen(true)
+    const handle = (e: Event) => {
+      const month1 = (e as CustomEvent<{ month?: number }>).detail?.month
+      if (month1 != null) {
+        const now    = new Date()
+        const month0 = month1 - 1
+        const year   = month0 >= now.getMonth() ? now.getFullYear() : now.getFullYear() + 1
+        setInitialMonth({ year, month0 })
+      } else {
+        setInitialMonth(null)
+      }
+      setIsOpen(true)
+    }
     window.addEventListener('open-inquiry-modal', handle)
     return () => window.removeEventListener('open-inquiry-modal', handle)
   }, [])
 
-  const openModal  = useCallback(() => setIsOpen(true),  [])
-  const closeModal = useCallback(() => setIsOpen(false), [])
+  const openModal  = useCallback(() => { setInitialMonth(null); setIsOpen(true) }, [])
+  const closeModal = useCallback(() => { setIsOpen(false); setInitialMonth(null) }, [])
 
   return (
     <>
@@ -796,6 +818,8 @@ export function InquiryWidget({
           maxGuests={maxGuests}
           blockedRanges={blockedRanges}
           selectedOptionLabel={selectedOptionLabel}
+          initialViewYear={initialMonth?.year}
+          initialViewMonth={initialMonth?.month0}
           onClose={closeModal}
         />,
         document.body,

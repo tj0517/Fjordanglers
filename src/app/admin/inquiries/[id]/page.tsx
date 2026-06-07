@@ -26,6 +26,8 @@ import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { OfferBuilderModal } from './OfferBuilderModal'
 import { MessageComposer } from './MessageComposer'
+import { StatusChanger } from './StatusChanger'
+import { InternalDealTracker } from './InternalDealTracker'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -33,18 +35,22 @@ export const metadata = { title: 'Inquiry Detail — Admin' }
 
 const STATUS_LABEL: Record<string, string> = {
   pending_fa_review: 'Pending review',
+  in_negotiation:    'Negotiating',
   deposit_sent:      'Deposit sent',
   deposit_paid:      'Confirmed',
   completed:         'Completed',
+  lost:              'Lost',
   cancelled:         'Cancelled',
 }
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  pending_fa_review: { color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)' },
-  deposit_sent:      { color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)' },
-  deposit_paid:      { color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)' },
+  pending_fa_review: { color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'  },
+  in_negotiation:    { color: '#5B21B6', bg: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)' },
+  deposit_sent:      { color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'  },
+  deposit_paid:      { color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'  },
   completed:         { color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)' },
-  cancelled:         { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)' },
+  lost:              { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
+  cancelled:         { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -104,12 +110,16 @@ export default async function AdminInquiryDetailPage({
 
   if (rawInquiry == null) notFound()
 
-  // Cast to include offer fields from migration
+  // Cast to include fields from migrations
   const inquiry = rawInquiry as typeof rawInquiry & {
-    offer_total_eur:   number | null
-    offer_deposit_eur: number | null
-    offer_notes:       string | null
-    offer_sent_at:     string | null
+    offer_total_eur:         number | null
+    offer_deposit_eur:       number | null
+    offer_notes:             string | null
+    offer_sent_at:           string | null
+    internal_deal_total_eur: number | null
+    internal_commission_eur: number | null
+    internal_notes:          string | null
+    lost_reason:             string | null
   }
 
   // ── Fetch messages (graceful if table doesn't exist yet) ───────────────────
@@ -398,6 +408,44 @@ export default async function AdminInquiryDetailPage({
             </div>
           )}
 
+          {/* Internal deal summary (if tracked) */}
+          {inquiry.internal_deal_total_eur != null && (
+            <div className="px-4 py-3 rounded-xl"
+              style={{ background: 'rgba(230,126,80,0.05)', border: '1px solid rgba(230,126,80,0.12)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body mb-1.5"
+                style={{ color: 'rgba(10,46,77,0.38)' }}>Internal deal</p>
+              <div className="flex flex-wrap gap-x-6 gap-y-0.5">
+                <span className="text-xs f-body" style={{ color: '#0A2E4D' }}>
+                  Total: <strong>€{Number(inquiry.internal_deal_total_eur).toFixed(2)}</strong>
+                </span>
+                {inquiry.internal_commission_eur != null && (
+                  <span className="text-xs f-body" style={{ color: '#0A2E4D' }}>
+                    Commission: <strong style={{ color: '#E67E50' }}>€{Number(inquiry.internal_commission_eur).toFixed(2)}</strong>
+                    {' '}
+                    <span style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      ({((Number(inquiry.internal_commission_eur) / Number(inquiry.internal_deal_total_eur)) * 100).toFixed(1)}%)
+                    </span>
+                  </span>
+                )}
+              </div>
+              {inquiry.internal_notes != null && inquiry.internal_notes.trim() !== '' && (
+                <p className="text-[11px] f-body italic mt-1.5" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                  {inquiry.internal_notes}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Lost reason (if set) */}
+          {inquiry.status === 'lost' && inquiry.lost_reason != null && inquiry.lost_reason.trim() !== '' && (
+            <div className="px-4 py-3 rounded-xl"
+              style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.18)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body mb-1"
+                style={{ color: 'rgba(153,27,27,0.6)' }}>Lost reason</p>
+              <p className="text-sm f-body" style={{ color: '#374151' }}>{inquiry.lost_reason}</p>
+            </div>
+          )}
+
           {/* Metadata footer */}
           <div className="px-4 py-3 rounded-xl"
             style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}>
@@ -410,11 +458,14 @@ export default async function AdminInquiryDetailPage({
         {/* ── Right: action buttons ─────────────────── */}
         <div className="lg:sticky lg:top-6 space-y-3">
 
-          {/* Status card */}
+          {/* Status changer — manual */}
+          <StatusChanger inquiryId={inquiry.id} currentStatus={inquiry.status} />
+
+          {/* Offer builder card */}
           <div className="rounded-[20px] px-5 py-4"
             style={{ background: '#0A2E4D', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(10,46,77,0.2)' }}>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1"
-              style={{ color: 'rgba(255,255,255,0.3)' }}>Actions</p>
+              style={{ color: 'rgba(255,255,255,0.3)' }}>Offer & Deposit</p>
             <p className="text-sm font-semibold f-body mb-4" style={{ color: 'rgba(255,255,255,0.7)' }}>
               {inquiry.angler_name} · {inquiry.party_size} {inquiry.party_size === 1 ? 'person' : 'people'}
             </p>
@@ -439,9 +490,11 @@ export default async function AdminInquiryDetailPage({
                 <p className="text-sm f-body" style={{
                   color: inquiry.status === 'deposit_paid' ? '#6EE7B7' : 'rgba(255,255,255,0.5)',
                 }}>
-                  {inquiry.status === 'deposit_paid' && '✅ Deposit received — booking confirmed'}
-                  {inquiry.status === 'completed'    && '✅ Trip completed'}
-                  {inquiry.status === 'cancelled'    && '❌ Inquiry cancelled'}
+                  {inquiry.status === 'deposit_paid'  && '✅ Deposit received — booking confirmed'}
+                  {inquiry.status === 'completed'     && '✅ Trip completed'}
+                  {inquiry.status === 'cancelled'     && '❌ Inquiry cancelled'}
+                  {inquiry.status === 'lost'          && '❌ Deal lost'}
+                  {inquiry.status === 'in_negotiation' && '💬 In negotiation'}
                 </p>
               </div>
             )}
@@ -461,6 +514,14 @@ export default async function AdminInquiryDetailPage({
               <MessageComposer inquiryId={inquiry.id} />
             </div>
           </div>
+
+          {/* Internal deal tracker — no email */}
+          <InternalDealTracker
+            inquiryId={inquiry.id}
+            initialTotal={inquiry.internal_deal_total_eur}
+            initialCommission={inquiry.internal_commission_eur}
+            initialNotes={inquiry.internal_notes}
+          />
 
         </div>
 

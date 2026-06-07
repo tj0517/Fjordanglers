@@ -35,8 +35,8 @@ const InquirySchema = z.object({
   angler_email:    z.string().email(),
   requested_dates: z
     .array(z.string().regex(dateRegex, 'Each date must be YYYY-MM-DD'))
-    .min(1, 'At least one date is required')
-    .max(30),
+    .max(30)
+    .default([]),
   party_size:      z.number().int().min(1).max(20),
   message:         z.string().max(2000).optional().nullable(),
   selected_option: z.string().max(200).optional().nullable(),

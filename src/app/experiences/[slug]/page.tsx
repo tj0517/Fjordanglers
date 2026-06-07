@@ -658,7 +658,7 @@ export default async function ExperiencePublicPage({
                         {fish.season_months.length > 0 && (
                           <div className="mt-5">
                             <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
-                            <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
+                            <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} clickable />
                           </div>
                         )}
                       </div>
@@ -759,7 +759,7 @@ export default async function ExperiencePublicPage({
                 )}
                 {seasonMonths.length > 0 && (
                   <div className="mb-4">
-                    <SeasonCalendarGrid seasonMonths={seasonMonths} peakMonths={peakMonths} />
+                    <SeasonCalendarGrid seasonMonths={seasonMonths} peakMonths={peakMonths} clickable />
                   </div>
                 )}
                 {page.best_months && (
@@ -1029,7 +1029,7 @@ export default async function ExperiencePublicPage({
                         {fish.season_months.length > 0 && (
                           <div className="mt-5">
                             <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
-                            <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
+                            <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} clickable />
                           </div>
                         )}
                       </div>
@@ -1067,7 +1067,7 @@ export default async function ExperiencePublicPage({
                 )}
                 {seasonMonths.length > 0 && (
                   <div className="mb-4">
-                    <SeasonCalendarGrid seasonMonths={seasonMonths} peakMonths={peakMonths} />
+                    <SeasonCalendarGrid seasonMonths={seasonMonths} peakMonths={peakMonths} clickable />
                   </div>
                 )}
                 {page.best_months && (

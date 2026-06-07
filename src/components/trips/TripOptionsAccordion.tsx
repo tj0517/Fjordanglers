@@ -140,7 +140,7 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
                   {fish.season_months.length > 0 && (
                     <div className="mt-4">
                       <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>Season</p>
-                      <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} />
+                      <SeasonCalendarGrid seasonMonths={fish.season_months} peakMonths={fish.peak_months} clickable />
                     </div>
                   )}
                 </div>
@@ -156,7 +156,7 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
         <section>
           <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
           <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>Season</p>
-          <SeasonCalendarGrid seasonMonths={option.season_months} peakMonths={option.peak_months} />
+          <SeasonCalendarGrid seasonMonths={option.season_months} peakMonths={option.peak_months} clickable />
         </section>
       )}
 

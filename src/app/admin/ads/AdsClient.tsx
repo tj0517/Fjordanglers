@@ -70,7 +70,7 @@ function enrich(rows: AdCampaignRow[], inquiriesByDate: Record<string, number>):
   return rows.map(r => ({
     ...r,
     ctr:         r.impressions > 0 ? (r.clicks / r.impressions) * 100 : null,
-    conversions: inquiriesByDate[r.date] ?? r.conversions ?? 0,
+    conversions: inquiriesByDate[r.date] ?? 0,
   }))
 }
 
@@ -281,7 +281,7 @@ export function AdsClient({
       const avg_cpc     = parseFloat(f?.avg_cpc     ?? '') || 0
       // Include if any field is filled
       if (spend > 0 || impressions > 0 || clicks > 0 || avg_cpc > 0) {
-        toSave.push({ date, platform: campaign.platform, campaign_name: campaign.key, spend, impressions, clicks, avg_cpc, conversions: 0 })
+        toSave.push({ date, platform: campaign.platform, campaign_name: campaign.key, spend, impressions, clicks, avg_cpc })
       }
     }
 

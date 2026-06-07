@@ -15,7 +15,6 @@ export interface AdCampaignRow {
   impressions: number
   clicks: number
   avg_cpc: number
-  conversions: number
 }
 
 export interface AdCampaignInsert {
@@ -26,7 +25,6 @@ export interface AdCampaignInsert {
   impressions: number
   clicks: number
   avg_cpc: number
-  conversions: number
 }
 
 export interface CampaignDefRow {

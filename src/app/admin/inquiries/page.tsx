@@ -15,11 +15,13 @@ export const metadata = {
 // ─── Status style map ─────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pending_fa_review: { label: 'Pending review', color: '#92400E', bg: 'rgba(251,191,36,0.15)', border: '1px solid rgba(251,191,36,0.4)' },
-  deposit_sent:      { label: 'Deposit sent',   color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)' },
-  deposit_paid:      { label: 'Confirmed',       color: '#065F46', bg: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)' },
-  completed:         { label: 'Completed',       color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)' },
-  cancelled:         { label: 'Cancelled',       color: '#991B1B', bg: 'rgba(239,68,68,0.10)',  border: '1px solid rgba(239,68,68,0.25)' },
+  pending_fa_review: { label: 'Pending',       color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'  },
+  in_negotiation:    { label: 'Negotiating',   color: '#5B21B6', bg: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)' },
+  deposit_sent:      { label: 'Deposit Sent',  color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'  },
+  deposit_paid:      { label: 'Confirmed',     color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'  },
+  completed:         { label: 'Completed',     color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)' },
+  lost:              { label: 'Lost',          color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
+  cancelled:         { label: 'Cancelled',     color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
 }
 
 function fmtDate(iso: string): string {
@@ -40,41 +42,59 @@ export default async function AdminInquiriesPage({
 
   const svc = createServiceClient()
 
-  let query = svc
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (svc as any)
     .from('inquiries')
-    .select('id, status, angler_name, angler_email, angler_country, requested_dates, party_size, deposit_amount, created_at, trip_id')
+    .select('id, status, angler_name, angler_email, angler_country, requested_dates, party_size, deposit_amount, created_at, trip_id, internal_commission_eur, lost_reason')
     .order('created_at', { ascending: false })
 
   if (filter !== 'all') {
     query = query.eq('status', filter)
   }
 
-  const { data: inquiries } = await query
+  const { data: rawInquiries } = await query
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows = (rawInquiries ?? []) as any[]
 
   // Fetch trip titles
-  const tripIds = [...new Set((inquiries ?? []).map(i => i.trip_id).filter(Boolean))]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tripIds = [...new Set(rows.map((i: any) => i.trip_id as string).filter(Boolean))]
   const { data: trips } = tripIds.length > 0
     ? await svc.from('experiences').select('id, title').in('id', tripIds)
     : { data: [] as Array<{ id: string; title: string }> }
 
   const tripMap = new Map((trips ?? []).map(t => [t.id, t.title]))
 
-  const rows = inquiries ?? []
-
   const counts = {
-    all:               rows.length === 0 && filter !== 'all' ? '—' : rows.length,
+    all:               rows.length,
     pending_fa_review: rows.filter(r => r.status === 'pending_fa_review').length,
+    in_negotiation:    rows.filter(r => r.status === 'in_negotiation').length,
     deposit_sent:      rows.filter(r => r.status === 'deposit_sent').length,
     deposit_paid:      rows.filter(r => r.status === 'deposit_paid').length,
-    cancelled:         rows.filter(r => r.status === 'cancelled').length,
+    completed:         rows.filter(r => r.status === 'completed').length,
+    lost:              rows.filter(r => r.status === 'lost').length,
   }
+
+  // Total commission from deals with internal tracking
+  const totalCommission = rows.reduce((sum: number, r) => {
+    const c = r.internal_commission_eur != null ? Number(r.internal_commission_eur) : 0
+    return sum + (Number.isFinite(c) ? c : 0)
+  }, 0)
+
+  // Won = deposit_paid + completed
+  const wonCount  = counts.deposit_paid + counts.completed
+  const totalDeals = rows.filter(r => !['pending_fa_review', 'in_negotiation', 'deposit_sent'].includes(r.status)).length
+  const conversionPct = totalDeals > 0 ? Math.round((wonCount / totalDeals) * 100) : null
 
   const tabs = [
     { key: 'all',               label: 'All' },
     { key: 'pending_fa_review', label: 'Pending' },
+    { key: 'in_negotiation',    label: 'Negotiating' },
     { key: 'deposit_sent',      label: 'Deposit Sent' },
     { key: 'deposit_paid',      label: 'Confirmed' },
-    { key: 'cancelled',         label: 'Cancelled' },
+    { key: 'completed',         label: 'Completed' },
+    { key: 'lost',              label: 'Lost' },
   ]
 
   return (
@@ -92,15 +112,23 @@ export default async function AdminInquiriesPage({
             Review incoming inquiries and send deposit links to anglers.
           </p>
         </div>
+        <Link
+          href="/admin/inquiries/new"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-[14px] text-sm font-bold f-body flex-shrink-0 transition-all hover:opacity-90"
+          style={{ background: '#0A2E4D', color: '#FFFFFF', boxShadow: '0 4px 16px rgba(10,46,77,0.2)' }}
+        >
+          <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+          New inquiry
+        </Link>
       </div>
 
       {/* ─── Stats row ───────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {([
-          { label: 'Pending',       value: counts.pending_fa_review, color: '#92400E' },
-          { label: 'Deposit Sent',  value: counts.deposit_sent,      color: '#1E40AF' },
-          { label: 'Confirmed',     value: counts.deposit_paid,       color: '#065F46' },
-          { label: 'Cancelled',     value: counts.cancelled,          color: '#6B7280' },
+          { label: 'Pending',       value: counts.pending_fa_review,                  color: '#92400E' },
+          { label: 'Negotiating',   value: counts.in_negotiation,                     color: '#5B21B6' },
+          { label: 'Won',           value: wonCount,                                   color: '#065F46' },
+          { label: 'Lost',          value: counts.lost,                                color: '#991B1B' },
         ] as const).map(s => (
           <div key={s.label}
             className="px-4 py-3 rounded-[16px]"
@@ -110,6 +138,34 @@ export default async function AdminInquiriesPage({
             <p className="text-2xl font-bold f-display" style={{ color: s.color }}>{s.value}</p>
           </div>
         ))}
+      </div>
+
+      {/* ─── Commission + conversion row ─────────────────── */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        {totalCommission > 0 && (
+          <div className="px-4 py-3 rounded-[16px] flex items-center gap-3"
+            style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.2)' }}>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.16em] f-body"
+                style={{ color: 'rgba(10,46,77,0.45)' }}>Commission tracked</p>
+              <p className="text-xl font-bold f-display" style={{ color: '#E67E50' }}>
+                €{totalCommission.toFixed(0)}
+              </p>
+            </div>
+          </div>
+        )}
+        {conversionPct != null && (
+          <div className="px-4 py-3 rounded-[16px] flex items-center gap-3"
+            style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.16em] f-body"
+                style={{ color: 'rgba(10,46,77,0.4)' }}>Win rate</p>
+              <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                {conversionPct}%
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ─── Filter tabs ─────────────────────────────────── */}
@@ -140,10 +196,15 @@ export default async function AdminInquiriesPage({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {rows.map(row => {
+          {rows.map((row: {
+            id: string; status: string; angler_name: string; angler_email: string
+            angler_country: string; requested_dates: string[] | null; party_size: number
+            deposit_amount: number | null; created_at: string; trip_id: string
+            internal_commission_eur: number | null; lost_reason: string | null
+          }) => {
             const st        = STATUS_STYLE[row.status] ?? STATUS_STYLE.pending_fa_review
             const tripTitle = tripMap.get(row.trip_id) ?? '—'
-            const dates     = row.requested_dates as string[] | null
+            const dates     = row.requested_dates
             const dateLabel = dates != null && dates.length > 0
               ? fmtDate(dates[0]) + (dates.length > 1 ? ` +${dates.length - 1}` : '')
               : '—'
@@ -199,9 +260,15 @@ export default async function AdminInquiriesPage({
                     <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
                       {dateLabel} · {row.party_size} pax
                     </p>
-                    {row.deposit_amount != null && (
+                    {row.internal_commission_eur != null && (
                       <p className="text-xs font-bold f-body" style={{ color: '#E67E50' }}>
-                        €{Number(row.deposit_amount).toFixed(2)}
+                        +€{Number(row.internal_commission_eur).toFixed(0)} FA
+                      </p>
+                    )}
+                    {row.status === 'lost' && row.lost_reason != null && row.lost_reason.trim() !== '' && (
+                      <p className="text-[10px] f-body max-w-[160px] text-right truncate"
+                        style={{ color: 'rgba(153,27,27,0.6)' }}>
+                        {row.lost_reason}
                       </p>
                     )}
                   </div>
