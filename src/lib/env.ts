@@ -71,6 +71,16 @@ const envSchema = z.object({
   // If not set, encryption is disabled (passthrough). Required in production.
   IBAN_ENCRYPTION_KEY: z.string().min(64).optional(),
 
+  // ── WhatsApp (Meta Cloud API) ───────────────────────────────────────────────
+  // Random secret string used to verify Meta's hub.challenge GET request.
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  // Meta App Secret — used to verify HMAC-SHA256 signature on incoming messages.
+  WHATSAPP_APP_SECRET: z.string().optional(),
+
+  // ── Resend Inbound (email webhook) ─────────────────────────────────────────
+  // Signing secret provided by Resend for inbound email webhooks.
+  RESEND_INBOUND_SECRET: z.string().optional(),
+
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`
   SUPABASE_ACCESS_TOKEN: z.string().optional(),

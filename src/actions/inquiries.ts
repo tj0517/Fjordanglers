@@ -745,3 +745,152 @@ export async function sendMessageToAngler(
 
   return { success: true }
 }
+
+// ─── logLeadMessage ───────────────────────────────────────────────────────────
+
+/**
+ * FA logs a manual communication with a client or guide.
+ * No email is sent — this is purely an internal CRM record.
+ * Also updates last_contact_at on the inquiry.
+ */
+
+export type LeadMessage = {
+  id:           string
+  inquiry_id:   string
+  direction:    'inbound' | 'outbound'
+  channel:      'whatsapp' | 'email' | 'note'
+  contact_type: 'client' | 'guide'
+  contact_name: string
+  content:      string
+  created_at:   string
+  created_by:   string
+}
+
+export interface LogLeadMessageParams {
+  direction:   'inbound' | 'outbound'
+  channel:     'whatsapp' | 'email' | 'note'
+  contactType: 'client' | 'guide'
+  contactName: string
+  content:     string
+  createdBy?:  string
+}
+
+export async function logLeadMessage(
+  inquiryId: string,
+  params: LogLeadMessageParams,
+): Promise<ActionResult> {
+  if (params.content.trim()     === '') return { success: false, error: 'Content is required' }
+  if (params.contactName.trim() === '') return { success: false, error: 'Contact name is required' }
+
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any).from('lead_messages').insert({
+    inquiry_id:   inquiryId,
+    direction:    params.direction,
+    channel:      params.channel,
+    contact_type: params.contactType,
+    contact_name: params.contactName.trim(),
+    content:      params.content.trim(),
+    created_by:   params.createdBy ?? 'tymon',
+  })
+
+  if (error != null) {
+    console.error('[logLeadMessage] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  // Bump last_contact_at on the parent inquiry
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('inquiries')
+    .update({ last_contact_at: new Date().toISOString() })
+    .eq('id', inquiryId)
+
+  console.log(`[logLeadMessage] ${params.direction} ${params.channel} logged for inquiry ${inquiryId}`)
+  return { success: true }
+}
+
+// ─── bulkLogLeadMessages ──────────────────────────────────────────────────────
+
+/**
+ * Bulk-insert multiple lead_messages in one transaction.
+ * Used by the conversation importer (paste WhatsApp/email thread).
+ * Each message may carry its own createdAt for historical imports.
+ * Content is stored as Markdown for AI readability.
+ */
+
+export interface BulkLeadMessage {
+  direction:   'inbound' | 'outbound'
+  channel:     'whatsapp' | 'email' | 'note'
+  contactType: 'client' | 'guide'
+  contactName: string
+  content:     string          // Markdown-formatted text
+  createdAt?:  string          // ISO — use parsed timestamp if available
+  createdBy?:  string
+}
+
+export async function bulkLogLeadMessages(
+  inquiryId: string,
+  messages:  BulkLeadMessage[],
+): Promise<ActionResult & { count?: number }> {
+  if (messages.length === 0) return { success: false, error: 'No messages to save' }
+
+  const svc = createServiceClient()
+
+  const now = new Date().toISOString()
+  const rows = messages.map(m => ({
+    inquiry_id:   inquiryId,
+    direction:    m.direction,
+    channel:      m.channel,
+    contact_type: m.contactType,
+    contact_name: m.contactName.trim() || 'Unknown',
+    content:      m.content.trim(),
+    created_by:   m.createdBy ?? 'tymon',
+    created_at:   m.createdAt ?? now,
+  }))
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any).from('lead_messages').insert(rows)
+  if (error != null) {
+    console.error('[bulkLogLeadMessages] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  // Bump last_contact_at to the most recent message
+  const latestAt = messages
+    .map(m => m.createdAt ?? new Date().toISOString())
+    .sort()
+    .at(-1) ?? new Date().toISOString()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('inquiries')
+    .update({ last_contact_at: latestAt })
+    .eq('id', inquiryId)
+
+  console.log(`[bulkLogLeadMessages] Saved ${messages.length} messages for inquiry ${inquiryId}`)
+  return { success: true, count: messages.length }
+}
+
+// ─── updateNextAction ─────────────────────────────────────────────────────────
+
+/**
+ * FA sets the "next action" reminder on an inquiry.
+ * Internal only — no email sent.
+ */
+export async function updateNextAction(
+  inquiryId: string,
+  nextAction: string | null,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({ next_action: nextAction?.trim() || null })
+    .eq('id', inquiryId)
+
+  if (error != null) return { success: false, error: error.message }
+  console.log(`[updateNextAction] Inquiry ${inquiryId} — "${nextAction}"`)
+  return { success: true }
+}

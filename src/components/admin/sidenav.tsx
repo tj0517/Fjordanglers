@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
-  LayoutDashboard, Users, Map, MessageSquare, ClipboardList,
-  Anchor, Zap, Menu, X, ShieldCheck, BarChart2, Wallet,
+  LayoutDashboard, Users, Map, MessageSquare,
+  Anchor, Menu, X, ShieldCheck, BarChart2, Wallet,
 } from 'lucide-react'
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
@@ -15,6 +15,7 @@ interface NavItem {
   href: string
   icon: React.ReactNode
   exact?: boolean
+  subItem?: boolean
 }
 
 const navItems: NavItem[] = [
@@ -23,8 +24,7 @@ const navItems: NavItem[] = [
   { label: 'Experiences',  href: '/admin/experiences', icon: <Map size={16} strokeWidth={1.6} /> },
   { label: 'Trips',        href: '/admin/trips',       icon: <Anchor size={16} strokeWidth={1.6} /> },
   { label: 'Inquiries',    href: '/admin/inquiries',   icon: <MessageSquare size={16} strokeWidth={1.6} /> },
-  { label: 'Submissions',  href: '/admin/submissions', icon: <ClipboardList size={16} strokeWidth={1.6} /> },
-  { label: 'Leads',        href: '/admin/leads',       icon: <Zap size={16} strokeWidth={1.6} /> },
+  { label: 'Unmatched',   href: '/admin/inquiries/unmatched', icon: <MessageSquare size={14} strokeWidth={1.6} />, subItem: true },
   { label: 'Ads',          href: '/admin/ads',         icon: <BarChart2 size={16} strokeWidth={1.6} /> },
   { label: 'Finances',     href: '/admin/finances',    icon: <Wallet size={16} strokeWidth={1.6} /> },
 ]
@@ -45,15 +45,20 @@ export function AdminSidenav() {
       <Link
         href={item.href}
         onClick={() => setOpen(false)}
-        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm f-body transition-all"
+        className="flex items-center gap-3 rounded-xl text-sm f-body transition-all"
         style={{
-          color:      active ? '#E67E50' : 'rgba(255,255,255,0.55)',
-          background: active ? 'rgba(230,126,80,0.12)' : 'transparent',
-          fontWeight: active ? 600 : 400,
+          paddingLeft:    item.subItem ? '2rem' : '0.75rem',
+          paddingRight:   '0.75rem',
+          paddingTop:     item.subItem ? '0.5rem' : '0.625rem',
+          paddingBottom:  item.subItem ? '0.5rem' : '0.625rem',
+          color:          active ? '#E67E50' : item.subItem ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.55)',
+          background:     active ? 'rgba(230,126,80,0.12)' : 'transparent',
+          fontWeight:     active ? 600 : 400,
+          fontSize:       item.subItem ? '0.8125rem' : undefined,
           textDecoration: 'none',
         }}
       >
-        <span style={{ color: active ? '#E67E50' : 'rgba(255,255,255,0.35)', flexShrink: 0 }}>
+        <span style={{ color: active ? '#E67E50' : 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
           {item.icon}
         </span>
         {item.label}

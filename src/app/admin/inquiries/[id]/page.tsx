@@ -28,6 +28,9 @@ import { OfferBuilderModal } from './OfferBuilderModal'
 import { MessageComposer } from './MessageComposer'
 import { StatusChanger } from './StatusChanger'
 import { InternalDealTracker } from './InternalDealTracker'
+import { LeadCommsLogger } from './LeadCommsLogger'
+import { NextActionEditor } from './NextActionEditor'
+import type { LeadMessage } from '@/actions/inquiries'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -120,6 +123,8 @@ export default async function AdminInquiryDetailPage({
     internal_commission_eur: number | null
     internal_notes:          string | null
     lost_reason:             string | null
+    last_contact_at:         string | null
+    next_action:             string | null
   }
 
   // ── Fetch messages (graceful if table doesn't exist yet) ───────────────────
@@ -134,6 +139,20 @@ export default async function AdminInquiryDetailPage({
     if (!error && data != null) messages = data as InquiryMessage[]
   } catch {
     // Table doesn't exist yet — safe to ignore until migration is run
+  }
+
+  // ── Fetch lead_messages (CRM log) ──────────────────────────────────────────
+  let leadMessages: LeadMessage[] = []
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: lmData, error: lmError } = await (svc as any)
+      .from('lead_messages')
+      .select('id, inquiry_id, direction, channel, contact_type, contact_name, content, created_at, created_by')
+      .eq('inquiry_id', id)
+      .order('created_at', { ascending: true })
+    if (!lmError && lmData != null) leadMessages = lmData as LeadMessage[]
+  } catch {
+    // Table doesn't exist yet — safe to ignore
   }
 
   // ── Fetch trip ─────────────────────────────────────────────────────────────
@@ -408,6 +427,14 @@ export default async function AdminInquiryDetailPage({
             </div>
           )}
 
+          {/* CRM communications */}
+          <LeadCommsLogger
+            inquiryId={inquiry.id}
+            initialMessages={leadMessages}
+            anglerName={inquiry.angler_name ?? ''}
+            guideName={guide?.full_name ?? null}
+          />
+
           {/* Internal deal summary (if tracked) */}
           {inquiry.internal_deal_total_eur != null && (
             <div className="px-4 py-3 rounded-xl"
@@ -514,6 +541,12 @@ export default async function AdminInquiryDetailPage({
               <MessageComposer inquiryId={inquiry.id} />
             </div>
           </div>
+
+          {/* Next action reminder */}
+          <NextActionEditor
+            inquiryId={inquiry.id}
+            initialValue={inquiry.next_action}
+          />
 
           {/* Internal deal tracker — no email */}
           <InternalDealTracker
