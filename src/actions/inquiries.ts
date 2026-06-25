@@ -670,6 +670,7 @@ export async function saveInternalDeal(
     dealTotalEur:  number | null
     commissionEur: number | null
     internalNotes: string | null
+    dealCurrency:  'EUR' | 'USD'
   },
 ): Promise<ActionResult> {
   const svc = createServiceClient()
@@ -680,11 +681,12 @@ export async function saveInternalDeal(
       internal_deal_total_eur: params.dealTotalEur,
       internal_commission_eur: params.commissionEur,
       internal_notes:          params.internalNotes,
+      deal_currency:           params.dealCurrency,
     })
     .eq('id', inquiryId)
 
   if (error != null) return { success: false, error: error.message }
-  console.log(`[saveInternalDeal] Inquiry ${inquiryId} — total €${params.dealTotalEur}, commission €${params.commissionEur}`)
+  console.log(`[saveInternalDeal] Inquiry ${inquiryId} — total ${params.dealCurrency} ${params.dealTotalEur}, commission ${params.dealCurrency} ${params.commissionEur}`)
   return { success: true }
 }
 

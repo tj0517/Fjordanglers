@@ -15,6 +15,8 @@ export interface PipelineDeal {
   offer_deposit_eur: number | null       // deposit we'd collect (from rich offer)
   deposit_amount: number | null          // legacy deposit field
   internal_commission_eur: number | null // our cut (internal tracking)
+  deal_currency: string | null           // 'EUR' | 'USD' — currency of internal deal
+  status: string
   created_at: string
 }
 
@@ -36,17 +38,27 @@ function urgencyColor(days: number): string {
 export function PipelineClient({
   deals,
   eurRate,
+  usdEurRate,
 }: {
   deals: PipelineDeal[]
   eurRate: number
+  usdEurRate: number
 }) {
-  const totalEur     = deals.reduce((s, d) => s + (dealTripPrice(d) ?? 0), 0)
-  const totalDepEur  = deals.reduce((s, d) => s + (dealOurCut(d) ?? 0), 0)
+  const toEur = (amt: number, currency: string | null) =>
+    currency === 'USD' ? amt * usdEurRate : amt
+
+  const totalEur    = deals.reduce((s, d) => s + toEur(dealTripPrice(d) ?? 0, d.deal_currency), 0)
+  const totalDepEur = deals.reduce((s, d) => s + toEur(dealOurCut(d) ?? 0, d.deal_currency), 0)
+  const hasUsd      = deals.some(d => d.deal_currency === 'USD')
 
   const fmtEur = (n: number) =>
     '€' + n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   const fmtPln = (n: number) =>
     n.toLocaleString('pl', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' zł'
+  const fmtAmt = (n: number, currency: string | null) => {
+    const sym = currency === 'USD' ? '$' : '€'
+    return sym + n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  }
 
   if (deals.length === 0) {
     return (
@@ -67,7 +79,7 @@ export function PipelineClient({
       {/* ── Summary bar ────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-4 mb-6">
         {[
-          { label: 'Open deals',         value: String(deals.length) },
+          { label: 'Open deals',         value: String(deals.length), sub: hasUsd ? 'mixed currencies → converted to EUR' : undefined },
           { label: 'Our potential cut',  value: fmtEur(totalDepEur), sub: `≈ ${fmtPln(totalDepEur * eurRate)}` },
           { label: 'Total trip value',   value: fmtEur(totalEur),    sub: 'guide + our cut combined' },
         ].map(c => (
@@ -95,10 +107,10 @@ export function PipelineClient({
             <tr style={{ background: 'rgba(10,46,77,0.04)', borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
               {[
                 ['Angler',           'text-left'],
+                ['Status',           'text-left'],
                 ['Trip price (full)', 'text-right'],
                 ['Our cut',          'text-right'],
                 ['→ PLN',            'text-right'],
-                ['Offer sent',       'text-right'],
                 ['Waiting',          'text-right'],
               ].map(([h, a]) => (
                 <th
@@ -120,33 +132,45 @@ export function PipelineClient({
               const days        = daysAgo(offerDate)
               const waitColor   = urgencyColor(days)
 
+              const statusStyle: Record<string, { label: string; color: string; bg: string }> = {
+                pending_fa_review: { label: 'Pending',     color: '#92400E', bg: 'rgba(251,191,36,0.15)'  },
+                in_negotiation:    { label: 'Negotiating', color: '#5B21B6', bg: 'rgba(139,92,246,0.15)' },
+                deposit_sent:      { label: 'Offer sent',  color: '#1E40AF', bg: 'rgba(59,130,246,0.12)'  },
+              }
+              const ss = statusStyle[d.status] ?? { label: d.status, color: '#374151', bg: 'rgba(107,114,128,0.10)' }
+
               return (
                 <tr key={d.id} style={{ borderBottom: '1px solid rgba(10,46,77,0.05)' }}>
 
                   {/* Angler */}
                   <td className="px-4 py-3">
-                    <p className="font-semibold" style={{ color: '#0A2E4D' }}>{d.angler_name}</p>
+                    <p className="font-semibold text-sm" style={{ color: '#0A2E4D' }}>{d.angler_name}</p>
                     <p className="text-xs" style={{ color: 'rgba(10,46,77,0.45)' }}>{d.angler_email}</p>
+                  </td>
+
+                  {/* Status badge */}
+                  <td className="px-4 py-3">
+                    <span
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body whitespace-nowrap"
+                      style={{ background: ss.bg, color: ss.color }}
+                    >
+                      {ss.label}
+                    </span>
                   </td>
 
                   {/* Trip price */}
                   <td className="px-4 py-3 text-right font-mono" style={{ color: tripPrice ? '#0A2E4D' : 'rgba(10,46,77,0.3)' }}>
-                    {tripPrice != null ? fmtEur(tripPrice) : '—'}
+                    {tripPrice != null ? fmtAmt(tripPrice, d.deal_currency) : '—'}
                   </td>
 
-                  {/* Deposit */}
+                  {/* Our cut */}
                   <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: deposit != null ? '#16A34A' : 'rgba(10,46,77,0.3)' }}>
-                    {deposit != null ? fmtEur(deposit) : '—'}
+                    {deposit != null ? fmtAmt(deposit, d.deal_currency) : '—'}
                   </td>
 
-                  {/* Deposit in PLN */}
+                  {/* Cut in PLN */}
                   <td className="px-4 py-3 text-right font-mono text-xs" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                    {deposit != null ? fmtPln(deposit * eurRate) : '—'}
-                  </td>
-
-                  {/* Offer sent date */}
-                  <td className="px-4 py-3 text-right text-xs" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                    {new Date(offerDate).toLocaleDateString('en', { day: 'numeric', month: 'short' })}
+                    {deposit != null ? fmtPln(toEur(deposit, d.deal_currency) * eurRate) : '—'}
                   </td>
 
                   {/* Days waiting */}

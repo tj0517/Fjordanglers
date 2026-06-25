@@ -11,11 +11,13 @@ type Tab = 'pl' | 'pipeline' | 'costs'
 export function FinancesPageTabs({
   months,
   defaultEurRate,
+  usdEurRate,
   fixedCosts,
   pipeline,
 }: {
   months: MonthRaw[]
   defaultEurRate: number
+  usdEurRate: number
   fixedCosts: FixedCostRow[]
   pipeline: PipelineDeal[]
 }) {
@@ -59,7 +61,7 @@ export function FinancesPageTabs({
       </div>
 
       {tab === 'pl'       && <MonthlyPLClient months={months} defaultEurRate={defaultEurRate} />}
-      {tab === 'pipeline' && <PipelineClient  deals={pipeline} eurRate={defaultEurRate} />}
+      {tab === 'pipeline' && <PipelineClient  deals={pipeline} eurRate={defaultEurRate} usdEurRate={usdEurRate} />}
       {tab === 'costs'    && <FinancesClient  rows={fixedCosts} />}
     </div>
   )

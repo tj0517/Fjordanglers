@@ -96,7 +96,7 @@ export default async function FinancesPage() {
     // Inquiries where deposit is paid — revenue source
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from as any)('inquiries')
-      .select('deposit_paid_at, updated_at, offer_deposit_eur, deposit_amount')
+      .select('deposit_paid_at, updated_at, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency')
       .in('status', ['deposit_paid', 'completed']),
 
     // Ad spend by date
@@ -123,11 +123,11 @@ export default async function FinancesPage() {
     (supabase.from as any)('finance_settings')
       .select('key, value'),
 
-    // Open deals — in negotiation or offer sent, with a price set
+    // Open deals — all active (non-terminal) statuses
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from as any)('inquiries')
-      .select('id, angler_name, angler_email, offer_sent_at, updated_at, offer_total_eur, internal_deal_total_eur, offer_deposit_eur, deposit_amount, internal_commission_eur, created_at')
-      .in('status', ['in_negotiation', 'deposit_sent'])
+      .select('id, angler_name, angler_email, offer_sent_at, updated_at, offer_total_eur, internal_deal_total_eur, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, created_at, status')
+      .in('status', ['pending_fa_review', 'in_negotiation', 'deposit_sent'])
       .order('updated_at', { ascending: false }),
   ])
 
@@ -138,6 +138,7 @@ export default async function FinancesPage() {
   const settings      = (settingsData ?? []) as { key: string; value: string }[]
   const pipeline      = (pipelineData ?? []) as PipelineDeal[]
   const eurRate       = parseFloat(settings.find(s => s.key === 'eur_pln_rate')?.value ?? '4.25')
+  const usdEurRate    = parseFloat(settings.find(s => s.key === 'usd_eur_rate')?.value ?? '0.92')
 
   // Fixed costs → single monthly total (same for every month)
   const fixedMonthly = fixedCosts.reduce((s, r) => s + toMonthlyPln(r), 0)
@@ -150,12 +151,15 @@ export default async function FinancesPage() {
     updated_at: string
     offer_deposit_eur: number | null
     deposit_amount: number | null
+    internal_commission_eur: number | null
+    deal_currency: string | null
   }[]) {
     const month = (row.deposit_paid_at ?? row.updated_at)?.slice(0, 7)
     if (!month) continue
-    const amt = Number(row.offer_deposit_eur ?? row.deposit_amount ?? 0)
+    const amt    = Number(row.offer_deposit_eur ?? row.deposit_amount ?? row.internal_commission_eur ?? 0)
+    const amtEur = row.deal_currency === 'USD' ? amt * usdEurRate : amt
     revenueByMonth[month] = {
-      eur:   (revenueByMonth[month]?.eur   ?? 0) + amt,
+      eur:   (revenueByMonth[month]?.eur   ?? 0) + amtEur,
       deals: (revenueByMonth[month]?.deals ?? 0) + 1,
     }
   }
@@ -183,9 +187,10 @@ export default async function FinancesPage() {
   for (const d of pipeline) {
     const cut = dealOurCut(d)
     if (cut == null || cut <= 0) continue
-    const month = (d.offer_sent_at ?? d.updated_at)?.slice(0, 7)
+    const month  = (d.offer_sent_at ?? d.updated_at)?.slice(0, 7)
     if (!month) continue
-    potentialByMonth[month] = (potentialByMonth[month] ?? 0) + Number(cut)
+    const cutEur = d.deal_currency === 'USD' ? cut * usdEurRate : cut
+    potentialByMonth[month] = (potentialByMonth[month] ?? 0) + cutEur
   }
 
   // ── Generate month range (Apr 2026 → now, plus any earlier data) ──────────────
@@ -228,10 +233,18 @@ export default async function FinancesPage() {
   const totalManual  = months.reduce((s, m) => s + m.manual_costs_pln, 0)
   const totalCosts   = totalAdSpend + totalFixed + totalManual
   const totalNet     = totalRevPln - totalCosts
-  const pipelineEur  = pipeline.reduce((s, d) => s + (dealOurCut(d) ?? 0), 0)
+  const pipelineEur  = pipeline.reduce((s, d) => {
+    const cut    = dealOurCut(d) ?? 0
+    const cutEur = d.deal_currency === 'USD' ? cut * usdEurRate : cut
+    return s + cutEur
+  }, 0)
+  const pipelinePln  = pipelineEur * eurRate
+  const usdPlnRate   = usdEurRate * eurRate
 
   const fmt0 = (n: number) =>
     n.toLocaleString('pl', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  const fmtRate = (n: number) =>
+    n.toLocaleString('pl', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
 
   // ── Render ────────────────────────────────────────────────────────────────────
 
@@ -251,12 +264,26 @@ export default async function FinancesPage() {
         </p>
       </div>
 
+      {/* Exchange rates */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 mb-5">
+        {[
+          { label: 'EUR/PLN', value: fmtRate(eurRate) },
+          { label: 'USD/EUR', value: fmtRate(usdEurRate) },
+          { label: 'USD/PLN', value: fmtRate(usdPlnRate) },
+        ].map(r => (
+          <span key={r.label} className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+            <span className="font-semibold" style={{ color: 'rgba(10,46,77,0.55)' }}>{r.label}</span>
+            {' '}{r.value}
+          </span>
+        ))}
+      </div>
+
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <MetricCard
           label="Total Revenue"
-          value={`€${totalRevEur.toFixed(2)}`}
-          sub={`≈ ${fmt0(totalRevPln)} zł`}
+          value={`${fmt0(totalRevPln)} zł`}
+          sub={`€${totalRevEur.toFixed(2)}`}
           highlight="green"
         />
         <MetricCard
@@ -272,8 +299,8 @@ export default async function FinancesPage() {
         />
         <MetricCard
           label="Pipeline"
-          value={`€${pipelineEur.toFixed(2)}`}
-          sub={`${pipeline.length} open deal${pipeline.length !== 1 ? 's' : ''} · potential deposits`}
+          value={`${fmt0(pipelinePln)} zł`}
+          sub={`€${pipelineEur.toFixed(2)} · ${pipeline.length} open deal${pipeline.length !== 1 ? 's' : ''}`}
         />
         <MetricCard
           label="Fixed / month"
@@ -286,6 +313,7 @@ export default async function FinancesPage() {
       <FinancesPageTabs
         months={months}
         defaultEurRate={eurRate}
+        usdEurRate={usdEurRate}
         fixedCosts={fixedCosts}
         pipeline={pipeline}
       />

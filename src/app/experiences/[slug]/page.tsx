@@ -477,6 +477,8 @@ export default async function ExperiencePublicPage({
             tripTitle={page.experience_name}
             maxGuests={maxGuests}
             blockedRanges={blockedRanges}
+            priceFrom={page.price_from ?? null}
+            priceType={page.price_type ?? null}
           >
             {/* These server-rendered sections go in the left column */}
 
@@ -1372,6 +1374,8 @@ export default async function ExperiencePublicPage({
                 tripTitle={page.experience_name}
                 maxGuests={maxGuests}
                 blockedRanges={blockedRanges}
+                priceFrom={page.price_from ?? null}
+                priceType={page.price_type ?? null}
               />
             </div>
           </div>
@@ -1381,7 +1385,7 @@ export default async function ExperiencePublicPage({
       </div>
 
       {/* ── MOBILE BAR ── */}
-      <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_type === 'request' ? null : page.price_from} />
+      <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_from ?? null} priceType={page.price_type ?? null} />
 
       {/* ════════════════════════════════════════════════════════════
           BOTTOM SECTIONS — different background

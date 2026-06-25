@@ -48,6 +48,8 @@ export interface InquiryWidgetProps {
   maxGuests?:           number
   blockedRanges?:       Array<{ date_start: string; date_end: string }>
   selectedOptionLabel?: string | null
+  priceFrom?:           number | null
+  priceType?:           string | null
 }
 
 type Step        = 'calendar' | 'form'
@@ -208,6 +210,8 @@ function InquiryModal({
   selectedOptionLabel,
   initialViewYear,
   initialViewMonth,
+  priceFrom,
+  priceType,
   onClose,
 }: {
   tripId?:              string
@@ -218,6 +222,8 @@ function InquiryModal({
   selectedOptionLabel?: string | null
   initialViewYear?:     number
   initialViewMonth?:    number
+  priceFrom?:           number | null
+  priceType?:           string | null
   onClose:              () => void
 }) {
   const [step,          setStep]          = useState<Step>('calendar')
@@ -391,6 +397,19 @@ function InquiryModal({
                 <X size={15} />
               </button>
             </div>
+
+            {/* ── Price strip ── */}
+            {(priceFrom != null || priceType != null) && (
+              <div className="px-5 py-2.5 flex items-center justify-between flex-shrink-0"
+                style={{ borderBottom: '1px solid rgba(10,46,77,0.07)', background: 'rgba(230,126,80,0.06)' }}>
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                  {priceType === 'request' ? 'Price' : priceType === 'flat' ? 'Group price' : 'Per person'}
+                </span>
+                <span className="text-base font-bold f-display" style={{ color: '#E67E50' }}>
+                  {priceType === 'request' ? 'On request' : `from €${priceFrom}`}
+                </span>
+              </div>
+            )}
 
             {/* ── Scrollable body ── */}
             <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(230,126,80,0.4) transparent' }}>
@@ -669,6 +688,8 @@ export function InquiryWidget({
   maxGuests            = 12,
   blockedRanges        = [],
   selectedOptionLabel,
+  priceFrom,
+  priceType,
 }: InquiryWidgetProps) {
   const [isOpen,      setIsOpen]      = useState(false)
   const [mounted,     setMounted]     = useState(false)
@@ -723,6 +744,18 @@ export function InquiryWidget({
           )}
         </div>
 
+        {/* Price banner */}
+        {(priceFrom != null || priceType != null) && (
+          <div className="px-5 py-3 flex items-baseline justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(230,126,80,0.08)' }}>
+            <span className="text-[10px] font-bold uppercase tracking-[0.16em] f-body" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              {priceType === 'request' ? 'Price' : priceType === 'flat' ? 'Group price' : 'Per person'}
+            </span>
+            <span className="text-xl font-bold f-display" style={{ color: '#E67E50' }}>
+              {priceType === 'request' ? 'On request' : `from €${priceFrom}`}
+            </span>
+          </div>
+        )}
+
         {/* How it works */}
         <div className="px-5 pt-4 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-3 f-body"
@@ -758,7 +791,7 @@ export function InquiryWidget({
               boxShadow:  '0 4px 14px rgba(230,126,80,0.4)',
             }}
           >
-            Ask about this trip →
+            Send Inquiry →
           </button>
 
           <p className="text-center text-[11px] f-body mt-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
@@ -820,6 +853,8 @@ export function InquiryWidget({
           selectedOptionLabel={selectedOptionLabel}
           initialViewYear={initialMonth?.year}
           initialViewMonth={initialMonth?.month0}
+          priceFrom={priceFrom}
+          priceType={priceType}
           onClose={closeModal}
         />,
         document.body,
@@ -998,10 +1033,12 @@ export function NoGuideContactCard({ tripTitle, selectedLabel }: {
 
 // ─── MobileInquiryBar ─────────────────────────────────────────────────────────
 
-export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId?: string | null; pricePerPerson?: number | null }) {
+export function MobileInquiryBar({ tripId: _tripId, pricePerPerson, priceType }: { tripId?: string | null; pricePerPerson?: number | null; priceType?: string | null }) {
   const handleClick = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-inquiry-modal'))
   }, [])
+
+  const isRequest = priceType === 'request'
 
   return (
     <div
@@ -1016,15 +1053,22 @@ export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId?:
         paddingBottom:        'calc(14px + env(safe-area-inset-bottom, 0px))',
       }}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {/* Price side */}
         <div className="flex-1 min-w-0">
-          {pricePerPerson != null ? (
+          {isRequest ? (
+            <>
+              <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.42)' }}>Price</p>
+              <p className="text-base font-bold f-display leading-tight" style={{ color: '#E67E50' }}>On request</p>
+            </>
+          ) : pricePerPerson != null ? (
             <>
               <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.42)' }}>From</p>
               <p className="font-bold f-body leading-tight" style={{ color: '#0A2E4D', fontSize: '18px' }}>
                 €{pricePerPerson}
-                <span className="text-xs font-normal ml-1" style={{ color: 'rgba(10,46,77,0.42)' }}>/person</span>
+                <span className="text-xs font-normal ml-1" style={{ color: 'rgba(10,46,77,0.42)' }}>
+                  {priceType === 'flat' ? '/group' : '/person'}
+                </span>
               </p>
             </>
           ) : (
@@ -1036,14 +1080,17 @@ export function MobileInquiryBar({ tripId: _tripId, pricePerPerson }: { tripId?:
         </div>
 
         {/* CTA */}
-        <button
-          type="button"
-          onClick={handleClick}
-          className="flex-shrink-0 flex items-center justify-center px-6 py-3.5 rounded-2xl font-bold text-white f-body"
-          style={{ background: '#E67E50', fontSize: '15px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
-        >
-          Ask about this trip →
-        </button>
+        <div className="flex-shrink-0 flex flex-col items-center gap-1">
+          <button
+            type="button"
+            onClick={handleClick}
+            className="flex items-center justify-center px-5 py-3.5 rounded-2xl font-bold text-white f-body"
+            style={{ background: '#E67E50', fontSize: '15px', boxShadow: '0 4px 20px rgba(230,126,80,0.4)' }}
+          >
+            Send Inquiry →
+          </button>
+          <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>Free · no payment now</p>
+        </div>
       </div>
     </div>
   )

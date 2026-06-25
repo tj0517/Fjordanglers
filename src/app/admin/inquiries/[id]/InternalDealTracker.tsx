@@ -6,10 +6,11 @@ import { Check, Loader2 } from 'lucide-react'
 import { saveInternalDeal } from '@/actions/inquiries'
 
 interface Props {
-  inquiryId:         string
-  initialTotal:      number | null
-  initialCommission: number | null
-  initialNotes:      string | null
+  inquiryId:          string
+  initialTotal:       number | null
+  initialCommission:  number | null
+  initialNotes:       string | null
+  initialCurrency?:   'EUR' | 'USD'
 }
 
 export function InternalDealTracker({
@@ -17,6 +18,7 @@ export function InternalDealTracker({
   initialTotal,
   initialCommission,
   initialNotes,
+  initialCurrency = 'EUR',
 }: Props) {
   const router           = useRouter()
   const [pending, start]  = useTransition()
@@ -26,6 +28,9 @@ export function InternalDealTracker({
   const [total,      setTotal]      = useState(initialTotal?.toFixed(2)      ?? '')
   const [commission, setCommission] = useState(initialCommission?.toFixed(2) ?? '')
   const [notes,      setNotes]      = useState(initialNotes ?? '')
+  const [currency,   setCurrency]   = useState<'EUR' | 'USD'>(initialCurrency)
+
+  const currencySymbol = currency === 'USD' ? '$' : '€'
 
   const parsedTotal      = parseFloat(total)
   const parsedCommission = parseFloat(commission)
@@ -47,6 +52,7 @@ export function InternalDealTracker({
         dealTotalEur:  Number.isFinite(parsedTotal)      ? parsedTotal      : null,
         commissionEur: Number.isFinite(parsedCommission) ? parsedCommission : null,
         internalNotes: notes.trim() || null,
+        dealCurrency:  currency,
       })
       if (res.success) {
         setFlash(true)
@@ -64,10 +70,31 @@ export function InternalDealTracker({
       style={{ background: 'rgba(10,46,77,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}
     >
       {/* Header */}
-      <div className="px-5 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
-          style={{ color: 'rgba(255,255,255,0.25)' }}>Internal only · no email</p>
-        <p className="text-sm font-bold f-body mt-0.5" style={{ color: '#FFFFFF' }}>Deal tracker</p>
+      <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
+            style={{ color: 'rgba(255,255,255,0.25)' }}>Internal only · no email</p>
+          <p className="text-sm font-bold f-body mt-0.5" style={{ color: '#FFFFFF' }}>Deal tracker</p>
+        </div>
+
+        {/* EUR / USD toggle */}
+        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
+          {(['EUR', 'USD'] as const).map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCurrency(c)}
+              className="px-2.5 py-1 text-[10px] font-bold f-body transition-all"
+              style={{
+                background: currency === c ? 'rgba(255,255,255,0.15)' : 'transparent',
+                color:      currency === c ? '#FFFFFF' : 'rgba(255,255,255,0.35)',
+                cursor:     'pointer',
+              }}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="px-5 py-4 space-y-3">
@@ -85,11 +112,11 @@ export function InternalDealTracker({
         <div>
           <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block"
             style={{ color: 'rgba(255,255,255,0.35)' }}>
-            Deal total (€)
+            Deal total ({currency})
           </label>
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <span className="text-sm font-bold f-body" style={{ color: 'rgba(255,255,255,0.28)' }}>€</span>
+            <span className="text-sm font-bold f-body" style={{ color: 'rgba(255,255,255,0.28)' }}>{currencySymbol}</span>
             <input
               type="number" min="0" step="0.01"
               value={total}
@@ -105,14 +132,14 @@ export function InternalDealTracker({
         <div>
           <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 flex items-center gap-2"
             style={{ color: 'rgba(255,255,255,0.35)' }}>
-            Our commission (€)
+            Our commission ({currency})
             {commissionPct != null && (
               <span className="font-bold" style={{ color: '#E67E50' }}>{commissionPct}%</span>
             )}
           </label>
           <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <span className="text-sm font-bold f-body" style={{ color: 'rgba(255,255,255,0.28)' }}>€</span>
+            <span className="text-sm font-bold f-body" style={{ color: 'rgba(255,255,255,0.28)' }}>{currencySymbol}</span>
             <input
               type="number" min="0" step="0.01"
               value={commission}
@@ -131,7 +158,7 @@ export function InternalDealTracker({
             <span className="text-[10px] f-body uppercase tracking-[0.12em]"
               style={{ color: 'rgba(255,255,255,0.28)' }}>Guide gets</span>
             <span className="text-xs font-bold f-body" style={{ color: 'rgba(255,255,255,0.55)' }}>
-              €{netGuide.toFixed(2)}
+              {currencySymbol}{netGuide.toFixed(2)}
             </span>
           </div>
         )}

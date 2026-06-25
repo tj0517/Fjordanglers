@@ -44,6 +44,8 @@ interface ExperiencePageWithOptionsProps {
   tripTitle:          string
   maxGuests:          number
   blockedRanges:      Array<{ date_start: string; date_end: string }>
+  priceFrom?:         number | null
+  priceType?:         string | null
   children?:          React.ReactNode
 }
 
@@ -57,13 +59,18 @@ export function ExperiencePageWithOptions({
   tripTitle,
   maxGuests,
   blockedRanges,
+  priceFrom,
+  priceType,
   children,
 }: ExperiencePageWithOptionsProps) {
   const [selectedIdx, setSelectedIdx] = useState(0)
 
-  const selectedLabel = options.length > 0
-    ? (options[selectedIdx]?.label ?? null)
-    : null
+  const selectedOption = options[selectedIdx] ?? null
+  const selectedLabel  = selectedOption?.label ?? null
+  const activePriceFrom = selectedOption?.price_type === 'request'
+    ? null
+    : (selectedOption?.price_from ?? priceFrom ?? null)
+  const activePriceType = selectedOption?.price_type ?? priceType ?? null
 
   return (
     <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 pt-5 pb-12 lg:py-14">
@@ -122,6 +129,8 @@ export function ExperiencePageWithOptions({
             maxGuests={maxGuests}
             blockedRanges={blockedRanges}
             selectedOptionLabel={selectedLabel}
+            priceFrom={activePriceFrom}
+            priceType={activePriceType}
           />
         </div>
       </div>

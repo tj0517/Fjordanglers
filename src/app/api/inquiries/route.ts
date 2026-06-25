@@ -129,32 +129,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to save inquiry' }, { status: 500 })
   }
 
-  // Fire-and-forget both emails
+  // Await both emails before responding — on Vercel serverless, unawaited promises
+  // are silently dropped once the response is returned and the function freezes.
   const baseUrl      = env.NEXT_PUBLIC_APP_URL
   const dashboardUrl = `${baseUrl}/admin/inquiries/${inquiry.id}`
 
-  Promise.all([
-    sendInquiryReceivedFaEmail({
-      to:             env.FA_EMAIL ?? 'contact@fjordanglers.com',
-      anglerName:     parsed.data.angler_name,
-      anglerEmail:    parsed.data.angler_email,
-      tripTitle,
-      requestedDates: sortedDates,
-      partySize:      parsed.data.party_size,
-      message:        parsed.data.message ?? null,
-      selectedOption: parsed.data.selected_option ?? null,
-      inquiryId:      inquiry.id,
-      dashboardUrl,
-    }),
-    sendInquiryReceivedAnglerEmail({
-      to:             parsed.data.angler_email,
-      anglerName:     parsed.data.angler_name,
-      tripTitle,
-      requestedDates: sortedDates,
-      partySize:      parsed.data.party_size,
-      inquiryId:      inquiry.id,
-    }),
-  ]).catch(err => console.error('[inquiries/POST] Email error:', err))
+  try {
+    await Promise.all([
+      sendInquiryReceivedFaEmail({
+        to:             env.FA_EMAIL ?? 'contact@fjordanglers.com',
+        anglerName:     parsed.data.angler_name,
+        anglerEmail:    parsed.data.angler_email,
+        tripTitle,
+        requestedDates: sortedDates,
+        partySize:      parsed.data.party_size,
+        message:        parsed.data.message ?? null,
+        selectedOption: parsed.data.selected_option ?? null,
+        inquiryId:      inquiry.id,
+        dashboardUrl,
+      }),
+      sendInquiryReceivedAnglerEmail({
+        to:             parsed.data.angler_email,
+        anglerName:     parsed.data.angler_name,
+        tripTitle,
+        requestedDates: sortedDates,
+        partySize:      parsed.data.party_size,
+        inquiryId:      inquiry.id,
+      }),
+    ])
+  } catch (err) {
+    // Log but don't fail the request — inquiry is already saved
+    console.error('[inquiries/POST] Email error:', err)
+  }
 
   console.log(`[inquiries/POST] Created inquiry ${inquiry.id} (${parsed.data.trip_id ? `trip ${parsed.data.trip_id}` : `page ${parsed.data.experience_page_id}`})`)
 

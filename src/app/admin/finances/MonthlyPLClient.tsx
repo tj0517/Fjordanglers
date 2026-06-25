@@ -180,9 +180,9 @@ export function MonthlyPLClient({
                 {[
                   ['Month',        'text-left',  ''],
                   ['Deals',        'text-right', ''],
-                  ['Revenue',      'text-right', 'EUR'],
-                  ['→ PLN',        'text-right', ''],
-                  ['Potential',    'text-right', 'EUR'],
+                  ['Revenue',      'text-right', 'PLN'],
+                  ['≈ EUR',        'text-right', ''],
+                  ['Potential',    'text-right', 'PLN'],
                   ['Ad Spend',     'text-right', 'PLN'],
                   ['Fixed',        'text-right', 'PLN'],
                   ['Manual',       'text-right', 'PLN'],
@@ -236,20 +236,20 @@ export function MonthlyPLClient({
                         {m.deals > 0 ? m.deals : '—'}
                       </td>
 
-                      {/* Revenue EUR */}
-                      <td className="px-4 py-3 text-right font-mono" style={{ color: m.revenue_eur > 0 ? '#16A34A' : 'rgba(10,46,77,0.25)' }}>
+                      {/* Revenue PLN (primary) */}
+                      <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: m.revenue_pln > 0 ? '#16A34A' : 'rgba(10,46,77,0.25)' }}>
+                        {m.revenue_pln > 0 ? fmtPln(m.revenue_pln) : '—'}
+                      </td>
+
+                      {/* Revenue EUR (secondary) */}
+                      <td className="px-4 py-3 text-right font-mono text-xs" style={{ color: m.revenue_eur > 0 ? 'rgba(10,46,77,0.45)' : 'rgba(10,46,77,0.2)' }}>
                         {m.revenue_eur > 0 ? fmtEur(m.revenue_eur) : '—'}
                       </td>
 
-                      {/* Revenue PLN */}
-                      <td className="px-4 py-3 text-right font-mono" style={{ color: m.revenue_eur > 0 ? '#0A2E4D' : 'rgba(10,46,77,0.25)' }}>
-                        {m.revenue_eur > 0 ? fmtPln(m.revenue_pln) : '—'}
-                      </td>
-
-                      {/* Potential (open deals) */}
-                      <td className="px-4 py-3 text-right font-mono" style={{ color: m.potential_eur > 0 ? '#7C3AED' : 'rgba(10,46,77,0.2)' }}>
-                        {m.potential_eur > 0
-                          ? <span title={`≈ ${fmtPln(m.potential_pln)}`}>~{fmtEur(m.potential_eur)}</span>
+                      {/* Potential PLN (primary) */}
+                      <td className="px-4 py-3 text-right font-mono" style={{ color: m.potential_pln > 0 ? '#7C3AED' : 'rgba(10,46,77,0.2)' }}>
+                        {m.potential_pln > 0
+                          ? <span title={`≈ ${fmtEur(m.potential_eur)}`}>~{fmtPln(m.potential_pln)}</span>
                           : '—'
                         }
                       </td>
@@ -423,14 +423,14 @@ export function MonthlyPLClient({
                   <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: 'rgba(10,46,77,0.6)' }}>
                     {totals.deals}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: '#16A34A' }}>
-                    {fmtEur(totals.revenue_eur)}
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: '#0A2E4D' }}>
+                  <td className="px-4 py-3 text-right font-mono font-bold" style={{ color: '#16A34A' }}>
                     {fmtPln(totals.revenue_pln)}
                   </td>
+                  <td className="px-4 py-3 text-right font-mono text-xs font-semibold" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                    {fmtEur(totals.revenue_eur)}
+                  </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: '#7C3AED' }}>
-                    {totals.potential_eur > 0 ? `~${fmtEur(totals.potential_eur)}` : '—'}
+                    {totals.potential_pln > 0 ? `~${fmtPln(totals.potential_pln)}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-right font-mono font-semibold" style={{ color: '#DC2626' }}>
                     {fmtPln(totals.ad)}

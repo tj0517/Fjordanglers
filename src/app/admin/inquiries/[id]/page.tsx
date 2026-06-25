@@ -125,6 +125,7 @@ export default async function AdminInquiryDetailPage({
     lost_reason:             string | null
     last_contact_at:         string | null
     next_action:             string | null
+    deal_currency:           string | null
   }
 
   // ── Fetch messages (graceful if table doesn't exist yet) ───────────────────
@@ -443,11 +444,11 @@ export default async function AdminInquiryDetailPage({
                 style={{ color: 'rgba(10,46,77,0.38)' }}>Internal deal</p>
               <div className="flex flex-wrap gap-x-6 gap-y-0.5">
                 <span className="text-xs f-body" style={{ color: '#0A2E4D' }}>
-                  Total: <strong>€{Number(inquiry.internal_deal_total_eur).toFixed(2)}</strong>
+                  Total: <strong>{inquiry.deal_currency === 'USD' ? '$' : '€'}{Number(inquiry.internal_deal_total_eur).toFixed(2)}</strong>
                 </span>
                 {inquiry.internal_commission_eur != null && (
                   <span className="text-xs f-body" style={{ color: '#0A2E4D' }}>
-                    Commission: <strong style={{ color: '#E67E50' }}>€{Number(inquiry.internal_commission_eur).toFixed(2)}</strong>
+                    Commission: <strong style={{ color: '#E67E50' }}>{inquiry.deal_currency === 'USD' ? '$' : '€'}{Number(inquiry.internal_commission_eur).toFixed(2)}</strong>
                     {' '}
                     <span style={{ color: 'rgba(10,46,77,0.45)' }}>
                       ({((Number(inquiry.internal_commission_eur) / Number(inquiry.internal_deal_total_eur)) * 100).toFixed(1)}%)
@@ -554,6 +555,7 @@ export default async function AdminInquiryDetailPage({
             initialTotal={inquiry.internal_deal_total_eur}
             initialCommission={inquiry.internal_commission_eur}
             initialNotes={inquiry.internal_notes}
+            initialCurrency={(inquiry.deal_currency ?? 'EUR') as 'EUR' | 'USD'}
           />
 
         </div>

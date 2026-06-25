@@ -50,6 +50,7 @@ interface InquiryRow {
   created_at:              string
   trip_id:                 string | null
   internal_commission_eur: number | null
+  deal_currency:           string | null
   lost_reason:             string | null
   last_contact_at:         string | null
   next_action:             string | null
@@ -183,7 +184,7 @@ export default async function AdminInquiriesPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawAll } = await (svc as any)
     .from('inquiries')
-    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, internal_commission_eur, lost_reason, last_contact_at, next_action')
+    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action')
     .order('created_at', { ascending: false })
 
   const allRows = (rawAll ?? []) as InquiryRow[]
@@ -235,9 +236,13 @@ export default async function AdminInquiriesPage({
   const tripMap = new Map((trips ?? []).map(t => [t.id, t.title]))
 
   // ── Stats (from full data) ─────────────────────────────────────────────────
+  const USD_EUR_RATE   = 0.92
+  const hasMixedCurrency = allRows.some(r => r.deal_currency === 'USD' && r.internal_commission_eur != null)
   const totalCommission = allRows.reduce((sum, r) => {
     const c = r.internal_commission_eur != null ? Number(r.internal_commission_eur) : 0
-    return sum + (Number.isFinite(c) ? c : 0)
+    if (!Number.isFinite(c)) return sum
+    const eur = r.deal_currency === 'USD' ? c * USD_EUR_RATE : c
+    return sum + eur
   }, 0)
   const wonCount    = counts.deposit_paid + counts.completed
   const closedCount = allRows.filter(r => !['pending_fa_review', 'in_negotiation', 'deposit_sent'].includes(r.status)).length
@@ -319,7 +324,7 @@ export default async function AdminInquiriesPage({
                 <p className="text-[10px] uppercase tracking-[0.16em] f-body"
                   style={{ color: 'rgba(10,46,77,0.45)' }}>Commission tracked</p>
                 <p className="text-xl font-bold f-display" style={{ color: '#E67E50' }}>
-                  €{totalCommission.toFixed(0)}
+                  €{totalCommission.toFixed(0)}{hasMixedCurrency && <span className="text-sm font-normal ml-1" style={{ color: 'rgba(10,46,77,0.45)' }}>≈ EUR</span>}
                 </p>
               </div>
             </div>
@@ -517,7 +522,7 @@ export default async function AdminInquiriesPage({
                     {/* Commission */}
                     {row.internal_commission_eur != null && (
                       <span className="text-xs font-bold f-body" style={{ color: '#E67E50' }}>
-                        +€{Number(row.internal_commission_eur).toFixed(0)}
+                        +{row.deal_currency === 'USD' ? '$' : '€'}{Number(row.internal_commission_eur).toFixed(0)}
                       </span>
                     )}
 
