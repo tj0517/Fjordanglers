@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const LINKS = [
   ['/', 'Home'],
@@ -14,13 +14,43 @@ const LINKS = [
 
 export function SiteNav() {
   const pathname = usePathname()
-  const isHome = pathname === '/'
+  const isHome          = pathname === '/'
+  const isExperiencePage = pathname.startsWith('/experiences/')
 
-  const [scrolled, setScrolled] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled,  setScrolled]  = useState(false)
+  const [navHidden, setNavHidden] = useState(false)
+  const [menuOpen,  setMenuOpen]  = useState(false)
+  const lastScrollY      = useRef(0)
+  const isExperienceRef  = useRef(isExperiencePage)
+  isExperienceRef.current = isExperiencePage
+
+  // Reset when leaving experience pages
+  useEffect(() => {
+    if (!isExperiencePage) {
+      setNavHidden(false)
+      lastScrollY.current = 0
+    }
+  }, [isExperiencePage])
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
+    const onScroll = () => {
+      const y = window.scrollY
+      setScrolled(y > 20)
+
+      if (isExperienceRef.current) {
+        const goingDown = y > lastScrollY.current
+        const goingUp   = y < lastScrollY.current
+
+        if (goingDown && y > 80) {
+          setNavHidden(true)
+          setMenuOpen(false)
+        } else if (y <= 80) {
+          setNavHidden(false)
+        }
+      }
+
+      lastScrollY.current = y
+    }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -52,7 +82,8 @@ export function SiteNav() {
           borderBottom: `1px solid ${navBorder}`,
           backdropFilter: hasBg ? 'blur(16px)' : 'none',
           WebkitBackdropFilter: hasBg ? 'blur(16px)' : 'none',
-          transition: 'background 0.3s ease, border-color 0.3s ease',
+          transform: navHidden ? 'translateY(-100%)' : 'translateY(0)',
+          transition: 'background 0.3s ease, border-color 0.3s ease, transform 0.3s ease',
         }}
       >
         {/* Logo */}

@@ -9,7 +9,7 @@ import ExpPageMapWrapper from '@/app/trips/exp-page-map-wrapper'
 import type { ExpPage } from '@/app/trips/exp-page-map-section'
 import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
 import { CountryFlag } from '@/components/ui/country-flag'
-import { ExperiencePageWithOptions } from '@/components/trips/ExperiencePageWithOptions'
+import { ExperienceTabLayout } from '@/components/trips/ExperienceTabLayout'
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem, Accommodation, Boat } from '@/actions/experience-pages'
@@ -466,11 +466,10 @@ export default async function ExperiencePublicPage({
 
         {/* ── TWO-COLUMN CONTENT GRID ── */}
         {hasOptions ? (
-          /* ─── OPTIONS MODE: ExperiencePageWithOptions manages both columns ─── */
-          <ExperiencePageWithOptions
+          /* ─── OPTIONS MODE: ExperienceTabLayout manages both columns ─── */
+          <ExperienceTabLayout
             options={tripOptions}
             faq={faq}
-            pageContentBlocks={pageContentBlocks}
             speciesDetails={speciesDetails}
             tripId={page.trip_id ?? null}
             experiencePageId={page.trip_id ? undefined : page.id}
@@ -834,7 +833,7 @@ export default async function ExperiencePublicPage({
                 )}
               </section>
             )}
-          </ExperiencePageWithOptions>
+          </ExperienceTabLayout>
         ) : (
         /* ─── FLAT MODE: no options → original two-column layout ─── */
         <div className="flex flex-col lg:flex-row gap-12 lg:gap-16 py-12 lg:py-14">
@@ -1381,7 +1380,7 @@ export default async function ExperiencePublicPage({
           </div>
 
         </div>
-        )} {/* end of ternary: hasOptions ? <ExperiencePageWithOptions> : <flat div> */}
+        )} {/* end of ternary: hasOptions ? <ExperienceTabLayout> : <flat div> */}
       </div>
 
       {/* ── MOBILE BAR ── */}

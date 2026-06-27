@@ -61,7 +61,7 @@ interface TripOptionsAccordionProps {
 
 // ─── Per-option content panel ─────────────────────────────────────────────────
 
-function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; speciesDetails?: SpeciesDetailItem[] }) {
+export function OptionPanel({ option, speciesDetails = [], priceOverride }: { option: TripOption; speciesDetails?: SpeciesDetailItem[]; priceOverride?: string }) {
   const filteredSpecies = speciesDetails.filter(s => option.target_species.includes(s.name))
 
   return (
@@ -300,7 +300,7 @@ function OptionPanel({ option, speciesDetails = [] }: { option: TripOption; spec
         <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>Price</p>
         <div className="px-6 py-5 rounded-2xl" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
           <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-            {formatPrice(option.price_from, option.price_type)}
+            {priceOverride ?? formatPrice(option.price_from, option.price_type)}
           </p>
           {option.price_type !== 'request' && (
             <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
