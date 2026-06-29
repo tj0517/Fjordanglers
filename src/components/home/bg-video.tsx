@@ -20,6 +20,7 @@ export function BgVideo({ src, className }: { src: string; className?: string })
       muted
       loop
       playsInline
+      preload="none"
       className={className}
       style={{ pointerEvents: 'none' }}
     >

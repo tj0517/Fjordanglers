@@ -28,22 +28,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const post = BLOG_POSTS.find(p => p.slug === slug)
   if (!post) return {}
+
+  const isStub = !ARTICLE_CONTENT[slug]
+  const absImg = `https://fjordanglers.com${post.img}`
+
   return {
-    title: `${post.title} — FjordAnglers`,
+    title: post.title,
     description: post.excerpt,
+    ...(isStub ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical: `https://fjordanglers.com/blog/${slug}` },
     openGraph: {
-      title: `${post.title} — FjordAnglers`,
+      title: `${post.title} | FjordAnglers`,
       description: post.excerpt,
       type: 'article',
       url: `https://fjordanglers.com/blog/${slug}`,
-      images: [{ url: post.img, width: 1200, height: 630, alt: post.title }],
+      images: [{ url: absImg, width: 1200, height: 630, alt: post.title }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${post.title} — FjordAnglers`,
+      title: `${post.title} | FjordAnglers`,
       description: post.excerpt,
-      images: [post.img],
+      images: [absImg],
     },
   }
 }
@@ -56,12 +61,14 @@ export default async function BlogPostPage({ params }: Props) {
   const ContentComponent = ARTICLE_CONTENT[slug]
   const sections = ARTICLE_SECTIONS[slug]
 
+  const absImg = `https://fjordanglers.com${post.img}`
+
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.excerpt,
-    image: post.img,
+    image: absImg,
     author: { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' },
     publisher: {
       '@type': 'Organization',
@@ -69,13 +76,25 @@ export default async function BlogPostPage({ params }: Props) {
       logo: { '@type': 'ImageObject', url: 'https://fjordanglers.com/brand/sygnet.png' },
     },
     datePublished: new Date(post.date).toISOString(),
+    dateModified: new Date(post.date).toISOString(),
     url: `https://fjordanglers.com/blog/${slug}`,
     mainEntityOfPage: { '@type': 'WebPage', '@id': `https://fjordanglers.com/blog/${slug}` },
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fjordanglers.com' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://fjordanglers.com/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `https://fjordanglers.com/blog/${slug}` },
+    ],
   }
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {ContentComponent && <ReadingProgress />}
 
       {/* ── Hero ─────────────────────────────────────────────────── */}

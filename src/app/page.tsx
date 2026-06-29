@@ -13,7 +13,7 @@ import { ExperiencesSlider } from '@/components/home/experiences-slider'
 import { BgVideo } from '@/components/home/bg-video'
 import { ContactExpertButton } from '@/components/ui/contact-expert-button'
 
-export const revalidate = 60
+export const revalidate = 300
 
 export const metadata = {
   alternates: { canonical: 'https://fjordanglers.com' },

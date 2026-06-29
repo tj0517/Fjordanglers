@@ -89,10 +89,17 @@ function Pagination({
 
 export const revalidate = 60
 export const metadata = {
-  title: 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland | FjordAnglers',
-  description: 'Browse 20+ hand-picked guided fishing trips across Norway, Sweden, Iceland and Finland. Salmon, sea trout, pike & fly fishing. Filter by species, country, and difficulty.',
+  title: 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland',
+  description: 'Browse 20+ hand-picked guided fishing trips across Norway, Sweden, Iceland and Finland. Salmon, sea trout, pike & fly fishing. Filter by country.',
   alternates: { canonical: 'https://fjordanglers.com/trips' },
-  openGraph: { url: 'https://fjordanglers.com/trips' },
+  openGraph: {
+    url: 'https://fjordanglers.com/trips',
+    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland | FjordAnglers' }],
+  },
+  twitter: {
+    card: 'summary_large_image' as const,
+    images: ['/brand/og-default.png'],
+  },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -133,8 +140,36 @@ export default async function TripsPage({
     Object.entries(params).filter(([k, v]) => k !== 'page' && v != null) as [string, string][]
   ).toString()
 
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: params.country
+      ? `Guided Fishing Trips in ${params.country}`
+      : 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland',
+    numberOfItems: total,
+    itemListElement: pages.map((exp, i) => ({
+      '@type': 'ListItem',
+      position: offset + i + 1,
+      item: {
+        '@type': 'TouristTrip',
+        name: exp.experience_name,
+        url: `https://fjordanglers.com/experiences/${exp.slug ?? exp.id}`,
+        ...(exp.hero_image_url != null ? { image: exp.hero_image_url } : {}),
+        ...(exp.price_from != null ? {
+          offers: {
+            '@type': 'Offer',
+            price: String(exp.price_from),
+            priceCurrency: 'EUR',
+            availability: 'https://schema.org/InStock',
+          },
+        } : {}),
+      },
+    })),
+  }
+
   return (
     <div style={{ background: '#F3EDE4' }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
 
       <SiteNav />
 

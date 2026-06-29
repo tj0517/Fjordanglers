@@ -67,6 +67,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
 
+        {/* Preconnect to jsDelivr CDN — used for country flag SVGs */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+
         {/* ── Google Consent Mode v2 defaults — MUST be first, before GTM ── */}
         <script dangerouslySetInnerHTML={{ __html: `
           window.dataLayer = window.dataLayer || [];
@@ -79,6 +83,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             wait_for_update: 500,
           });
         `}} />
+
+        {/* WebSite + SearchAction — enables sitelinks searchbox in branded SERPs */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: 'FjordAnglers',
+              url: 'https://fjordanglers.com',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: 'https://fjordanglers.com/trips?country={search_term_string}',
+                },
+                'query-input': 'required name=search_term_string',
+              },
+            }),
+          }}
+        />
 
         {/* Organization + LocalBusiness structured data */}
         <script

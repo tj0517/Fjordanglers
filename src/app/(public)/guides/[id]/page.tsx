@@ -63,18 +63,26 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const guide = await getGuide(id)
   if (guide == null) return {}
   const canonicalSlug = (guide as { slug?: string | null }).slug ?? id
-  const desc = guide.bio != null ? guide.bio.slice(0, 160) : `Fish with ${guide.full_name} — a verified local guide in ${guide.country}. Book via FjordAnglers.`
+  const desc = `Fish with ${guide.full_name} — verified local fishing guide in ${guide.country}. ${guide.fish_expertise?.slice(0, 3).join(', ') ?? 'Salmon, sea trout & more'}. Book via FjordAnglers.`
+  const ogTitle = `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`
+  const ogImages = guide.cover_url != null
+    ? [{ url: guide.cover_url, width: 1200, height: 630, alt: `${guide.full_name} — fishing guide in ${guide.country}` }]
+    : []
   return {
-    title: `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`,
+    title: `${guide.full_name} — Fishing Guide in ${guide.country}`,
     description: desc,
     alternates: { canonical: `https://fjordanglers.com/guides/${canonicalSlug}` },
     openGraph: {
-      title: `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`,
+      title: ogTitle,
       description: desc,
       url: `https://fjordanglers.com/guides/${canonicalSlug}`,
-      images: guide.cover_url != null
-        ? [{ url: guide.cover_url, width: 1200, height: 630, alt: `${guide.full_name} — fishing guide in ${guide.country}` }]
-        : [],
+      images: ogImages,
+    },
+    twitter: {
+      card: 'summary_large_image' as const,
+      title: ogTitle,
+      description: desc,
+      images: guide.cover_url != null ? [guide.cover_url] : [],
     },
   }
 }
@@ -107,6 +115,13 @@ export default async function GuideProfilePage({
   // flag rendered as <CountryFlag> below
   const landscapeUrl = (guide as { landscape_url?: string | null }).landscape_url ?? getLandscapeUrl(guide.country, guide.id)
 
+  const sameAs = [
+    guide.instagram_url,
+    guide.youtube_url,
+    guide.facebook_url,
+    guide.website_url,
+  ].filter((url): url is string => url != null)
+
   const personSchema = {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -121,6 +136,7 @@ export default async function GuideProfilePage({
       ...(guide.city != null ? { addressLocality: guide.city } : {}),
     },
     ...(guide.fish_expertise.length > 0 ? { knowsAbout: guide.fish_expertise } : {}),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
     ...(guide.average_rating != null ? {
       aggregateRating: {
         '@type': 'AggregateRating',

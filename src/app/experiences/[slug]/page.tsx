@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (page == null) return {}
 
-  const title      = page.meta_title ?? `${page.experience_name} | FjordAnglers`
+  const title      = page.meta_title ?? page.experience_name
   const speciesList = ((page.target_species as string[] | null) ?? []).slice(0, 2).join(' & ')
   const fishingType = speciesList ? `${speciesList} fishing` : 'fishing'
   const description = page.meta_description

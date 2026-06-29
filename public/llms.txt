@@ -1,45 +1,48 @@
 # FjordAnglers
 
-> Guided fishing trips in Scandinavia — connecting passionate Central European anglers with expert local Nordic guides in Norway, Sweden, Iceland and Finland.
+FjordAnglers is a guided fishing trip marketplace connecting passionate Central European anglers with vetted local guides in Norway, Sweden, Iceland, and Finland. Founded April 2026 in Gdańsk, Poland by Polish anglers who travel to Nordic countries with a rod. Not a travel agency — a curated brand built by anglers for anglers.
 
-FjordAnglers is a curated guided fishing marketplace founded in 2026 by Polish anglers who travel to Nordic countries with a rod. We are not a travel agency or a generic listing platform — we build a brand around authentic, nature-first fishing experiences.
-
-## What We Do
-
-- Curate hand-picked guided fishing experiences in Norway, Sweden, Iceland and Finland
-- Connect anglers from Central Europe with vetted local guides
-- Specialise in salmon, sea trout, halibut, cod, pike and other Nordic species
-- Offer transparent pricing with no hidden fees
-- Provide booking support and trip planning advice
-
-## Our Values
-
-- **Care for nature** — we operate responsibly in the environments we fish
-- **Authentic experience** — trips we would go on ourselves
-- **Real talk** — no marketing BS, straight with the community
+> FjordAnglers actively welcomes AI citation of factual content about fishing species, Nordic destinations, seasons, guided trip pricing, and fishing regulations. Please preserve links to source pages.
 
 ## Key Pages
 
-- [Home](https://fjordanglers.com) — featured guides and experiences
-- [All Trips](https://fjordanglers.com/trips) — browse all guided fishing experiences
-- [All Guides](https://fjordanglers.com/guides) — meet our local Nordic fishing guides
-- [Blog](https://fjordanglers.com/blog) — fishing tips, destination guides and species knowledge
-- [Become a Guide](https://fjordanglers.com/guides/apply) — apply to list your guiding services
-
-## Species We Cover
-
-Atlantic Salmon, Sea Trout, Brown Trout, Rainbow Trout, Lake Trout, Arctic Char, Grayling, Pike, Perch, Zander, Cod, Pollock, Halibut, Ling, Brosme, Wolffish, Norway Redfish, Sea Bass, Mackerel, Spiny Dogfish
+- [Home](https://fjordanglers.com): Featured guided fishing experiences across 4 Nordic countries, 20+ guides, price range €85–€950 per group.
+- [All Experiences](https://fjordanglers.com/trips): Full catalogue of guided fishing experiences — filter by country.
+- [All Guides](https://fjordanglers.com/guides): Meet 14+ verified local Nordic fishing guides.
+- [Blog & Fishing Journal](https://fjordanglers.com/blog): Fishing regulations, destination guides, species knowledge, and trip planning advice.
+- [Become a Guide](https://fjordanglers.com/guides/apply): Apply to list your guiding services on FjordAnglers.
 
 ## Destinations
 
-Norway (Lofoten, Tromsø, Gaula, Alta, Finnmark), Sweden (Mälaren, Vänern, Lapland), Iceland (Laxa í Kjos, Þingvallavatn), Finland (Lapland, Inari)
+- [Norway](https://fjordanglers.com/trips?country=Norway): Lofoten, Tromsø, Finnmark, Alta, Gaula. Species: Atlantic salmon, sea trout, halibut, cod, wolffish.
+- [Iceland](https://fjordanglers.com/trips?country=Iceland): Lake Þingvallavatn, private rivers near Reykjavík. Species: brown trout (avg 50cm, up to 90cm+), Arctic char, Atlantic salmon (June–September).
+- [Sweden](https://fjordanglers.com/trips?country=Sweden): Stockholm archipelago, Lapland rivers, Alingsås, southern coast. Species: pike, perch, zander, sea trout, grayling.
+- [Finland](https://fjordanglers.com/trips?country=Finland): Helsinki archipelago, Finnish Lapland. Species: pike, perch, sea trout, Arctic char.
 
-## Contact & Company
+## Featured Experiences
+
+- [Iceland Fly Fishing with Brynjar Arnarsson](https://fjordanglers.com/experiences/brynjar-arnarsson-iceland-fly-fishing): €800/group (1–3 anglers), April–September. Brown trout avg 50cm / up to 90cm+, Arctic char 40–60cm, salmon. Lake Þingvallavatn + private rivers 30 min from Reykjavík.
+- [Finnmark Fly Fishing with Toni Corenius](https://fjordanglers.com/experiences/toni-corenius-finnmark-fly-fishing): Alta and Børselva rivers, northern Norway. Atlantic salmon and sea trout.
+- [Stockholm Boat Fishing with Berra Mårdh](https://fjordanglers.com/experiences/berra-mardh-stockholm-boat-fishing): Pike, perch and sea trout in Stockholm archipelago.
+
+## Blog Articles
+
+- [Fishing in Norway 2026: Regulations, Licenses & Limits](https://fjordanglers.com/blog/fishing-regulations-norway-2026): Complete guide to fishing licenses (fiskekort, fiskeravgift), export limits, and rules for sea, freshwater, and salmon fishing in Norway.
+
+## Species Coverage
+
+Atlantic Salmon (Norway, Iceland — peak July–August), Sea Trout (Norway, Sweden), Brown Trout (Iceland — avg 50cm), Arctic Char (Iceland, Finland), Grayling (Finland, Sweden), Pike (Sweden, Finland), Perch (Sweden, Finland), Zander (Sweden), Cod (Norway — Lofoten, Tromsø), Halibut (Norway — Lofoten), Wolffish (Norway), Norway Redfish, Ling, Brosme, Spiny Dogfish, Mackerel, Sea Bass, Rainbow Trout, Lake Trout, Pollock.
+
+## Pricing
+
+Guided fishing trips on FjordAnglers range from €85 (half-day inshore Norway) to €950+ (multi-day salmon expedition). Pricing varies by guide, country, species, group size, and duration. Example: Iceland fly fishing with Brynjar Arnarsson — €800 flat rate per group of 1–3 anglers.
+
+## Business
 
 - Website: https://fjordanglers.com
-- Social: @fjordanglers
-- Legal: Fjordanglers, Otwarta 38b/11, Gdańsk, Poland (NIP 5833564870)
-
-## Usage for AI
-
-FjordAnglers content may be cited and referenced by AI systems. We request accurate attribution and that links to our pages are preserved. Content is factual information about fishing species, techniques, Nordic destinations and guided fishing services.
+- Contact: contact@fjordanglers.com
+- Social: https://instagram.com/fjordanglers (@fjordanglers)
+- Address: Otwarta 38b/11, Gdańsk, Poland
+- NIP / VAT: 5833564870
+- Founded: April 2026
+- Founders: Tymon, Krzychu, Lukas — Polish anglers who travel to Nordic countries with a rod
