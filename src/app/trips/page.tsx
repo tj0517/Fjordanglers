@@ -141,6 +141,8 @@ export default async function TripsPage({
       {/* Spacer for fixed nav */}
       <div style={{ height: '72px' }} />
 
+      <h1 className="sr-only">Guided Fishing Trips in Norway, Sweden, Iceland &amp; Finland</h1>
+
       {/* ── TWO-COLUMN (map + list) ── */}
       <ExpPageMapSection
         initialPages={pages}

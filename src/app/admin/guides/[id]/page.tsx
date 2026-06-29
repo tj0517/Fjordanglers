@@ -224,7 +224,7 @@ export default async function AdminGuideDetailPage({
               {/* Actions */}
               <div className="flex items-center gap-2 flex-wrap">
                 {(guide.status === 'active' || guide.status === 'verified') ? (
-                  <Link href={`/guides/${guide.id}`} target="_blank"
+                  <Link href={`/guides/${guide.slug ?? guide.id}`} target="_blank"
                     className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all f-body"
                     style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
                   >

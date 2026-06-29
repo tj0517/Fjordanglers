@@ -13,22 +13,10 @@ import { ExperiencesSlider } from '@/components/home/experiences-slider'
 import { BgVideo } from '@/components/home/bg-video'
 import { ContactExpertButton } from '@/components/ui/contact-expert-button'
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 export const metadata = {
   alternates: { canonical: 'https://fjordanglers.com' },
-}
-
-const HOW_IT_WORKS_SCHEMA = {
-  '@context': 'https://schema.org',
-  '@type': 'HowTo',
-  name: 'How to book a guided fishing trip on FjordAnglers',
-  description: 'Three simple steps to book a guided fishing trip in Norway, Sweden, Iceland or Finland.',
-  step: [
-    { '@type': 'HowToStep', name: 'Browse trips & pick a guide', text: 'Every listing shows the guide, the water, the species, and the price. Pick what matches what you want to catch.' },
-    { '@type': 'HowToStep', name: 'Send a booking request', text: 'Select your dates, add a short message. Takes 2 minutes. Free until the deal is done.' },
-    { '@type': 'HowToStep', name: 'Guide confirms within 48h', text: 'The guide reviews your request and confirms availability — or proposes alternative dates if yours are taken.' },
-  ],
 }
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -94,8 +82,6 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(HOW_IT_WORKS_SCHEMA) }} />
-
       <SiteNav />
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
@@ -429,7 +415,7 @@ export default async function HomePage() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               {featuredGuides.map((guide: FeaturedGuide, idx) => (
-                <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
+                <Link key={guide.id} href={`/guides/${guide.slug ?? guide.id}`} className="group block">
                   <div className="relative overflow-hidden" style={{ borderRadius: '16px', aspectRatio: '3/4', background: '#0A2E4D' }}>
                     {guide.avatar_url != null ? (
                       <Image src={guide.avatar_url} alt={guide.full_name} fill priority={idx < 2} className="object-cover transition-transform duration-700 group-hover:scale-[1.06]" />

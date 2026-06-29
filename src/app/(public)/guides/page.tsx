@@ -72,7 +72,7 @@ function Pagination({
   )
 }
 
-export const dynamic = 'force-dynamic'
+export const revalidate = 300
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -132,7 +132,33 @@ export default async function GuidesPage({
     Object.entries(params).filter(([k, v]) => k !== 'page' && v != null) as [string, string][]
   ).toString()
 
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Fishing Guides in Norway, Sweden, Iceland & Finland',
+    description: 'Curated local fishing guides across Norway, Sweden, Finland and Iceland. Salmon, trout, pike & sea fishing.',
+    url: 'https://fjordanglers.com/guides',
+    numberOfItems: total,
+    itemListElement: guides.map((guide, i) => ({
+      '@type': 'ListItem',
+      position: (currentPage - 1) * PAGE_SIZE + i + 1,
+      item: {
+        '@type': 'Person',
+        name: guide.full_name,
+        url: `https://fjordanglers.com/guides/${guide.slug ?? guide.id}`,
+        ...(guide.avatar_url != null && { image: guide.avatar_url }),
+        ...(guide.bio != null && { description: guide.bio }),
+        address: { '@type': 'PostalAddress', addressCountry: guide.country },
+      },
+    })),
+  }
+
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+      />
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
       {/* ─── PHOTO HERO ──────────────────────────────────────────── */}
       <header className="relative overflow-hidden" style={{ minHeight: '380px', height: 'clamp(380px, 55vw, 580px)' }}>
@@ -234,7 +260,7 @@ export default async function GuidesPage({
               const fishPills = guide.fish_expertise.slice(0, 3)
 
               return (
-                <Link key={guide.id} href={`/guides/${guide.id}`} className="group block">
+                <Link key={guide.id} href={`/guides/${guide.slug ?? guide.id}`} className="group block">
                   <article
                     className="overflow-hidden transition-all duration-300 hover:shadow-[0_20px_56px_rgba(10,46,77,0.13)] hover:-translate-y-1"
                     style={{
@@ -387,5 +413,6 @@ export default async function GuidesPage({
       </section>
 
     </div>
+    </>
   )
 }

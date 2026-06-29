@@ -1,7 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { createServiceClient } from '@/lib/supabase/server'
 import { BLOG_POSTS } from '@/lib/blog-data'
-import { FISH_CATALOG } from '@/lib/fish'
 
 export const revalidate = 3600
 
@@ -12,31 +11,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // ── Static pages ──────────────────────────────────────────────────────────
   const staticPages: MetadataRoute.Sitemap = [
-    { url: BASE,                              lastModified: now, changeFrequency: 'weekly',  priority: 1.0 },
-    { url: `${BASE}/trips`,                   lastModified: now, changeFrequency: 'daily',   priority: 0.9 },
-    { url: `${BASE}/guides`,                  lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
-    { url: `${BASE}/about`,                   lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
-    { url: `${BASE}/blog`,                    lastModified: now, changeFrequency: 'weekly',  priority: 0.7 },
-    { url: `${BASE}/guides/apply`,            lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
-    { url: `${BASE}/legal/privacy-policy`,    lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${BASE}/legal/terms-of-service`,  lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
-    { url: `${BASE}/legal/cookie-policy`,     lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    { url: BASE,                              lastModified: now, changeFrequency: 'weekly',  priority: 1.00 },
+    { url: `${BASE}/trips`,                   lastModified: now, changeFrequency: 'daily',   priority: 0.90 },
+    { url: `${BASE}/guides`,                  lastModified: now, changeFrequency: 'daily',   priority: 0.78 },
+    { url: `${BASE}/about`,                   lastModified: now, changeFrequency: 'monthly', priority: 0.55 },
+    { url: `${BASE}/blog`,                    lastModified: now, changeFrequency: 'weekly',  priority: 0.65 },
+    { url: `${BASE}/guides/apply`,            lastModified: now, changeFrequency: 'monthly', priority: 0.50 },
+    { url: `${BASE}/legal/privacy-policy`,    lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
+    { url: `${BASE}/legal/terms-of-service`,  lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
+    { url: `${BASE}/legal/cookie-policy`,     lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
+    { url: `${BASE}/legal/legal-notice`,      lastModified: now, changeFrequency: 'monthly', priority: 0.30 },
   ]
-
-  // ── Species pages (from static catalog) ───────────────────────────────────
-  const speciesPages: MetadataRoute.Sitemap = FISH_CATALOG.map(fish => ({
-    url:             `${BASE}/species/${fish.slug}`,
-    lastModified:    now,
-    changeFrequency: 'monthly' as const,
-    priority:        0.6,
-  }))
 
   // ── Blog posts (static data) ───────────────────────────────────────────────
   const blogPages: MetadataRoute.Sitemap = BLOG_POSTS.map(post => ({
     url:             `${BASE}/blog/${post.slug}`,
     lastModified:    now,
     changeFrequency: 'monthly' as const,
-    priority:        0.6,
+    priority:        0.65,
   }))
 
   // ── Dynamic: active experience pages & active guides ─────────────────────
@@ -51,7 +43,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .select('slug, updated_at')
         .eq('status', 'active'),
       db.from('guides')
-        .select('id, updated_at')
+        .select('id, slug, updated_at')
         .eq('status', 'active')
         .eq('is_hidden', false),
     ])
@@ -60,18 +52,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url:             `${BASE}/experiences/${exp.slug}`,
       lastModified:    exp.updated_at ? new Date(exp.updated_at) : now,
       changeFrequency: 'weekly' as const,
-      priority:        0.85,
+      priority:        0.95,
     }))
 
     guidePages = (guideRes.data ?? []).map(guide => ({
-      url:             `${BASE}/guides/${guide.id}`,
+      url:             `${BASE}/guides/${(guide as { slug?: string | null }).slug ?? guide.id}`,
       lastModified:    guide.updated_at ? new Date(guide.updated_at) : now,
       changeFrequency: 'weekly' as const,
-      priority:        0.7,
+      priority:        0.90,
     }))
   } catch {
     // Fail silently — sitemap degrades to static pages only
   }
 
-  return [...staticPages, ...speciesPages, ...blogPages, ...experiencePages, ...guidePages]
+  return [...staticPages, ...blogPages, ...experiencePages, ...guidePages]
 }

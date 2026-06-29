@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { getGuide, getGuideExperiencePages } from '@/lib/supabase/queries'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CountryFlag } from '@/components/ui/country-flag'
@@ -56,19 +56,22 @@ const SalmonRule = () => (
 
 // ─── METADATA ─────────────────────────────────────────────────────────────────
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const guide = await getGuide(id)
   if (guide == null) return {}
+  const canonicalSlug = (guide as { slug?: string | null }).slug ?? id
   const desc = guide.bio != null ? guide.bio.slice(0, 160) : `Fish with ${guide.full_name} — a verified local guide in ${guide.country}. Book via FjordAnglers.`
   return {
     title: `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`,
     description: desc,
-    alternates: { canonical: `https://fjordanglers.com/guides/${id}` },
+    alternates: { canonical: `https://fjordanglers.com/guides/${canonicalSlug}` },
     openGraph: {
       title: `${guide.full_name} — Fishing Guide in ${guide.country} | FjordAnglers`,
       description: desc,
-      url: `https://fjordanglers.com/guides/${id}`,
+      url: `https://fjordanglers.com/guides/${canonicalSlug}`,
       images: guide.cover_url != null
         ? [{ url: guide.cover_url, width: 1200, height: 630, alt: `${guide.full_name} — fishing guide in ${guide.country}` }]
         : [],
@@ -93,6 +96,14 @@ export default async function GuideProfilePage({
 
   if (guide == null) notFound()
 
+  // Redirect UUID URLs to slug URLs permanently (SEO: slug carries keyword value)
+  const guideSlug = (guide as { slug?: string | null }).slug
+  if (UUID_RE.test(id) && guideSlug != null) {
+    permanentRedirect(`/guides/${guideSlug}`)
+  }
+
+  const canonicalSlug = guideSlug ?? id
+
   // flag rendered as <CountryFlag> below
   const landscapeUrl = (guide as { landscape_url?: string | null }).landscape_url ?? getLandscapeUrl(guide.country, guide.id)
 
@@ -102,7 +113,7 @@ export default async function GuideProfilePage({
     name: guide.full_name,
     ...(guide.bio != null ? { description: guide.bio } : {}),
     ...(guide.avatar_url != null ? { image: guide.avatar_url } : {}),
-    url: `https://fjordanglers.com/guides/${id}`,
+    url: `https://fjordanglers.com/guides/${canonicalSlug}`,
     jobTitle: 'Fishing Guide',
     address: {
       '@type': 'PostalAddress',
@@ -126,7 +137,7 @@ export default async function GuideProfilePage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://fjordanglers.com' },
       { '@type': 'ListItem', position: 2, name: 'Guides', item: 'https://fjordanglers.com/guides' },
-      { '@type': 'ListItem', position: 3, name: guide.full_name, item: `https://fjordanglers.com/guides/${id}` },
+      { '@type': 'ListItem', position: 3, name: guide.full_name, item: `https://fjordanglers.com/guides/${canonicalSlug}` },
     ],
   }
 

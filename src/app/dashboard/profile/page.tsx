@@ -26,7 +26,7 @@ export default async function ProfilePage() {
   // ── Guide profile ───────────────────────────────────────────────────────────
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, bio, avatar_url, cover_url, city, country, fish_expertise')
+    .select('id, slug, full_name, bio, avatar_url, cover_url, city, country, fish_expertise')
     .eq('user_id', user.id)
     .single()
 
@@ -147,7 +147,7 @@ export default async function ProfilePage() {
           Edit full profile →
         </Link>
         <Link
-          href={`/guides/${guide.id}`}
+          href={`/guides/${(guide as { slug?: string | null }).slug ?? guide.id}`}
           target="_blank"
           className="flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-full transition-all f-body hover:brightness-95"
           style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}

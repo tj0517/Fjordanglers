@@ -240,7 +240,7 @@ export async function getFeaturedGuides(limit = 4): Promise<FeaturedGuide[]> {
 
       const { data, error } = await db
         .from('guides')
-        .select('id, full_name, avatar_url, cover_url, country, city, average_rating, years_experience, fish_expertise, languages, tagline')
+        .select('id, slug, full_name, avatar_url, cover_url, country, city, average_rating, years_experience, fish_expertise, languages, tagline')
         .eq('status', 'active')
         .eq('is_hidden', false)
         .not('verified_at', 'is', null)
@@ -546,7 +546,7 @@ export type GuideRow = Database['public']['Tables']['guides']['Row']
 
 export type FeaturedGuide = Pick<
   GuideRow,
-  'id' | 'full_name' | 'avatar_url' | 'cover_url' | 'country' | 'city' |
+  'id' | 'slug' | 'full_name' | 'avatar_url' | 'cover_url' | 'country' | 'city' |
   'average_rating' | 'years_experience' | 'fish_expertise' | 'languages' | 'tagline'
 >
 
@@ -606,28 +606,45 @@ export async function getGuides(
  * Single guide by ID with embedded gallery images.
  * Returns null if not found or not active.
  */
-export async function getGuide(id: string): Promise<GuideWithImages | null> {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Fetch a guide by slug or UUID.
+ * UUID lookups first try by id; slug lookups try by slug column.
+ * Returns null if not found / inactive / hidden.
+ */
+export async function getGuide(slugOrId: string): Promise<GuideWithImages | null> {
+  const isUuid = UUID_RE.test(slugOrId)
   return unstable_cache(
     async () => {
       const db = createPublicClient()
+      const SELECT = '*, images:guide_images ( id, guide_id, url, is_cover, sort_order, created_at )'
 
-      const { data, error } = await db
-        .from('guides')
-        .select('*, images:guide_images ( id, guide_id, url, is_cover, sort_order, created_at )')
-        .eq('id', id)
-        .eq('status', 'active')
-        .eq('is_hidden', false)
-        .single()
+      // Primary lookup
+      const primary = isUuid
+        ? db.from('guides').select(SELECT).eq('id', slugOrId).eq('status', 'active').eq('is_hidden', false).maybeSingle()
+        : db.from('guides').select(SELECT).eq('slug', slugOrId).eq('status', 'active').eq('is_hidden', false).maybeSingle()
 
-      if (error) return null
+      const { data, error } = await primary
 
-      const guide = data as unknown as GuideWithImages
-      return {
-        ...guide,
-        images: sortImages(guide.images ?? []),
+      if (!error && data != null) {
+        const guide = data as unknown as GuideWithImages
+        return { ...guide, images: sortImages(guide.images ?? []) }
       }
+
+      // Fallback: UUID might also be stored as slug (edge case)
+      if (isUuid) {
+        const { data: bySlug } = await db
+          .from('guides').select(SELECT).eq('slug', slugOrId).eq('status', 'active').eq('is_hidden', false).maybeSingle()
+        if (bySlug != null) {
+          const guide = bySlug as unknown as GuideWithImages
+          return { ...guide, images: sortImages(guide.images ?? []) }
+        }
+      }
+
+      return null
     },
-    ['guide', id],
+    ['guide', slugOrId],
     { revalidate: 300, tags: [CACHE_TAG_GUIDES] },
   )()
 }

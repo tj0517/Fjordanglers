@@ -3,6 +3,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.1.62'],
+  async redirects() {
+    return [
+      { source: '/terms',   destination: '/legal/terms-of-service', permanent: true },
+      { source: '/privacy', destination: '/legal/privacy-policy',   permanent: true },
+    ]
+  },
   images: {
     remotePatterns: [
       // Unsplash — demo/seed images

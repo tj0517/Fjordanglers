@@ -15,6 +15,8 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem, Accommodation, Boat } from '@/actions/experience-pages'
 import type { TripOption } from '@/components/trips/TripOptionsAccordion'
 
+export const revalidate = 3600
+
 /**
  * /experiences/[slug] — Public editorial experience page.
  *
@@ -45,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const svc = createServiceClient()
   const { data: page } = await svc
     .from('experience_pages')
-    .select('experience_name, meta_title, meta_description, hero_image_url, og_image_url, gallery_image_urls, country, region, price_from, price_type')
+    .select('experience_name, meta_title, meta_description, hero_image_url, og_image_url, gallery_image_urls, country, region, price_from, price_type, target_species, technique')
     .eq('slug', slug)
     .eq('status', 'active')
     .single()
@@ -53,10 +55,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (page == null) return {}
 
   const title      = page.meta_title ?? `${page.experience_name} | FjordAnglers`
+  const speciesList = ((page.target_species as string[] | null) ?? []).slice(0, 2).join(' & ')
+  const fishingType = speciesList ? `${speciesList} fishing` : 'fishing'
   const description = page.meta_description
     ?? (page.price_type === 'request'
-      ? `Guided fishing in ${page.region}, ${page.country}. Price on request. Book via FjordAnglers.`
-      : `Fish with an expert guide in ${page.region}, ${page.country}. From €${page.price_from}. Book via FjordAnglers.`)
+      ? `Guided ${fishingType} in ${page.region}, ${page.country}. Price on request. Book with a verified local guide via FjordAnglers.`
+      : `Guided ${fishingType} in ${page.region}, ${page.country}. From €${page.price_from}. Book with a verified local guide via FjordAnglers.`)
   const gallery    = (page.gallery_image_urls as string[] | null) ?? []
   const ogImage    = page.og_image_url ?? gallery[0] ?? page.hero_image_url
 
@@ -271,6 +275,8 @@ export default async function ExperiencePublicPage({
       ? [{ id: '0', url: page.hero_image_url, is_cover: true }]
       : []
 
+  const faOrg = { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' }
+
   const tripSchema = {
     '@context': 'https://schema.org',
     '@type': 'TouristTrip',
@@ -279,6 +285,25 @@ export default async function ExperiencePublicPage({
     ...(page.hero_image_url != null ? { image: page.hero_image_url } : {}),
     url: `https://fjordanglers.com/experiences/${slug}`,
     touristType: ['Fishing', 'Outdoor Activity'],
+    ...(rawPage.location_lat != null && rawPage.location_lng != null ? {
+      location: {
+        '@type': 'Place',
+        name: rawPage.location_area ?? `${rawPage.region}, ${rawPage.country}`,
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: rawPage.location_lat,
+          longitude: rawPage.location_lng,
+        },
+        address: {
+          '@type': 'PostalAddress',
+          addressCountry: rawPage.country,
+          addressRegion: rawPage.region,
+        },
+      },
+    } : {}),
+    ...(page.season_start != null && page.season_end != null ? {
+      temporalCoverage: `${page.season_start}/${page.season_end}`,
+    } : {}),
     ...(page.price_from != null && page.price_type !== 'request' ? {
       offers: {
         '@type': 'Offer',
@@ -286,14 +311,15 @@ export default async function ExperiencePublicPage({
         priceCurrency: 'EUR',
         availability: 'https://schema.org/InStock',
         url: `https://fjordanglers.com/experiences/${slug}`,
+        seller: faOrg,
       },
     } : {}),
-    provider: { '@type': 'Organization', name: 'FjordAnglers', url: 'https://fjordanglers.com' },
+    provider: faOrg,
     ...(guide != null ? {
       subjectOf: {
         '@type': 'Person',
         name: guide.full_name,
-        url: `https://fjordanglers.com/guides/${guide.id}`,
+        url: `https://fjordanglers.com/guides/${guide.slug ?? guide.id}`,
       },
     } : {}),
   }
@@ -308,6 +334,8 @@ export default async function ExperiencePublicPage({
     ],
   }
 
+  // FAQPage retained for AI/LLM citation benefit only.
+  // Google ended FAQ rich results for all sites on May 7, 2026 — no SERP feature is rendered.
   const faqSchema = faq.length > 0 ? {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -421,7 +449,7 @@ export default async function ExperiencePublicPage({
             style={{ color: 'rgba(10,46,77,0.38)' }}>
             <Link href="/" className="hover:text-[#0A2E4D] transition-colors">Home</Link>
             <span style={{ color: 'rgba(10,46,77,0.2)' }}>›</span>
-            <Link href="/trips" className="hover:text-[#0A2E4D] transition-colors">Experiences</Link>
+            <Link href="/trips" className="hover:text-[#0A2E4D] transition-colors">Trips</Link>
             <span style={{ color: 'rgba(10,46,77,0.2)' }}>›</span>
             <span style={{ color: 'rgba(10,46,77,0.6)' }}>{page.experience_name}</span>
           </div>
@@ -1469,7 +1497,7 @@ export default async function ExperiencePublicPage({
                 )}
 
                 <Link
-                  href={`/guides/${guide.id}`}
+                  href={`/guides/${guide.slug ?? guide.id}`}
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-bold f-body transition-all hover:opacity-90"
                   style={{ background: '#E67E50', color: '#fff', boxShadow: '0 4px 14px rgba(230,126,80,0.35)' }}
                 >

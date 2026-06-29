@@ -142,6 +142,7 @@ function SectionDivider({ title }: { title: string }) {
 
 export type GuideEditData = {
   id: string
+  slug?: string | null
   full_name: string
   country: string
   city: string | null
@@ -283,7 +284,7 @@ export default function EditGuideForm({ guide }: Props) {
             Back to guide →
           </button>
           <a
-            href={`/guides/${guide.id}`}
+            href={`/guides/${guide.slug ?? guide.id}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-95 f-body"

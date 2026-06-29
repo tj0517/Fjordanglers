@@ -40,7 +40,7 @@ export default async function AdminGuidesPage({
   const [{ data: guides }, { data: expCounts }] = await Promise.all([
     supabase
       .from('guides')
-      .select('id, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, payment_ready')
+      .select('id, slug, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, payment_ready')
       .order('created_at', { ascending: false }),
     supabase
       .from('experiences')
@@ -312,7 +312,7 @@ export default async function AdminGuidesPage({
                         Edit
                       </Link>
                       <Link
-                        href={`/guides/${guide.id}`}
+                        href={`/guides/${guide.slug ?? guide.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[11px] f-body hover:text-[#E67E50] transition-colors"

@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    alternateLocale: ['pl_PL', 'de_DE'],
+    // alternateLocale removed — no translated pages exist yet; add back when /pl/ and /de/ routes are built
     url: 'https://fjordanglers.com',
     siteName: 'FjordAnglers',
     title: 'FjordAnglers — Guided Fishing Trips in Nordic Countries',
