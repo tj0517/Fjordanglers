@@ -30,8 +30,13 @@ export async function POST(req: Request) {
     // Resend uses the same svix signing scheme: sign "{svix-id}.{svix-timestamp}.{body}"
     if (svixId && svixTimestamp && svixSignature) {
       const toSign   = `${svixId}.${svixTimestamp}.${rawBody}`
+      // Svix secrets are base64-encoded with a "whsec_" prefix — decode before use
+      const secretKey = Buffer.from(
+        env.RESEND_INBOUND_SECRET.replace(/^whsec_/, ''),
+        'base64',
+      )
       const computed = 'v1,' + crypto
-        .createHmac('sha256', env.RESEND_INBOUND_SECRET)
+        .createHmac('sha256', secretKey)
         .update(toSign)
         .digest('base64')
 
