@@ -57,6 +57,11 @@ export async function POST(req: Request) {
     return new Response('Bad JSON', { status: 400 })
   }
 
+  const raw = payload as unknown as Record<string, unknown>
+  console.log('[email-inbound] payload keys:', Object.keys(raw))
+  console.log('[email-inbound] payload.from:', raw.from)
+  console.log('[email-inbound] payload.data:', JSON.stringify(raw.data ?? null))
+
   const fromRaw     = payload.from ?? ''
   const fromEmail   = extractEmail(fromRaw)
   const senderName  = extractName(fromRaw)
