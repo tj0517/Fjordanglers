@@ -1,0 +1,488 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - link "FjordAnglers" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "FjordAnglers" [ref=e5]
+      - generic [ref=e6]:
+        - link "Home" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "Trips" [ref=e8] [cursor=pointer]:
+          - /url: /trips
+        - link "Guides" [ref=e9] [cursor=pointer]:
+          - /url: /guides
+        - link "About" [ref=e10] [cursor=pointer]:
+          - /url: /about
+      - link "Explore trips →" [ref=e12] [cursor=pointer]:
+        - /url: /trips
+    - generic [ref=e13]:
+      - img "Angler fishing on a Nordic fjord river at midnight sun" [ref=e14]
+      - generic [ref=e16]:
+        - paragraph [ref=e17]: Guided fishing in the Nordic countries
+        - heading "Catch the fish of your life. In the wild North." [level=1] [ref=e18]:
+          - text: Catch the fish of your life.
+          - text: In the wild North.
+        - paragraph [ref=e19]: Guided fishing trips across Norway, Sweden, Iceland and Finland — hand-picked local guides, real rivers, no tourist routes.
+        - link "Explore trips →" [ref=e20] [cursor=pointer]:
+          - /url: /trips
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - paragraph [ref=e24]: 20+
+          - paragraph [ref=e25]: Curated Nordic Guides
+          - paragraph [ref=e26]: We reached out cold, they applied. We listed only the ones whose trips we'd actually book ourselves.
+        - generic [ref=e27]:
+          - paragraph [ref=e28]: "4"
+          - paragraph [ref=e29]: Countries. One operator.
+          - paragraph [ref=e30]: Norway, Sweden, Iceland and Finland. The best salmon, trout and sea fishing in Europe, curated in one place.
+        - generic [ref=e31]:
+          - paragraph [ref=e32]: 24h
+          - paragraph [ref=e33]: Personal Response
+          - paragraph [ref=e34]: Every inquiry is read and answered by a real person. No bots, no templates — within 24 hours.
+    - generic [ref=e35]:
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - heading "We're not a travel agency. We're anglers who found their people." [level=2] [ref=e42]:
+            - text: We're not a travel agency.
+            - text: We're anglers who found their people.
+          - generic [ref=e43]:
+            - paragraph [ref=e44]: FjordAnglers started because we went through the same thing you're going through. We've been backpacking Norway, Sweden, and Iceland with rods, sleeping in tents — and the hardest part was never the fishing. It was knowing where to go. Hundreds of rivers, lakes, and coastlines, and no straightforward way to find someone local who actually knows them. So we started building that list ourselves.
+            - paragraph [ref=e45]: We don't package you a “Lofoten 7-day all-inclusive”. We listen to what you want to catch and how you want to experience it. Then we call the right guide. It takes two days instead of two clicks — and that's why it works.
+        - generic [ref=e46]:
+          - generic [ref=e47]:
+            - img "Tymon" [ref=e49]
+            - img "Krzychu" [ref=e51]
+            - img "Lukas" [ref=e53]
+          - paragraph [ref=e54]: — Tymon, Krzychu & Lukas · Founders
+      - generic [ref=e55]:
+        - generic [ref=e57]:
+          - paragraph [ref=e60]: Our experiences
+          - heading "Trips you can book." [level=2] [ref=e61]
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - button "Previous" [ref=e65]: ←
+            - button "Next" [ref=e66]: →
+          - generic [ref=e67]:
+            - 'link "Fjord & Lake Escape: Authentic Fishing Adventures in Southern Norway Norway Norway Fjord & Lake Escape: Authentic Fishing Adventures in Southern Norway Go fishing Norway · from €150" [ref=e68] [cursor=pointer]':
+              - /url: /experiences/go-fishing-norway-kristiansand
+              - generic [ref=e69]:
+                - 'img "Fjord & Lake Escape: Authentic Fishing Adventures in Southern Norway" [ref=e70]'
+                - generic [ref=e72]:
+                  - generic [ref=e73]:
+                    - img "Norway" [ref=e74]
+                    - generic [ref=e75]: Norway
+                  - 'heading "Fjord & Lake Escape: Authentic Fishing Adventures in Southern Norway" [level=3] [ref=e76]'
+                  - paragraph [ref=e77]: Go fishing Norway · from €150
+            - 'link "Edge of the Arctic: Extreme Wild Fishing Expeditions in Far North Norway Norway Norway Edge of the Arctic: Extreme Wild Fishing Expeditions in Far North Norway Toni Corenius · from €1" [ref=e78] [cursor=pointer]':
+              - /url: /experiences/toni-corenius-finnmark-fly-fishing
+              - generic [ref=e79]:
+                - 'img "Edge of the Arctic: Extreme Wild Fishing Expeditions in Far North Norway" [ref=e80]'
+                - generic [ref=e82]:
+                  - generic [ref=e83]:
+                    - img "Norway" [ref=e84]
+                    - generic [ref=e85]: Norway
+                  - 'heading "Edge of the Arctic: Extreme Wild Fishing Expeditions in Far North Norway" [level=3] [ref=e86]'
+                  - paragraph [ref=e87]: Toni Corenius · from €1
+            - 'link "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland Iceland Iceland Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland Magnús Haukur · from €700" [ref=e88] [cursor=pointer]':
+              - /url: /experiences/magnus-haukur-iceland-fly-fishing
+              - generic [ref=e89]:
+                - 'img "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland" [ref=e90]'
+                - generic [ref=e92]:
+                  - generic [ref=e93]:
+                    - img "Iceland" [ref=e94]
+                    - generic [ref=e95]: Iceland
+                  - 'heading "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland" [level=3] [ref=e96]'
+                  - paragraph [ref=e97]: Magnús Haukur · from €700
+            - 'link "Capital Waters: Archipelago and Lake Predator Fishing near Helsinki Finland Finland Capital Waters: Archipelago and Lake Predator Fishing near Helsinki Helsinki · from €900" [ref=e98] [cursor=pointer]':
+              - /url: /experiences/predator-fishing
+              - generic [ref=e99]:
+                - 'img "Capital Waters: Archipelago and Lake Predator Fishing near Helsinki" [ref=e100]'
+                - generic [ref=e102]:
+                  - generic [ref=e103]:
+                    - img "Finland" [ref=e104]
+                    - generic [ref=e105]: Finland
+                  - 'heading "Capital Waters: Archipelago and Lake Predator Fishing near Helsinki" [level=3] [ref=e106]'
+                  - paragraph [ref=e107]: Helsinki · from €900
+            - 'link "Sweden Sweden Northern Wilderness: Wild River & Lake Fishing in Northern Sweden Kalix Jakt & Fisketurism AB · from €1" [ref=e108] [cursor=pointer]':
+              - /url: /experiences/kjoft-northern-sweden-lapland
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - img "Sweden" [ref=e113]
+                  - generic [ref=e114]: Sweden
+                - 'heading "Northern Wilderness: Wild River & Lake Fishing in Northern Sweden" [level=3] [ref=e115]'
+                - paragraph [ref=e116]: Kalix Jakt & Fisketurism AB · from €1
+            - 'link "Sweden Sweden The Archipelago Legend: Premium Fishing Expeditions in Stockholm Berra Mårdh · from €460" [ref=e117] [cursor=pointer]':
+              - /url: /experiences/berra-mardh-stockholm-boat-fishing
+              - generic [ref=e120]:
+                - generic [ref=e121]:
+                  - img "Sweden" [ref=e122]
+                  - generic [ref=e123]: Sweden
+                - 'heading "The Archipelago Legend: Premium Fishing Expeditions in Stockholm" [level=3] [ref=e124]'
+                - paragraph [ref=e125]: Berra Mårdh · from €460
+            - 'link "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland Iceland Iceland Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland Far Away Fishing Adventures Bergur Birgisson · from €1" [ref=e126] [cursor=pointer]':
+              - /url: /experiences/bergur-birgisson-far-away-fishing-iceland
+              - generic [ref=e127]:
+                - 'img "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland" [ref=e128]'
+                - generic [ref=e130]:
+                  - generic [ref=e131]:
+                    - img "Iceland" [ref=e132]
+                    - generic [ref=e133]: Iceland
+                  - 'heading "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland" [level=3] [ref=e134]'
+                  - paragraph [ref=e135]: Far Away Fishing Adventures Bergur Birgisson · from €1
+            - 'link "Lake Saimaa & Beyond: Fishing Trips with a South Karelian Heart Finland Finland Lake Saimaa & Beyond: Fishing Trips with a South Karelian Heart SouthEast fishing Finland · from €640" [ref=e136] [cursor=pointer]':
+              - /url: /experiences/southeast-fishing-finland
+              - generic [ref=e137]:
+                - 'img "Lake Saimaa & Beyond: Fishing Trips with a South Karelian Heart" [ref=e138]'
+                - generic [ref=e140]:
+                  - generic [ref=e141]:
+                    - img "Finland" [ref=e142]
+                    - generic [ref=e143]: Finland
+                  - 'heading "Lake Saimaa & Beyond: Fishing Trips with a South Karelian Heart" [level=3] [ref=e144]'
+                  - paragraph [ref=e145]: SouthEast fishing Finland · from €640
+            - link "→ See all trips" [ref=e146] [cursor=pointer]:
+              - /url: /trips
+              - generic [ref=e147]:
+                - generic [ref=e148]: →
+                - generic [ref=e149]:
+                  - text: See all
+                  - text: trips
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - generic [ref=e155]:
+            - paragraph [ref=e158]: How it works
+            - heading "Not Booking.com. Better than going alone." [level=2] [ref=e159]:
+              - text: Not Booking.com.
+              - text: Better than going alone.
+          - paragraph [ref=e160]: Norway, Sweden, Iceland and Finland — same process everywhere.
+        - generic [ref=e161]:
+          - generic [ref=e162]:
+            - generic: "01"
+            - generic [ref=e163]: "01"
+            - generic [ref=e164]:
+              - heading "Browse trips & pick a guide" [level=3] [ref=e165]
+              - paragraph [ref=e166]: Every listing shows the guide, the water, the species, and the price. Pick what matches what you want to catch.
+          - generic [ref=e167]:
+            - generic: "02"
+            - generic [ref=e168]: "02"
+            - generic [ref=e169]:
+              - heading "Send a booking request" [level=3] [ref=e170]
+              - paragraph [ref=e171]: Select your dates, add a short message. Takes 2 minutes. Free until the deal is done.
+          - generic [ref=e172]:
+            - generic: "03"
+            - generic [ref=e173]: "03"
+            - generic [ref=e174]:
+              - heading "Guide confirms within 48h" [level=3] [ref=e175]
+              - paragraph [ref=e176]: The guide reviews your request and confirms availability — or proposes alternative dates if yours are taken.
+        - generic [ref=e177]:
+          - link "Browse trips" [ref=e178] [cursor=pointer]:
+            - /url: /trips
+            - text: Browse trips
+            - img [ref=e179]
+          - paragraph [ref=e181]: Free to browse and request — you only pay when you confirm.
+      - generic [ref=e183]:
+        - heading "Four countries. Wild waters." [level=2] [ref=e186]
+        - generic [ref=e187]:
+          - link "Guided fishing in Norway — River, shore & tundra · May to October Norway Norway Trophy brown trout on the Mistra. Cod and wolffish from the coast. Arctic char on tundra lakes near Alta. Explore →" [ref=e188] [cursor=pointer]:
+            - /url: /trips?country=Norway
+            - generic [ref=e189]:
+              - img "Guided fishing in Norway — River, shore & tundra · May to October" [ref=e190]
+              - generic [ref=e192]:
+                - generic [ref=e193]:
+                  - img "Norway" [ref=e194]
+                  - generic [ref=e195]: Norway
+                - heading "Trophy brown trout on the Mistra. Cod and wolffish from the coast. Arctic char on tundra lakes near Alta." [level=3] [ref=e196]
+                - generic [ref=e197]: Explore →
+          - link "Guided fishing in Sweden — Lake, river & coast · April to December Sweden Sweden Pike, zander and perch on Mälaren and Vänern. Baltic sea trout on the Blekinge coast. Salmon on the Kalix and Torne rivers. Explore →" [ref=e198] [cursor=pointer]:
+            - /url: /trips?country=Sweden
+            - generic [ref=e199]:
+              - img "Guided fishing in Sweden — Lake, river & coast · April to December" [ref=e200]
+              - generic [ref=e202]:
+                - generic [ref=e203]:
+                  - img "Sweden" [ref=e204]
+                  - generic [ref=e205]: Sweden
+                - heading "Pike, zander and perch on Mälaren and Vänern. Baltic sea trout on the Blekinge coast. Salmon on the Kalix and Torne rivers." [level=3] [ref=e206]
+                - generic [ref=e207]: Explore →
+          - link "Guided fishing in Iceland — Fly fishing · April to October Iceland Iceland Brown trout and sea trout on highland rivers near Hella. Arctic char in glacial lakes. Salmon by season. Explore →" [ref=e208] [cursor=pointer]:
+            - /url: /trips?country=Iceland
+            - generic [ref=e209]:
+              - img "Guided fishing in Iceland — Fly fishing · April to October" [ref=e210]
+              - generic [ref=e212]:
+                - generic [ref=e213]:
+                  - img "Iceland" [ref=e214]
+                  - generic [ref=e215]: Iceland
+                - heading "Brown trout and sea trout on highland rivers near Hella. Arctic char in glacial lakes. Salmon by season." [level=3] [ref=e216]
+                - generic [ref=e217]: Explore →
+          - link "Guided fishing in Finland — Lake & river · May to November Finland Finland Pike, perch and zander on Lake Saimaa — with live sonar. Baltic salmon and grayling on the Tornio river in Lapland. Explore →" [ref=e218] [cursor=pointer]:
+            - /url: /trips?country=Finland
+            - generic [ref=e219]:
+              - img "Guided fishing in Finland — Lake & river · May to November" [ref=e220]
+              - generic [ref=e222]:
+                - generic [ref=e223]:
+                  - img "Finland" [ref=e224]
+                  - generic [ref=e225]: Finland
+                - heading "Pike, perch and zander on Lake Saimaa — with live sonar. Baltic salmon and grayling on the Tornio river in Lapland." [level=3] [ref=e226]
+                - generic [ref=e227]: Explore →
+      - generic [ref=e229]:
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - paragraph [ref=e233]: The people behind it
+            - heading "People you'll fish with." [level=2] [ref=e234]
+            - paragraph [ref=e235]: We reached out cold or they found us. We list only the ones whose trips we'd actually book.
+          - link "All guides →" [ref=e236] [cursor=pointer]:
+            - /url: /guides
+        - generic [ref=e237]:
+          - link "Piotr Wawrzyniuk Piotr Wawrzyniuk Sweden Sweden Sea Trout" [ref=e238] [cursor=pointer]:
+            - /url: /guides/pexfish-piotr-sweden
+            - generic [ref=e239]:
+              - img "Piotr Wawrzyniuk" [ref=e240]
+              - generic [ref=e242]:
+                - paragraph [ref=e243]: Piotr Wawrzyniuk
+                - paragraph [ref=e244]:
+                  - img "Sweden" [ref=e245]
+                  - text: Sweden
+                - paragraph [ref=e246]: Sea Trout
+          - link "Toni Corenius Toni Corenius Norway Finnmark Sea Trout" [ref=e247] [cursor=pointer]:
+            - /url: /guides/toni-corenius-finnmark
+            - generic [ref=e248]:
+              - img "Toni Corenius" [ref=e249]
+              - generic [ref=e251]:
+                - paragraph [ref=e252]: Toni Corenius
+                - paragraph [ref=e253]:
+                  - img "Norway" [ref=e254]
+                  - text: Finnmark
+                - paragraph [ref=e255]: Sea Trout
+          - link "Far Away Fishing Adventures Bergur Birgisson Far Away Fishing Adventures Bergur Birgisson Iceland Hella Salmon" [ref=e256] [cursor=pointer]:
+            - /url: /guides/bergur-birgisson-iceland
+            - generic [ref=e257]:
+              - img "Far Away Fishing Adventures Bergur Birgisson" [ref=e258]
+              - generic [ref=e260]:
+                - paragraph [ref=e261]: Far Away Fishing Adventures Bergur Birgisson
+                - paragraph [ref=e262]:
+                  - img "Iceland" [ref=e263]
+                  - text: Hella
+                - paragraph [ref=e264]: Salmon
+          - link "Go fishing Norway Go fishing Norway Norway Krystiansand Cod" [ref=e265] [cursor=pointer]:
+            - /url: /guides/marcin-go-fishing-norway
+            - generic [ref=e266]:
+              - img "Go fishing Norway" [ref=e267]
+              - generic [ref=e269]:
+                - paragraph [ref=e270]: Go fishing Norway
+                - paragraph [ref=e271]:
+                  - img "Norway" [ref=e272]
+                  - text: Krystiansand
+                - paragraph [ref=e273]: Cod
+          - link "Lapland Fishing LTD Lapland Fishing LTD Finland Lapland Salmon" [ref=e274] [cursor=pointer]:
+            - /url: /guides/lapland-fishing-ltd-finland
+            - generic [ref=e275]:
+              - img "Lapland Fishing LTD" [ref=e276]
+              - generic [ref=e278]:
+                - paragraph [ref=e279]: Lapland Fishing LTD
+                - paragraph [ref=e280]:
+                  - img "Finland" [ref=e281]
+                  - text: Lapland
+                - paragraph [ref=e282]: Salmon
+          - link "Dan Bjurshammar, FiskeDan Dan Bjurshammar, FiskeDan Sweden Stockholm Perch" [ref=e283] [cursor=pointer]:
+            - /url: /guides/dan-bjurshammar-fiskedan
+            - generic [ref=e284]:
+              - img "Dan Bjurshammar, FiskeDan" [ref=e285]
+              - generic [ref=e287]:
+                - paragraph [ref=e288]: Dan Bjurshammar, FiskeDan
+                - paragraph [ref=e289]:
+                  - img "Sweden" [ref=e290]
+                  - text: Stockholm
+                - paragraph [ref=e291]: Perch
+        - link "Meet all guides" [ref=e293] [cursor=pointer]:
+          - /url: /guides
+          - text: Meet all guides
+          - img [ref=e294]
+      - generic [ref=e297]:
+        - generic [ref=e298]:
+          - generic [ref=e299]:
+            - paragraph [ref=e301]: Browse by species
+            - heading "What are you after?" [level=2] [ref=e302]
+          - link "View all trips →" [ref=e303] [cursor=pointer]:
+            - /url: /trips
+        - generic [ref=e304]:
+          - link "Atlantic Salmon Atlantic Salmon 6 trips" [ref=e305] [cursor=pointer]:
+            - /url: /trips?fish=Salmon
+            - img "Atlantic Salmon" [ref=e307]
+            - paragraph [ref=e308]: Atlantic Salmon
+            - paragraph [ref=e309]: 6 trips
+          - link "Sea Trout Sea Trout 12 trips" [ref=e310] [cursor=pointer]:
+            - /url: /trips?fish=Sea Trout
+            - img "Sea Trout" [ref=e312]
+            - paragraph [ref=e313]: Sea Trout
+            - paragraph [ref=e314]: 12 trips
+          - link "Brown Trout Brown Trout 8 trips" [ref=e315] [cursor=pointer]:
+            - /url: /trips?fish=Brown Trout
+            - img "Brown Trout" [ref=e317]
+            - paragraph [ref=e318]: Brown Trout
+            - paragraph [ref=e319]: 8 trips
+          - link "Rainbow Trout Rainbow Trout" [ref=e320] [cursor=pointer]:
+            - /url: /trips?fish=Rainbow Trout
+            - img "Rainbow Trout" [ref=e322]
+            - paragraph [ref=e323]: Rainbow Trout
+          - link "Lake Trout Lake Trout" [ref=e324] [cursor=pointer]:
+            - /url: /trips?fish=Lake Trout
+            - img "Lake Trout" [ref=e326]
+            - paragraph [ref=e327]: Lake Trout
+          - link "Arctic Char Arctic Char 6 trips" [ref=e328] [cursor=pointer]:
+            - /url: /trips?fish=Arctic Char
+            - img "Arctic Char" [ref=e330]
+            - paragraph [ref=e331]: Arctic Char
+            - paragraph [ref=e332]: 6 trips
+          - link "Grayling Grayling 1 trip" [ref=e333] [cursor=pointer]:
+            - /url: /trips?fish=Grayling
+            - img "Grayling" [ref=e335]
+            - paragraph [ref=e336]: Grayling
+            - paragraph [ref=e337]: 1 trip
+          - link "Pike Pike 8 trips" [ref=e338] [cursor=pointer]:
+            - /url: /trips?fish=Pike
+            - img "Pike" [ref=e340]
+            - paragraph [ref=e341]: Pike
+            - paragraph [ref=e342]: 8 trips
+          - link "Perch Perch 7 trips" [ref=e343] [cursor=pointer]:
+            - /url: /trips?fish=Perch
+            - img "Perch" [ref=e345]
+            - paragraph [ref=e346]: Perch
+            - paragraph [ref=e347]: 7 trips
+          - link "Zander Zander 4 trips" [ref=e348] [cursor=pointer]:
+            - /url: /trips?fish=Zander
+            - img "Zander" [ref=e350]
+            - paragraph [ref=e351]: Zander
+            - paragraph [ref=e352]: 4 trips
+          - link "Cod Cod 3 trips" [ref=e353] [cursor=pointer]:
+            - /url: /trips?fish=Cod
+            - img "Cod" [ref=e355]
+            - paragraph [ref=e356]: Cod
+            - paragraph [ref=e357]: 3 trips
+          - link "Pollock Pollock 2 trips" [ref=e358] [cursor=pointer]:
+            - /url: /trips?fish=Pollock
+            - img "Pollock" [ref=e360]
+            - paragraph [ref=e361]: Pollock
+            - paragraph [ref=e362]: 2 trips
+          - link "Ling Ling 1 trip" [ref=e363] [cursor=pointer]:
+            - /url: /trips?fish=Ling
+            - img "Ling" [ref=e365]
+            - paragraph [ref=e366]: Ling
+            - paragraph [ref=e367]: 1 trip
+          - link "Halibut Halibut" [ref=e368] [cursor=pointer]:
+            - /url: /trips?fish=Halibut
+            - img "Halibut" [ref=e370]
+            - paragraph [ref=e371]: Halibut
+          - link "Brosme Brosme 1 trip" [ref=e372] [cursor=pointer]:
+            - /url: /trips?fish=Brosme
+            - img "Brosme" [ref=e374]
+            - paragraph [ref=e375]: Brosme
+            - paragraph [ref=e376]: 1 trip
+          - link "Norway Redfish Norway Redfish" [ref=e377] [cursor=pointer]:
+            - /url: /trips?fish=Norway Redfish
+            - img "Norway Redfish" [ref=e379]
+            - paragraph [ref=e380]: Norway Redfish
+          - link "Wolffish Wolffish 1 trip" [ref=e381] [cursor=pointer]:
+            - /url: /trips?fish=Wolffish
+            - img "Wolffish" [ref=e383]
+            - paragraph [ref=e384]: Wolffish
+            - paragraph [ref=e385]: 1 trip
+          - link "Sea Bass Sea Bass 2 trips" [ref=e386] [cursor=pointer]:
+            - /url: /trips?fish=Sea Bass
+            - img "Sea Bass" [ref=e388]
+            - paragraph [ref=e389]: Sea Bass
+            - paragraph [ref=e390]: 2 trips
+          - link "Mackerel Mackerel 2 trips" [ref=e391] [cursor=pointer]:
+            - /url: /trips?fish=Mackerel
+            - img "Mackerel" [ref=e393]
+            - paragraph [ref=e394]: Mackerel
+            - paragraph [ref=e395]: 2 trips
+          - link "Spiny Dogfish Spiny Dogfish 1 trip" [ref=e396] [cursor=pointer]:
+            - /url: /trips?fish=Spiny Dogfish
+            - img "Spiny Dogfish" [ref=e398]
+            - paragraph [ref=e399]: Spiny Dogfish
+            - paragraph [ref=e400]: 1 trip
+      - generic [ref=e404]:
+        - paragraph [ref=e405]: Season 2026 is open
+        - heading "The best weeks are filling now." [level=2] [ref=e406]
+        - paragraph [ref=e407]: Peak salmon weeks go fast. Write to us before the dates you want are gone.
+        - generic [ref=e408]:
+          - link "Explore trips" [ref=e409] [cursor=pointer]:
+            - /url: /trips
+            - text: Explore trips
+            - img [ref=e410]
+          - button "Talk to an Expert" [ref=e413]:
+            - img [ref=e414]
+            - text: Talk to an Expert
+        - paragraph [ref=e416]: We reply within 24 hours. In Polish, English or German.
+    - contentinfo [ref=e417]:
+      - generic [ref=e418]:
+        - generic [ref=e419]:
+          - generic [ref=e420]:
+            - link "FjordAnglers" [ref=e421] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e422]: FjordAnglers
+            - paragraph [ref=e423]: Connecting anglers with the best fishing trips in Scandinavia.
+            - link "@fjordanglers" [ref=e424] [cursor=pointer]:
+              - /url: https://instagram.com/fjordanglers
+              - img [ref=e425]
+              - text: "@fjordanglers"
+          - generic [ref=e429]:
+            - paragraph [ref=e430]: Explore
+            - generic [ref=e431]:
+              - link "All Trips" [ref=e432] [cursor=pointer]:
+                - /url: /trips
+              - link "Find Guides" [ref=e433] [cursor=pointer]:
+                - /url: /guides
+              - link "Atlantic Salmon" [ref=e434] [cursor=pointer]:
+                - /url: /trips?species=atlantic-salmon
+              - link "Trout Fishing" [ref=e435] [cursor=pointer]:
+                - /url: /trips?species=trout
+          - generic [ref=e436]:
+            - paragraph [ref=e437]: Destinations
+            - generic [ref=e438]:
+              - link "🇳🇴 Norway" [ref=e439] [cursor=pointer]:
+                - /url: /trips?country=norway
+                - generic [ref=e440]: 🇳🇴
+                - generic [ref=e441]: Norway
+              - link "🇸🇪 Sweden" [ref=e442] [cursor=pointer]:
+                - /url: /trips?country=sweden
+                - generic [ref=e443]: 🇸🇪
+                - generic [ref=e444]: Sweden
+              - link "🇫🇮 Finland" [ref=e445] [cursor=pointer]:
+                - /url: /trips?country=finland
+                - generic [ref=e446]: 🇫🇮
+                - generic [ref=e447]: Finland
+              - link "🇮🇸 Iceland" [ref=e448] [cursor=pointer]:
+                - /url: /trips?country=iceland
+                - generic [ref=e449]: 🇮🇸
+                - generic [ref=e450]: Iceland
+              - link "🇩🇰 Denmark" [ref=e451] [cursor=pointer]:
+                - /url: /trips?country=denmark
+                - generic [ref=e452]: 🇩🇰
+                - generic [ref=e453]: Denmark
+          - generic [ref=e454]:
+            - paragraph [ref=e455]: For Guides
+            - generic [ref=e456]:
+              - link "Apply as Guide" [ref=e457] [cursor=pointer]:
+                - /url: /guides/apply
+              - link "Guide Dashboard" [ref=e458] [cursor=pointer]:
+                - /url: /dashboard
+              - link "Sign in" [ref=e459] [cursor=pointer]:
+                - /url: /login
+        - generic [ref=e460]:
+          - paragraph [ref=e461]: © 2026 FjordAnglers. All rights reserved.
+          - generic [ref=e462]:
+            - link "Terms of Service" [ref=e463] [cursor=pointer]:
+              - /url: /legal/terms-of-service
+            - link "Privacy Policy" [ref=e464] [cursor=pointer]:
+              - /url: /legal/privacy-policy
+            - link "Cookie Policy" [ref=e465] [cursor=pointer]:
+              - /url: /legal/cookie-policy
+            - link "Legal Notice" [ref=e466] [cursor=pointer]:
+              - /url: /legal/legal-notice
+  - alert [ref=e467]
+  - generic [ref=e468]:
+    - paragraph [ref=e469]:
+      - text: We use cookies to understand how visitors use FjordAnglers and improve the experience.
+      - link "Privacy policy" [ref=e470] [cursor=pointer]:
+        - /url: /legal/privacy-policy
+    - generic [ref=e471]:
+      - button "Decline" [ref=e472] [cursor=pointer]
+      - button "Accept" [ref=e473] [cursor=pointer]

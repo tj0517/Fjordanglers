@@ -1,0 +1,11 @@
+- generic [active] [ref=e1]:
+  - img "FjordAnglers" [ref=e6]
+  - alert [ref=e92]
+  - generic [ref=e93]:
+    - paragraph [ref=e94]:
+      - text: We use cookies to understand how visitors use FjordAnglers and improve the experience.
+      - link "Privacy policy" [ref=e95] [cursor=pointer]:
+        - /url: /legal/privacy-policy
+    - generic [ref=e96]:
+      - button "Decline" [ref=e97] [cursor=pointer]
+      - button "Accept" [ref=e98] [cursor=pointer]

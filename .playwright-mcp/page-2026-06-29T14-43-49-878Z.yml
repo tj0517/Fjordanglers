@@ -1,0 +1,272 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - link "FjordAnglers" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "FjordAnglers" [ref=e5]
+      - generic [ref=e6]:
+        - link "Home" [ref=e7] [cursor=pointer]:
+          - /url: /
+        - link "Trips" [ref=e8] [cursor=pointer]:
+          - /url: /trips
+        - link "Guides" [ref=e9] [cursor=pointer]:
+          - /url: /guides
+        - link "About" [ref=e10] [cursor=pointer]:
+          - /url: /about
+      - link "Explore trips →" [ref=e12] [cursor=pointer]:
+        - /url: /trips
+    - heading "Guided Fishing Trips in Norway, Sweden, Iceland & Finland" [level=1] [ref=e14]
+    - main [ref=e15]:
+      - paragraph [ref=e16]: 15 experiences found
+      - generic [ref=e17]:
+        - link [ref=e18] [cursor=pointer]:
+          - /url: /experiences/predator-fishing
+          - article [ref=e19]:
+            - generic [ref=e20]:
+              - 'img "Capital Waters: Archipelago and Lake Predator Fishing near Helsinki" [ref=e21]'
+              - generic [ref=e23]: Family-friendly
+              - generic [ref=e25]: from €900 for the group
+            - generic [ref=e26]:
+              - 'heading "Capital Waters: Archipelago and Lake Predator Fishing near Helsinki" [level=3] [ref=e27]'
+              - generic [ref=e28]:
+                - img [ref=e29]
+                - paragraph [ref=e32]: Helsinki, Finland
+                - img "Finland" [ref=e34]
+        - link [ref=e35] [cursor=pointer]:
+          - /url: /experiences/toni-corenius-finnmark-fly-fishing
+          - article [ref=e36]:
+            - generic [ref=e37]:
+              - 'img "Edge of the Arctic: Extreme Wild Fishing Expeditions in Far North Norway" [ref=e38]'
+              - generic [ref=e39]:
+                - generic [ref=e40]: All Levels
+                - generic [ref=e41]: Family-friendly
+              - generic [ref=e43]: Price on request
+            - generic [ref=e44]:
+              - 'heading "Edge of the Arctic: Extreme Wild Fishing Expeditions in Far North Norway" [level=3] [ref=e45]'
+              - generic [ref=e46]:
+                - img [ref=e47]
+                - paragraph [ref=e50]: Finnmark, Northern Norway / Finnish Lapland, Norway
+                - img "Norway" [ref=e52]
+        - link [ref=e53] [cursor=pointer]:
+          - /url: /experiences/pexfish-southern-sweden
+          - article [ref=e54]:
+            - generic [ref=e55]:
+              - 'img "Southern Sweden Expeditions: Guided Sport Fishing on Lakes and Coasts" [ref=e56]'
+              - generic [ref=e58]: All Levels
+              - generic [ref=e60]: from €370 / person
+            - generic [ref=e61]:
+              - 'heading "Southern Sweden Expeditions: Guided Sport Fishing on Lakes and Coasts" [level=3] [ref=e62]'
+              - generic [ref=e63]:
+                - img [ref=e64]
+                - paragraph [ref=e67]: Southern Sweden - Blekinge / Skåne, Sweden
+                - img "Sweden" [ref=e69]
+        - link [ref=e70] [cursor=pointer]:
+          - /url: /experiences/southeast-fishing-finland
+          - article [ref=e71]:
+            - generic [ref=e72]:
+              - 'img "Lake Saimaa & Beyond: Fishing Trips with a South Karelian Heart" [ref=e73]'
+              - generic [ref=e74]:
+                - generic [ref=e75]: All Levels
+                - generic [ref=e76]: Family-friendly
+              - generic [ref=e78]: from €640 for the group
+            - generic [ref=e79]:
+              - 'heading "Lake Saimaa & Beyond: Fishing Trips with a South Karelian Heart" [level=3] [ref=e80]'
+              - generic [ref=e81]:
+                - img [ref=e82]
+                - paragraph [ref=e85]: South Karelia, Finland, Finland
+                - img "Finland" [ref=e87]
+        - link [ref=e88] [cursor=pointer]:
+          - /url: /experiences/go-fishing-norway-kristiansand
+          - article [ref=e89]:
+            - generic [ref=e90]:
+              - 'img "Fjord & Lake Escape: Authentic Fishing Adventures in Southern Norway" [ref=e91]'
+              - generic [ref=e92]:
+                - generic [ref=e93]: All Levels
+                - generic [ref=e94]: Family-friendly
+              - generic [ref=e96]: from €150 / person
+            - generic [ref=e97]:
+              - 'heading "Fjord & Lake Escape: Authentic Fishing Adventures in Southern Norway" [level=3] [ref=e98]'
+              - generic [ref=e99]:
+                - img [ref=e100]
+                - paragraph [ref=e103]: Southern Norway, Norway
+                - img "Norway" [ref=e105]
+        - link [ref=e106] [cursor=pointer]:
+          - /url: /experiences/fiskedan-stockholm-fishing
+          - article [ref=e107]:
+            - generic [ref=e108]:
+              - 'img "The Baltic and Lake Mälaren: Premium Sport Fishing near Stockholm" [ref=e109]'
+              - generic [ref=e111]: All Levels
+              - generic [ref=e113]: from €950 for the group
+            - generic [ref=e114]:
+              - 'heading "The Baltic and Lake Mälaren: Premium Sport Fishing near Stockholm" [level=3] [ref=e115]'
+              - generic [ref=e116]:
+                - img [ref=e117]
+                - paragraph [ref=e120]: Stockholm - Lake Mälaren, Archipelago, Vänern, Vättern, Kalmarsund, Lapland, Sweden
+                - img "Sweden" [ref=e122]
+        - link [ref=e123] [cursor=pointer]:
+          - /url: /experiences/inge-ronning-mistra-river-trout
+          - article [ref=e124]:
+            - generic [ref=e125]:
+              - 'img "Chasing Giants: Premium Trophy Trout Expeditions on the Mistra River" [ref=e126]'
+              - generic [ref=e128]: All Levels
+              - generic [ref=e130]: from €700 for the group
+            - generic [ref=e131]:
+              - 'heading "Chasing Giants: Premium Trophy Trout Expeditions on the Mistra River" [level=3] [ref=e132]'
+              - generic [ref=e133]:
+                - img [ref=e134]
+                - paragraph [ref=e137]: Lake Storsjøen, eastern Norway, Norway
+                - img "Norway" [ref=e139]
+        - link [ref=e140] [cursor=pointer]:
+          - /url: /experiences/magnus-haukur-iceland-fly-fishing
+          - article [ref=e141]:
+            - generic [ref=e142]:
+              - 'img "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland" [ref=e143]'
+              - generic [ref=e145]: All Levels
+              - generic [ref=e147]: from €700 for the group
+            - generic [ref=e148]:
+              - 'heading "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland" [level=3] [ref=e149]'
+              - generic [ref=e150]:
+                - img [ref=e151]
+                - paragraph [ref=e154]: West Ranga, Iceland, Iceland
+                - img "Iceland" [ref=e156]
+        - link [ref=e157] [cursor=pointer]:
+          - /url: /experiences/kjoft-northern-sweden-lapland
+          - article [ref=e158]:
+            - generic [ref=e159]:
+              - 'img "Northern Wilderness: Wild River & Lake Fishing in Northern Sweden" [ref=e160]'
+              - generic [ref=e161]:
+                - generic [ref=e162]: All Levels
+                - generic [ref=e163]: Family-friendly
+              - generic [ref=e165]: Price on request
+            - generic [ref=e166]:
+              - 'heading "Northern Wilderness: Wild River & Lake Fishing in Northern Sweden" [level=3] [ref=e167]'
+              - generic [ref=e168]:
+                - img [ref=e169]
+                - paragraph [ref=e172]: Northern Sweden - Kalix & Swedish Lapland, Sweden
+                - img "Sweden" [ref=e174]
+        - link [ref=e175] [cursor=pointer]:
+          - /url: /experiences/bergur-birgisson-far-away-fishing-iceland
+          - article [ref=e176]:
+            - generic [ref=e177]:
+              - 'img "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland" [ref=e178]'
+              - generic [ref=e180]: All Levels
+              - generic [ref=e182]: Price on request
+            - generic [ref=e183]:
+              - 'heading "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland" [level=3] [ref=e184]'
+              - generic [ref=e185]:
+                - img [ref=e186]
+                - paragraph [ref=e189]: Hella, South Iceland, Iceland
+                - img "Iceland" [ref=e191]
+        - link [ref=e192] [cursor=pointer]:
+          - /url: /experiences/joakim-aberg-alingsas-fishing
+          - article [ref=e193]:
+            - generic [ref=e194]:
+              - 'img "Precision Predator Fishing: Guided Lake Expeditions near Gothenburg" [ref=e195]'
+              - generic [ref=e196]:
+                - generic [ref=e197]: All Levels
+                - generic [ref=e198]: Family-friendly
+              - generic [ref=e200]: from €650 for the group
+            - generic [ref=e201]:
+              - 'heading "Precision Predator Fishing: Guided Lake Expeditions near Gothenburg" [level=3] [ref=e202]'
+              - generic [ref=e203]:
+                - img [ref=e204]
+                - paragraph [ref=e207]: Alingsås - 50km east of Gothenburg, Sweden
+                - img "Sweden" [ref=e209]
+        - link [ref=e210] [cursor=pointer]:
+          - /url: /experiences/brynjar-arnarsson-iceland-fly-fishing
+          - article [ref=e211]:
+            - generic [ref=e212]:
+              - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson" [ref=e213]
+              - generic [ref=e215]: All Levels
+              - generic [ref=e217]: from €800 for the group
+            - generic [ref=e218]:
+              - heading "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson" [level=3] [ref=e219]
+              - generic [ref=e220]:
+                - img [ref=e221]
+                - paragraph [ref=e224]: Capital area, Iceland, Iceland
+                - img "Iceland" [ref=e226]
+      - navigation "Pagination" [ref=e227]:
+        - generic [ref=e228]: ← Prev
+        - generic [ref=e229]: "1"
+        - link "2" [ref=e230] [cursor=pointer]:
+          - /url: /trips?page=2
+        - link "Next →" [ref=e231] [cursor=pointer]:
+          - /url: /trips?page=2
+      - button "Map" [ref=e233]:
+        - img [ref=e234]
+        - text: Map
+    - contentinfo [ref=e237]:
+      - generic [ref=e238]:
+        - generic [ref=e239]:
+          - generic [ref=e240]:
+            - link "FjordAnglers" [ref=e241] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e242]: FjordAnglers
+            - paragraph [ref=e243]: Connecting anglers with the best fishing trips in Scandinavia.
+            - link "@fjordanglers" [ref=e244] [cursor=pointer]:
+              - /url: https://instagram.com/fjordanglers
+              - img [ref=e245]
+              - text: "@fjordanglers"
+          - generic [ref=e249]:
+            - paragraph [ref=e250]: Explore
+            - generic [ref=e251]:
+              - link "All Trips" [ref=e252] [cursor=pointer]:
+                - /url: /trips
+              - link "Find Guides" [ref=e253] [cursor=pointer]:
+                - /url: /guides
+              - link "Atlantic Salmon" [ref=e254] [cursor=pointer]:
+                - /url: /trips?species=atlantic-salmon
+              - link "Trout Fishing" [ref=e255] [cursor=pointer]:
+                - /url: /trips?species=trout
+          - generic [ref=e256]:
+            - paragraph [ref=e257]: Destinations
+            - generic [ref=e258]:
+              - link "🇳🇴 Norway" [ref=e259] [cursor=pointer]:
+                - /url: /trips?country=norway
+                - generic [ref=e260]: 🇳🇴
+                - generic [ref=e261]: Norway
+              - link "🇸🇪 Sweden" [ref=e262] [cursor=pointer]:
+                - /url: /trips?country=sweden
+                - generic [ref=e263]: 🇸🇪
+                - generic [ref=e264]: Sweden
+              - link "🇫🇮 Finland" [ref=e265] [cursor=pointer]:
+                - /url: /trips?country=finland
+                - generic [ref=e266]: 🇫🇮
+                - generic [ref=e267]: Finland
+              - link "🇮🇸 Iceland" [ref=e268] [cursor=pointer]:
+                - /url: /trips?country=iceland
+                - generic [ref=e269]: 🇮🇸
+                - generic [ref=e270]: Iceland
+              - link "🇩🇰 Denmark" [ref=e271] [cursor=pointer]:
+                - /url: /trips?country=denmark
+                - generic [ref=e272]: 🇩🇰
+                - generic [ref=e273]: Denmark
+          - generic [ref=e274]:
+            - paragraph [ref=e275]: For Guides
+            - generic [ref=e276]:
+              - link "Apply as Guide" [ref=e277] [cursor=pointer]:
+                - /url: /guides/apply
+              - link "Guide Dashboard" [ref=e278] [cursor=pointer]:
+                - /url: /dashboard
+              - link "Sign in" [ref=e279] [cursor=pointer]:
+                - /url: /login
+        - generic [ref=e280]:
+          - paragraph [ref=e281]: © 2026 FjordAnglers. All rights reserved.
+          - generic [ref=e282]:
+            - link "Terms of Service" [ref=e283] [cursor=pointer]:
+              - /url: /legal/terms-of-service
+            - link "Privacy Policy" [ref=e284] [cursor=pointer]:
+              - /url: /legal/privacy-policy
+            - link "Cookie Policy" [ref=e285] [cursor=pointer]:
+              - /url: /legal/cookie-policy
+            - link "Legal Notice" [ref=e286] [cursor=pointer]:
+              - /url: /legal/legal-notice
+  - alert [ref=e287]
+  - generic [ref=e288]:
+    - paragraph [ref=e289]:
+      - text: We use cookies to understand how visitors use FjordAnglers and improve the experience.
+      - link "Privacy policy" [ref=e290] [cursor=pointer]:
+        - /url: /legal/privacy-policy
+    - generic [ref=e291]:
+      - button "Decline" [ref=e292] [cursor=pointer]
+      - button "Accept" [ref=e293] [cursor=pointer]

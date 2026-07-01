@@ -62,6 +62,16 @@ export async function POST(req: Request) {
     return new Response('OK', { status: 200 })
   }
 
+  // Filter out automated/system senders
+  const autoSenders = [
+    'noreply', 'no-reply', 'mailer-daemon', 'postmaster',
+    'dmarc', 'bounce', 'notifications', 'do-not-reply', 'donotreply',
+  ]
+  if (autoSenders.some(s => fromEmail.includes(s))) {
+    console.log('[email-inbound] Auto-sender filtered:', fromEmail)
+    return new Response('OK', { status: 200 })
+  }
+
   if (!bodyText.trim()) {
     console.log('[email-inbound] Empty body — skipping:', fromEmail)
     return new Response('OK', { status: 200 })

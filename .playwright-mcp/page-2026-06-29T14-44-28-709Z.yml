@@ -1,0 +1,590 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - link "FjordAnglers" [ref=e3] [cursor=pointer]:
+      - /url: /
+      - img "FjordAnglers" [ref=e4]
+    - generic [ref=e5]:
+      - link "Home" [ref=e6] [cursor=pointer]:
+        - /url: /
+      - link "Trips" [ref=e7] [cursor=pointer]:
+        - /url: /trips
+      - link "Guides" [ref=e8] [cursor=pointer]:
+        - /url: /guides
+      - link "About" [ref=e9] [cursor=pointer]:
+        - /url: /about
+    - link "Explore trips →" [ref=e11] [cursor=pointer]:
+      - /url: /trips
+  - link "All trips" [ref=e13] [cursor=pointer]:
+    - /url: /trips
+    - img [ref=e14]
+    - text: All trips
+  - generic [ref=e16]:
+    - generic [ref=e19]:
+      - button "Open photo" [ref=e20]:
+        - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson — cover photo" [ref=e21]
+      - button "Open photo 2" [ref=e23]:
+        - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson — photo 2" [ref=e24]
+      - button "Open photo 3" [ref=e26]:
+        - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson — photo 3" [ref=e27]
+      - button "Open photo 4" [ref=e29]:
+        - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson — photo 4" [ref=e30]
+      - button "Open photo 5" [ref=e32]:
+        - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson — photo 5" [ref=e33]
+        - generic [ref=e36]:
+          - img [ref=e37]
+          - text: All 7 photos
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - link "Home" [ref=e44] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e45]: ›
+        - link "Trips" [ref=e46] [cursor=pointer]:
+          - /url: /trips
+        - generic [ref=e47]: ›
+        - generic [ref=e48]: Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson
+      - generic [ref=e49]:
+        - img [ref=e50]
+        - generic [ref=e53]: Capital area, Iceland, Iceland
+        - generic [ref=e54]: · April–September
+      - heading "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson" [level=1] [ref=e55]
+      - generic [ref=e56]:
+        - generic [ref=e57]: from €800 for the group
+        - generic [ref=e58]: ·
+        - generic [ref=e59]: River
+        - generic [ref=e60]: Lake
+    - generic [ref=e61]:
+      - generic [ref=e62]:
+        - generic [ref=e66]:
+          - button "Overview" [ref=e67] [cursor=pointer]
+          - button "Iceland Fishing Day Trips" [ref=e68] [cursor=pointer]
+          - button "Luxury Iceland Fly Fishing Experience" [ref=e69] [cursor=pointer]
+        - generic [ref=e71]:
+          - paragraph [ref=e73]: Iceland's rivers and lakes hold some of Europe's finest wild trout and salmon — and Brynjar has spent his career learning every pool. Whether you're planning a day fishing trip or a longer Iceland fly fishing experience, each guided trip is built around what you want to catch.
+          - generic [ref=e74]:
+            - paragraph [ref=e76]: Quick Fit
+            - generic [ref=e77]:
+              - generic [ref=e78]:
+                - paragraph [ref=e79]: Level
+                - generic [ref=e80]:
+                  - generic [ref=e81]: All Levels
+                  - generic [ref=e82]: Low effort
+              - generic [ref=e83]:
+                - paragraph [ref=e84]: Target species
+                - generic [ref=e85]:
+                  - generic [ref=e86]: Brown Trout
+                  - generic [ref=e87]: Arctic Char
+                  - generic [ref=e88]: Salmon
+                  - generic [ref=e89]: Sea Trout
+              - generic [ref=e90]:
+                - paragraph [ref=e91]: Technique
+                - generic [ref=e92]:
+                  - generic [ref=e93]: Fly fishing
+                  - generic [ref=e94]: Spinning
+                  - generic [ref=e95]: Baitcasting
+              - generic [ref=e96]:
+                - paragraph [ref=e97]: Guide speaks
+                - generic [ref=e98]:
+                  - generic [ref=e99]: English
+                  - generic [ref=e100]: Icelandic
+          - generic [ref=e101]:
+            - paragraph [ref=e103]: About this experience
+            - paragraph [ref=e105]: Led by a local expert certified by the Icelandic School of Travel and Tourism in 2019, this premier guiding service offers highly personalized fishing adventures across Iceland. Operating with a deep understanding of the country's vast network of rivers and lakes, the service caters to all preferences, from quick day trips departing from Reykjavík to fully catered luxury wilderness expeditions. Whether the goal is to cast a fly in a rushing river or spin-fish on a pristine lake, every itinerary is meticulously customized.
+          - generic [ref=e106]:
+            - paragraph [ref=e108]: Photos
+            - generic [ref=e109]:
+              - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson photo 1" [ref=e111]
+              - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson photo 2" [ref=e113]
+              - img "Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson photo 3" [ref=e115]
+          - generic [ref=e116]:
+            - paragraph [ref=e118]: What you can catch
+            - generic [ref=e119]:
+              - generic [ref=e120]:
+                - generic [ref=e121]:
+                  - generic [ref=e122]:
+                    - heading "Brown Trout" [level=3] [ref=e123]
+                    - paragraph [ref=e124]: "Standard fish average around 50 cm (3–5 lbs). Large specimens reach 90 cm+ and weights of 10–15 lbs, occasionally exceeding 20 lbs. Spring is an excellent time for targeting them. Specialty: Targeting the legendary prehistoric Ice Age Brown Trout."
+                  - img "Brown Trout" [ref=e126]
+                - generic [ref=e127]:
+                  - paragraph [ref=e128]: Season
+                  - generic [ref=e129]:
+                    - generic [ref=e130]:
+                      - generic [ref=e131]:
+                        - generic [ref=e132]: Jan
+                        - generic [ref=e134]: —
+                      - generic [ref=e135]:
+                        - generic [ref=e136]: Feb
+                        - generic [ref=e138]: —
+                      - generic [ref=e139]:
+                        - generic [ref=e140]: Mar
+                        - generic [ref=e142]: —
+                      - button "Open inquiry for April" [ref=e143] [cursor=pointer]:
+                        - generic [ref=e144]: Apr
+                        - generic [ref=e146]: Peak
+                      - button "Open inquiry for May" [ref=e147] [cursor=pointer]:
+                        - generic [ref=e148]: May
+                        - generic [ref=e150]: Peak
+                      - button "Open inquiry for June" [ref=e151] [cursor=pointer]:
+                        - generic [ref=e152]: Jun
+                        - generic [ref=e154]: Peak
+                      - button "Open inquiry for July" [ref=e155] [cursor=pointer]:
+                        - generic [ref=e156]: Jul
+                        - generic [ref=e158]: Open
+                      - button "Open inquiry for August" [ref=e159] [cursor=pointer]:
+                        - generic [ref=e160]: Aug
+                        - generic [ref=e162]: Open
+                      - button "Open inquiry for September" [ref=e163] [cursor=pointer]:
+                        - generic [ref=e164]: Sep
+                        - generic [ref=e166]: Open
+                      - generic [ref=e167]:
+                        - generic [ref=e168]: Oct
+                        - generic [ref=e170]: —
+                      - generic [ref=e171]:
+                        - generic [ref=e172]: Nov
+                        - generic [ref=e174]: —
+                      - generic [ref=e175]:
+                        - generic [ref=e176]: Dec
+                        - generic [ref=e178]: —
+                    - generic [ref=e179]:
+                      - generic [ref=e182]: Peak season
+                      - generic [ref=e185]: Open season
+                      - generic [ref=e188]: Off season
+              - generic [ref=e189]:
+                - generic [ref=e191]:
+                  - heading "Arctic Char" [level=3] [ref=e192]
+                  - paragraph [ref=e193]: Typical size is 40–60 cm; caught mainly via fly fishing utilizing specialized dry-dropper setups (nymphs with indicators).
+                - generic [ref=e194]:
+                  - paragraph [ref=e195]: Season
+                  - generic [ref=e196]:
+                    - generic [ref=e197]:
+                      - generic [ref=e198]:
+                        - generic [ref=e199]: Jan
+                        - generic [ref=e201]: —
+                      - generic [ref=e202]:
+                        - generic [ref=e203]: Feb
+                        - generic [ref=e205]: —
+                      - generic [ref=e206]:
+                        - generic [ref=e207]: Mar
+                        - generic [ref=e209]: —
+                      - generic [ref=e210]:
+                        - generic [ref=e211]: Apr
+                        - generic [ref=e213]: —
+                      - button "Open inquiry for May" [ref=e214] [cursor=pointer]:
+                        - generic [ref=e215]: May
+                        - generic [ref=e217]: Open
+                      - button "Open inquiry for June" [ref=e218] [cursor=pointer]:
+                        - generic [ref=e219]: Jun
+                        - generic [ref=e221]: Open
+                      - button "Open inquiry for July" [ref=e222] [cursor=pointer]:
+                        - generic [ref=e223]: Jul
+                        - generic [ref=e225]: Open
+                      - button "Open inquiry for August" [ref=e226] [cursor=pointer]:
+                        - generic [ref=e227]: Aug
+                        - generic [ref=e229]: Open
+                      - button "Open inquiry for September" [ref=e230] [cursor=pointer]:
+                        - generic [ref=e231]: Sep
+                        - generic [ref=e233]: Open
+                      - generic [ref=e234]:
+                        - generic [ref=e235]: Oct
+                        - generic [ref=e237]: —
+                      - generic [ref=e238]:
+                        - generic [ref=e239]: Nov
+                        - generic [ref=e241]: —
+                      - generic [ref=e242]:
+                        - generic [ref=e243]: Dec
+                        - generic [ref=e245]: —
+                    - generic [ref=e246]:
+                      - generic [ref=e249]: Peak season
+                      - generic [ref=e252]: Open season
+                      - generic [ref=e255]: Off season
+              - generic [ref=e256]:
+                - generic [ref=e257]:
+                  - generic [ref=e258]:
+                    - heading "Salmon" [level=3] [ref=e259]
+                    - paragraph [ref=e260]: "The season runs from early June to September, peaking between mid-July and mid-August. Note: Permits for salmon are premium-priced compared to trout and char."
+                  - img "Salmon" [ref=e262]
+                - generic [ref=e263]:
+                  - paragraph [ref=e264]: Season
+                  - generic [ref=e265]:
+                    - generic [ref=e266]:
+                      - generic [ref=e267]:
+                        - generic [ref=e268]: Jan
+                        - generic [ref=e270]: —
+                      - generic [ref=e271]:
+                        - generic [ref=e272]: Feb
+                        - generic [ref=e274]: —
+                      - generic [ref=e275]:
+                        - generic [ref=e276]: Mar
+                        - generic [ref=e278]: —
+                      - generic [ref=e279]:
+                        - generic [ref=e280]: Apr
+                        - generic [ref=e282]: —
+                      - generic [ref=e283]:
+                        - generic [ref=e284]: May
+                        - generic [ref=e286]: —
+                      - button "Open inquiry for June" [ref=e287] [cursor=pointer]:
+                        - generic [ref=e288]: Jun
+                        - generic [ref=e290]: Open
+                      - button "Open inquiry for July" [ref=e291] [cursor=pointer]:
+                        - generic [ref=e292]: Jul
+                        - generic [ref=e294]: Peak
+                      - button "Open inquiry for August" [ref=e295] [cursor=pointer]:
+                        - generic [ref=e296]: Aug
+                        - generic [ref=e298]: Open
+                      - generic [ref=e299]:
+                        - generic [ref=e300]: Sep
+                        - generic [ref=e302]: —
+                      - generic [ref=e303]:
+                        - generic [ref=e304]: Oct
+                        - generic [ref=e306]: —
+                      - generic [ref=e307]:
+                        - generic [ref=e308]: Nov
+                        - generic [ref=e310]: —
+                      - generic [ref=e311]:
+                        - generic [ref=e312]: Dec
+                        - generic [ref=e314]: —
+                    - generic [ref=e315]:
+                      - generic [ref=e318]: Peak season
+                      - generic [ref=e321]: Open season
+                      - generic [ref=e324]: Off season
+              - generic [ref=e325]:
+                - generic [ref=e326]:
+                  - generic [ref=e327]:
+                    - heading "Sea Trout" [level=3] [ref=e328]
+                    - paragraph [ref=e329]: Excellent results are typically achieved during the spring season, but the absolute peak period for targeting sea trout is during the autumn months.
+                  - img "Sea Trout" [ref=e331]
+                - generic [ref=e332]:
+                  - paragraph [ref=e333]: Season
+                  - generic [ref=e334]:
+                    - generic [ref=e335]:
+                      - generic [ref=e336]:
+                        - generic [ref=e337]: Jan
+                        - generic [ref=e339]: —
+                      - generic [ref=e340]:
+                        - generic [ref=e341]: Feb
+                        - generic [ref=e343]: —
+                      - generic [ref=e344]:
+                        - generic [ref=e345]: Mar
+                        - generic [ref=e347]: —
+                      - button "Open inquiry for April" [ref=e348] [cursor=pointer]:
+                        - generic [ref=e349]: Apr
+                        - generic [ref=e351]: Open
+                      - button "Open inquiry for May" [ref=e352] [cursor=pointer]:
+                        - generic [ref=e353]: May
+                        - generic [ref=e355]: Open
+                      - button "Open inquiry for June" [ref=e356] [cursor=pointer]:
+                        - generic [ref=e357]: Jun
+                        - generic [ref=e359]: Open
+                      - generic [ref=e360]:
+                        - generic [ref=e361]: Jul
+                        - generic [ref=e363]: —
+                      - button "Open inquiry for August" [ref=e364] [cursor=pointer]:
+                        - generic [ref=e365]: Aug
+                        - generic [ref=e367]: Peak
+                      - button "Open inquiry for September" [ref=e368] [cursor=pointer]:
+                        - generic [ref=e369]: Sep
+                        - generic [ref=e371]: Peak
+                      - button "Open inquiry for October" [ref=e372] [cursor=pointer]:
+                        - generic [ref=e373]: Oct
+                        - generic [ref=e375]: Open
+                      - generic [ref=e376]:
+                        - generic [ref=e377]: Nov
+                        - generic [ref=e379]: —
+                      - generic [ref=e380]:
+                        - generic [ref=e381]: Dec
+                        - generic [ref=e383]: —
+                    - generic [ref=e384]:
+                      - generic [ref=e387]: Peak season
+                      - generic [ref=e390]: Open season
+                      - generic [ref=e393]: Off season
+          - generic [ref=e394]:
+            - generic [ref=e395]:
+              - heading "Trophy Fish or High Action — You Choose" [level=4] [ref=e396]
+              - paragraph [ref=e397]: Iceland's river systems vary wildly — some are built for trophy Brown Trout and Salmon, others give constant action with Arctic Char. Tell your guide the goal and Brynjar picks the right water for the day.
+            - generic [ref=e398]:
+              - heading "Catch & Release on Iceland's Rivers" [level=4] [ref=e399]
+              - paragraph [ref=e400]: Catch and release is standard on Iceland's rivers and mandatory on many beats. Where permitted, you're welcome to keep a fish — grilling a fresh catch on the riverbank is one of those moments you don't forget on a guided fishing trip in Iceland.
+            - generic [ref=e401]:
+              - heading "Fly Fishing, Spinning & Iceland River Selection" [level=4] [ref=e402]
+              - paragraph [ref=e403]: Iceland's rivers are classic fly fishing territory, but the country's lakes and many river sections are equally good for spinning and baitcasting. Every guided trip is matched to your preferred style and target species.
+            - generic [ref=e404]:
+              - 'heading "Exclusive Access: Þingvallavatn & Private Rivers" [level=4] [ref=e405]'
+              - paragraph [ref=e406]: Brynjar has an exceptional track record on Lake Þingvallavatn — one of Iceland's most iconic trout fisheries. He also holds exclusive guide access to a private river 30 minutes from Reykjavík, ideal when other beats are full.
+            - generic [ref=e407]:
+              - heading "All Transport from Reykjavík Included" [level=4] [ref=e408]
+              - paragraph [ref=e409]: Iceland fishing permits must be secured well in advance — your guide handles all of that. Pick-up and drop-off in Reykjavík, transport between pools, and all driving throughout the trip is included.
+            - generic [ref=e410]:
+              - heading "Fly Fishing Gear Included" [level=4] [ref=e411]
+              - paragraph [ref=e412]: "Full gear is available for a small additional fee — #6–7 weight fly rods for rivers and lakes, double-handed or switch rods for salmon beats. Bring your own if you prefer; backup gear is always in the truck."
+          - generic [ref=e413]:
+            - paragraph [ref=e415]: Season
+            - paragraph [ref=e416]: April – September
+            - generic [ref=e418]:
+              - generic [ref=e419]:
+                - generic [ref=e420]:
+                  - generic [ref=e421]: Jan
+                  - generic [ref=e423]: —
+                - generic [ref=e424]:
+                  - generic [ref=e425]: Feb
+                  - generic [ref=e427]: —
+                - generic [ref=e428]:
+                  - generic [ref=e429]: Mar
+                  - generic [ref=e431]: —
+                - button "Open inquiry for April" [ref=e432] [cursor=pointer]:
+                  - generic [ref=e433]: Apr
+                  - generic [ref=e435]: Open
+                - button "Open inquiry for May" [ref=e436] [cursor=pointer]:
+                  - generic [ref=e437]: May
+                  - generic [ref=e439]: Open
+                - button "Open inquiry for June" [ref=e440] [cursor=pointer]:
+                  - generic [ref=e441]: Jun
+                  - generic [ref=e443]: Open
+                - button "Open inquiry for July" [ref=e444] [cursor=pointer]:
+                  - generic [ref=e445]: Jul
+                  - generic [ref=e447]: Open
+                - button "Open inquiry for August" [ref=e448] [cursor=pointer]:
+                  - generic [ref=e449]: Aug
+                  - generic [ref=e451]: Open
+                - button "Open inquiry for September" [ref=e452] [cursor=pointer]:
+                  - generic [ref=e453]: Sep
+                  - generic [ref=e455]: Open
+                - generic [ref=e456]:
+                  - generic [ref=e457]: Oct
+                  - generic [ref=e459]: —
+                - generic [ref=e460]:
+                  - generic [ref=e461]: Nov
+                  - generic [ref=e463]: —
+                - generic [ref=e464]:
+                  - generic [ref=e465]: Dec
+                  - generic [ref=e467]: —
+              - generic [ref=e468]:
+                - generic [ref=e471]: Peak season
+                - generic [ref=e474]: Open season
+                - generic [ref=e477]: Off season
+          - generic [ref=e478]:
+            - paragraph [ref=e480]: Accommodation
+            - generic [ref=e482]:
+              - heading "Accommodation, Catering & Sightseeing" [level=3] [ref=e483]
+              - paragraph [ref=e486]: For multi-day excursions and full-service luxury packages, every detail regarding lodging and dining is expertly managed. Accommodations are entirely tailored to the guest's preferences, group size, and budget. Options range from fully catered, premium fishing lodges featuring gourmet meals to a more intimate, relaxing self-catered experience hosted in a private cabin. Beyond the water, the guide acts as a personal driver and sightseeing host, seamlessly combining elite fishing with guided tours of Iceland's breathtaking landscapes. Even for standard day trips, bespoke catering including high-quality food and beverages can be fully provided upon request.
+          - generic [ref=e487]:
+            - paragraph [ref=e489]: Location
+            - generic [ref=e490]:
+              - img [ref=e491]
+              - paragraph [ref=e494]: Capital area, Iceland - exact location arranged at booking
+            - generic [ref=e496]:
+              - button [ref=e497] [cursor=pointer]:
+                - img [ref=e499]
+              - generic [ref=e500]:
+                - link "Leaflet" [ref=e501] [cursor=pointer]:
+                  - /url: https://leafletjs.com
+                  - img [ref=e502]
+                  - text: Leaflet
+                - text: "| ©"
+                - link "OSM" [ref=e506] [cursor=pointer]:
+                  - /url: https://www.openstreetmap.org/copyright
+                - text: ©
+                - link "CARTO" [ref=e507] [cursor=pointer]:
+                  - /url: https://carto.com/
+          - generic [ref=e508]:
+            - paragraph [ref=e510]: FAQ
+            - generic [ref=e511]:
+              - group [ref=e512]:
+                - generic "Does the cost of the guiding service increase if I have more people in my group?" [ref=e513] [cursor=pointer]:
+                  - generic [ref=e514]: Does the cost of the guiding service increase if I have more people in my group?
+                  - img [ref=e515]
+              - group [ref=e517]:
+                - generic "Do I need to bring my own fishing gear?" [ref=e518] [cursor=pointer]:
+                  - generic [ref=e519]: Do I need to bring my own fishing gear?
+                  - img [ref=e520]
+              - group [ref=e522]:
+                - generic "What should I wear for a day of fishing in Iceland?" [ref=e523] [cursor=pointer]:
+                  - generic [ref=e524]: What should I wear for a day of fishing in Iceland?
+                  - img [ref=e525]
+              - group [ref=e527]:
+                - generic "I am a beginner. Is this trip suitable for me?" [ref=e528] [cursor=pointer]:
+                  - generic [ref=e529]: I am a beginner. Is this trip suitable for me?
+                  - img [ref=e530]
+              - group [ref=e532]:
+                - generic "Where does the trip start and is transportation provided?" [ref=e533] [cursor=pointer]:
+                  - generic [ref=e534]: Where does the trip start and is transportation provided?
+                  - img [ref=e535]
+              - group [ref=e537]:
+                - generic "How strict is the daily fishing schedule?" [ref=e538] [cursor=pointer]:
+                  - generic [ref=e539]: How strict is the daily fishing schedule?
+                  - img [ref=e540]
+              - group [ref=e542]:
+                - generic "What about food and drinks during the trip?" [ref=e543] [cursor=pointer]:
+                  - generic [ref=e544]: What about food and drinks during the trip?
+                  - img [ref=e545]
+        - generic:
+          - generic:
+            - img
+            - img
+      - generic [ref=e549]:
+        - generic [ref=e550]:
+          - paragraph [ref=e551]: Book this trip
+          - paragraph [ref=e552]: Iceland Fly Fishing & River Expeditions with Brynjar Arnarsson
+        - generic [ref=e553]:
+          - generic [ref=e554]: Group price
+          - generic [ref=e555]: from €800
+        - generic [ref=e556]:
+          - paragraph [ref=e557]: How it works
+          - generic [ref=e558]:
+            - generic [ref=e559]:
+              - generic [ref=e561]: "1"
+              - paragraph [ref=e562]: Ask about your dates
+            - generic [ref=e563]:
+              - generic [ref=e565]: "2"
+              - paragraph [ref=e566]: FA confirms availability
+            - generic [ref=e567]:
+              - generic [ref=e569]: "3"
+              - paragraph [ref=e570]: Secure with a deposit
+        - generic [ref=e571]:
+          - button "Send Inquiry →" [ref=e572]
+          - paragraph [ref=e573]: Free to ask · no payment now · reply within 24h
+        - generic [ref=e574]:
+          - paragraph [ref=e575]: Not sure yet? Talk to us
+          - generic [ref=e576]:
+            - link "WhatsApp" [ref=e577] [cursor=pointer]:
+              - /url: https://wa.me/48698936563?text=Hi!%20I%20have%20a%20question%20about%20%22Iceland%20Fly%20Fishing%20%26%20River%20Expeditions%20with%20Brynjar%20Arnarsson%22.%20Can%20you%20help%20me%20plan%20this%20trip%3F
+              - img [ref=e578]
+              - text: WhatsApp
+            - link "Instagram" [ref=e580] [cursor=pointer]:
+              - /url: https://www.instagram.com/fjordanglers/
+              - img [ref=e581]
+              - text: Instagram
+            - link "Email" [ref=e583] [cursor=pointer]:
+              - /url: mailto:contact@fjordanglers.com?subject=Question%20about%20a%20guided%20fishing%20trip
+              - img [ref=e584]
+              - text: Email
+  - generic [ref=e588]:
+    - paragraph [ref=e591]: Your guide
+    - generic [ref=e592]:
+      - img "Brynjar Arnarsson" [ref=e595]
+      - generic [ref=e596]:
+        - heading "Brynjar Arnarsson" [level=2] [ref=e598]
+        - generic [ref=e599]:
+          - generic [ref=e600]:
+            - img "Iceland" [ref=e601]
+            - text: Capital area, Iceland
+          - generic [ref=e602]: 9 years guiding
+          - generic [ref=e603]: Speaks English, Icelandic
+        - paragraph [ref=e604]: Certified Iceland fishing guide since 2019 — rivers, lakes, and everything in between.
+        - generic [ref=e605]:
+          - generic [ref=e606]: Brown Trout
+          - generic [ref=e607]: Sea Trout
+          - generic [ref=e608]: Arctic Char
+          - generic [ref=e609]: Salmon
+        - link "View guide profile →" [ref=e610] [cursor=pointer]:
+          - /url: /guides/brynjar-arnarsson-iceland
+  - generic [ref=e612]:
+    - paragraph [ref=e615]: More like this
+    - heading "More experiences in Iceland" [level=2] [ref=e616]
+    - generic [ref=e617]:
+      - 'link "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland Iceland West Ranga, Iceland Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland All Levels Fly fishing Sight casting from €700 View →" [ref=e618] [cursor=pointer]':
+        - /url: /experiences/magnus-haukur-iceland-fly-fishing
+        - generic [ref=e619]:
+          - 'img "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland" [ref=e620]'
+          - generic [ref=e621]:
+            - img "Iceland" [ref=e622]
+            - generic [ref=e623]: West Ranga, Iceland
+        - generic [ref=e624]:
+          - 'heading "Silver & Shadows: Specialized Fly Fishing and Sight Casting in Iceland" [level=3] [ref=e625]'
+          - generic [ref=e626]:
+            - generic [ref=e627]: All Levels
+            - generic [ref=e628]: Fly fishing
+            - generic [ref=e629]: Sight casting
+          - generic [ref=e630]:
+            - generic [ref=e631]: from €700
+            - generic [ref=e632]: View →
+      - 'link "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland Iceland Hella, South Iceland Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland All Levels Fly fishing Price on request View →" [ref=e633] [cursor=pointer]':
+        - /url: /experiences/bergur-birgisson-far-away-fishing-iceland
+        - generic [ref=e634]:
+          - 'img "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland" [ref=e635]'
+          - generic [ref=e636]:
+            - img "Iceland" [ref=e637]
+            - generic [ref=e638]: Hella, South Iceland
+        - generic [ref=e639]:
+          - 'heading "Volcanic Horizons: Elite Highland Fly Fishing Adventures in Iceland" [level=3] [ref=e640]'
+          - generic [ref=e641]:
+            - generic [ref=e642]: All Levels
+            - generic [ref=e643]: Fly fishing
+          - generic [ref=e644]:
+            - generic [ref=e645]: Price on request
+            - generic [ref=e646]: View →
+    - link "See all experiences in Iceland →" [ref=e648] [cursor=pointer]:
+      - /url: /trips?country=Iceland
+  - contentinfo [ref=e649]:
+    - generic [ref=e650]:
+      - generic [ref=e651]:
+        - generic [ref=e652]:
+          - link "FjordAnglers" [ref=e653] [cursor=pointer]:
+            - /url: /
+            - generic [ref=e654]: FjordAnglers
+          - paragraph [ref=e655]: Connecting anglers with the best fishing trips in Scandinavia.
+          - link "@fjordanglers" [ref=e656] [cursor=pointer]:
+            - /url: https://instagram.com/fjordanglers
+            - img [ref=e657]
+            - text: "@fjordanglers"
+        - generic [ref=e661]:
+          - paragraph [ref=e662]: Explore
+          - generic [ref=e663]:
+            - link "All Trips" [ref=e664] [cursor=pointer]:
+              - /url: /trips
+            - link "Find Guides" [ref=e665] [cursor=pointer]:
+              - /url: /guides
+            - link "Atlantic Salmon" [ref=e666] [cursor=pointer]:
+              - /url: /trips?species=atlantic-salmon
+            - link "Trout Fishing" [ref=e667] [cursor=pointer]:
+              - /url: /trips?species=trout
+        - generic [ref=e668]:
+          - paragraph [ref=e669]: Destinations
+          - generic [ref=e670]:
+            - link "🇳🇴 Norway" [ref=e671] [cursor=pointer]:
+              - /url: /trips?country=norway
+              - generic [ref=e672]: 🇳🇴
+              - generic [ref=e673]: Norway
+            - link "🇸🇪 Sweden" [ref=e674] [cursor=pointer]:
+              - /url: /trips?country=sweden
+              - generic [ref=e675]: 🇸🇪
+              - generic [ref=e676]: Sweden
+            - link "🇫🇮 Finland" [ref=e677] [cursor=pointer]:
+              - /url: /trips?country=finland
+              - generic [ref=e678]: 🇫🇮
+              - generic [ref=e679]: Finland
+            - link "🇮🇸 Iceland" [ref=e680] [cursor=pointer]:
+              - /url: /trips?country=iceland
+              - generic [ref=e681]: 🇮🇸
+              - generic [ref=e682]: Iceland
+            - link "🇩🇰 Denmark" [ref=e683] [cursor=pointer]:
+              - /url: /trips?country=denmark
+              - generic [ref=e684]: 🇩🇰
+              - generic [ref=e685]: Denmark
+        - generic [ref=e686]:
+          - paragraph [ref=e687]: For Guides
+          - generic [ref=e688]:
+            - link "Apply as Guide" [ref=e689] [cursor=pointer]:
+              - /url: /guides/apply
+            - link "Guide Dashboard" [ref=e690] [cursor=pointer]:
+              - /url: /dashboard
+            - link "Sign in" [ref=e691] [cursor=pointer]:
+              - /url: /login
+      - generic [ref=e692]:
+        - paragraph [ref=e693]: © 2026 FjordAnglers. All rights reserved.
+        - generic [ref=e694]:
+          - link "Terms of Service" [ref=e695] [cursor=pointer]:
+            - /url: /legal/terms-of-service
+          - link "Privacy Policy" [ref=e696] [cursor=pointer]:
+            - /url: /legal/privacy-policy
+          - link "Cookie Policy" [ref=e697] [cursor=pointer]:
+            - /url: /legal/cookie-policy
+          - link "Legal Notice" [ref=e698] [cursor=pointer]:
+            - /url: /legal/legal-notice
+  - alert [ref=e699]
+  - generic [ref=e700]:
+    - paragraph [ref=e701]:
+      - text: We use cookies to understand how visitors use FjordAnglers and improve the experience.
+      - link "Privacy policy" [ref=e702] [cursor=pointer]:
+        - /url: /legal/privacy-policy
+    - generic [ref=e703]:
+      - button "Decline" [ref=e704] [cursor=pointer]
+      - button "Accept" [ref=e705] [cursor=pointer]
