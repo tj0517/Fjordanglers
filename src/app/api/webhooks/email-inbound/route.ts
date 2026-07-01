@@ -57,15 +57,12 @@ export async function POST(req: Request) {
     return new Response('Bad JSON', { status: 400 })
   }
 
-  const raw = payload as unknown as Record<string, unknown>
-  console.log('[email-inbound] payload keys:', Object.keys(raw))
-  console.log('[email-inbound] payload.from:', raw.from)
-  console.log('[email-inbound] payload.data:', JSON.stringify(raw.data ?? null))
-
-  const fromRaw     = payload.from ?? ''
+  // Resend sends email fields nested under `data` when using Svix
+  const email       = payload.data ?? payload
+  const fromRaw     = email.from ?? ''
   const fromEmail   = extractEmail(fromRaw)
   const senderName  = extractName(fromRaw)
-  const bodyText    = payload.text ?? stripHtml(payload.html ?? '')
+  const bodyText    = email.text ?? stripHtml(email.html ?? '')
 
   if (!fromEmail) {
     console.warn('[email-inbound] Could not parse from address:', fromRaw)
@@ -90,7 +87,7 @@ export async function POST(req: Request) {
   const supabase   = createServiceClient()
   const inquiryId  = await matchInquiryByEmail(fromEmail)
 
-  const subject = payload.subject ? `**${payload.subject}**\n\n` : ''
+  const subject = email.subject ? `**${email.subject}**\n\n` : ''
   const content = subject + bodyText.trim()
 
   if (inquiryId) {
@@ -170,11 +167,23 @@ function stripHtml(html: string): string {
 
 // ─── Resend Inbound payload type ──────────────────────────────────────────────
 
-interface ResendInboundPayload {
-  from:    string
-  to?:     string[]
+interface ResendEmailData {
+  from:     string
+  to?:      string[]
   subject?: string
-  text?:   string
-  html?:   string
+  text?:    string
+  html?:    string
   headers?: Record<string, string>
+}
+
+// Resend wraps the email inside a `data` field when sending via Svix
+interface ResendInboundPayload {
+  type?: string
+  data?: ResendEmailData
+  // flat fields (fallback — some versions send without wrapper)
+  from?:    string
+  to?:      string[]
+  subject?: string
+  text?:    string
+  html?:    string
 }
