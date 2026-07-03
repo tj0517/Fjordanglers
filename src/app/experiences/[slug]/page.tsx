@@ -120,38 +120,29 @@ export default async function ExperiencePublicPage({
     return `from €${priceFrom} / person`
   }
 
-  // Fetch blocked dates for InquiryWidget if trip_id is set
-  let blockedRanges: Array<{ date_start: string; date_end: string }> = []
+  // Fetch guide's available dates for InquiryWidget
+  let blockedDates: string[] = []
   let maxGuests = 12
 
   if (page.trip_id) {
     const today     = new Date().toISOString().slice(0, 10)
-    const yearAhead = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10)
+    const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
-    const [{ data: expData }, { data: expCalendars }, { data: allGuideCalendars }] = await Promise.all([
-      svc.from('experiences').select('max_guests, guide_id').eq('id', page.trip_id).single(),
-      svc.from('calendar_experiences').select('calendar_id').eq('experience_id', page.trip_id),
+    const [{ data: expData }, { data: availRows }] = await Promise.all([
+      svc.from('experiences').select('max_guests').eq('id', page.trip_id).single(),
       page.guide_id
-        ? svc.from('guide_calendars').select('id').eq('guide_id', page.guide_id)
-        : Promise.resolve({ data: [] as Array<{ id: string }> }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? (svc as any)
+            .from('guide_unavailable_dates')
+            .select('date')
+            .eq('guide_id', page.guide_id)
+            .gte('date', today)
+            .lte('date', yearAhead)
+        : Promise.resolve({ data: [] as Array<{ date: string }> }),
     ])
 
     if (expData?.max_guests) maxGuests = expData.max_guests
-
-    const specificIds = (expCalendars ?? []).map((c: { calendar_id: string }) => c.calendar_id)
-    const calendarIds = specificIds.length > 0
-      ? specificIds
-      : (allGuideCalendars ?? []).map((c: { id: string }) => c.id)
-
-    if (calendarIds.length > 0) {
-      const { data: blocked } = await svc
-        .from('calendar_blocked_dates')
-        .select('date_start, date_end')
-        .in('calendar_id', calendarIds)
-        .gte('date_end', today)
-        .lte('date_start', yearAhead)
-      blockedRanges = blocked ?? []
-    }
+    blockedDates = (availRows ?? []).map((r: { date: string }) => r.date)
   }
 
   // Guide info
@@ -503,7 +494,7 @@ export default async function ExperiencePublicPage({
             experiencePageId={page.trip_id ? undefined : page.id}
             tripTitle={page.experience_name}
             maxGuests={maxGuests}
-            blockedRanges={blockedRanges}
+            blockedDates={blockedDates}
             priceFrom={page.price_from ?? null}
             priceType={page.price_type ?? null}
           >
@@ -1400,7 +1391,7 @@ export default async function ExperiencePublicPage({
                 experiencePageId={page.trip_id ? undefined : page.id}
                 tripTitle={page.experience_name}
                 maxGuests={maxGuests}
-                blockedRanges={blockedRanges}
+                blockedDates={blockedDates}
                 priceFrom={page.price_from ?? null}
                 priceType={page.price_type ?? null}
               />

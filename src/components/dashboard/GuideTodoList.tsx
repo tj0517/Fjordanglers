@@ -42,10 +42,10 @@ const CURRENCY_SYMBOL: Record<Currency, string> = { EUR: '€', USD: '$', ISK: '
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface OptionDraft {
-  spot:          string
-  speciesSelect: string   // value from dropdown ('other' triggers free text)
-  speciesOther:  string   // free text when 'other' is selected
-  currency:      Currency
+  spot:         string
+  species:      string[]   // selected known species
+  speciesOther: string     // extra free-text species
+  currency:     Currency
   license_price: string
   guide_price:   string
   description:   string
@@ -63,19 +63,25 @@ interface Props {
 
 export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props) {
 
-  function toSelectValue(species: string | null, knownSpecies: string[]): { sel: string; other: string } {
-    if (!species) return { sel: '', other: '' }
-    if (knownSpecies.includes(species)) return { sel: species, other: '' }
-    return { sel: 'other', other: species }
+  function toSpeciesInit(
+    species: string[] | string | null,
+    knownSpecies: string[],
+  ): { selected: string[]; other: string } {
+    if (!species) return { selected: [], other: '' }
+    // handle legacy string format
+    const arr = Array.isArray(species) ? species : [species]
+    const selected = arr.filter(s => knownSpecies.includes(s))
+    const others   = arr.filter(s => !knownSpecies.includes(s))
+    return { selected, other: others.join(', ') }
   }
 
   const initOptions: OptionDraft[] =
     (initialDetails?.guide_options ?? []).length > 0
       ? initialDetails!.guide_options.map(o => {
-          const { sel, other } = toSelectValue(o.species ?? null, guideSpecies)
+          const { selected, other } = toSpeciesInit(o.species ?? null, guideSpecies)
           return {
             spot:          o.spot          ?? '',
-            speciesSelect: sel,
+            species:       selected,
             speciesOther:  other,
             currency:      (o.currency     ?? 'EUR') as Currency,
             license_price: o.license_price != null ? String(o.license_price) : '',
@@ -85,10 +91,11 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
             localPhotos:   [],
           }
         })
-      : [{ spot: '', speciesSelect: '', speciesOther: '', currency: 'EUR' as Currency, license_price: '', guide_price: '', description: '', photos: [], localPhotos: [] }]
+      : [{ spot: '', species: [], speciesOther: '', currency: 'EUR' as Currency, license_price: '', guide_price: '', description: '', photos: [], localPhotos: [] }]
 
+  const hasExistingOffer = (initialDetails?.guide_options ?? []).length > 0
+  const [isSent,  setIsSent]  = useState(hasExistingOffer)
   const [options, setOptions] = useState<OptionDraft[]>(initOptions)
-  const [saved,   setSaved]   = useState(false)
   const [saveErr, setSaveErr] = useState<string | null>(null)
   const [saving, startSave]   = useTransition()
 
@@ -100,7 +107,7 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
   function addOption() {
     if (options.length >= 3) return
     setOptions(prev => [...prev, {
-      spot: '', speciesSelect: '', speciesOther: '', currency: 'EUR',
+      spot: '', species: [], speciesOther: '', currency: 'EUR',
       license_price: '', guide_price: '', description: '', photos: [], localPhotos: [],
     }])
   }
@@ -110,8 +117,18 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
     setOptions(prev => prev.filter((_, idx) => idx !== i))
   }
 
-  function updateOption(i: number, field: keyof Omit<OptionDraft, 'photos' | 'localPhotos'>, val: string) {
+  function updateOption(i: number, field: keyof Omit<OptionDraft, 'photos' | 'localPhotos' | 'species'>, val: string) {
     setOptions(prev => prev.map((o, idx) => idx === i ? { ...o, [field]: val } : o))
+  }
+
+  function toggleSpecies(optIdx: number, s: string) {
+    setOptions(prev => prev.map((o, idx) => {
+      if (idx !== optIdx) return o
+      const next = o.species.includes(s)
+        ? o.species.filter(x => x !== s)
+        : [...o.species, s]
+      return { ...o, species: next }
+    }))
   }
 
   // ── Photo management ───────────────────────────────────────────────────────
@@ -170,12 +187,13 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
       const guideOptions: GuideOption[] = processed
         .filter(o => o.spot.trim() !== '')
         .map(o => {
-          const species = o.speciesSelect === 'other'
-            ? o.speciesOther.trim() || null
-            : o.speciesSelect || null
+          const allSpecies = [
+            ...o.species,
+            ...o.speciesOther.split(',').map(s => s.trim()).filter(Boolean),
+          ]
           return {
             spot:          o.spot.trim(),
-            species,
+            species:       allSpecies.length > 0 ? allSpecies : null,
             currency:      o.currency,
             license_price: o.license_price !== '' ? Number(o.license_price) : null,
             guide_price:   o.guide_price   !== '' ? Number(o.guide_price)   : null,
@@ -188,8 +206,7 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
       if (!res.success) {
         setSaveErr(res.error ?? 'Failed to save')
       } else {
-        setSaved(true)
-        setTimeout(() => setSaved(false), 2000)
+        setIsSent(true)
       }
     })
   }
@@ -200,14 +217,86 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
     <div className="flex flex-col gap-4 mb-4">
       <div className="rounded-[22px] overflow-hidden"
         style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-        <div className="px-6 py-4"
+
+        {/* Header */}
+        <div className="px-6 py-4 flex items-center justify-between"
           style={{ borderBottom: '1px solid rgba(10,46,77,0.08)', background: 'rgba(230,126,80,0.03)' }}>
-          <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Your Offer</h2>
-          <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-            Fill this in so FjordAnglers can build the final offer for the angler.
-          </p>
+          <div>
+            <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Your Offer</h2>
+            {!isSent && (
+              <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                Fill this in so FjordAnglers can build the final offer for the angler.
+              </p>
+            )}
+          </div>
+          {isSent && (
+            <button type="button" onClick={() => setIsSent(false)}
+              className="flex items-center gap-1.5 text-xs font-bold f-body px-3 py-1.5 rounded-lg"
+              style={{ color: '#0A2E4D', background: 'rgba(10,46,77,0.06)', border: 'none', cursor: 'pointer' }}>
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                <path d="M8.5 1.5L10.5 3.5L4 10H2V8L8.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+              </svg>
+              Edit
+            </button>
+          )}
         </div>
+
         <div className="px-6 py-5 flex flex-col gap-5">
+
+        {/* ── Sent / locked view ── */}
+        {isSent ? (
+          <div className="flex flex-col gap-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full self-start"
+              style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)' }}>
+              <span className="text-[11px] font-bold f-body" style={{ color: '#065F46' }}>
+                ✓ Offer submitted
+              </span>
+            </div>
+            {options.map((opt, i) => (
+              <div key={i} className="rounded-xl px-4 py-3"
+                style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body mb-1"
+                  style={{ color: 'rgba(10,46,77,0.38)' }}>Option {i + 1}</p>
+                <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{opt.spot || '—'}</p>
+                {(opt.species.length > 0 || opt.speciesOther.trim()) && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {[...opt.species, ...opt.speciesOther.split(',').map(s => s.trim()).filter(Boolean)].map(s => (
+                      <span key={s} className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(230,126,80,0.12)', color: '#C05A2E' }}>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {(opt.license_price || opt.guide_price) && (
+                  <p className="text-xs f-body mt-1.5 font-semibold" style={{ color: '#E67E50' }}>
+                    {CURRENCY_SYMBOL[opt.currency]}
+                    {opt.license_price && ` License: ${Number(opt.license_price).toLocaleString()}`}
+                    {opt.guide_price   && ` · Guide: ${Number(opt.guide_price).toLocaleString()}`}
+                  </p>
+                )}
+                {opt.description.trim() && (
+                  <p className="text-xs f-body mt-2 leading-relaxed"
+                    style={{ color: '#374151', whiteSpace: 'pre-wrap' }}>
+                    {opt.description}
+                  </p>
+                )}
+                {(opt.photos.length > 0 || opt.localPhotos.length > 0) && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {[...opt.photos].map((url, pi) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={pi} src={url} alt=""
+                        className="w-14 h-14 rounded-lg object-cover"
+                        style={{ border: '1px solid rgba(10,46,77,0.08)' }} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* ── Edit / fill view ── */
+          <>
 
           <div>
             <label style={labelStyle}>Fishing spot options</label>
@@ -233,23 +322,36 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
                     onChange={e => updateOption(i, 'spot', e.target.value)}
                     placeholder="Fishing spot / river / lake…" style={inputStyle} />
 
-                  {/* Species */}
-                  <select
-                    value={opt.speciesSelect}
-                    onChange={e => updateOption(i, 'speciesSelect', e.target.value)}
-                    style={{ ...inputStyle, cursor: 'pointer' }}
-                  >
-                    <option value="">— Target species —</option>
-                    {guideSpecies.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                    <option value="other">Other…</option>
-                  </select>
-                  {opt.speciesSelect === 'other' && (
-                    <input type="text" value={opt.speciesOther}
-                      onChange={e => updateOption(i, 'speciesOther', e.target.value)}
-                      placeholder="Specify species…" style={inputStyle} />
+                  {/* Species multi-picker */}
+                  {guideSpecies.length > 0 && (
+                    <div>
+                      <label style={{ ...labelStyle, marginBottom: 6 }}>Target species</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {guideSpecies.map(s => {
+                          const selected = opt.species.includes(s)
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => toggleSpecies(i, s)}
+                              className="text-[11px] font-semibold f-body px-2.5 py-1 rounded-full transition-all"
+                              style={{
+                                background: selected ? '#E67E50' : 'rgba(10,46,77,0.06)',
+                                color:      selected ? '#fff'    : 'rgba(10,46,77,0.55)',
+                                border:     selected ? 'none'    : '1px solid rgba(10,46,77,0.1)',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {s}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
                   )}
+                  <input type="text" value={opt.speciesOther}
+                    onChange={e => updateOption(i, 'speciesOther', e.target.value)}
+                    placeholder="Other species (comma-separated)…" style={inputStyle} />
 
                   {/* Currency */}
                   <div className="flex items-center gap-2">
@@ -358,18 +460,28 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
             <button type="button" onClick={handleSaveOffer} disabled={saving}
               className="px-5 py-2.5 rounded-xl text-sm font-bold f-body transition-all"
               style={{
-                background: saved ? 'rgba(16,185,129,0.12)' : '#E67E50',
-                color:      saved ? '#065F46'                : '#fff',
-                border:     saved ? '1px solid rgba(16,185,129,0.3)' : 'none',
+                background: '#E67E50',
+                color:      '#fff',
+                border:     'none',
                 cursor:     saving ? 'not-allowed' : 'pointer',
                 opacity:    saving ? 0.7 : 1,
               }}>
-              {saving ? 'Saving…' : saved ? '✓ Saved' : 'Send offer details'}
+              {saving ? 'Saving…' : 'Send offer details'}
             </button>
+            {isSent && (
+              <button type="button" onClick={() => setIsSent(true)}
+                className="text-sm f-body"
+                style={{ color: 'rgba(10,46,77,0.4)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                Cancel
+              </button>
+            )}
             {saveErr != null && (
               <p className="text-xs f-body" style={{ color: '#DC2626' }}>{saveErr}</p>
             )}
           </div>
+
+        </>
+        )}
 
         </div>
       </div>

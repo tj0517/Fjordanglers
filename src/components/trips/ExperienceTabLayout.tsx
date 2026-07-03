@@ -35,7 +35,7 @@ interface ExperienceTabLayoutProps {
   experiencePageId?: string
   tripTitle:         string
   maxGuests:         number
-  blockedRanges:     Array<{ date_start: string; date_end: string }>
+  blockedDates?:   string[]
   priceFrom?:        number | null
   priceType?:        string | null
   children?:         React.ReactNode
@@ -54,7 +54,7 @@ export function ExperienceTabLayout({
   experiencePageId,
   tripTitle,
   maxGuests,
-  blockedRanges,
+  blockedDates = [],
   priceFrom,
   priceType,
   children,
@@ -309,7 +309,7 @@ export function ExperienceTabLayout({
             experiencePageId={tripId ? undefined : experiencePageId}
             tripTitle={tripTitle}
             maxGuests={maxGuests}
-            blockedRanges={blockedRanges}
+            blockedDates={blockedDates}
             selectedOptionLabel={selectedLabel}
             priceFrom={activePriceFrom}
             priceType={activePriceType}

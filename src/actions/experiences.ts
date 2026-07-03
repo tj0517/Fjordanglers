@@ -394,48 +394,6 @@ export async function createExperience(
     // is no longer valid — reset it so the guide's trip pages work correctly.
     await resetCalendarDisabledIfNeeded(guideId, payload.booking_type ?? 'classic')
 
-    // Auto-assign new experience to the guide's default calendar.
-    // Since migration 20260402200000 every guide has at least one calendar.
-    // If for some reason no calendar exists yet, create "Main Calendar" first.
-    const service = createServiceClient()
-
-    const { data: firstCal } = await service
-      .from('guide_calendars')
-      .select('id')
-      .eq('guide_id', guideId)
-      .order('created_at')
-      .limit(1)
-      .maybeSingle()
-
-    if (firstCal != null) {
-      // Assign experience to the existing default calendar (fire-and-forget)
-      void Promise.resolve(
-        service
-          .from('calendar_experiences')
-          .insert({ calendar_id: firstCal.id, experience_id: exp.id })
-      ).then(({ error: e }) => {
-        if (e) console.error('[createExperience] calendar_experiences insert:', e.message)
-      })
-    } else {
-      // No calendar at all — create "Main Calendar" and assign immediately
-      void Promise.resolve(
-        service
-          .from('guide_calendars')
-          .insert({ guide_id: guideId, name: 'Main Calendar' })
-          .select('id')
-          .single()
-      ).then(async ({ data: newCal, error: e }) => {
-        if (e || newCal == null) {
-          console.error('[createExperience] guide_calendars create:', e?.message)
-          return
-        }
-        const { error: e2 } = await service
-          .from('calendar_experiences')
-          .insert({ calendar_id: newCal.id, experience_id: exp.id })
-        if (e2) console.error('[createExperience] calendar_experiences assign:', e2.message)
-      })
-    }
-
     revalidateTag(CACHE_TAG_EXPERIENCES, {})
     return { success: true, data: { id: exp.id } }
   } catch (err) {

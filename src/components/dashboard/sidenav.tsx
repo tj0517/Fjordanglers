@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, CalendarDays, User,
-  Image as ImageIcon, Settings, Menu, X,
+  Image as ImageIcon, Settings, Menu, X, Briefcase,
 } from 'lucide-react'
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
@@ -22,7 +22,8 @@ const mainItems: NavItem[] = [
   { label: 'Overview', href: '/dashboard',          icon: <LayoutDashboard size={16} strokeWidth={1.6} />, exact: true },
   { label: 'Calendar', href: '/dashboard/calendar', icon: <CalendarDays size={16} strokeWidth={1.6} /> },
   { label: 'Profile',  href: '/dashboard/profile',  icon: <User size={16} strokeWidth={1.6} /> },
-  { label: 'Photos',   href: '/dashboard/photos',   icon: <ImageIcon size={16} strokeWidth={1.6} /> },
+  { label: 'Photos',    href: '/dashboard/photos',   icon: <ImageIcon size={16} strokeWidth={1.6} /> },
+  { label: 'My Trips', href: '/dashboard/trips',    icon: <Briefcase size={16} strokeWidth={1.6} /> },
 ]
 
 const contentItems: NavItem[] = []

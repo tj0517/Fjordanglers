@@ -804,41 +804,6 @@ export async function confirmBooking(
         .eq('id', bookingId)
       updateError = error
 
-      // Block calendar dates (fire-and-forget)
-      if (offeredDays.length > 0 && booking.experience_id != null) {
-        const svc = createServiceClient()
-        ;(async () => {
-          const { data: calLink } = await svc
-            .from('calendar_experiences')
-            .select('calendar_id')
-            .eq('experience_id', booking.experience_id!)
-            .limit(1)
-            .single()
-
-          let calendarId: string | null = calLink?.calendar_id ?? null
-
-          if (calendarId == null) {
-            const { data: fallback } = await svc
-              .from('guide_calendars')
-              .select('id')
-              .eq('guide_id', guide.id)
-              .limit(1)
-              .single()
-            calendarId = fallback?.id ?? null
-          }
-
-          if (calendarId == null) return
-
-          await svc.from('calendar_blocked_dates').insert(
-            offeredDays.map((d: string) => ({
-              calendar_id: calendarId!,
-              date_start:  d,
-              date_end:    d,
-              reason:      `Booking — ${bookingId.slice(0, 8).toUpperCase()}`,
-            }))
-          )
-        })().catch(err => console.error('[bookings/confirmBooking] Calendar block error:', err))
-      }
     }
 
     if (updateError != null) {
@@ -1013,42 +978,6 @@ export async function acceptOffer(bookingId: string): Promise<AcceptOfferResult>
     if (updateError != null) {
       console.error('[bookings/acceptOffer] Update error:', updateError)
       return { success: false, error: 'Failed to accept offer. Please try again.' }
-    }
-
-    // Block calendar dates (fire-and-forget)
-    if (offeredDays.length > 0 && booking.experience_id != null && booking.guide_id != null) {
-      const svc = createServiceClient()
-      ;(async () => {
-        const { data: calLink } = await svc
-          .from('calendar_experiences')
-          .select('calendar_id')
-          .eq('experience_id', booking.experience_id!)
-          .limit(1)
-          .single()
-
-        let calendarId: string | null = calLink?.calendar_id ?? null
-
-        if (calendarId == null) {
-          const { data: fallback } = await svc
-            .from('guide_calendars')
-            .select('id')
-            .eq('guide_id', booking.guide_id!)
-            .limit(1)
-            .single()
-          calendarId = fallback?.id ?? null
-        }
-
-        if (calendarId == null) return
-
-        await svc.from('calendar_blocked_dates').insert(
-          offeredDays.map((d: string) => ({
-            calendar_id: calendarId!,
-            date_start:  d,
-            date_end:    d,
-            reason:      `Trip confirmed — ${bookingId.slice(0, 8).toUpperCase()}`,
-          }))
-        )
-      })().catch(err => console.error('[bookings/acceptOffer] Calendar block error:', err))
     }
 
     // Email guide (fire-and-forget)

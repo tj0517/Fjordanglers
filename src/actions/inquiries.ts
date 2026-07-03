@@ -903,7 +903,7 @@ export async function updateNextAction(
 
 export interface GuideOption {
   spot:          string
-  species:       string | null
+  species:       string[] | null   // multi-select; null = not filled
   currency:      'EUR' | 'USD' | 'ISK'
   license_price: number | null
   guide_price:   number | null

@@ -46,7 +46,8 @@ export interface InquiryWidgetProps {
   experiencePageId?:    string
   tripTitle:            string
   maxGuests?:           number
-  blockedRanges?:       Array<{ date_start: string; date_end: string }>
+  /** ISO date strings the guide has blocked — these cannot be selected */
+  blockedDates?:        string[]
   selectedOptionLabel?: string | null
   priceFrom?:           number | null
   priceType?:           string | null
@@ -206,7 +207,7 @@ function InquiryModal({
   experiencePageId,
   tripTitle,
   maxGuests,
-  blockedRanges,
+  blockedDates,
   selectedOptionLabel,
   initialViewYear,
   initialViewMonth,
@@ -218,7 +219,7 @@ function InquiryModal({
   experiencePageId?:    string
   tripTitle:            string
   maxGuests:            number
-  blockedRanges:        Array<{ date_start: string; date_end: string }>
+  blockedDates:         string[]
   selectedOptionLabel?: string | null
   initialViewYear?:     number
   initialViewMonth?:    number
@@ -240,7 +241,7 @@ function InquiryModal({
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null)
   const [hasAttempted, setHasAttempted] = useState(false)
 
-  const blockedSet = useMemo(() => buildBlockedSet(blockedRanges), [blockedRanges])
+  const blockedSet = useMemo(() => new Set(blockedDates), [blockedDates])
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -686,7 +687,7 @@ export function InquiryWidget({
   experiencePageId,
   tripTitle,
   maxGuests            = 12,
-  blockedRanges        = [],
+  blockedDates         = [],
   selectedOptionLabel,
   priceFrom,
   priceType,
@@ -849,7 +850,7 @@ export function InquiryWidget({
           experiencePageId={experiencePageId}
           tripTitle={tripTitle}
           maxGuests={maxGuests}
-          blockedRanges={blockedRanges}
+          blockedDates={blockedDates}
           selectedOptionLabel={selectedOptionLabel}
           initialViewYear={initialMonth?.year}
           initialViewMonth={initialMonth?.month0}

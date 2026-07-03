@@ -1,11 +1,9 @@
 import { redirect } from 'next/navigation'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { stripe } from '@/lib/stripe/client'
+import { createClient } from '@/lib/supabase/server'
 import { PasswordResetButton } from './AccountActions'
 import { MarketingConsentToggle } from './MarketingConsentToggle'
-import { PayoutSettingsCard } from './PayoutSettingsCard'
 import { HelpWidget } from '@/components/ui/help-widget'
-import { Lock, Check, LogOut } from 'lucide-react'
+import { Lock, LogOut } from 'lucide-react'
 import { signOut } from '@/actions/auth'
 
 export const revalidate = 0
@@ -14,76 +12,18 @@ export const metadata = { title: 'Account — FjordAnglers Dashboard' }
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function AccountPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ stripe_done?: string; stripe_refresh?: string }>
-}) {
-  const params        = await searchParams
-  const stripeDone    = params.stripe_done    === '1'
-  const stripeRefresh = params.stripe_refresh === '1'
-
+export default async function AccountPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (user == null) redirect('/login')
 
   const { data: guide } = await supabase
     .from('guides')
-    .select('id, full_name, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, status, photo_marketing_consent')
+    .select('id, full_name, status, photo_marketing_consent')
     .eq('user_id', user.id)
     .single()
 
   if (guide == null) redirect('/dashboard')
-
-  // ── Stripe account settings — payout schedule, currency, requirements ────
-  let payoutScheduleLabel   = '—'
-  let payoutCurrencyLabel   = 'EUR (€)'
-  let stripeCurrentlyDue:   string[] = []
-  let stripePending:         string[] = []
-  let stripePayoutsLive     = guide.stripe_payouts_enabled
-
-  if (guide.stripe_account_id) {
-    try {
-      const stripeAccount = await stripe.accounts.retrieve(guide.stripe_account_id)
-      const schedule = stripeAccount.settings?.payouts?.schedule
-      const currency = stripeAccount.default_currency?.toUpperCase() ?? 'EUR'
-
-      payoutCurrencyLabel = currency === 'EUR' ? 'EUR (€)'
-        : currency === 'GBP' ? 'GBP (£)'
-        : currency === 'SEK' ? 'SEK (kr)'
-        : currency === 'NOK' ? 'NOK (kr)'
-        : currency
-
-      if (schedule?.interval === 'weekly' && schedule.weekly_anchor) {
-        const day = schedule.weekly_anchor.charAt(0).toUpperCase() + schedule.weekly_anchor.slice(1)
-        payoutScheduleLabel = `Weekly — every ${day}`
-      } else if (schedule?.interval === 'daily') {
-        payoutScheduleLabel = 'Daily'
-      } else if (schedule?.interval === 'monthly') {
-        payoutScheduleLabel = `Monthly — day ${schedule.monthly_anchor ?? 1}`
-      } else if (schedule?.interval === 'manual') {
-        payoutScheduleLabel = 'Manual'
-      }
-
-      // Auto-sync: if Stripe says payouts enabled but our DB is stale, update it
-      // so guides don't need to wait for a webhook or an admin click.
-      if (stripeAccount.payouts_enabled && !stripePayoutsLive) {
-        stripePayoutsLive = true
-        const service = createServiceClient()
-        const { error: syncErr } = await service.from('guides').update({
-          stripe_payouts_enabled: true,
-          stripe_charges_enabled: stripeAccount.charges_enabled ?? false,
-        }).eq('id', guide.id)
-        if (syncErr) console.error('[account/page] auto-sync Stripe status error:', syncErr)
-      }
-
-      // Requirements — used to distinguish "form incomplete" from "under review"
-      stripeCurrentlyDue = (stripeAccount.requirements?.currently_due ?? []) as string[]
-      stripePending      = (stripeAccount.requirements?.pending_verification ?? []) as string[]
-    } catch {
-      // Non-fatal — fall back to DB values and empty requirements
-    }
-  }
 
   const email       = user.email ?? '—'
   const provider    = user.app_metadata?.provider ?? 'email'
@@ -91,18 +31,6 @@ export default async function AccountPage({
   const memberSince = new Date(user.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   })
-
-  const hasStripeAccount = guide.stripe_account_id != null
-
-  const stripeStatus = stripePayoutsLive
-    ? { label: 'Active — payouts enabled',   dot: '#4ADE80', glow: true  }
-    : hasStripeAccount
-    ? { label: 'Under review',               dot: '#E67E50', glow: false }
-    : { label: 'Not connected',              dot: 'rgba(10,46,77,0.2)', glow: false }
-
-  // Pre-format Stripe requirement labels so PayoutSettingsCard (Client Component) gets plain data
-  const requirementLabels   = formatStripeRequirements(stripeCurrentlyDue)
-  const hasPendingVerification = stripePending.length > 0
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-2xl">
@@ -117,7 +45,7 @@ export default async function AccountPage({
           Account
         </h1>
         <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
-          Login credentials, payouts and subscription
+          Login credentials and preferences
         </p>
       </div>
 
@@ -166,52 +94,6 @@ export default async function AccountPage({
           )}
         </Card>
 
-        {/* ── Payouts — Stripe Connect ──────────────────────────────────────── */}
-        <PayoutSettingsCard
-          hasStripeAccount={hasStripeAccount}
-          stripePayoutsLive={stripePayoutsLive}
-          stripeStatus={stripeStatus}
-          requirementLabels={requirementLabels}
-          hasPendingVerification={hasPendingVerification}
-          stripeRefresh={stripeRefresh}
-          payoutCurrencyLabel={payoutCurrencyLabel}
-          payoutScheduleLabel={payoutScheduleLabel}
-          helpWidget={
-            <HelpWidget
-              title="Payouts"
-              description="Stripe Connect — your earnings are paid out weekly."
-              items={[
-                { icon: '🏦', title: 'Stripe Connect', text: 'FjordAnglers uses Stripe to pay guides. Once active, earnings from confirmed bookings are transferred weekly.' },
-                { icon: '📅', title: 'Payout schedule', text: 'Payouts are sent weekly (every Monday) for completed bookings from the previous week.' },
-              ]}
-            />
-          }
-        />
-
-        {/* ── Return from Stripe — setup submitted ─────────────────────────── */}
-        {stripeDone && stripePayoutsLive === false && (
-          <div
-            className="rounded-2xl px-6 py-4 flex items-start gap-3"
-            style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)' }}
-          >
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-              style={{ background: 'rgba(74,222,128,0.15)' }}
-            >
-              <Check size={13} strokeWidth={2} style={{ color: '#16A34A' }} />
-            </div>
-            <div>
-              <p className="text-sm font-bold f-body" style={{ color: '#16A34A' }}>
-                Setup submitted!
-              </p>
-              <p className="text-xs f-body mt-0.5 leading-relaxed" style={{ color: 'rgba(22,163,74,0.8)' }}>
-                Stripe is reviewing your account — this usually takes 1–2 business days.
-                You&apos;ll be notified when payouts are enabled.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* ── Photo & marketing consent ─────────────────────────────────────── */}
         <Card title="Photo & marketing consent" help={
           <HelpWidget title="Photo & marketing consent" items={[
@@ -245,42 +127,6 @@ export default async function AccountPage({
 
     </div>
   )
-}
-
-// ─── Stripe requirement field → human-readable label ─────────────────────────
-
-const STRIPE_FIELD_LABELS: Record<string, string> = {
-  'individual.first_name':                       'First name',
-  'individual.last_name':                        'Last name',
-  'individual.dob.day':                          'Date of birth',
-  'individual.dob.month':                        'Date of birth',
-  'individual.dob.year':                         'Date of birth',
-  'individual.address.line1':                    'Street address',
-  'individual.address.city':                     'City',
-  'individual.address.postal_code':              'Postal code',
-  'individual.address.state':                    'State / region',
-  'individual.address.country':                  'Country',
-  'individual.id_number':                        'National ID / Tax ID',
-  'individual.ssn_last_4':                       'Last 4 of SSN',
-  'individual.verification.document':            'Government-issued ID',
-  'individual.verification.additional_document': 'Proof of address',
-  'individual.email':                            'Email address',
-  'individual.phone':                            'Phone number',
-  'external_account':                            'Bank account (IBAN)',
-  'tos_acceptance.date':                         'Terms of service',
-  'tos_acceptance.ip':                           'Terms of service',
-  'business_profile.product_description':        'Business description',
-  'business_profile.support_phone':              'Support phone',
-  'business_profile.url':                        'Business website',
-  'business_profile.mcc':                        'Business category',
-}
-
-function formatStripeRequirements(fields: string[]): string[] {
-  const seen = new Set<string>()
-  for (const field of fields) {
-    seen.add(STRIPE_FIELD_LABELS[field] ?? field)
-  }
-  return Array.from(seen)
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

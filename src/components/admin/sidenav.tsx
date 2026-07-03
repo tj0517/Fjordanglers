@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, Users, Map, MessageSquare,
-  Anchor, Menu, X, ShieldCheck, BarChart2, Wallet,
+  Anchor, Menu, X, ShieldCheck, BarChart2, Wallet, LogOut,
 } from 'lucide-react'
+import { signOut } from '@/actions/auth'
 
 // ─── Nav definitions ──────────────────────────────────────────────────────────
 
@@ -98,9 +99,9 @@ export function AdminSidenav() {
         {navItems.map(item => <NavLink key={item.href} item={item} />)}
       </nav>
 
-      {/* Back to site */}
+      {/* Back to site + Logout */}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div className="px-3 py-3">
+        <div className="px-3 py-3 flex flex-col gap-0.5">
           <Link
             href="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm f-body transition-all"
@@ -108,6 +109,16 @@ export function AdminSidenav() {
           >
             ← Back to site
           </Link>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm f-body transition-all"
+              style={{ color: 'rgba(255,255,255,0.35)', background: 'transparent', cursor: 'pointer' }}
+            >
+              <LogOut size={14} strokeWidth={1.6} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+              Log out
+            </button>
+          </form>
         </div>
       </div>
     </div>

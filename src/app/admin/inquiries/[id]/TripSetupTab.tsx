@@ -313,8 +313,8 @@ export function TripSetupTab({
                   <p className="text-[10px] font-bold uppercase tracking-[0.13em] f-body mb-1.5"
                     style={{ color: 'rgba(10,46,77,0.4)' }}>Option {i + 1}</p>
                   <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{opt.spot}</p>
-                  {opt.species != null && opt.species !== '' && (
-                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.55)' }}>{opt.species}</p>
+                  {Array.isArray(opt.species) && opt.species.length > 0 && (
+                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.55)' }}>{opt.species.join(', ')}</p>
                   )}
                   {(opt.license_price != null || opt.guide_price != null) && (
                     <p className="text-xs font-bold f-body mt-1" style={{ color: '#E67E50' }}>
