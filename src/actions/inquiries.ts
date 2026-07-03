@@ -1015,7 +1015,11 @@ export async function assignGuideSilently(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (svc as any)
     .from('inquiries')
-    .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString() })
+    .update({
+      assigned_guide_id: guideId,
+      assigned_at:       new Date().toISOString(),
+      guide_acceptance:  'accepted',   // silent = no need to accept, treat as already confirmed
+    })
     .eq('id', inquiryId)
 
   if (error != null) {
@@ -1024,7 +1028,7 @@ export async function assignGuideSilently(
   }
 
   revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[assignGuideSilently] Inquiry ${inquiryId} → guide ${guideId} (silent)`)
+  console.log(`[assignGuideSilently] Inquiry ${inquiryId} → guide ${guideId} (silent, auto-accepted)`)
   return { success: true }
 }
 
