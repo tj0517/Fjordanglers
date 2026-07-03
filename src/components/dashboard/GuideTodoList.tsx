@@ -94,10 +94,11 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
       : [{ spot: '', species: [], speciesOther: '', currency: 'EUR' as Currency, license_price: '', guide_price: '', description: '', photos: [], localPhotos: [] }]
 
   const hasExistingOffer = (initialDetails?.guide_options ?? []).length > 0
-  const [isSent,  setIsSent]  = useState(hasExistingOffer)
-  const [options, setOptions] = useState<OptionDraft[]>(initOptions)
-  const [saveErr, setSaveErr] = useState<string | null>(null)
-  const [saving, startSave]   = useTransition()
+  const [isSent,      setIsSent]      = useState(hasExistingOffer)
+  const [finalDates,  setFinalDates]  = useState(initialDetails?.guide_final_dates ?? '')
+  const [options,     setOptions]     = useState<OptionDraft[]>(initOptions)
+  const [saveErr,     setSaveErr]     = useState<string | null>(null)
+  const [saving, startSave]           = useTransition()
 
   // One file-input ref slot per option (max 3)
   const fileRefs = useRef<(HTMLInputElement | null)[]>([null, null, null])
@@ -202,7 +203,10 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
           }
         })
 
-      const res = await saveGuideOfferResponse(inquiryId, { guide_options: guideOptions })
+      const res = await saveGuideOfferResponse(inquiryId, {
+        guide_final_dates: finalDates.trim() || null,
+        guide_options: guideOptions,
+      })
       if (!res.success) {
         setSaveErr(res.error ?? 'Failed to save')
       } else {
@@ -246,11 +250,18 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
         {/* ── Sent / locked view ── */}
         {isSent ? (
           <div className="flex flex-col gap-3">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full self-start"
-              style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)' }}>
-              <span className="text-[11px] font-bold f-body" style={{ color: '#065F46' }}>
-                ✓ Offer submitted
-              </span>
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+                style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)' }}>
+                <span className="text-[11px] font-bold f-body" style={{ color: '#065F46' }}>
+                  ✓ Offer submitted
+                </span>
+              </div>
+              {finalDates.trim() && (
+                <span className="text-xs f-body font-semibold" style={{ color: '#0A2E4D' }}>
+                  📅 {finalDates}
+                </span>
+              )}
             </div>
             {options.map((opt, i) => (
               <div key={i} className="rounded-xl px-4 py-3"
@@ -297,6 +308,17 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
         ) : (
           /* ── Edit / fill view ── */
           <>
+
+          <div>
+            <label style={labelStyle}>Confirmed date(s)</label>
+            <input
+              type="text"
+              value={finalDates}
+              onChange={e => setFinalDates(e.target.value)}
+              placeholder="e.g. 23–25 August 2026"
+              style={inputStyle}
+            />
+          </div>
 
           <div>
             <label style={labelStyle}>Fishing spot options</label>

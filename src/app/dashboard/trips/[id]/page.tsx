@@ -70,7 +70,7 @@ export default async function GuideTripDetailPage({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: tdData } = await (svc as any)
       .from('inquiry_trip_details')
-      .select('confirmed_date,confirmed_party_size,price_range,date_flexibility,target_species,accommodation,guide_notes,guide_options')
+      .select('confirmed_date,confirmed_party_size,price_range,date_flexibility,target_species,accommodation,guide_notes,guide_final_dates,guide_options')
       .eq('inquiry_id', id)
       .maybeSingle()
     if (tdData != null) tripDetails = tdData as TripDetails

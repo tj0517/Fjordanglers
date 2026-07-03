@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { assignGuideToInquiry } from '@/actions/inquiries'
+import { assignGuideToInquiry, assignGuideSilently } from '@/actions/inquiries'
 
 interface Props {
   inquiryId: string
@@ -15,15 +15,21 @@ export function AssignGuidePanel({ inquiryId, currentAssignedGuideId, guides }: 
   const router             = useRouter()
   const [pending, start]   = useTransition()
   const [selected, setSelected] = useState(currentAssignedGuideId ?? '')
+  const [lastAction, setLastAction] = useState<'notify' | 'silent' | null>(null)
   const [success, setSuccess]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
 
-  function handleAssign() {
-    if (selected === '' || selected === currentAssignedGuideId) return
+  const changed = selected !== '' && selected !== currentAssignedGuideId
+
+  function handleAssign(silent: boolean) {
+    if (!changed) return
     setSuccess(false)
     setError(null)
+    setLastAction(silent ? 'silent' : 'notify')
     start(async () => {
-      const res = await assignGuideToInquiry(inquiryId, selected)
+      const res = silent
+        ? await assignGuideSilently(inquiryId, selected)
+        : await assignGuideToInquiry(inquiryId, selected)
       if (res.success) {
         setSuccess(true)
         router.refresh()
@@ -68,24 +74,41 @@ export function AssignGuidePanel({ inquiryId, currentAssignedGuideId, guides }: 
 
         <button
           type="button"
-          disabled={pending || selected === '' || selected === currentAssignedGuideId}
-          onClick={handleAssign}
+          disabled={pending || !changed}
+          onClick={() => handleAssign(false)}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold f-body transition-all"
           style={{
             background: 'rgba(230,126,80,0.22)',
             color:      '#E67E50',
             border:     '1px solid rgba(230,126,80,0.35)',
-            opacity:    (pending || selected === '' || selected === currentAssignedGuideId) ? 0.5 : 1,
-            cursor:     (pending || selected === '' || selected === currentAssignedGuideId) ? 'default' : 'pointer',
+            opacity:    (pending || !changed) ? 0.5 : 1,
+            cursor:     (pending || !changed) ? 'default' : 'pointer',
           }}
         >
-          {pending && <Loader2 size={13} className="animate-spin" />}
+          {pending && lastAction === 'notify' && <Loader2 size={13} className="animate-spin" />}
           Assign &amp; Notify Guide
+        </button>
+
+        <button
+          type="button"
+          disabled={pending || !changed}
+          onClick={() => handleAssign(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold f-body transition-all"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            color:      'rgba(255,255,255,0.55)',
+            border:     '1px solid rgba(255,255,255,0.1)',
+            opacity:    (pending || !changed) ? 0.4 : 1,
+            cursor:     (pending || !changed) ? 'default' : 'pointer',
+          }}
+        >
+          {pending && lastAction === 'silent' && <Loader2 size={13} className="animate-spin" />}
+          Assign silently (no email)
         </button>
 
         {success && (
           <p className="text-[10px] f-body text-center" style={{ color: '#6EE7B7' }}>
-            ✅ Guide assigned — email sent
+            {lastAction === 'notify' ? '✅ Guide assigned — email sent' : '✅ Guide linked (no email)'}
           </p>
         )}
         {error != null && (

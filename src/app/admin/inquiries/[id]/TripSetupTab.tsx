@@ -307,6 +307,16 @@ export function TripSetupTab({
             </p>
           ) : (
             <div className="flex flex-col gap-3">
+              {initialDetails!.guide_final_dates != null && initialDetails!.guide_final_dates.trim() !== '' && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] f-body flex-shrink-0"
+                    style={{ color: 'rgba(10,46,77,0.4)' }}>Dates</span>
+                  <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                    {initialDetails!.guide_final_dates}
+                  </span>
+                </div>
+              )}
               {initialDetails!.guide_options.map((opt, i) => (
                 <div key={i} className="rounded-xl px-3 py-3"
                   style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}>

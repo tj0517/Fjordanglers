@@ -921,6 +921,7 @@ export interface TripDetails {
   accommodation:     string | null
   guide_notes:       string | null
   // Guide fills (shown to FA as their offer response):
+  guide_final_dates: string | null   // guide's confirmed/adjusted dates (free text)
   guide_options:     GuideOption[]
 }
 
@@ -996,6 +997,34 @@ export async function assignGuideToInquiry(
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[assignGuideToInquiry] Inquiry ${inquiryId} → guide ${guideId}`)
+  return { success: true }
+}
+
+// ─── assignGuideSilently ──────────────────────────────────────────────────────
+
+/**
+ * FA links a guide to an inquiry without sending any notification.
+ * Used for "old-way" offers FA built manually — guide is visible in admin only.
+ */
+export async function assignGuideSilently(
+  inquiryId: string,
+  guideId: string,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString() })
+    .eq('id', inquiryId)
+
+  if (error != null) {
+    console.error('[assignGuideSilently] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[assignGuideSilently] Inquiry ${inquiryId} → guide ${guideId} (silent)`)
   return { success: true }
 }
 
@@ -1130,6 +1159,7 @@ export async function saveTripDetails(
 export async function saveGuideOfferResponse(
   inquiryId: string,
   data: {
+    guide_final_dates?: string | null
     guide_options: GuideOption[]
   },
 ): Promise<ActionResult> {
