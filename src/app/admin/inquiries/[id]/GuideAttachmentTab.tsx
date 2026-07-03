@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
-import { assignGuideToInquiry } from '@/actions/inquiries'
+import { assignGuideToInquiry, assignGuideSilently } from '@/actions/inquiries'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -191,6 +191,7 @@ function GuideCard({
 }) {
   const [showCalendar, setShowCalendar] = useState(false)
   const [pending, start]               = useTransition()
+  const [lastMode, setLastMode]        = useState<'notify' | 'silent' | null>(null)
   const [done, setDone]                = useState(false)
   const [err,  setErr]                 = useState<string | null>(null)
 
@@ -205,9 +206,12 @@ function GuideCard({
     .join('')
     .toUpperCase()
 
-  function handleAssign() {
+  function handleAssign(silent: boolean) {
+    setLastMode(silent ? 'silent' : 'notify')
     start(async () => {
-      const res = await assignGuideToInquiry(inquiryId, guide.id)
+      const res = silent
+        ? await assignGuideSilently(inquiryId, guide.id)
+        : await assignGuideToInquiry(inquiryId, guide.id)
       if (!res.success) {
         setErr(res.error ?? 'Failed to assign')
       } else {
@@ -305,27 +309,46 @@ function GuideCard({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            type="button"
-            onClick={handleAssign}
-            disabled={pending || isAssigned || done}
-            className="px-4 py-1.5 rounded-xl text-xs font-bold f-body transition-all"
-            style={{
-              background: isAssigned || done
-                ? 'rgba(16,185,129,0.12)'
-                : '#0A2E4D',
-              color: isAssigned || done
-                ? '#065F46'
-                : '#FFFFFF',
-              border: isAssigned || done
-                ? '1px solid rgba(16,185,129,0.25)'
-                : 'none',
-              cursor: pending || isAssigned || done ? 'default' : 'pointer',
-            }}
-          >
-            {pending ? '…' : isAssigned || done ? '✓ Assigned' : 'Assign'}
-          </button>
+        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+          {isAssigned || done ? (
+            <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl"
+              style={{ background: 'rgba(16,185,129,0.12)', color: '#065F46', border: '1px solid rgba(16,185,129,0.25)' }}>
+              ✓ {lastMode === 'silent' ? 'Linked' : 'Assigned'}
+            </span>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => handleAssign(false)}
+                disabled={pending}
+                className="px-4 py-1.5 rounded-xl text-xs font-bold f-body transition-all whitespace-nowrap"
+                style={{
+                  background: '#0A2E4D',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  cursor: pending ? 'default' : 'pointer',
+                  opacity: pending && lastMode === 'notify' ? 0.6 : 1,
+                }}
+              >
+                {pending && lastMode === 'notify' ? '…' : 'Assign & notify'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAssign(true)}
+                disabled={pending}
+                className="px-4 py-1.5 rounded-xl text-xs font-semibold f-body transition-all whitespace-nowrap"
+                style={{
+                  background: 'rgba(10,46,77,0.06)',
+                  color: 'rgba(10,46,77,0.5)',
+                  border: '1px solid rgba(10,46,77,0.1)',
+                  cursor: pending ? 'default' : 'pointer',
+                  opacity: pending && lastMode === 'silent' ? 0.6 : 1,
+                }}
+              >
+                {pending && lastMode === 'silent' ? '…' : 'Link silently'}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
