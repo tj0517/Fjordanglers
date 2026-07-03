@@ -24,14 +24,16 @@
  *   Message is stored in inquiry_messages for audit trail.
  */
 
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import {
   sendDepositLinkAnglerEmail,
   sendInquiryMessageAnglerEmail,
   sendRichOfferAnglerEmail,
+  sendGuideAssignedEmail,
 } from '@/lib/email'
+import { revalidatePath } from 'next/cache'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -896,3 +898,280 @@ export async function updateNextAction(
   console.log(`[updateNextAction] Inquiry ${inquiryId} — "${nextAction}"`)
   return { success: true }
 }
+
+// ─── Trip brief + Todo types ─────────────────────────────────────────────────
+
+export interface GuideOption {
+  spot:          string
+  species:       string | null
+  currency:      'EUR' | 'USD' | 'ISK'
+  license_price: number | null
+  guide_price:   number | null
+  description:   string | null
+  photos:        string[]
+}
+
+export interface TripDetails {
+  // FA fills (shown to guide as brief):
+  confirmed_date:    string | null   // FA-editable override of inquiry dates (free text)
+  confirmed_party_size: number | null // FA-editable override of inquiry party size
+  price_range:       string | null
+  date_flexibility:  string | null  // 'fixed' | 'flexible_1_2' | 'flexible_week' | 'very_flexible'
+  target_species:    string | null
+  accommodation:     string | null
+  guide_notes:       string | null
+  // Guide fills (shown to FA as their offer response):
+  guide_options:     GuideOption[]
+}
+
+
+// ─── assignGuideToInquiry ─────────────────────────────────────────────────────
+
+/**
+ * FA assigns a guide to an inquiry.
+ * Saves assigned_guide_id + assigned_at, then emails the guide.
+ */
+export async function assignGuideToInquiry(
+  inquiryId: string,
+  guideId: string,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+
+  // Update inquiry
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (svc as any)
+    .from('inquiries')
+    .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString() })
+    .eq('id', inquiryId)
+
+  if (updateError != null) {
+    console.error('[assignGuideToInquiry] DB error:', updateError)
+    return { success: false, error: updateError.message }
+  }
+
+  // Fetch guide email + name
+  const { data: guide } = await svc
+    .from('guides')
+    .select('id, full_name, invite_email, user_id')
+    .eq('id', guideId)
+    .single()
+
+  if (guide == null) {
+    return { success: false, error: 'Guide not found' }
+  }
+
+  // Resolve email: prefer invite_email, fall back to auth user email
+  let guideEmail: string | null = guide.invite_email ?? null
+  if ((guideEmail == null || guideEmail.trim() === '') && guide.user_id != null) {
+    const { data: authUser } = await svc.auth.admin.getUserById(guide.user_id)
+    guideEmail = authUser?.user?.email ?? null
+  }
+
+  // Fetch inquiry info for email
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('angler_name, requested_dates, party_size, trip_id')
+    .eq('id', inquiryId)
+    .single()
+
+  const { data: trip } = inquiry?.trip_id
+    ? await svc.from('experiences').select('title').eq('id', inquiry.trip_id).single()
+    : { data: null }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'
+  const tripsUrl = `${baseUrl}/dashboard/trips/${inquiryId}`
+
+  if (guideEmail != null && inquiry != null) {
+    sendGuideAssignedEmail({
+      to:               guideEmail,
+      guideName:        guide.full_name ?? 'Guide',
+      anglerName:       inquiry.angler_name,
+      experienceTitle:  trip?.title ?? 'Your trip',
+      requestedDates:   (inquiry.requested_dates as string[] | null) ?? [],
+      partySize:        inquiry.party_size ?? 1,
+      tripsUrl,
+    }).catch(err => console.error('[assignGuideToInquiry] Email error:', err))
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[assignGuideToInquiry] Inquiry ${inquiryId} → guide ${guideId}`)
+  return { success: true }
+}
+
+// ─── respondToAssignment ──────────────────────────────────────────────────────
+
+/**
+ * Guide accepts or declines the assignment to an inquiry.
+ * Verifies ownership: the inquiry must have assigned_guide_id = this guide.
+ */
+export async function respondToAssignment(
+  inquiryId: string,
+  accepted: boolean,
+  declineReason?: string,
+): Promise<ActionResult> {
+  const userClient = await createClient()
+  const { data: { user } } = await userClient.auth.getUser()
+  if (user == null) return { success: false, error: 'Not authenticated' }
+
+  const svc = createServiceClient()
+
+  const { data: guide } = await svc
+    .from('guides')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+  if (guide == null) return { success: false, error: 'Guide profile not found' }
+
+  // Verify the inquiry is assigned to this guide
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('id')
+    .eq('id', inquiryId)
+    .eq('assigned_guide_id', guide.id)
+    .single()
+
+  if (inquiry == null) return { success: false, error: 'Inquiry not found or not assigned to you' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({
+      guide_acceptance:     accepted ? 'accepted' : 'declined',
+      guide_decline_reason: accepted ? null : (declineReason?.trim() || null),
+      guide_responded_at:   new Date().toISOString(),
+    })
+    .eq('id', inquiryId)
+
+  if (error != null) {
+    console.error('[respondToAssignment] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/dashboard/trips/' + inquiryId)
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[respondToAssignment] Inquiry ${inquiryId} — ${accepted ? 'accepted' : 'declined'}`)
+  return { success: true }
+}
+
+// ─── saveGuideOfferEta ────────────────────────────────────────────────────────
+
+/**
+ * Guide: save when they expect to send the offer (free text).
+ * Verifies ownership: the inquiry must be assigned to this guide.
+ */
+export async function saveGuideOfferEta(
+  inquiryId: string,
+  eta: string,
+): Promise<ActionResult> {
+  const userClient = await createClient()
+  const { data: { user } } = await userClient.auth.getUser()
+  if (user == null) return { success: false, error: 'Not authenticated' }
+
+  const svc = createServiceClient()
+
+  const { data: guide } = await svc
+    .from('guides')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+  if (guide == null) return { success: false, error: 'Guide profile not found' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({ guide_offer_eta: eta.trim() || null })
+    .eq('id', inquiryId)
+    .eq('assigned_guide_id', guide.id)
+
+  if (error != null) {
+    console.error('[saveGuideOfferEta] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  return { success: true }
+}
+
+// ─── saveTripDetails ──────────────────────────────────────────────────────────
+
+/**
+ * Admin: upsert the trip brief for an inquiry.
+ */
+export async function saveTripDetails(
+  inquiryId: string,
+  data: Partial<Omit<TripDetails, never>>,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiry_trip_details')
+    .upsert(
+      { inquiry_id: inquiryId, ...data, updated_at: new Date().toISOString() },
+      { onConflict: 'inquiry_id' },
+    )
+
+  if (error != null) {
+    console.error('[saveTripDetails] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[saveTripDetails] Saved trip details for inquiry ${inquiryId}`)
+  return { success: true }
+}
+
+// ─── saveGuideOfferResponse ───────────────────────────────────────────────────
+
+/**
+ * Guide: saves their offer response (spot options + description) for an inquiry.
+ * Verifies ownership: the inquiry must be assigned to this guide.
+ */
+export async function saveGuideOfferResponse(
+  inquiryId: string,
+  data: {
+    guide_options: GuideOption[]
+  },
+): Promise<ActionResult> {
+  const userClient = await createClient()
+  const { data: { user } } = await userClient.auth.getUser()
+  if (user == null) return { success: false, error: 'Not authenticated' }
+
+  const svc = createServiceClient()
+
+  const { data: guide } = await svc
+    .from('guides')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+  if (guide == null) return { success: false, error: 'Guide profile not found' }
+
+  // Verify ownership
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('id')
+    .eq('id', inquiryId)
+    .eq('assigned_guide_id', guide.id)
+    .single()
+  if (inquiry == null) return { success: false, error: 'Inquiry not found or not assigned to you' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiry_trip_details')
+    .upsert(
+      { inquiry_id: inquiryId, ...data, updated_at: new Date().toISOString() },
+      { onConflict: 'inquiry_id' },
+    )
+
+  if (error != null) {
+    console.error('[saveGuideOfferResponse] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/dashboard/trips/' + inquiryId)
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[saveGuideOfferResponse] Saved offer response for inquiry ${inquiryId}`)
+  return { success: true }
+}
+
