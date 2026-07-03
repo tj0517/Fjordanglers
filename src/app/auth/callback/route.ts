@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code        = requestUrl.searchParams.get('code')
   const explicitNext = requestUrl.searchParams.get('next')
-  const next        = explicitNext ?? '/account'
+  const next        = explicitNext ?? '/dashboard'
   const origin      = requestUrl.origin
 
   if (code != null) {
