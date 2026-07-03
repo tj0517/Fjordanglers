@@ -33,6 +33,7 @@ import { BookingConfirmedGuideEmail } from '@/emails/booking-confirmed-guide'
 import { InquiryMessageAnglerEmail } from '@/emails/inquiry-message-angler'
 import { InquiryOfferAnglerEmail } from '@/emails/inquiry-offer-angler'
 import { InquiryRichOfferAnglerEmail } from '@/emails/inquiry-rich-offer-angler'
+import { GuideAssignedEmail } from '@/emails/guide-assigned'
 import type { GuideApplicationEmailProps } from '@/emails/guide-application'
 import type { GuideWelcomeEmailProps } from '@/emails/guide-welcome'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
@@ -53,6 +54,7 @@ import type { BookingConfirmedGuideEmailProps } from '@/emails/booking-confirmed
 import type { InquiryMessageAnglerEmailProps } from '@/emails/inquiry-message-angler'
 import type { InquiryOfferAnglerEmailProps } from '@/emails/inquiry-offer-angler'
 import type { InquiryRichOfferAnglerEmailProps } from '@/emails/inquiry-rich-offer-angler'
+import type { GuideAssignedEmailProps } from '@/emails/guide-assigned'
 
 const FROM = 'FjordAnglers <contact@fjordanglers.com>'
 
@@ -422,6 +424,21 @@ export async function sendInquiryOfferAnglerEmail(
     to,
     subject: `Your offer — ${templateProps.tripTitle} — €${templateProps.offerTotalEur.toFixed(2)} total`,
     react:   createElement(InquiryOfferAnglerEmail, templateProps),
+  })
+}
+
+/**
+ * Sent to the guide when FA assigns them to an inquiry.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendGuideAssignedEmail(
+  props: { to: string } & GuideAssignedEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `New trip assigned: ${templateProps.anglerName}`,
+    react:   createElement(GuideAssignedEmail, templateProps),
   })
 }
 
