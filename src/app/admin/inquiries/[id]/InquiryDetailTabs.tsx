@@ -5,18 +5,21 @@ import { useState } from 'react'
 interface Props {
   defaultTab?: string
   // Contact tab: 2-column
-  contactContent:  React.ReactNode
-  sidePanel:       React.ReactNode
+  contactContent:   React.ReactNode
+  sidePanel:        React.ReactNode
   // Guide tab: full-width
-  guideContent:    React.ReactNode
+  guideContent:     React.ReactNode
   // Trip setup tab: full-width
   tripSetupContent: React.ReactNode
+  // Proposal tab: full-width
+  proposalContent:  React.ReactNode
 }
 
 const TABS = [
   { id: 'contact',   label: 'Contact' },
   { id: 'guide',     label: 'Guide Attachment' },
   { id: 'tripsetup', label: 'Trip Setup' },
+  { id: 'proposal',  label: 'Proposal' },
 ]
 
 export function InquiryDetailTabs({
@@ -25,6 +28,7 @@ export function InquiryDetailTabs({
   sidePanel,
   guideContent,
   tripSetupContent,
+  proposalContent,
 }: Props) {
   const [active, setActive] = useState(defaultTab)
 
@@ -78,6 +82,13 @@ export function InquiryDetailTabs({
       {active === 'tripsetup' && (
         <div>
           {tripSetupContent}
+        </div>
+      )}
+
+      {/* ── Proposal tab — full-width ─────────────────────────────────────── */}
+      {active === 'proposal' && (
+        <div>
+          {proposalContent}
         </div>
       )}
     </div>

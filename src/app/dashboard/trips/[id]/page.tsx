@@ -41,7 +41,7 @@ export default async function GuideTripDetailPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawInquiry } = await (svc as any)
     .from('inquiries')
-    .select('id, angler_name, angler_country, party_size, requested_dates, trip_id, guide_acceptance, guide_decline_reason, guide_offer_eta')
+    .select('id, angler_name, angler_country, party_size, requested_dates, trip_id, guide_acceptance, guide_decline_reason, guide_offer_eta, external_offer_sent')
     .eq('id', id)
     .eq('assigned_guide_id', guide.id)
     .single()
@@ -58,6 +58,7 @@ export default async function GuideTripDetailPage({
     guide_acceptance: string | null
     guide_decline_reason: string | null
     guide_offer_eta: string | null
+    external_offer_sent: boolean
   }
 
   const { data: trip } = inquiry.trip_id
@@ -130,6 +131,7 @@ export default async function GuideTripDetailPage({
         inquiryId={inquiry.id}
         initialDetails={tripDetails}
         guideSpecies={(guide as { id: string; fish_expertise?: string[] }).fish_expertise ?? []}
+        externalOfferSent={inquiry.external_offer_sent ?? false}
       />
 
     </div>

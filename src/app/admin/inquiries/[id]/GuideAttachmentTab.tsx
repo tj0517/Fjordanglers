@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
-import { assignGuideToInquiry, assignGuideSilently } from '@/actions/inquiries'
+import { assignGuideToInquiry, assignGuideSilently, setExternalOffer } from '@/actions/inquiries'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ interface Props {
   tripCountry:            string | null
   guideAcceptance:        string | null  // 'accepted' | 'declined' | null
   guideDeclineReason:     string | null
+  externalOfferSent:      boolean
 }
 
 // ─── Mini read-only calendar ──────────────────────────────────────────────────
@@ -404,13 +405,25 @@ export function GuideAttachmentTab({
   tripCountry,
   guideAcceptance,
   guideDeclineReason,
+  externalOfferSent,
 }: Props) {
   const router = useRouter()
   const [assignedGuideId, setAssignedGuideId] = useState(currentAssignedGuideId)
+  const [extOffer, setExtOffer]               = useState(externalOfferSent)
+  const [extPending, startExt]                = useTransition()
 
   function handleAssigned(guideId: string) {
     setAssignedGuideId(guideId)
     router.refresh()
+  }
+
+  function toggleExternalOffer() {
+    const next = !extOffer
+    setExtOffer(next)
+    startExt(async () => {
+      const res = await setExternalOffer(inquiryId, next)
+      if (!res.success) setExtOffer(!next) // revert on error
+    })
   }
 
   // Sort: assigned first, then by conflict (no conflict first), then alphabetical
@@ -440,6 +453,31 @@ export function GuideAttachmentTab({
           {requestedDates.length > 0 && ' Orange dates = requested by angler. Red = conflict with guide blocked dates.'}
         </p>
       </div>
+
+      {/* External offer toggle */}
+      <button
+        type="button"
+        onClick={toggleExternalOffer}
+        disabled={extPending}
+        className="mb-5 flex items-center gap-2.5 px-4 py-2.5 rounded-[14px] text-sm font-semibold f-body transition-all"
+        style={{
+          background: extOffer ? 'rgba(16,185,129,0.1)'        : 'rgba(10,46,77,0.05)',
+          color:      extOffer ? '#065F46'                      : 'rgba(10,46,77,0.5)',
+          border:     extOffer ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(10,46,77,0.1)',
+          cursor:     extPending ? 'default' : 'pointer',
+          opacity:    extPending ? 0.6 : 1,
+        }}
+      >
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          width: 16, height: 16, borderRadius: 4,
+          background: extOffer ? '#10B981' : 'rgba(10,46,77,0.12)',
+          color: '#fff', fontSize: 10, fontWeight: 700, flexShrink: 0,
+        }}>
+          {extOffer ? '✓' : ''}
+        </span>
+        {extOffer ? 'Offer sent externally (click to undo)' : 'Offer done outside system'}
+      </button>
 
       {guides.length === 0 ? (
         <div

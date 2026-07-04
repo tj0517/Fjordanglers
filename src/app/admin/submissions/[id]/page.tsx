@@ -102,6 +102,12 @@ export default async function SubmissionDetailPage({
     .eq('id', sub.guide_id)
     .single()
 
+  // Fetch experience slug (to build public URL)
+  const { data: expSlugRow } = sub.experience_id != null
+    ? await (svc as any).from('experiences').select('slug').eq('id', sub.experience_id).single()
+    : { data: null }
+  const expSlug: string | null = expSlugRow?.slug ?? null
+
   const st = STATUS_STYLE[sub.status] ?? STATUS_STYLE.submitted
   const submittedDate = new Date(sub.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -167,7 +173,7 @@ export default async function SubmissionDetailPage({
         {/* If published, show link to experience */}
         {sub.status === 'published' && sub.experience_id != null && (
           <Link
-            href={`/trips/${sub.experience_id}`}
+            href={expSlug != null ? `/experiences/${expSlug}` : '#'}
             target="_blank"
             className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl f-body transition-all hover:brightness-105"
             style={{ background: 'rgba(74,222,128,0.12)', color: '#16A34A', border: '1px solid rgba(74,222,128,0.3)' }}

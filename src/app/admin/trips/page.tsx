@@ -29,6 +29,7 @@ const DIFFICULTY_STYLES = {
 type ExpWithGuide = {
   id: string
   guide_id: string
+  slug: string | null
   title: string
   fish_types: string[]
   price_per_person_eur: number
@@ -57,7 +58,7 @@ export default async function AdminExperiencesPage({
   const { data } = await supabase
     .from('experiences')
     .select(
-      'id, guide_id, title, fish_types, price_per_person_eur, duration_hours, duration_days, difficulty, published, location_city, location_country, created_at, guide:guides(id, full_name)',
+      'id, guide_id, slug, title, fish_types, price_per_person_eur, duration_hours, duration_days, difficulty, published, location_city, location_country, created_at, guide:guides(id, full_name)',
     )
     .order('created_at', { ascending: false })
 
@@ -370,7 +371,7 @@ export default async function AdminExperiencesPage({
                   <div className="flex items-center gap-2.5 flex-wrap">
                     {/* View public */}
                     <Link
-                      href={`/trips/${exp.id}`}
+                      href={exp.slug != null ? `/experiences/${exp.slug}` : '#'}
                       target="_blank"
                       className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]"
                       style={{ color: 'rgba(10,46,77,0.38)' }}

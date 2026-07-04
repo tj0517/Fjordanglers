@@ -33,6 +33,7 @@ import { NextActionEditor } from './NextActionEditor'
 import { InquiryDetailTabs } from './InquiryDetailTabs'
 import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab'
 import { TripSetupTab } from './TripSetupTab'
+import { ProposalTab } from './ProposalTab'
 import type { LeadMessage, TripDetails } from '@/actions/inquiries'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
@@ -132,6 +133,9 @@ export default async function AdminInquiryDetailPage({
     assigned_guide_id:       string | null
     guide_acceptance:        string | null
     guide_decline_reason:    string | null
+    external_offer_sent:     boolean
+    offer_token:             string | null
+    deposit_paid_at:         string | null
   }
 
   // (AssignGuidePanel removed — guide assignment is now in the Guide Attachment tab)
@@ -566,6 +570,7 @@ export default async function AdminInquiryDetailPage({
       tripCountry={tripLocationCountry}
       guideAcceptance={inquiry.guide_acceptance ?? null}
       guideDeclineReason={inquiry.guide_decline_reason ?? null}
+      externalOfferSent={inquiry.external_offer_sent ?? false}
     />
   )
 
@@ -579,6 +584,23 @@ export default async function AdminInquiryDetailPage({
       experienceTitle={trip?.title ?? null}
       anglerMessage={inquiry.message ?? null}
       initialDetails={tripDetails}
+    />
+  )
+
+  // ── Proposal tab ───────────────────────────────────────────────────────────
+  const proposalContent = (
+    <ProposalTab
+      inquiryId={inquiry.id}
+      anglerName={inquiry.angler_name}
+      experienceTitle={trip?.title ?? null}
+      guideOptions={tripDetails?.guide_options ?? []}
+      guideFinalDates={tripDetails?.guide_final_dates ?? null}
+      existingToken={inquiry.offer_token ?? null}
+      existingTotalEur={inquiry.offer_total_eur ?? null}
+      existingDepositEur={inquiry.offer_deposit_eur ?? null}
+      existingSentAt={inquiry.offer_sent_at ?? null}
+      depositPaidAt={inquiry.deposit_paid_at ?? null}
+      baseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
     />
   )
 
@@ -616,6 +638,7 @@ export default async function AdminInquiryDetailPage({
         sidePanel={sidePanel}
         guideContent={guideContent}
         tripSetupContent={tripSetupContent}
+        proposalContent={proposalContent}
       />
 
     </div>

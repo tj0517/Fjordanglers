@@ -208,7 +208,7 @@ export async function sendDepositLink(
 
   const { data: trip } = await svc
     .from('experiences')
-    .select('id, title, price_per_person_eur, guide_id')
+    .select('id, title, slug, price_per_person_eur, guide_id')
     .eq('id', rawInquiry.trip_id)
     .single()
 
@@ -266,7 +266,7 @@ export async function sendDepositLink(
           payment_type: 'inquiry_deposit',
         },
         success_url: `${baseUrl}/inquiry-confirmed?inquiry_id=${inquiryId}`,
-        cancel_url:  `${baseUrl}/trips/${rawInquiry.trip_id}`,
+        cancel_url:  trip.slug != null ? `${baseUrl}/experiences/${trip.slug}` : baseUrl,
       },
       {
         idempotencyKey: `deposit-${inquiryId}-${Date.now()}`,
@@ -997,6 +997,28 @@ export async function assignGuideToInquiry(
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[assignGuideToInquiry] Inquiry ${inquiryId} → guide ${guideId}`)
+  return { success: true }
+}
+
+// ─── setExternalOffer ─────────────────────────────────────────────────────────
+
+/**
+ * Mark (or unmark) an inquiry's offer as handled externally
+ * (e.g. via WhatsApp / email outside the system).
+ */
+export async function setExternalOffer(
+  inquiryId: string,
+  value: boolean,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({ external_offer_sent: value })
+    .eq('id', inquiryId)
+  if (error != null) return { success: false, error: error.message }
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/inquiries')
   return { success: true }
 }
 

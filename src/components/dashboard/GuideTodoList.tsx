@@ -54,14 +54,15 @@ interface OptionDraft {
 }
 
 interface Props {
-  inquiryId:      string
-  initialDetails: TripDetails | null
-  guideSpecies:   string[]
+  inquiryId:          string
+  initialDetails:     TripDetails | null
+  guideSpecies:       string[]
+  externalOfferSent?: boolean
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props) {
+export function GuideTodoList({ inquiryId, initialDetails, guideSpecies, externalOfferSent = false }: Props) {
 
   function toSpeciesInit(
     species: string[] | string | null,
@@ -94,7 +95,7 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
       : [{ spot: '', species: [], speciesOther: '', currency: 'EUR' as Currency, license_price: '', guide_price: '', description: '', photos: [], localPhotos: [] }]
 
   const hasExistingOffer = (initialDetails?.guide_options ?? []).length > 0
-  const [isSent,      setIsSent]      = useState(hasExistingOffer)
+  const [isSent,      setIsSent]      = useState(hasExistingOffer || externalOfferSent)
   const [finalDates,  setFinalDates]  = useState(initialDetails?.guide_final_dates ?? '')
   const [options,     setOptions]     = useState<OptionDraft[]>(initOptions)
   const [saveErr,     setSaveErr]     = useState<string | null>(null)
@@ -252,9 +253,14 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
-                style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)' }}>
-                <span className="text-[11px] font-bold f-body" style={{ color: '#065F46' }}>
-                  ✓ Offer submitted
+                style={{
+                  background: externalOfferSent && !hasExistingOffer ? 'rgba(59,130,246,0.1)' : 'rgba(16,185,129,0.1)',
+                  border:     externalOfferSent && !hasExistingOffer ? '1px solid rgba(59,130,246,0.25)' : '1px solid rgba(16,185,129,0.25)',
+                }}>
+                <span className="text-[11px] font-bold f-body" style={{
+                  color: externalOfferSent && !hasExistingOffer ? '#1E40AF' : '#065F46',
+                }}>
+                  {externalOfferSent && !hasExistingOffer ? '✓ FA sent the offer directly' : '✓ Offer submitted'}
                 </span>
               </div>
               {finalDates.trim() && (
@@ -263,6 +269,11 @@ export function GuideTodoList({ inquiryId, initialDetails, guideSpecies }: Props
                 </span>
               )}
             </div>
+            {externalOfferSent && !hasExistingOffer ? (
+              <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                FjordAnglers has handled this offer directly with the angler. No action needed from you.
+              </p>
+            ) : null}
             {options.map((opt, i) => (
               <div key={i} className="rounded-xl px-4 py-3"
                 style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}>

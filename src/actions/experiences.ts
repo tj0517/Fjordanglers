@@ -294,7 +294,7 @@ async function assertCanManageExperience(expId: string): Promise<
 export async function createExperience(
   guideId: string,
   payload: ExperiencePayload,
-): Promise<ActionResult<{ id: string }>> {
+): Promise<ActionResult<{ id: string; slug: string | null }>> {
   try {
     const perm = await assertCanManageGuide(guideId)
     if (!perm.ok) return { success: false, error: perm.error, code: perm.code }
@@ -349,7 +349,7 @@ export async function createExperience(
         price_range_max_eur:          payload.price_range_max_eur ?? null,
         inquiry_form_config:          (payload.inquiry_form_config as unknown as DbJson) ?? null,
       })
-      .select('id')
+      .select('id, slug')
       .single()
 
     if (expError != null) {
@@ -395,7 +395,7 @@ export async function createExperience(
     await resetCalendarDisabledIfNeeded(guideId, payload.booking_type ?? 'classic')
 
     revalidateTag(CACHE_TAG_EXPERIENCES, {})
-    return { success: true, data: { id: exp.id } }
+    return { success: true, data: { id: exp.id, slug: (exp as any).slug ?? null } }
   } catch (err) {
     console.error('[createExperience] Unexpected:', err)
     return { success: false, error: 'An unexpected error occurred. Please try again.' }

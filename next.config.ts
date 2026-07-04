@@ -5,8 +5,11 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.1.62'],
   async redirects() {
     return [
-      { source: '/terms',   destination: '/legal/terms-of-service', permanent: true },
-      { source: '/privacy', destination: '/legal/privacy-policy',   permanent: true },
+      { source: '/terms',        destination: '/legal/terms-of-service', permanent: true },
+      { source: '/privacy',      destination: '/legal/privacy-policy',   permanent: true },
+      // /trips/* → homepage (legacy route, replaced by /experiences/[slug])
+      { source: '/trips',        destination: '/',                        permanent: true },
+      { source: '/trips/:path*', destination: '/',                        permanent: true },
     ]
   },
   images: {

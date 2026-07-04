@@ -658,7 +658,8 @@ export default function ExperienceForm({
   // ── Error / success ──────────────────────────────────────────────────────
   const [error,     setError]     = useState<string | null>(null)
   const [success,   setSuccess]   = useState(false)
-  const [createdId, setCreatedId] = useState<string | null>(null)
+  const [createdId,   setCreatedId]   = useState<string | null>(null)
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null)
 
   // ── Derived ──────────────────────────────────────────────────────────────
   // Whether any duration option has days > 1 (controls accommodation visibility)
@@ -908,6 +909,7 @@ export default function ExperienceForm({
         result = await createExperience(guideId, payload)
         if (result.success && result.data != null) {
           setCreatedId(result.data.id)
+          setCreatedSlug(result.data.slug ?? null)
           setSuccess(true)
         } else if (!result.success) {
           setError(result.error)
@@ -961,7 +963,7 @@ export default function ExperienceForm({
 
         <div className="flex items-center justify-center gap-3 flex-wrap">
           <a
-            href={`/trips/${createdId}`}
+            href={createdSlug != null ? `/experiences/${createdSlug}` : '#'}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-all hover:brightness-110 f-body"

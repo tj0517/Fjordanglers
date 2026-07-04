@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 import { createServiceClient } from '@/lib/supabase/server'
 import { InquiriesFilters } from './InquiriesFilters'
+import { ExternalOfferToggle } from './ExternalOfferToggle'
 
 export const metadata = {
   title: 'Inquiries — Admin',
@@ -54,6 +55,30 @@ interface InquiryRow {
   lost_reason:             string | null
   last_contact_at:         string | null
   next_action:             string | null
+  // guide tracking
+  assigned_guide_id:       string | null
+  guide_acceptance:        string | null
+  guide_decline_reason:    string | null
+  external_offer_sent:     boolean
+}
+
+// ─── Guide offer stage ────────────────────────────────────────────────────────
+
+type GuideStage = 'no_guide' | 'awaiting_response' | 'declined' | 'needs_offer' | 'offer_sent'
+
+function guideStage(row: InquiryRow, hasOffer: boolean): GuideStage {
+  if (row.assigned_guide_id == null) return 'no_guide'
+  if (row.guide_acceptance === 'declined') return 'declined'
+  if (row.guide_acceptance == null) return 'awaiting_response'
+  return (hasOffer || row.external_offer_sent) ? 'offer_sent' : 'needs_offer'
+}
+
+const GUIDE_STAGE_STYLE: Record<GuideStage, { label: string; color: string; bg: string; border: string }> = {
+  no_guide:          { label: 'No guide',       color: 'rgba(10,46,77,0.4)',  bg: 'rgba(10,46,77,0.05)',    border: '1px solid rgba(10,46,77,0.1)'    },
+  awaiting_response: { label: '⏳ Awaiting',    color: '#92400E',             bg: 'rgba(251,191,36,0.12)',  border: '1px solid rgba(251,191,36,0.35)' },
+  declined:          { label: '✗ Declined',     color: '#991B1B',             bg: 'rgba(239,68,68,0.08)',   border: '1px solid rgba(239,68,68,0.2)'   },
+  needs_offer:       { label: 'Needs offer',    color: '#1E40AF',             bg: 'rgba(59,130,246,0.1)',   border: '1px solid rgba(59,130,246,0.25)' },
+  offer_sent:        { label: '✓ Offer sent',   color: '#065F46',             bg: 'rgba(16,185,129,0.1)',   border: '1px solid rgba(16,185,129,0.25)' },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -174,6 +199,7 @@ export default async function AdminInquiriesPage({
 }) {
   const sp     = await searchParams
   const filter = sp.status ?? 'all'
+  const view   = (sp.view === 'guide') ? 'guide' : 'angler'
   const q      = (sp.q ?? '').trim().toLowerCase()
   const from   = sp.from ?? ''
   const to     = sp.to   ?? ''
@@ -184,7 +210,7 @@ export default async function AdminInquiriesPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawAll } = await (svc as any)
     .from('inquiries')
-    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action')
+    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action, assigned_guide_id, guide_acceptance, guide_decline_reason, external_offer_sent')
     .order('created_at', { ascending: false })
 
   const allRows = (rawAll ?? []) as InquiryRow[]
@@ -235,6 +261,29 @@ export default async function AdminInquiriesPage({
 
   const tripMap = new Map((trips ?? []).map(t => [t.id, t.title]))
 
+  // ── Guide names for assigned inquiries ─────────────────────────────────────
+  const guideIds = [...new Set(allRows.map(r => r.assigned_guide_id).filter(Boolean))] as string[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: guidesData } = guideIds.length > 0
+    ? await (svc as any).from('guides').select('id, full_name').in('id', guideIds)
+    : { data: [] as Array<{ id: string; full_name: string }> }
+  const guideMap = new Map(((guidesData ?? []) as Array<{ id: string; full_name: string }>).map(g => [g.id, g.full_name]))
+
+  // ── Offer status: which inquiries have guide_options set ───────────────────
+  const assignedInquiryIds = rows.filter(r => r.assigned_guide_id != null).map(r => r.id)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: tripDetailsData } = assignedInquiryIds.length > 0
+    ? await (svc as any)
+        .from('inquiry_trip_details')
+        .select('inquiry_id, guide_options')
+        .in('inquiry_id', assignedInquiryIds)
+    : { data: [] as Array<{ inquiry_id: string; guide_options: unknown }> }
+  const offerSentSet = new Set(
+    ((tripDetailsData ?? []) as Array<{ inquiry_id: string; guide_options: unknown }>)
+      .filter(d => Array.isArray(d.guide_options) && (d.guide_options as unknown[]).length > 0)
+      .map(d => d.inquiry_id)
+  )
+
   // ── Stats (from full data) ─────────────────────────────────────────────────
   const USD_EUR_RATE   = 0.92
   const hasMixedCurrency = allRows.some(r => r.deal_currency === 'USD' && r.internal_commission_eur != null)
@@ -248,13 +297,25 @@ export default async function AdminInquiriesPage({
   const closedCount = allRows.filter(r => !['pending_fa_review', 'in_negotiation', 'deposit_sent'].includes(r.status)).length
   const convPct     = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : null
 
-  // ── Helper: build tab href preserving current search/date params ───────────
+  // ── Helper: build tab href preserving current search/date/view params ──────
   function tabHref(key: string): string {
+    const params = new URLSearchParams()
+    if (q)            params.set('q',      q)
+    if (from)         params.set('from',   from)
+    if (to)           params.set('to',     to)
+    if (view === 'guide') params.set('view', 'guide')
+    if (key !== 'all') params.set('status', key)
+    const qs = params.toString()
+    return qs ? `/admin/inquiries?${qs}` : '/admin/inquiries'
+  }
+
+  function viewHref(v: 'angler' | 'guide'): string {
     const params = new URLSearchParams()
     if (q)    params.set('q',    q)
     if (from) params.set('from', from)
     if (to)   params.set('to',   to)
-    if (key !== 'all') params.set('status', key)
+    if (filter !== 'all') params.set('status', filter)
+    if (v === 'guide') params.set('view', 'guide')
     const qs = params.toString()
     return qs ? `/admin/inquiries?${qs}` : '/admin/inquiries'
   }
@@ -395,6 +456,24 @@ export default async function AdminInquiriesPage({
         })}
       </div>
 
+      {/* ─── View toggle ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 mb-5">
+        {(['angler', 'guide'] as const).map(v => (
+          <Link
+            key={v}
+            href={viewHref(v)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
+            style={{
+              background: view === v ? '#0A2E4D' : 'rgba(10,46,77,0.06)',
+              color:      view === v ? '#fff'    : 'rgba(10,46,77,0.55)',
+              border:     view === v ? 'none'    : '1px solid rgba(10,46,77,0.1)',
+            }}
+          >
+            {v === 'angler' ? '👤 Angler view' : '🎣 Guide view'}
+          </Link>
+        ))}
+      </div>
+
       {/* ─── Results count ───────────────────────────────────────────── */}
       {(hasActiveFilters || filter !== 'all') && (
         <p className="text-xs f-body mb-4" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -431,10 +510,121 @@ export default async function AdminInquiriesPage({
             const dateLabel = dates != null && dates.length > 0
               ? fmtDate(dates[0]) + (dates.length > 1 ? ` +${dates.length - 1}` : '')
               : '—'
-
             const isAttention = needsAttention(row)
             const isNew       = isNewUnresponded(row)
 
+            // ── Guide view row ─────────────────────────────────────────────
+            if (view === 'guide') {
+              const hasOffer   = offerSentSet.has(row.id)
+              const stage      = guideStage(row, hasOffer)
+              const stageSt    = GUIDE_STAGE_STYLE[stage]
+              const guideName  = row.assigned_guide_id != null
+                ? (guideMap.get(row.assigned_guide_id) ?? 'Unknown guide')
+                : null
+
+              return (
+                <Link
+                  key={row.id}
+                  href={`/admin/inquiries/${row.id}`}
+                  className="block group"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div
+                    className="flex gap-4 px-5 py-4 rounded-[20px] transition-all group-hover:shadow-md"
+                    style={{
+                      background: stage === 'awaiting_response' ? 'rgba(251,191,36,0.04)' : '#FDFAF7',
+                      border:     stage === 'awaiting_response'
+                        ? '1px solid rgba(251,191,36,0.25)'
+                        : stage === 'declined'
+                          ? '1px solid rgba(239,68,68,0.15)'
+                          : '1px solid rgba(10,46,77,0.07)',
+                      boxShadow: '0 1px 6px rgba(10,46,77,0.04)',
+                    }}
+                  >
+                    {/* Stage dot */}
+                    <div className="flex-shrink-0 flex flex-col items-center pt-1">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full mt-0.5"
+                        style={{ background: stageSt.color, boxShadow: `0 0 0 3px ${stageSt.bg}` }}
+                      />
+                    </div>
+
+                    {/* Left: angler + trip */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <span className="text-sm font-bold f-body text-[#0A2E4D] truncate">
+                          {row.angler_name}
+                        </span>
+                        {row.party_size > 1 && (
+                          <span className="text-[10px] f-body flex-shrink-0 px-1.5 py-0.5 rounded-full"
+                            style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.5)' }}>
+                            {row.party_size} pax
+                          </span>
+                        )}
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+                          style={{ background: st.bg, color: st.color, border: st.border }}
+                        >
+                          {st.label}
+                        </span>
+                      </div>
+                      <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                        {tripTitle} · {dateLabel}
+                      </p>
+                    </div>
+
+                    {/* Right: guide + stage */}
+                    <div className="hidden sm:flex flex-col items-end gap-1.5 flex-shrink-0 min-w-[160px]">
+                      {/* Guide name */}
+                      <span className="text-xs font-bold f-body text-right" style={{ color: '#0A2E4D' }}>
+                        {guideName ?? <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>Unassigned</span>}
+                      </span>
+
+                      {/* Guide acceptance */}
+                      {row.assigned_guide_id != null && (
+                        <span className="text-[10px] f-body font-semibold">
+                          {row.guide_acceptance === 'accepted' && <span style={{ color: '#059669' }}>✓ Accepted</span>}
+                          {row.guide_acceptance === 'declined' && <span style={{ color: '#DC2626' }}>✗ Declined</span>}
+                          {row.guide_acceptance == null        && <span style={{ color: '#A16207' }}>⏳ No response</span>}
+                        </span>
+                      )}
+
+                      {/* Decline reason */}
+                      {row.guide_decline_reason != null && row.guide_decline_reason.trim() !== '' && (
+                        <p className="text-[10px] f-body max-w-[150px] text-right truncate"
+                          style={{ color: 'rgba(153,27,27,0.65)' }}>
+                          {row.guide_decline_reason}
+                        </p>
+                      )}
+
+                      {/* Offer stage badge */}
+                      <span
+                        className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+                        style={{ background: stageSt.bg, color: stageSt.color, border: stageSt.border }}
+                      >
+                        {stageSt.label}
+                      </span>
+
+                      {/* External offer toggle */}
+                      {row.assigned_guide_id != null && row.guide_acceptance !== 'declined' && (
+                        <ExternalOfferToggle
+                          inquiryId={row.id}
+                          initial={row.external_offer_sent}
+                        />
+                      )}
+                    </div>
+
+                    {/* Caret */}
+                    <div className="flex items-center flex-shrink-0 pl-1">
+                      <span className="text-sm font-semibold transition-transform group-hover:translate-x-0.5"
+                        style={{ color: '#E67E50' }}>→</span>
+                    </div>
+                  </div>
+                </Link>
+              )
+            }
+
+            // ── Angler view row (original) ─────────────────────────────────
             return (
               <Link
                 key={row.id}
