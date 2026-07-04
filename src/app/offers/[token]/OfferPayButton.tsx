@@ -1,21 +1,17 @@
 'use client'
 
 /**
- * OfferPayButton — handles the angler's Q&A form + deposit payment.
+ * OfferResponseButtons — angler responds to the offer.
  *
- * If the offer has questions: shows a form. On submit, saves answers and
- * redirects to Stripe Checkout.
- *
- * If no questions: shows a single "Pay Deposit" button directly.
- *
- * showOnlyForm prop: when true, only renders the form (used in the questions
- * section lower on the page) so the sticky CTA at the top stays clean.
+ * If the offer has questions: shows a Q&A form first.
+ * Actions: "Accept this offer" or "Decline" (optional note).
+ * No Stripe payment — acceptance triggers FA to follow up manually.
  */
 
 import { useState, useTransition } from 'react'
-import { submitOfferAnswers } from '@/actions/inquiries'
+import { acceptOffer, declineOffer } from '@/actions/inquiries'
 import type { OfferQuestion, OfferAnswer } from '@/actions/inquiries'
-import { Loader2 } from 'lucide-react'
+import { Loader2, ChevronDown } from 'lucide-react'
 
 interface Props {
   token: string
@@ -32,102 +28,52 @@ export function OfferPayButton({
   depositEur,
   showOnlyForm = false,
 }: Props) {
-  const [isPending, startTransition] = useTransition()
-  const [answers, setAnswers] = useState<Record<string, string>>(
+  const [isPending,     startTransition]  = useTransition()
+  const [isDeclining,   startDecline]     = useTransition()
+  const [answers,       setAnswers]       = useState<Record<string, string>>(
     () => Object.fromEntries(questions.map(q => [q.id, '']))
   )
-  const [error, setError] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
+  const [showDecline,   setShowDecline]   = useState(false)
+  const [declineNote,   setDeclineNote]   = useState('')
+  const [error,         setError]         = useState<string | null>(null)
 
   function updateAnswer(id: string, val: string) {
     setAnswers(prev => ({ ...prev, [id]: val }))
   }
 
-  function handlePay() {
+  function handleAccept() {
     startTransition(async () => {
       setError(null)
-
       const builtAnswers: OfferAnswer[] = questions.map(q => ({
         id:       q.id,
         question: q.question,
         answer:   answers[q.id] ?? '',
       }))
-
-      const res = await submitOfferAnswers(token, builtAnswers)
-
-      if (res.success) {
-        window.location.href = res.checkoutUrl
-      } else {
+      const res = await acceptOffer(token, builtAnswers)
+      if (!res.success) {
         setError(res.error)
+      } else {
+        // Reload to show the accepted confirmation screen
+        window.location.reload()
       }
     })
   }
 
-  // ── No questions: just a button ─────────────────────────────────────────────
-  if (!hasQuestions) {
-    if (showOnlyForm) return null
-
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={handlePay}
-          disabled={isPending}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold f-body transition-all"
-          style={{
-            background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
-            color:      '#fff',
-            cursor:     isPending ? 'not-allowed' : 'pointer',
-            boxShadow:  isPending ? 'none' : '0 4px 20px rgba(230,126,80,0.4)',
-          }}
-        >
-          {isPending
-            ? <><Loader2 size={16} className="animate-spin" /> Preparing payment…</>
-            : `Pay €${depositEur.toFixed(2)} deposit to secure your spot →`}
-        </button>
-        {error != null && (
-          <p className="text-sm f-body text-center mt-3" style={{ color: '#991B1B' }}>
-            {error}
-          </p>
-        )}
-        <p className="text-xs f-body text-center mt-2.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
-          Secure payment via Stripe · Refundable per the terms above
-        </p>
-      </div>
-    )
+  function handleDecline() {
+    startDecline(async () => {
+      setError(null)
+      const res = await declineOffer(token, declineNote.trim() || null)
+      if (!res.success) {
+        setError(res.error)
+      } else {
+        window.location.reload()
+      }
+    })
   }
 
-  // ── Has questions ───────────────────────────────────────────────────────────
-
-  // Top of page: just show the CTA that expands the form below
-  if (!showOnlyForm && !showForm) {
-    return (
-      <div>
-        <button
-          type="button"
-          onClick={() => {
-            setShowForm(true)
-            document.getElementById('offer-questions')?.scrollIntoView({ behavior: 'smooth' })
-          }}
-          className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold f-body transition-all"
-          style={{
-            background: '#E67E50',
-            color:      '#fff',
-            boxShadow:  '0 4px 20px rgba(230,126,80,0.4)',
-          }}
-        >
-          Answer questions &amp; pay €{depositEur.toFixed(2)} deposit →
-        </button>
-        <p className="text-xs f-body text-center mt-2.5" style={{ color: 'rgba(10,46,77,0.4)' }}>
-          {questions.length} question{questions.length > 1 ? 's' : ''} · then secure payment via Stripe
-        </p>
-      </div>
-    )
-  }
-
-  // Form: show all questions + submit
-  return (
-    <div id="offer-questions" className="space-y-4">
+  // Questions form (used in both the top CTA and the "A Few Questions" section)
+  const questionsForm = hasQuestions && (
+    <div className="space-y-4 mb-4">
       {questions.map((q, i) => (
         <div key={q.id}>
           <label className="text-sm font-semibold f-body block mb-1.5" style={{ color: '#0A2E4D' }}>
@@ -148,34 +94,114 @@ export function OfferPayButton({
           />
         </div>
       ))}
+    </div>
+  )
+
+  if (showOnlyForm) {
+    // Just the Q&A form — buttons are in the main CTA card above
+    return <>{questionsForm}</>
+  }
+
+  return (
+    <div id="offer-questions">
+      {questionsForm}
 
       {error != null && (
-        <div className="px-4 py-3 rounded-xl"
+        <div className="px-4 py-3 rounded-xl mb-3"
           style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' }}>
           <p className="text-sm f-body" style={{ color: '#991B1B' }}>{error}</p>
         </div>
       )}
 
+      {/* Accept */}
       <button
         type="button"
-        onClick={handlePay}
-        disabled={isPending}
+        onClick={handleAccept}
+        disabled={isPending || isDeclining}
         className="w-full flex items-center justify-center gap-2 py-4 rounded-xl text-base font-bold f-body transition-all"
         style={{
           background: isPending ? 'rgba(230,126,80,0.6)' : '#E67E50',
           color:      '#fff',
-          cursor:     isPending ? 'not-allowed' : 'pointer',
-          boxShadow:  isPending ? 'none' : '0 4px 20px rgba(230,126,80,0.4)',
+          cursor:     (isPending || isDeclining) ? 'not-allowed' : 'pointer',
+          boxShadow:  isPending ? 'none' : '0 4px 24px rgba(230,126,80,0.45)',
+          letterSpacing: '0.01em',
         }}
       >
         {isPending
-          ? <><Loader2 size={16} className="animate-spin" /> Preparing payment…</>
-          : `Submit answers &amp; pay €${depositEur.toFixed(2)} deposit →`}
+          ? <><Loader2 size={16} className="animate-spin" /> Processing…</>
+          : 'Accept this offer →'}
       </button>
 
-      <p className="text-xs f-body text-center" style={{ color: 'rgba(10,46,77,0.4)' }}>
-        Secure payment via Stripe · Your answers are sent to FjordAnglers
+      <p className="text-xs f-body text-center mt-2.5 mb-3" style={{ color: 'rgba(10,46,77,0.4)' }}>
+        €{depositEur.toFixed(0)} deposit · FjordAnglers will be in touch to confirm
       </p>
+
+      {/* Decline toggle */}
+      {!showDecline ? (
+        <button
+          type="button"
+          onClick={() => setShowDecline(true)}
+          disabled={isPending}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm f-body transition-all"
+          style={{
+            background: 'transparent',
+            color:      'rgba(10,46,77,0.38)',
+            border:     '1px solid rgba(10,46,77,0.1)',
+            cursor:     'pointer',
+          }}
+        >
+          <ChevronDown size={14} />
+          This offer doesn&apos;t work for me
+        </button>
+      ) : (
+        <div className="space-y-2.5 pt-1">
+          <div
+            className="px-4 py-3 rounded-xl"
+            style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.09)' }}
+          >
+            <p className="text-xs font-semibold f-body mb-2" style={{ color: '#0A2E4D' }}>
+              Want to leave a note? (optional)
+            </p>
+            <textarea
+              value={declineNote}
+              onChange={e => setDeclineNote(e.target.value)}
+              rows={2}
+              className="w-full px-3 py-2 rounded-lg text-sm f-body resize-none"
+              style={{
+                background: 'rgba(10,46,77,0.04)',
+                border:     '1px solid rgba(10,46,77,0.1)',
+                color:      '#0A2E4D',
+                outline:    'none',
+              }}
+              placeholder="Dates don't work, budget, found another option… or leave blank"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDecline(false)}
+              className="flex-1 py-2.5 rounded-xl text-sm f-body"
+              style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)', cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDecline}
+              disabled={isDeclining || isPending}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold f-body"
+              style={{
+                background: isDeclining ? 'rgba(10,46,77,0.3)' : '#0A2E4D',
+                color:      '#fff',
+                cursor:     isDeclining ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isDeclining ? <Loader2 size={14} className="animate-spin inline mr-1" /> : null}
+              Decline offer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

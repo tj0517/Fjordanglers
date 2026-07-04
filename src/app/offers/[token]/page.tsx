@@ -3,17 +3,6 @@
  *
  * Accessed via magic link from the offer email.
  * No login required — the token IS the authentication.
- *
- * Shows:
- *   - Guide photo + name + bio
- *   - Trip summary (title, dates, party size)
- *   - Price breakdown + refundable deposit notice
- *   - Trip plan / itinerary
- *   - What's included list
- *   - Fishing licence information
- *   - FA notes
- *   - Questions form (if any)
- *   - "Pay Deposit" CTA → Stripe Checkout
  */
 
 import Image from 'next/image'
@@ -94,11 +83,55 @@ export default async function OfferPage({
     )
   }
 
+  if (offer.status === 'in_negotiation' || offer.status === 'deposit_sent') {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: '#F8FAFB' }}>
+        <div className="max-w-md w-full text-center py-16">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+            🎣
+          </div>
+          <h1 className="text-2xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
+            Offer accepted!
+          </h1>
+          <p className="text-base f-body" style={{ color: 'rgba(10,46,77,0.6)' }}>
+            We&apos;ve received your response. FjordAnglers will be in touch shortly to confirm the details.
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  if (offer.status === 'lost' || offer.status === 'cancelled') {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: '#F8FAFB' }}>
+        <div className="max-w-md w-full text-center py-16">
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+            style={{ background: 'rgba(10,46,77,0.07)' }}>
+            <span className="text-2xl">👋</span>
+          </div>
+          <h1 className="text-2xl font-bold f-display mb-3" style={{ color: '#0A2E4D' }}>
+            Offer declined
+          </h1>
+          <p className="text-base f-body mb-6" style={{ color: 'rgba(10,46,77,0.6)' }}>
+            Thanks for letting us know. If you change your mind or want to explore other trips, we&apos;re here.
+          </p>
+          <a href="mailto:contact@fjordanglers.com"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold f-body"
+            style={{ background: '#0A2E4D', color: '#fff' }}>
+            Contact FjordAnglers
+          </a>
+        </div>
+      </main>
+    )
+  }
+
   const hasQuestions = offer.questions.length > 0
   const balanceEur   = offer.offerTotalEur - offer.offerDepositEur
   const hasPhotos    = offer.photos.length > 0
 
-  // Currency conversion hint (display only — Stripe always charges in EUR)
+  // Currency conversion hint (display only — no Stripe payment, for reference)
   const localCurrency = currencyForCountry(offer.anglerCountry)
   const localRate     = localCurrency != null ? await fetchEurRate(localCurrency) : null
 
@@ -135,14 +168,15 @@ export default async function OfferPage({
           </h1>
           <p className="text-base f-body" style={{ color: 'rgba(255,255,255,0.65)', maxWidth: '520px' }}>
             We put this together especially for you. Take a look at the full trip plan,
-            what&apos;s included, and secure your spot with a refundable deposit.
+            what&apos;s included, and confirm your spot below.
           </p>
         </div>
       </div>
 
-      {/* ── Photo gallery (full-bleed between hero and content) ──────────── */}
+      {/* ── Photo gallery (between hero and content) ──────────────────────── */}
       {hasPhotos && (
-        <div className="max-w-3xl mx-auto px-4 sm:px-6" style={{ marginTop: '-20px', marginBottom: '-20px', position: 'relative', zIndex: 1 }}>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6"
+          style={{ marginTop: '-20px', marginBottom: '-20px', position: 'relative', zIndex: 1 }}>
           <div
             className="overflow-hidden rounded-2xl"
             style={{ border: '2px solid rgba(255,255,255,0.12)', boxShadow: '0 8px 40px rgba(10,46,77,0.2)' }}
@@ -155,7 +189,7 @@ export default async function OfferPage({
               }}
             >
               {offer.photos.slice(0, 6).map((url, i) => {
-                const isHero  = offer.photos.length >= 3 && i === 0
+                const isHero   = offer.photos.length >= 3 && i === 0
                 const showMore = i === 5 && offer.photos.length > 6
                 return (
                   <div
@@ -166,8 +200,8 @@ export default async function OfferPage({
                         ? '21/8'
                         : offer.photos.length === 1 ? '16/7'
                         : '4/3',
-                      position:  'relative',
-                      overflow:  'hidden',
+                      position: 'relative',
+                      overflow: 'hidden',
                     }}
                   >
                     <Image
@@ -196,14 +230,15 @@ export default async function OfferPage({
       )}
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <div className="max-w-3xl mx-auto px-4 sm:px-6" style={{ marginTop: hasPhotos ? '32px' : '-40px' }}>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6"
+        style={{ marginTop: hasPhotos ? '32px' : '-40px', paddingBottom: '60px' }}>
 
-        {/* ── Sticky deposit CTA ─────────────────────────────────────────── */}
+        {/* ── Offer CTA card ──────────────────────────────────────────────── */}
         <div className="p-6 rounded-2xl mb-6"
           style={{
-            background:    '#FFFFFF',
-            border:        '1px solid rgba(10,46,77,0.08)',
-            boxShadow:     '0 8px 40px rgba(10,46,77,0.12)',
+            background:  '#FFFFFF',
+            border:      '1px solid rgba(10,46,77,0.08)',
+            boxShadow:   '0 8px 40px rgba(10,46,77,0.12)',
           }}>
 
           {/* Price breakdown */}
@@ -215,7 +250,8 @@ export default async function OfferPage({
                 €{offer.offerTotalEur.toFixed(0)}
               </p>
             </div>
-            <div className="text-center" style={{ borderLeft: '1px solid rgba(10,46,77,0.06)', borderRight: '1px solid rgba(10,46,77,0.06)' }}>
+            <div className="text-center"
+              style={{ borderLeft: '1px solid rgba(10,46,77,0.06)', borderRight: '1px solid rgba(10,46,77,0.06)' }}>
               <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.06em] sm:tracking-[0.1em] f-body mb-1"
                 style={{ color: 'rgba(10,46,77,0.4)' }}>Deposit</p>
               <p className="text-xl sm:text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
@@ -238,7 +274,7 @@ export default async function OfferPage({
               {fmtConverted(offer.offerTotalEur, localRate, localCurrency)} total
               &nbsp;·&nbsp;
               {fmtConverted(offer.offerDepositEur, localRate, localCurrency)} deposit
-              &nbsp;·&nbsp;today&apos;s ECB rate · charged in EUR
+              &nbsp;·&nbsp;today&apos;s ECB rate
             </p>
           )}
 
@@ -315,7 +351,7 @@ export default async function OfferPage({
         </div>
 
         {/* ── Location ───────────────────────────────────────────────────── */}
-        {(offer.location != null && offer.location.trim() !== '') || offer.locationLat != null ? (
+        {((offer.location != null && offer.location.trim() !== '') || offer.locationLat != null) && (
           <Section title="Where It Happens" icon="📍">
             {offer.location != null && offer.location.trim() !== '' && (
               <p className="text-sm f-body leading-relaxed whitespace-pre-wrap mb-0"
@@ -332,13 +368,12 @@ export default async function OfferPage({
               />
             )}
           </Section>
-        ) : null}
+        )}
 
         {/* ── Schedule / Trip plan ────────────────────────────────────────── */}
         {offer.schedule.length > 0 ? (
           <Section title="Trip Schedule" icon="🗓️">
             <ol className="relative" style={{ paddingLeft: '28px' }}>
-              {/* Vertical timeline line */}
               <div
                 className="absolute left-0 top-2 bottom-2"
                 style={{
@@ -350,14 +385,11 @@ export default async function OfferPage({
               />
               {offer.schedule.map((entry, i) => (
                 <li key={entry.id ?? i} className="relative mb-6 last:mb-0">
-                  {/* Timeline dot */}
                   <div
                     className="absolute flex items-center justify-center"
                     style={{
-                      left: '-28px',
-                      top: '2px',
-                      width: '18px',
-                      height: '18px',
+                      left: '-28px', top: '2px',
+                      width: '18px', height: '18px',
                       borderRadius: '50%',
                       background: '#E67E50',
                       border: '2.5px solid #fff',
@@ -365,7 +397,6 @@ export default async function OfferPage({
                       flexShrink: 0,
                     }}
                   />
-                  {/* Content */}
                   <div>
                     {entry.label && (
                       <span
@@ -425,10 +456,7 @@ export default async function OfferPage({
             >
               {offer.whatToBring.map((item, i) => (
                 <li key={i} className="flex items-center gap-2.5">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: '#E67E50' }}
-                  />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#E67E50' }} />
                   <span className="text-sm f-body" style={{ color: '#374151' }}>{item}</span>
                 </li>
               ))}
@@ -437,8 +465,8 @@ export default async function OfferPage({
         )}
 
         {/* ── Fishing licence ─────────────────────────────────────────────── */}
-        {(offer.licenseHeading != null && offer.licenseHeading.trim() !== '') ||
-         (offer.licenseInfo   != null && offer.licenseInfo.trim()   !== '') ? (
+        {((offer.licenseHeading != null && offer.licenseHeading.trim() !== '') ||
+          (offer.licenseInfo   != null && offer.licenseInfo.trim()   !== '')) && (
           <Section title="Fishing Licence" icon="📋">
             {offer.licenseHeading != null && offer.licenseHeading.trim() !== '' && (
               <h3 className="text-sm font-bold f-body mb-2" style={{ color: '#0A2E4D' }}>
@@ -452,7 +480,7 @@ export default async function OfferPage({
               </div>
             )}
           </Section>
-        ) : null}
+        )}
 
         {/* ── FA notes ───────────────────────────────────────────────────── */}
         {offer.notes != null && offer.notes.trim() !== '' && (
@@ -467,7 +495,7 @@ export default async function OfferPage({
         {hasQuestions && (
           <Section title="A Few Questions" icon="❓">
             <p className="text-sm f-body mb-4" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              Please answer the questions below before paying your deposit.
+              Please answer the questions below before accepting your offer.
               Your answers help us prepare the best possible experience for you.
             </p>
             <OfferPayButton
@@ -480,7 +508,7 @@ export default async function OfferPage({
           </Section>
         )}
 
-        {/* ── Bottom CTA ─────────────────────────────────────────────────── */}
+        {/* ── Bottom contact ──────────────────────────────────────────────── */}
         <div className="py-8 text-center">
           <p className="text-sm f-body mb-3" style={{ color: 'rgba(10,46,77,0.5)' }}>
             Questions about this offer? Reply to our email or contact us.

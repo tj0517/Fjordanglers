@@ -17,7 +17,7 @@
 
 import { useState, useTransition } from 'react'
 import dynamic from 'next/dynamic'
-import { saveRichOffer } from '@/actions/inquiries'
+import { saveOfferDraft, sendOfferEmail } from '@/actions/inquiries'
 import { uploadOfferPhoto } from '@/actions/offer-photos'
 import type { OfferQuestion, ScheduleEntry } from '@/actions/inquiries'
 import type { Feature, Polygon } from 'geojson'
@@ -39,63 +39,89 @@ const LocationPicker = dynamic(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Props {
-  inquiryId: string
-  tripTitle: string
-  estimatedTotalEur: number
+export interface InitialOfferData {
+  totalPriceEur:   number | null
+  depositEur:      number | null
+  notes:           string | null
+  licenseInfo:     string | null
+  licenseHeading:  string | null
+  inclusions:      string[]
+  questions:       OfferQuestion[]
+  refundReason:    string | null
+  photos:          string[]
+  location:        string | null
+  whatToBring:     string[]
+  schedule:        ScheduleEntry[]
+  locationLat:     number | null
+  locationLng:     number | null
+  locationZoom:    number
+  locationGeoJson: object | null
+  offerToken:      string | null
+  offerSentAt:     string | null
 }
+
+interface Props {
+  inquiryId:         string
+  tripTitle:         string
+  estimatedTotalEur: number
+  initialOffer?:     InitialOfferData
+  baseUrl:           string
+}
+
+const DEFAULT_INCLUSIONS = ['Professional guide', 'Fishing equipment & tackle', 'Fishing licence']
+const DEFAULT_BRING      = ['Warm waterproof jacket', 'Rubber-soled shoes or waders']
+const DEFAULT_REFUND     = 'If you need to cancel, the deposit is fully refundable up to 14 days before the trip date.'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur }: Props) {
+export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur, initialOffer, baseUrl }: Props) {
+  const init = initialOffer
 
   // ── Pricing ─────────────────────────────────────────────────────────────────
-  const [totalEur,     setTotalEur]    = useState(estimatedTotalEur > 0 ? estimatedTotalEur : 0)
+  const [totalEur,     setTotalEur]    = useState(
+    init?.totalPriceEur ?? (estimatedTotalEur > 0 ? estimatedTotalEur : 0)
+  )
   const [depositEur,   setDepositEur]  = useState(
-    estimatedTotalEur > 0 ? Math.round(estimatedTotalEur * 0.3 * 100) / 100 : 0
+    init?.depositEur ??
+    (estimatedTotalEur > 0 ? Math.round(estimatedTotalEur * 0.3 * 100) / 100 : 0)
   )
-  const [refundReason, setRefundReason] = useState(
-    'If you need to cancel, the deposit is fully refundable up to 14 days before the trip date.'
-  )
+  const [refundReason, setRefundReason] = useState(init?.refundReason ?? DEFAULT_REFUND)
 
   // ── Location ─────────────────────────────────────────────────────────────────
-  const [location,        setLocation]        = useState('')
-  const [locationLat,     setLocationLat]     = useState<number | null>(null)
-  const [locationLng,     setLocationLng]     = useState<number | null>(null)
-  const [locationZoom,    setLocationZoom]    = useState(8)
-  const [locationGeoJson, setLocationGeoJson] = useState<object | null>(null)
-  const [showMap,         setShowMap]         = useState(false)
+  const [location,        setLocation]        = useState(init?.location ?? '')
+  const [locationLat,     setLocationLat]     = useState<number | null>(init?.locationLat ?? null)
+  const [locationLng,     setLocationLng]     = useState<number | null>(init?.locationLng ?? null)
+  const [locationZoom,    setLocationZoom]    = useState(init?.locationZoom ?? 8)
+  const [locationGeoJson, setLocationGeoJson] = useState<object | null>(init?.locationGeoJson ?? null)
+  const [showMap,         setShowMap]         = useState(init?.locationLat != null)
 
   // ── Photos ───────────────────────────────────────────────────────────────────
-  const [photos,      setPhotos]      = useState<string[]>([])
+  const [photos,      setPhotos]      = useState<string[]>(init?.photos ?? [])
   const [uploading,   setUploading]   = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
   // ── Schedule ─────────────────────────────────────────────────────────────────
-  const [schedule, setSchedule] = useState<ScheduleEntry[]>([])
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>(init?.schedule ?? [])
 
   // ── Inclusions ───────────────────────────────────────────────────────────────
-  const [inclusions, setInclusions] = useState<string[]>([
-    'Professional guide',
-    'Fishing equipment & tackle',
-    'Fishing licence',
-  ])
+  const [inclusions, setInclusions] = useState<string[]>(
+    init?.inclusions?.length ? init.inclusions : DEFAULT_INCLUSIONS
+  )
 
   // ── What to bring ────────────────────────────────────────────────────────────
-  const [whatToBring, setWhatToBring] = useState<string[]>([
-    'Warm waterproof jacket',
-    'Rubber-soled shoes or waders',
-  ])
+  const [whatToBring, setWhatToBring] = useState<string[]>(
+    init?.whatToBring?.length ? init.whatToBring : DEFAULT_BRING
+  )
 
   // ── Fishing licence ──────────────────────────────────────────────────────────
-  const [licenseHeading, setLicenseHeading] = useState('')
-  const [licenseInfo,    setLicenseInfo]    = useState('')
+  const [licenseHeading, setLicenseHeading] = useState(init?.licenseHeading ?? '')
+  const [licenseInfo,    setLicenseInfo]    = useState(init?.licenseInfo ?? '')
 
   // ── Questions ────────────────────────────────────────────────────────────────
-  const [questions, setQuestions] = useState<OfferQuestion[]>([])
+  const [questions, setQuestions] = useState<OfferQuestion[]>(init?.questions ?? [])
 
   // ── Notes ────────────────────────────────────────────────────────────────────
-  const [notes, setNotes] = useState('')
+  const [notes, setNotes] = useState(init?.notes ?? '')
 
   // ── Section open/closed ──────────────────────────────────────────────────────
   const [open, setOpen] = useState<Record<string, boolean>>({
@@ -112,9 +138,17 @@ export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur }: Props)
   const toggle = (k: string) => setOpen(p => ({ ...p, [k]: !p[k] }))
 
   // ── Submission ───────────────────────────────────────────────────────────────
-  const [isPending, startTransition] = useTransition()
-  const [result, setResult]          = useState<{ offerUrl: string } | { error: string } | null>(null)
-  const [copied, setCopied]          = useState(false)
+  const existingOfferUrl = init?.offerToken != null
+    ? `${baseUrl}/offers/${init.offerToken}`
+    : null
+
+  const [isPending, startTransition]     = useTransition()
+  const [isSending, startSendTransition] = useTransition()
+  const [result, setResult]              = useState<{ offerUrl: string } | { error: string } | null>(null)
+  const [sendResult, setSendResult]      = useState<'sent' | { error: string } | null>(
+    init?.offerSentAt != null ? 'sent' : null
+  )
+  const [copied, setCopied]              = useState(false)
 
   // ─── Photo upload ─────────────────────────────────────────────────────────────
   async function handlePhotoFiles(files: FileList) {
@@ -170,10 +204,10 @@ export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur }: Props)
   function updateQuestion(id: string, v: string)   { setQuestions(p => p.map(q => q.id === id ? { ...q, question: v } : q)) }
   function removeQuestion(id: string)              { setQuestions(p => p.filter(q => q.id !== id)) }
 
-  // ─── Submit ───────────────────────────────────────────────────────────────────
-  function handleSend() {
+  // ─── Save draft (no email) ────────────────────────────────────────────────────
+  function handleSaveDraft() {
     startTransition(async () => {
-      const res = await saveRichOffer(inquiryId, {
+      const res = await saveOfferDraft(inquiryId, {
         totalPriceEur:  totalEur,
         depositEur,
         notes:          notes.trim() || null,
@@ -192,7 +226,16 @@ export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur }: Props)
         locationZoom,
         locationGeoJson,
       })
+      setSendResult(null)
       setResult(res.success ? { offerUrl: res.offerUrl! } : { error: res.error })
+    })
+  }
+
+  // ─── Send email ───────────────────────────────────────────────────────────────
+  function handleSendEmail() {
+    startSendTransition(async () => {
+      const res = await sendOfferEmail(inquiryId)
+      setSendResult(res.success ? 'sent' : { error: res.error })
     })
   }
 
@@ -203,41 +246,65 @@ export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur }: Props)
     })
   }
 
-  // ─── Success ─────────────────────────────────────────────────────────────────
+  // ─── Draft saved ─────────────────────────────────────────────────────────────
   if (result != null && 'offerUrl' in result) {
+    const url = (result as { offerUrl: string }).offerUrl
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
-          style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)' }}>
-          <Check size={16} style={{ color: '#065F46', flexShrink: 0 }} />
-          <p className="text-sm font-semibold f-body" style={{ color: '#065F46' }}>
-            Offer email sent! Magic link ready.
+          style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)' }}>
+          <Check size={15} style={{ color: '#1E40AF', flexShrink: 0 }} />
+          <p className="text-sm font-semibold f-body" style={{ color: '#1E40AF' }}>
+            Draft saved — preview before sending
           </p>
         </div>
-        <div className="p-4 rounded-xl"
-          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.08)' }}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body mb-1.5"
-            style={{ color: 'rgba(10,46,77,0.4)' }}>Offer URL</p>
-          <p className="text-xs f-body break-all" style={{ color: '#0A2E4D' }}>{result.offerUrl}</p>
-        </div>
+
+        {/* Preview + copy */}
         <div className="flex gap-2">
-          <button type="button"
-            onClick={() => handleCopy((result as { offerUrl: string }).offerUrl)}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold f-body"
-            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            {copied ? 'Copied!' : 'Copy link'}
-          </button>
-          <a href={(result as { offerUrl: string }).offerUrl} target="_blank" rel="noopener noreferrer"
+          <a href={url} target="_blank" rel="noopener noreferrer"
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold f-body"
             style={{ background: '#E67E50', color: '#fff' }}>
-            <ExternalLink size={14} /> Preview
+            <ExternalLink size={14} /> Preview offer
           </a>
+          <button type="button"
+            onClick={() => handleCopy(url)}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold f-body"
+            style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
         </div>
+
+        {/* Send email */}
+        {sendResult === 'sent' ? (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
+            style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)' }}>
+            <Check size={15} style={{ color: '#065F46', flexShrink: 0 }} />
+            <p className="text-sm font-semibold f-body" style={{ color: '#065F46' }}>
+              Email sent to angler!
+            </p>
+          </div>
+        ) : (
+          <>
+            {sendResult != null && 'error' in sendResult && (
+              <p className="text-xs f-body" style={{ color: '#991B1B' }}>{sendResult.error}</p>
+            )}
+            <button type="button" onClick={handleSendEmail} disabled={isSending}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold f-body"
+              style={{
+                background: isSending ? 'rgba(10,46,77,0.4)' : '#0A2E4D',
+                color: '#fff',
+                cursor: isSending ? 'not-allowed' : 'pointer',
+              }}>
+              {isSending ? <><Loader2 size={14} className="animate-spin" /> Sending…</> : '✉ Send to angler'}
+            </button>
+          </>
+        )}
+
         <button type="button" onClick={() => setResult(null)}
           className="w-full py-2 rounded-xl text-xs f-body"
           style={{ color: 'rgba(10,46,77,0.4)' }}>
-          Edit &amp; resend offer
+          Edit offer
         </button>
       </div>
     )
@@ -529,8 +596,38 @@ export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur }: Props)
           style={inputStyle} placeholder="Any personal message for the angler…" />
       </Section>
 
-      {/* ── Send ───────────────────────────────────────────────────────────── */}
-      <button type="button" onClick={handleSend}
+      {/* ── Existing draft banner ──────────────────────────────────────────── */}
+      {existingOfferUrl != null && result == null && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+          style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)' }}>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] f-body mb-0.5"
+              style={{ color: 'rgba(10,46,77,0.4)' }}>
+              {init?.offerSentAt != null
+                ? `Sent ${new Date(init.offerSentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                : 'Draft saved'}
+            </p>
+            <p className="text-xs f-body" style={{ color: '#1E40AF', wordBreak: 'break-all' }}>
+              /offers/{init?.offerToken?.slice(0, 20)}…
+            </p>
+          </div>
+          <div className="flex gap-1.5 flex-shrink-0">
+            <a href={existingOfferUrl} target="_blank" rel="noopener noreferrer"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold f-body"
+              style={{ background: '#E67E50', color: '#fff' }}>
+              Preview
+            </a>
+            <button type="button" onClick={() => handleCopy(existingOfferUrl)}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold f-body"
+              style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D', border: '1px solid rgba(10,46,77,0.1)' }}>
+              {copied ? '✓' : 'Copy'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Save draft ─────────────────────────────────────────────────────── */}
+      <button type="button" onClick={handleSaveDraft}
         disabled={isPending || totalEur <= 0 || depositEur <= 0 || uploading}
         className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold f-body mt-1"
         style={{
@@ -539,13 +636,13 @@ export function OfferBuilder({ inquiryId, tripTitle, estimatedTotalEur }: Props)
           cursor: (isPending || totalEur <= 0 || depositEur <= 0 || uploading) ? 'not-allowed' : 'pointer',
           boxShadow: (isPending || totalEur <= 0 || depositEur <= 0 || uploading) ? 'none' : '0 4px 14px rgba(230,126,80,0.35)',
         }}>
-        {isPending    ? <><Loader2 size={14} className="animate-spin" /> Sending offer…</> :
+        {isPending    ? <><Loader2 size={14} className="animate-spin" /> Saving…</> :
          uploading    ? <><Loader2 size={14} className="animate-spin" /> Photos uploading…</> :
-         '✉ Send Offer Email →'}
+         'Save & preview →'}
       </button>
 
       <p className="text-[11px] f-body text-center" style={{ color: 'rgba(10,46,77,0.4)' }}>
-        Angler receives a magic link to view the full offer and pay the deposit.
+        Preview the offer before sending it to the angler.
       </p>
     </div>
   )

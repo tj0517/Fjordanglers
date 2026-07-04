@@ -24,7 +24,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
-import { OfferBuilderModal } from './OfferBuilderModal'
 import { MessageComposer } from './MessageComposer'
 import { StatusChanger } from './StatusChanger'
 import { InternalDealTracker } from './InternalDealTracker'
@@ -34,7 +33,8 @@ import { InquiryDetailTabs } from './InquiryDetailTabs'
 import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab'
 import { TripSetupTab } from './TripSetupTab'
 import { ProposalTab } from './ProposalTab'
-import type { LeadMessage, TripDetails } from '@/actions/inquiries'
+import type { LeadMessage, TripDetails, OfferQuestion, ScheduleEntry } from '@/actions/inquiries'
+import type { InitialOfferData } from './OfferBuilder'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -123,6 +123,20 @@ export default async function AdminInquiryDetailPage({
     offer_deposit_eur:       number | null
     offer_notes:             string | null
     offer_sent_at:           string | null
+    offer_trip_plan:         string | null
+    offer_license_info:      string | null
+    offer_license_heading:   string | null
+    offer_inclusions:        unknown
+    offer_questions:         unknown
+    offer_refund_reason:     string | null
+    offer_photos:            unknown
+    offer_location:          string | null
+    offer_what_to_bring:     unknown
+    offer_schedule:          unknown
+    offer_location_lat:      number | null
+    offer_location_lng:      number | null
+    offer_location_zoom:     number | null
+    offer_location_geojson:  unknown
     internal_deal_total_eur: number | null
     internal_commission_eur: number | null
     internal_notes:          string | null
@@ -296,8 +310,6 @@ export default async function AdminInquiryDetailPage({
     const tb = 'sentAt' in b ? b.sentAt : b.paidAt
     return new Date(ta).getTime() - new Date(tb).getTime()
   })
-
-  const canBuildOffer = ['pending_fa_review', 'deposit_sent'].includes(inquiry.status)
 
   // ── Build left column (Contact tab) ───────────────────────────────────────
   const contactContent = (
@@ -507,36 +519,6 @@ export default async function AdminInquiryDetailPage({
     <div className="space-y-3">
       <StatusChanger inquiryId={inquiry.id} currentStatus={inquiry.status} />
 
-      <div className="rounded-[20px] px-5 py-4"
-        style={{ background: '#0A2E4D', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 8px 32px rgba(10,46,77,0.2)' }}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body mb-1"
-          style={{ color: 'rgba(255,255,255,0.3)' }}>Offer & Deposit</p>
-        <p className="text-sm font-semibold f-body mb-4" style={{ color: 'rgba(255,255,255,0.7)' }}>
-          {inquiry.angler_name} · {inquiry.party_size} {inquiry.party_size === 1 ? 'person' : 'people'}
-        </p>
-        {canBuildOffer ? (
-          <OfferBuilderModal
-            inquiryId={inquiry.id}
-            tripTitle={trip?.title ?? 'Your trip'}
-            estimatedTotalEur={tripPriceEur}
-          />
-        ) : (
-          <div className="px-4 py-3 rounded-xl"
-            style={{
-              background: inquiry.status === 'deposit_paid' ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
-              border:     inquiry.status === 'deposit_paid' ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
-            }}>
-            <p className="text-sm f-body" style={{ color: inquiry.status === 'deposit_paid' ? '#6EE7B7' : 'rgba(255,255,255,0.5)' }}>
-              {inquiry.status === 'deposit_paid'   && '✅ Deposit received — booking confirmed'}
-              {inquiry.status === 'completed'      && '✅ Trip completed'}
-              {inquiry.status === 'cancelled'      && '❌ Inquiry cancelled'}
-              {inquiry.status === 'lost'           && '❌ Deal lost'}
-              {inquiry.status === 'in_negotiation' && '💬 In negotiation'}
-            </p>
-          </div>
-        )}
-      </div>
-
       <div className="rounded-[20px] overflow-hidden"
         style={{ background: 'rgba(10,46,77,0.75)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -587,6 +569,28 @@ export default async function AdminInquiryDetailPage({
     />
   )
 
+  // ── Build initialOffer from saved draft ────────────────────────────────────
+  const initialOffer: InitialOfferData | null = inquiry.offer_token != null ? {
+    totalPriceEur:   inquiry.offer_total_eur ?? null,
+    depositEur:      inquiry.offer_deposit_eur ?? null,
+    notes:           inquiry.offer_notes ?? null,
+    licenseInfo:     inquiry.offer_license_info ?? null,
+    licenseHeading:  inquiry.offer_license_heading ?? null,
+    inclusions:      (inquiry.offer_inclusions as string[] | null) ?? [],
+    questions:       (inquiry.offer_questions as OfferQuestion[] | null) ?? [],
+    refundReason:    inquiry.offer_refund_reason ?? null,
+    photos:          (inquiry.offer_photos as string[] | null) ?? [],
+    location:        inquiry.offer_location ?? null,
+    whatToBring:     (inquiry.offer_what_to_bring as string[] | null) ?? [],
+    schedule:        (inquiry.offer_schedule as ScheduleEntry[] | null) ?? [],
+    locationLat:     inquiry.offer_location_lat != null ? Number(inquiry.offer_location_lat) : null,
+    locationLng:     inquiry.offer_location_lng != null ? Number(inquiry.offer_location_lng) : null,
+    locationZoom:    inquiry.offer_location_zoom != null ? Number(inquiry.offer_location_zoom) : 8,
+    locationGeoJson: (inquiry.offer_location_geojson as object | null) ?? null,
+    offerToken:      inquiry.offer_token,
+    offerSentAt:     inquiry.offer_sent_at ?? null,
+  } : null
+
   // ── Proposal tab ───────────────────────────────────────────────────────────
   const proposalContent = (
     <ProposalTab
@@ -601,6 +605,9 @@ export default async function AdminInquiryDetailPage({
       existingSentAt={inquiry.offer_sent_at ?? null}
       depositPaidAt={inquiry.deposit_paid_at ?? null}
       baseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
+      initialOffer={initialOffer}
+      availableGuides={countryGuides.map(g => ({ id: g.id, full_name: g.full_name, avatar_url: g.avatar_url }))}
+      currentGuideId={inquiry.assigned_guide_id ?? null}
     />
   )
 

@@ -117,6 +117,7 @@ export function OfferBuilderModal({
                 inquiryId={inquiryId}
                 tripTitle={tripTitle}
                 estimatedTotalEur={estimatedTotalEur}
+                baseUrl={typeof window !== 'undefined' ? window.location.origin : 'https://fjordanglers.com'}
               />
             </div>
 

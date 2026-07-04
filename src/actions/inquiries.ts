@@ -454,7 +454,7 @@ export async function getOfferByToken(token: string): Promise<OfferPageData | nu
     .eq('id', inquiry.trip_id)
     .single()
 
-  const guideId = trip?.guide_id ?? inquiry.guide_id
+  const guideId = (inquiry.assigned_guide_id as string | null) ?? trip?.guide_id ?? null
   const { data: guide } = guideId
     ? await svc
         .from('guides')
@@ -1228,6 +1228,263 @@ export async function saveGuideOfferResponse(
   revalidatePath('/dashboard/trips/' + inquiryId)
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[saveGuideOfferResponse] Saved offer response for inquiry ${inquiryId}`)
+  return { success: true }
+}
+
+// ─── saveOfferDraft ───────────────────────────────────────────────────────────
+
+/**
+ * Save a rich offer draft WITHOUT sending the email to the angler.
+ * Used by FA to build + preview the offer before sending.
+ * Does NOT set offer_sent_at — call sendOfferEmail() to send.
+ */
+export async function saveOfferDraft(
+  inquiryId: string,
+  params: RichOfferParams,
+): Promise<ActionResult & { offerUrl?: string }> {
+  const {
+    totalPriceEur, depositEur, notes,
+    tripPlan, licenseInfo, licenseHeading, inclusions,
+    questions, refundReason,
+    photos, location, whatToBring,
+    schedule, locationLat, locationLng, locationZoom, locationGeoJson,
+  } = params
+
+  if (!Number.isFinite(totalPriceEur) || totalPriceEur <= 0) {
+    return { success: false, error: 'Total price must be greater than €0' }
+  }
+  if (!Number.isFinite(depositEur) || depositEur < 0.5) {
+    return { success: false, error: 'Deposit must be at least €0.50' }
+  }
+  if (depositEur > totalPriceEur) {
+    return { success: false, error: 'Deposit cannot exceed the total trip price' }
+  }
+
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('id, status, offer_token')
+    .eq('id', inquiryId)
+    .single()
+
+  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
+
+  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
+    return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
+  }
+
+  // Reuse existing token if available, otherwise generate a new one
+  const token     = (inquiry.offer_token as string | null) ?? crypto.randomUUID().replace(/-/g, '')
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  const offerUrl  = `${env.NEXT_PUBLIC_APP_URL}/offers/${token}`
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: updateError } = await (svc as any)
+    .from('inquiries')
+    .update({
+      offer_total_eur:         totalPriceEur,
+      offer_deposit_eur:       depositEur,
+      offer_notes:             notes?.trim() || null,
+      offer_trip_plan:         tripPlan?.trim() || null,
+      offer_license_info:      licenseInfo?.trim() || null,
+      offer_inclusions:        inclusions,
+      offer_questions:         questions,
+      offer_refund_reason:     refundReason?.trim() || null,
+      offer_photos:            photos,
+      offer_location:          location?.trim() || null,
+      offer_what_to_bring:     whatToBring,
+      offer_schedule:          schedule,
+      offer_license_heading:   licenseHeading?.trim() || null,
+      offer_location_lat:      locationLat,
+      offer_location_lng:      locationLng,
+      offer_location_zoom:     locationZoom,
+      offer_location_geojson:  locationGeoJson,
+      offer_token:             token,
+      offer_token_expires_at:  expiresAt,
+      // NOTE: offer_sent_at is intentionally NOT set here
+    })
+    .eq('id', inquiryId)
+
+  if (updateError != null) {
+    console.error('[saveOfferDraft] DB error:', updateError)
+    return { success: false, error: 'Failed to save offer draft' }
+  }
+
+  console.log(`[saveOfferDraft] Draft saved for inquiry ${inquiryId} — token ${token}`)
+  return { success: true, offerUrl }
+}
+
+// ─── sendOfferEmail ───────────────────────────────────────────────────────────
+
+/**
+ * Send the offer email to the angler for an already-saved draft.
+ * Sets offer_sent_at to now.
+ */
+export async function sendOfferEmail(
+  inquiryId: string,
+): Promise<ActionResult & { offerUrl?: string }> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, offer_token, offer_total_eur, offer_deposit_eur, offer_notes, status')
+    .eq('id', inquiryId)
+    .single()
+
+  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
+  if (inquiry.offer_token == null) return { success: false, error: 'No offer draft — save a draft first' }
+
+  const { data: trip } = await svc
+    .from('experiences')
+    .select('title, guide_id')
+    .eq('id', inquiry.trip_id)
+    .single()
+
+  const guideId = trip?.guide_id
+  const { data: guide } = guideId
+    ? await svc.from('guides').select('full_name').eq('id', guideId).single()
+    : { data: null }
+
+  const offerUrl = `${env.NEXT_PUBLIC_APP_URL}/offers/${inquiry.offer_token}`
+
+  await sendRichOfferAnglerEmail({
+    to:              inquiry.angler_email,
+    anglerName:      inquiry.angler_name,
+    tripTitle:       trip?.title ?? 'Your trip',
+    guideName:       guide?.full_name ?? 'Your guide',
+    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
+    partySize:       inquiry.party_size ?? 1,
+    offerTotalEur:   Number(inquiry.offer_total_eur ?? 0),
+    offerDepositEur: Number(inquiry.offer_deposit_eur ?? 0),
+    notes:           inquiry.offer_notes ?? null,
+    offerUrl,
+    inquiryId,
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('inquiries')
+    .update({ offer_sent_at: new Date().toISOString() })
+    .eq('id', inquiryId)
+
+  console.log(`[sendOfferEmail] Offer email sent for inquiry ${inquiryId}`)
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true, offerUrl }
+}
+
+// ─── acceptOffer ──────────────────────────────────────────────────────────────
+
+/**
+ * Angler accepts the offer on the public /offers/[token] page.
+ * Saves any Q&A answers and moves the inquiry to in_negotiation.
+ */
+export async function acceptOffer(
+  token: string,
+  answers: OfferAnswer[],
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('id, status, offer_token_expires_at')
+    .eq('offer_token', token)
+    .single()
+
+  if (inquiry == null) return { success: false, error: 'Offer not found or link has expired' }
+
+  if (inquiry.offer_token_expires_at != null && new Date(inquiry.offer_token_expires_at) < new Date()) {
+    return { success: false, error: 'This offer link has expired' }
+  }
+
+  if (['deposit_paid', 'completed', 'cancelled', 'lost'].includes(inquiry.status)) {
+    return { success: false, error: `Inquiry is already ${inquiry.status}` }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({
+      offer_answers: answers,
+      status: 'in_negotiation',
+    })
+    .eq('id', inquiry.id)
+
+  if (error != null) {
+    console.error('[acceptOffer] DB error:', error)
+    return { success: false, error: 'Failed to save acceptance' }
+  }
+
+  console.log(`[acceptOffer] Inquiry ${inquiry.id} accepted by angler`)
+  return { success: true }
+}
+
+// ─── declineOffer ─────────────────────────────────────────────────────────────
+
+/**
+ * Angler declines the offer on the public /offers/[token] page.
+ * Moves the inquiry to lost with an optional note.
+ */
+export async function declineOffer(
+  token: string,
+  note: string | null,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('id, status, offer_token_expires_at')
+    .eq('offer_token', token)
+    .single()
+
+  if (inquiry == null) return { success: false, error: 'Offer not found' }
+
+  if (['deposit_paid', 'completed'].includes(inquiry.status)) {
+    return { success: false, error: 'Cannot decline a confirmed booking' }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({
+      status:      'lost',
+      lost_reason: note?.trim() || 'Declined by angler',
+    })
+    .eq('id', inquiry.id)
+
+  if (error != null) {
+    console.error('[declineOffer] DB error:', error)
+    return { success: false, error: 'Failed to save response' }
+  }
+
+  console.log(`[declineOffer] Inquiry ${inquiry.id} declined by angler`)
+  return { success: true }
+}
+
+// ─── updateInquiryGuide ───────────────────────────────────────────────────────
+
+/**
+ * FA overrides which guide is shown on the offer page.
+ * Silently sets assigned_guide_id without sending any notification.
+ * Pass null to revert to the trip's default guide.
+ */
+export async function updateInquiryGuide(
+  inquiryId: string,
+  guideId: string | null,
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({ assigned_guide_id: guideId })
+    .eq('id', inquiryId)
+  if (error != null) return { success: false, error: error.message }
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[updateInquiryGuide] Inquiry ${inquiryId} → guide ${guideId ?? '(default)'}`)
   return { success: true }
 }
 
