@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[sync-google-ads] Google Ads API error:', message)
-    return NextResponse.json({ error: message }, { status: 502 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 
   if (campaigns.length === 0) {
