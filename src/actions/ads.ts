@@ -35,6 +35,7 @@ export interface CampaignDefRow {
   platform: 'google_ads' | 'meta'
   sort_order: number
   active: boolean
+  google_campaign_id?: string | null
 }
 
 // ─── Ad Campaign Actions ──────────────────────────────────────────────────────
@@ -84,7 +85,7 @@ export async function getCampaignDefs(): Promise<CampaignDefRow[]> {
   const supabase = createServiceClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (supabase.from as any)('ad_campaign_defs')
-    .select('*')
+    .select('id, created_at, key, name, platform, sort_order, active, google_campaign_id')
     .eq('active', true)
     .order('sort_order', { ascending: true })
   return (data ?? []) as CampaignDefRow[]

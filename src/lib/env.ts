@@ -81,6 +81,19 @@ const envSchema = z.object({
   // Signing secret provided by Resend for inbound email webhooks.
   RESEND_INBOUND_SECRET: z.string().optional(),
 
+  // ── Cron ───────────────────────────────────────────────────────────────────
+  // Bearer token used to authenticate Vercel cron job requests.
+  CRON_SECRET: z.string().optional(),
+
+  // ── Google Ads API ─────────────────────────────────────────────────────────
+  // All optional — cron silently skips sync if not configured.
+  GOOGLE_ADS_DEVELOPER_TOKEN: z.string().optional(),
+  GOOGLE_ADS_CLIENT_ID: z.string().optional(),
+  GOOGLE_ADS_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_ADS_REFRESH_TOKEN: z.string().optional(),
+  // 10-digit customer ID without dashes, e.g. "1234567890"
+  GOOGLE_ADS_CUSTOMER_ID: z.string().optional(),
+
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`
   SUPABASE_ACCESS_TOKEN: z.string().optional(),
