@@ -28,7 +28,14 @@ export async function POST(req: NextRequest) {
   )
 
   // Fetch metrics from Google Ads
-  const campaigns = await fetchGoogleAdsCampaigns(dateParam)
+  let campaigns: Awaited<ReturnType<typeof fetchGoogleAdsCampaigns>>
+  try {
+    campaigns = await fetchGoogleAdsCampaigns(dateParam)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[sync-google-ads] Google Ads API error:', message)
+    return NextResponse.json({ error: message }, { status: 502 })
+  }
 
   if (campaigns.length === 0) {
     return NextResponse.json({ synced: 0 })
