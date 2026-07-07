@@ -27,8 +27,7 @@ export async function fetchGoogleAdsCampaigns(
       campaign.status,
       metrics.cost_micros,
       metrics.impressions,
-      metrics.clicks,
-      metrics.average_cpc
+      metrics.clicks
     FROM campaign
     WHERE segments.date = '${targetDate}'
       AND campaign.status IN ('ENABLED', 'PAUSED')
@@ -37,14 +36,18 @@ export async function fetchGoogleAdsCampaigns(
   return rows.map((row) => {
     const campaign = row.campaign!
     const metrics = row.metrics!
+    const costMicros = Number(metrics.cost_micros ?? 0)
+    const clicks = Number(metrics.clicks ?? 0)
+    const spendEur = Math.round((costMicros / 1_000_000) * 100) / 100
+    const avgCpcEur = clicks > 0 ? Math.round((spendEur / clicks) * 100) / 100 : 0
     return {
       campaignId: String(campaign.id ?? ''),
       campaignName: String(campaign.name ?? ''),
       status: String(campaign.status ?? ''),
-      spendEur: Math.round((Number(metrics.cost_micros ?? 0) / 1_000_000) * 100) / 100,
+      spendEur,
       impressions: Number(metrics.impressions ?? 0),
-      clicks: Number(metrics.clicks ?? 0),
-      avgCpcEur: Math.round((Number(metrics.average_cpc ?? 0) / 1_000_000) * 100) / 100,
+      clicks,
+      avgCpcEur,
     }
   })
 }
