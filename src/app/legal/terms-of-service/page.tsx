@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { SiteNav } from '@/components/layout/nav'
+import { NavWithUser } from '@/components/layout/nav-with-user'
 import { SiteFooter } from '@/components/layout/footer'
 
 export const metadata: Metadata = {
@@ -175,7 +175,7 @@ export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
 
-      <SiteNav />
+      <NavWithUser />
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <header className="px-5 md:px-8 pt-14 pb-12 max-w-[860px] mx-auto">

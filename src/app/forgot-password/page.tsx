@@ -19,7 +19,18 @@ export const metadata: Metadata = {
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
-export default function ForgotPasswordPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid_link: 'This reset link is invalid or has expired. Please request a new one.',
+}
+
+export default async function ForgotPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
+  const initialError = error != null ? (ERROR_MESSAGES[error] ?? 'Something went wrong. Please try again.') : undefined
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -107,7 +118,7 @@ export default function ForgotPasswordPage() {
               </p>
             </div>
 
-            <ForgotPasswordForm />
+            <ForgotPasswordForm initialError={initialError} />
           </div>
 
         </div>

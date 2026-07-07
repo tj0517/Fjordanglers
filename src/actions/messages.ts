@@ -79,3 +79,73 @@ export async function matchUnmatchedMessage(
   console.log(`[matchUnmatchedMessage] Linked unmatched ${unmatchedId} → inquiry ${inquiryId}`)
   return { success: true }
 }
+
+// ─── bulkMatchUnmatchedMessages ───────────────────────────────────────────────
+
+export async function bulkMatchUnmatchedMessages(
+  unmatchedIds: string[],
+  inquiryId: string,
+): Promise<ActionResult> {
+  if (unmatchedIds.length === 0) return { success: true }
+
+  const svc = createServiceClient()
+
+  // Fetch all unmatched messages in one query
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: msgs, error: fetchErr } = await (svc as any)
+    .from('unmatched_messages')
+    .select('id, source, sender_name, from_identifier, content, raw_payload')
+    .in('id', unmatchedIds)
+    .is('matched_inquiry_id', null)
+
+  if (fetchErr || !msgs?.length) {
+    return { success: false, error: fetchErr?.message ?? 'No messages found' }
+  }
+
+  const now = new Date().toISOString()
+
+  // Build lead_messages rows — preserve original timestamp from raw_payload if available
+  const leadRows = msgs.map((msg: {
+    id: string
+    source: string
+    sender_name: string
+    from_identifier: string
+    content: string
+    raw_payload: { timestamp?: number; fromMe?: boolean } | null
+  }) => {
+    const ts        = msg.raw_payload?.timestamp
+    const fromMe    = msg.raw_payload?.fromMe ?? false
+    const createdAt = ts ? new Date(ts * 1000).toISOString() : now
+    return {
+      inquiry_id:   inquiryId,
+      direction:    fromMe ? 'outbound' : 'inbound',
+      channel:      msg.source,
+      contact_type: 'client',
+      contact_name: msg.sender_name || msg.from_identifier,
+      content:      msg.content,
+      created_at:   createdAt,
+      created_by:   'admin-bulk-link',
+    }
+  })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: insertErr } = await (svc as any).from('lead_messages').insert(leadRows)
+  if (insertErr) return { success: false, error: insertErr.message }
+
+  // Mark all as matched
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('unmatched_messages')
+    .update({ matched_inquiry_id: inquiryId, matched_at: now, matched_by: 'admin' })
+    .in('id', unmatchedIds)
+
+  // Bump last_contact_at
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('inquiries')
+    .update({ last_contact_at: now })
+    .eq('id', inquiryId)
+
+  console.log(`[bulkMatchUnmatchedMessages] Linked ${msgs.length} messages → inquiry ${inquiryId}`)
+  return { success: true }
+}

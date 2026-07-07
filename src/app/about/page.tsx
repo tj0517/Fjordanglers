@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { SiteNav } from '@/components/layout/nav'
+import { NavWithUser } from '@/components/layout/nav-with-user'
 import { SiteFooter } from '@/components/layout/footer'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 
@@ -43,7 +43,7 @@ const FOUNDERS = [
 export default function AboutPage() {
   return (
     <>
-      <SiteNav />
+      <NavWithUser />
       <main style={{ background: '#F3EDE4' }}>
 
         {/* ── Header ──────────────────────────────────────────────────── */}

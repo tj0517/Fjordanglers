@@ -27,6 +27,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
+import { getAppUrl } from '@/lib/app-url'
 import {
   sendDepositLinkAnglerEmail,
   sendInquiryMessageAnglerEmail,
@@ -972,31 +973,82 @@ export async function assignGuideToInquiry(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: inquiry } = await (svc as any)
     .from('inquiries')
-    .select('angler_name, requested_dates, party_size, trip_id')
+    .select('angler_name, angler_country, message, requested_dates, party_size')
     .eq('id', inquiryId)
     .single()
 
-  const { data: trip } = inquiry?.trip_id
-    ? await svc.from('experiences').select('title').eq('id', inquiry.trip_id).single()
-    : { data: null }
+  // Fetch trip brief (graceful — table may not exist yet)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let tripDetails: Record<string, unknown> | null = null
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: td } = await (svc as any)
+      .from('inquiry_trip_details')
+      .select('confirmed_date, confirmed_party_size, price_range, date_flexibility, target_species, accommodation, guide_notes')
+      .eq('inquiry_id', inquiryId)
+      .maybeSingle()
+    tripDetails = td ?? null
+  } catch {
+    // Table not yet migrated — graceful fallback
+  }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'
-  const tripsUrl = `${baseUrl}/dashboard/trips/${inquiryId}`
+  const baseUrl   = await getAppUrl()
+  const tripsUrl  = `${baseUrl}/dashboard/trips/${inquiryId}`
+  const acceptUrl = `${baseUrl}/dashboard/trips/${inquiryId}?action=accept`
 
   if (guideEmail != null && inquiry != null) {
     sendGuideAssignedEmail({
-      to:               guideEmail,
-      guideName:        guide.full_name ?? 'Guide',
-      anglerName:       inquiry.angler_name,
-      experienceTitle:  trip?.title ?? 'Your trip',
-      requestedDates:   (inquiry.requested_dates as string[] | null) ?? [],
-      partySize:        inquiry.party_size ?? 1,
+      to:             guideEmail,
+      guideName:      guide.full_name ?? 'Guide',
+      anglerName:     inquiry.angler_name,
+      anglerCountry:  (inquiry.angler_country as string | null) ?? null,
+      confirmedDate:   (tripDetails?.confirmed_date as string | null) ?? null,
+      requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
+      dateFlexibility: (tripDetails?.date_flexibility as string | null) ?? null,
+      partySize:       (tripDetails?.confirmed_party_size as number | null) ?? (inquiry.party_size as number) ?? 1,
+      targetSpecies:  (tripDetails?.target_species as string | null) ?? null,
+      priceRange:     (tripDetails?.price_range as string | null) ?? null,
+      accommodation:  (tripDetails?.accommodation as string | null) ?? null,
+      guideNotes:     (tripDetails?.guide_notes as string | null) ?? null,
+      anglerMessage:  (inquiry.message as string | null) ?? null,
+      acceptUrl,
       tripsUrl,
     }).catch(err => console.error('[assignGuideToInquiry] Email error:', err))
   }
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[assignGuideToInquiry] Inquiry ${inquiryId} → guide ${guideId}`)
+  return { success: true }
+}
+
+// ─── unassignGuide ────────────────────────────────────────────────────────────
+
+/**
+ * FA removes the currently assigned guide from an inquiry.
+ * Clears assignment fields so a new guide can be assigned.
+ */
+export async function unassignGuide(inquiryId: string): Promise<ActionResult> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({
+      assigned_guide_id:    null,
+      assigned_at:          null,
+      guide_acceptance:     null,
+      guide_decline_reason: null,
+      guide_offer_eta:      null,
+    })
+    .eq('id', inquiryId)
+
+  if (error != null) {
+    console.error('[unassignGuide] DB error:', error)
+    return { success: false, error: error.message }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[unassignGuide] Inquiry ${inquiryId} — guide unassigned`)
   return { success: true }
 }
 
@@ -1485,6 +1537,19 @@ export async function updateInquiryGuide(
   if (error != null) return { success: false, error: error.message }
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[updateInquiryGuide] Inquiry ${inquiryId} → guide ${guideId ?? '(default)'}`)
+  return { success: true }
+}
+
+export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
+  if (ids.length === 0) return { success: true }
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('unmatched_messages')
+    .delete()
+    .in('id', ids)
+  if (error != null) return { success: false, error: error.message }
+  revalidatePath('/admin/inquiries/unmatched')
   return { success: true }
 }
 

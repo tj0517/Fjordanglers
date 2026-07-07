@@ -1,8 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { MessageSquare, Mail, Link2 } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import { MessageSquare, Mail, Link2, Trash2 } from 'lucide-react'
 import { UnmatchedLinker } from './UnmatchedLinker'
+import { deleteUnmatchedMessages } from '@/actions/inquiries'
+
+type LinkerMode =
+  | { kind: 'single'; msg: UnmatchedMessage }
+  | { kind: 'bulk';   ids: string[] }
 
 interface UnmatchedMessage {
   id:              string
@@ -38,19 +43,80 @@ function fmtDate(iso: string): string {
   })
 }
 
-export function UnmatchedPageClient({ messages, inquiries }: Props) {
-  const [linker, setLinker] = useState<UnmatchedMessage | null>(null)
+export function UnmatchedPageClient({ messages: initial, inquiries }: Props) {
+  const [messages, setMessages]      = useState(initial)
+  const [selected, setSelected]      = useState<Set<string>>(new Set())
+  const [linker, setLinker]          = useState<LinkerMode | null>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const allSelected = messages.length > 0 && selected.size === messages.length
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(messages.map(m => m.id)))
+  }
+
+  function toggle(id: string) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function handleDelete() {
+    const ids = [...selected]
+    startTransition(async () => {
+      const res = await deleteUnmatchedMessages(ids)
+      if (res.success) {
+        setMessages(prev => prev.filter(m => !selected.has(m.id)))
+        setSelected(new Set())
+      }
+    })
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="f-display font-bold text-[22px]" style={{ color: '#0A2E4D' }}>
-          Unmatched Messages
-        </h1>
-        <p className="text-sm f-body mt-1" style={{ color: '#6B7280' }}>
-          Incoming WhatsApp and email messages that couldn't be auto-matched to an inquiry.
-        </p>
+      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
+        <div>
+          <h1 className="f-display font-bold text-[22px]" style={{ color: '#0A2E4D' }}>
+            Unmatched Messages
+          </h1>
+          <p className="text-sm f-body mt-1" style={{ color: '#6B7280' }}>
+            Incoming WhatsApp and email messages that couldn&apos;t be auto-matched to an inquiry.
+          </p>
+        </div>
+
+        {selected.size > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLinker({ kind: 'bulk', ids: [...selected] })}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold f-body transition-all"
+              style={{
+                background: 'rgba(10,46,77,0.08)',
+                color:      '#0A2E4D',
+                border:     '1px solid rgba(10,46,77,0.2)',
+              }}
+            >
+              <Link2 size={14} strokeWidth={2} />
+              Link {selected.size} to inquiry
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold f-body transition-all"
+              style={{
+                background: isPending ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.1)',
+                color:      '#DC2626',
+                border:     '1px solid rgba(239,68,68,0.25)',
+                opacity:    isPending ? 0.6 : 1,
+              }}
+            >
+              <Trash2 size={14} strokeWidth={2} />
+              Delete {selected.size}
+            </button>
+          </div>
+        )}
       </div>
 
       {messages.length === 0 && (
@@ -71,14 +137,21 @@ export function UnmatchedPageClient({ messages, inquiries }: Props) {
         >
           {/* Table header */}
           <div
-            className="grid text-xs font-semibold f-body px-4 py-3 uppercase tracking-wide"
+            className="grid text-xs font-semibold f-body px-4 py-3 uppercase tracking-wide items-center"
             style={{
-              gridTemplateColumns: '100px 180px 1fr 130px 110px',
+              gridTemplateColumns: '36px 100px 180px 1fr 130px 110px',
               background: 'rgba(10,46,77,0.03)',
               borderBottom: '1px solid rgba(10,46,77,0.08)',
               color: '#6B7280',
             }}
           >
+            {/* Select all checkbox */}
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="w-4 h-4 cursor-pointer accent-[#E67E50]"
+            />
             <span>Source</span>
             <span>From</span>
             <span>Message</span>
@@ -87,16 +160,26 @@ export function UnmatchedPageClient({ messages, inquiries }: Props) {
           </div>
 
           {messages.map((msg, i) => {
-            const meta = SOURCE_META[msg.source]
+            const meta       = SOURCE_META[msg.source]
+            const isSelected = selected.has(msg.id)
             return (
               <div
                 key={msg.id}
                 className="grid items-center px-4 py-3 gap-3"
                 style={{
-                  gridTemplateColumns: '100px 180px 1fr 130px 110px',
+                  gridTemplateColumns: '36px 100px 180px 1fr 130px 110px',
                   borderBottom: i < messages.length - 1 ? '1px solid rgba(10,46,77,0.06)' : 'none',
+                  background: isSelected ? 'rgba(230,126,80,0.04)' : 'transparent',
                 }}
               >
+                {/* Checkbox */}
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggle(msg.id)}
+                  className="w-4 h-4 cursor-pointer accent-[#E67E50]"
+                />
+
                 {/* Source badge */}
                 <span
                   className="inline-flex items-center gap-1.5 text-xs font-semibold f-body px-2 py-1 rounded-full w-fit"
@@ -128,7 +211,7 @@ export function UnmatchedPageClient({ messages, inquiries }: Props) {
 
                 {/* Action */}
                 <button
-                  onClick={() => setLinker(msg)}
+                  onClick={() => setLinker({ kind: 'single', msg })}
                   className="flex items-center gap-1.5 text-xs font-semibold f-body px-3 py-1.5 rounded-xl transition-all"
                   style={{
                     color:      '#0A2E4D',
@@ -150,11 +233,23 @@ export function UnmatchedPageClient({ messages, inquiries }: Props) {
       {/* Linker modal */}
       {linker && (
         <UnmatchedLinker
-          unmatchedId={linker.id}
-          fromIdentifier={linker.from_identifier}
-          senderName={linker.sender_name}
+          {...(linker.kind === 'single'
+            ? {
+                unmatchedId:    linker.msg.id,
+                fromIdentifier: linker.msg.from_identifier,
+                senderName:     linker.msg.sender_name,
+              }
+            : {
+                unmatchedIds: linker.ids,
+                bulkCount:    linker.ids.length,
+              }
+          )}
           inquiries={inquiries}
           onClose={() => setLinker(null)}
+          onLinked={ids => {
+            setMessages(prev => prev.filter(m => !ids.includes(m.id)))
+            setSelected(new Set())
+          }}
         />
       )}
     </div>

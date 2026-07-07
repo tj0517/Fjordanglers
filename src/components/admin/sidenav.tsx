@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, Users, Map, MessageSquare,
-  Anchor, Menu, X, ShieldCheck, BarChart2, Wallet, LogOut,
+  Menu, X, ShieldCheck, BarChart2, Wallet, LogOut,
 } from 'lucide-react'
 import { signOut } from '@/actions/auth'
 
@@ -23,8 +23,7 @@ const navItems: NavItem[] = [
   { label: 'Overview',     href: '/admin',             icon: <LayoutDashboard size={16} strokeWidth={1.6} />, exact: true },
   { label: 'Guides',       href: '/admin/guides',      icon: <Users size={16} strokeWidth={1.6} /> },
   { label: 'Experiences',  href: '/admin/experiences', icon: <Map size={16} strokeWidth={1.6} /> },
-  { label: 'Trips',        href: '/admin/trips',       icon: <Anchor size={16} strokeWidth={1.6} /> },
-  { label: 'Inquiries',    href: '/admin/inquiries',   icon: <MessageSquare size={16} strokeWidth={1.6} /> },
+{ label: 'Inquiries',    href: '/admin/inquiries',   icon: <MessageSquare size={16} strokeWidth={1.6} /> },
   { label: 'Unmatched',   href: '/admin/inquiries/unmatched', icon: <MessageSquare size={14} strokeWidth={1.6} />, subItem: true },
   { label: 'Ads',          href: '/admin/ads',         icon: <BarChart2 size={16} strokeWidth={1.6} /> },
   { label: 'Finances',     href: '/admin/finances',    icon: <Wallet size={16} strokeWidth={1.6} /> },

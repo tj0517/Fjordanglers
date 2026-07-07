@@ -30,14 +30,13 @@ function BriefRow({ label, value }: { label: string; value: string | null | unde
 }
 
 interface Props {
-  anglerName:      string
-  requestedDates:  string[]
-  partySize:       number
-  experienceTitle: string | null
-  details:         TripDetails | null
+  anglerName:     string
+  requestedDates: string[]
+  partySize:      number
+  details:        TripDetails | null
 }
 
-export function TripBriefCard({ anglerName, requestedDates, partySize, experienceTitle, details }: Props) {
+export function TripBriefCard({ anglerName, requestedDates, partySize, details }: Props) {
   const hasManual = details != null && (
     details.price_range      != null ||
     details.date_flexibility != null ||
@@ -90,9 +89,6 @@ export function TripBriefCard({ anglerName, requestedDates, partySize, experienc
 
         {/* Manual: accommodation */}
         <BriefRow label="Accommodation"  value={details?.accommodation  ?? undefined} />
-
-        {/* Auto: experience */}
-        <BriefRow label="Experience"     value={experienceTitle ?? undefined} />
 
         {/* Manual: note */}
         <BriefRow label="Note from FA"   value={details?.guide_notes    ?? undefined} />

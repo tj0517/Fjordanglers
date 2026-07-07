@@ -58,9 +58,9 @@ const errorTextStyle: React.CSSProperties = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({ initialError }: { initialError?: string }) {
   const [email, setEmail] = useState('')
-  const [errors, setErrors] = useState<{ email?: string; form?: string }>({})
+  const [errors, setErrors] = useState<{ email?: string; form?: string }>({ form: initialError })
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)

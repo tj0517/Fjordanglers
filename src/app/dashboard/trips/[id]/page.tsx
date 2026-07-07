@@ -19,13 +19,20 @@ const COUNTRY_FLAG: Record<string, string> = {
 
 export default async function GuideTripDetailPage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ id: string }>
+  params:       Promise<{ id: string }>
+  searchParams: Promise<{ action?: string }>
 }) {
-  const { id } = await params
+  const [{ id }, { action }] = await Promise.all([params, searchParams])
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (user == null) redirect('/login')
+  if (user == null) {
+    const returnPath = action === 'accept'
+      ? `/dashboard/trips/${id}?action=accept`
+      : `/dashboard/trips/${id}`
+    redirect(`/login?next=${encodeURIComponent(returnPath)}`)
+  }
 
   const svc = createServiceClient()
 
@@ -41,7 +48,7 @@ export default async function GuideTripDetailPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawInquiry } = await (svc as any)
     .from('inquiries')
-    .select('id, angler_name, angler_country, party_size, requested_dates, trip_id, guide_acceptance, guide_decline_reason, guide_offer_eta, external_offer_sent')
+    .select('id, angler_name, angler_country, party_size, requested_dates, message, guide_acceptance, guide_decline_reason, guide_offer_eta, external_offer_sent')
     .eq('id', id)
     .eq('assigned_guide_id', guide.id)
     .single()
@@ -54,16 +61,12 @@ export default async function GuideTripDetailPage({
     angler_country: string | null
     party_size: number
     requested_dates: string[] | null
-    trip_id: string | null
+    message: string | null
     guide_acceptance: string | null
     guide_decline_reason: string | null
     guide_offer_eta: string | null
     external_offer_sent: boolean
   }
-
-  const { data: trip } = inquiry.trip_id
-    ? await svc.from('experiences').select('title').eq('id', inquiry.trip_id).single()
-    : { data: null }
 
   // Fetch trip brief (graceful — table may not exist yet)
   let tripDetails: TripDetails | null = null
@@ -102,11 +105,6 @@ export default async function GuideTripDetailPage({
           {flag && <span className="mr-2">{flag}</span>}
           {inquiry.angler_name}
         </h1>
-        {trip?.title != null && (
-          <p className="text-sm f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-            {trip.title}
-          </p>
-        )}
       </div>
 
       {/* Acceptance panel */}
@@ -115,6 +113,7 @@ export default async function GuideTripDetailPage({
         guideAcceptance={inquiry.guide_acceptance}
         guideDeclineReason={inquiry.guide_decline_reason}
         guideOfferEta={inquiry.guide_offer_eta}
+        autoAccept={action === 'accept'}
       />
 
       {/* Trip brief */}
@@ -122,9 +121,20 @@ export default async function GuideTripDetailPage({
         anglerName={inquiry.angler_name}
         requestedDates={inquiry.requested_dates ?? []}
         partySize={inquiry.party_size}
-        experienceTitle={trip?.title ?? null}
         details={tripDetails}
       />
+
+      {/* Angler message */}
+      {inquiry.message != null && inquiry.message.trim() !== '' && (
+        <div className="rounded-[22px] px-6 py-5 mb-4"
+          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-2"
+            style={{ color: 'rgba(10,46,77,0.38)' }}>Angler&apos;s message</p>
+          <p className="text-sm f-body leading-relaxed italic" style={{ color: '#0A2E4D' }}>
+            &ldquo;{inquiry.message}&rdquo;
+          </p>
+        </div>
+      )}
 
       {/* Guide offer form */}
       <GuideTodoList

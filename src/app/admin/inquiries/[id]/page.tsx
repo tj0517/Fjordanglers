@@ -203,31 +203,18 @@ export default async function AdminInquiryDetailPage({
     const today     = new Date().toISOString().slice(0, 10)
     const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
-    // Step 1: find guide_ids who have experiences in this country
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: expRows } = await (svc as any)
-      .from('experiences')
-      .select('guide_id')
-      .eq('location_country', tripLocationCountry ?? '')
+    // Fetch active guides whose country matches the trip's location country
+    const { data: guideRows } = await svc
+      .from('guides')
+      .select('id, full_name, avatar_url, country')
+      .eq('country', tripLocationCountry ?? '')
+      .eq('status', 'active')
+      .order('full_name')
 
-    const guideIds: string[] = [
-      ...new Set(
-        ((expRows ?? []) as { guide_id: string | null }[])
-          .map(e => e.guide_id)
-          .filter((id): id is string => id != null),
-      ),
-    ]
+    const guideIds = (guideRows ?? []).map(g => g.id)
 
     if (guideIds.length > 0) {
-      // Step 2: fetch those guides
-      const { data: guideRows } = await svc
-        .from('guides')
-        .select('id, full_name, avatar_url, country')
-        .in('id', guideIds)
-        .eq('status', 'active')
-        .order('full_name')
-
-      // Step 3: fetch their blocked dates
+      // Fetch their blocked dates
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: blockedRows } = await (svc as any)
         .from('guide_unavailable_dates')

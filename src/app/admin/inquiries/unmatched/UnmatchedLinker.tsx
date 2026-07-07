@@ -1,17 +1,9 @@
 'use client'
 
-/**
- * UnmatchedLinker — modal to link an unmatched message to an inquiry.
- *
- * Opens when admin clicks "Link to inquiry" on an unmatched message row.
- * Searches inquiries by angler name, email, or phone, then calls
- * matchUnmatchedMessage server action.
- */
-
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, X, Loader2, Check } from 'lucide-react'
-import { matchUnmatchedMessage } from '@/actions/messages'
+import { matchUnmatchedMessage, bulkMatchUnmatchedMessages } from '@/actions/messages'
 
 interface InquiryOption {
   id:           string
@@ -23,19 +15,36 @@ interface InquiryOption {
 }
 
 interface Props {
-  unmatchedId:  string
-  fromIdentifier: string
-  senderName:   string
-  inquiries:    InquiryOption[]
-  onClose:      () => void
+  // Single mode
+  unmatchedId?:   string
+  fromIdentifier?: string
+  senderName?:    string
+  // Bulk mode
+  unmatchedIds?:  string[]
+  bulkCount?:     number
+  // Shared
+  inquiries:      InquiryOption[]
+  onClose:        () => void
+  onLinked?:      (ids: string[]) => void
 }
 
-export function UnmatchedLinker({ unmatchedId, fromIdentifier, senderName, inquiries, onClose }: Props) {
+export function UnmatchedLinker({
+  unmatchedId,
+  fromIdentifier,
+  senderName,
+  unmatchedIds,
+  bulkCount,
+  inquiries,
+  onClose,
+  onLinked,
+}: Props) {
   const router           = useRouter()
   const [pending, start] = useTransition()
-  const [query, setQuery]   = useState('')
+  const [query, setQuery]     = useState('')
   const [success, setSuccess] = useState(false)
-  const [error, setError]   = useState<string | null>(null)
+  const [error, setError]     = useState<string | null>(null)
+
+  const isBulk = (unmatchedIds?.length ?? 0) > 0
 
   const filtered = inquiries.filter(inq => {
     if (!query.trim()) return true
@@ -50,21 +59,35 @@ export function UnmatchedLinker({ unmatchedId, fromIdentifier, senderName, inqui
   function handleLink(inquiryId: string) {
     setError(null)
     start(async () => {
-      const result = await matchUnmatchedMessage(unmatchedId, inquiryId)
+      let result
+      if (isBulk && unmatchedIds) {
+        result = await bulkMatchUnmatchedMessages(unmatchedIds, inquiryId)
+      } else if (unmatchedId) {
+        result = await matchUnmatchedMessage(unmatchedId, inquiryId)
+      } else {
+        return
+      }
+
       if (result.success) {
         setSuccess(true)
+        const linked = isBulk ? (unmatchedIds ?? []) : [unmatchedId!]
+        onLinked?.(linked)
         setTimeout(() => {
           router.refresh()
           onClose()
         }, 800)
       } else {
-        setError(result.error)
+        setError(result.error ?? 'Something went wrong')
       }
     })
   }
 
+  const title    = isBulk ? `Link ${bulkCount} messages to inquiry` : 'Link to inquiry'
+  const subtitle = isBulk
+    ? `${bulkCount} selected messages will be moved to the chosen inquiry`
+    : (senderName ? `${senderName} (${fromIdentifier})` : fromIdentifier ?? '')
+
   return (
-    /* Backdrop */
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.5)' }}
@@ -80,10 +103,8 @@ export function UnmatchedLinker({ unmatchedId, fromIdentifier, senderName, inqui
           style={{ borderBottom: '1px solid rgba(0,0,0,0.08)' }}
         >
           <div>
-            <p className="font-semibold text-sm f-body" style={{ color: '#0A2E4D' }}>Link to inquiry</p>
-            <p className="text-xs f-body mt-0.5" style={{ color: '#6B7280' }}>
-              {senderName ? `${senderName} (${fromIdentifier})` : fromIdentifier}
-            </p>
+            <p className="font-semibold text-sm f-body" style={{ color: '#0A2E4D' }}>{title}</p>
+            <p className="text-xs f-body mt-0.5" style={{ color: '#6B7280' }}>{subtitle}</p>
           </div>
           <button
             onClick={onClose}
@@ -152,7 +173,7 @@ export function UnmatchedLinker({ unmatchedId, fromIdentifier, senderName, inqui
           ))}
         </div>
 
-        {/* Footer — error / success */}
+        {/* Footer */}
         {(error || success || pending) && (
           <div
             className="px-5 py-3 flex items-center gap-2"

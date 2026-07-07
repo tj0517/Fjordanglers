@@ -2,7 +2,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
-import { SiteNav } from '@/components/layout/nav'
+import { NavWithUser } from '@/components/layout/nav-with-user'
 import { SiteFooter } from '@/components/layout/footer'
 import { getFeaturedExperiencePages, getSpeciesCounts, getFeaturedGuides } from '@/lib/supabase/queries'
 import type { FeaturedGuide } from '@/lib/supabase/queries'
@@ -82,7 +82,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#F3EDE4' }}>
-      <SiteNav />
+      <NavWithUser />
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="relative" style={{ height: '100vh', minHeight: '640px', background: '#050e1a' }}>

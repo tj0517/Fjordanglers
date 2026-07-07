@@ -180,10 +180,16 @@ export async function resetPassword(email: string): Promise<AuthResult> {
       return { success: true }
     }
 
+    // Build a custom URL using the hashed_token instead of the Supabase-hosted
+    // action_link. This lets /auth/reset verify with verifyOtp({ token_hash })
+    // which works without a PKCE code_verifier — fixing the incompatibility
+    // between admin.generateLink() and @supabase/ssr's exchangeCodeForSession().
+    const resetUrl = `${await getAppUrl()}/auth/reset?token_hash=${data.properties.hashed_token}&type=recovery`
+
     // Fire-and-forget — don't expose send errors to the user
     sendPasswordResetEmail({
       to: email,
-      resetUrl: data.properties.action_link,
+      resetUrl,
     }).catch((err: unknown) => {
       console.error('[auth/resetPassword] Email send error:', err)
     })

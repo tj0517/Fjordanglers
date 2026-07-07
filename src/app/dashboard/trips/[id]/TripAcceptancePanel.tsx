@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { respondToAssignment, saveGuideOfferEta } from '@/actions/inquiries'
 
@@ -9,6 +9,7 @@ interface Props {
   guideAcceptance:    string | null  // 'accepted' | 'declined' | null
   guideDeclineReason: string | null
   guideOfferEta:      string | null
+  autoAccept?:        boolean
 }
 
 const inputStyle: React.CSSProperties = {
@@ -86,12 +87,20 @@ function EtaField({ inquiryId, initial }: { inquiryId: string; initial: string }
   )
 }
 
-export function TripAcceptancePanel({ inquiryId, guideAcceptance, guideDeclineReason, guideOfferEta }: Props) {
+export function TripAcceptancePanel({ inquiryId, guideAcceptance, guideDeclineReason, guideOfferEta, autoAccept }: Props) {
   const router = useRouter()
   const [showDecline,   setShowDecline]   = useState(false)
   const [declineReason, setDeclineReason] = useState('')
   const [err,           setErr]           = useState<string | null>(null)
   const [pending, start]                  = useTransition()
+
+  // Auto-accept from email one-click link (?action=accept)
+  useEffect(() => {
+    if (autoAccept === true && guideAcceptance == null) {
+      handleAccept()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function handleAccept() {
     setErr(null)

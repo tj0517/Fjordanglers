@@ -9,6 +9,8 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { ResetPasswordForm } from '@/components/auth/reset-password-form'
 
 // ─── METADATA ─────────────────────────────────────────────────────────────────
@@ -20,7 +22,14 @@ export const metadata: Metadata = {
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect('/forgot-password?error=invalid_link')
+  }
+
   return (
     <div
       className="min-h-screen flex flex-col"

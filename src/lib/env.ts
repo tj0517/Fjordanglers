@@ -94,6 +94,11 @@ const envSchema = z.object({
   // 10-digit customer ID without dashes, e.g. "1234567890"
   GOOGLE_ADS_CUSTOMER_ID: z.string().optional(),
 
+  // ── AI ─────────────────────────────────────────────────────────────────────
+  // Anthropic API key — required for AI-powered features (trip detail extraction).
+  // Optional so build succeeds without it; action returns error if missing at runtime.
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`
   SUPABASE_ACCESS_TOKEN: z.string().optional(),

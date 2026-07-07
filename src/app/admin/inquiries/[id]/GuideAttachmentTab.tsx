@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useTransition, useMemo } from 'react'
+import { useState, useTransition, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
-import { assignGuideToInquiry, assignGuideSilently, setExternalOffer } from '@/actions/inquiries'
+import { assignGuideToInquiry, assignGuideSilently, setExternalOffer, unassignGuide } from '@/actions/inquiries'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -179,6 +179,7 @@ function GuideCard({
   isAssigned,
   inquiryId,
   onAssigned,
+  onUnassigned,
   guideAcceptance,
   guideDeclineReason,
 }: {
@@ -187,14 +188,21 @@ function GuideCard({
   isAssigned:          boolean
   inquiryId:           string
   onAssigned:          (guideId: string) => void
+  onUnassigned:        () => void
   guideAcceptance?:    string | null
   guideDeclineReason?: string | null
 }) {
-  const [showCalendar, setShowCalendar] = useState(false)
-  const [pending, start]               = useTransition()
-  const [lastMode, setLastMode]        = useState<'notify' | 'silent' | null>(null)
-  const [done, setDone]                = useState(false)
-  const [err,  setErr]                 = useState<string | null>(null)
+  const [showCalendar,    setShowCalendar]    = useState(false)
+  const [pending,         start]              = useTransition()
+  const [unassignPending, startUnassign]      = useTransition()
+  const [lastMode,        setLastMode]        = useState<'notify' | 'silent' | null>(null)
+  const [done,            setDone]            = useState(false)
+  const [err,             setErr]             = useState<string | null>(null)
+
+  // Reset local "done" flag if parent un-assigns this guide
+  useEffect(() => {
+    if (!isAssigned) setDone(false)
+  }, [isAssigned])
 
   const blockedSet   = useMemo(() => new Set(guide.blockedDates), [guide.blockedDates])
   const conflicts    = requestedDates.filter(d => blockedSet.has(d))
@@ -209,6 +217,7 @@ function GuideCard({
 
   function handleAssign(silent: boolean) {
     setLastMode(silent ? 'silent' : 'notify')
+    setErr(null)
     start(async () => {
       const res = silent
         ? await assignGuideSilently(inquiryId, guide.id)
@@ -218,6 +227,18 @@ function GuideCard({
       } else {
         setDone(true)
         onAssigned(guide.id)
+      }
+    })
+  }
+
+  function handleUnassign() {
+    setErr(null)
+    startUnassign(async () => {
+      const res = await unassignGuide(inquiryId)
+      if (!res.success) {
+        setErr(res.error ?? 'Failed to unassign')
+      } else {
+        onUnassigned()
       }
     })
   }
@@ -311,7 +332,29 @@ function GuideCard({
 
         {/* Actions */}
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          {isAssigned || done ? (
+          {isAssigned ? (
+            <>
+              <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl"
+                style={{ background: 'rgba(16,185,129,0.12)', color: '#065F46', border: '1px solid rgba(16,185,129,0.25)' }}>
+                ✓ {lastMode === 'silent' ? 'Linked' : 'Assigned'}
+              </span>
+              <button
+                type="button"
+                onClick={handleUnassign}
+                disabled={unassignPending}
+                className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap"
+                style={{
+                  background: 'rgba(239,68,68,0.07)',
+                  color: '#991B1B',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  cursor: unassignPending ? 'default' : 'pointer',
+                  opacity: unassignPending ? 0.6 : 1,
+                }}
+              >
+                {unassignPending ? '…' : 'Unassign'}
+              </button>
+            </>
+          ) : done ? (
             <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl"
               style={{ background: 'rgba(16,185,129,0.12)', color: '#065F46', border: '1px solid rgba(16,185,129,0.25)' }}>
               ✓ {lastMode === 'silent' ? 'Linked' : 'Assigned'}
@@ -417,6 +460,11 @@ export function GuideAttachmentTab({
     router.refresh()
   }
 
+  function handleUnassigned() {
+    setAssignedGuideId(null)
+    router.refresh()
+  }
+
   function toggleExternalOffer() {
     const next = !extOffer
     setExtOffer(next)
@@ -498,6 +546,7 @@ export function GuideAttachmentTab({
               isAssigned={guide.id === assignedGuideId}
               inquiryId={inquiryId}
               onAssigned={handleAssigned}
+              onUnassigned={handleUnassigned}
               guideAcceptance={guide.id === assignedGuideId ? guideAcceptance : null}
               guideDeclineReason={guide.id === assignedGuideId ? guideDeclineReason : null}
             />

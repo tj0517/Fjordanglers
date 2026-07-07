@@ -187,14 +187,21 @@ export const footerSmall = {
 export function DetailRows({
   rows,
 }: {
-  rows: { label: string; value: string; last?: boolean }[]
+  rows: { label: string; value: string; subValue?: string; last?: boolean }[]
 }) {
   return (
     <>
-      {rows.map(({ label, value, last }, i) => (
+      {rows.map(({ label, value, subValue, last }, i) => (
         <tr key={i} style={last ? summaryRowLast : summaryRow}>
           <td style={labelCell}>{label}</td>
-          <td style={valueCell}>{value}</td>
+          <td style={valueCell}>
+            {value}
+            {subValue != null && (
+              <span style={{ display: 'block', fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>
+                {subValue}
+              </span>
+            )}
+          </td>
         </tr>
       ))}
     </>
