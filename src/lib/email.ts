@@ -34,6 +34,7 @@ import { InquiryMessageAnglerEmail } from '@/emails/inquiry-message-angler'
 import { InquiryOfferAnglerEmail } from '@/emails/inquiry-offer-angler'
 import { InquiryRichOfferAnglerEmail } from '@/emails/inquiry-rich-offer-angler'
 import { GuideAssignedEmail } from '@/emails/guide-assigned'
+import { InquiryAgentEmail } from '@/emails/inquiry-agent-email'
 import type { GuideApplicationEmailProps } from '@/emails/guide-application'
 import type { GuideWelcomeEmailProps } from '@/emails/guide-welcome'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
@@ -55,6 +56,7 @@ import type { InquiryMessageAnglerEmailProps } from '@/emails/inquiry-message-an
 import type { InquiryOfferAnglerEmailProps } from '@/emails/inquiry-offer-angler'
 import type { InquiryRichOfferAnglerEmailProps } from '@/emails/inquiry-rich-offer-angler'
 import type { GuideAssignedEmailProps } from '@/emails/guide-assigned'
+import type { InquiryAgentEmailProps } from '@/emails/inquiry-agent-email'
 
 const FROM = 'FjordAnglers <contact@fjordanglers.com>'
 
@@ -455,5 +457,21 @@ export async function sendRichOfferAnglerEmail(
     to,
     subject: `Your personalised offer — ${templateProps.tripTitle} — €${templateProps.offerTotalEur.toFixed(2)}`,
     react:   createElement(InquiryRichOfferAnglerEmail, templateProps),
+  })
+}
+
+/**
+ * Sent by the AI agent when it needs one more detail from the angler.
+ * Minimal, conversational — no buttons, no marketing.
+ * Non-blocking: callers should fire-and-forget with .catch().
+ */
+export async function sendInquiryAgentEmail(
+  props: { to: string } & InquiryAgentEmailProps,
+): Promise<void> {
+  const { to, ...templateProps } = props
+  await sendEmail({
+    to,
+    subject: `Quick question about your ${templateProps.tripTitle} inquiry`,
+    react:   createElement(InquiryAgentEmail, templateProps),
   })
 }

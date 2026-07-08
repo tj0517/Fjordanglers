@@ -1,36 +1,35 @@
 /**
- * Email inbound webhook — Resend Inbound (beta)
+ * Email inbound webhook — Resend Inbound
  *
- * Receives forwarded emails from Zoho Mail via Resend Inbound.
- * Matches the sender to an existing inquiry by email address.
+ * Resend's inbound webhook payload does NOT include the email body by design.
+ * After receiving the `email.received` event, we fetch the full email content
+ * (html + text) via the Resend Receiving API using the email_id.
  *
  * Setup:
  *  1. Resend dashboard → Inbound → Create email (e.g. leads@fjordanglers.com)
  *  2. Webhook URL: https://fjordanglers.com/api/webhooks/email-inbound
  *  3. Copy signing secret → RESEND_INBOUND_SECRET env var
- *  4. Zoho Mail → Settings → Forwarding → add the Resend inbound address
  */
 
 import crypto from 'crypto'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByEmail } from '@/lib/inquiry-matcher'
+import { runAgentRound2 } from '@/lib/ai/inquiry-agent'
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
   const rawBody = await req.text()
 
-  // Verify Resend inbound signature (svix-style: svix-id, svix-timestamp, svix-signature)
+  // Verify Resend inbound signature (svix-style)
   if (env.RESEND_INBOUND_SECRET) {
     const svixId        = req.headers.get('svix-id')        ?? ''
     const svixTimestamp = req.headers.get('svix-timestamp') ?? ''
     const svixSignature = req.headers.get('svix-signature') ?? ''
 
-    // Resend uses the same svix signing scheme: sign "{svix-id}.{svix-timestamp}.{body}"
     if (svixId && svixTimestamp && svixSignature) {
       const toSign   = `${svixId}.${svixTimestamp}.${rawBody}`
-      // Svix secrets are base64-encoded with a "whsec_" prefix — decode before use
       const secretKey = Buffer.from(
         env.RESEND_INBOUND_SECRET.replace(/^whsec_/, ''),
         'base64',
@@ -40,8 +39,7 @@ export async function POST(req: Request) {
         .update(toSign)
         .digest('base64')
 
-      // svix-signature may contain multiple space-separated "v1,xxx" values
-      const sigs = svixSignature.split(' ')
+      const sigs  = svixSignature.split(' ')
       const valid = sigs.some(s => s === computed)
       if (!valid) {
         console.warn('[email-inbound] Signature verification failed')
@@ -57,19 +55,27 @@ export async function POST(req: Request) {
     return new Response('Bad JSON', { status: 400 })
   }
 
-  // Resend sends email fields nested under `data` when using Svix
-  const email       = payload.data ?? payload
-  const fromRaw     = email.from ?? ''
-  const fromEmail   = extractEmail(fromRaw)
-  const senderName  = extractName(fromRaw)
-  const bodyText    = email.text ?? stripHtml(email.html ?? '')
+  if (payload.type !== 'email.received') {
+    return new Response('OK', { status: 200 })
+  }
+
+  const emailData = payload.data
+  if (!emailData?.email_id) {
+    console.warn('[email-inbound] Missing email_id in payload')
+    return new Response('OK', { status: 200 })
+  }
+
+  const fromRaw    = emailData.from ?? ''
+  const fromEmail  = extractEmail(fromRaw)
+  const senderName = extractName(fromRaw)
+  const subject    = emailData.subject ?? ''
 
   if (!fromEmail) {
     console.warn('[email-inbound] Could not parse from address:', fromRaw)
     return new Response('OK', { status: 200 })
   }
 
-  // Filter out automated/system senders
+  // Filter automated/system senders
   const autoSenders = [
     'noreply', 'no-reply', 'mailer-daemon', 'postmaster',
     'dmarc', 'bounce', 'notifications', 'do-not-reply', 'donotreply',
@@ -79,16 +85,33 @@ export async function POST(req: Request) {
     return new Response('OK', { status: 200 })
   }
 
-  if (!bodyText.trim()) {
-    console.log('[email-inbound] Empty body — skipping:', fromEmail)
+  // Fetch full email body via Resend Receiving API
+  let bodyText = ''
+  try {
+    const res = await fetch(`https://api.resend.com/emails/receiving/${emailData.email_id}`, {
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      },
+      cache: 'no-store',
+    })
+    if (res.ok) {
+      const full = await res.json() as { text?: string; html?: string }
+      bodyText = full.text?.trim() ?? stripHtml(full.html ?? '').trim()
+    } else {
+      console.warn('[email-inbound] Resend fetch failed:', res.status)
+    }
+  } catch (err) {
+    console.error('[email-inbound] Resend API error:', err)
+  }
+
+  if (!bodyText) {
+    console.log('[email-inbound] Empty body after fetch — skipping:', fromEmail)
     return new Response('OK', { status: 200 })
   }
 
-  const supabase   = createServiceClient()
-  const inquiryId  = await matchInquiryByEmail(fromEmail)
-
-  const subject = email.subject ? `**${email.subject}**\n\n` : ''
-  const content = subject + bodyText.trim()
+  const supabase  = createServiceClient()
+  const inquiryId = await matchInquiryByEmail(fromEmail)
+  const content   = subject ? `**${subject}**\n\n${bodyText}` : bodyText
 
   if (inquiryId) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,6 +135,19 @@ export async function POST(req: Request) {
         .eq('id', inquiryId)
 
       console.log(`[email-inbound] Email from ${fromEmail} → inquiry ${inquiryId}`)
+
+      if (env.AI_AUTO_REPLY_ENABLED) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: inq } = await (supabase as any)
+          .from('inquiries')
+          .select('agent_status')
+          .eq('id', inquiryId)
+          .single()
+        if (inq?.agent_status === 'waiting') {
+          try { await runAgentRound2(inquiryId) }
+          catch (err) { console.error('[email-inbound] Agent error:', err) }
+        }
+      }
     }
   } else {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,21 +171,18 @@ export async function POST(req: Request) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Extract email from "Name <email>" or plain "email" format. */
 function extractEmail(from: string): string {
   const match = from.match(/<([^>]+)>/)
   if (match) return match[1].trim().toLowerCase()
   return from.trim().toLowerCase()
 }
 
-/** Extract display name from "Name <email>" format. Returns '' if not present. */
 function extractName(from: string): string {
   const match = from.match(/^(.+?)\s*</)
   if (!match) return ''
   return match[1].trim().replace(/^["']|["']$/g, '')
 }
 
-/** Rudimentary HTML → plain text for when text part is absent. */
 function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
@@ -168,22 +201,13 @@ function stripHtml(html: string): string {
 // ─── Resend Inbound payload type ──────────────────────────────────────────────
 
 interface ResendEmailData {
+  email_id: string
   from:     string
   to?:      string[]
   subject?: string
-  text?:    string
-  html?:    string
-  headers?: Record<string, string>
 }
 
-// Resend wraps the email inside a `data` field when sending via Svix
 interface ResendInboundPayload {
   type?: string
   data?: ResendEmailData
-  // flat fields (fallback — some versions send without wrapper)
-  from?:    string
-  to?:      string[]
-  subject?: string
-  text?:    string
-  html?:    string
 }

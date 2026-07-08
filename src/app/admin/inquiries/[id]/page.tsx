@@ -33,7 +33,8 @@ import { InquiryDetailTabs } from './InquiryDetailTabs'
 import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab'
 import { TripSetupTab } from './TripSetupTab'
 import { ProposalTab } from './ProposalTab'
-import type { LeadMessage, TripDetails, OfferQuestion, ScheduleEntry } from '@/actions/inquiries'
+import { ReviewLinkGenerator } from './ReviewLinkGenerator'
+import type { LeadMessage, TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
 import type { InitialOfferData } from './OfferBuilder'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
@@ -41,23 +42,29 @@ export const metadata = { title: 'Inquiry Detail — Admin' }
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<string, string> = {
-  pending_fa_review: 'Pending review',
-  in_negotiation:    'Negotiating',
-  deposit_sent:      'Deposit sent',
-  deposit_paid:      'Confirmed',
-  completed:         'Completed',
-  lost:              'Lost',
-  cancelled:         'Cancelled',
+  pending:                 'Pending',
+  in_negotiation:          'Negotiating',
+  waiting_for_guide_offer: 'Waiting for guide offer',
+  offer_sent:              'Offer sent',
+  waiting_for_deposit:     'Waiting for deposit',
+  deposit_sent:            'Deposit sent',
+  deposit_paid:            'Confirmed',
+  completed:               'Completed',
+  lost:                    'Lost',
+  cancelled:               'Cancelled',
 }
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  pending_fa_review: { color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'  },
-  in_negotiation:    { color: '#5B21B6', bg: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)' },
-  deposit_sent:      { color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'  },
-  deposit_paid:      { color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'  },
-  completed:         { color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)' },
-  lost:              { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
-  cancelled:         { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
+  pending:                 { color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'  },
+  in_negotiation:          { color: '#5B21B6', bg: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)' },
+  waiting_for_guide_offer: { color: '#C2410C', bg: 'rgba(234,88,12,0.12)',  border: '1px solid rgba(234,88,12,0.35)'  },
+  offer_sent:              { color: '#0E7490', bg: 'rgba(6,182,212,0.12)',  border: '1px solid rgba(6,182,212,0.35)'  },
+  waiting_for_deposit:     { color: '#3730A3', bg: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.35)' },
+  deposit_sent:            { color: '#1E40AF', bg: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)'  },
+  deposit_paid:            { color: '#065F46', bg: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)'  },
+  completed:               { color: '#374151', bg: 'rgba(107,114,128,0.10)',border: '1px solid rgba(107,114,128,0.2)' },
+  lost:                    { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',  border: '1px solid rgba(239,68,68,0.25)'  },
+  cancelled:               { color: '#991B1B', bg: 'rgba(239,68,68,0.10)',  border: '1px solid rgba(239,68,68,0.25)'  },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -137,6 +144,7 @@ export default async function AdminInquiryDetailPage({
     offer_location_lng:      number | null
     offer_location_zoom:     number | null
     offer_location_geojson:  unknown
+    offer_options:           unknown
     internal_deal_total_eur: number | null
     internal_commission_eur: number | null
     internal_notes:          string | null
@@ -239,6 +247,20 @@ export default async function AdminInquiryDetailPage({
     // Non-fatal — guide attachment tab will show empty state
   }
 
+  // ── Fetch review link (graceful if table doesn't exist yet) ───────────────
+  let existingReview: { token: string; submitted_at: string | null } | null = null
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: reviewRow } = await (svc as any)
+      .from('reviews')
+      .select('token, submitted_at')
+      .eq('inquiry_id', id)
+      .maybeSingle()
+    if (reviewRow != null) existingReview = reviewRow as { token: string; submitted_at: string | null }
+  } catch {
+    // Table not yet created — safe to ignore
+  }
+
   // ── Fetch trip brief ───────────────────────────────────────────────────────
   let tripDetails: TripDetails | null = null
   try {
@@ -253,7 +275,7 @@ export default async function AdminInquiryDetailPage({
     // Table not yet migrated — safe to ignore
   }
 
-  const st             = STATUS_STYLE[inquiry.status] ?? STATUS_STYLE.pending_fa_review
+  const st             = STATUS_STYLE[inquiry.status] ?? STATUS_STYLE.pending
   const tripPriceEur   = (trip?.price_per_person_eur ?? 0) * (inquiry.party_size ?? 1)
   const requestedDates = inquiry.requested_dates as string[] | null
 
@@ -526,6 +548,13 @@ export default async function AdminInquiryDetailPage({
         initialNotes={inquiry.internal_notes}
         initialCurrency={(inquiry.deal_currency ?? 'EUR') as 'EUR' | 'USD'}
       />
+
+      <ReviewLinkGenerator
+        inquiryId={inquiry.id}
+        existingToken={existingReview?.token ?? null}
+        existingBaseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
+        submittedAt={existingReview?.submitted_at ?? null}
+      />
     </div>
   )
 
@@ -576,6 +605,7 @@ export default async function AdminInquiryDetailPage({
     locationGeoJson: (inquiry.offer_location_geojson as object | null) ?? null,
     offerToken:      inquiry.offer_token,
     offerSentAt:     inquiry.offer_sent_at ?? null,
+    options:         (inquiry.offer_options as OfferOptionInput[] | null) ?? null,
   } : null
 
   // ── Proposal tab ───────────────────────────────────────────────────────────

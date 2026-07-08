@@ -9,6 +9,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { getOfferByToken } from '@/actions/inquiries'
 import { OfferPayButton } from './OfferPayButton'
+import { OfferOptionsPanel } from './OfferOptionsPanel'
 import { OfferLocationMap } from '@/components/offer/OfferLocationMap'
 import { currencyForCountry, fetchEurRate, fmtConverted } from '@/lib/fx'
 import { CheckCircle2, Calendar, Users, Shield, ChevronRight } from 'lucide-react'
@@ -233,89 +234,103 @@ export default async function OfferPage({
       <div className="max-w-3xl mx-auto px-4 sm:px-6"
         style={{ marginTop: hasPhotos ? '32px' : '-40px', paddingBottom: '60px' }}>
 
-        {/* ── Offer CTA card ──────────────────────────────────────────────── */}
-        <div className="p-6 rounded-2xl mb-6"
-          style={{
-            background:  '#FFFFFF',
-            border:      '1px solid rgba(10,46,77,0.08)',
-            boxShadow:   '0 8px 40px rgba(10,46,77,0.12)',
-          }}>
+        {/* ── CTA: multi-option or single-option ──────────────────────────── */}
+        {offer.options.length > 0 ? (
+          /* Multi-option: let angler pick */
+          <OfferOptionsPanel
+            token={token}
+            options={offer.options}
+            questions={offer.questions}
+            refundReason={offer.refundReason}
+            requestedDates={offer.requestedDates}
+            partySize={offer.partySize}
+            guideName={offer.guideName}
+          />
+        ) : (
+          /* Legacy single-option CTA card */
+          <div className="p-6 rounded-2xl mb-6"
+            style={{
+              background:  '#FFFFFF',
+              border:      '1px solid rgba(10,46,77,0.08)',
+              boxShadow:   '0 8px 40px rgba(10,46,77,0.12)',
+            }}>
 
-          {/* Price breakdown */}
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-5">
-            <div className="text-center">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.06em] sm:tracking-[0.1em] f-body mb-1"
-                style={{ color: 'rgba(10,46,77,0.4)' }}>Total</p>
-              <p className="text-xl sm:text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                €{offer.offerTotalEur.toFixed(0)}
-              </p>
-            </div>
-            <div className="text-center"
-              style={{ borderLeft: '1px solid rgba(10,46,77,0.06)', borderRight: '1px solid rgba(10,46,77,0.06)' }}>
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.06em] sm:tracking-[0.1em] f-body mb-1"
-                style={{ color: 'rgba(10,46,77,0.4)' }}>Deposit</p>
-              <p className="text-xl sm:text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
-                €{offer.offerDepositEur.toFixed(0)}
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.06em] sm:tracking-[0.1em] f-body mb-1"
-                style={{ color: 'rgba(10,46,77,0.4)' }}>To guide</p>
-              <p className="text-xl sm:text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                €{balanceEur.toFixed(0)}
-              </p>
-            </div>
-          </div>
-
-          {/* Local currency hint */}
-          {localRate != null && localCurrency != null && (
-            <p className="text-center text-[11px] f-body mb-4 -mt-2"
-              style={{ color: 'rgba(10,46,77,0.38)' }}>
-              {fmtConverted(offer.offerTotalEur, localRate, localCurrency)} total
-              &nbsp;·&nbsp;
-              {fmtConverted(offer.offerDepositEur, localRate, localCurrency)} deposit
-              &nbsp;·&nbsp;today&apos;s ECB rate
-            </p>
-          )}
-
-          {/* Refundable notice */}
-          {offer.refundReason != null && (
-            <div className="flex items-start gap-3 px-4 py-3 rounded-xl mb-4"
-              style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <Shield size={16} style={{ color: '#16a34a', flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <p className="text-xs font-bold f-body mb-0.5" style={{ color: '#065F46' }}>
-                  Refundable deposit
+            {/* Price breakdown */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-5">
+              <div className="text-center">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.06em] sm:tracking-[0.1em] f-body mb-1"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}>Total</p>
+                <p className="text-xl sm:text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                  €{offer.offerTotalEur.toFixed(0)}
                 </p>
-                <p className="text-sm f-body" style={{ color: '#047857' }}>
-                  {offer.refundReason}
+              </div>
+              <div className="text-center"
+                style={{ borderLeft: '1px solid rgba(10,46,77,0.06)', borderRight: '1px solid rgba(10,46,77,0.06)' }}>
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.06em] sm:tracking-[0.1em] f-body mb-1"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}>Deposit</p>
+                <p className="text-xl sm:text-2xl font-bold f-display" style={{ color: '#E67E50' }}>
+                  €{offer.offerDepositEur.toFixed(0)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] sm:text-xs font-bold uppercase tracking-[0.06em] sm:tracking-[0.1em] f-body mb-1"
+                  style={{ color: 'rgba(10,46,77,0.4)' }}>To guide</p>
+                <p className="text-xl sm:text-2xl font-bold f-display" style={{ color: '#0A2E4D' }}>
+                  €{balanceEur.toFixed(0)}
                 </p>
               </div>
             </div>
-          )}
 
-          {/* Trip meta */}
-          <div className="flex flex-wrap gap-x-6 gap-y-2 mb-5 text-sm f-body"
-            style={{ color: 'rgba(10,46,77,0.6)' }}>
-            <span className="flex items-center gap-1.5">
-              <Calendar size={14} /> {fmtDates(offer.requestedDates)}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Users size={14} /> {offer.partySize} {offer.partySize === 1 ? 'angler' : 'anglers'}
-            </span>
-            <span className="flex items-center gap-1.5">
-              {offer.guideName}
-            </span>
+            {/* Local currency hint */}
+            {localRate != null && localCurrency != null && (
+              <p className="text-center text-[11px] f-body mb-4 -mt-2"
+                style={{ color: 'rgba(10,46,77,0.38)' }}>
+                {fmtConverted(offer.offerTotalEur, localRate, localCurrency)} total
+                &nbsp;·&nbsp;
+                {fmtConverted(offer.offerDepositEur, localRate, localCurrency)} deposit
+                &nbsp;·&nbsp;today&apos;s ECB rate
+              </p>
+            )}
+
+            {/* Refundable notice */}
+            {offer.refundReason != null && (
+              <div className="flex items-start gap-3 px-4 py-3 rounded-xl mb-4"
+                style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                <Shield size={16} style={{ color: '#16a34a', flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <p className="text-xs font-bold f-body mb-0.5" style={{ color: '#065F46' }}>
+                    Refundable deposit
+                  </p>
+                  <p className="text-sm f-body" style={{ color: '#047857' }}>
+                    {offer.refundReason}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Trip meta */}
+            <div className="flex flex-wrap gap-x-6 gap-y-2 mb-5 text-sm f-body"
+              style={{ color: 'rgba(10,46,77,0.6)' }}>
+              <span className="flex items-center gap-1.5">
+                <Calendar size={14} /> {fmtDates(offer.requestedDates)}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Users size={14} /> {offer.partySize} {offer.partySize === 1 ? 'angler' : 'anglers'}
+              </span>
+              <span className="flex items-center gap-1.5">
+                {offer.guideName}
+              </span>
+            </div>
+
+            {/* CTA */}
+            <OfferPayButton
+              token={token}
+              hasQuestions={hasQuestions}
+              questions={offer.questions}
+              depositEur={offer.offerDepositEur}
+            />
           </div>
-
-          {/* CTA */}
-          <OfferPayButton
-            token={token}
-            hasQuestions={hasQuestions}
-            questions={offer.questions}
-            depositEur={offer.offerDepositEur}
-          />
-        </div>
+        )}
 
         {/* ── Guide card ─────────────────────────────────────────────────── */}
         <div className="p-5 rounded-2xl mb-6 flex items-start gap-4"
@@ -370,8 +385,8 @@ export default async function OfferPage({
           </Section>
         )}
 
-        {/* ── Schedule / Trip plan ────────────────────────────────────────── */}
-        {offer.schedule.length > 0 ? (
+        {/* ── Schedule / Trip plan (only for legacy single-option) ────────── */}
+        {offer.options.length > 0 ? null : offer.schedule.length > 0 ? (
           <Section title="Trip Schedule" icon="🗓️">
             <ol className="relative" style={{ paddingLeft: '28px' }}>
               <div
@@ -430,8 +445,8 @@ export default async function OfferPage({
           </Section>
         ) : null}
 
-        {/* ── What's included ────────────────────────────────────────────── */}
-        {offer.inclusions.length > 0 && (
+        {/* ── What's included (legacy single-option only) ─────────────────── */}
+        {offer.options.length === 0 && offer.inclusions.length > 0 && (
           <Section
             title={`What's Included${offer.offerTotalEur > 0 ? ` — €${offer.offerTotalEur.toFixed(0)}` : ''}`}
             icon="✅"
@@ -491,8 +506,8 @@ export default async function OfferPage({
           </Section>
         )}
 
-        {/* ── Questions ──────────────────────────────────────────────────── */}
-        {hasQuestions && (
+        {/* ── Questions (legacy single-option only — multi-option handles internally) */}
+        {hasQuestions && offer.options.length === 0 && (
           <Section title="A Few Questions" icon="❓">
             <p className="text-sm f-body mb-4" style={{ color: 'rgba(10,46,77,0.6)' }}>
               Please answer the questions below before accepting your offer.

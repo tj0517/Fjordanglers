@@ -98,6 +98,8 @@ const envSchema = z.object({
   // Anthropic API key — required for AI-powered features (trip detail extraction).
   // Optional so build succeeds without it; action returns error if missing at runtime.
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  // Feature flag: auto-reply agent on new inquiries. Off by default.
+  AI_AUTO_REPLY_ENABLED: z.coerce.boolean().optional().default(false),
 
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`

@@ -127,7 +127,7 @@ export default async function FinancesPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from as any)('inquiries')
       .select('id, angler_name, angler_email, offer_sent_at, updated_at, offer_total_eur, internal_deal_total_eur, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, created_at, status')
-      .in('status', ['pending_fa_review', 'in_negotiation', 'deposit_sent'])
+      .in('status', ['pending', 'in_negotiation', 'waiting_for_guide_offer', 'offer_sent', 'waiting_for_deposit', 'deposit_sent'])
       .order('updated_at', { ascending: false }),
   ])
 

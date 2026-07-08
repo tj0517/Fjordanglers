@@ -7,13 +7,16 @@ import { updateInquiryStatus } from '@/actions/inquiries'
 
 // All statuses FA can set manually
 const STATUSES = [
-  { key: 'pending_fa_review', label: 'Pending',       color: '#92400E', bg: 'rgba(251,191,36,0.2)',  border: 'rgba(251,191,36,0.45)' },
-  { key: 'in_negotiation',    label: 'Negotiating',   color: '#5B21B6', bg: 'rgba(139,92,246,0.18)', border: 'rgba(139,92,246,0.4)'  },
-  { key: 'deposit_sent',      label: 'Deposit Sent',  color: '#1E40AF', bg: 'rgba(59,130,246,0.18)', border: 'rgba(59,130,246,0.35)' },
-  { key: 'deposit_paid',      label: 'Confirmed',     color: '#065F46', bg: 'rgba(16,185,129,0.18)', border: 'rgba(16,185,129,0.35)' },
-  { key: 'completed',         label: 'Completed',     color: '#D1D5DB', bg: 'rgba(107,114,128,0.18)',border: 'rgba(107,114,128,0.35)' },
-  { key: 'lost',              label: 'Lost',          color: '#FCA5A5', bg: 'rgba(239,68,68,0.18)',  border: 'rgba(239,68,68,0.35)'  },
-  { key: 'cancelled',         label: 'Cancelled',     color: '#FCA5A5', bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.25)'  },
+  { key: 'pending',                 label: 'Pending',            color: '#92400E', bg: 'rgba(251,191,36,0.2)',   border: 'rgba(251,191,36,0.45)'  },
+  { key: 'in_negotiation',          label: 'Negotiating',        color: '#5B21B6', bg: 'rgba(139,92,246,0.18)',  border: 'rgba(139,92,246,0.4)'   },
+  { key: 'waiting_for_guide_offer', label: 'Waiting Guide',      color: '#C2410C', bg: 'rgba(234,88,12,0.18)',   border: 'rgba(234,88,12,0.4)'    },
+  { key: 'offer_sent',              label: 'Offer Sent',         color: '#0E7490', bg: 'rgba(6,182,212,0.18)',   border: 'rgba(6,182,212,0.4)'    },
+  { key: 'waiting_for_deposit',     label: 'Waiting Deposit',    color: '#3730A3', bg: 'rgba(99,102,241,0.18)',  border: 'rgba(99,102,241,0.4)'   },
+  { key: 'deposit_sent',            label: 'Deposit Sent',       color: '#1E40AF', bg: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.35)'  },
+  { key: 'deposit_paid',            label: 'Confirmed',          color: '#065F46', bg: 'rgba(16,185,129,0.18)',  border: 'rgba(16,185,129,0.35)'  },
+  { key: 'completed',               label: 'Completed',          color: '#D1D5DB', bg: 'rgba(107,114,128,0.18)', border: 'rgba(107,114,128,0.35)' },
+  { key: 'lost',                    label: 'Lost',               color: '#FCA5A5', bg: 'rgba(239,68,68,0.18)',   border: 'rgba(239,68,68,0.35)'   },
+  { key: 'cancelled',               label: 'Cancelled',          color: '#FCA5A5', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)'   },
 ] as const
 
 type StatusKey = typeof STATUSES[number]['key']

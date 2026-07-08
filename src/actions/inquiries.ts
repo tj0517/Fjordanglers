@@ -64,6 +64,19 @@ export interface OfferAnswer {
   answer: string
 }
 
+// ─── Offer option (multi-option proposal support) ─────────────────────────────
+
+export interface OfferOptionInput {
+  id:           string
+  title:        string
+  totalEur:     number
+  depositEur:   number
+  refundReason: string | null
+  inclusions:   string[]
+  schedule:     ScheduleEntry[]
+  notes:        string | null
+}
+
 export interface RichOfferParams {
   totalPriceEur: number
   depositEur: number
@@ -82,6 +95,8 @@ export interface RichOfferParams {
   locationLng: number | null
   locationZoom: number
   locationGeoJson: object | null
+  /** Multi-option proposal. When provided, takes precedence over flat fields for display. */
+  options?: OfferOptionInput[]
 }
 
 export interface OfferPageData {
@@ -98,6 +113,10 @@ export interface OfferPageData {
   offerDepositEur: number
   notes: string | null
   tripPlan: string | null
+  /** Multi-option proposal — empty array means single-option (legacy) */
+  options: OfferOptionInput[]
+  /** Which option the angler selected when accepting */
+  selectedOptionId: string | null
   licenseInfo: string | null
   licenseHeading: string | null
   inclusions: string[]
@@ -176,7 +195,7 @@ export async function createManualInquiry(params: {
  *   1. inquiry.offer_deposit_eur — if FA created an offer, always use that exact amount.
  *   2. depositPercent × trip price — legacy fallback.
  *
- * Allowed statuses: pending_fa_review, deposit_sent (resend).
+ * Allowed statuses: any active status or deposit_sent (resend).
  * Blocked statuses: deposit_paid, completed, cancelled.
  */
 export async function sendDepositLink(
@@ -389,6 +408,7 @@ export async function saveRichOffer(
       offer_location_lng:      locationLng,
       offer_location_zoom:     locationZoom,
       offer_location_geojson:  locationGeoJson,
+      offer_options:           params.options ?? null,
       offer_token:             token,
       offer_token_expires_at:  expiresAt,
       offer_sent_at:           new Date().toISOString(),
@@ -465,34 +485,36 @@ export async function getOfferByToken(token: string): Promise<OfferPageData | nu
     : { data: null }
 
   return {
-    inquiryId:       inquiry.id,
-    anglerName:      inquiry.angler_name,
-    anglerCountry:   (inquiry.angler_country as string | null) ?? '',
-    tripTitle:       trip?.title ?? 'Your trip',
-    guideName:       guide?.full_name ?? 'Your guide',
-    guidePhotoUrl:   guide?.avatar_url ?? null,
-    guideBio:        guide?.bio ?? null,
-    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
-    partySize:       inquiry.party_size ?? 1,
-    offerTotalEur:   Number(inquiry.offer_total_eur ?? 0),
-    offerDepositEur: Number(inquiry.offer_deposit_eur ?? 0),
-    notes:           inquiry.offer_notes ?? null,
-    tripPlan:        inquiry.offer_trip_plan ?? null,
-    licenseInfo:     inquiry.offer_license_info ?? null,
-    inclusions:      (inquiry.offer_inclusions as string[] | null) ?? [],
-    questions:       (inquiry.offer_questions as OfferQuestion[] | null) ?? [],
-    answers:         (inquiry.offer_answers as OfferAnswer[] | null) ?? [],
-    refundReason:    inquiry.offer_refund_reason ?? null,
-    status:          inquiry.status,
-    photos:          (inquiry.offer_photos as string[] | null) ?? [],
-    location:        inquiry.offer_location ?? null,
-    whatToBring:     (inquiry.offer_what_to_bring as string[] | null) ?? [],
-    schedule:        (inquiry.offer_schedule as ScheduleEntry[] | null) ?? [],
-    licenseHeading:  inquiry.offer_license_heading ?? null,
-    locationLat:     inquiry.offer_location_lat != null ? Number(inquiry.offer_location_lat) : null,
-    locationLng:     inquiry.offer_location_lng != null ? Number(inquiry.offer_location_lng) : null,
-    locationZoom:    inquiry.offer_location_zoom != null ? Number(inquiry.offer_location_zoom) : 10,
-    locationGeoJson: (inquiry.offer_location_geojson as object | null) ?? null,
+    inquiryId:        inquiry.id,
+    anglerName:       inquiry.angler_name,
+    anglerCountry:    (inquiry.angler_country as string | null) ?? '',
+    tripTitle:        trip?.title ?? 'Your trip',
+    guideName:        guide?.full_name ?? 'Your guide',
+    guidePhotoUrl:    guide?.avatar_url ?? null,
+    guideBio:         guide?.bio ?? null,
+    requestedDates:   (inquiry.requested_dates as string[] | null) ?? [],
+    partySize:        inquiry.party_size ?? 1,
+    offerTotalEur:    Number(inquiry.offer_total_eur ?? 0),
+    offerDepositEur:  Number(inquiry.offer_deposit_eur ?? 0),
+    notes:            inquiry.offer_notes ?? null,
+    tripPlan:         inquiry.offer_trip_plan ?? null,
+    licenseInfo:      inquiry.offer_license_info ?? null,
+    inclusions:       (inquiry.offer_inclusions as string[] | null) ?? [],
+    questions:        (inquiry.offer_questions as OfferQuestion[] | null) ?? [],
+    answers:          (inquiry.offer_answers as OfferAnswer[] | null) ?? [],
+    refundReason:     inquiry.offer_refund_reason ?? null,
+    status:           inquiry.status,
+    photos:           (inquiry.offer_photos as string[] | null) ?? [],
+    location:         inquiry.offer_location ?? null,
+    whatToBring:      (inquiry.offer_what_to_bring as string[] | null) ?? [],
+    schedule:         (inquiry.offer_schedule as ScheduleEntry[] | null) ?? [],
+    licenseHeading:   inquiry.offer_license_heading ?? null,
+    locationLat:      inquiry.offer_location_lat != null ? Number(inquiry.offer_location_lat) : null,
+    locationLng:      inquiry.offer_location_lng != null ? Number(inquiry.offer_location_lng) : null,
+    locationZoom:     inquiry.offer_location_zoom != null ? Number(inquiry.offer_location_zoom) : 10,
+    locationGeoJson:  (inquiry.offer_location_geojson as object | null) ?? null,
+    options:          (inquiry.offer_options as OfferOptionInput[] | null) ?? [],
+    selectedOptionId: inquiry.selected_option_id ?? null,
   }
 }
 
@@ -1353,6 +1375,7 @@ export async function saveOfferDraft(
       offer_location_lng:      locationLng,
       offer_location_zoom:     locationZoom,
       offer_location_geojson:  locationGeoJson,
+      offer_options:           params.options ?? null,
       offer_token:             token,
       offer_token_expires_at:  expiresAt,
       // NOTE: offer_sent_at is intentionally NOT set here
@@ -1436,6 +1459,7 @@ export async function sendOfferEmail(
 export async function acceptOffer(
   token: string,
   answers: OfferAnswer[],
+  selectedOptionId?: string,
 ): Promise<ActionResult> {
   const svc = createServiceClient()
 
@@ -1460,8 +1484,9 @@ export async function acceptOffer(
   const { error } = await (svc as any)
     .from('inquiries')
     .update({
-      offer_answers: answers,
-      status: 'in_negotiation',
+      offer_answers:       answers,
+      status:              'in_negotiation',
+      selected_option_id:  selectedOptionId ?? null,
     })
     .eq('id', inquiry.id)
 
@@ -1470,7 +1495,7 @@ export async function acceptOffer(
     return { success: false, error: 'Failed to save acceptance' }
   }
 
-  console.log(`[acceptOffer] Inquiry ${inquiry.id} accepted by angler`)
+  console.log(`[acceptOffer] Inquiry ${inquiry.id} accepted by angler${selectedOptionId != null ? ` (option ${selectedOptionId})` : ''}`)
   return { success: true }
 }
 

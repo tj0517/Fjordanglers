@@ -24,18 +24,24 @@ const COLD_DAYS  = 3   // 3–7 days → orange
 const STALE_DAYS = 7   // 7d+      → red
 
 /** Statuses that are still active (need attention if silent) */
-const ACTIVE_STATUSES = new Set(['pending_fa_review', 'in_negotiation', 'deposit_sent'])
+const ACTIVE_STATUSES = new Set([
+  'pending', 'in_negotiation', 'waiting_for_guide_offer',
+  'offer_sent', 'waiting_for_deposit', 'deposit_sent',
+])
 
 // ─── Status style map ─────────────────────────────────────────────────────────
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pending_fa_review: { label: 'Pending',      color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'  },
-  in_negotiation:    { label: 'Negotiating',  color: '#5B21B6', bg: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)' },
-  deposit_sent:      { label: 'Deposit Sent', color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'  },
-  deposit_paid:      { label: 'Confirmed',    color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'  },
-  completed:         { label: 'Completed',    color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)' },
-  lost:              { label: 'Lost',         color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
-  cancelled:         { label: 'Cancelled',    color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'  },
+  pending:                 { label: 'Pending',         color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'   },
+  in_negotiation:          { label: 'Negotiating',     color: '#5B21B6', bg: 'rgba(139,92,246,0.15)',  border: '1px solid rgba(139,92,246,0.35)'  },
+  waiting_for_guide_offer: { label: 'Waiting Guide',   color: '#C2410C', bg: 'rgba(234,88,12,0.12)',   border: '1px solid rgba(234,88,12,0.35)'   },
+  offer_sent:              { label: 'Offer Sent',      color: '#0E7490', bg: 'rgba(6,182,212,0.12)',   border: '1px solid rgba(6,182,212,0.35)'   },
+  waiting_for_deposit:     { label: 'Waiting Deposit', color: '#3730A3', bg: 'rgba(99,102,241,0.12)',  border: '1px solid rgba(99,102,241,0.35)'  },
+  deposit_sent:            { label: 'Deposit Sent',    color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'   },
+  deposit_paid:            { label: 'Confirmed',       color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'   },
+  completed:               { label: 'Completed',       color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)'  },
+  lost:                    { label: 'Lost',            color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
+  cancelled:               { label: 'Cancelled',       color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
 }
 
 // ─── Row type ─────────────────────────────────────────────────────────────────
@@ -118,7 +124,7 @@ function needsAttention(row: InquiryRow): boolean {
 
 /** Brand new pending lead with no contact yet and <24h old. */
 function isNewUnresponded(row: InquiryRow): boolean {
-  if (row.status !== 'pending_fa_review') return false
+  if (row.status !== 'pending') return false
   if (row.last_contact_at != null) return false
   return (Date.now() - new Date(row.created_at).getTime()) < 86_400_000
 }
@@ -180,14 +186,17 @@ function SilenceBadge({ row }: { row: InquiryRow }) {
 // ─── Status tab keys ──────────────────────────────────────────────────────────
 
 const TABS = [
-  { key: 'all',               label: 'All' },
-  { key: 'needs_attention',   label: '⚡ Needs Attention' },
-  { key: 'pending_fa_review', label: 'Pending' },
-  { key: 'in_negotiation',    label: 'Negotiating' },
-  { key: 'deposit_sent',      label: 'Deposit Sent' },
-  { key: 'deposit_paid',      label: 'Confirmed' },
-  { key: 'completed',         label: 'Completed' },
-  { key: 'lost',              label: 'Lost' },
+  { key: 'all',                    label: 'All' },
+  { key: 'needs_attention',        label: '⚡ Needs Attention' },
+  { key: 'pending',                label: 'Pending' },
+  { key: 'in_negotiation',         label: 'Negotiating' },
+  { key: 'waiting_for_guide_offer',label: 'Waiting Guide' },
+  { key: 'offer_sent',             label: 'Offer Sent' },
+  { key: 'waiting_for_deposit',    label: 'Waiting Deposit' },
+  { key: 'deposit_sent',           label: 'Deposit Sent' },
+  { key: 'deposit_paid',           label: 'Confirmed' },
+  { key: 'completed',              label: 'Completed' },
+  { key: 'lost',                   label: 'Lost' },
 ]
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -217,14 +226,17 @@ export default async function AdminInquiriesPage({
 
   // ── Counts always from full data ───────────────────────────────────────────
   const counts = {
-    all:               allRows.length,
-    needs_attention:   allRows.filter(needsAttention).length,
-    pending_fa_review: allRows.filter(r => r.status === 'pending_fa_review').length,
-    in_negotiation:    allRows.filter(r => r.status === 'in_negotiation').length,
-    deposit_sent:      allRows.filter(r => r.status === 'deposit_sent').length,
-    deposit_paid:      allRows.filter(r => r.status === 'deposit_paid').length,
-    completed:         allRows.filter(r => r.status === 'completed').length,
-    lost:              allRows.filter(r => r.status === 'lost').length,
+    all:                     allRows.length,
+    needs_attention:         allRows.filter(needsAttention).length,
+    pending:                 allRows.filter(r => r.status === 'pending').length,
+    in_negotiation:          allRows.filter(r => r.status === 'in_negotiation').length,
+    waiting_for_guide_offer: allRows.filter(r => r.status === 'waiting_for_guide_offer').length,
+    offer_sent:              allRows.filter(r => r.status === 'offer_sent').length,
+    waiting_for_deposit:     allRows.filter(r => r.status === 'waiting_for_deposit').length,
+    deposit_sent:            allRows.filter(r => r.status === 'deposit_sent').length,
+    deposit_paid:            allRows.filter(r => r.status === 'deposit_paid').length,
+    completed:               allRows.filter(r => r.status === 'completed').length,
+    lost:                    allRows.filter(r => r.status === 'lost').length,
   }
 
   // ── Apply filters ──────────────────────────────────────────────────────────
@@ -294,7 +306,7 @@ export default async function AdminInquiriesPage({
     return sum + eur
   }, 0)
   const wonCount    = counts.deposit_paid + counts.completed
-  const closedCount = allRows.filter(r => !['pending_fa_review', 'in_negotiation', 'deposit_sent'].includes(r.status)).length
+  const closedCount = allRows.filter(r => !ACTIVE_STATUSES.has(r.status)).length
   const convPct     = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : null
 
   // ── Helper: build tab href preserving current search/date/view params ──────
@@ -350,8 +362,8 @@ export default async function AdminInquiriesPage({
       {/* ─── Stats row ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         {([
-          { label: 'Pending',     value: counts.pending_fa_review, color: '#92400E' },
-          { label: 'Negotiating', value: counts.in_negotiation,    color: '#5B21B6' },
+          { label: 'Pending',     value: counts.pending,        color: '#92400E' },
+          { label: 'Negotiating', value: counts.in_negotiation, color: '#5B21B6' },
           { label: 'Won',         value: wonCount,                  color: '#065F46' },
           { label: 'Lost',        value: counts.lost,               color: '#991B1B' },
           {

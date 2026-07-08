@@ -1,7 +1,7 @@
 /**
  * POST /api/inquiries — create a new FA inquiry.
  *
- * Saves to the `inquiries` table with status = 'pending_fa_review'.
+ * Saves to the `inquiries` table with status = 'pending'.
  * Fires two emails:
  *   • FA: new inquiry notification (with dashboard link)
  *   • Angler: inquiry received confirmation
@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/lib/email'
 import { env } from '@/lib/env'
+import { runAgentRound1 } from '@/lib/ai/inquiry-agent'
 
 export const runtime  = 'nodejs'
 export const dynamic  = 'force-dynamic'
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       message:            parsed.data.message ?? null,
       selected_option:    parsed.data.selected_option ?? null,
       angler_phone:       parsed.data.angler_phone ?? null,
-      status:             'pending_fa_review',
+      status:             'pending',
     })
     .select('id, status')
     .single()
@@ -163,6 +164,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   console.log(`[inquiries/POST] Created inquiry ${inquiry.id} (${parsed.data.trip_id ? `trip ${parsed.data.trip_id}` : `page ${parsed.data.experience_page_id}`})`)
+
+  if (env.AI_AUTO_REPLY_ENABLED) {
+    try {
+      await runAgentRound1({
+        inquiryId:      inquiry.id,
+        anglerName:     parsed.data.angler_name,
+        anglerEmail:    parsed.data.angler_email,
+        tripTitle,
+        message:        parsed.data.message ?? null,
+        requestedDates: sortedDates,
+        partySize:      parsed.data.party_size,
+      })
+    } catch (err) {
+      console.error('[inquiries/POST] Agent error:', err)
+      // never block the 201 response
+    }
+  }
 
   return NextResponse.json({ id: inquiry.id, status: inquiry.status }, { status: 201 })
 }
