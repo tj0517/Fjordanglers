@@ -34,6 +34,7 @@ import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab
 import { TripSetupTab } from './TripSetupTab'
 import { ProposalTab } from './ProposalTab'
 import { ReviewLinkGenerator } from './ReviewLinkGenerator'
+import { AgentToggle } from './AgentToggle'
 import type { LeadMessage, TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
 import type { InitialOfferData } from './OfferBuilder'
 
@@ -158,6 +159,8 @@ export default async function AdminInquiryDetailPage({
     external_offer_sent:     boolean
     offer_token:             string | null
     deposit_paid_at:         string | null
+    agent_status:            string | null
+    agent_round:             number | null
   }
 
   // (AssignGuidePanel removed — guide assignment is now in the Guide Attachment tab)
@@ -333,6 +336,7 @@ export default async function AdminInquiryDetailPage({
         <div className="px-6 pb-2">
           <Row label="Name"    value={inquiry.angler_name} />
           <Row label="Email"   value={inquiry.angler_email} />
+          <Row label="Phone"   value={(inquiry as typeof inquiry & { angler_phone?: string | null }).angler_phone ?? null} />
           <Row label="Country" value={inquiry.angler_country} />
         </div>
       </div>
@@ -527,6 +531,8 @@ export default async function AdminInquiryDetailPage({
   const sidePanel = (
     <div className="space-y-3">
       <StatusChanger inquiryId={inquiry.id} currentStatus={inquiry.status} />
+
+      <AgentToggle inquiryId={inquiry.id} initialStatus={inquiry.agent_status} />
 
       <div className="rounded-[20px] overflow-hidden"
         style={{ background: 'rgba(10,46,77,0.75)', border: '1px solid rgba(255,255,255,0.07)' }}>

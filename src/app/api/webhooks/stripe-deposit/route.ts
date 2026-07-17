@@ -99,6 +99,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       status:                    'deposit_paid',
       deposit_paid_at:           new Date().toISOString(),
       deposit_stripe_session_id: session.id,
+      stage_reached:             'deposit_paid',
     })
     .eq('id', inquiryId)
 

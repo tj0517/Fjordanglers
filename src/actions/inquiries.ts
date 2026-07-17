@@ -412,6 +412,7 @@ export async function saveRichOffer(
       offer_token:             token,
       offer_token_expires_at:  expiresAt,
       offer_sent_at:           new Date().toISOString(),
+      stage_reached:           'offer_sent',
     })
     .eq('id', inquiryId)
 
@@ -670,6 +671,9 @@ export async function updateInquiryStatus(
     update.lost_reason = lostReason?.trim() || null
   } else {
     update.lost_reason = null
+  }
+  if (status === 'completed') {
+    update.stage_reached = 'completed'
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1442,7 +1446,7 @@ export async function sendOfferEmail(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (svc as any)
     .from('inquiries')
-    .update({ offer_sent_at: new Date().toISOString() })
+    .update({ offer_sent_at: new Date().toISOString(), stage_reached: 'offer_sent' })
     .eq('id', inquiryId)
 
   console.log(`[sendOfferEmail] Offer email sent for inquiry ${inquiryId}`)

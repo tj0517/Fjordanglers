@@ -60,18 +60,42 @@ import type { InquiryAgentEmailProps } from '@/emails/inquiry-agent-email'
 
 const FROM = 'FjordAnglers <contact@fjordanglers.com>'
 
+// ─── Thread headers (email threading) ────────────────────────────────────────
+
+export interface ThreadHeaders {
+  /** Message-ID for THIS outbound email, e.g. `<uuid@mail.fjordanglers.com>` */
+  messageId:  string
+  /** Message-ID of the email we are replying to (omit for the first email in the thread) */
+  inReplyTo?: string
+}
+
 // ─── Core send helper ─────────────────────────────────────────────────────────
 
 async function sendEmail({
   to,
   subject,
   react,
+  threadHeaders,
 }: {
   to: string
   subject: string
   react: React.ReactElement
+  threadHeaders?: ThreadHeaders
 }): Promise<void> {
   const html = await render(react)
+
+  // Build optional threading headers
+  const headers: Record<string, string> = {}
+  if (threadHeaders) {
+    headers['Message-ID'] = threadHeaders.messageId
+    if (threadHeaders.inReplyTo) {
+      headers['In-Reply-To'] = threadHeaders.inReplyTo
+      headers['References']  = threadHeaders.inReplyTo
+    }
+  }
+
+  const body: Record<string, unknown> = { from: FROM, to, subject, html }
+  if (Object.keys(headers).length > 0) body.headers = headers
 
   // Call Resend REST API directly — bypasses the SDK's internal fetch which can
   // fail silently in Next.js environments where the global fetch is patched with
@@ -82,13 +106,13 @@ async function sendEmail({
       Authorization: `Bearer ${env.RESEND_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ from: FROM, to, subject, html }),
+    body: JSON.stringify(body),
     cache: 'no-store',
   })
 
   if (!response.ok) {
-    const body = await response.text().catch(() => '(no body)')
-    throw new Error(`[email] Resend HTTP ${response.status}: ${body}`)
+    const bodyText = await response.text().catch(() => '(no body)')
+    throw new Error(`[email] Resend HTTP ${response.status}: ${bodyText}`)
   }
 }
 
@@ -466,12 +490,13 @@ export async function sendRichOfferAnglerEmail(
  * Non-blocking: callers should fire-and-forget with .catch().
  */
 export async function sendInquiryAgentEmail(
-  props: { to: string } & InquiryAgentEmailProps,
+  props: { to: string; threadHeaders?: ThreadHeaders } & InquiryAgentEmailProps,
 ): Promise<void> {
-  const { to, ...templateProps } = props
+  const { to, threadHeaders, ...templateProps } = props
   await sendEmail({
     to,
     subject: `Quick question about your ${templateProps.tripTitle} inquiry`,
     react:   createElement(InquiryAgentEmail, templateProps),
+    threadHeaders,
   })
 }

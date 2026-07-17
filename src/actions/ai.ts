@@ -24,6 +24,30 @@ export type ExtractTripDetailsResult =
   | { success: true;  data: ExtractedTripDetails }
   | { success: false; error: string }
 
+// ─── setAgentStatus ───────────────────────────────────────────────────────────
+
+/**
+ * Stops or restarts the AI inquiry agent for a specific inquiry.
+ * Setting to 'stopped' prevents any future automated agent rounds.
+ * Setting to 'waiting' re-enables it (agent will reply on next inbound message).
+ */
+export async function setAgentStatus(
+  inquiryId: string,
+  status: 'waiting' | 'stopped',
+): Promise<{ success: boolean; error?: string }> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({ agent_status: status })
+    .eq('id', inquiryId)
+  if (error != null) {
+    console.error('[setAgentStatus] Error:', error)
+    return { success: false, error: error.message }
+  }
+  return { success: true }
+}
+
 // ─── extractTripDetailsAI ──────────────────────────────────────────────────────
 
 /**
