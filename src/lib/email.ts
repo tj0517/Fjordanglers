@@ -58,7 +58,7 @@ import type { InquiryRichOfferAnglerEmailProps } from '@/emails/inquiry-rich-off
 import type { GuideAssignedEmailProps } from '@/emails/guide-assigned'
 import type { InquiryAgentEmailProps } from '@/emails/inquiry-agent-email'
 
-const FROM = 'FjordAnglers <contact@fjordanglers.com>'
+const FROM = env.FA_FROM_EMAIL
 
 // ─── Thread headers (email threading) ────────────────────────────────────────
 

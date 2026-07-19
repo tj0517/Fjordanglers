@@ -61,8 +61,12 @@ const envSchema = z.object({
 
   // ── Email (Resend) ─────────────────────────────────────────────────────────
   RESEND_API_KEY: z.string().min(1, 'RESEND_API_KEY is required'),
-  // FA contact email — receives new inquiry notifications.
+  // FA contact email — receives new inquiry notifications (FA inbox).
   FA_EMAIL: z.string().email().optional().default('contact@fjordanglers.com'),
+  // Sender address shown in all outbound emails ("From" header).
+  FA_FROM_EMAIL: z.string().optional().default('FjordAnglers <contact@fjordanglers.com>'),
+  // Inbound email address configured in Resend dashboard (for reference / auto-replies).
+  FA_INBOUND_EMAIL: z.string().email().optional().default('leads@fjordanglers.com'),
 
   // ── Security / Observability ───────────────────────────────────────────────
   // Sentry DSN — optional. If not set, Sentry is disabled (safe without key).
@@ -76,6 +80,10 @@ const envSchema = z.object({
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   // Meta App Secret — used to verify HMAC-SHA256 signature on incoming messages.
   WHATSAPP_APP_SECRET: z.string().optional(),
+  // Phone Number ID from Meta Business → WhatsApp → Getting Started (needed to SEND messages).
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  // The FA WhatsApp business number in E.164 format, e.g. +48123456789 (for display / routing).
+  WHATSAPP_BUSINESS_NUMBER: z.string().optional(),
 
   // ── Resend Inbound (email webhook) ─────────────────────────────────────────
   // Signing secret provided by Resend for inbound email webhooks.
