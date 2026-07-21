@@ -55,6 +55,10 @@ const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(
     'NEXT_PUBLIC_APP_URL must be a valid URL (e.g. http://localhost:3000)',
   ),
+  // Public contact info — baked into client bundle, safe to expose.
+  // Phone number in E.164 without "+", e.g. "48698936563"
+  NEXT_PUBLIC_WHATSAPP_NUMBER: z.string().optional().default('48698936563'),
+  NEXT_PUBLIC_FA_EMAIL: z.string().email().optional().default('contact@fjordanglers.com'),
 
   // Commission rate as a decimal (0.10 = 10%). Defaults to 10%.
   PLATFORM_COMMISSION_RATE: z.coerce.number().min(0).max(1).default(0.1),

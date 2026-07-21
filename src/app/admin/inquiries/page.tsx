@@ -24,12 +24,18 @@ export default async function AdminInquiriesPage() {
 
   const allRows = (rawAll ?? []) as InquiryRow[]
 
-  // ── Trip titles ─────────────────────────────────────────────────────────────
+  // ── Trip titles + slugs ──────────────────────────────────────────────────────
   const tripIds = [...new Set(allRows.map(r => r.trip_id).filter(Boolean))] as string[]
   const { data: trips } = tripIds.length > 0
-    ? await svc.from('experiences').select('id, title').in('id', tripIds)
-    : { data: [] as Array<{ id: string; title: string }> }
-  const tripMap = Object.fromEntries((trips ?? []).map(t => [t.id, t.title]))
+    ? await svc.from('experiences').select('id, title, slug, location_country').in('id', tripIds)
+    : { data: [] as Array<{ id: string; title: string; slug: string | null; location_country: string | null }> }
+  const tripMap    = Object.fromEntries((trips ?? []).map(t => [t.id, t.title]))
+  const slugMap    = Object.fromEntries(
+    (trips ?? []).filter(t => t.slug != null).map(t => [t.id, t.slug as string])
+  )
+  const countryMap = Object.fromEntries(
+    (trips ?? []).filter(t => t.location_country != null).map(t => [t.id, t.location_country as string])
+  )
 
   // ── Guide names ─────────────────────────────────────────────────────────────
   const guideIds = [...new Set(allRows.map(r => r.assigned_guide_id).filter(Boolean))] as string[]
@@ -59,6 +65,8 @@ export default async function AdminInquiriesPage() {
       <InquiriesClient
         allRows={allRows}
         tripMap={tripMap}
+        slugMap={slugMap}
+        countryMap={countryMap}
         guideMap={guideMap}
         offerSentIds={offerSentIds}
       />

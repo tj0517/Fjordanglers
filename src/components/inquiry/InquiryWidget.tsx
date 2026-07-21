@@ -24,16 +24,19 @@ import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
 import { trackFormStart, trackQualifyLead } from '@/lib/gtag'
 
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
+const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
+
 function buildWhatsAppUrl(tripTitle: string, optionLabel?: string | null): string {
   const context = optionLabel ? `${tripTitle} — ${optionLabel}` : tripTitle
   const text = encodeURIComponent(
     `Hi! I have a question about "${context}". Can you help me plan this trip?`
   )
-  return `https://wa.me/48698936563?text=${text}`
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`
 }
 
 const EMAIL_URL =
-  'mailto:contact@fjordanglers.com?subject=Question%20about%20a%20guided%20fishing%20trip'
+  `mailto:${FA_EMAIL}?subject=Question%20about%20a%20guided%20fishing%20trip`
 
 const INSTAGRAM_URL = 'https://www.instagram.com/fjordanglers/'
 

@@ -910,6 +910,41 @@ export async function bulkLogLeadMessages(
  * FA sets the "next action" reminder on an inquiry.
  * Internal only — no email sent.
  */
+export async function deleteInquiry(inquiryId: string): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .delete()
+    .eq('id', inquiryId)
+
+  if (error != null) return { success: false, error: error.message }
+  console.log(`[deleteInquiry] Inquiry ${inquiryId} hard deleted`)
+  return { success: true }
+}
+
+export async function updateRequestedDates(
+  inquiryId: string,
+  dates: string[],
+): Promise<ActionResult> {
+  const svc = createServiceClient()
+  // Normalise: keep only valid YYYY-MM-DD values, remove duplicates, sort ascending
+  const clean = [...new Set(
+    dates
+      .map(d => d.trim().slice(0, 10))
+      .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)),
+  )].sort()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({ requested_dates: clean })
+    .eq('id', inquiryId)
+
+  if (error != null) return { success: false, error: error.message }
+  console.log(`[updateRequestedDates] Inquiry ${inquiryId} — ${clean.join(', ')}`)
+  return { success: true }
+}
+
 export async function updateNextAction(
   inquiryId: string,
   nextAction: string | null,

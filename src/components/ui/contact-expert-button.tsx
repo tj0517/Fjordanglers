@@ -3,10 +3,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { Mail, MessageCircle } from 'lucide-react'
 
+const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
+const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
+
 const WHATSAPP_URL =
-  'https://wa.me/48698936563?text=Hi!%20I%27m%20interested%20in%20a%20guided%20fishing%20trip%20in%20Scandinavia.%20Can%20you%20help%20me%20plan%20it%3F'
+  `https://wa.me/${WHATSAPP_NUMBER}?text=Hi!%20I%27m%20interested%20in%20a%20guided%20fishing%20trip%20in%20Scandinavia.%20Can%20you%20help%20me%20plan%20it%3F`
 const EMAIL_URL =
-  'mailto:contact@fjordanglers.com?subject=Question%20about%20a%20guided%20fishing%20trip'
+  `mailto:${FA_EMAIL}?subject=Question%20about%20a%20guided%20fishing%20trip`
 
 export function ContactExpertButton({
   variant = 'on-dark',

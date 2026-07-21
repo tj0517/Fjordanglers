@@ -3,8 +3,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Search, X, CalendarDays, ChevronDown } from 'lucide-react'
+import { Search, X, CalendarDays, ChevronDown, List, Calendar } from 'lucide-react'
 import { ExternalOfferToggle } from './ExternalOfferToggle'
+import { InquiriesCalendar } from './InquiriesCalendar'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,32 +66,32 @@ const GUIDE_STAGE_STYLE: Record<GuideStage, { label: string; color: string; bg: 
 
 // ─── Main filter groups ───────────────────────────────────────────────────────
 
-type MainFilter = 'lead' | 'guide' | 'confirmed' | 'lost'
+export type MainFilter = 'lead' | 'guide' | 'confirmed' | 'lost'
 
-const STATUS_GROUPS: Record<MainFilter, string[]> = {
+export const STATUS_GROUPS: Record<MainFilter, string[]> = {
   lead:      ['pending', 'in_negotiation'],
   guide:     ['waiting_for_guide_offer', 'offer_sent', 'waiting_for_deposit', 'deposit_sent'],
   confirmed: ['deposit_paid', 'completed'],
   lost:      ['lost', 'cancelled'],
 }
 
-const MAIN_LABELS: Record<MainFilter, string> = {
+export const MAIN_LABELS: Record<MainFilter, string> = {
   lead:      'Lead',
   guide:     'Guide',
   confirmed: 'Confirmed',
   lost:      'Lost',
 }
 
-const MAIN_COLORS: Record<MainFilter, { active: string; text: string; bg: string; border: string }> = {
+export const MAIN_COLORS: Record<MainFilter, { active: string; text: string; bg: string; border: string }> = {
   lead:      { active: '#0A2E4D', text: '#fff', bg: 'rgba(10,46,77,0.06)',    border: '1px solid rgba(10,46,77,0.12)'    },
   guide:     { active: '#5B21B6', text: '#fff', bg: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)' },
   confirmed: { active: '#065F46', text: '#fff', bg: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)'  },
   lost:      { active: '#991B1B', text: '#fff', bg: 'rgba(239,68,68,0.08)',  border: '1px solid rgba(239,68,68,0.2)'   },
 }
 
-interface SubOption { key: string; label: string; special?: boolean }
+export interface SubOption { key: string; label: string; special?: boolean }
 
-const SUB_OPTIONS: Record<MainFilter, SubOption[]> = {
+export const SUB_OPTIONS: Record<MainFilter, SubOption[]> = {
   lead: [
     { key: 'pending',        label: 'Pending'     },
     { key: 'in_negotiation', label: 'Negotiating' },
@@ -202,16 +203,22 @@ function SilenceBadge({ row }: { row: InquiryRow }) {
 interface Props {
   allRows:      InquiryRow[]
   tripMap:      Record<string, string>
+  slugMap:      Record<string, string>
+  countryMap:   Record<string, string>
   guideMap:     Record<string, string>
   offerSentIds: string[]
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function InquiriesClient({ allRows, tripMap, guideMap, offerSentIds }: Props) {
+export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMap, offerSentIds }: Props) {
   const searchParams = useSearchParams()
   const router       = useRouter()
   const pathname     = usePathname()
+
+  const [displayMode, setDisplayMode] = useState<'list' | 'calendar'>(() =>
+    searchParams.get('mode') === 'calendar' ? 'calendar' : 'list'
+  )
 
   // Initialise from URL so back-navigation restores filters
   const [mainFilter, setMainFilter] = useState<MainFilter>(() => {
@@ -233,6 +240,7 @@ export function InquiriesClient({ allRows, tripMap, guideMap, offerSentIds }: Pr
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
     const p = new URLSearchParams()
+    if (displayMode !== 'list') p.set('mode', displayMode)
     if (mainFilter !== 'lead') p.set('tab',  mainFilter)
     if (subFilter  != null)    p.set('sub',  subFilter)
     if (view       !== 'angler') p.set('view', view)
@@ -241,7 +249,7 @@ export function InquiriesClient({ allRows, tripMap, guideMap, offerSentIds }: Pr
     if (to)   p.set('to',   to)
     const qs = p.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [mainFilter, subFilter, view, q, from, to]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayMode, mainFilter, subFilter, view, q, from, to]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const offerSentSet = useMemo(() => new Set(offerSentIds), [offerSentIds])
 
@@ -332,14 +340,40 @@ export function InquiriesClient({ allRows, tripMap, guideMap, offerSentIds }: Pr
             {allRows.length} total inquiries · review, negotiate, and close deals.
           </p>
         </div>
-        <Link
-          href="/admin/inquiries/new"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-[14px] text-sm font-bold f-body flex-shrink-0 transition-all hover:opacity-90"
-          style={{ background: '#0A2E4D', color: '#FFFFFF', boxShadow: '0 4px 16px rgba(10,46,77,0.2)' }}
-        >
-          <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
-          New inquiry
-        </Link>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* List / Calendar toggle */}
+          <div
+            className="flex items-center rounded-[12px] overflow-hidden p-0.5 gap-0.5"
+            style={{ background: 'rgba(10,46,77,0.06)', border: '1px solid rgba(10,46,77,0.1)' }}
+          >
+            {([
+              { mode: 'list' as const,     icon: <List     size={14} />, title: 'List view'     },
+              { mode: 'calendar' as const, icon: <Calendar size={14} />, title: 'Calendar view' },
+            ]).map(({ mode, icon, title }) => (
+              <button
+                key={mode}
+                onClick={() => setDisplayMode(mode)}
+                title={title}
+                className="flex items-center justify-center w-8 h-8 rounded-[9px] transition-all"
+                style={{
+                  background: displayMode === mode ? '#0A2E4D' : 'transparent',
+                  color:      displayMode === mode ? '#fff'    : 'rgba(10,46,77,0.45)',
+                }}
+              >
+                {icon}
+              </button>
+            ))}
+          </div>
+
+          <Link
+            href="/admin/inquiries/new"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[14px] text-sm font-bold f-body flex-shrink-0 transition-all hover:opacity-90"
+            style={{ background: '#0A2E4D', color: '#FFFFFF', boxShadow: '0 4px 16px rgba(10,46,77,0.2)' }}
+          >
+            <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+            New inquiry
+          </Link>
+        </div>
       </div>
 
       {/* ─── Stats row ────────────────────────────────────────────────── */}
@@ -392,6 +426,14 @@ export function InquiriesClient({ allRows, tripMap, guideMap, offerSentIds }: Pr
           )}
         </div>
       )}
+
+      {/* ─── Calendar view ───────────────────────────────────────────── */}
+      {displayMode === 'calendar' && (
+        <InquiriesCalendar allRows={allRows} tripMap={tripMap} slugMap={slugMap} countryMap={countryMap} />
+      )}
+
+      {/* ─── List view ───────────────────────────────────────────────── */}
+      {displayMode === 'list' && (<>
 
       {/* ─── Search + date filters ────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center mb-5">
@@ -834,6 +876,8 @@ export function InquiriesClient({ allRows, tripMap, guideMap, offerSentIds }: Pr
           })}
         </div>
       )}
+
+      </>)}
 
     </div>
   )

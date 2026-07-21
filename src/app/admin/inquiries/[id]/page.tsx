@@ -35,6 +35,8 @@ import { TripSetupTab } from './TripSetupTab'
 import { ProposalTab } from './ProposalTab'
 import { ReviewLinkGenerator } from './ReviewLinkGenerator'
 import { AgentToggle } from './AgentToggle'
+import { RequestedDatesEditor } from './RequestedDatesEditor'
+import { DeleteInquiryButton } from './DeleteInquiryButton'
 import type { LeadMessage, TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
 import type { InitialOfferData } from './OfferBuilder'
 
@@ -351,13 +353,9 @@ export default async function AdminInquiryDetailPage({
           <Row label="Trip"        value={trip?.title ?? '—'} />
           <Row label="Guide"       value={guide?.full_name ?? '—'} />
           <Row label="Guide email" value={guide?.invite_email ?? '—'} />
-          <Row
-            label="Requested dates"
-            value={
-              requestedDates != null && requestedDates.length > 0
-                ? requestedDates.map(fmtDate).join(', ')
-                : '—'
-            }
+          <RequestedDatesEditor
+            inquiryId={inquiry.id}
+            initialDates={requestedDates ?? []}
           />
           <Row label="Party size" value={`${inquiry.party_size} ${inquiry.party_size === 1 ? 'person' : 'people'}`} />
           <Row
@@ -561,6 +559,10 @@ export default async function AdminInquiryDetailPage({
         existingBaseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
         submittedAt={existingReview?.submitted_at ?? null}
       />
+
+      <div className="pt-2" style={{ borderTop: '1px solid rgba(10,46,77,0.08)' }}>
+        <DeleteInquiryButton inquiryId={inquiry.id} anglerName={inquiry.angler_name} />
+      </div>
     </div>
   )
 
