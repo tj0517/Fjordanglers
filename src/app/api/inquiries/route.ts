@@ -71,26 +71,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   let guideId: string | null = null
 
   if (parsed.data.trip_id != null) {
-    // Fetch trip for guide_id + title (also validates trip exists).
-    // No published filter — experience_pages.status controls public visibility;
-    // the underlying experience may still be unpublished during onboarding.
-    const { data: trip } = await svc
-      .from('experiences')
-      .select('id, guide_id, title')
-      .eq('id', parsed.data.trip_id)
+    // trip_id is the expedition UUID stored in experience_pages.trip_id.
+    // The legacy `experiences` table no longer exists — look up the experience_page
+    // that links to this expedition to get guide_id and title.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: expPage } = await (svc as any)
+      .from('experience_pages')
+      .select('id, guide_id, experience_name')
+      .eq('trip_id', parsed.data.trip_id)
+      .eq('status', 'active')
       .single()
 
-    if (trip == null) {
+    if (expPage == null) {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
     }
 
-    tripTitle = trip.title
-    guideId   = trip.guide_id
+    tripTitle = expPage.experience_name
+    guideId   = expPage.guide_id
   } else {
     // Fetch experience page title
-    const { data: expPage } = await svc
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: expPage } = await (svc as any)
       .from('experience_pages')
-      .select('id, experience_name')
+      .select('id, guide_id, experience_name')
       .eq('id', parsed.data.experience_page_id!)
       .eq('status', 'active')
       .single()
@@ -100,6 +103,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     tripTitle = expPage.experience_name
+    guideId   = expPage.guide_id
   }
 
   // Sort dates before storing
