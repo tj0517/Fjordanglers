@@ -96,11 +96,8 @@ export default async function GuideProfilePage({
 }) {
   const { id } = await params
 
-  // Parallel fetch: guide profile + their published experiences
-  const [guide, guideExperiences] = await Promise.all([
-    getGuide(id),
-    getGuideExperiencePages(id),
-  ])
+  // Fetch guide first — needed to resolve slug → UUID before fetching experiences
+  const guide = await getGuide(id)
 
   if (guide == null) notFound()
 
@@ -109,6 +106,9 @@ export default async function GuideProfilePage({
   if (UUID_RE.test(id) && guideSlug != null) {
     permanentRedirect(`/guides/${guideSlug}`)
   }
+
+  // Use guide.id (UUID) so getGuideExperiencePages can filter by the UUID FK
+  const guideExperiences = await getGuideExperiencePages(guide.id)
 
   const canonicalSlug = guideSlug ?? id
 

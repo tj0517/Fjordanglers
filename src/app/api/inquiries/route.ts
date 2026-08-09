@@ -71,12 +71,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   let guideId: string | null = null
 
   if (parsed.data.trip_id != null) {
-    // Fetch trip for guide_id + title (also validates trip exists)
+    // Fetch trip for guide_id + title (also validates trip exists).
+    // No published filter — experience_pages.status controls public visibility;
+    // the underlying experience may still be unpublished during onboarding.
     const { data: trip } = await svc
       .from('experiences')
       .select('id, guide_id, title')
       .eq('id', parsed.data.trip_id)
-      .eq('published', true)
       .single()
 
     if (trip == null) {
