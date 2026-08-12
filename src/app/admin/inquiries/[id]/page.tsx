@@ -216,13 +216,18 @@ export default async function AdminInquiryDetailPage({
     const today     = new Date().toISOString().slice(0, 10)
     const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
-    // Fetch active guides whose country matches the trip's location country
-    const { data: guideRows } = await svc
+    // Fetch active guides — filtered by country when the trip has a known location
+    let guidesQuery = svc
       .from('guides')
       .select('id, full_name, avatar_url, country')
-      .eq('country', tripLocationCountry ?? '')
       .eq('status', 'active')
       .order('full_name')
+
+    if (tripLocationCountry != null && tripLocationCountry !== '') {
+      guidesQuery = guidesQuery.eq('country', tripLocationCountry)
+    }
+
+    const { data: guideRows } = await guidesQuery
 
     const guideIds = (guideRows ?? []).map(g => g.id)
 
