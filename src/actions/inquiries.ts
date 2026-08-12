@@ -163,7 +163,9 @@ export async function createManualInquiry(params: {
     status:          params.status,
     requested_dates: params.requestedDates,
   }
-  if (params.tripId != null && params.tripId !== '') row.trip_id = params.tripId
+  // tripId here is experience_pages.id (the dropdown value from the admin form).
+  // Store as experience_page_id — trip_id FK points to the non-existent experiences table.
+  if (params.tripId != null && params.tripId !== '') row.experience_page_id = params.tripId
   if (params.message != null && params.message.trim() !== '') row.message = params.message.trim()
   // Store source in internal_notes so it's visible in the deal tracker
   if (params.source != null && params.source.trim() !== '') {
