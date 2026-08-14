@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
   LayoutDashboard, Users, Map, MessageSquare,
-  Menu, X, ShieldCheck, BarChart2, Wallet, LogOut, TrendingUp,
+  Menu, X, ShieldCheck, BarChart2, Wallet, LogOut, TrendingUp, ClipboardList,
 } from 'lucide-react'
 import { signOut } from '@/actions/auth'
 
@@ -28,6 +28,7 @@ const navItems: NavItem[] = [
   { label: 'Pipeline',     href: '/admin/pipeline',    icon: <TrendingUp size={16} strokeWidth={1.6} /> },
   { label: 'Ads',          href: '/admin/ads',         icon: <BarChart2 size={16} strokeWidth={1.6} /> },
   { label: 'Finances',     href: '/admin/finances',    icon: <Wallet size={16} strokeWidth={1.6} /> },
+  { label: 'Forms',        href: '/admin/forms',       icon: <ClipboardList size={16} strokeWidth={1.6} /> },
 ]
 
 // ─── Component ────────────────────────────────────────────────────────────────
