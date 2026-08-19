@@ -76,7 +76,7 @@ export function assembleConversation(
 
 // ─── Core extraction ──────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `You are an assistant for FjordAnglers — a curated guided fishing trips agency connecting Central European anglers with Nordic (Norwegian, Swedish, Icelandic) fishing guides.
+const SYSTEM_PROMPT = `You are an assistant for FjordAnglers — a curated guided fishing trips agency connecting Central European anglers with fishing guides in Norway, Sweden, Iceland, Finland, and New Zealand.
 
 Your task: extract structured trip details from an inquiry conversation. Return ONLY a valid JSON object matching this exact schema:
 

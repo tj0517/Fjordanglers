@@ -20,10 +20,11 @@ const SPECIES = [
 ]
 
 const COUNTRIES = [
-  { id: 'Norway',  label: 'Norway',              flag: '🇳🇴', desc: 'Fjords, salmon rivers, arctic sea' },
-  { id: 'Sweden',  label: 'Sweden',              flag: '🇸🇪', desc: 'Pike paradise, coastal trout, clear lakes' },
-  { id: 'Iceland', label: 'Iceland',             flag: '🇮🇸', desc: 'Pristine salmon rivers, volcanic landscapes' },
-  { id: 'Open',    label: 'Anywhere — you choose', flag: '🗺️', desc: 'We\'ll suggest the best fit for your goals' },
+  { id: 'Norway',      label: 'Norway',               flag: '🇳🇴', desc: 'Fjords, salmon rivers, arctic sea' },
+  { id: 'Sweden',      label: 'Sweden',               flag: '🇸🇪', desc: 'Pike paradise, coastal trout, clear lakes' },
+  { id: 'Iceland',     label: 'Iceland',              flag: '🇮🇸', desc: 'Pristine salmon rivers, volcanic landscapes' },
+  { id: 'New Zealand', label: 'New Zealand',          flag: '🇳🇿', desc: 'Wild trout in crystal-clear rivers, Southern Hemisphere' },
+  { id: 'Open',        label: 'Anywhere — you choose', flag: '🗺️', desc: 'We\'ll suggest the best fit for your goals' },
 ]
 
 const TRIP_TYPES = [
@@ -200,7 +201,7 @@ export default function PlanYourTripPage() {
                 Which country?
               </h1>
               <p className="f-body text-[15px] mb-8" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                We operate across Norway, Sweden, and Iceland. Each has its own character.
+                Norway, Sweden, Iceland, and New Zealand. Each has its own character.
               </p>
 
               <div className="flex flex-col gap-3 mb-8">

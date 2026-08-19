@@ -274,7 +274,7 @@ function SpeciesDetailEditor({
       >
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: detail.description || detail.image_urls.length > 0 || detail.season_months.length > 0 ? '#E67E50' : 'rgba(10,46,77,0.2)' }} />
+            style={{ background: detail.description || (detail.image_urls?.length ?? 0) > 0 || detail.season_months.length > 0 ? '#E67E50' : 'rgba(10,46,77,0.2)' }} />
           <span className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{name}</span>
           {detail.season_months.length > 0 && (
             <span className="text-[10px] f-body px-2 py-0.5 rounded-full"
@@ -303,7 +303,7 @@ function SpeciesDetailEditor({
 
           <MultiImageUpload
             label="Photos (up to 6 — first shown beside description, rest in a row below)"
-            initial={detail.image_urls.map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))}
+            initial={(detail.image_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))}
             max={6}
             onChange={(imgs) => onChange({
               ...detail,
@@ -1628,7 +1628,7 @@ export default function ExperiencePageForm({
             <SpeciesDetailEditor
               key={name}
               name={name}
-              detail={speciesDetails[name] ?? { description: '', image_url: '', season_months: [], peak_months: [] }}
+              detail={speciesDetails[name] ?? { description: '', image_url: '', image_urls: [], season_months: [], peak_months: [] }}
               onChange={d => updateSpeciesDetail(name, d)}
               guidePhotos={guidePhotos}
               guideId={prefill?.guide_id}

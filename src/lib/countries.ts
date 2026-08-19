@@ -29,6 +29,7 @@ const EXTENDED_CODES: Record<string, string> = {
   uk: 'gb', 'united kingdom': 'gb', 'great britain': 'gb',
   ireland: 'ie', portugal: 'pt', 'united states': 'us', usa: 'us',
   estonia: 'ee', latvia: 'lv', lithuania: 'lt',
+  'new zealand': 'nz', australia: 'au',
 }
 
 /** Converts an ISO 3166-1 alpha-2 code to a Twemoji SVG path segment.
