@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Fraunces, DM_Sans } from 'next/font/google'
 import Script from 'next/script'
 import { CookieBanner } from '@/components/ui/cookie-banner'
+import { GclidCapture } from '@/components/analytics/GclidCapture'
 import './globals.css'
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID
@@ -144,6 +145,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
+        <GclidCapture />
         {GTM_ID && <CookieBanner gtmId={GTM_ID} />}
 
         {/* ── GTM — loads unconditionally, consent mode controls what fires ── */}

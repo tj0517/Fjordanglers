@@ -25,11 +25,12 @@ const AREA_PALETTE = [
 
 // ─── Country bounding boxes ───────────────────────────────────────────────────
 const COUNTRY_BOUNDS: Record<string, [[number, number], [number, number]]> = {
-  'Norway':  [[57.5,  4.0],  [71.5, 31.5]],
-  'Sweden':  [[55.0, 10.5],  [69.5, 24.5]],
-  'Denmark': [[54.5,  7.5],  [58.0, 15.5]],
-  'Finland': [[59.5, 18.5],  [70.5, 31.5]],
-  'Iceland': [[63.0, -25.5], [66.8, -12.5]],
+  'Norway':      [[57.5,  4.0],   [71.5,  31.5]],
+  'Sweden':      [[55.0, 10.5],   [69.5,  24.5]],
+  'Denmark':     [[54.5,  7.5],   [58.0,  15.5]],
+  'Finland':     [[59.5, 18.5],   [70.5,  31.5]],
+  'Iceland':     [[63.0, -25.5],  [66.8,  -12.5]],
+  'New Zealand': [[-47.5, 166.0], [-34.0, 178.5]],
 }
 
 function computeCountryBounds(countries: string[]): L.LatLngBoundsExpression | null {
@@ -535,8 +536,8 @@ export default function ExpPageMapView({
       <MapClickClearer onClear={() => setPinnedId(null)} />
 
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         maxZoom={19}
       />
 

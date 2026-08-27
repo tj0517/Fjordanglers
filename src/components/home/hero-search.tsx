@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-
-const COUNTRIES = ['Norway', 'Sweden', 'Finland']
+import { COUNTRIES } from '@/lib/countries'
 import { FISH_FILTER } from '@/lib/fish'
 
 const SPECIES = FISH_FILTER

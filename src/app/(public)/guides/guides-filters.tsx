@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
-
-const COUNTRIES = ['Norway', 'Sweden', 'Finland', 'Iceland'] as const
+import { COUNTRIES } from '@/lib/countries'
 const LANGUAGES = ['English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic', 'German'] as const
 
 function Dropdown({

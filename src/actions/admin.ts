@@ -95,6 +95,7 @@ export async function createBetaGuide(
       .insert({
         user_id:          null,
         is_beta_listing:  true,
+        is_hidden:        false,
         full_name:        payload.full_name.trim(),
         country:          payload.country,
         city:             payload.city?.trim() || null,
@@ -357,7 +358,8 @@ export async function updateGuide(
   payload: UpdateGuidePayload,
 ): Promise<AdminUpdateResult> {
   try {
-    const { supabase } = await requireAdmin()
+    await requireAdmin()
+    const supabase = createServiceClient()
 
     // Fetch current verified_at so we only set it once (on first activation)
     const { data: current } = await supabase

@@ -60,6 +60,23 @@ export function trackPurchase(params: {
 }
 
 /**
+ * SUBMIT_LEAD_FORM — fires when an angler submits the inquiry form.
+ * Imported into Google Ads as a conversion. Always uses PLN so Google Ads
+ * can compare value across lead types (day trip vs. multi-day expedition).
+ */
+export function trackSubmitLeadForm(params: {
+  value:      number
+  currency?:  string
+  trip_name?: string
+}) {
+  gtagEvent('SUBMIT_LEAD_FORM', {
+    value:    params.value,
+    currency: params.currency ?? 'PLN',
+    ...(params.trip_name ? { trip_name: params.trip_name } : {}),
+  })
+}
+
+/**
  * form_start — fire on the first interaction with a booking / inquiry form.
  */
 export function trackFormStart(params: { form_id: string; form_name: string }) {

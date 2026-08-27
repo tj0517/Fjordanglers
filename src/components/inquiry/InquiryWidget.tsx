@@ -22,7 +22,9 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
-import { trackFormStart, trackQualifyLead } from '@/lib/gtag'
+import { trackFormStart, trackQualifyLead, trackSubmitLeadForm } from '@/lib/gtag'
+import { estimateLeadValue, type TripLength } from '@/lib/leadValue'
+import { getStoredGclid } from '@/lib/gclid'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
 const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
@@ -237,6 +239,7 @@ function InquiryModal({
   const [lastName,     setLastName]     = useState('')
   const [email,        setEmail]        = useState('')
   const [partySize,    setPartySize]    = useState(1)
+  const [tripLength,   setTripLength]   = useState<TripLength | ''>('')
   const [message,      setMessage]      = useState('')
   const [phone,        setPhone]        = useState('')
 
@@ -279,7 +282,8 @@ function InquiryModal({
   const canSubmit  = (
     firstName.trim() !== '' &&
     lastName.trim()  !== '' &&
-    emailValid
+    emailValid        &&
+    tripLength        !== ''
   )
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -291,6 +295,12 @@ function InquiryModal({
     setErrorMsg(null)
 
     try {
+      const gclid     = getStoredGclid()
+      const leadValue = estimateLeadValue({
+        tripLength: tripLength as TripLength,
+        groupSize:  partySize,
+      })
+
       const res = await fetch('/api/inquiries', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -300,9 +310,11 @@ function InquiryModal({
           angler_email:    email.trim(),
           requested_dates: selectedDates,
           party_size:      partySize,
+          trip_length:     tripLength || null,
           message:         message.trim() || null,
           selected_option: selectedOptionLabel ?? null,
           angler_phone:    phone.trim() || null,
+          gclid:           gclid ?? null,
         }),
       })
 
@@ -312,7 +324,8 @@ function InquiryModal({
       }
 
       setSubmitState('success')
-      trackQualifyLead({ value: 0, trip_name: tripTitle })
+      trackQualifyLead({ value: leadValue, currency: 'PLN', trip_name: tripTitle })
+      trackSubmitLeadForm({ value: leadValue, trip_name: tripTitle })
     } catch (err) {
       console.error('[InquiryModal] submit error:', err)
       setSubmitState('error')
@@ -320,7 +333,7 @@ function InquiryModal({
         err instanceof Error ? err.message : 'Something went wrong — please try again.',
       )
     }
-  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, message, phone, selectedOptionLabel])
+  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, selectedOptionLabel])
 
   return (
     /* Backdrop */
@@ -606,6 +619,26 @@ function InquiryModal({
                           <Plus size={13} />
                         </button>
                       </div>
+                    </div>
+
+                    {/* Trip length */}
+                    <div className="mb-3">
+                      <label className={labelCls}>Trip length</label>
+                      <select
+                        value={tripLength}
+                        onChange={e => setTripLength(e.target.value as TripLength | '')}
+                        className={inputCls}
+                        style={{
+                          ...inputStyle,
+                          border: hasAttempted && tripLength === '' ? '1.5px solid rgba(239,68,68,0.6)' : inputStyle.border,
+                        }}
+                      >
+                        <option value="">Select duration…</option>
+                        <option value="1">1 day</option>
+                        <option value="2-3">2–3 days</option>
+                        <option value="4-7">4–7 days</option>
+                        <option value="7+">7+ days</option>
+                      </select>
                     </div>
 
                     {/* Message */}

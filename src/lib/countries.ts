@@ -7,17 +7,19 @@ export const COUNTRIES = [
   'Finland',
   'Iceland',
   'Denmark',
+  'New Zealand',
 ] as const
 
 export type Country = (typeof COUNTRIES)[number]
 
 /** ISO 3166-1 alpha-2 codes — used for flag image URLs */
 export const COUNTRY_CODE: Record<Country, string> = {
-  Norway:  'no',
-  Sweden:  'se',
-  Finland: 'fi',
-  Iceland: 'is',
-  Denmark: 'dk',
+  Norway:      'no',
+  Sweden:      'se',
+  Finland:     'fi',
+  Iceland:     'is',
+  Denmark:     'dk',
+  'New Zealand': 'nz',
 }
 
 /** Extended ISO codes for angler-origin countries (Central/Western Europe + Scandinavia) */
@@ -51,11 +53,12 @@ export function getFlagUrl(country: string): string | null {
 
 /** @deprecated Emoji flags don't render on Windows — use <CountryFlag> component instead */
 export const COUNTRY_FLAG: Record<Country, string> = {
-  Norway:  '🇳🇴',
-  Sweden:  '🇸🇪',
-  Finland: '🇫🇮',
-  Iceland: '🇮🇸',
-  Denmark: '🇩🇰',
+  Norway:        '🇳🇴',
+  Sweden:        '🇸🇪',
+  Finland:       '🇫🇮',
+  Iceland:       '🇮🇸',
+  Denmark:       '🇩🇰',
+  'New Zealand': '🇳🇿',
 }
 
 /** Ordered list used in dropdowns and filters */

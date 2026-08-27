@@ -42,6 +42,8 @@ const InquirySchema = z.object({
   message:         z.string().max(2000).optional().nullable(),
   selected_option: z.string().max(200).optional().nullable(),
   angler_phone:    z.string().max(50).optional().nullable(),
+  trip_length:     z.enum(['1', '2-3', '4-7', '7+']).optional().nullable(),
+  gclid:           z.string().max(200).optional().nullable(),
 }).refine(
   d => d.trip_id != null || d.experience_page_id != null,
   { message: 'Either trip_id or experience_page_id is required' },
@@ -125,6 +127,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       message:            parsed.data.message ?? null,
       selected_option:    parsed.data.selected_option ?? null,
       angler_phone:       parsed.data.angler_phone ?? null,
+      trip_length:        parsed.data.trip_length ?? null,
+      gclid:              parsed.data.gclid ?? null,
       status:             'pending',
     })
     .select('id, status')
