@@ -22,7 +22,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
-import { trackFormStart, trackQualifyLead, trackSubmitLeadForm } from '@/lib/gtag'
+import { trackFormStart, trackSubmitLeadForm } from '@/lib/gtag'
 import { estimateLeadValue, type TripLength } from '@/lib/leadValue'
 import { getStoredGclid } from '@/lib/gclid'
 
@@ -251,9 +251,14 @@ function InquiryModal({
 
   // Lock body scroll while modal is open
   useEffect(() => {
-    const prev = document.body.style.overflow
+    const prevBody = document.body.style.overflow
+    const prevHtml = document.documentElement.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevBody
+      document.documentElement.style.overflow = prevHtml
+    }
   }, [])
 
   // Close on Escape
@@ -324,7 +329,6 @@ function InquiryModal({
       }
 
       setSubmitState('success')
-      trackQualifyLead({ value: leadValue, currency: 'PLN', trip_name: tripTitle })
       trackSubmitLeadForm({ value: leadValue, trip_name: tripTitle })
     } catch (err) {
       console.error('[InquiryModal] submit error:', err)
@@ -429,7 +433,7 @@ function InquiryModal({
             )}
 
             {/* ── Scrollable body ── */}
-            <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(230,126,80,0.4) transparent' }}>
+            <div className="overflow-y-auto flex-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(230,126,80,0.4) transparent', overscrollBehavior: 'contain' }}>
 
               {step === 'calendar' ? (
                 /* ── Step 1: Calendar ── */

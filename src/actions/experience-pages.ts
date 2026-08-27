@@ -503,6 +503,10 @@ export async function createExperiencePageOption(
   }
 
   console.log(`[createExperiencePageOption] Created option ${data.id} for page ${experiencePageId}`)
+
+  const { data: ep } = await svc.from('experience_pages').select('slug').eq('id', experiencePageId).single()
+  if (ep?.slug) revalidatePath(`/experiences/${ep.slug}`)
+
   return { success: true, id: data.id }
 }
 
@@ -544,6 +548,12 @@ export async function updateExperiencePageOption(
     return { success: false, error: 'Failed to update trip option' }
   }
 
+  const { data: opt } = await svc.from('experience_page_options').select('experience_page_id').eq('id', optionId).single()
+  if (opt?.experience_page_id) {
+    const { data: ep } = await svc.from('experience_pages').select('slug').eq('id', opt.experience_page_id).single()
+    if (ep?.slug) revalidatePath(`/experiences/${ep.slug}`)
+  }
+
   return { success: true }
 }
 
@@ -551,6 +561,9 @@ export async function deleteExperiencePageOption(
   optionId: string,
 ): Promise<{ success: true } | { success: false; error: string }> {
   const svc = createServiceClient()
+
+  // Look up before delete so we can revalidate the public page afterwards
+  const { data: opt } = await svc.from('experience_page_options').select('experience_page_id').eq('id', optionId).single()
 
   const { error } = await svc
     .from('experience_page_options')
@@ -560,6 +573,11 @@ export async function deleteExperiencePageOption(
   if (error != null) {
     console.error('[deleteExperiencePageOption] DB error:', error)
     return { success: false, error: 'Failed to delete trip option' }
+  }
+
+  if (opt?.experience_page_id) {
+    const { data: ep } = await svc.from('experience_pages').select('slug').eq('id', opt.experience_page_id).single()
+    if (ep?.slug) revalidatePath(`/experiences/${ep.slug}`)
   }
 
   return { success: true }

@@ -139,7 +139,7 @@ export function ExperienceTabLayout({
 
   const tabs = [
     { idx: 0, label: 'Overview' },
-    ...options.slice(0, 2).map((opt, i) => ({
+    ...options.map((opt, i) => ({
       idx:   i + 1,
       label: optionConfigs[i]?.tabLabel ?? opt.label,
     })),
@@ -171,37 +171,27 @@ export function ExperienceTabLayout({
           style={{ borderBottom: '1px solid rgba(10,46,77,0.08)' }}
         >
           <div
-            style={{
-              overflowX:               'auto',
-              scrollbarWidth:          'none',
-              WebkitOverflowScrolling: 'touch',
-            } as React.CSSProperties}
+            className="flex flex-wrap gap-1 p-1.5 rounded-2xl"
+            style={{ background: 'rgba(10,46,77,0.07)' }}
           >
-            <div className="flex">
-              <div
-                className="inline-flex gap-1 p-1.5 rounded-2xl flex-shrink-0"
-                style={{ background: 'rgba(10,46,77,0.07)' }}
+            {tabs.map(tab => (
+              <button
+                key={tab.idx}
+                type="button"
+                onClick={() => switchTab(tab.idx)}
+                className="px-4 sm:px-5 py-2 rounded-xl f-body text-sm font-bold whitespace-nowrap transition-all duration-150"
+                style={{
+                  background:    activeTab === tab.idx ? '#0A2E4D' : 'transparent',
+                  color:         activeTab === tab.idx ? '#fff'    : 'rgba(10,46,77,0.5)',
+                  boxShadow:     activeTab === tab.idx ? '0 2px 10px rgba(10,46,77,0.22)' : 'none',
+                  border:        'none',
+                  cursor:        'pointer',
+                  letterSpacing: '0.01em',
+                }}
               >
-                {tabs.map(tab => (
-                  <button
-                    key={tab.idx}
-                    type="button"
-                    onClick={() => switchTab(tab.idx)}
-                    className="px-4 sm:px-5 py-2 rounded-xl f-body text-sm font-bold whitespace-nowrap transition-all duration-150"
-                    style={{
-                      background:    activeTab === tab.idx ? '#0A2E4D' : 'transparent',
-                      color:         activeTab === tab.idx ? '#fff'    : 'rgba(10,46,77,0.5)',
-                      boxShadow:     activeTab === tab.idx ? '0 2px 10px rgba(10,46,77,0.22)' : 'none',
-                      border:        'none',
-                      cursor:        'pointer',
-                      letterSpacing: '0.01em',
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
