@@ -1,14 +1,42 @@
-{ 
-  "allowedTools": [ 
-    "Read", "Write", "Edit", "MultiEdit", 
-    "Bash", "Glob", "Grep", "LS" 
-  ], 
-  "model": "claude-sonnet-4-6" ,
-   "permissions": {
+{
+  "model": "claude-sonnet-4-6",
+  "permissions": {
     "defaultMode": "bypassPermissions",
     "allow": [
-      "Bash(*)"
+      "Bash(pnpm *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git checkout*)",
+      "Bash(git switch*)",
+      "Bash(grep *)",
+      "Bash(rg *)",
+      "Bash(ls *)",
+      "Bash(supabase db diff*)",
+      "Bash(supabase migration new*)",
+      "Bash(supabase gen types*)"
     ],
-    "deny": []
+    "deny": [
+      "Read(.env*)",
+      "Read(.claude/settings.local.json)",
+      "Bash(cat .env*)",
+      "Bash(printenv*)",
+      "Bash(env)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/agent-guard.sh"
+          }
+        ]
+      }
+    ]
   }
-} 
+}
