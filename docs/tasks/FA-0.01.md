@@ -63,59 +63,124 @@ pnpm typecheck && pnpm lint && pnpm build
 
 ## Notatki z realizacji
 
-## Report — FA-0.01 Strona potwierdzenia po wpłacie depozytu
+## Report — FA-0.01 Strona potwierdzenia po wpłacie depozytu (uzupełniony dowodami)
 
-### Done
-- Added `getInquiryConfirmation(id)` to `src/actions/inquiries.ts`, following the `getOfferByToken` pattern (`createServiceClient()`, join `inquiries` → `experiences` for trip title). Returns exactly `{ tripTitle, anglerName, depositAmountEur, depositPaidAt }` — no email, phone, or offer token. Returns `null` if the inquiry id doesn't exist.
-- Created `src/app/inquiry/[id]/confirmed/page.tsx` — flat route (not in a route group; that's stage 7), Server Component, `params: Promise<{ id: string }>` (Next 16 async params, same pattern as `offers/[token]/page.tsx`). `null` confirmation → `notFound()`; `depositPaidAt == null` → "processing" variant (clock icon, salmon accent, "We're confirming your payment… you'll receive an email shortly"); `depositPaidAt != null` → "confirmed" variant (green check, trip title, angler first name, deposit amount). Brand colors/fonts reused from the offer page (`#0A2E4D`, `#E67E50`, `#F8FAFB`, `f-display`/`f-body`). No `.from()` in the component.
-- Updated both Stripe `success_url` values in `src/actions/inquiries.ts` (`sendDepositLink` ~line 290, `submitOfferAnswers` ~line 598) from `${baseUrl}/inquiry-confirmed?inquiry_id=...` to `${baseUrl}/inquiry/{id}/confirmed?session_id={CHECKOUT_SESSION_ID}`.
-- Confirmed neither `cancel_url` was touched or broken: `sendDepositLink` → `${baseUrl}/experiences/${trip.slug}` (or baseUrl fallback); `submitOfferAnswers` → `${baseUrl}/offers/${token}`. Both existing, live routes.
+### Done — z dowodami
+
+**1. Brak referencji do starej trasy**
+```
+$ grep -rn "inquiry-confirmed" src || echo OK-no-references
+OK-no-references
+```
+
+**2. Nowa funkcja odczytu — plik i sygnatura**
+
+`src/actions/inquiries.ts:1638`:
+```ts
+export type InquiryConfirmation = {
+  tripTitle: string
+  anglerName: string
+  depositAmountEur: number
+  depositPaidAt: string | null
+}
+
+export async function getInquiryConfirmation(id: string): Promise<InquiryConfirmation | null> {
+  const svc = createServiceClient()
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('angler_name, deposit_amount, deposit_paid_at, trip_id')
+    .eq('id', id)
+    .single()
+
+  if (inquiry == null) return null
+
+  const { data: trip } = await svc
+    .from('experiences')
+    .select('title')
+    .eq('id', inquiry.trip_id)
+    .single()
+
+  return {
+    tripTitle:         trip?.title ?? 'Your trip',
+    anglerName:        inquiry.angler_name,
+    depositAmountEur:  Number(inquiry.deposit_amount ?? 0),
+    depositPaidAt:     inquiry.deposit_paid_at ?? null,
+  }
+}
+```
+`select()` na `inquiries`: `angler_name, deposit_amount, deposit_paid_at, trip_id` — brak e-maila, telefonu, tokenu. Drugi `select()` na `experiences`: `title`.
+
+Brak `.from()` w komponencie:
+```
+$ grep -rn "\.from(" src/app/inquiry/ || echo "OK-no-.from-in-src/app/inquiry"
+OK-no-.from-in-src/app/inquiry
+```
+
+**3. Wariant niezapłacony — dowód testem vitest + zapytaniem z bazy testowej**
+
+Test: `src/actions/getInquiryConfirmation.test.ts` (nowy plik), uruchomiony przeciw bazie testowej `xsilxmaiyyjgpxsalvet` (env z `.env.local`, nigdy niewypisywany):
+```
+$ pnpm test -- src/actions/getInquiryConfirmation.test.ts --run
+
+stdout | getInquiryConfirmation > returns depositPaidAt: null for an unpaid inquiry
+unpaid inquiry used: { id: 'b03421c1-8b01-4280-85ae-e0616db14611', deposit_paid_at: null }
+
+ ✓ src/actions/getInquiryConfirmation.test.ts (2 tests) 1346ms
+     ✓ returns depositPaidAt: null for an unpaid inquiry  1269ms
+     ✓ returns null for a nonexistent inquiry id
+
+ Test Files  2 passed (2)
+      Tests  12 passed (12)
+```
+Użyte id zapytania z bazy testowej: `b03421c1-8b01-4280-85ae-e0616db14611`, odczytana wartość `deposit_paid_at`: `null`. Test wywołuje `getInquiryConfirmation(id)` bezpośrednio (tę samą funkcję, którą wywołuje strona) i asercjuje `result.depositPaidAt === null` — to właśnie ta wartość steruje gałęzią renderu w `page.tsx` (`isPaid = depositPaidAt != null`), więc test dowodzi wejścia w wariant „processing".
+
+Drugi test dowodzi zachowania przy nieistniejącym id: `getInquiryConfirmation('00000000-0000-0000-0000-000000000000')` zwraca `null` — w `page.tsx` to `null` wywołuje `notFound()` (`src/app/inquiry/[id]/confirmed/page.tsx:31`), czyli standardowe 404 Next.js, nie błąd 500.
+
+**4. `cancel_url` — nietknięte, potwierdzone diffem**
+```
+$ sed -n '291p;599p' src/actions/inquiries.ts
+        cancel_url:  trip.slug != null ? `${baseUrl}/experiences/${trip.slug}` : baseUrl,
+        cancel_url:  `${baseUrl}/offers/${token}`,
+```
+Obie linie identyczne jak przed zmianą (git diff na `inquiries.ts` nie dotyka `cancel_url`); żadna nie prowadzi na 404 — obie to istniejące, żywe trasy.
+
+**5. Weryfikacja — pełne wyjście**
+```
+$ pnpm typecheck
+> tsc --noEmit
+(exit 0, brak błędów)
+
+$ npx eslint "src/app/inquiry/[id]/confirmed/page.tsx" src/actions/inquiries.ts src/actions/getInquiryConfirmation.test.ts
+0 errors (1 pre-existing warning w inquiries.ts, linia 1044, poza zakresem tego zadania)
+
+# pnpm lint na całym repo: 62 pre-existing errors / 68 warnings w src/emails/*.tsx
+# i whatsapp-bridge/poll-emails.mjs — żaden w plikach dotkniętych tym zadaniem;
+# potwierdzone powyższym scoped eslint run.
+
+$ pnpm build
+...
+├ ƒ /inquiry/[id]/confirmed
+...
+[exited with code 0]
+```
+
+**6. Gałąź wypchnięta**
+```
+$ git push -u origin fix/inquiry-confirmed-page
+ * [new branch]      fix/inquiry-confirmed-page -> fix/inquiry-confirmed-page
+```
+Vercel preview powinien powstać automatycznie dla tej gałęzi — tj przeklika testowy depozyt (oferta → Checkout test mode → powrót na `/inquiry/{id}/confirmed`).
 
 ### Not done
-- Nothing from task scope was skipped.
+- Pełny ręczny click-through Stripe Checkout (krok 6 wykonuje tj na Vercel preview).
 
 ### Noticed, not touched (→ docs/deferred-tasks.md)
-- Nothing new beyond what the task already scoped out (login redirect, webhook, route-group move).
+- Nic nowego poza tym, co już wyłączono z zakresu (login redirect, webhook, route group).
 
 ### Needs a decision
 - None.
 
-### Verification
-
-```
-$ grep -rn "inquiry-confirmed" src || echo OK-no-references
-OK-no-references
-
-$ pnpm typecheck
-> tsc --noEmit
-(clean exit, 0 errors)
-
-$ npx eslint "src/app/inquiry/[id]/confirmed/page.tsx" src/actions/inquiries.ts
-0 errors (1 pre-existing warning in inquiries.ts unrelated to this change,
-at line 1044 in sendMessageToAngler, not touched by this task)
-
-# pnpm lint (full repo) has 62 pre-existing errors/7 warnings in
-# src/emails/*.tsx and whatsapp-bridge/poll-emails.mjs — none in files
-# touched by this task; confirmed via the scoped eslint run above.
-
-$ pnpm build
-...
-├ ƒ /inquiry/[id]/confirmed   ← new route, builds successfully
-...
-exit 0
-```
-
-**"Processing" variant proof** (manual read-only query against test/dev Supabase project `xsilxmaiyyjgpxsalvet`, no `pnpm dev`/`start` run per project convention):
-
-```
-unpaid inquiry sample: [{"id":"b03421c1-8b01-4280-85ae-e0616db14611","angler_name":"Mike Bollivar","deposit_paid_at":null,"trip_id":"dffe9998-02e9-4f97-9154-c20356f82200"}]
-
-getInquiryConfirmation() result: {"tripTitle":"Your trip","anglerName":"Mike Bollivar","depositAmountEur":0,"depositPaidAt":null}
-→ renders PROCESSING variant
-```
-
-**Full Stripe test-mode round trip (offer → Checkout → return, 200 + trip name screenshot) was not performed** — needs either `pnpm dev` (disallowed per project memory: `.env.local` points at test Supabase/Stripe but running the dev server is not to be started by the agent) or a Vercel preview deploy. Recommended next step: deploy this branch to a Vercel preview, trigger a test deposit link, complete Stripe Checkout in test mode, and confirm the browser lands on `/inquiry/{id}/confirmed?session_id=...` with 200 and (once webhook fires) the confirmed variant.
-
 ### Files touched
 - `src/actions/inquiries.ts`
 - `src/app/inquiry/[id]/confirmed/page.tsx`
+- `src/actions/getInquiryConfirmation.test.ts` (nowy test)
