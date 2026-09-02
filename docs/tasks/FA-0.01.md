@@ -2,7 +2,7 @@
 id: FA-0.01
 title: Strona potwierdzenia po wpłacie depozytu (/inquiry-confirmed → 404)
 stage: 0
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
