@@ -2,7 +2,7 @@
 id: FA-0.01
 title: Strona potwierdzenia po wpłacie depozytu (/inquiry-confirmed → 404)
 stage: 0
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
@@ -63,3 +63,59 @@ pnpm typecheck && pnpm lint && pnpm build
 
 ## Notatki z realizacji
 
+## Report — FA-0.01 Strona potwierdzenia po wpłacie depozytu
+
+### Done
+- Added `getInquiryConfirmation(id)` to `src/actions/inquiries.ts`, following the `getOfferByToken` pattern (`createServiceClient()`, join `inquiries` → `experiences` for trip title). Returns exactly `{ tripTitle, anglerName, depositAmountEur, depositPaidAt }` — no email, phone, or offer token. Returns `null` if the inquiry id doesn't exist.
+- Created `src/app/inquiry/[id]/confirmed/page.tsx` — flat route (not in a route group; that's stage 7), Server Component, `params: Promise<{ id: string }>` (Next 16 async params, same pattern as `offers/[token]/page.tsx`). `null` confirmation → `notFound()`; `depositPaidAt == null` → "processing" variant (clock icon, salmon accent, "We're confirming your payment… you'll receive an email shortly"); `depositPaidAt != null` → "confirmed" variant (green check, trip title, angler first name, deposit amount). Brand colors/fonts reused from the offer page (`#0A2E4D`, `#E67E50`, `#F8FAFB`, `f-display`/`f-body`). No `.from()` in the component.
+- Updated both Stripe `success_url` values in `src/actions/inquiries.ts` (`sendDepositLink` ~line 290, `submitOfferAnswers` ~line 598) from `${baseUrl}/inquiry-confirmed?inquiry_id=...` to `${baseUrl}/inquiry/{id}/confirmed?session_id={CHECKOUT_SESSION_ID}`.
+- Confirmed neither `cancel_url` was touched or broken: `sendDepositLink` → `${baseUrl}/experiences/${trip.slug}` (or baseUrl fallback); `submitOfferAnswers` → `${baseUrl}/offers/${token}`. Both existing, live routes.
+
+### Not done
+- Nothing from task scope was skipped.
+
+### Noticed, not touched (→ docs/deferred-tasks.md)
+- Nothing new beyond what the task already scoped out (login redirect, webhook, route-group move).
+
+### Needs a decision
+- None.
+
+### Verification
+
+```
+$ grep -rn "inquiry-confirmed" src || echo OK-no-references
+OK-no-references
+
+$ pnpm typecheck
+> tsc --noEmit
+(clean exit, 0 errors)
+
+$ npx eslint "src/app/inquiry/[id]/confirmed/page.tsx" src/actions/inquiries.ts
+0 errors (1 pre-existing warning in inquiries.ts unrelated to this change,
+at line 1044 in sendMessageToAngler, not touched by this task)
+
+# pnpm lint (full repo) has 62 pre-existing errors/7 warnings in
+# src/emails/*.tsx and whatsapp-bridge/poll-emails.mjs — none in files
+# touched by this task; confirmed via the scoped eslint run above.
+
+$ pnpm build
+...
+├ ƒ /inquiry/[id]/confirmed   ← new route, builds successfully
+...
+exit 0
+```
+
+**"Processing" variant proof** (manual read-only query against test/dev Supabase project `xsilxmaiyyjgpxsalvet`, no `pnpm dev`/`start` run per project convention):
+
+```
+unpaid inquiry sample: [{"id":"b03421c1-8b01-4280-85ae-e0616db14611","angler_name":"Mike Bollivar","deposit_paid_at":null,"trip_id":"dffe9998-02e9-4f97-9154-c20356f82200"}]
+
+getInquiryConfirmation() result: {"tripTitle":"Your trip","anglerName":"Mike Bollivar","depositAmountEur":0,"depositPaidAt":null}
+→ renders PROCESSING variant
+```
+
+**Full Stripe test-mode round trip (offer → Checkout → return, 200 + trip name screenshot) was not performed** — needs either `pnpm dev` (disallowed per project memory: `.env.local` points at test Supabase/Stripe but running the dev server is not to be started by the agent) or a Vercel preview deploy. Recommended next step: deploy this branch to a Vercel preview, trigger a test deposit link, complete Stripe Checkout in test mode, and confirm the browser lands on `/inquiry/{id}/confirmed?session_id=...` with 200 and (once webhook fires) the confirmed variant.
+
+### Files touched
+- `src/actions/inquiries.ts`
+- `src/app/inquiry/[id]/confirmed/page.tsx`
