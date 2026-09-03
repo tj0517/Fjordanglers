@@ -10,3 +10,4 @@ where, why it matters, which task noticed it. Promote to `docs/tasks/` when sche
 | audit 2026-08-31 | `.claude/settings.local.json` holds live secrets | `.claude/` | O-11 |
 | audit 2026-08-31 | `review-media` bucket has no policy migration | Supabase storage | record in stage-1 baseline |
 | audit 2026-08-31 | `guides.iban` stored plaintext (`field-encryption.ts` never called) | `guides` | drop the column in stage 4; until then do not add more |
+| FA-0.02 | Duplicate breadcrumb: "Guides" and guide-name crumb both link to `/admin/guides/[id]` | `src/app/admin/guides/[id]/trips/[expId]/edit/page.tsx:121,125` | minor UX noise; fix when redesigning admin breadcrumbs in stage 7 |

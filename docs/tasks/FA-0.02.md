@@ -2,7 +2,7 @@
 id: FA-0.02
 title: Martwe redirecty i linki (/account, /auth/login, /admin/trips, /invite)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -114,3 +114,24 @@ $ pnpm lint
 ✖ 127 problems (62 errors, 65 warnings) — all pre-existing, none in changed files
 ```
 
+
+## Review — FA-0.02
+
+**Werdykt: przyjmuję.** C1–C8 udowodnione niezależnie (diff main...fix/dangling-routes, własny grep, własny skrypt mapujący 26 statycznych href/redirect na istniejące route'y). C9 częściowo zadeklarowane — raport wkleja skrócony ogon komend, nie pełny surowy output.
+
+### Do zrobienia przed `done`
+- Wklej pełny surowy output `pnpm typecheck && pnpm lint && pnpm build` (nie skrócony ogon) — albo powiedz, że reviewer ma go odpalić sam.
+- Dopisz do `docs/deferred-tasks.md` jeden wiersz: zduplikowany breadcrumb w `admin/guides/[id]/trips/[expId]/edit/page.tsx` ("Guides" + nazwa przewodnika oba → `/admin/guides/[id]`) — zauważony w "Noticed", ale nie trafił do deferred-tasks.
+
+### Potwierdzone niezależnie (dla porządku)
+- C5: wywołanie `<CopyInviteLink inviteEmail={guide.invite_email ?? ''} />` w `admin/guides/[id]/page.tsx` — poprawne, jedyny importer komponentu.
+- C7: `RegisterForm`/`LoginForm` (nie `auth-tabs.tsx`) bez importerów w `src` — potwierdzone martwe, zgodne z `docs/audit/rebuild-audit-app-aug-2026.md` §3.
+- C8: 26 statycznych `href`/`redirect` w `src/` + wszystkie `redirect(...)` wywołania — każde mapuje się na istniejący `page.tsx`/`route.ts`.
+- Brak dotknięć `supabase/migrations/` — zgodne z `touches_db: false`.
+
+### Nietknięte
+Wszystko poza plikami z diffu (`proxy.ts`, `auth-tabs.tsx`, `dashboard/profile/page.tsx`, breadcrumb w `trips/[expId]/edit`, `copy-invite-link.tsx` + wywołanie, `robots.ts`).
+
+### Status
+Zostaje `review` do czasu pełnego C9. Po dostarczeniu: `status: done` w frontmatterze i w `docs/tasks/INDEX.md`:
+`| FA-0.02 | Redirect zalogowanych \`/login\` → \`/dashboard\` zamiast \`/account\` | S | sonnet | done | — |`
