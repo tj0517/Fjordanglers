@@ -2,7 +2,7 @@
 id: FA-0.02
 title: Martwe redirecty i linki (/account, /auth/login, /admin/trips, /invite)
 stage: 0
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
@@ -56,4 +56,61 @@ pnpm typecheck && pnpm lint && pnpm build
 ```
 
 ## Notatki z realizacji
+
+## Report — FA-0.02 Martwe redirecty i linki
+
+### Done
+
+- **C1 proxy.ts: /login|/register → /dashboard** — `accountUrl.pathname = '/account'` replaced with `dashboardUrl.pathname = '/dashboard'`; comment updated. Evidence: `src/proxy.ts:58-60` diff.
+
+- **C2 auth-tabs.tsx: post-register → /dashboard for all roles** — `role === 'guide' ? '/dashboard' : '/account'` → `'/dashboard'`. Also: unused `useRouter` import removed (pre-existing lint warning, one problem fewer in lint). Evidence: `src/components/auth/auth-tabs.tsx:131` diff.
+
+- **C2 auth-tabs.tsx: ?email= pre-fill** — `initialEmail = searchParams.get('email') ?? ''`; `regEmail` state initialised from it. Evidence: `src/components/auth/auth-tabs.tsx:70,88` diff.
+
+- **C3 dashboard/profile/page.tsx: /auth/login → /login** — `href="/auth/login"` → `href="/login"`. Evidence: `src/app/dashboard/profile/page.tsx:19` diff.
+
+- **C4 admin/guides/[id]/trips/[expId]/edit: /admin/trips → /admin/guides/[id]** — breadcrumb "Trips" link changed to `href={\`/admin/guides/${guideId}\`}` and label updated to "Guides". Evidence: `src/app/admin/guides/[id]/trips/[expId]/edit/page.tsx:121` diff.
+
+- **C5 copy-invite-link: URL → /login?tab=register&email=<inviteEmail>** — prop renamed `inviteEmail: string`; URL built as `/login?tab=register&email=${encodeURIComponent(inviteEmail)}`; parent call updated to `<CopyInviteLink inviteEmail={guide.invite_email ?? ''} />`. `invite_email: string | null` is in the generated types (database.types.ts:1092). Evidence: component diff + parent diff.
+
+- **C6 robots.ts: removed /account/, /book/, /invite/** — three lines dropped from disallow list. Evidence: `src/app/robots.ts` diff.
+
+- **C7 Grep result after fixes:**
+  ```
+  src/components/auth/register-form.tsx:136  — martwy (audit §3)
+  src/components/auth/login-form.tsx:76      — martwy (audit §3)
+  ```
+  No live-code hits remain.
+
+- **C8 Link audit — all static hrefs/redirects in live src/ have a matching page.tsx/route.ts:**
+  Routes checked: /admin, /admin/experiences, /admin/experiences/new, /admin/forms, /admin/forms/new, /admin/guides, /admin/guides/new, /admin/inquiries, /admin/inquiries/new, /admin/leads, /admin/submissions, /blog, /dashboard, /dashboard/profile, /dashboard/profile/edit, /dashboard/trips, /forgot-password, /guides, /guides/apply, /legal/*, /login, /register, /trips. All present — /blog, /guides, /guides/apply live under `src/app/(public)/` route group (no URL impact).
+
+- **C9 pnpm typecheck**: 0 errors. **pnpm build**: passes (all routes compile). **pnpm lint**: 127 problems (62 errors, 65 warnings) — all pre-existing in files not touched by this task (baseline on main was 128 problems; one unused-vars warning removed).
+
+### Not done
+- Nothing.
+
+### Noticed, not touched (→ docs/deferred-tasks.md)
+- Pre-existing lint failures (62 errors) in files outside this task's scope — see FA-1.07/1.08 scope.
+- admin/guides/[id]/trips/[expId]/edit breadcrumb now has two links to the same guide URL (the "Guides" breadcrumb and the guide-name breadcrumb at line 125 both resolve to `/admin/guides/[id]`). Minor UX duplication; out of scope.
+
+### Needs a decision
+- Nothing.
+
+### Verification
+```
+$ grep -rn "'/account'\|/auth/login\|/admin/trips\|/invite/" src
+src/components/auth/register-form.tsx:136  → martwy (audit §3)
+src/components/auth/login-form.tsx:76      → martwy (audit §3)
+
+$ pnpm typecheck
+(0 errors)
+
+$ pnpm build
+...
+✓ Compiled successfully
+
+$ pnpm lint
+✖ 127 problems (62 errors, 65 warnings) — all pre-existing, none in changed files
+```
 
