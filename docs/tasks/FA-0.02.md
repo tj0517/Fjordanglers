@@ -2,7 +2,7 @@
 id: FA-0.02
 title: Martwe redirecty i linki (/account, /auth/login, /admin/trips, /invite)
 stage: 0
-status: done
+status: review
 difficulty: S
 model: sonnet
 model_approved:
@@ -151,3 +151,166 @@ Wszystko poza plikami z diffu (`proxy.ts`, `auth-tabs.tsx`, `dashboard/profile/p
 ### Status
 Zostaje `review` do czasu pełnego C9. Po dostarczeniu: `status: done` w frontmatterze i w `docs/tasks/INDEX.md`:
 `| FA-0.02 | Redirect zalogowanych \`/login\` → \`/dashboard\` zamiast \`/account\` | S | sonnet | done | — |`
+
+## Korekta (2026-09-03) — Sonnet 5, effort medium
+
+Zadanie było zaznaczone `status: done`, ale to niewłaściwe — tylko reviewer oznacza `done`
+(reguła z `docs/05-agent-operations.md`). tj przejrzał wcześniejszą realizację i znalazł
+rozbieżności ze stanem repo; poniżej korekta zgodnie z jego uzupełnieniami.
+
+### Co było nie tak w poprzedniej realizacji
+
+1. **Grep był niekompletny.** Wzorzec `'/account'` (pojedynczy cudzysłów) nie łapał
+   `"/account` (podwójny, `proxy.ts:58`) ani wpisu `/invite/` w `robots.ts`. Realnych
+   miejsc było **7**, nie 4. `login-form.tsx:76` i `register-form.tsx:136` zostały
+   zidentyfikowane jako martwe, ale **nie usunięte** — więc kryterium „grep → 0 wyników"
+   nigdy nie było faktycznie spełnione (dwa hity zostawały).
+2. **`auth-tabs.tsx:135`** — po rejestracji anglera kierował na `/dashboard` (zamiast na
+   `/`). Nie ma panelu anglera; `dashboard/layout.tsx` i tak odbiłby go na `/`, więc to
+   był zbędny dodatkowy redirect, nie błąd 404 — ale niezgodny z celem „żaden link nie
+   prowadzi donikąd niepotrzebnie".
+3. **`copy-invite-link.tsx`** — poprzednia wersja dodała parametr `?email=` i zmieniła
+   prop na `inviteEmail`, mimo że żaden komponent tego parametru nie czytał (poza
+   nowo dodanym kodem w `auth-tabs.tsx`, który też trzeba było dodać, żeby cokolwiek z
+   tym zrobić). Niepotrzebna złożoność — konto i tak wiąże się po e-mailu w
+   `auth/callback` (linie 59-65). Poprzedni „Review" to zaakceptował bez zakwestionowania.
+4. **Breadcrumb** — zamiast usunąć segment „Trips", poprzednia realizacja podmieniła go
+   na drugi link do `/admin/guides/${guide.id}` — czyli dwa identyczne linki obok siebie.
+   To zostało zauważone w sekcji „Noticed, not touched" ale **nie naprawione**, mimo że
+   naprawa była trywialna (usunięcie jednego segmentu).
+
+### Zmiany w tej korekcie
+
+- `src/components/auth/auth-tabs.tsx` — usunięto `initialEmail`/`?email=` prefill (martwe
+  po punkcie niżej); redirect po rejestracji: `role === 'guide' ? '/dashboard' : '/'`.
+- `src/components/admin/copy-invite-link.tsx` — cofnięte do statycznego URL-a
+  `/login?tab=register`, bez propsów (guide-specific dane niepotrzebne).
+- `src/app/admin/guides/[id]/page.tsx` — wywołanie `<CopyInviteLink />` bez propsa.
+- `src/app/admin/guides/[id]/trips/[expId]/edit/page.tsx` — usunięty cały segment
+  breadcrumba „Trips"/„Guides" (link + separator `›`); breadcrumb teraz:
+  `Admin › {guide.full_name} › {exp.title} › Edit`.
+- **Usunięto** `src/components/auth/login-form.tsx` i `src/components/auth/register-form.tsx`
+  — martwy kod, zero żywych importów.
+- `src/app/auth/callback/route.ts` — komentarz zaktualizowany (`LoginForm` → `AuthTabs`,
+  jedyny żywy komponent auth).
+
+### Dowód — STOP gate: brak importów przed usunięciem
+
+```
+$ grep -rn "login-form\|register-form\|LoginForm\|RegisterForm" src
+(brak wyników przed usunięciem poza definicjami we własnych plikach i komentarzem
+ w auth/callback/route.ts:15 — zgoda na usunięcie potwierdzona)
+```
+Po usunięciu:
+```
+$ grep -rn "login-form\|register-form\|LoginForm\|RegisterForm" src
+(brak wyników)
+```
+
+### Dowód — 7 wzorców → 0 wyników
+
+```
+$ grep -rn "'/account'\|\"/account\|/auth/login\|/admin/trips\|/invite/" src
+(brak wyników)
+```
+
+### Dowód — skrypt linków (dokładnie jeden wyjątek: /thank-you)
+
+```
+$ grep -rhoE "(href=\"/[a-zA-Z0-9/_?=&#.-]*\"|redirect\('/[a-zA-Z0-9/_?=&#.-]*'\)|push\('/[a-zA-Z0-9/_?=&#.-]*'\))" src \
+    | sed -E "s/href=\"//; s/redirect\('//; s/push\('//; s/[\"')]+$//" \
+    | cut -d'?' -f1 | cut -d'#' -f1 | sort -u > /tmp/links.txt
+  find src/app \( -name "page.tsx" -o -name "route.ts" \) | sed -E 's|^src/app||' \
+    | sed -E 's|/page\.tsx$||; s|/route\.ts$||' | sed -E 's|/\([^)]*\)||g' \
+    | sed 's|^$|/|' | sort -u > /tmp/routes.txt
+  while read -r l; do ll="${l%/}"; [ -z "$ll" ] && ll="/"; \
+    awk -v L="$ll" '...' /tmp/routes.txt; \
+  done < /tmp/links.txt
+
+MISSING /thank-you
+```
+Jedyny wyjątek, jak przewidział tj: `src/app/plan-your-trip/page.tsx:110` robi
+`router.push('/thank-you')` do trasy, która nie istnieje. `/plan-your-trip` idzie do
+usunięcia (decyzja tj z 3 IX 2026) — świadomie zostawione, nie naprawiane w tym PR.
+
+### Dowód — lint tylko na dotkniętych plikach
+
+```
+$ npx eslint src/proxy.ts src/components/auth/auth-tabs.tsx \
+    src/app/dashboard/profile/page.tsx \
+    "src/app/admin/guides/[id]/trips/[expId]/edit/page.tsx" \
+    src/components/admin/copy-invite-link.tsx \
+    "src/app/admin/guides/[id]/page.tsx" \
+    src/app/robots.ts src/app/auth/callback/route.ts
+
+/Users/.../src/app/admin/guides/[id]/page.tsx
+   23:10   warning  'SectionCard' is defined but never used
+  214:92   error    `"` can be escaped with `&quot;`...
+  214:108  error    `"` can be escaped with `&quot;`...
+
+✖ 3 problems (2 errors, 1 warning)
+```
+Wszystkie trzy pre-existing — linie 23 i 214 nie są w moim diffie (`git diff main -- "src/app/admin/guides/[id]/page.tsx"`
+pokazuje wyłącznie zmianę linii 249, wywołania `<CopyInviteLink />`).
+
+### pnpm typecheck
+
+```
+> fjordanglers@0.1.0 typecheck
+> tsc --noEmit
+(clean exit, no output — 0 errors)
+```
+
+### pnpm build
+
+```
+> fjordanglers@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+✓ Compiled successfully in 36.6s
+✓ Completed runAfterProductionCompile in 5755ms
+✓ Generating static pages using 7 workers (49/49) in 2.0s
+✓ Finalizing page optimization ...
+
+Route (app)
+...
+├ ○ /login
+├ ƒ /dashboard
+├ ƒ /admin/guides/[id]
+├ ƒ /admin/guides/[id]/trips/[expId]/edit
+├ ○ /register
+...
+(49/49 routes, no build errors)
+```
+
+### Ręczna weryfikacja (localhost:3100, częściowa)
+
+```
+$ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3100/login
+200
+$ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3100/dashboard
+307   (unauth → redirect do /login, nie 404)
+$ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3100/register
+307
+```
+**Nie zweryfikowano** pełnego łańcucha „zalogowany na /login → ląduje na /dashboard
+(przewodnik) lub /admin (admin)" — wymaga rzeczywistego konta testowego z hasłem, którego
+nie mam w tej sesji. Zgłoszone wprost, nie pominięte milczeniem.
+
+### Pliki nietknięte na gałęzi, niezwiązane z tym zadaniem
+
+Przy checkout gałęzi `fix/dangling-routes` zastałem trzy niescommitowane zmiany
+sprzed tej sesji, niezwiązane z FA-0.02: `.claude/agents/fa-reviewer.md`,
+`.claude/commands/fa-review.md`, `docs/tasks/INDEX.md`. Zostawione bez ruszania —
+nie wiem, czyje to i czy mają być zachowane. Zgłaszam do potwierdzenia przez tj.
+
+### Not done / do potwierdzenia
+- [ ] Pełny łańcuch redirectu po realnym logowaniu (wymaga konta testowego).
+- [ ] Trzy niescommitowane pliki poza zakresem (wyżej) — proszę o decyzję, czy je
+      zachować, odrzucić, czy to osobna praca w toku.
+
+### Proponowana linia do docs/tasks/INDEX.md
+`| FA-0.02 | Martwe redirecty i linki (/account, /auth/login, /admin/trips, /invite) | S | sonnet | review | — |`
+
+Status w `docs/tasks/FA-0.02.md`: `review` (nie `done` — to decyzja reviewera).
