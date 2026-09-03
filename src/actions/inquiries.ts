@@ -287,7 +287,7 @@ export async function sendDepositLink(
           trip_id:      rawInquiry.trip_id,
           payment_type: 'inquiry_deposit',
         },
-        success_url: `${baseUrl}/inquiry-confirmed?inquiry_id=${inquiryId}`,
+        success_url: `${baseUrl}/inquiry/${inquiryId}/confirmed?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:  trip.slug != null ? `${baseUrl}/experiences/${trip.slug}` : baseUrl,
       },
       {
@@ -595,7 +595,7 @@ export async function submitOfferAnswers(
           trip_id:      inquiry.trip_id,
           payment_type: 'inquiry_deposit',
         },
-        success_url: `${baseUrl}/inquiry-confirmed?inquiry_id=${inquiry.id}`,
+        success_url: `${baseUrl}/inquiry/${inquiry.id}/confirmed?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:  `${baseUrl}/offers/${token}`,
       },
       {
@@ -1617,5 +1617,47 @@ export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResu
   if (error != null) return { success: false, error: error.message }
   revalidatePath('/admin/inquiries/unmatched')
   return { success: true }
+}
+
+// ─── getInquiryConfirmation ───────────────────────────────────────────────────
+
+export type InquiryConfirmation = {
+  tripTitle: string
+  anglerName: string
+  depositAmountEur: number
+  depositPaidAt: string | null
+}
+
+/**
+ * Public action — reads the minimal data needed for the post-checkout
+ * confirmation page (/inquiry/[id]/confirmed). No auth: the inquiry id in
+ * the Stripe success_url is not a secret, but this returns only non-sensitive
+ * fields (no email, phone, offer token).
+ * Returns null if the inquiry does not exist.
+ */
+export async function getInquiryConfirmation(id: string): Promise<InquiryConfirmation | null> {
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inquiry } = await (svc as any)
+    .from('inquiries')
+    .select('angler_name, deposit_amount, deposit_paid_at, trip_id')
+    .eq('id', id)
+    .single()
+
+  if (inquiry == null) return null
+
+  const { data: trip } = await svc
+    .from('experiences')
+    .select('title')
+    .eq('id', inquiry.trip_id)
+    .single()
+
+  return {
+    tripTitle:         trip?.title ?? 'Your trip',
+    anglerName:        inquiry.angler_name,
+    depositAmountEur:  Number(inquiry.deposit_amount ?? 0),
+    depositPaidAt:     inquiry.deposit_paid_at ?? null,
+  }
 }
 

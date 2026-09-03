@@ -6,6 +6,10 @@
  * (before consent, or when GTM_ID is not configured).
  */
 
+// ── Measurement IDs ───────────────────────────────────────────────────────────
+const ADS_CONVERSION_SEND_TO = 'AW-18171634204/yydcCKmuoe0cEJzE9NhD'
+const GA4_MEASUREMENT_ID     = 'G-Z3Y8GMHR4J'
+
 // ── Generic event ──────────────────────────────────────────────────────────────
 
 export function gtagEvent(action: string, params: Record<string, unknown> = {}) {
@@ -61,17 +65,28 @@ export function trackPurchase(params: {
 
 /**
  * SUBMIT_LEAD_FORM — fires when an angler submits the inquiry form.
- * Imported into Google Ads as a conversion. Always uses PLN so Google Ads
- * can compare value across lead types (day trip vs. multi-day expedition).
+ * Two calls: direct Google Ads conversion + GA4 lead-form event.
+ * Always PLN so Google Ads can compare value across lead types.
  */
 export function trackSubmitLeadForm(params: {
   value:      number
   currency?:  string
   trip_name?: string
 }) {
-  gtagEvent('SUBMIT_LEAD_FORM', {
+  const currency = params.currency ?? 'PLN'
+
+  // Direct Google Ads conversion — independent of GA4/GTM
+  gtagEvent('conversion', {
+    send_to:  ADS_CONVERSION_SEND_TO,
     value:    params.value,
-    currency: params.currency ?? 'PLN',
+    currency,
+  })
+
+  // GA4 lead-form event — explicit send_to so GTM-loaded GA4 receives it
+  gtagEvent('SUBMIT_LEAD_FORM', {
+    send_to:  GA4_MEASUREMENT_ID,
+    value:    params.value,
+    currency,
     ...(params.trip_name ? { trip_name: params.trip_name } : {}),
   })
 }
