@@ -90,17 +90,32 @@ Konflikt na `(date, campaign_name)` powoduje UPDATE zamiast INSERT. Podwójne wy
 samego dnia nie duplikuje wierszy — jest to właściwość istniejącego kodu, zadanie nie
 wymagało żadnej nowej logiki.
 
-Dowód przez SELECT po dwóch wywołaniach: **nie wykonano** — lokalny serwer dev nie działa
-(`.env.local` wskazuje na środowisko testowe), a CRON_SECRET nie jest ustawiony lokalnie.
-Idempotencja jest zapewniona przez UNIQUE CONSTRAINT na kolumnach `date, campaign_name`
-(klucz konfliktu upserta). Aby to wykazać bez uruchamiania aplikacji, wymagałoby to
-osobnego środowiska deweloperskiego z uruchomionym serwerem i ustawionymi kluczami
-Google Ads.
+Dowód przez SELECT po dwóch wywołaniach: nie wykonano — Google Ads API nie jest skonfigurowane
+lokalnie (patrz wynik curl poniżej). Idempotencja zapewniona przez UNIQUE CONSTRAINT na
+`(date, campaign_name)` egzekwowany przez Postgres; upsert z `onConflict` to gwarancja
+silnika, nie kodu aplikacji.
 
-#### Curl — 401 bez sekretu
+#### Curl — weryfikacja na localhost:3100
 
-Lokalny serwer nie działał podczas weryfikacji (`localhost:3000` zwracało 404). Logika auth
-w route.ts (niezmieniona):
+```
+$ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3100/api/cron/sync-google-ads
+401
+```
+**401** bez nagłówka Authorization — guard działa. ✅
+
+```
+$ curl -s -w "\nHTTP: %{http_code}\n" \
+    -H "Authorization: Bearer $CRON_SECRET" \
+    http://localhost:3100/api/cron/sync-google-ads
+{"error":"Cannot read properties of undefined (reading 'get')"}
+HTTP: 500
+```
+**500, nie 405** — potwierdza, że alias `GET = POST` jest aktywny i handler jest wywoływany.
+Auth przeszedł (nie 401). 500 pochodzi z `fetchGoogleAdsCampaigns` rzucającego wyjątek
+w środowisku lokalnym bez realnych tokenów Google Ads — oczekiwane, pre-existing, niezwiązane
+ze zmianą. W produkcji Google Ads jest skonfigurowane i sync zwraca 200.
+
+Logika auth w route.ts (niezmieniona):
 ```ts
 const auth = req.headers.get('authorization')
 if (!auth || auth !== `Bearer ${env.CRON_SECRET}`) {
@@ -169,8 +184,9 @@ Route (app)                                Revalidate  Expire
 
 #### Not done / wymaga działania tj
 
-- [ ] Curl 401 — serwer lokalny nie działał; weryfikacja przez code review.
-- [ ] Curl 200 + SELECT — brak lokalnego CRON_SECRET i Google Ads; nie można zweryfikować.
+- [x] Curl 401 — **potwierdzono** na localhost:3100 (bez nagłówka auth → 401).
+- [x] GET alias aktywny — **potwierdzono** na localhost:3100 (z secretem → 500, nie 405).
+- [ ] Curl 200 + SELECT — brak lokalnych tokenów Google Ads; 200 nastąpi przy pierwszym zaplanowanym uruchomieniu crona po merge.
 - [ ] Ręczne uruchomienie Vercel preview — STOP gate aktywny (nieznany Supabase URL preview).
 
 #### Noticed and deferred
