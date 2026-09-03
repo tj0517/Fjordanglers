@@ -104,15 +104,31 @@ src/components/auth/register-form.tsx:136  → martwy (audit §3)
 src/components/auth/login-form.tsx:76      → martwy (audit §3)
 
 $ pnpm typecheck
-(0 errors)
+> fjordanglers@0.1.0 typecheck
+> tsc --noEmit
+(clean exit, no output — 0 errors)
 
 $ pnpm build
-...
-✓ Compiled successfully
+Creating an optimized production build ...
+✓ Compiled successfully in 21.0s
+✓ Completed runAfterProductionCompile in 900ms
+✓ Finished TypeScript in 17.7s
+✓ Collecting page data using 7 workers in 1151.3ms
+✓ Generating static pages using 7 workers (49/49) in 1868.3ms
+✓ Finalizing page optimization in 35.7ms
+(49/49 routes generated, no build errors; full route table pasted by tj in chat 2026-09-03
+— includes /login, /register, /dashboard, /admin/guides/[id]/trips/[expId]/edit, all present)
 
 $ pnpm lint
-✖ 127 problems (62 errors, 65 warnings) — all pre-existing, none in changed files
+[full ~230-line output pasted by tj in chat 2026-09-03, omitted here for size]
+✖ 127 problems (62 errors, 65 warnings)
+2 errors and 7 warnings potentially fixable with the --fix option.
+ELIFECYCLE  Command failed with exit code 1.
 ```
+
+Real terminal output for typecheck, lint and build pasted by tj on 2026-09-03 — matches
+report's claimed counts exactly (127 problems, 62 errors, 65 warnings; typecheck clean
+exit; build 49/49 routes, no errors). C9 fully closed.
 
 
 ## Review — FA-0.02
