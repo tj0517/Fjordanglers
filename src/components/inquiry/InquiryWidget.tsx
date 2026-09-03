@@ -246,6 +246,7 @@ function InquiryModal({
   const [submitState,  setSubmitState]  = useState<SubmitState>('idle')
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null)
   const [hasAttempted, setHasAttempted] = useState(false)
+  const submittingRef = useRef(false)
 
   const blockedSet = useMemo(() => new Set(blockedDates), [blockedDates])
 
@@ -295,6 +296,8 @@ function InquiryModal({
     e.preventDefault()
     setHasAttempted(true)
     if (!canSubmit) return
+    if (submittingRef.current) return
+    submittingRef.current = true
 
     setSubmitState('loading')
     setErrorMsg(null)
@@ -336,6 +339,7 @@ function InquiryModal({
       setErrorMsg(
         err instanceof Error ? err.message : 'Something went wrong — please try again.',
       )
+      submittingRef.current = false
     }
   }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, selectedOptionLabel])
 
