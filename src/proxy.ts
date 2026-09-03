@@ -52,12 +52,12 @@ export async function proxy(request: NextRequest) {
   }
 
   // ── 4. Skip login/register if already authenticated ───────────────────────
-  // Redirect to /account — it role-routes: guides → /dashboard, anglers → /account/bookings
+  // Redirect to /dashboard — dashboard layout routes admins to /admin, non-guides to /.
   if (user != null && (pathname === '/login' || pathname === '/register')) {
-    const accountUrl = request.nextUrl.clone()
-    accountUrl.pathname = '/account'
-    accountUrl.search = ''
-    return NextResponse.redirect(accountUrl)
+    const dashboardUrl = request.nextUrl.clone()
+    dashboardUrl.pathname = '/dashboard'
+    dashboardUrl.search = ''
+    return NextResponse.redirect(dashboardUrl)
   }
 
   return supabaseResponse

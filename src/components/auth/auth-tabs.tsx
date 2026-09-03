@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { signIn, signUp } from '@/actions/auth'
 import { GoogleAuthButton } from '@/components/auth/google-auth-button'
@@ -63,10 +63,10 @@ const ROLES: { key: Role; icon: string; title: string; desc: string }[] = [
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AuthTabs() {
-  const router = useRouter()
   const searchParams = useSearchParams()
 
   const initialTab = (searchParams.get('tab') === 'register' ? 'register' : 'login') as Tab
+  const initialEmail = searchParams.get('email') ?? ''
   const nextUrl = searchParams.get('next') ?? '/dashboard'
   const callbackError = searchParams.get('error')
   const callbackErrorMsg = callbackError != null
@@ -85,7 +85,7 @@ export function AuthTabs() {
   // ── Register state ───────────────────────────────────────────────────────
   const [role, setRole]                         = useState<Role>('angler')
   const [regName, setRegName]                   = useState('')
-  const [regEmail, setRegEmail]                 = useState('')
+  const [regEmail, setRegEmail]                 = useState(initialEmail)
   const [regPassword, setRegPassword]           = useState('')
   const [regConfirm, setRegConfirm]             = useState('')
   const [regErrors, setRegErrors]               = useState<Record<string, string>>({})
@@ -132,7 +132,7 @@ export function AuthTabs() {
       setRegLoading(false)
       return
     }
-    window.location.href = role === 'guide' ? '/dashboard' : '/account'
+    window.location.href = '/dashboard'
   }
 
   // ─── Tab toggle ───────────────────────────────────────────────────────────

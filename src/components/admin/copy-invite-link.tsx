@@ -4,22 +4,23 @@ import { useState } from 'react'
 import { Check, Share2 } from 'lucide-react'
 
 type Props = {
-  guideId: string
+  inviteEmail: string
 }
 
 /**
  * "Copy invite link" button shown in the admin guide detail page.
  *
- * Copies /invite/[guideId] to clipboard.
- * Admin pastes it into email/WhatsApp and sends it to the guide.
+ * Copies /login?tab=register&email=<inviteEmail> to clipboard so the guide
+ * lands on the register tab with their email pre-filled.
+ * Admin pastes the link into email/WhatsApp and sends it to the guide.
  *
  * Shows a brief "Copied!" confirmation then resets to the default state.
  */
-export default function CopyInviteLink({ guideId }: Props) {
+export default function CopyInviteLink({ inviteEmail }: Props) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    const url = `${window.location.origin}/invite/${guideId}`
+    const url = `${window.location.origin}/login?tab=register&email=${encodeURIComponent(inviteEmail)}`
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
@@ -55,7 +56,7 @@ export default function CopyInviteLink({ guideId }: Props) {
       onClick={() => { void handleCopy() }}
       className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all hover:brightness-95 f-body"
       style={{ background: 'rgba(230,126,80,0.1)', color: '#C96030' }}
-      title={`Copy invite link for /invite/${guideId}`}
+      title={`Copy invite link for ${inviteEmail}`}
     >
       <Share2 size={11} strokeWidth={1.5} aria-hidden="true" />
       Copy invite link

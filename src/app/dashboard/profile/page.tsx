@@ -16,7 +16,7 @@ export default async function ProfilePage() {
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-4">My Profile</h1>
         <p className="text-[#0A2E4D]/55 f-body text-sm">
           Please{' '}
-          <Link href="/auth/login" className="text-[#E67E50] underline underline-offset-2">sign in</Link>
+          <Link href="/login" className="text-[#E67E50] underline underline-offset-2">sign in</Link>
           {' '}to view your profile.
         </p>
       </div>
