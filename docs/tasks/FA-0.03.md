@@ -2,7 +2,7 @@
 id: FA-0.03
 title: Cron sync-google-ads odpowiada na GET (Vercel cron woła GET)
 stage: 0
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
