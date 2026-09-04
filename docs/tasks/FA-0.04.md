@@ -2,7 +2,7 @@
 id: FA-0.04
 title: AI_AUTO_REPLY_ENABLED jako enum 'true'|'false' (dziś "false" włącza agenta)
 stage: 0
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
