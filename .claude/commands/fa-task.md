@@ -49,6 +49,18 @@ Do exactly this, in order:
    "Notatki z realizacji" and into the PR body. Set `status: review`. Do not mark `done`
    — that is the reviewer's call.
 
+10. **Open the PR — as a draft.** Push the branch, then:
+    `gh pr create --base main --title "<id> — <task title>" --body-file <report file> --draft`
+    Draft on purpose: the PR exists for review, nobody merges it by accident. Never
+    `gh pr merge` — merging is tj's call, always.
+    If `gh` reports it is not authenticated, do **not** try to log in, look for a token, or
+    read `.env*`. Print the compare URL instead —
+    `https://github.com/tj0517/Fjordanglers/compare/main...<branch>?expand=1` — and say in
+    the report that the PR has to be opened by hand.
+    If the branch touches `docs/tasks/INDEX.md` or `docs/deferred-tasks.md`, merge
+    `origin/main` into the branch first and resolve there, so the PR lands conflict-free:
+    both files are append-heavy and every parallel task collides on them.
+
 Never: start a second task in this session without being told; run `db push`,
 `migration repair`, non-SELECT SQL on production, drops, or secret changes without a STOP
 message and an explicit yes; print an env value.
