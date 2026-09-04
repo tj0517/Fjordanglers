@@ -63,6 +63,9 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ synced: rows.length, date })
 }
 
+// Vercel Cron issues GET; POST kept for compatibility
+export const GET = POST
+
 function getYesterday(): string {
   const d = new Date()
   d.setUTCDate(d.getUTCDate() - 1)
