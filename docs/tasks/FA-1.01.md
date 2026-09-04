@@ -2,7 +2,7 @@
 id: FA-1.01
 title: Baseline schematu — `db pull` produkcji, archiwizacja 61 starych migracji, pogodzenie historii na produkcji
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
