@@ -132,10 +132,35 @@ preview należy potwierdzić, czy środowisko preview używa oddzielnego projekt
 produkcyjnego `uwxrstbplaoxfghrchcy`. Tego nie zweryfikowano (brak dostępu do panelu
 Vercel w tym sesji). **Czekam na wyraźne "tak" od tj.**
 
-#### GET z sekretem → 200 + wpis w ad_campaigns
+#### GET z sekretem → realny wynik (zweryfikowane 2026-09-03, przez tj + reviewer)
 
-**Nie zweryfikowano** — CRON_SECRET nie jest ustawiony lokalnie, Google Ads nie są
-skonfigurowane lokalnie. Zgłoszone wprost, nie pominięte.
+`curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3100/api/cron/sync-google-ads`
+z realnym sekretem z `.env.local`:
+
+```
+GET /api/cron/sync-google-ads 500 in 1178ms
+[sync-google-ads] Google Ads API error: Cannot read properties of undefined (reading 'get')
+```
+
+Poprzedzone w logu serwera:
+```
+No data type found for reason
+No data type found for domain
+No data type found for metadata.activation_url
+No data type found for metadata.service_title
+No data type found for metadata.container_info
+No data type found for metadata.consumer
+No data type found for metadata.service
+```
+
+**To NIE jest błąd routingu** — request przeszedł auth i dotarł do wywołania Google Ads API
+(gdyby alias `GET = POST` nie działał, dostalibyśmy 404/405, nie 500 z tej logiki). To jest
+błąd gRPC zwrócony przez Google (kształt `google.rpc.ErrorInfo` — reason/domain/metadata),
+którego `google-ads-api` nie potrafi zdekodować i wywala się przy próbie odczytu wyniku.
+Pierwotna przyczyna: prawdopodobnie wygasły `GOOGLE_ADS_REFRESH_TOKEN` albo brak
+`login_customer_id` dla konta zarządzanego przez MCC. **Poza zakresem FA-0.03** — zgłoszone
+do `docs/deferred-tasks.md`. Zanim to nie zostanie naprawione, cron będzie zwracał 500 nawet
+po merge tej poprawki.
 
 #### pnpm typecheck
 
