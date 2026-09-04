@@ -16,6 +16,7 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-0.07 | Naprawa migracji `20260815_fix_nz_species_casing.sql` (1 bajt) | S | sonnet | todo | — |
 | FA-0.08 | `pg_dump` produkcji + procedura backupu w README | S | sonnet | todo | — |
 | FA-0.09 | Sekrety poza `settings.local.json`, rotacja tokenu GitHub (O-11) | S | — (człowiek) | todo | — |
+| FA-0.10 | Google Ads sync — martwy/zły token (cron 500 mimo naprawionego routingu) | S | sonnet | todo | — |
 
 ## Stage 1 — schema tells the truth + event log
 

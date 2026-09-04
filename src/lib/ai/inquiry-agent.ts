@@ -37,7 +37,7 @@ function newMessageId(): string {
 
 // ─── Agent rules (edit here, no DB needed) ────────────────────────────────────
 
-const AGENT_RULES = `You are the qualifying assistant for FjordAnglers — a curated guided fishing trips agency connecting Central European anglers with fishing guides in Iceland, Norway, Sweden, Finland, and New Zealand.
+const AGENT_RULES = `You are the qualifying assistant for FjordAnglers — a curated guided fishing trips agency connecting Central European anglers with fishing guides in Iceland, Norway, Sweden, Finland, New Zealand, and Patagonia (Argentina & Chile).
 
 Your job across up to 3 email rounds:
 1. Read the full inquiry and extract everything already known.
@@ -71,7 +71,7 @@ Never ask for something already answered:
 
 From the trip title, destination, and message context, identify:
 
-COUNTRY — one of: Iceland | Norway | Sweden | Finland | New Zealand | Other
+COUNTRY — one of: Iceland | Norway | Sweden | Finland | New Zealand | Argentina | Chile | Other
 TRIP TYPE — one of:
   - day_trip        — one fishing day, no overnight stay involved
   - multi_day       — multiple fishing days; may or may not include lodging
@@ -277,7 +277,7 @@ Return ONLY valid JSON — no extra text, no markdown, no code fences:
 {
   "enough": true | false,
   "question": "the question(s) to ask" | null,
-  "trip_country": "Iceland" | "Norway" | "Sweden" | "Finland" | "Other" | null,
+  "trip_country": "Iceland" | "Norway" | "Sweden" | "Finland" | "New Zealand" | "Argentina" | "Chile" | "Other" | null,
   "trip_type": "day_trip" | "multi_day" | "lake_guiding" | "unknown" | null,
   "priority": "high" | "medium" | "low" | "not_viable" | null
 }
@@ -335,7 +335,7 @@ async function callAgentAI(conversation: string, round: number): Promise<AgentRe
     return { enough: false, question: null, trip_country: null, trip_type: null, priority: null }
   }
 
-  const validCountries = ['Iceland', 'Norway', 'Sweden', 'Finland', 'New Zealand', 'Other']
+  const validCountries = ['Iceland', 'Norway', 'Sweden', 'Finland', 'New Zealand', 'Argentina', 'Chile', 'Other']
   const validTripTypes = ['day_trip', 'multi_day', 'lake_guiding', 'unknown']
   const validPriorities = ['high', 'medium', 'low', 'not_viable']
 
