@@ -2,7 +2,7 @@
 id: FA-1.01
 title: Baseline schematu — `db pull` produkcji, archiwizacja 61 starych migracji, pogodzenie historii na produkcji
 stage: 1
-status: in_progress
+status: done
 difficulty: L
 model: opus
 model_approved: fable by tj 2026-09-04
@@ -430,4 +430,35 @@ git log --oneline -5 | head -5
 93b925a2 chore(FA-1.01): record model_approved
 ...
 ```
+
+---
+
+## Faza B — wykonanie (2026-09-04, „go" od tj)
+
+Wszystkie 8 kroków wykonane po kolei, z zatrzymaniem po każdym i potwierdzeniem „dalej"
+od tj. `FA_ALLOW_PROD=1` użyte wyłącznie w ramach tych ośmiu poleceń.
+
+| krok | polecenie | wynik |
+|---|---|---|
+| 1 | `migration repair --status reverted` × 38 | wykonane, bez błędów |
+| 2 | `SELECT count(*) FROM supabase_migrations.schema_migrations` | `0` ✓ |
+| 3 | `migration repair --status applied` dla `20260904165037` | wykonane |
+| 4 | `SELECT version, name FROM ...` | 1 wiersz: `20260904165037 \| baseline_prod` ✓ |
+| 5 | `supabase db push` | zaaplikowano wyłącznie `20260904165038_fix_nz_species_casing.sql` — potwierdzone przed „y" |
+| 6 | `SELECT ... target_species FROM experience_pages WHERE country ILIKE '%zealand%'` | 3 rekordy NZ, wszystkie Title Case (`Rainbow Trout`, `Brown Trout`) ✓ |
+| 7 | `SUPABASE_ACCESS_TOKEN="" supabase db diff --linked` | jedyna linia: `drop extension "pg_net"` (znany false positive shadow DB) + WARNINGi postgis — nic więcej ✓ |
+| 8 | `SELECT schemaname, relname, n_live_tup FROM pg_stat_user_tables WHERE schemaname IN ('public','archive')` | identyczne z „Snapshot przed baseline" (`docs/audit/db-row-counts-2026-09-04.md`, 16:51 UTC) — porównano wiersz po wierszu, żadna tabela z `>0` nie spadła do `0` ✓ |
+
+**Rollback nie był potrzebny** — wszystkie kroki 1–8 przeszły zgodnie z oczekiwaniem,
+`docs/tasks/FA-1.01-rollback.sql` pozostaje w repo jako dokumentacja procedury na
+przyszłość (nieużyty w tym przebiegu).
+
+Po zakończeniu fazy B: `scripts/agent-guard.sh` przywrócony do stanu sprzed sesji (usunięty
+tymczasowy prefix-check na `FA_ALLOW_PROD=1 ` w treści komendy, zostaje tylko sprawdzenie
+zmiennej środowiskowej).
+
+**Wynik fazy B: sukces. Produkcja `uwxrstbplaoxfghrchcy` ma teraz dokładnie jedną migrację
+bazową (`20260904165037_baseline_prod`) + jedną migrację `20260904165038_fix_nz_species_casing`
+w `supabase_migrations.schema_migrations`, zgodną z plikami w `supabase/migrations/`. Brak
+utraty danych. `db diff --linked` czysty poza znanym false positive.**
 

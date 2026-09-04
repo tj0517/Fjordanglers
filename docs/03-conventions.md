@@ -35,6 +35,9 @@ justification, it goes in an ADR and this file links to it.
 - Every migration is reversible in intent: if it drops, the task has a `pg_dump` step
   before it and the PR says where the dump is.
 - No DDL in the Supabase dashboard. Ever. CI runs `supabase db diff` and fails on drift.
+  Since FA-1.01 (baseline `20260904165037_baseline_prod.sql`), production's SQL Editor is
+  read-only in practice: every schema change goes through `supabase migration new` +
+  `supabase db push`, never a manual statement run against `uwxrstbplaoxfghrchcy`.
 - Column naming: `snake_case`, `*_at` for timestamps, `*_cents` for money, `*_id` for FKs,
   booleans as adjectives (`qualified`, `is_hidden` is legacy).
 - Money: `INTEGER` cents + `currency CHAR(3)`. Never `NUMERIC` euros in new columns.

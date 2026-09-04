@@ -22,7 +22,7 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 
 | id | title | diff | model | status | depends |
 |---|---|---|---|---|---|
-| FA-1.01 | Baseline: `db pull` produkcji, archiwizacja 61 migracji, pogodzenie historii (`migration repair`) | L | opus | in_progress | FA-0.08 |
+| FA-1.01 | Baseline: `db pull` produkcji, archiwizacja 61 migracji, pogodzenie historii (`migration repair`) | L | opus | done | FA-0.08 |
 | FA-1.02 | `drop_marketplace_leftovers` (tabele bez danych do przeniesienia) | M | opus | todo | FA-1.01 |
 | FA-1.03 | Rejestrator zdarzeń `inquiry_events` + `transition()` | L | opus | todo | FA-1.01 |
 | FA-1.04 | `inquiries.qualified` z agenta + korekta ręczna + `unknown` dla starych | M | sonnet | todo | FA-1.01 |
