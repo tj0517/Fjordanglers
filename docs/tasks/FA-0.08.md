@@ -2,7 +2,7 @@
 id: FA-0.08
 title: pg_dump produkcji + runbook backupu (warunek wstępny etapu 1)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:

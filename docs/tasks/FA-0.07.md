@@ -2,7 +2,7 @@
 id: FA-0.07
 title: Naprawa uszkodzonej migracji 20260815_fix_nz_species_casing.sql (plik ma 1 bajt)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
