@@ -1,1 +1,7 @@
-4
+-- This file was a single stray byte ("4") from 2026-08-15 onward — never valid SQL.
+-- Confirmed via `git log --follow`: no commit in history ever had real content here.
+-- Confirmed via prod `supabase_migrations.schema_migrations`: this version, and every
+-- other 20260815-20260827 migration, is absent from the table (max applied version is
+-- 20260708163723) — it was never applied through `supabase db push`.
+-- No-op, kept only so the migration history is a valid, ordered sequence of files.
+-- The intended fix (NZ target_species casing) is in 20260904_fix_nz_species_casing.sql.
