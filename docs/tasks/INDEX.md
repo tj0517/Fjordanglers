@@ -10,7 +10,7 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-0.01 | Strona potwierdzenia po depozycie (`/inquiry-confirmed` → 404) | S | sonnet | todo | — |
 | FA-0.02 | Redirect zalogowanych `/login` → `/dashboard` zamiast `/account` | S | sonnet | todo | — |
 | FA-0.03 | Cron `sync-google-ads` odpowiada na GET | S | sonnet | todo | — |
-| FA-0.04 | `AI_AUTO_REPLY_ENABLED` jako enum, nie `coerce.boolean` | S | sonnet | todo | — |
+| FA-0.04 | `AI_AUTO_REPLY_ENABLED` jako enum, nie `coerce.boolean` | S | sonnet | review | — |
 | FA-0.05 | Leady z `/plan-your-trip` do `inquiries` + UTM | M | sonnet | todo | — |
 | FA-0.06 | `requireAdmin()` we wszystkich mutujących akcjach | M | sonnet | todo | — |
 | FA-0.07 | Naprawa migracji `20260815_fix_nz_species_casing.sql` (1 bajt) | S | sonnet | todo | — |
