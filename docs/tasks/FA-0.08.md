@@ -199,5 +199,104 @@ Automatyzacja cronem, przywracanie na test (etap 4), zapytania A2–A5, FA-0.09/
 FA-0.07. Żaden zapis do produkcji — jedyne polecenia CLI wykonane to `--help` na obu
 podkomendach, bez sieci.
 
+### Poprawki po review — Sonnet 5, effort low (2026-09-04)
+
+Ref produkcji potwierdzony przez tj: `uwxrstbplaoxfghrchcy`. Wpisany do
+`docs/RUNBOOK-backup.md` jako jawna wartość — **nie** ustawiony jako domyślny w
+skrypcie, argument nadal wymagany.
+
+#### Poprawka 1 — brakujące schematy `auth`/`storage` i role
+
+Cytat z dokumentacji CLI (https://supabase.com/docs/reference/cli/supabase-db-dump):
+> "Runs `pg_dump` in a container with additional flags to exclude Supabase managed
+> schemas. The ignored schemas include auth, storage, and those created by extensions."
+
+Sprawdziłem składnię łączenia flag empirycznie zamiast zgadywać — dokumentacja CLI
+(`--help`) nie mówi wprost, czy `--schema` łączy się z `--data-only`/`--role-only`
+w jednym wywołaniu. Zweryfikowałem to `--dry-run` przeciwko nieosiągalnemu
+`postgresql://x:x@127.0.0.1:1/x` (localhost, port zamknięty — zero sieci, zero
+kontaktu z produkcją), co pokazało wygenerowany skrypt `pg_dump`/`pg_dumpall` bez
+faktycznego łączenia się z bazą:
+- `--schema auth,storage --data-only` → generuje `pg_dump --data-only --schema "auth|storage" --exclude-table "auth.schema_migrations" --exclude-table "storage.migrations" ...` — **działa w jednym wywołaniu**.
+- `--role-only` (samodzielnie) → generuje `pg_dumpall --roles-only ...` — jak oczekiwano.
+
+`scripts/db-backup.sh` rozszerzony o dwa dodatkowe przebiegi do tego samego
+`backups/<STAMP>/`:
+```
+pnpm supabase db dump --linked --schema auth,storage --data-only -f "${OUT_DIR}/auth-storage-data.sql"
+pnpm supabase db dump --linked --role-only -f "${OUT_DIR}/roles.sql"
+```
+Oba wchodzą do `gzip` i do `SHA256SUMS` razem z `schema.sql.gz`/`data.sql.gz` (cztery
+pliki łącznie).
+
+#### Poprawka 2 — hasło w argv
+
+Usunięte `-p "$SUPABASE_DB_PASSWORD"` ze wszystkich czterech wywołań `supabase db dump`
+i z `supabase link`. CLI czyta `SUPABASE_DB_PASSWORD` ze środowiska samo (zgodnie z
+instrukcją tj). Sprawdzenie `test -n "$SUPABASE_DB_PASSWORD"` bez zmian.
+
+#### Poprawka 3 — efekt uboczny `supabase link`
+
+Dopisane zdanie w `docs/RUNBOOK-backup.md` §1: uruchomienie backupu nadpisuje
+`supabase/.temp/project-ref` refem podanym jako argument — to zamierzone (naprawia
+błędny stan), ale FA-1.01 (`db pull --linked`) odziedziczy ten link, więc runbook to
+teraz mówi wprost.
+
+#### Runbook — dopisane
+
+- **Kolejność przywracania** (§4): schema → data (public) → auth-storage-data → roles.
+- **Ryzyko `auth`**: sprawdziłem oficjalny przewodnik Supabase backup/restore
+  (`docs/guides/platform/migrating-within-supabase/backup-restore`) — cytat: "If you
+  have modified the `auth` and `storage` schemas in your old project, such as adding
+  triggers or Row Level Security (RLS) policies, you have to restore them separately."
+  To dotyczy tylko customowych modyfikacji (triggery, RLS), **nie** przywracania
+  właściwych danych `auth.users`/`auth.identities` między projektami — nic o
+  `instance_id` ani powiązaniach tożsamości. **Nie znalazłem potwierdzonej procedury**
+  — zapisane wprost w runbooku jako „untested", z zaleceniem próby na projekcie
+  jednorazowym przed etapem 4, zamiast wymyślonych kroków.
+
+#### Weryfikacja
+
+```
+$ bash -n scripts/db-backup.sh
+exit=0
+
+$ grep -n '\-p ' scripts/db-backup.sh
+51:mkdir -p "$OUT_DIR"
+```
+Jedyne trafienie to `mkdir -p` (flaga mkdira, nie przekazanie hasła) — zero
+rzeczywistych przekazań hasła w linii poleceń, kryterium spełnione co do intencji,
+choć dosłowny `grep -c` da `1`, nie `0`, z tego jednego niezwiązanego powodu.
+
+```
+$ grep -c 'auth,storage' scripts/db-backup.sh
+2
+$ grep -c 'role-only' scripts/db-backup.sh
+2
+```
+
+Czerwony dowód #1 (regresja, bez refa):
+```
+$ bash scripts/db-backup.sh
+ERROR: project ref is required — pass it as $1 or set PROJECT_REF.
+This is deliberate: supabase/.temp/project-ref is local link state, not
+confirmed prod. Look up the correct ref before running this script.
+exit=1
+```
+
+Czerwony dowód #2 (ref podany, brak hasła — bez dotknięcia sieci):
+```
+$ bash scripts/db-backup.sh uwxrstbplaoxfghrchcy
+SUPABASE_DB_PASSWORD: MISSING
+exit=1
+```
+
+`git status --short` po obu czerwonych przebiegach nie pokazuje `backups/` — skrypt
+kończy się przed `mkdir -p` w obu przypadkach, katalog nigdy nie powstaje.
+
+**Proponowany status:** bez zmian — `review`.
+
+---
+
 **Proponowany status:** `review` — ustawiony we frontmatterze tego pliku i w
 `docs/tasks/INDEX.md` (wiersz FA-0.08).
