@@ -3,23 +3,20 @@
 import { useState } from 'react'
 import { Check, Share2 } from 'lucide-react'
 
-type Props = {
-  guideId: string
-}
-
 /**
  * "Copy invite link" button shown in the admin guide detail page.
  *
- * Copies /invite/[guideId] to clipboard.
- * Admin pastes it into email/WhatsApp and sends it to the guide.
+ * Copies /login?tab=register to clipboard. Admin pastes it into email/WhatsApp
+ * and sends it to the guide; the account gets linked to this guide's listing
+ * by matching invite_email in auth/callback once they register.
  *
  * Shows a brief "Copied!" confirmation then resets to the default state.
  */
-export default function CopyInviteLink({ guideId }: Props) {
+export default function CopyInviteLink() {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    const url = `${window.location.origin}/invite/${guideId}`
+    const url = `${window.location.origin}/login?tab=register`
     try {
       await navigator.clipboard.writeText(url)
       setCopied(true)
@@ -55,7 +52,7 @@ export default function CopyInviteLink({ guideId }: Props) {
       onClick={() => { void handleCopy() }}
       className="flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full transition-all hover:brightness-95 f-body"
       style={{ background: 'rgba(230,126,80,0.1)', color: '#C96030' }}
-      title={`Copy invite link for /invite/${guideId}`}
+      title="Copy invite link (/login?tab=register)"
     >
       <Share2 size={11} strokeWidth={1.5} aria-hidden="true" />
       Copy invite link
