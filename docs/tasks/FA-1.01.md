@@ -5,7 +5,7 @@ stage: 1
 status: in_progress
 difficulty: L
 model: opus
-model_approved:
+model_approved: fable by tj 2026-09-04
 effort: high
 agent: fa-db
 branch: db/baseline-2026-09
