@@ -34,3 +34,15 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+### Skipping builds for docs-only commits
+
+`scripts/vercel-ignore-build.sh` checks the diff between a commit and its parent, and
+exits `0` (build **skipped**) when every changed path falls under `docs/**`, `.claude/**`
+or `*.md` — otherwise it exits `1` and the build proceeds. `vercel.json`'s `git.deploymentEnabled`
+also turns off deployments entirely on `docs/*` and `chore/*` branches, and on the unused
+`staging`/`preview` branches; task branches (`fix/*`, `feat/*`) still deploy previews.
+
+**For tj:** for the script to actually run, paste `bash scripts/vercel-ignore-build.sh`
+into Vercel → Project Settings → Git → Ignored Build Step. The script sitting in the repo
+does nothing on its own until that field is set.

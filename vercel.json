@@ -4,5 +4,13 @@
       "path": "/api/cron/sync-google-ads",
       "schedule": "0 6 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "docs/*": false,
+      "chore/*": false,
+      "staging": false,
+      "preview": false
+    }
+  }
 }
