@@ -47,3 +47,9 @@ next-env.d.ts
 docs/node_modules/
 
 .playwright-mcp/
+
+# supabase CLI local link state — not source of truth for which project is linked
+supabase/.temp/
+
+# local DB dumps — never committed, may contain production data
+backups/
