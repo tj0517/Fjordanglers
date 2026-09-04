@@ -45,3 +45,5 @@ next-env.d.ts
 *.mov
 *.mp4
 docs/node_modules/
+
+.playwright-mcp/
