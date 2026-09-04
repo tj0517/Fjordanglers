@@ -126,4 +126,117 @@ order by 2 desc;
 
 ### Exact counts result (2026-09-04)
 
-_pending — paste the result of the query above here._
+_Filled in during FA-1.01 Phase A, 2026-09-04 16:51 UTC. Source: `pg_stat_user_tables.n_live_tup`
+(approximate live-tuple count, not `count(*)`). Tables with `n_live_tup = 0` may still contain
+rows if stats haven't been reset since last insert — run `count(*)` before Stage 1 if needed._
+
+| table | n_live_tup |
+|---|---:|
+| lead_messages | 559 |
+| unmatched_messages | 187 |
+| inquiries | 84 |
+| experience_page_options | 86 |
+| experience_pages | 29 |
+| inquiry_messages | 56 |
+| inquiry_trip_details | 40 |
+| ad_campaigns | 40 |
+| requests | 51 |
+| guides | 32 |
+| guide_private | 18 |
+| regions | 16 |
+| offers | 14 |
+| request_guides | 22 |
+| countries | 5 |
+| expedition_guides | 4 |
+| expedition_waters | 3 |
+| waters | 3 |
+| profiles | 2 |
+| species_windows | 2 |
+| guide_intake_responses | 2 |
+| guide_intake_forms | 1 |
+| expeditions | 1 |
+| audit_log | 30 |
+| reviews | 7 |
+| ad_campaign_defs | 0 |
+| expedition_options | 0 |
+| expedition_private | 0 |
+| finance_settings | 0 |
+| fixed_costs | 0 |
+| guide_availability | 0 |
+| guide_images | 0 |
+| guide_intake_submissions | 0 |
+| guide_photos | 0 |
+| guide_submissions | 0 |
+| guide_unavailable_dates | 0 |
+| inquiry_todos | 0 |
+| manual_cost_entries | 0 |
+| media | 0 |
+| media_links | 0 |
+| spatial_ref_sys | 0 |
+
+## Snapshot przed baseline — FA-1.01 (2026-09-04 16:51 UTC)
+
+Source: `pg_stat_user_tables.n_live_tup`, project `uwxrstbplaoxfghrchcy`, run by Claude Sonnet 4.6
+during FA-1.01 Phase A immediately before `supabase db dump` created the baseline migration.
+Includes all 10 `archive` tables (introduced alongside baseline; all empty — migrated 2026-04–07).
+
+### public schema (41 tables)
+
+| table | n_live_tup |
+|---|---:|
+| lead_messages | 559 |
+| experience_page_options | 86 |
+| inquiries | 84 |
+| inquiry_messages | 56 |
+| requests | 51 |
+| inquiry_trip_details | 40 |
+| ad_campaigns | 40 |
+| guides | 32 |
+| audit_log | 30 |
+| experience_pages | 29 |
+| request_guides | 22 |
+| guide_private | 18 |
+| unmatched_messages | 187 |
+| regions | 16 |
+| offers | 14 |
+| reviews | 7 |
+| countries | 5 |
+| expedition_guides | 4 |
+| expedition_waters | 3 |
+| waters | 3 |
+| profiles | 2 |
+| species_windows | 2 |
+| guide_intake_responses | 2 |
+| guide_intake_forms | 1 |
+| expeditions | 1 |
+| ad_campaign_defs | 0 |
+| expedition_options | 0 |
+| expedition_private | 0 |
+| finance_settings | 0 |
+| fixed_costs | 0 |
+| guide_availability | 0 |
+| guide_images | 0 |
+| guide_intake_submissions | 0 |
+| guide_photos | 0 |
+| guide_submissions | 0 |
+| guide_unavailable_dates | 0 |
+| inquiry_todos | 0 |
+| manual_cost_entries | 0 |
+| media | 0 |
+| media_links | 0 |
+| spatial_ref_sys | 0 |
+
+### archive schema (10 tables — all empty)
+
+| table | n_live_tup |
+|---|---:|
+| booking_messages | 0 |
+| bookings | 0 |
+| experience_accommodations | 0 |
+| experience_availability_config | 0 |
+| experience_blocked_dates | 0 |
+| experience_images | 0 |
+| experiences | 0 |
+| guide_accommodations | 0 |
+| leads | 0 |
+| payments | 0 |
