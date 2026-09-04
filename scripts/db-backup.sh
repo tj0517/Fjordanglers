@@ -56,8 +56,10 @@ echo "Dumping project ${REF} → ${OUT_DIR}/"
 # whatever supabase/.temp/project-ref happens to hold (see header comment above).
 pnpm supabase link --project-ref "$REF"
 
+# No --schema-only flag exists in the Supabase CLI: `db dump` with no data flag
+# IS the schema-only dump (it excludes auth/storage/extension schemas by default).
 pnpm supabase db dump --linked \
-  --schema-only -f "${OUT_DIR}/schema.sql"
+  -f "${OUT_DIR}/schema.sql"
 
 pnpm supabase db dump --linked \
   --data-only -f "${OUT_DIR}/data.sql"
