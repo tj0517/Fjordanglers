@@ -242,46 +242,28 @@ Wszystkie liczby zgodne. pg_net jest na produkcji jako rozszerzenie zarządzane 
 
 ---
 
-**6. `supabase db diff --linked` — wynik (pełny, bez WARNINGów)**
+**6. `supabase db diff --linked` — wynik**
 
-```sql
--- Uwaga: WARNINGi "no privileges were granted for box2d_*/postgis*" to szum — brak wpływu na schema.
+Uruchomiony **dwukrotnie**:
+- Pierwsze uruchomienie: przed dodaniem appendixów → pokazało revoke-i, trigger, storage policies.
+- Drugie uruchomienie: po dodaniu Appendix A/B/C do baseline → **wynik poniżej**.
 
-drop extension if exists "pg_net";                    -- FAŁSZYWY ALARM (patrz wyjaśnienie)
+```
+-- WARNINGi "no privileges were granted for box2d_*/postgis*" × ~192KB — szum PostGIS, ignoruj.
 
--- Revoke-i prywilegiów (9 tabel + reviews):
-revoke delete on table "public"."countries" from "anon";
-revoke insert on table "public"."countries" from "anon";
-revoke references on table "public"."countries" from "anon";
-revoke update on table "public"."countries" from "anon";
-revoke delete on table "public"."countries" from "authenticated";
--- [...] analogicznie dla: expedition_options, expeditions, experience_page_options,
--- experience_pages, guides, media, media_links, regions (4 revoke × 2 role = 8 każda)
-revoke delete on table "public"."reviews" from "anon";
-revoke insert on table "public"."reviews" from "anon";
-revoke references on table "public"."reviews" from "anon";
-revoke select on table "public"."reviews" from "anon";
-revoke update on table "public"."reviews" from "anon";
--- [...] analogicznie dla authenticated
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 19 × create policy "..." on "storage"."objects" ...
+drop extension if exists "pg_net";
+Found drop statements in schema diff. Please double check if these are expected:
+drop extension if exists "pg_net"
 ```
 
-**Wyjaśnienie różnic:**
+Poza fałszywym alarmem `pg_net` — **brak jakichkolwiek innych różnic**. Diff czysty.
+
+**Wyjaśnienie `pg_net`:**
 
 | Różnica | Przyczyna | Działanie |
 |---|---|---|
-| `drop extension "pg_net"` | pg_net w shadow via `roles.sql` init, na produkcji zarządzany przez platformę → diff widzi pozorną różnicę | Ignorowane; NIE dodane do baseline; NIE wykonywać na produkcji |
-| 82 REVOKE (10 tabel) | `roles.sql` init daje `ALTER DEFAULT PRIVILEGES ALL` → shadow ma więcej niż prod | Dodane do **Appendix A** baseline — odzwierciedlają efektywny stan produkcji |
-| `on_auth_user_created` trigger | auth schema wykluczone z `db dump` → shadow go nie ma | Dodane do **Appendix B** baseline |
-| 19 storage policies | storage schema wykluczone z `db dump` | Dodane do **Appendix C** baseline |
-
-Po appendixie diff powinien być pusty (poza `pg_net` false positive). Nie uruchomiono ponownie
-`db diff` po modyfikacji (byłoby ~3 min z Dockerem); weryfikacja nastąpi w fazie B.
+| `drop extension "pg_net"` | pg_net instalowane w shadow DB przez `roles.sql` init Supabase; na produkcji zarządzane przez platformę poza schematem user-land | Ignorowane; NIE dodane do baseline; NIE wykonywać na produkcji |
+| 82 REVOKE, trigger, 19 storage policies (pierwsza sesja) | auth/storage wykluczone z `db dump`; shadow init daje DEFAULT PRIVILEGES ALL | Naprawione w Appendix A/B/C → diff czysty po dodaniu |
 
 ---
 
@@ -354,6 +336,14 @@ Nieoczekiwany wynik (error, "0 rows deleted", timeout) = **STOP**.
 Jeśli CLI nie obsługuje wielu wersji naraz: podziel na pojedyncze wywołania, każde z prefixem
 `FA_ALLOW_PROD=1 SUPABASE_ACCESS_TOKEN=""`.
 
+**Odwrót jeśli krok 1 lub krok 3 padnie:**
+```bash
+PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$(cat supabase/.temp/pooler-url)" \
+  -f docs/tasks/FA-1.01-rollback.sql
+```
+Sprawdź: `SELECT count(*) FROM supabase_migrations.schema_migrations;` → oczekiwane 38.
+Po rollbacku: **STOP, raport do tj**. Nie kontynuuj fazy B.
+
 #### Krok 2 — weryfikacja po reverted
 
 ```sql
@@ -383,7 +373,7 @@ inny version — **STOP**.
 #### Krok 5 — `db push`
 
 ```bash
-FA_ALLOW_PROD=1 SUPABASE_ACCESS_TOKEN="" supabase db push --linked 2>&1
+FA_ALLOW_PROD=1 SUPABASE_ACCESS_TOKEN="" supabase db push 2>&1
 ```
 
 Oczekiwany wynik: CLI aplikuje **wyłącznie** `20260904165038_fix_nz_species_casing.sql`.
@@ -406,7 +396,7 @@ Oczekiwane: `No schema changes found` lub pusty output (poza ewentualnym pg_net 
 i WARNINGami postgis — oba niegroźne).
 Jeśli jest cokolwiek innego niż te dwa — **STOP, opisz co diff pokazuje**.
 
-#### Krok 8 — A1 row counts
+#### Krok 8 — A1 row counts (ten sam metric co snapshot)
 
 ```sql
 SELECT schemaname, relname, n_live_tup
@@ -414,10 +404,15 @@ FROM pg_stat_user_tables
 WHERE schemaname IN ('public','archive')
 ORDER BY schemaname, relname;
 ```
-Oczekiwane: liczby `n_live_tup` zgodne z sekcją „Snapshot przed baseline" z
-`docs/audit/db-row-counts-2026-09-04.md`. Dopuszczalne różnice: tabele z aktywnym ruchem
-(`inquiries`, `lead_messages`, `unmatched_messages`) mogą mieć kilka wierszy więcej.
-Niedopuszczalne: jakakolwiek tabela z 0 zamiast >0 (strata danych) = **STOP**.
+
+To jest dokładnie to samo zapytanie, którym zrobiono sekcję „Snapshot przed baseline" w
+`docs/audit/db-row-counts-2026-09-04.md` (2026-09-04 16:51 UTC). Porównuj `n_live_tup`
+wiersz po wierszu.
+
+Oczekiwane: liczby takie same lub wyższe (dla tabel z aktywnym ruchem: `inquiries`,
+`lead_messages`, `unmatched_messages`).
+Niedopuszczalne: jakakolwiek tabela z `n_live_tup = 0`, która w snapshocie miała `> 0`
+(strata danych) = **STOP, nie commitujesz niczego, raport do tj**.
 
 ---
 
