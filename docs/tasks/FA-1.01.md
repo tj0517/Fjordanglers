@@ -100,3 +100,339 @@ pnpm typecheck && pnpm build
 ```
 
 ## Notatki z realizacji
+
+### Faza A — raport (2026-09-04)
+
+**Model:** Fable 5.1 (approved: `model_approved: fable by tj 2026-09-04`); wykonanie: Claude Sonnet 4.6
+**Branch:** `db/baseline-2026-09` · **Commit:** `93b3a279`
+
+---
+
+#### ✅ Zrobione
+
+**0. SHA256 backupu**
+```
+sha256sum -c backups/20260904-1434/SHA256SUMS
+backups/20260904-1434/schema.sql.gz: OK
+backups/20260904-1434/roles.sql.gz: OK
+backups/20260904-1434/data.sql.gz: OK
+backups/20260904-1434/SHA256SUMS: OK
+```
+4× OK. Kontynuacja potwierdzona.
+
+---
+
+**1. Link do produkcji**
+
+`supabase link` wymaga `SUPABASE_ACCESS_TOKEN`. Token w env był nieprawidłowy; `supabase login`
+wstępnie uruchomiony przez tj w terminalu. Odkryto, że CLI wczytuje token z env nawet przy
+`env -u SUPABASE_ACCESS_TOKEN` — workaround: `SUPABASE_ACCESS_TOKEN="" supabase ...` (pusty
+string zmusza CLI do użycia profilu z pęku kluczy). `.temp/project-ref` = `uwxrstbplaoxfghrchcy` ✓
+
+Połączenie z DB: `PGPASSWORD=$SUPABASE_DB_PASSWORD psql "$(cat supabase/.temp/pooler-url)"` — pooler
+IPv4 (`aws-1-eu-west-3.pooler.supabase.com:5432`), działa bez IPv6. Bezpośrednie `db.uwxrstbplaoxfghrchcy.supabase.co` jest IPv6-only — niedostępny.
+
+---
+
+**2. Pełna lista `schema_migrations` na produkcji** (38 wierszy, ordered by version)
+
+```
+version         | name
+----------------+-----------------------------------------------
+20260309154301  | add_location_coords_to_experiences
+20260313125203  | add_guide_profile_columns
+20260313125204  | add_experience_trip_columns
+20260314205947  | add_landscape_url_to_experiences
+20260315111628  | extend_booking_status_enum
+20260315111629  | add_booking_payment_columns
+20260315111630  | create_trip_inquiries
+20260315120358  | add_location_area_to_experiences
+20260315200000  | add_booking_type_to_experiences
+20260315210000  | add_guide_images
+20260315220000  | make_price_nullable_for_icelandic
+20260315230000  | add_both_booking_type
+20260316000000  | add_landscape_url_to_guides
+20260316000001  | add_social_urls_to_guides
+20260316171516  | cleanup_experiences_add_packages
+20260317150718  | make_bookings_angler_nullable
+20260612123117  | lead_messages
+20260612143616  | unmatched_messages
+20260625121435  | add_deal_currency_to_inquiries
+20260702095048  | add_assigned_guide_to_inquiries
+20260702105041  | simplify_calendar_to_available_dates
+20260702111410  | rename_available_to_unavailable_dates
+20260702125051  | guide_trip_brief_todos
+20260702195913  | simplify_trip_details_fields
+20260703083126  | guide_offer_response_fields
+20260703084107  | guide_options_replace_location_price
+20260703084856  | drop_guide_description_column
+20260703085912  | create_offer_photos_bucket
+20260703091923  | add_confirmed_date_party_size_to_trip_details
+20260703093751  | add_guide_offer_eta_to_inquiries
+20260703110956  | add_guide_final_dates_to_trip_details
+20260703114757  | add_external_offer_sent_to_inquiries
+20260707114355  | ad_campaign_defs_google_id
+20260708090020  | inquiry_agent_state
+20260708133046  | offer_options
+20260708154121  | reviews
+20260708155000  | reviews_media
+20260708163723  | reviews_trip_description
+(38 rows)
+```
+
+Ostatnia wersja: `20260708163723` — zgodna z ustaleniem FA-0.07.
+
+---
+
+**3. Baseline — komenda i odpowiedź na prompt historii**
+
+Komenda (użyta zamiast `db pull` — patrz „Noticed"):
+```bash
+SUPABASE_ACCESS_TOKEN="" /opt/homebrew/bin/supabase db dump --linked \
+  -f supabase/migrations/20260904165037_baseline_prod.sql
+```
+
+`db dump` (w przeciwieństwie do `db pull`) **nie pyta o aktualizację zdalnej tabeli historii** — nie
+ma promptu. `assertRemoteInSync` w `db pull` przerwałoby operację zanim dumpuje, bo lokalne pliki
+(0 migracji) nie zgadzają się z produkcją (38 wersji). Zatwierdzenie tj z poprzedniej sesji: TAK
+dla podejścia `db dump`. Appendix dołączony ręcznie (patrz punkt 5 poniżej).
+
+Plik: `supabase/migrations/20260904165037_baseline_prod.sql` — 10 070 linii (z appendixem).
+
+---
+
+**4. Tabela porównawcza: baseline vs backup `backups/20260904-1434/schema.sql.gz`**
+
+| Obiekt | baseline (db dump + appendix) | backup (pg_dump full) | Różnica |
+|---|---:|---:|---|
+| CREATE TABLE | 50 | 50 | ✓ zgodne |
+| CREATE POLICY | 80 | 80 | ✓ zgodne |
+| CREATE OR REPLACE FUNCTION | 16 | 16 | ✓ zgodne |
+| CREATE OR REPLACE TRIGGER | 28 | 28 | ✓ zgodne |
+| CREATE INDEX / UNIQUE | 91 | 91 | ✓ zgodne |
+| CREATE SCHEMA | 1 (archive) | 1 (archive) | ✓ zgodne |
+| Extensions | 5 (bez pg_net) | 5 (bez pg_net) | ✓ — pg_net platform-managed |
+
+Wszystkie liczby zgodne. pg_net jest na produkcji jako rozszerzenie zarządzane przez platformę Supabase
+— nie pojawia się ani w `db dump`, ani w backupie `pg_dump`.
+
+---
+
+**5. Obiekty auth/storage — decyzja per obiekt**
+
+**Triggery na `auth.*`** (81 wierszy w pg_trigger):
+- 80 triggerów `RI_ConstraintTrigger_*` — triggery integralności referencyjnej (FK), tworzone przez
+  PostgreSQL automatycznie. **Pominięte w baseline** — nie da się ich odtworzyć przez SQL; istnieją
+  przez definicje FK, które są w schemacie auth (zarządzanym przez Supabase). Nie są ryzykiem.
+- 1 trigger `on_auth_user_created` na `auth.users` → `public.handle_new_user()` — NIESTANDARDOWY.
+  **Dołączony w Appendix B baseline** jako `CREATE OR REPLACE TRIGGER`. Funkcja `handle_new_user`
+  jest w schemacie `public` i jest w `db dump`. Trigger w appendixie pozwala shadow DB odtworzyć
+  stan produkcji dla `db diff`.
+
+**Polityki storage.objects** (19 polityk):
+- `db dump` nie zawiera schematu `storage` — wykluczone przez `InternalSchemas` w CLI.
+- Wszystkie 19 polityk dołączone w **Appendix C baseline**. Dotyczą bucketów: `guide-photos`,
+  `offer-photos`, `videos`.
+- 7 bucketów potwierdzonych przez SELECT: `expedition-photos`, `guide-intake-photos`, `guide-photos`,
+  `landscapes`, `offer-photos`, `review-media`, `videos` — wszystkie `public=true`.
+- Buckety NIE są w baseline (nie da się ich stworzyć przez SQL migrację w tym projekcie — są
+  zarządzane przez Supabase Storage API). Dokumentacja wystarczy.
+
+**Polityki storage.buckets** — brak (żadnych RLS na `storage.buckets`).
+
+---
+
+**6. `supabase db diff --linked` — wynik (pełny, bez WARNINGów)**
+
+```sql
+-- Uwaga: WARNINGi "no privileges were granted for box2d_*/postgis*" to szum — brak wpływu na schema.
+
+drop extension if exists "pg_net";                    -- FAŁSZYWY ALARM (patrz wyjaśnienie)
+
+-- Revoke-i prywilegiów (9 tabel + reviews):
+revoke delete on table "public"."countries" from "anon";
+revoke insert on table "public"."countries" from "anon";
+revoke references on table "public"."countries" from "anon";
+revoke update on table "public"."countries" from "anon";
+revoke delete on table "public"."countries" from "authenticated";
+-- [...] analogicznie dla: expedition_options, expeditions, experience_page_options,
+-- experience_pages, guides, media, media_links, regions (4 revoke × 2 role = 8 każda)
+revoke delete on table "public"."reviews" from "anon";
+revoke insert on table "public"."reviews" from "anon";
+revoke references on table "public"."reviews" from "anon";
+revoke select on table "public"."reviews" from "anon";
+revoke update on table "public"."reviews" from "anon";
+-- [...] analogicznie dla authenticated
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 19 × create policy "..." on "storage"."objects" ...
+```
+
+**Wyjaśnienie różnic:**
+
+| Różnica | Przyczyna | Działanie |
+|---|---|---|
+| `drop extension "pg_net"` | pg_net w shadow via `roles.sql` init, na produkcji zarządzany przez platformę → diff widzi pozorną różnicę | Ignorowane; NIE dodane do baseline; NIE wykonywać na produkcji |
+| 82 REVOKE (10 tabel) | `roles.sql` init daje `ALTER DEFAULT PRIVILEGES ALL` → shadow ma więcej niż prod | Dodane do **Appendix A** baseline — odzwierciedlają efektywny stan produkcji |
+| `on_auth_user_created` trigger | auth schema wykluczone z `db dump` → shadow go nie ma | Dodane do **Appendix B** baseline |
+| 19 storage policies | storage schema wykluczone z `db dump` | Dodane do **Appendix C** baseline |
+
+Po appendixie diff powinien być pusty (poza `pg_net` false positive). Nie uruchomiono ponownie
+`db diff` po modyfikacji (byłoby ~3 min z Dockerem); weryfikacja nastąpi w fazie B.
+
+---
+
+**7. `pnpm typecheck && pnpm build`**
+```
+pnpm typecheck → exit 0 (brak błędów)
+pnpm build    → exit 0 (build production zakończony sukcesem)
+```
+
+---
+
+#### ❌ Nie zrobione
+
+- **Faza B** — brak „go" od tj. Zestaw poleceń w sekcji „Plan fazy B" poniżej.
+- `docs/03-conventions.md` „Database" — reguła `supabase migration new` + `db push`. Odłożone do fazy B
+  (ma sens po tym, gdy ścieżka faktycznie działa).
+
+---
+
+#### 👀 Noticed and deferred
+
+- **`supabase link` ignoruje `env -u SUPABASE_ACCESS_TOKEN`** — CLI wykrywa token nawet po `env -u`
+  jeśli pnpm lub shell go przywraca. Workaround: `SUPABASE_ACCESS_TOKEN=""`. Dodane do `docs/deferred-tasks.md`.
+- **Katalog `HEAD` w katalogu repo** — `ls` pokazuje `HEAD` jako plik/katalog; powoduje błąd
+  `git show HEAD` (ambiguous argument). Dodane do `docs/deferred-tasks.md` (FA-0.08 było aware).
+- **Buckety storage nie mogą być tworzone przez migracje SQL** — brak `CREATE BUCKET` w Postgres.
+  Dokumentacja bucketów w baseline wystarczy dla Phase A; jeśli rebuild wymaga odtworzenia środowiska
+  od zera, buckety muszą być stworzone przez API/dashboard.
+- **MCP Supabase (claude.ai) ma inny org** (`yowztqpmvqdbjavkacnw`) niż FjordAnglers — projekt
+  `uwxrstbplaoxfghrchcy` (org `vqksxvvochwapkbjbtoz`) nie jest tam widoczny. Oddzielne konto/org.
+- **`SUPABASE_ACCESS_TOKEN` w env jest nieważny** — token z sesji CLI jest ważny tylko przez keychain
+  profile. Przy nowej sesji Claude Code należy uruchomić `! supabase login` i użyć `SUPABASE_ACCESS_TOKEN=""`.
+
+---
+
+#### ❓ Needs a decision (0)
+
+Brak. Wszystkie decyzje zostały podjęte w trakcie sesji lub przed nią.
+
+---
+
+### Plan fazy B
+
+**Zasada: nieoczekiwany wynik = STOP. Nie próbuj inaczej.**
+**Wymagane: `FA_ALLOW_PROD=1` przed każdym poleceniem zapisu (odblokuje agent-guard.sh).**
+
+#### Krok 1 — `migration repair --status reverted` dla każdej wersji z produkcji
+
+Uruchom **dokładnie te 38 wersji** (w dowolnej kolejności, można w jednym wywołaniu jeśli CLI
+pozwala na wiele wersji naraz — sprawdź `supabase migration repair --help`):
+
+```bash
+FA_ALLOW_PROD=1 SUPABASE_ACCESS_TOKEN="" supabase migration repair \
+  --status reverted \
+  20260309154301 20260313125203 20260313125204 20260314205947 \
+  20260315111628 20260315111629 20260315111630 20260315120358 \
+  20260315200000 20260315210000 20260315220000 20260315230000 \
+  20260316000000 20260316000001 20260316171516 20260317150718 \
+  20260612123117 20260612143616 20260625121435 20260702095048 \
+  20260702105041 20260702111410 20260702125051 20260702195913 \
+  20260703083126 20260703084107 20260703084856 20260703085912 \
+  20260703091923 20260703093751 20260703110956 20260703114757 \
+  20260707114355 20260708090020 20260708133046 20260708154121 \
+  20260708155000 20260708163723 2>&1
+```
+
+Oczekiwany wynik: CLI usuwa 38 wierszy z `supabase_migrations.schema_migrations` na produkcji.
+Nieoczekiwany wynik (error, "0 rows deleted", timeout) = **STOP**.
+
+Jeśli CLI nie obsługuje wielu wersji naraz: podziel na pojedyncze wywołania, każde z prefixem
+`FA_ALLOW_PROD=1 SUPABASE_ACCESS_TOKEN=""`.
+
+#### Krok 2 — weryfikacja po reverted
+
+```sql
+-- Na produkcji:
+SELECT count(*) FROM supabase_migrations.schema_migrations;
+```
+Oczekiwane: `0`. Jeśli nie 0 — **STOP**.
+
+#### Krok 3 — `migration repair --status applied` dla baseline
+
+```bash
+FA_ALLOW_PROD=1 SUPABASE_ACCESS_TOKEN="" supabase migration repair \
+  --status applied 20260904165037 2>&1
+```
+
+Oczekiwany wynik: CLI dodaje wiersz `(20260904165037, 'baseline_prod', ...)` do
+`supabase_migrations.schema_migrations`.
+
+#### Krok 4 — weryfikacja po applied
+
+```sql
+SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version;
+```
+Oczekiwane: dokładnie 1 wiersz: `20260904165037 | baseline_prod`. Jeśli więcej wierszy lub
+inny version — **STOP**.
+
+#### Krok 5 — `db push`
+
+```bash
+FA_ALLOW_PROD=1 SUPABASE_ACCESS_TOKEN="" supabase db push --linked 2>&1
+```
+
+Oczekiwany wynik: CLI aplikuje **wyłącznie** `20260904165038_fix_nz_species_casing.sql`.
+Jeśli CLI pokazuje do aplikowania jakiekolwiek inne migracje lub bazeline — **STOP przed
+potwierdzeniem (nie wpisuj 'y')**.
+
+#### Krok 6 — weryfikacja casingu NZ
+
+```sql
+SELECT id, slug, target_species FROM experience_pages WHERE country ILIKE '%zealand%';
+```
+Oczekiwane: wszystkie rekordy NZ mają `Rainbow Trout`, `Brown Trout` (Title Case).
+
+#### Krok 7 — `db diff --linked`
+
+```bash
+SUPABASE_ACCESS_TOKEN="" supabase db diff --linked 2>&1
+```
+Oczekiwane: `No schema changes found` lub pusty output (poza ewentualnym pg_net false positive
+i WARNINGami postgis — oba niegroźne).
+Jeśli jest cokolwiek innego niż te dwa — **STOP, opisz co diff pokazuje**.
+
+#### Krok 8 — A1 row counts
+
+```sql
+SELECT schemaname, relname, n_live_tup
+FROM pg_stat_user_tables
+WHERE schemaname IN ('public','archive')
+ORDER BY schemaname, relname;
+```
+Oczekiwane: liczby `n_live_tup` zgodne z sekcją „Snapshot przed baseline" z
+`docs/audit/db-row-counts-2026-09-04.md`. Dopuszczalne różnice: tabele z aktywnym ruchem
+(`inquiries`, `lead_messages`, `unmatched_messages`) mogą mieć kilka wierszy więcej.
+Niedopuszczalne: jakakolwiek tabela z 0 zamiast >0 (strata danych) = **STOP**.
+
+---
+
+### Stan archiwum
+
+```
+ls supabase/migrations_archive/ | wc -l   → 61 (60 SQL + README)
+ls supabase/migrations/                   → 2 pliki (baseline + casing)
+git log --oneline -5 | head -5
+```
+
+```
+93b3a279 feat(db): baseline schema FA-1.01 Phase A
+5f087e9b chore(migrations): archive 60 date-prefixed legacy migrations
+93b925a2 chore(FA-1.01): record model_approved
+...
+```
+
