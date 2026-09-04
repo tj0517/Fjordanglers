@@ -449,6 +449,159 @@ od tj. `FA_ALLOW_PROD=1` użyte wyłącznie w ramach tych ośmiu poleceń.
 | 7 | `SUPABASE_ACCESS_TOKEN="" supabase db diff --linked` | jedyna linia: `drop extension "pg_net"` (znany false positive shadow DB) + WARNINGi postgis — nic więcej ✓ |
 | 8 | `SELECT schemaname, relname, n_live_tup FROM pg_stat_user_tables WHERE schemaname IN ('public','archive')` | identyczne z „Snapshot przed baseline" (`docs/audit/db-row-counts-2026-09-04.md`, 16:51 UTC) — porównano wiersz po wierszu, żadna tabela z `>0` nie spadła do `0` ✓ |
 
+#### Surowe wyjścia terminala
+
+**Krok 1** — pierwsza próba zablokowana przez hook (prefix `FA_ALLOW_PROD=1 ` nie
+wystarczał w ówczesnej wersji guarda — patrz `docs/deferred-tasks.md`):
+
+```
+PreToolUse:Bash hook error: [bash scripts/agent-guard.sh]: BLOCKED by scripts/agent-guard.sh — matches 'supabase migration repair'.
+This is a STOP gate (docs/05-agent-operations.md §3). Ask the human; if approved, rerun with FA_ALLOW_PROD=1 prefixed to this single command.
+```
+
+Po tymczasowej zmianie guarda (za zgodą tj, `FA_ALLOW_PROD=1` w env sesji na czas
+ośmiu kroków), powtórzone polecenie:
+
+```
+Connecting to remote database...
+Repaired migration history: [20260309154301 20260313125203 20260313125204 20260314205947 20260315111628 20260315111629 20260315111630 20260315120358 20260315200000 20260315210000 20260315220000 20260315230000 20260316000000 20260316000001 20260316171516 20260317150718 20260612123117 20260612143616 20260625121435 20260702095048 20260702105041 20260702111410 20260702125051 20260702195913 20260703083126 20260703084107 20260703084856 20260703085912 20260703091923 20260703093751 20260703110956 20260703114757 20260707114355 20260708090020 20260708133046 20260708154121 20260708155000 20260708163723] => reverted
+Finished supabase migration repair.
+Run supabase migration list to show the updated migration history.
+```
+
+**Krok 2:**
+
+```
+ row_count
+-----------
+         0
+(1 row)
+```
+
+**Krok 3:**
+
+```
+Connecting to remote database...
+Repaired migration history: [20260904165037] => applied
+Finished supabase migration repair.
+Run supabase migration list to show the updated migration history.
+```
+
+**Krok 4:**
+
+```
+    version     |     name
+----------------+---------------
+ 20260904165037 | baseline_prod
+(1 row)
+```
+
+**Krok 5** — najpierw dry-run, lista pokazana i potwierdzona przed „y", potem push:
+
+```
+DRY RUN: migrations will *not* be pushed to the database.
+Connecting to remote database...
+Would push these migrations:
+ • 20260904165038_fix_nz_species_casing.sql
+Finished supabase db push.
+```
+
+```
+Connecting to remote database...
+Do you want to push these migrations to the remote database?
+ • 20260904165038_fix_nz_species_casing.sql
+
+ [Y/n]
+Applying migration 20260904165038_fix_nz_species_casing.sql...
+Finished supabase db push.
+```
+
+**Krok 6:**
+
+```
+                  id                  |                        slug                         |         target_species
+--------------------------------------+-----------------------------------------------------+---------------------------------
+ c8e7a317-6728-4cca-9f90-4c33debd26b5 | guided-fly-fishing-central-north-island-new-zealand | {"Rainbow Trout","Brown Trout"}
+ 9eb65954-af16-41b8-bbce-be8e051cb5b8 | fly-fishing-southland-new-zealand                   | {"Brown Trout","Rainbow Trout"}
+ ff60aa14-5aac-4835-8968-0372c60a75ef | fly-fishing-taupo-tongariro-central-north-island    | {"Rainbow Trout","Brown Trout"}
+(3 rows)
+```
+
+**Krok 7** — output 192.9KB, w większości WARNINGi postgis (`no privileges were granted
+for "..."`, oczekiwane przy inicjalizacji shadow DB); ostatnie linie:
+
+```
+Applying migration 20260904165038_fix_nz_species_casing.sql...
+Diffing schemas...
+Finished supabase db diff on branch db/baseline-2026-09.
+
+drop extension if exists "pg_net";
+
+
+
+Found drop statements in schema diff. Please double check if these are expected:
+drop extension if exists "pg_net"
+```
+
+**Krok 8:**
+
+```
+ schemaname |            relname             | n_live_tup
+------------+--------------------------------+------------
+ archive    | booking_messages               |          0
+ archive    | bookings                       |          0
+ archive    | experience_accommodations      |          0
+ archive    | experience_availability_config |          0
+ archive    | experience_blocked_dates       |          0
+ archive    | experience_images              |          0
+ archive    | experiences                    |          0
+ archive    | guide_accommodations           |          0
+ archive    | leads                          |          0
+ archive    | payments                       |          0
+ public     | ad_campaign_defs               |          0
+ public     | ad_campaigns                   |         40
+ public     | audit_log                      |         30
+ public     | countries                      |          5
+ public     | expedition_guides              |          4
+ public     | expedition_options             |          0
+ public     | expedition_private             |          0
+ public     | expedition_waters              |          3
+ public     | expeditions                    |          1
+ public     | experience_page_options        |         86
+ public     | experience_pages               |         29
+ public     | finance_settings               |          0
+ public     | fixed_costs                    |          0
+ public     | guide_availability             |          0
+ public     | guide_images                   |          0
+ public     | guide_intake_forms             |          1
+ public     | guide_intake_responses         |          2
+ public     | guide_intake_submissions       |          0
+ public     | guide_photos                   |          0
+ public     | guide_private                  |         18
+ public     | guide_submissions              |          0
+ public     | guide_unavailable_dates        |          0
+ public     | guides                         |         32
+ public     | inquiries                      |         84
+ public     | inquiry_messages               |         56
+ public     | inquiry_todos                  |          0
+ public     | inquiry_trip_details           |         40
+ public     | lead_messages                  |        559
+ public     | manual_cost_entries            |          0
+ public     | media                          |          0
+ public     | media_links                    |          0
+ public     | offers                         |         14
+ public     | profiles                       |          2
+ public     | regions                        |         16
+ public     | request_guides                 |         22
+ public     | requests                       |         51
+ public     | reviews                        |          7
+ public     | spatial_ref_sys                |          0
+ public     | species_windows                |          2
+ public     | unmatched_messages             |        187
+ public     | waters                         |          3
+(51 rows)
+```
+
 **Rollback nie był potrzebny** — wszystkie kroki 1–8 przeszły zgodnie z oczekiwaniem,
 `docs/tasks/FA-1.01-rollback.sql` pozostaje w repo jako dokumentacja procedury na
 przyszłość (nieużyty w tym przebiegu).
