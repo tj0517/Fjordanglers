@@ -32,6 +32,15 @@ set -euo pipefail
 
 REF="${1:-${PROJECT_REF:-}}"
 
+# Guard: `supabase link` writes supabase/.temp/project-ref in the CURRENT directory.
+# Run from another repo (e.g. SeaClouds) this would silently re-point that repo's CLI
+# at the FjordAnglers production project. Refuse unless we are in the fjordanglers repo.
+if [ ! -f package.json ] || ! grep -q '"name": *"fjordanglers"' package.json; then
+  echo "ERROR: run this from the root of the fjordanglers repo (package.json name must be 'fjordanglers')." >&2
+  echo "Current directory: $(pwd)" >&2
+  exit 1
+fi
+
 if [ -z "$REF" ]; then
   echo "ERROR: project ref is required — pass it as \$1 or set PROJECT_REF." >&2
   echo "This is deliberate: supabase/.temp/project-ref is local link state, not" >&2
