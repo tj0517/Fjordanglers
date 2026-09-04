@@ -41,7 +41,13 @@ those apart. Volume of work earns nothing; coverage of criteria does.
    coverage table, then follow-ups ordered by what would hurt most.
 8. **Message for the implementer**, ready to paste: decision, exact follow-ups, what must
    stay untouched, what is explicitly out of this round.
-9. Propose the task status change — `done` only if every criterion is proven.
+9. **Propose the task status change in both places.** The status lives twice: in the
+   `status:` frontmatter field of `docs/tasks/<id>.md` and in the task's row in
+   `docs/tasks/INDEX.md`. Give the exact replacement line for each — never only one of
+   them. `done` only if every criterion is proven; an implementer's own `done` is a
+   declaration, so treat it as `review` until this review proves otherwise. Before
+   proposing, read both and report any mismatch you found (that mismatch is itself a
+   finding: it means an earlier task was closed in one place only).
 
 ## Rules
 - Green CI is not proof a function works; an RLS function bug shows on the first user
@@ -50,4 +56,6 @@ those apart. Volume of work earns nothing; coverage of criteria does.
   first.
 - "Noticed, not touched" items are good news — confirm they landed in
   `docs/deferred-tasks.md`.
+- A task file and `INDEX.md` that disagree about status are a defect in their own right;
+  say so, and give both corrected lines.
 - You do not fix things. You report them.

@@ -11,8 +11,8 @@
  * writes the session cookies, then redirects to /dashboard
  * (or the `next` param if the middleware passed one along).
  *
- * On failure it redirects to /login with an error flag so the
- * LoginForm can surface a human-readable message.
+ * On failure it redirects to /login with an error flag so AuthTabs
+ * can surface a human-readable message.
  */
 
 import { type NextRequest, NextResponse } from 'next/server'

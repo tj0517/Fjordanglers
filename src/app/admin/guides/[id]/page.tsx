@@ -246,7 +246,7 @@ export default async function AdminGuideDetailPage({
                 </Link>
                 {guide.user_id == null && (
                   <>
-                    <CopyInviteLink guideId={guide.id} />
+                    <CopyInviteLink />
                     <LinkGuidePanel guideId={guide.id} />
                   </>
                 )}

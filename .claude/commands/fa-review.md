@@ -22,5 +22,8 @@ Expected output, in this order:
 6. Side-effect assessment on the live inquiry → offer → deposit path.
 7. Follow-ups ordered by damage potential.
 8. Ready-to-paste message for the implementer.
-9. Proposed task status (`done` only if every criterion is proven) and the exact line to
-   change in `docs/tasks/INDEX.md`.
+9. Proposed task status (`done` only if every criterion is proven), written out for
+   **both** places that carry it — they drift apart otherwise:
+   - the exact `status:` line to set in the frontmatter of `docs/tasks/<id>.md`;
+   - the exact table row to replace in `docs/tasks/INDEX.md`.
+   Also report any status mismatch you found between the two before your change.
