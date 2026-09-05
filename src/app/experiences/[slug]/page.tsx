@@ -14,6 +14,7 @@ import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem, Accommodation, Boat } from '@/actions/experience-pages'
 import type { TripOption } from '@/components/trips/TripOptionsAccordion'
+import { formatPrice, currencySymbol } from '@/lib/format-price'
 
 export const revalidate = 3600
 
@@ -47,7 +48,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const svc = createServiceClient()
   const { data: page } = await svc
     .from('experience_pages')
-    .select('experience_name, meta_title, meta_description, hero_image_url, og_image_url, gallery_image_urls, country, region, price_from, price_type, target_species, technique')
+    .select('experience_name, meta_title, meta_description, hero_image_url, og_image_url, gallery_image_urls, country, region, price_from, price_type, currency, target_species, technique')
     .eq('slug', slug)
     .eq('status', 'active')
     .single()
@@ -60,7 +61,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const description = page.meta_description
     ?? (page.price_type === 'request'
       ? `Guided ${fishingType} in ${page.region}, ${page.country}. Price on request. Book with a verified local guide via FjordAnglers.`
-      : `Guided ${fishingType} in ${page.region}, ${page.country}. From €${page.price_from}. Book with a verified local guide via FjordAnglers.`)
+      : `Guided ${fishingType} in ${page.region}, ${page.country}. From ${currencySymbol(page.currency)}${page.price_from}. Book with a verified local guide via FjordAnglers.`)
   const gallery    = (page.gallery_image_urls as string[] | null) ?? []
   const ogImage    = page.og_image_url ?? gallery[0] ?? page.hero_image_url
 
@@ -113,12 +114,6 @@ export default async function ExperiencePublicPage({
     price_type:          string
   }
   const page = rawPage as unknown as PageWithNewCols
-
-  function formatPrice(priceFrom: number, priceType: string): string {
-    if (priceType === 'request') return 'Price on request'
-    if (priceType === 'flat') return `from €${priceFrom} for the group`
-    return `from €${priceFrom} / person`
-  }
 
   // Fetch guide's available dates for InquiryWidget
   let blockedDates: string[] = []
@@ -182,7 +177,7 @@ export default async function ExperiencePublicPage({
   // Similar experience pages
   const { data: sameCountryRaw } = await svc
     .from('experience_pages')
-    .select('id, slug, experience_name, country, region, price_from, price_type, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
+    .select('id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
     .eq('status', 'active')
     .eq('country', page.country)
     .neq('id', page.id)
@@ -193,7 +188,7 @@ export default async function ExperiencePublicPage({
   if (similarTrips.length === 0) {
     const { data: anyRaw } = await svc
       .from('experience_pages')
-      .select('id, slug, experience_name, country, region, price_from, price_type, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
+      .select('id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
       .eq('status', 'active')
       .neq('id', page.id)
       .limit(3)
@@ -233,6 +228,7 @@ export default async function ExperiencePublicPage({
     region:              rawPage.region,
     price_from:          rawPage.price_from,
     price_type:          page.price_type,
+    currency:            page.currency,
     hero_image_url:      rawPage.hero_image_url,
     gallery_image_urls:  rawPage.gallery_image_urls,
     difficulty:          rawPage.difficulty,
@@ -292,7 +288,7 @@ export default async function ExperiencePublicPage({
       offers: {
         '@type': 'Offer',
         price: page.price_from,
-        priceCurrency: 'EUR',
+        priceCurrency: page.currency,
         availability: 'https://schema.org/InStock',
         url: `https://fjordanglers.com/experiences/${slug}`,
         seller: faOrg,
@@ -365,7 +361,7 @@ export default async function ExperiencePublicPage({
           {/* Price overlay — absolute on photo */}
           <div className="absolute bottom-10 left-4 z-10 pointer-events-none">
             <span className="font-bold f-display text-white" style={{ fontSize: '22px', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
-              {formatPrice(page.price_from, page.price_type)}
+              {formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency })}
             </span>
           </div>
         </div>
@@ -460,7 +456,7 @@ export default async function ExperiencePublicPage({
           {/* Pills */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-bold f-display text-xl" style={{ color: '#0A2E4D' }}>
-              {formatPrice(page.price_from, page.price_type)}
+              {formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency })}
             </span>
             {env.length > 0 && (
               <>
@@ -490,6 +486,7 @@ export default async function ExperiencePublicPage({
             blockedDates={blockedDates}
             priceFrom={page.price_from ?? null}
             priceType={page.price_type ?? null}
+            currency={page.currency}
           >
             {/* These server-rendered sections go in the left column */}
 
@@ -1346,16 +1343,11 @@ export default async function ExperiencePublicPage({
                 style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
                 <div className="flex-1">
                   <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-                    {formatPrice(page.price_from, page.price_type)}
+                    {formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency })}
                   </p>
-                  {page.currency && page.currency !== 'EUR' && page.price_type !== 'request' && (
-                    <p className="text-xs f-body mt-1" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                      Prices in {page.currency}
-                    </p>
-                  )}
                   {page.price_type !== 'request' && (
                     <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                      {page.price_type === 'flat' ? 'Flat rate for the group · includes guide service' : 'Per person · includes guide service'}
+                      {page.price_type === 'flat' ? 'Flat rate per trip · includes guide service' : 'Per person · includes guide service'}
                     </p>
                   )}
                 </div>
@@ -1387,6 +1379,7 @@ export default async function ExperiencePublicPage({
                 blockedDates={blockedDates}
                 priceFrom={page.price_from ?? null}
                 priceType={page.price_type ?? null}
+                currency={page.currency}
               />
             </div>
           </div>
@@ -1396,7 +1389,7 @@ export default async function ExperiencePublicPage({
       </div>
 
       {/* ── MOBILE BAR ── */}
-      <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_from ?? null} priceType={page.price_type ?? null} />
+      <MobileInquiryBar tripId={page.trip_id} pricePerPerson={page.price_from ?? null} priceType={page.price_type ?? null} currency={page.currency} />
 
       {/* ════════════════════════════════════════════════════════════
           BOTTOM SECTIONS — different background
@@ -1578,7 +1571,7 @@ export default async function ExperiencePublicPage({
 
                       <div className="flex items-center justify-between">
                         <span className="text-base font-bold f-display" style={{ color: '#0A2E4D' }}>
-                          {(trip as {price_type?: string}).price_type === 'request' ? 'Price on request' : `from €${trip.price_from}`}
+                          {formatPrice({ priceFrom: trip.price_from, priceType: trip.price_type, currency: trip.currency })}
                         </span>
                         <span className="text-xs font-semibold f-body transition-colors" style={{ color: '#E67E50' }}>
                           View →

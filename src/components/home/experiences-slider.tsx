@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { CountryFlag } from '@/components/ui/country-flag'
 import type { FeaturedExperiencePage } from '@/lib/supabase/queries'
+import { formatPrice } from '@/lib/format-price'
 
 interface Props {
   experiences: FeaturedExperiencePage[]
@@ -92,7 +93,7 @@ export function ExperiencesSlider({ experiences }: Props) {
                 </h3>
                 <p className="f-body mt-1" style={{ fontSize: '12px', color: 'rgba(255,255,255,0.48)' }}>
                   {exp.guide?.full_name ?? exp.region}
-                  {` · from €${exp.price_from}`}
+                  {` · ${formatPrice({ priceFrom: exp.price_from, priceType: exp.price_type, currency: exp.currency })}`}
                 </p>
               </div>
             </div>

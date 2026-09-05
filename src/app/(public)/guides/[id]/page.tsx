@@ -6,6 +6,7 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { heroFull, avatarImg, cardThumb } from '@/lib/image'
 import { getLandscapeUrl } from '@/lib/landscapes'
+import { currencySymbol } from '@/lib/format-price'
 
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
@@ -482,7 +483,7 @@ export default async function GuideProfilePage({
                                 </span>
                               </div>
                               <div className="absolute top-3 right-3 text-white text-sm font-bold px-3 py-1.5 rounded-full f-body" style={{ background: 'rgba(5,12,22,0.72)', backdropFilter: 'blur(8px)' }}>
-                                €{exp.price_from}<span className="text-xs font-normal opacity-55">/pp</span>
+                                {currencySymbol(exp.currency)}{exp.price_from}<span className="text-xs font-normal opacity-55">/pp</span>
                               </div>
                             </div>
 

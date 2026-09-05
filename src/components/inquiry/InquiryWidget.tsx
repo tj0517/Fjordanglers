@@ -26,6 +26,7 @@ import { trackFormStart, trackSubmitLeadForm } from '@/lib/gtag'
 import { estimateLeadValue, type TripLength } from '@/lib/leadValue'
 import { getStoredGclid } from '@/lib/gclid'
 import { getStoredUtm } from '@/lib/utm'
+import { currencySymbol } from '@/lib/format-price'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
 const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
@@ -57,6 +58,7 @@ export interface InquiryWidgetProps {
   selectedOptionLabel?: string | null
   priceFrom?:           number | null
   priceType?:           string | null
+  currency:             string
 }
 
 type Step        = 'calendar' | 'form'
@@ -219,6 +221,7 @@ function InquiryModal({
   initialViewMonth,
   priceFrom,
   priceType,
+  currency,
   onClose,
 }: {
   tripId?:              string
@@ -231,6 +234,7 @@ function InquiryModal({
   initialViewMonth?:    number
   priceFrom?:           number | null
   priceType?:           string | null
+  currency:             string
   onClose:              () => void
 }) {
   const [step,          setStep]          = useState<Step>('calendar')
@@ -434,7 +438,7 @@ function InquiryModal({
                   {priceType === 'request' ? 'Price' : priceType === 'flat' ? 'Group price' : 'Per person'}
                 </span>
                 <span className="text-base font-bold f-display" style={{ color: '#E67E50' }}>
-                  {priceType === 'request' ? 'On request' : `from €${priceFrom}`}
+                  {priceType === 'request' ? 'On request' : `from ${currencySymbol(currency)}${priceFrom}`}
                 </span>
               </div>
             )}
@@ -738,6 +742,7 @@ export function InquiryWidget({
   selectedOptionLabel,
   priceFrom,
   priceType,
+  currency,
 }: InquiryWidgetProps) {
   const [isOpen,      setIsOpen]      = useState(false)
   const [mounted,     setMounted]     = useState(false)
@@ -799,7 +804,7 @@ export function InquiryWidget({
               {priceType === 'request' ? 'Price' : priceType === 'flat' ? 'Group price' : 'Per person'}
             </span>
             <span className="text-xl font-bold f-display" style={{ color: '#E67E50' }}>
-              {priceType === 'request' ? 'On request' : `from €${priceFrom}`}
+              {priceType === 'request' ? 'On request' : `from ${currencySymbol(currency)}${priceFrom}`}
             </span>
           </div>
         )}
@@ -903,6 +908,7 @@ export function InquiryWidget({
           initialViewMonth={initialMonth?.month0}
           priceFrom={priceFrom}
           priceType={priceType}
+          currency={currency}
           onClose={closeModal}
         />,
         document.body,
@@ -1081,7 +1087,7 @@ export function NoGuideContactCard({ tripTitle, selectedLabel }: {
 
 // ─── MobileInquiryBar ─────────────────────────────────────────────────────────
 
-export function MobileInquiryBar({ tripId: _tripId, pricePerPerson, priceType }: { tripId?: string | null; pricePerPerson?: number | null; priceType?: string | null }) {
+export function MobileInquiryBar({ tripId: _tripId, pricePerPerson, priceType, currency }: { tripId?: string | null; pricePerPerson?: number | null; priceType?: string | null; currency: string }) {
   const handleClick = useCallback(() => {
     window.dispatchEvent(new CustomEvent('open-inquiry-modal'))
   }, [])
@@ -1113,7 +1119,7 @@ export function MobileInquiryBar({ tripId: _tripId, pricePerPerson, priceType }:
             <>
               <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.42)' }}>From</p>
               <p className="font-bold f-body leading-tight" style={{ color: '#0A2E4D', fontSize: '18px' }}>
-                €{pricePerPerson}
+                {currencySymbol(currency)}{pricePerPerson}
                 <span className="text-xs font-normal ml-1" style={{ color: 'rgba(10,46,77,0.42)' }}>
                   {priceType === 'flat' ? '/group' : '/person'}
                 </span>

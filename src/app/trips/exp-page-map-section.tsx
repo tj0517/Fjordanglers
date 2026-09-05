@@ -8,6 +8,7 @@ import { CountryFlag } from '@/components/ui/country-flag'
 import ExpPageMapWrapper from './exp-page-map-wrapper'
 import { fetchGeoExpPages } from './exp-page-geo-action'
 import type { MapBounds } from './exp-page-map-view'
+import { formatPrice } from '@/lib/format-price'
 
 // ─── Shared type ──────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ export type ExpPage = {
   region: string
   price_from: number
   price_type: string
+  currency: string
   hero_image_url: string | null
   gallery_image_urls: unknown
   difficulty: string | null
@@ -29,12 +31,6 @@ export type ExpPage = {
   location_lng: number | null
   location_area: unknown   // GeoJSON.Polygon | null
   location_spots: unknown  // LocationSpot[] | null
-}
-
-function formatPrice(priceFrom: number, priceType: string): string {
-  if (priceType === 'request') return 'Price on request'
-  if (priceType === 'flat') return `from €${priceFrom} for the group`
-  return `from €${priceFrom} / person`
 }
 
 // ─── Difficulty colours ───────────────────────────────────────────────────────
@@ -152,7 +148,7 @@ function SheetCard({
           {/* Price */}
           <div className="flex items-center mt-2.5">
             <span className="text-[13px] font-bold f-display" style={{ color: '#0A2E4D' }}>
-              {formatPrice(page.price_from, page.price_type)}
+              {formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency })}
             </span>
           </div>
         </div>
@@ -233,7 +229,7 @@ function ExpCard({
               className="text-[13px] font-bold px-3.5 py-1.5 rounded-full f-body"
               style={{ background: 'rgba(5,12,22,0.72)', color: '#fff', backdropFilter: 'blur(8px)' }}
             >
-              {formatPrice(page.price_from, page.price_type)}
+              {formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency })}
             </span>
           </div>
         </div>
