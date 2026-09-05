@@ -38,6 +38,7 @@ interface ExperienceTabLayoutProps {
   blockedDates?:   string[]
   priceFrom?:        number | null
   priceType?:        string | null
+  currency:          string
   children?:         React.ReactNode
 }
 
@@ -57,6 +58,7 @@ export function ExperienceTabLayout({
   blockedDates = [],
   priceFrom,
   priceType,
+  currency,
   children,
 }: ExperienceTabLayoutProps) {
   const [activeTab,      setActiveTab]      = useState(0)
@@ -266,6 +268,7 @@ export function ExperienceTabLayout({
                   option={opt}
                   speciesDetails={speciesDetails}
                   priceOverride={config?.priceOverride}
+                  currency={currency}
                 />
               </>
             )
@@ -303,6 +306,7 @@ export function ExperienceTabLayout({
             selectedOptionLabel={selectedLabel}
             priceFrom={activePriceFrom}
             priceType={activePriceType}
+            currency={currency}
           />
         </div>
       </div>

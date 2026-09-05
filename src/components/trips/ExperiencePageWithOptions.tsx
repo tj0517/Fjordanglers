@@ -46,6 +46,7 @@ interface ExperiencePageWithOptionsProps {
   blockedDates?:    string[]
   priceFrom?:         number | null
   priceType?:         string | null
+  currency:           string
   children?:          React.ReactNode
 }
 
@@ -61,6 +62,7 @@ export function ExperiencePageWithOptions({
   blockedDates = [],
   priceFrom,
   priceType,
+  currency,
   children,
 }: ExperiencePageWithOptionsProps) {
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -86,6 +88,7 @@ export function ExperiencePageWithOptions({
           selectedIdx={selectedIdx}
           onSelect={setSelectedIdx}
           speciesDetails={speciesDetails}
+          currency={currency}
         />
 
         {/* FAQ */}
@@ -131,6 +134,7 @@ export function ExperiencePageWithOptions({
             selectedOptionLabel={selectedLabel}
             priceFrom={activePriceFrom}
             priceType={activePriceType}
+            currency={currency}
           />
         </div>
       </div>

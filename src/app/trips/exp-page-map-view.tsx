@@ -6,6 +6,7 @@ import L from 'leaflet'
 import Supercluster from 'supercluster'
 import 'leaflet/dist/leaflet.css'
 import type { ExpPage } from './exp-page-map-section'
+import { formatPrice } from '@/lib/format-price'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
 
@@ -310,7 +311,7 @@ function ExpPagePopup({ page }: { page: ExpPage }) {
       </p>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: '13px', fontWeight: 700, color: '#0A2E4D' }}>
-          {page.price_type === 'request' ? 'Price on request' : page.price_type === 'flat' ? `from €${page.price_from} for the group` : `from €${page.price_from} / person`}
+          {formatPrice({ priceFrom: page.price_from, priceType: page.price_type, currency: page.currency })}
         </span>
         <a
           href={`/experiences/${page.slug}`}

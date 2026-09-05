@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react'
 import { MapPin, Check, X as XIcon, ArrowRight } from 'lucide-react'
 import type { SpecialAttraction, ContentBlock, SpeciesDetailItem, Boat } from '@/actions/experience-pages'
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
+import { formatPrice } from '@/lib/format-price'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,22 +47,17 @@ export interface TripOption {
   excludes:                  string[]
 }
 
-function formatPrice(priceFrom: number, priceType: string): string {
-  if (priceType === 'request') return 'Price on request'
-  if (priceType === 'flat') return `from €${priceFrom} for the group`
-  return `from €${priceFrom} / person`
-}
-
 interface TripOptionsAccordionProps {
   options:        TripOption[]
   selectedIdx:    number
   onSelect:       (idx: number) => void
   speciesDetails?: SpeciesDetailItem[]
+  currency:       string
 }
 
 // ─── Per-option content panel ─────────────────────────────────────────────────
 
-export function OptionPanel({ option, speciesDetails = [], priceOverride }: { option: TripOption; speciesDetails?: SpeciesDetailItem[]; priceOverride?: string }) {
+export function OptionPanel({ option, speciesDetails = [], priceOverride, currency }: { option: TripOption; speciesDetails?: SpeciesDetailItem[]; priceOverride?: string; currency: string }) {
   const filteredSpecies = speciesDetails.filter(s => option.target_species.includes(s.name))
 
   return (
@@ -300,11 +296,11 @@ export function OptionPanel({ option, speciesDetails = [], priceOverride }: { op
         <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>Price</p>
         <div className="px-6 py-5 rounded-2xl" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
           <p className="text-3xl font-bold f-display" style={{ color: '#0A2E4D' }}>
-            {priceOverride ?? formatPrice(option.price_from, option.price_type)}
+            {priceOverride ?? formatPrice({ priceFrom: option.price_from, priceType: option.price_type, currency })}
           </p>
           {option.price_type !== 'request' && (
             <p className="text-sm f-body mt-2" style={{ color: 'rgba(10,46,77,0.55)' }}>
-              {option.price_type === 'flat' ? 'Flat rate for the group · includes guide service' : 'Per person · includes guide service'}
+              {option.price_type === 'flat' ? 'Flat rate per trip · includes guide service' : 'Per person · includes guide service'}
             </p>
           )}
         </div>
@@ -319,10 +315,12 @@ export function OptionPanel({ option, speciesDetails = [], priceOverride }: { op
 function OptionModal({
   option,
   speciesDetails,
+  currency,
   onClose,
 }: {
   option: TripOption
   speciesDetails?: SpeciesDetailItem[]
+  currency: string
   onClose: () => void
 }) {
   // Lock body scroll & close on Escape
@@ -371,7 +369,7 @@ function OptionModal({
           </div>
           <div className="flex items-center gap-4">
             <span className="font-bold f-display" style={{ color: '#E67E50', fontSize: '16px' }}>
-              {formatPrice(option.price_from, option.price_type)}
+              {formatPrice({ priceFrom: option.price_from, priceType: option.price_type, currency })}
             </span>
             <button
               onClick={onClose}
@@ -385,7 +383,7 @@ function OptionModal({
         </div>
 
         {/* Content */}
-        <OptionPanel option={option} speciesDetails={speciesDetails} />
+        <OptionPanel option={option} speciesDetails={speciesDetails} currency={currency} />
       </div>
     </div>
   )
@@ -393,7 +391,7 @@ function OptionModal({
 
 // ─── Trip option cards + popup ─────────────────────────────────────────────────
 
-export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDetails }: TripOptionsAccordionProps) {
+export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDetails, currency }: TripOptionsAccordionProps) {
   const [openIdx, setOpenIdx] = useState<number | null>(null)
 
   if (options.length === 0) return null
@@ -454,7 +452,7 @@ export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDe
 
                 {/* Price */}
                 <span className="font-bold f-display text-sm flex-shrink-0" style={{ color: '#E67E50' }}>
-                  {formatPrice(option.price_from, option.price_type)}
+                  {formatPrice({ priceFrom: option.price_from, priceType: option.price_type, currency })}
                 </span>
               </button>
 
@@ -483,6 +481,7 @@ export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDe
         <OptionModal
           option={openOption}
           speciesDetails={speciesDetails}
+          currency={currency}
           onClose={() => setOpenIdx(null)}
         />
       )}

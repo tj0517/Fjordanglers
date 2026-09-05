@@ -284,6 +284,8 @@ export type GuideExperiencePage = {
   hero_image_url: string | null
   gallery_image_urls: string[] | null
   price_from: number
+  price_type: string
+  currency: string
   target_species: string[] | null
   difficulty: string | null
 }
@@ -299,7 +301,7 @@ export async function getGuideExperiencePages(guideId: string): Promise<GuideExp
 
       const { data, error } = await db
         .from('experience_pages')
-        .select('id, slug, experience_name, country, hero_image_url, gallery_image_urls, price_from, target_species, difficulty')
+        .select('id, slug, experience_name, country, hero_image_url, gallery_image_urls, price_from, price_type, currency, target_species, difficulty')
         .eq('guide_id', guideId)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
@@ -322,6 +324,8 @@ export type FeaturedExperiencePage = {
   country: string
   region: string
   price_from: number
+  price_type: string
+  currency: string
   hero_image_url: string | null
   guide: { id: string; full_name: string } | null
 }
@@ -336,7 +340,7 @@ export async function getFeaturedExperiencePages(limit = 8): Promise<FeaturedExp
 
       const { data, error } = await db
         .from('experience_pages')
-        .select('id, slug, experience_name, country, region, price_from, hero_image_url, guide:guides!guide_id ( id, full_name )')
+        .select('id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name )')
         .eq('status', 'active')
         .limit(40)
 
