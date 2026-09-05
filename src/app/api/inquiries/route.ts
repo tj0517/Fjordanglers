@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
+import { createInquiry } from '@/lib/inquiries/create'
 import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 import { runAgentRound1 } from '@/lib/ai/inquiry-agent'
@@ -44,6 +45,13 @@ const InquirySchema = z.object({
   angler_phone:    z.string().max(50).optional().nullable(),
   trip_length:     z.enum(['1', '2-3', '4-7', '7+']).optional().nullable(),
   gclid:           z.string().max(200).optional().nullable(),
+  utm: z.object({
+    utm_source:   z.string().max(200).optional(),
+    utm_medium:   z.string().max(200).optional(),
+    utm_campaign: z.string().max(200).optional(),
+    utm_content:  z.string().max(200).optional(),
+    utm_term:     z.string().max(200).optional(),
+  }).optional().nullable(),
 }).refine(
   d => d.trip_id != null || d.experience_page_id != null,
   { message: 'Either trip_id or experience_page_id is required' },
@@ -109,29 +117,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Sort dates before storing
   const sortedDates = [...parsed.data.requested_dates].sort()
 
-  // Insert inquiry
-  // Cast needed until generated types catch up with the migration that makes
-  // trip_id nullable and adds experience_page_id.
-  const { data: inquiry, error: dbError } = await svc.from('inquiries')
-    .insert({
-      trip_id:            parsed.data.trip_id ?? null,
-      experience_page_id: parsed.data.experience_page_id ?? null,
-      guide_id:           guideId,
-      angler_name:        parsed.data.angler_name,
-      angler_email:       parsed.data.angler_email,
-      requested_dates:    sortedDates,
-      party_size:         parsed.data.party_size,
-      message:            parsed.data.message ?? null,
-      selected_option:    parsed.data.selected_option ?? null,
-      angler_phone:       parsed.data.angler_phone ?? null,
-      trip_length:        parsed.data.trip_length ?? null,
-      gclid:              parsed.data.gclid ?? null,
-      status:             'pending',
+  let inquiry: { id: string; status: string }
+  try {
+    inquiry = await createInquiry({
+      tripId:            parsed.data.trip_id ?? null,
+      experiencePageId:  parsed.data.experience_page_id ?? null,
+      guideId,
+      anglerName:        parsed.data.angler_name,
+      anglerEmail:       parsed.data.angler_email,
+      requestedDates:    sortedDates,
+      partySize:         parsed.data.party_size,
+      message:           parsed.data.message ?? null,
+      selectedOption:    parsed.data.selected_option ?? null,
+      anglerPhone:       parsed.data.angler_phone ?? null,
+      tripLength:        parsed.data.trip_length ?? null,
+      gclid:             parsed.data.gclid ?? null,
+      utm:               parsed.data.utm ?? null,
+      status:            'pending',
+      source:            'web_form',
     })
-    .select('id, status')
-    .single()
-
-  if (dbError != null || inquiry == null) {
+  } catch (dbError) {
     console.error('[inquiries/POST] DB insert error:', dbError)
     return NextResponse.json({ error: 'Failed to save inquiry' }, { status: 500 })
   }

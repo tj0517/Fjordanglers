@@ -25,6 +25,7 @@
  */
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createInquiry } from '@/lib/inquiries/create'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
@@ -139,6 +140,11 @@ export interface OfferPageData {
 /**
  * FA creates an inquiry manually — for leads that came via Instagram, WhatsApp,
  * email, or any channel outside the website form.
+ *
+ * `channel` is the acquisition channel (instagram/whatsapp/email/…) and is stored
+ * in `internal_notes` for visibility in the deal tracker — it is a different concept
+ * from `inquiries.source`, which always records `'manual'` for rows created here
+ * (the creation path, not the channel).
  */
 export async function createManualInquiry(params: {
   anglerName:     string
@@ -147,45 +153,39 @@ export async function createManualInquiry(params: {
   tripId:         string | null
   requestedDates: string[]
   message:        string | null
-  source:         string | null
+  channel:        string | null
   status:         string
 }): Promise<ActionResult & { inquiryId?: string }> {
   if (params.anglerName.trim() === '') return { success: false, error: 'Name is required' }
   if (params.anglerEmail.trim() === '') return { success: false, error: 'Email is required' }
   if (params.partySize < 1) return { success: false, error: 'Party size must be at least 1' }
 
-  const svc = createServiceClient()
+  const internalNotes = params.channel != null && params.channel.trim() !== ''
+    ? `Source: ${params.channel.trim()}`
+    : null
 
-  const row: Record<string, unknown> = {
-    angler_name:     params.anglerName.trim(),
-    angler_email:    params.anglerEmail.trim().toLowerCase(),
-    party_size:      params.partySize,
-    status:          params.status,
-    requested_dates: params.requestedDates,
-  }
-  // tripId here is experience_pages.id (the dropdown value from the admin form).
-  // Store as experience_page_id — trip_id FK points to the non-existent experiences table.
-  if (params.tripId != null && params.tripId !== '') row.experience_page_id = params.tripId
-  if (params.message != null && params.message.trim() !== '') row.message = params.message.trim()
-  // Store source in internal_notes so it's visible in the deal tracker
-  if (params.source != null && params.source.trim() !== '') {
-    row.internal_notes = `Source: ${params.source.trim()}`
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (svc as any)
-    .from('inquiries')
-    .insert(row)
-    .select('id')
-    .single()
-
-  if (error != null) {
+  let inquiry: { id: string; status: string }
+  try {
+    inquiry = await createInquiry({
+      anglerName:       params.anglerName.trim(),
+      anglerEmail:      params.anglerEmail.trim().toLowerCase(),
+      partySize:        params.partySize,
+      status:           params.status,
+      requestedDates:   params.requestedDates,
+      // tripId here is experience_pages.id (the dropdown value from the admin form).
+      // Store as experience_page_id — trip_id FK points to the non-existent experiences table.
+      experiencePageId: params.tripId != null && params.tripId !== '' ? params.tripId : null,
+      message:          params.message != null && params.message.trim() !== '' ? params.message.trim() : null,
+      internalNotes,
+      source:           'manual',
+    })
+  } catch (error) {
     console.error('[createManualInquiry] DB error:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create inquiry' }
   }
 
-  console.log(`[createManualInquiry] Created inquiry ${data.id} for ${params.anglerName} (source: ${params.source ?? 'manual'})`)
-  return { success: true, inquiryId: data.id }
+  console.log(`[createManualInquiry] Created inquiry ${inquiry.id} for ${params.anglerName} (channel: ${params.channel ?? 'unspecified'})`)
+  return { success: true, inquiryId: inquiry.id }
 }
 
 // ─── sendDepositLink ──────────────────────────────────────────────────────────

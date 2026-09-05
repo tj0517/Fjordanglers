@@ -27,7 +27,10 @@ be undeclared (`assigned_guide_id`, `assigned_at`, `guide_acceptance`, `guide_of
 `deal_currency`, `angler_phone`, the `offer_*` / `internal_*` / agent columns). The
 `as any` casts that hid them were removed in FA-1.06 where the real types compile; the
 remaining casts (9 files) cover `Json` columns and nullable columns, not missing tables.
-`inquiries.source` / `utm` are **not** in the baseline — FA-0.05 adds them by migration.
+`inquiries.source` / `utm` are **not** in the baseline — FA-0.05 adds them by migration
+`20260904210532_inquiries_source_utm.sql` (`source text` with `CHECK (source IS NULL OR
+source IN ('web_form','manual','email','whatsapp'))`, `utm jsonb`), written by the single
+insert path `src/lib/inquiries/create.ts`. Historical rows keep `source = NULL`.
 `guides.lead_id` is **not** in the baseline either (the audit listed it; production does not
 have it).
 
