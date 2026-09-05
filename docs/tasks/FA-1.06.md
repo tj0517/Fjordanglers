@@ -393,11 +393,46 @@ była już w kontekście, a każda zmiana to chirurgiczne wycięcie z tabeli.
   zadania (INDEX miał jeszcze stary opis M/sonnet).
 
 ### Not done
-- **Odczyt produkcji** (liczby `trip_id` vs `experience_page_id`, wiersze `archive.*`) —
-  brak `SUPABASE_DB_PASSWORD` w sesji, MCP `Unauthorized`, CLI bez `db query`. tj podał
-  `archive.leads = 0` z własnego odczytu; reszty nie potwierdzam. Żadne kryterium akceptacji
-  tego nie wymaga.
-- **Delegacja do `fa-core`** — świadomie pominięta (patrz nagłówek raportu).
+- **D4 — wartości PRZED i PO dla `getPlatformStats.experienceCount` i `getSpeciesCounts`
+  nie zostały zmierzone.** Lokalna baza to sam baseline bez danych:
+  ```
+  $ psql -h 127.0.0.1 -p 54422 -U postgres -d postgres -Atc "
+    select 'experience_pages total', count(*) from public.experience_pages
+    union all select 'status=active', count(*) from public.experience_pages where status='active'
+    union all select 'archive.experiences published', count(*) from archive.experiences where published"
+  experience_pages total|0
+  status=active|0
+  archive.experiences published|0
+  ```
+  PRZED = 0 (zapytanie do `experiences` padało na produkcji, więc `0`/`{}`), PO lokalnie = 0 —
+  porównanie nic nie mówi. Produkcji nie odczytałem (patrz niżej). **To jedyna zmiana
+  funkcjonalna w tym PR i wchodzi niezweryfikowana na danych; weryfikacja D4 przenosi się
+  na po-deploy** (checklista niżej). Co wiem bez danych: baseline nie ma CHECK-a na
+  `experience_pages.status` (kolumna `text DEFAULT 'draft' NOT NULL`, linia 1113), a
+  `status='active'` jest tym samym filtrem, którego używają `/experiences/[slug]` (4×),
+  `sitemap.ts` (2×) i `getGuideExperiencePages` — jeśli strony wypraw renderują się na
+  produkcji, ten filtr jest poprawny.
+- **Odczyt produkcji** (liczby `trip_id` vs `experience_page_id`, wiersze `archive.*`,
+  liczniki D4) — brak `SUPABASE_DB_PASSWORD` w sesji, MCP `Unauthorized`, CLI bez `db query`.
+  tj podał `archive.leads = 0` z własnego odczytu; reszty nie potwierdzam. Decyzja tj 5 IX:
+  odczyt prod wchodzi jako pierwszy punkt zadania-helpera z D2, nie tutaj.
+- **Delegacja do `fa-core`** — pominięta; od 5 IX to reguła w `docs/05-agent-operations.md` §8
+  (faza A + B w jednej sesji = ten sam agent).
+
+### Otwarte po deployu — checklista dla tj (do zamknięcia przed `done`)
+- [ ] Otworzyć `/` — licznik gatunków w species pickerze (`getSpeciesCounts`) niezerowy
+      i sumuje się do liczby wystąpień w `target_species` aktywnych `experience_pages`.
+- [ ] Otworzyć `/guides` — pasek statystyk, pole „experiences" (`getPlatformStats`) równe
+      `select count(*) from experience_pages where status='active'` (na 4 IX: 29 wierszy w
+      `experience_pages` ogółem wg `docs/audit/db-row-counts-2026-09-04.md`; ile z nich
+      `active` — do odczytu).
+- [ ] Jeśli którakolwiek wartość dalej `0` przy niezerowej liczbie aktywnych stron → filtr
+      `status='active'` w `src/lib/supabase/queries.ts` jest zły (jedna linijka w każdej z
+      dwóch funkcji); pamiętać o `unstable_cache` z `revalidate: 300` — odświeżyć po 5 min
+      albo przez `revalidateTag('experiences')`.
+- [ ] `/guides/apply` → 301 na `/guides` (curl -I).
+- [ ] `/admin`, `/admin/guides`, `/admin/guides/[id]`, `/admin/inquiries`,
+      `/admin/inquiries/[id]`, `/admin/experiences/new?submission_id=…` renderują się bez 500.
 
 ### Noticed, not touched (→ docs/deferred-tasks.md)
 - 8 miejsc z `'Your trip'` po D2-A + puste `tripMap/slugMap/countryMap` w komponentach
