@@ -5,14 +5,14 @@ stage: 0
 status: review
 difficulty: M
 model: sonnet
-model_approved: fable by tj 2026-09-04 (first pass); rebase + verification 2026-09-05 on sonnet/high per tj
+model_approved: fable by tj 2026-09-04 (first pass) — odstępstwo od tabeli §2 w docs/05-agent-operations.md (zadanie jest M, Fable przewidziany dla XL); rebase + verification 2026-09-05 on sonnet/high per tj
 effort: medium-high
 agent: fa-core
 branch: feat/inquiry-source-and-utm
 depends_on: [FA-1.06]
 blocked_by_questions: []
 touches_db: true
-touches_prod: false
+touches_prod: true
 estimate_h: 4
 owner: tj
 ---
@@ -479,6 +479,8 @@ FA-0.09 (sekrety poza `settings.local.json`); agent nie łączył się z produkc
 odczytem. Zgoda tj z 5 IX obejmowała wyłącznie tę jedną migrację i wyłącznie po kroku 1.
 Kolejność (migracja **przed** merge'em PR-a) była częścią zgody: kod z tej gałęzi wstawia
 `source` i `utm`, więc bez kolumn na produkcji każde nowe zapytanie padłoby na insercie.
+Migracja `20260904210532` jest na produkcji od 5 IX 2026, więc zadanie liczy się jako
+dotykające produkcji (`touches_prod: true`) dla wszystkich przyszłych ocen ryzyka.
 
 ### Krok 1 — pending przed pushem (`supabase migration list --linked`, tj)
 
