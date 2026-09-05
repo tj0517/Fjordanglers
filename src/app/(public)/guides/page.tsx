@@ -105,11 +105,16 @@ const GrainOverlay = () => (
 // ─── METADATA ─────────────────────────────────────────────────────────────────
 
 export const metadata = {
-  title: 'Fishing Guides in Norway, Sweden, Iceland & Finland',
+  title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
   description:
-    'Curated local fishing guides across Norway, Sweden, Finland and Iceland. Salmon, trout, pike & sea fishing. Filter by country and language to find your perfect guide.',
+    'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
   alternates: { canonical: 'https://fjordanglers.com/guides' },
-  openGraph: { url: 'https://fjordanglers.com/guides', type: 'website' },
+  openGraph: {
+    url: 'https://fjordanglers.com/guides',
+    type: 'website',
+    title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
+    description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
+  },
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
@@ -135,8 +140,8 @@ export default async function GuidesPage({
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'Fishing Guides in Norway, Sweden, Iceland & Finland',
-    description: 'Curated local fishing guides across Norway, Sweden, Finland and Iceland. Salmon, trout, pike & sea fishing.',
+    name: 'FjordAnglers guides',
+    description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
     url: 'https://fjordanglers.com/guides',
     numberOfItems: total,
     itemListElement: guides.map((guide, i) => ({
@@ -191,12 +196,12 @@ export default async function GuidesPage({
                 </p>
               </div>
               <h1 className="text-white font-bold f-display" style={{ fontSize: 'clamp(28px, 5vw, 54px)', lineHeight: 1.06 }}>
-                Meet the guides
+                The guides
                 <br />
                 <span style={{ fontStyle: 'italic', color: '#E67E50' }}>who know every fish.</span>
               </h1>
               <p className="mt-5 text-sm leading-relaxed f-body" style={{ color: 'rgba(255,255,255,0.55)', maxWidth: '420px' }}>
-                Curated local guides across Norway, Sweden, Finland and Iceland. Only the ones we&apos;d book ourselves.
+                Owner-operators only. The person who replies to your enquiry is the person who will be standing next to you on the water. Iceland, Norway, Sweden, Finland, Argentina, Chile, New Zealand.
               </p>
             </div>
 

@@ -202,6 +202,11 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
    przewodników tracą barwniejszy tekst "Connecting anglers... Scandinavia" na rzecz neutralnego.
    Do potwierdzenia — alternatywa (przenieść `<SiteFooter>` z layoutu do każdej strony osobno, żeby
    `/guides/[id]` mogło znać kraj przewodnika) to redesign struktury, wykluczony w Poza zakresem.
+   **Zastąpione w FA-0.17 (2026-09-06)**: decyzja tj — jeden tagline dla każdej strony, bez
+   rozgałęzienia: "Independent fishing guides in Iceland, Scandinavia, Patagonia and New
+   Zealand." Cały mechanizm `neutralTagline` (prop, warunek w `footer.tsx`, wywołania w
+   `experiences/[slug]/page.tsx`, `trips/page.tsx`, `(public)/layout.tsx`) usunięty w FA-0.17.
+   Ten wiersz zostaje jako zapis decyzji z FA-0.12 i historii, dlaczego mechanizm istniał.
 2. **Partnerzy → draft** — patrz "Not done"; dwa sluigi gotowe do `UPDATE`, czekam na twoje wykonanie.
 3. **Produkcyjne SELECT-y** — muszę je dostać, żeby zamknąć bramkę STOP o spójności `country` i
    uzupełnić listę podwójnych sufiksów w `deferred-tasks.md`.

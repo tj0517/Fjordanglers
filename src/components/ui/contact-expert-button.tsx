@@ -7,7 +7,7 @@ const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
 const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
 
 const WHATSAPP_URL =
-  `https://wa.me/${WHATSAPP_NUMBER}?text=Hi!%20I%27m%20interested%20in%20a%20guided%20fishing%20trip%20in%20Scandinavia.%20Can%20you%20help%20me%20plan%20it%3F`
+  `https://wa.me/${WHATSAPP_NUMBER}?text=Hi%2C%20I%20am%20looking%20at%20a%20guided%20fishing%20trip.%20Country%3A%20___%20Dates%3A%20___%20Number%20of%20anglers%3A%20___`
 const EMAIL_URL =
   `mailto:${FA_EMAIL}?subject=Question%20about%20a%20guided%20fishing%20trip`
 

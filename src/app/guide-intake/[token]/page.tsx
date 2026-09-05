@@ -86,7 +86,7 @@ export default async function GuideIntakePage({
       {/* ── Footer ──────────────────────────────────────────────────────── */}
       <div className="pb-8 text-center">
         <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>
-          FjordAnglers · Connecting guides &amp; anglers across Scandinavia
+          FjordAnglers. Independent guides in Iceland, Scandinavia, Patagonia and New Zealand.
         </p>
       </div>
 

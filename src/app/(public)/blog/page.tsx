@@ -6,7 +6,7 @@ import { BLOG_POSTS } from '@/lib/blog-data'
 
 export const metadata: Metadata = {
   title: 'Fishing Journal — Tips, Guides & Destination Stories',
-  description: 'Expert fishing tips, regulation guides, and destination stories for anglers heading to Norway, Sweden, Iceland and Finland. Written by anglers, for anglers.',
+  description: 'Season dates, licence rules and tactics, written from the rivers we actually send people to.',
   alternates: { canonical: 'https://fjordanglers.com/blog' },
   openGraph: { url: 'https://fjordanglers.com/blog', type: 'website' },
 }

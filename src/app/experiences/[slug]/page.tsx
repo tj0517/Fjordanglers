@@ -1609,7 +1609,7 @@ export default async function ExperiencePublicPage({
         </section>
       )}
 
-      <SiteFooter neutralTagline={pageRegion !== 'Nordic'} />
+      <SiteFooter />
     </>
   )
 }

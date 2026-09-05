@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: 'How do fishing permits work?',
-    a: "Nordic rivers are divided into beats, and each beat requires a separate permit — typically per person per day. Your guide sorts the permit for the water you'll be on. Some rivers also require a national licence, which the guide will explain before your arrival. You won't be dealing with Norwegian bureaucracy on your own.",
+    a: "Depends on the country. In Iceland the licence is often the biggest part of the price. In Chile Alex includes it. Every offer lists it as a separate line so you can see it.",
   },
   {
     q: 'Do I need to bring my own gear?',
@@ -25,11 +25,11 @@ const FAQS = [
   },
   {
     q: "Can I bring my partner or a friend who doesn't fish?",
-    a: "Yes. Nordic nature is extraordinary on its own. Non-fishing companions are welcome on most trips — just mention it when you enquire so the guide can plan the day accordingly.",
+    a: "Yes. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand are worth the trip even without a rod. Non-fishing companions are welcome on most trips, just mention it when you enquire so the guide can plan the day accordingly.",
   },
   {
     q: 'What if the weather or water conditions are bad?',
-    a: "Weather is part of fishing in Scandinavia — and a good guide knows how to read it. High water, cold fronts, low temperatures: experienced guides adapt. What we won't promise is that every condition leads to fish. That's not always true, and we'd rather tell you that now. If a trip genuinely can't happen due to extreme conditions or safety concerns, we'll work with the guide to find a solution — what that looks like depends on their calendar.",
+    a: "Depends on where you go. Iceland and Norway fish from May to September, Patagonia and New Zealand from November to April. Your guide picks the water for the day; if a day is not fishable he tells you the evening before and proposes another day or another river.",
   },
   {
     q: 'Who do I pay — you or the guide?',
@@ -41,7 +41,7 @@ const FAQS = [
   },
   {
     q: "You're based in Poland. Why should I trust a Polish company for Nordic fishing?",
-    a: "Because we're the ones who kept flying to Norway every summer with rods and sleeping in tents — figuring it out the hard way. We know the frustration of not knowing which river to trust or whether a guide is worth it. We built FjordAnglers because that service didn't exist. We know the guides personally, and we know what it's like to be in your position.",
+    a: "Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand. A country appears here only after we have a guide there we have met.",
   },
 ]
 

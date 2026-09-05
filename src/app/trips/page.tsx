@@ -4,7 +4,7 @@ import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExpPageMapSection from './exp-page-map-section'
 import type { ExpPage } from './exp-page-map-section'
-import { COUNTRIES, getRegionGroup } from '@/lib/countries'
+import { COUNTRIES } from '@/lib/countries'
 
 const PAGE_SIZE = 12
 
@@ -164,7 +164,6 @@ export default async function TripsPage({
   const matchedCountry = params.country
     ? COUNTRIES.find(c => c.toLowerCase() === params.country!.toLowerCase().trim())
     : undefined
-  const pageRegion = matchedCountry != null ? getRegionGroup(matchedCountry) : null
 
   // Preserve active filters in pagination links (strip 'page' key)
   const baseParams = new URLSearchParams(
@@ -221,7 +220,7 @@ export default async function TripsPage({
         }
 
       />
-      <SiteFooter neutralTagline={pageRegion != null && pageRegion !== 'Nordic'} />
+      <SiteFooter />
     </div>
   )
 }
