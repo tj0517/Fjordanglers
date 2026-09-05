@@ -64,6 +64,9 @@ partnera, którego nie umiemy wycenić. Tytuł strony ma jeden sufiks.
       nigdy „dowolne 3"; jeśli w grupie nie ma innych aktywnych stron — sekcja się nie renderuje.
 - [ ] **Partnerzy bez potwierdzonej prowizji** (Flywise, PRG, Natales) → `status='draft'` — patrz STOP; to wypina ich
       jednocześnie z cross-sellu, `/trips` i sitemapy bez dodatkowej flagi w kodzie.
+- [ ] **Stary tag Ads**: `src/app/layout.tsx` ładuje `AW-18008446689` obok właściwego `AW-18171634204`
+      (Tag Assistant 5 IX: 4 tagi na stronie). Usunąć stary; zostaje jedno `gtag('config','AW-18171634204')`.
+      Przed usunięciem `grep -rn "18008446689" src` — lista do raportu.
 - [ ] **Tytuł**: w `generateMetadata` — jeśli `meta_title` kończy się na `| FjordAnglers`, zwróć `title: { absolute: meta_title }`;
       w przeciwnym razie zostaw template. Nie edytuj danych w tym zadaniu.
 
@@ -74,6 +77,7 @@ partnera, którego nie umiemy wycenić. Tytuł strony ma jeden sufiks.
 - [ ] Sekcja „More like this" pod Bariloche pokazuje wyłącznie strony z grupy Patagonia (Argentyna/Chile) — zrzut listy slugów w raporcie.
 - [ ] Stopka na stronie Bariloche zawiera `Argentina` i `Chile` w destynacjach, a nie zawiera `Denmark` (o ile Dania nie ma aktywnej strony — z odczytu).
 - [ ] Po STOP-owanym UPDATE: `select slug, status from experience_pages where slug in (<Flywise, PRG, Natales>)` → `draft`; strony zwracają 404 lub redirect, nie treść.
+- [ ] `grep -rn "18008446689" src` → 0 trafień; Tag Assistant na produkcji pokazuje 3 tagi (GTM, G-, jeden AW-), nie 4.
 - [ ] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` zero nowych błędów vs `main`.
 - [ ] Status `todo → review` tu i w `INDEX.md`, w tym samym PR.
 
