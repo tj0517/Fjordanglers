@@ -2,7 +2,7 @@
 id: FA-0.05
 title: Jedna ścieżka tworzenia zapytania — source + UTM; usunięcie landingu /plan-your-trip
 stage: 0
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved: fable by tj 2026-09-04 (first pass) — odstępstwo od tabeli §2 w docs/05-agent-operations.md (zadanie jest M, Fable przewidziany dla XL); rebase + verification 2026-09-05 on sonnet/high per tj
