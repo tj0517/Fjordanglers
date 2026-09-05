@@ -25,15 +25,15 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   metadataBase: new URL('https://fjordanglers.com'),
   title: {
-    default: 'FjordAnglers — Guided Fishing Trips in Nordic Countries',
+    default: 'FjordAnglers. Fishing guides who own the boat.',
     template: '%s | FjordAnglers',
   },
   description:
-    'Book guided fishing trips in Norway, Sweden, Iceland & Finland with verified local guides. Salmon, sea trout, pike & fly fishing. Free to browse — only pay when you confirm.',
+    'Owner-guides in Iceland, Norway, Sweden, Finland, Patagonia and New Zealand. Send your dates, we check with the guide and reply within 24 hours. No payment to enquire.',
   keywords: [
-    'guided fishing trips Norway', 'salmon fishing Norway', 'fly fishing Iceland',
-    'fishing guide Scandinavia', 'sea trout fishing Sweden', 'Nordic fishing guide',
-    'guided salmon fishing', 'fjord fishing', 'wędkowanie Norwegia', 'Angelreisen Norwegen',
+    'fishing guide Iceland', 'salmon fishing Iceland', 'fly fishing Patagonia',
+    'Bariloche fishing guide', 'Coyhaique fly fishing', 'trout fishing New Zealand',
+    'Tongariro fishing guide', 'fishing guide Norway', 'pike fishing Sweden',
   ],
   openGraph: {
     type: 'website',
@@ -41,14 +41,14 @@ export const metadata: Metadata = {
     // alternateLocale removed — no translated pages exist yet; add back when /pl/ and /de/ routes are built
     url: 'https://fjordanglers.com',
     siteName: 'FjordAnglers',
-    title: 'FjordAnglers — Guided Fishing Trips in Nordic Countries',
-    description: 'Book guided fishing trips in Norway, Sweden, Iceland & Finland with verified local guides. Salmon, trout, pike & more.',
-    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'FjordAnglers — Guided Fishing Trips in Nordic Countries' }],
+    title: 'FjordAnglers. Fishing guides who own the boat.',
+    description: 'Owner-guides in Iceland, Norway, Sweden, Finland, Patagonia and New Zealand. Send your dates, we check with the guide and reply within 24 hours. No payment to enquire.',
+    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'A guide and an angler on a river bank at first light' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'FjordAnglers — Guided Fishing Trips in Nordic Countries',
-    description: 'Book guided fishing trips in Norway, Sweden, Iceland & Finland. Salmon, trout, pike & fly fishing.',
+    title: 'FjordAnglers. Fishing guides who own the boat.',
+    description: 'Owner-guides in Iceland, Norway, Sweden, Finland, Patagonia and New Zealand. Send your dates, we check with the guide and reply within 24 hours. No payment to enquire.',
     images: ['/brand/og-default.png'],
   },
   robots: {
@@ -116,7 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               name: 'FjordAnglers',
               url: 'https://fjordanglers.com',
               logo: 'https://fjordanglers.com/brand/sygnet.png',
-              description: 'Guided fishing trips marketplace connecting Central European anglers with verified local guides across Norway, Sweden, Iceland and Finland.',
+              description: 'FjordAnglers puts anglers in direct contact with independent fishing guides in Iceland, Scandinavia, Patagonia and New Zealand. Each guide is met and checked by the founders before listing.',
               email: 'contact@fjordanglers.com',
               address: {
                 '@type': 'PostalAddress',
@@ -137,8 +137,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 { '@type': 'Country', name: 'Sweden' },
                 { '@type': 'Country', name: 'Iceland' },
                 { '@type': 'Country', name: 'Finland' },
+                { '@type': 'Country', name: 'Argentina' },
+                { '@type': 'Country', name: 'Chile' },
+                { '@type': 'Country', name: 'New Zealand' },
               ],
-              knowsAbout: ['Salmon fishing', 'Sea trout fishing', 'Fly fishing', 'Nordic fishing guides', 'Pike fishing'],
+              knowsAbout: ['Atlantic salmon', 'Brown trout', 'Arctic char', 'Fly fishing', 'Rangá river', 'Limay river', 'Mataura river', 'Tongariro river', 'Iceland', 'Norway', 'Sweden', 'Finland', 'Argentina', 'Chile', 'New Zealand'],
             }),
           }}
         />

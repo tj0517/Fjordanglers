@@ -86,7 +86,7 @@ export default async function HomePage() {
 
       {/* ─── HERO ────────────────────────────────────────────────────── */}
       <section className="relative" style={{ height: '100vh', minHeight: '640px', background: '#050e1a' }}>
-        <Image src="/hero.jpg" alt="Angler fishing on a Nordic fjord river at midnight sun" fill priority className="object-cover object-center" />
+        <Image src="/hero.jpg" alt="Guide netting a brown trout for an angler in a clear river" fill priority className="object-cover object-center" />
         <BgVideo
           src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/videos/bg-cta.mp4`}
           className="absolute inset-0 w-full h-full object-cover"
@@ -111,7 +111,7 @@ export default async function HomePage() {
             className="f-body font-semibold uppercase tracking-[0.14em] mb-5 px-4 py-1.5 rounded-full"
             style={{ fontSize: '12px', color: '#E67E50', background: 'rgba(230,126,80,0.12)', border: '1px solid rgba(230,126,80,0.25)' }}
           >
-            Guided fishing in the Nordic countries
+            Local guides. Local experts.
           </p>
 
           <h1
@@ -126,7 +126,7 @@ export default async function HomePage() {
             className="f-body mt-5 max-w-[460px]"
             style={{ fontSize: 'clamp(14px, 1.4vw, 17px)', color: 'rgba(255,255,255,0.60)', lineHeight: 1.75 }}
           >
-            Guided fishing trips across Norway, Sweden, Iceland and Finland — hand-picked local guides, real rivers, no tourist routes.
+            Brynjar on the Rangá. Alex on the Aysén since 1989. Juan on the Limay. Independent guides, their own water, their own price. You pay a deposit only after the guide confirms your dates.
           </p>
           <Link
             href="/trips"
@@ -150,9 +150,9 @@ export default async function HomePage() {
                 desc:  'We reached out cold, they applied. We listed only the ones whose trips we\'d actually book ourselves.',
               },
               {
-                stat:  '4',
-                title: 'Countries. One operator.',
-                desc:  'Norway, Sweden, Iceland and Finland. The best salmon, trout and sea fishing in Europe, curated in one place.',
+                stat:  '7',
+                title: 'Seven countries, one rule',
+                desc:  'Every guide here runs his own business and answers your enquiry himself. If he is booked, we say so within 24 hours and suggest someone else.',
               },
               {
                 stat:  '24h',
@@ -217,7 +217,7 @@ export default async function HomePage() {
               {/* Right: prose */}
               <div className="flex flex-col justify-center gap-7">
                 <p className="f-body leading-relaxed" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.9 }}>
-                  FjordAnglers started because we went through the same thing you&apos;re going through. We&apos;ve been backpacking Norway, Sweden, and Iceland with rods, sleeping in tents — and the hardest part was never the fishing. It was knowing where to go. Hundreds of rivers, lakes, and coastlines, and no straightforward way to find someone local who actually knows them. So we started building that list ourselves.
+                  We started in 2026 with three guides in Norway and Sweden we knew from our own trips. Iceland came next, then Patagonia and New Zealand. The rule has not changed: we list a guide only after one of us has spoken to him and seen his water.
                 </p>
                 <p className="f-body leading-relaxed" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.9 }}>
                   We don&apos;t package you a &ldquo;Lofoten 7-day all-inclusive&rdquo;. We listen to what you want to catch and how you want to experience it. Then we call the right guide. It takes two days instead of two clicks — and that&apos;s why it works.

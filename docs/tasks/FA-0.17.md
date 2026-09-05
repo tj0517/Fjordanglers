@@ -45,6 +45,14 @@ repozycjonowanie marki ani redesign — to usunięcie sprzeczności między tym,
 
 ## Zakres
 
+### Reguła stylu dla całego copy w tym zadaniu (tj, 2026-09-06)
+Żadnych półpauz ani pauz (— / –) w tekście widocznym dla użytkownika — przecinek, dwukropek
+albo kropka. Cudzysłowy tylko proste ASCII, jeśli w ogóle potrzebne. Zero przymiotników-wypełniaczy
+("seamless", "unforgettable", "world-class", "curated", "premium", "elevate", "unlock"). Zero
+konstrukcji "not X, just Y". Konkretny rzeczownik (rzeka, imię przewodnika, rok, cena) zamiast
+przymiotnika, gdzie się da. Zdania poniżej 20 słów. Jeśli linijka brzmiałaby tak samo na dowolnej
+innej stronie o wędkarstwie, przepisać ją, aż przestanie.
+
 ### Krok 0 — ten plik
 Utworzony w tej sesji wg `docs/tasks/README.md` i wzorca `FA-0.12.md`.
 
@@ -311,4 +319,106 @@ tsc --noEmit → exit 0
 
 $ pnpm test -- --run
 Test Files 4 passed (4) · Tests 21 passed (21)
+```
+
+## Notatki z realizacji — Faza 2 (częściowa, 2026-09-06)
+
+tj podał brzmienie dla większości koszyka A w wiadomości z regułą stylu (bez półpauz/pauz,
+proste cudzysłowy, zero przymiotników-wypełniaczy, zdania <20 słów). Zastosowane dosłownie,
+z wyjątkami opisanymi niżej — Faza 2 NIE jest skończona, status zostaje `in_progress`.
+
+### Zastosowane dosłownie
+- `layout.tsx`: `title.default`, `description`, `og.title/description`, `og.images[].alt`,
+  `twitter.title/description`, `keywords` (9-elementowa lista) — sekcja 1.
+- `layout.tsx` JSON-LD Organization: `description`, `knowsAbout` — sekcja 2.
+- `page.tsx`: hero `alt`, `subtitle`, karta "Countries" `desc`, akapit `page.tsx:220` — sekcja 3.
+- `(public)/guides/page.tsx`: h1 pierwsza linia ("The guides"), akapit pod h1 (`:199`) — sekcja 4.
+- `(public)/blog/page.tsx`: `metadata.description` — sekcja 4.
+- `components/ui/contact-expert-button.tsx`: prefill WhatsApp, zakodowany i zweryfikowany
+  dekodowaniem — sekcja 6.
+- `guide-intake/[token]/page.tsx:89` — sekcja 7.
+- Reguła stylu dopisana do `Zakres` w tym pliku.
+
+### Zmiany wprowadzone przeze mnie, NIE dosłownie podane — do potwierdzenia
+1. **`layout.tsx` JSON-LD `areaServed`** — dodałem Argentina/Chile/New Zealand do istniejącej
+   listy 4 krajów nordyckich. Nie było w Twojej wiadomości, ale zostawienie `areaServed` przy
+   4 krajach obok nowego `knowsAbout` z 7 krajami byłoby świeżą, przeze mnie zostawioną
+   sprzecznością. Użyłem wyłącznie nazw krajów, które już są w Twoim `knowsAbout`.
+2. **Karta "Countries" `stat`**: `'4'` → `'7'`. Tytuł karty mówi teraz "Seven countries" — zostawienie
+   dużej cyfry "4" nad nim byłoby nową sprzecznością w tym samym komponencie.
+3. **Eyebrow strony głównej** (`page.tsx:114`) — pierwsza podmiana "Guides we have fished with"
+   cofnięta na Twoją prośbę w trakcie sesji (zbyt dosłowna obietnica osobistego łowienia z
+   przewodnikami). Zastąpiona przeze mnie tekstem "Local guides. Local experts." na podstawie
+   Twojego opisu ("trust signal że to lokalni przewodnicy, lokalni eksperci") — **to moje sformułowanie,
+   nie Twoje dosłowne słowa; do zatwierdzenia albo poprawy**.
+
+### Sprawdzone, brak sprzeczności
+- **"Trzy przewodnicy w Norwegii i Szwecji" / "2026"** (`page.tsx:220`) — `about/page.tsx` nie podaje
+  ani roku założenia, ani liczby pierwszych przewodników (mówi tylko "students from Gdańsk").
+  `layout.tsx` JSON-LD miało już `foundingDate: '2026-04'` — zgodne z "2026". Brak sprzeczności do
+  rozwiązania, zastosowałem liczby z Twojej wiadomości bez zmian.
+
+### NIE zastosowane — brak jednoznacznego brzmienia albo konflikt struktury, zostaje otwarte
+
+1. **`page.tsx:149` — karta "Curated Nordic Guides" (stat `20+`)**. Dałeś jedną parę
+   tytuł/opis ("Seven countries, one rule" / "Every guide here runs..."), a w koszyku A były
+   dwie osobne flagowane pozycje w dwóch różnych kartach: tytuł karty 1 (`20+`, ta) i opis
+   karty 2 (`4`, "Countries"). Zastosowałem Twoją parę do karty "Countries" (semantycznie
+   pasuje — cyfra, tytuł i opis są teraz spójnie o krajach). Karta 1 zostaje z "Curated Nordic
+   Guides" — nietknięta, wciąż w koszyku A, czeka na brzmienie.
+2. **`page.tsx:302` — "Norway, Sweden, Iceland and Finland — same process everywhere."**
+   Dałeś trzy zdania (kroki 1/2/3) pod nagłówkiem "process section (3 steps)", ale w kodzie w
+   tym miejscu jest JEDNA linijka podpisu, nie trzyelementowa lista. Trzy zdania nie mieszczą
+   się w tym komponencie bez zmiany struktury (co jest poza zakresem: "zero zmian w
+   strukturze"). Możliwe, że Twoje trzy zdania są przeznaczone na `HOW_IT_WORKS` (tablica 3
+   kroków renderowana kawałek niżej, dziś neutralna, nieflagowana) — ale nie zgaduję. Zostawiłem
+   linijkę `:302` nietkniętą. **Pytanie: gdzie mają trafić te trzy zdania?**
+3. **`(public)/guides/page.tsx:108,110,138,139`** — `metadata.title`, `metadata.description`,
+   JSON-LD `name`, JSON-LD `description`. Dałeś "heading" i "intro" (zastosowane do h1 i akapitu
+   pod nim), ale nie osobnego tytułu/opisu strony ani JSON-LD. Zostawione nietknięte, wciąż
+   koszyk A.
+4. **`(public)/guides/page.tsx`: "replace every 'Scandinavian guide' with 'guide'"** — sprawdzone
+   (`grep -rn "Scandinavian guide" "src/app/(public)/guides" src/components/guide`) — fraza nie
+   istnieje nigdzie w tym zakresie. Nic do zrobienia, zanotowane.
+5. **`home-faq.tsx` — 4 nowe pytania/odpowiedzi**. Dałeś 4 pary Q&A ("Where do you operate?",
+   "Who are the guides?", "How does payment work?", "Do I need a fishing licence?"), ale plik ma
+   10 wpisów, z czego flagowane były 4 INNE (permit-question, companion-question,
+   weather-question, trust-question) — Twoje nowe pytania nie są przeformułowaniem tych samych
+   pytań, tylko nowymi pytaniami. Dwa mają oczywiste dopasowanie tematyczne (licencja↔pytanie o
+   pozwolenia; "where do you operate"↔pytanie o zaufanie/pochodzenie), dwa nie mają żadnego
+   (płatność↔pogoda? przewodnicy↔towarzysz bez wędki?). Nie zgaduję mapowania — czekam, które z
+   10 wpisów mają zniknąć/zostać zastąpione, i czy weather/companion (oba wciąż flagowane,
+   nietknięte) w ogóle są objęte tą podmianą.
+
+### Weryfikacja stylu (dashes/quotes) — tylko w liniach zmienionych w tym zadaniu
+```
+$ git diff -- src/app/layout.tsx src/app/page.tsx "src/app/(public)/guides/page.tsx" \
+    "src/app/(public)/blog/page.tsx" src/components/ui/contact-expert-button.tsx \
+    "src/app/guide-intake/[token]/page.tsx" | grep "^+" | grep -P "[—–''""]"
+(0 hits)
+```
+
+### "Scandinavia" na `/` — NIE JEST jeszcze jedno trafienie
+Kryterium z Twojej wiadomości: "The founders' sentence on the home page remains the single
+'Scandinavia' hit on /." Bieżący stan (po Fazie 2 częściowej) — trzy źródła renderują się na `/`:
+1. `layout.tsx:119` JSON-LD Organization `description` (nowy tekst, celowo zawiera "Scandinavia"
+   jako nazwę regionu obok Iceland/Patagonia/New Zealand — to Twoje dosłowne słowa).
+2. `footer.tsx:28` — domyślny tagline stopki (bucket C z FA-0.12, celowo zostawiony —
+   strona główna nie ma kontekstu non-Nordic, więc `neutralTagline` jest `false`).
+3. `home-faq.tsx:32` — odpowiedź o pogodzie, wciąż nietknięta (patrz punkt 5 wyżej).
+
+Bez decyzji o (2) i (3) nie da się dojść do "dokładnie jednego trafienia" — obecnie byłyby trzy,
+nie licząc żadnego zdania "founders'" (żaden z zastosowanych tekstów na `/` nie zawiera dosłownie
+"Scandinavia" — najbliższe, `page.tsx:220`, mówi "Norway and Sweden", nie "Scandinavia"). **Pytanie:
+które z tych trzech ma zostać jako jedyne, a które dwa mają zniknąć?**
+
+### Verification (Faza 2, częściowa)
+```
+$ pnpm typecheck && pnpm test -- --run && pnpm build
+tsc --noEmit → exit 0
+Test Files 4 passed (4) · Tests 21 passed (21)
+pnpm build → exit 0, 46/46 pages
+
+$ pnpm lint
+✖ 100 problems (40 errors, 60 warnings)   # identyczne z main, zero nowych
 ```

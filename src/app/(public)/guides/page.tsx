@@ -191,12 +191,12 @@ export default async function GuidesPage({
                 </p>
               </div>
               <h1 className="text-white font-bold f-display" style={{ fontSize: 'clamp(28px, 5vw, 54px)', lineHeight: 1.06 }}>
-                Meet the guides
+                The guides
                 <br />
                 <span style={{ fontStyle: 'italic', color: '#E67E50' }}>who know every fish.</span>
               </h1>
               <p className="mt-5 text-sm leading-relaxed f-body" style={{ color: 'rgba(255,255,255,0.55)', maxWidth: '420px' }}>
-                Curated local guides across Norway, Sweden, Finland and Iceland. Only the ones we&apos;d book ourselves.
+                Owner-operators only. The person who replies to your enquiry is the person who will be standing next to you on the water. Iceland, Norway, Sweden, Finland, Argentina, Chile, New Zealand.
               </p>
             </div>
 
