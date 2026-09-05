@@ -1,7 +1,5 @@
 'use server'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { createServiceClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
 
@@ -37,7 +35,7 @@ export interface ReviewSubmitInput {
 export async function generateReviewLink(
   inquiryId: string,
 ): Promise<{ url: string; token: string }> {
-  const svc = createServiceClient() as any
+  const svc = createServiceClient()
 
   // Return existing token if already generated
   const { data: existing } = await svc
@@ -69,7 +67,7 @@ export async function generateReviewLink(
  * Public — fetches review data by token (for the angler-facing review page).
  */
 export async function getReviewByToken(token: string): Promise<ReviewPageData | null> {
-  const svc = createServiceClient() as any
+  const svc = createServiceClient()
 
   const { data: review } = await svc
     .from('reviews')
@@ -110,7 +108,7 @@ export async function submitReview(
   token: string,
   input: ReviewSubmitInput,
 ): Promise<{ ok: boolean; error?: string }> {
-  const svc = createServiceClient() as any
+  const svc = createServiceClient()
 
   const { data: review } = await svc
     .from('reviews')

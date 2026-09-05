@@ -50,8 +50,7 @@ export default async function AdsPage({
   const supabase = createServiceClient()
 
   const buildTableQuery = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let q = (supabase.from as any)('ad_campaigns').select('*')
+    let q = supabase.from('ad_campaigns').select('*')
     if (date_from) q = q.gte('date', date_from)
     if (date_to)   q = q.lte('date', date_to)
     if (platforms) {
@@ -69,15 +68,13 @@ export default async function AdsPage({
     buildTableQuery(),
 
     // Campaign definitions from DB
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('ad_campaign_defs')
+    supabase.from('ad_campaign_defs')
       .select('*')
       .eq('active', true)
       .order('sort_order', { ascending: true }),
 
     // Conversions = inquiries, keyed by date (YYYY-MM-DD)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('inquiries').select('created_at'),
+    supabase.from('inquiries').select('created_at'),
   ])
 
   // Build date → count map for all inquiries

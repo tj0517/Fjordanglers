@@ -422,8 +422,7 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
         to: anglerEmail, anglerName, question: CLOSING_MESSAGE, tripTitle, inquiryId,
         threadHeaders: { messageId: outboundMsgId },
       })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('lead_messages').insert({
+      await supabase.from('lead_messages').insert({
         inquiry_id:   inquiryId,
         direction:    'outbound',
         channel:      'email',
@@ -435,8 +434,7 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
       console.log(`[inquiry-agent] Round 1 → sent closing message to ${anglerEmail}`)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await supabase
       .from('inquiries')
       .update({ agent_status: 'ready', email_thread_message_id: outboundMsgId, ...classUpdate })
       .eq('id', inquiryId)
@@ -451,8 +449,7 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
     threadHeaders: { messageId: outboundMsgId },
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('lead_messages').insert({
+  await supabase.from('lead_messages').insert({
     inquiry_id:   inquiryId,
     direction:    'outbound',
     channel:      'email',
@@ -462,8 +459,7 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
     created_by:   'agent',
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any)
+  await supabase
     .from('inquiries')
     .update({ agent_status: 'waiting', agent_round: 1, email_thread_message_id: outboundMsgId, ...classUpdate })
     .eq('id', inquiryId)
@@ -477,8 +473,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
   const supabase = createServiceClient()
 
   // Fetch inquiry + existing classification so we don't overwrite known values
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (supabase as any)
+  const { data: inquiry } = await supabase
     .from('inquiries')
     .select('angler_name, angler_email, message, requested_dates, party_size, agent_round, trip_id, experience_page_id, trip_country, trip_type, priority, email_thread_message_id')
     .eq('id', inquiryId)
@@ -489,8 +484,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     return
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: messages } = await (supabase as any)
+  const { data: messages } = await supabase
     .from('lead_messages')
     .select('direction, channel, contact_name, content, created_at')
     .eq('inquiry_id', inquiryId)
@@ -499,8 +493,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
   // Fetch trip title
   let tripTitle = 'your trip'
   if (inquiry.experience_page_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: expPage } = await (supabase as any)
+    const { data: expPage } = await supabase
       .from('experience_pages')
       .select('experience_name')
       .eq('id', inquiry.experience_page_id)
@@ -546,8 +539,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
       threadHeaders,
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('lead_messages').insert({
+    await supabase.from('lead_messages').insert({
       inquiry_id:   inquiryId,
       direction:    'outbound',
       channel:      'email',
@@ -557,8 +549,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
       created_by:   'agent',
     })
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any)
+    await supabase
       .from('inquiries')
       .update({ agent_status: 'ready', email_thread_message_id: outboundMsgId2, ...classUpdate })
       .eq('id', inquiryId)
@@ -579,8 +570,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     threadHeaders,
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('lead_messages').insert({
+  await supabase.from('lead_messages').insert({
     inquiry_id:   inquiryId,
     direction:    'outbound',
     channel:      'email',
@@ -590,8 +580,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     created_by:   'agent',
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any)
+  await supabase
     .from('inquiries')
     .update({ agent_status: 'waiting', agent_round: currentRound + 1, email_thread_message_id: outboundMsgId2, ...classUpdate })
     .eq('id', inquiryId)

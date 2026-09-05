@@ -44,8 +44,7 @@ export async function addAdCampaign(
   data: AdCampaignInsert,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('ad_campaigns').insert(data)
+  const { error } = await supabase.from('ad_campaigns').insert(data)
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/ads')
   return { success: true }
@@ -56,8 +55,7 @@ export async function upsertAdCampaignRows(
 ): Promise<{ success: boolean; error?: string }> {
   if (rows.length === 0) return { success: true }
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('ad_campaigns')
+  const { error } = await supabase.from('ad_campaigns')
     .upsert(rows, { onConflict: 'date,campaign_name' })
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/ads')
@@ -70,8 +68,7 @@ export async function getAdCampaignRows(
   dateTo: string,
 ): Promise<AdCampaignRow[]> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.from as any)('ad_campaigns')
+  const { data } = await supabase.from('ad_campaigns')
     .select('*')
     .eq('campaign_name', campaignName)
     .gte('date', dateFrom)
@@ -83,8 +80,7 @@ export async function getAdCampaignRows(
 
 export async function getCampaignDefs(): Promise<CampaignDefRow[]> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (supabase.from as any)('ad_campaign_defs')
+  const { data } = await supabase.from('ad_campaign_defs')
     .select('id, created_at, key, name, platform, sort_order, active, google_campaign_id')
     .eq('active', true)
     .order('sort_order', { ascending: true })
@@ -97,14 +93,12 @@ export async function addCampaignDef(data: {
   platform: 'google_ads' | 'meta'
 }): Promise<{ success: boolean; error?: string; row?: CampaignDefRow }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase.from as any)('ad_campaign_defs')
+  const { data: existing } = await supabase.from('ad_campaign_defs')
     .select('sort_order')
     .order('sort_order', { ascending: false })
     .limit(1)
   const maxOrder = ((existing as { sort_order: number }[] | null)?.[0]?.sort_order ?? 0)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: row, error } = await (supabase.from as any)('ad_campaign_defs')
+  const { data: row, error } = await supabase.from('ad_campaign_defs')
     .insert({ ...data, sort_order: maxOrder + 1 })
     .select()
     .single()
@@ -117,8 +111,7 @@ export async function deleteAdCampaignRow(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('ad_campaigns').delete().eq('id', id)
+  const { error } = await supabase.from('ad_campaigns').delete().eq('id', id)
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/ads')
   return { success: true }
@@ -128,8 +121,7 @@ export async function deleteCampaignDef(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('ad_campaign_defs')
+  const { error } = await supabase.from('ad_campaign_defs')
     .update({ active: false })
     .eq('id', id)
   if (error) return { success: false, error: error.message }

@@ -52,8 +52,7 @@ export async function addFixedCost(
   data: FixedCostInput,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('fixed_costs').insert({
+  const { error } = await supabase.from('fixed_costs').insert({
     ...data,
     notes: data.notes ?? null,
   })
@@ -67,8 +66,7 @@ export async function updateFixedCost(
   data: Partial<FixedCostInput>,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('fixed_costs')
+  const { error } = await supabase.from('fixed_costs')
     .update({ ...data, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: error.message }
@@ -80,8 +78,7 @@ export async function deleteFixedCost(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('fixed_costs')
+  const { error } = await supabase.from('fixed_costs')
     .update({ active: false, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) return { success: false, error: error.message }
@@ -93,8 +90,7 @@ export async function addManualCostEntry(
   data: ManualCostEntryInput,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('manual_cost_entries').insert({
+  const { error } = await supabase.from('manual_cost_entries').insert({
     month: data.month,
     name: data.name,
     amount_pln: data.amount_pln,
@@ -110,8 +106,7 @@ export async function deleteManualCostEntry(
   id: string,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('manual_cost_entries').delete().eq('id', id)
+  const { error } = await supabase.from('manual_cost_entries').delete().eq('id', id)
   if (error) return { success: false, error: error.message }
   revalidatePath('/admin/finances')
   return { success: true }
@@ -121,8 +116,7 @@ export async function updateEurRate(
   rate: number,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from as any)('finance_settings')
+  const { error } = await supabase.from('finance_settings')
     .upsert({ key: 'eur_pln_rate', value: String(rate), updated_at: new Date().toISOString() })
   if (error) return { success: false, error: error.message }
   return { success: true }

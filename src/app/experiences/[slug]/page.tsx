@@ -128,8 +128,7 @@ export default async function ExperiencePublicPage({
     const today     = new Date().toISOString().slice(0, 10)
     const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: availRows } = await (svc as any)
+    const { data: availRows } = await svc
       .from('guide_unavailable_dates')
       .select('date')
       .eq('guide_id', page.guide_id)

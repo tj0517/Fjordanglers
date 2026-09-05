@@ -94,38 +94,32 @@ export default async function FinancesPage() {
     { data: pipelineData },
   ] = await Promise.all([
     // Inquiries where deposit is paid — revenue source
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('inquiries')
+    supabase.from('inquiries')
       .select('deposit_paid_at, updated_at, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency')
       .in('status', ['deposit_paid', 'completed']),
 
     // Ad spend by date
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('ad_campaigns')
+    supabase.from('ad_campaigns')
       .select('date, spend'),
 
     // Active fixed recurring costs
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('fixed_costs')
+    supabase.from('fixed_costs')
       .select('*')
       .eq('active', true)
       .order('category', { ascending: true })
       .order('name', { ascending: true }),
 
     // Manual one-off cost entries
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('manual_cost_entries')
+    supabase.from('manual_cost_entries')
       .select('*')
       .order('created_at', { ascending: true }),
 
     // Finance settings (EUR rate)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('finance_settings')
+    supabase.from('finance_settings')
       .select('key, value'),
 
     // Open deals — all active (non-terminal) statuses
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from as any)('inquiries')
+    supabase.from('inquiries')
       .select('id, angler_name, angler_email, offer_sent_at, updated_at, offer_total_eur, internal_deal_total_eur, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, created_at, status')
       .in('status', ['pending', 'in_negotiation', 'waiting_for_guide_offer', 'offer_sent', 'waiting_for_deposit', 'deposit_sent'])
       .order('updated_at', { ascending: false }),

@@ -76,8 +76,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // trip_id is the expedition UUID stored in experience_pages.trip_id.
     // The legacy `experiences` table no longer exists — look up the experience_page
     // that links to this expedition to get guide_id and title.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: expPage } = await (svc as any)
+    const { data: expPage } = await svc
       .from('experience_pages')
       .select('id, guide_id, experience_name')
       .eq('trip_id', parsed.data.trip_id)
@@ -92,8 +91,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     guideId   = expPage.guide_id
   } else {
     // Fetch experience page title
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: expPage } = await (svc as any)
+    const { data: expPage } = await svc
       .from('experience_pages')
       .select('id, guide_id, experience_name')
       .eq('id', parsed.data.experience_page_id!)
@@ -114,8 +112,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Insert inquiry
   // Cast needed until generated types catch up with the migration that makes
   // trip_id nullable and adds experience_page_id.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry, error: dbError } = await (svc.from('inquiries') as any)
+  const { data: inquiry, error: dbError } = await svc.from('inquiries')
     .insert({
       trip_id:            parsed.data.trip_id ?? null,
       experience_page_id: parsed.data.experience_page_id ?? null,

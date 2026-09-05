@@ -8,8 +8,7 @@ export default async function NewInquiryPage() {
   const svc = createServiceClient()
 
   // Fetch active experience pages + guide names for the trip dropdown
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: expPages } = await (svc as any)
+  const { data: expPages } = await svc
     .from('experience_pages')
     .select('id, experience_name, guide_id')
     .eq('status', 'active')

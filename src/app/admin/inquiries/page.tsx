@@ -16,8 +16,7 @@ export default async function AdminInquiriesPage() {
   const svc = createServiceClient()
 
   // ── Fetch all inquiries ─────────────────────────────────────────────────────
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rawAll } = await (svc as any)
+  const { data: rawAll } = await svc
     .from('inquiries')
     .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action, assigned_guide_id, guide_acceptance, guide_decline_reason, external_offer_sent')
     .order('created_at', { ascending: false })
@@ -34,9 +33,8 @@ export default async function AdminInquiriesPage() {
 
   // ── Guide names ─────────────────────────────────────────────────────────────
   const guideIds = [...new Set(allRows.map(r => r.assigned_guide_id).filter(Boolean))] as string[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: guidesData } = guideIds.length > 0
-    ? await (svc as any).from('guides').select('id, full_name').in('id', guideIds)
+    ? await svc.from('guides').select('id, full_name').in('id', guideIds)
     : { data: [] as Array<{ id: string; full_name: string }> }
   const guideMap = Object.fromEntries(
     ((guidesData ?? []) as Array<{ id: string; full_name: string }>).map(g => [g.id, g.full_name])
@@ -44,9 +42,8 @@ export default async function AdminInquiriesPage() {
 
   // ── Offer status ────────────────────────────────────────────────────────────
   const assignedInquiryIds = allRows.filter(r => r.assigned_guide_id != null).map(r => r.id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: tripDetailsData } = assignedInquiryIds.length > 0
-    ? await (svc as any)
+    ? await svc
         .from('inquiry_trip_details')
         .select('inquiry_id, guide_options')
         .in('inquiry_id', assignedInquiryIds)
