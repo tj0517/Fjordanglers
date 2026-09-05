@@ -105,11 +105,16 @@ const GrainOverlay = () => (
 // ─── METADATA ─────────────────────────────────────────────────────────────────
 
 export const metadata = {
-  title: 'Fishing Guides in Norway, Sweden, Iceland & Finland',
+  title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
   description:
-    'Curated local fishing guides across Norway, Sweden, Finland and Iceland. Salmon, trout, pike & sea fishing. Filter by country and language to find your perfect guide.',
+    'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
   alternates: { canonical: 'https://fjordanglers.com/guides' },
-  openGraph: { url: 'https://fjordanglers.com/guides', type: 'website' },
+  openGraph: {
+    url: 'https://fjordanglers.com/guides',
+    type: 'website',
+    title: 'Independent Fishing Guides in Iceland, Scandinavia, Patagonia and New Zealand',
+    description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
+  },
 }
 
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
@@ -135,8 +140,8 @@ export default async function GuidesPage({
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'Fishing Guides in Norway, Sweden, Iceland & Finland',
-    description: 'Curated local fishing guides across Norway, Sweden, Finland and Iceland. Salmon, trout, pike & sea fishing.',
+    name: 'FjordAnglers guides',
+    description: 'Owner-operator guides listed by name, with their rivers, prices and season. Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand.',
     url: 'https://fjordanglers.com/guides',
     numberOfItems: total,
     itemListElement: guides.map((guide, i) => ({

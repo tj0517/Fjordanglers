@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { getActiveDestinationCountries } from '@/lib/supabase/queries'
 
-export async function SiteFooter({ neutralTagline = false }: { neutralTagline?: boolean }) {
+export async function SiteFooter() {
   const destinations = await getActiveDestinationCountries()
 
   return (
@@ -23,9 +23,7 @@ export async function SiteFooter({ neutralTagline = false }: { neutralTagline?: 
               </span>
             </Link>
             <p className="f-body text-[14px] leading-relaxed mt-4 mb-6" style={{ color: 'rgba(255,255,255,0.4)', maxWidth: '220px' }}>
-              {neutralTagline
-                ? 'Hand-picked guided fishing trips with local owner-guides.'
-                : 'Connecting anglers with the best fishing trips in Scandinavia.'}
+              Independent fishing guides in Iceland, Scandinavia, Patagonia and New Zealand.
             </p>
             <a
               href="https://instagram.com/fjordanglers"

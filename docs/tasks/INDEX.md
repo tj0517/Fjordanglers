@@ -23,7 +23,7 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-0.14 | Strona hub `/patagonia` dla grupy reklam „Patagonia ogólna" | M | sonnet | todo | FA-0.11, FA-0.12 |
 | FA-0.15 | Własna telemetria lejka bez cookies — `web_events` + widok `web_funnel_daily` (wyciągnięte z etapu 5) | M | sonnet | todo | — |
 | FA-0.16 | SLA 48 h — data w auto-mailu, licznik i alarm w adminie, `lost_reason_code` jako lista | M | sonnet | todo | — |
-| FA-0.17 | Copy przestaje obiecywać wyłącznie Skandynawię | M | sonnet | in_progress | FA-0.12 |
+| FA-0.17 | Copy przestaje obiecywać wyłącznie Skandynawię | M | sonnet | review | FA-0.12 |
 
 ## Stage 1 — schema tells the truth + event log
 

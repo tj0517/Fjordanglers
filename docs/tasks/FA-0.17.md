@@ -2,7 +2,7 @@
 id: FA-0.17
 title: Copy przestaje obiecywać wyłącznie Skandynawię
 stage: 0
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -421,4 +421,124 @@ pnpm build → exit 0, 46/46 pages
 
 $ pnpm lint
 ✖ 100 problems (40 errors, 60 warnings)   # identyczne z main, zero nowych
+```
+
+## Notatki z realizacji — Faza 2 dokończona, poprawki tj (2026-09-06)
+
+Po pierwszej częściowej Fazie 2, tj przysłał poprawki i domknięcia dla wszystkich pięciu
+otwartych punktów, plus dwie korekty do już zastosowanego tekstu. Wszystko zastosowane.
+
+### Dwie korekty do wcześniej zastosowanego tekstu
+1. **`page.tsx:220`** (akapit założycieli) — "spoken to him and seen his water" zastąpione
+   przez "had a long call with him and gone through his season, his prices and his
+   references". Powód (tj): "We have not been on these rivers; the site must not imply we
+   have." Dosłowne słowa tj.
+2. **Eyebrow strony głównej** — moje własne "Local guides. Local experts." (flagowane
+   ostatnim razem jako niezatwierdzone) odrzucone przez tj: "says the same thing twice and
+   could sit on any site." Zastąpione tekstem tj: "Independent guides, seven countries".
+
+### Domknięcie pięciu otwartych punktów
+
+**1. `page.tsx:149` karta "20+".** Tytuł → "Independent owner-guides" (dosłowne słowa tj).
+Liczba `stat: '20+'` **zostawiona bez zmian** na wyraźną prośbę tj ("keep whatever number
+the card shows"). Zgodnie z instrukcją zgłaszam: `'20+'` (i `'7'` na sąsiedniej karcie
+"Countries" z poprzedniej rundy) to literały w tablicy w `page.tsx`, **nie są liczone** z
+`select count(*) from guides where status='active'` ani z `getPlatformStats()` (ta funkcja
+istnieje w `queries.ts` i jest już używana na `/guides`, ale strona główna jej nie woła —
+`grep -n "getPlatformStats" src/app/page.tsx` → 0 trafień). Jeśli te liczby mają odzwierciedlać
+stan bazy, to osobne zadanie (podpięcie `getPlatformStats()` do strony głównej).
+
+**2. `page.tsx:302` + `HOW_IT_WORKS`.** Podpis zmieniony na "Same process in every country:
+your dates, one offer, deposit only when the guide confirms." (dosłowne słowa tj). Trzy zdania
+z poprzedniej wiadomości trafiły do pola `body` trzech elementów `HOW_IT_WORKS` (`page.tsx:53-69`),
+po jednym na krok, w kolejności podanej. Pola `title` (`n:'01'` "Browse trips & pick a guide" itd.)
+**zostały nietknięte** — nie dałeś dla nich nowych tekstów, a `HOW_IT_WORKS` renderuje się
+wyłącznie na stronie głównej (`grep -rln "HOW_IT_WORKS" src` → tylko `page.tsx`), więc nie ma
+gdzie indziej sprawdzić spójności.
+
+**3. `/guides` metadata + JSON-LD.** `metadata.title`/`description` i `openGraph.title`/
+`description` — dosłowne słowa tj, tytuł bez sufiksu (template z layoutu go dokłada — sprawdzone,
+`(public)/guides/page.tsx` nie ma własnego `generateMetadata`, więc `title.template` z root
+layoutu się stosuje). JSON-LD `name` → "FjordAnglers guides" (dosłowne). JSON-LD `description`
+(linia ~144) **nie miała podanego tekstu** — użyłem tej samej treści co `metadata.description`
+(to Twoje słowa, zastosowane drugi raz do pola o identycznej roli semantycznej — opis listy
+przewodników). Flaguję to jako wybór inferowany, nie dosłownie wskazany.
+
+**4. `home-faq.tsx`.** Cztery pytania zostały **bez zmian** (dosłownie te same `q:`). Mapowanie
+odpowiedzi — cztery obecne pytania, wklejone verbatim, jak prosiłeś:
+```
+1. "How do fishing permits work?"
+2. "Can I bring my partner or a friend who doesn't fish?"
+3. "What if the weather or water conditions are bad?"
+4. "You're based in Poland. Why should I trust a Polish company for Nordic fishing?"
+```
+Zastosowane:
+- (1) permit-question → cała odpowiedź zastąpiona Twoim tekstem z pytania "Do I need a fishing
+  licence?" (dopasowanie tematyczne — obie o pozwoleniach/licencjach).
+- (3) weather-question → cała odpowiedź zastąpiona tekstem podanym wprost w Twojej ostatniej
+  wiadomości ("Depends on where you go...").
+- (4) trust-question → cała odpowiedź zastąpiona Twoim tekstem z pytania "Where do you
+  operate?" — **to moje dopasowanie tematyczne, nie oczywiste 1:1**: pytanie brzmi "why trust a
+  Polish company for Nordic fishing", odpowiedź teraz mówi tylko, gdzie działamy, nie odpowiada
+  wprost na "dlaczego ufać". Sprawdź, czy to pasuje.
+- (2) companion-question → zgodnie z regułą "zamień tylko zdanie z Scandinavia/Nordic, resztę
+  zostaw": zdanie "Nordic nature is extraordinary on its own." zastąpione przeze mnie zdaniem
+  "Iceland, Norway, Sweden, Finland, Argentina, Chile and New Zealand are worth the trip even
+  without a rod." — **to moje sformułowanie łącznikowe, nie Twoje dosłowne słowa**, bo
+  instrukcja była regułą do zastosowania, nie gotowym zdaniem. Reszta odpowiedzi (o towarzyszach
+  bez wędki) nietknięta, plus poprawiona półpauza w tym samym zdaniu na przecinek (reguła
+  stylu). Dwie z czterech Twoich nowych par Q&A z poprzedniej wiadomości ("Who are the guides?",
+  "How does payment work?") **nie zostały użyte nigdzie** — zgodnie z "keep the four existing
+  questions" nie dodawałem nowych wpisów.
+
+**5. "Scandinavia" na `/`.** Mechanizm `neutralTagline` z FA-0.12 usunięty całkowicie: prop
+zdjęty z `SiteFooter`, warunek zamieniony na jeden string, wywołania w `experiences/[slug]/page.tsx`,
+`trips/page.tsx`, `(public)/layout.tsx` zaktualizowane (u pierwszych dwóch — teraz nieużywana
+zmienna `pageRegion`/`getRegionGroup` import w `trips/page.tsx` usunięte; `pageRegion` w
+`experiences/[slug]/page.tsx` zostaje, bo dalej używana do cross-sellu). Nowy tagline:
+"Independent fishing guides in Iceland, Scandinavia, Patagonia and New Zealand." — jedna wersja,
+wszystkie strony. Dopisana notatka do `docs/tasks/FA-0.12.md` "Needs a decision" #1 o tym
+zastąpieniu. Nowe kryterium sprawdzone lokalnie (patrz Verification) — dwa pozostałe trafienia
+"Scandinavia" na `/` (JSON-LD Organization, stopka) oba w tym samym zdaniu co "Patagonia".
+
+### Reguła stylu — sprawdzona na całym diffie tej rundy
+```
+$ git diff -- src/app/page.tsx "src/app/(public)/guides/page.tsx" src/components/home/home-faq.tsx \
+    src/components/layout/footer.tsx "src/app/(public)/layout.tsx" src/app/trips/page.tsx \
+    "src/app/experiences/[slug]/page.tsx" | grep "^+" | grep -P "\x{2014}|\x{2013}|\x{2018}|\x{2019}|\x{201C}|\x{201D}"
+(0 hits)
+```
+
+### Verification — kryterium "Scandinavia tylko przy Patagonii"
+```
+$ grep -n "Scandinavia" src/components/home/home-faq.tsx src/app/page.tsx src/app/layout.tsx src/components/layout/footer.tsx
+src/components/layout/footer.tsx:26:  Independent fishing guides in Iceland, Scandinavia, Patagonia and New Zealand.
+src/app/layout.tsx:119:  description: '...independent fishing guides in Iceland, Scandinavia, Patagonia and New Zealand...'
+(oba zdania zawierają "Patagonia" — kryterium spełnione; produkcyjny curl do wykonania po deployu,
+zgodnie z Twoim sformułowaniem kryterium jako curl na fjordanglers.com)
+
+$ grep -n "neutralTagline" src --include=*.tsx --include=*.ts
+(0 hits — mechanizm w całości usunięty)
+```
+
+### Pozostaje jawnie otwarte (moje wybory do potwierdzenia, nie STOP)
+- Eyebrow (zastosowany tekst tj, bez wątpliwości).
+- `home-faq.tsx` trust-question mapowanie (punkt 4 wyżej).
+- `home-faq.tsx` companion-question łącznikowe zdanie (punkt 4 wyżej) — moje sformułowanie.
+- `/guides` JSON-LD `description` — inferowane powtórzenie `metadata.description`.
+- Liczby `20+`/`7` na stronie głównej — literały, nie liczone z bazy (zgłoszone, nie zmienione
+  bez zgody, jak prosiłeś).
+
+### Verification — pełny zestaw
+```
+$ pnpm typecheck && pnpm test -- --run && pnpm build
+tsc --noEmit → exit 0
+Test Files 4 passed (4) · Tests 21 passed (21)
+pnpm build → exit 0, 46/46 pages
+
+$ pnpm lint   # branch
+✖ 100 problems (40 errors, 60 warnings)
+$ pnpm lint   # main
+✖ 100 problems (40 errors, 60 warnings)
+→ zero nowych błędów
 ```

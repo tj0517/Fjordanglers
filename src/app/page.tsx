@@ -54,17 +54,17 @@ const HOW_IT_WORKS = [
   {
     n: '01',
     title: 'Browse trips & pick a guide',
-    body: 'Every listing shows the guide, the water, the species, and the price. Pick what matches what you want to catch.',
+    body: 'Send your dates, how many rods, and what you want to catch.',
   },
   {
     n: '02',
     title: 'Send a booking request',
-    body: 'Select your dates, add a short message. Takes 2 minutes. Free until the deal is done.',
+    body: 'We ask the guide. You get one offer with the real price, what is included, and what is not.',
   },
   {
     n: '03',
     title: 'Guide confirms within 48h',
-    body: 'The guide reviews your request and confirms availability — or proposes alternative dates if yours are taken.',
+    body: 'Pay a deposit to hold the dates. The rest goes straight to the guide when you meet.',
   },
 ]
 
@@ -111,7 +111,7 @@ export default async function HomePage() {
             className="f-body font-semibold uppercase tracking-[0.14em] mb-5 px-4 py-1.5 rounded-full"
             style={{ fontSize: '12px', color: '#E67E50', background: 'rgba(230,126,80,0.12)', border: '1px solid rgba(230,126,80,0.25)' }}
           >
-            Local guides. Local experts.
+            Independent guides, seven countries
           </p>
 
           <h1
@@ -146,7 +146,7 @@ export default async function HomePage() {
             {([
               {
                 stat:  '20+',
-                title: 'Curated Nordic Guides',
+                title: 'Independent owner-guides',
                 desc:  'We reached out cold, they applied. We listed only the ones whose trips we\'d actually book ourselves.',
               },
               {
@@ -217,7 +217,7 @@ export default async function HomePage() {
               {/* Right: prose */}
               <div className="flex flex-col justify-center gap-7">
                 <p className="f-body leading-relaxed" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.9 }}>
-                  We started in 2026 with three guides in Norway and Sweden we knew from our own trips. Iceland came next, then Patagonia and New Zealand. The rule has not changed: we list a guide only after one of us has spoken to him and seen his water.
+                  We started in 2026 with three guides in Norway and Sweden we knew from our own trips. Iceland came next, then Patagonia and New Zealand. The rule has not changed: we list a guide only after one of us has had a long call with him and gone through his season, his prices and his references.
                 </p>
                 <p className="f-body leading-relaxed" style={{ fontSize: '16px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.9 }}>
                   We don&apos;t package you a &ldquo;Lofoten 7-day all-inclusive&rdquo;. We listen to what you want to catch and how you want to experience it. Then we call the right guide. It takes two days instead of two clicks — and that&apos;s why it works.
@@ -299,7 +299,7 @@ export default async function HomePage() {
                   </h2>
                 </div>
                 <p className="text-sm f-body md:text-right md:max-w-[260px]" style={{ color: 'rgba(255,255,255,0.28)', lineHeight: 1.7 }}>
-                  Norway, Sweden, Iceland and Finland — same process everywhere.
+                  Same process in every country: your dates, one offer, deposit only when the guide confirms.
                 </p>
               </div>
 
