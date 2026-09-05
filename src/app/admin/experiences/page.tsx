@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/server'
 import { Plus, ExternalLink } from 'lucide-react'
-import { GenerateDraftsButton } from './GenerateDraftsButton'
 import { PublishAllDraftsButton } from './PublishAllDraftsButton'
 
 export const metadata = {
@@ -48,7 +47,6 @@ export default async function AdminExperiencesPage() {
         </div>
         <div className="flex items-start gap-3 flex-shrink-0">
           <PublishAllDraftsButton draftCount={counts.draft} />
-          <GenerateDraftsButton />
           <Link
             href="/admin/experiences/new"
             className="flex items-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-full transition-all hover:brightness-110 f-body flex-shrink-0"

@@ -2,8 +2,7 @@
  * Stripe webhook handler.
  *
  * Handles:
- *   account.updated            → sync guide Stripe Connect account flags
- *   checkout.session.completed → mark booking fee as paid (Icelandic inquiry flow only)
+ *   account.updated → sync guide Stripe Connect account flags
  *
  * Deposit payments for FA inquiries are handled by /api/webhooks/stripe-deposit.
  * Always returns 200 to prevent infinite Stripe retries.
@@ -43,55 +42,12 @@ export async function POST(req: Request): Promise<Response> {
       case 'account.updated':
         await handleAccountUpdated(event.data.object as Stripe.Account)
         break
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
-        break
     }
   } catch (err) {
     console.error(`[webhook] Error processing ${event.type}:`, err)
   }
 
   return new Response('OK', { status: 200 })
-}
-
-// ─── checkout.session.completed ───────────────────────────────────────────────
-
-/**
- * Marks booking fee as paid when Stripe Checkout succeeds.
- *
- * payment_type='booking_fee'  → Icelandic inquiry offer accepted by angler.
- *   Sets balance_paid_at on the booking so the UI can confirm payment.
- *
- * Idempotent: if balance_paid_at is already set, skip gracefully.
- */
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  // Icelandic inquiry flow: booking_id + payment_type='booking_fee'
-  const bookingId   = session.metadata?.booking_id
-  const paymentType = session.metadata?.payment_type
-
-  if (!bookingId || paymentType !== 'booking_fee') return
-  if (session.payment_status !== 'paid') return
-
-  const db = createServiceClient()
-
-  // Idempotency check
-  const { data: booking } = await db
-    .from('bookings')
-    .select('id, balance_paid_at')
-    .eq('id', bookingId)
-    .single()
-
-  if (booking == null || booking.balance_paid_at != null) return
-
-  await db
-    .from('bookings')
-    .update({
-      balance_paid_at:            new Date().toISOString(),
-      balance_stripe_checkout_id: session.id,
-    })
-    .eq('id', bookingId)
-
-  console.log(`[webhook] Booking fee paid for booking ${bookingId} — session ${session.id}`)
 }
 
 // ─── account.updated ──────────────────────────────────────────────────────────

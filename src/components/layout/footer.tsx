@@ -84,7 +84,6 @@ export function SiteFooter() {
             </p>
             <div className="flex flex-col gap-3">
               {[
-                ['/guides/apply', 'Apply as Guide'],
                 ['/dashboard',    'Guide Dashboard'],
                 ['/login',        'Sign in'],
               ].map(([href, label]) => (

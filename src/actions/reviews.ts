@@ -79,23 +79,15 @@ export async function getReviewByToken(token: string): Promise<ReviewPageData | 
 
   if (review == null) return null
 
-  // Fetch inquiry for angler name + trip
+  // Fetch inquiry for angler name
   const typedSvc = createServiceClient()
   const { data: inquiry } = await typedSvc
     .from('inquiries')
-    .select('angler_name, trip_id')
+    .select('angler_name')
     .eq('id', review.inquiry_id)
     .single()
 
-  let tripTitle: string | null = null
-  if (inquiry?.trip_id) {
-    const { data: exp } = await typedSvc
-      .from('experiences')
-      .select('title')
-      .eq('id', inquiry.trip_id)
-      .single()
-    tripTitle = exp?.title ?? null
-  }
+  const tripTitle: string | null = null
 
   return {
     id: review.id,

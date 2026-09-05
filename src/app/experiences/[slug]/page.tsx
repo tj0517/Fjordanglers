@@ -122,26 +122,20 @@ export default async function ExperiencePublicPage({
 
   // Fetch guide's available dates for InquiryWidget
   let blockedDates: string[] = []
-  let maxGuests = 12
+  const maxGuests = 12
 
-  if (page.trip_id) {
+  if (page.trip_id && page.guide_id) {
     const today     = new Date().toISOString().slice(0, 10)
     const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
-    const [{ data: expData }, { data: availRows }] = await Promise.all([
-      svc.from('experiences').select('max_guests').eq('id', page.trip_id).single(),
-      page.guide_id
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ? (svc as any)
-            .from('guide_unavailable_dates')
-            .select('date')
-            .eq('guide_id', page.guide_id)
-            .gte('date', today)
-            .lte('date', yearAhead)
-        : Promise.resolve({ data: [] as Array<{ date: string }> }),
-    ])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: availRows } = await (svc as any)
+      .from('guide_unavailable_dates')
+      .select('date')
+      .eq('guide_id', page.guide_id)
+      .gte('date', today)
+      .lte('date', yearAhead)
 
-    if (expData?.max_guests) maxGuests = expData.max_guests
     blockedDates = (availRows ?? []).map((r: { date: string }) => r.date)
   }
 

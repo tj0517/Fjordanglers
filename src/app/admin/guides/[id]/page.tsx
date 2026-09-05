@@ -3,13 +3,12 @@ import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import DeleteGuideButton from '@/components/admin/delete-guide-button'
-import DeleteExperienceButton from '@/components/admin/delete-experience-button'
 import LinkGuideButton from '@/components/admin/link-guide-button'
 import LinkGuidePanel from '@/components/admin/link-guide-panel'
 import CopyInviteLink from '@/components/admin/copy-invite-link'
 import { AdminGuideActions } from './AdminGuideActions'
 import { MigratePhotosButton } from './MigratePhotosButton'
-import { ExternalLink, Pencil, Mail, Plus, Images } from 'lucide-react'
+import { ExternalLink, Pencil, Mail, Images } from 'lucide-react'
 
 const STATUS_STYLES = {
   active:    { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Active'    },
@@ -86,14 +85,14 @@ export default async function AdminGuideDetailPage({
   const { id } = await params
   const supabase = createServiceClient()
 
-  const [{ data: guide }, { data: experiences }, { data: bookings }, { data: guidePhotosRaw }] = await Promise.all([
+  const [{ data: guide }, { data: guidePhotosRaw }] = await Promise.all([
     supabase
       .from('guides')
       .select(`
         id, user_id, full_name, country, city, status, is_beta_listing,
         avatar_url, cover_url, landscape_url, bio, tagline, specialties,
         fish_expertise, languages, certifications, years_experience,
-        verified_at, created_at, updated_at, invite_email, lead_id,
+        verified_at, created_at, updated_at, invite_email,
         stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled,
         photo_marketing_consent, cancellation_policy, commission_rate, pricing_model,
         calendar_disabled, calendar_mode,
@@ -105,15 +104,6 @@ export default async function AdminGuideDetailPage({
       .eq('id', id)
       .single(),
     supabase
-      .from('experiences')
-      .select('id, title, fish_types, price_per_person_eur, duration_hours, duration_days, difficulty, published, location_city, location_country, created_at')
-      .eq('guide_id', id)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('bookings')
-      .select('status, total_eur, guide_payout_eur')
-      .eq('guide_id', id),
-    supabase
       .from('guide_photos')
       .select('id, url, sort_order')
       .eq('guide_id', id)
@@ -122,17 +112,8 @@ export default async function AdminGuideDetailPage({
 
   if (guide == null) notFound()
 
-  const exps        = experiences ?? []
-  const allBookings = bookings ?? []
   const guidePhotos = guidePhotosRaw ?? []
   const s = STATUS_STYLES[guide.status as keyof typeof STATUS_STYLES] ?? STATUS_STYLES.pending
-
-  // ── Booking stats ─────────────────────────────────────────────────────────
-  const confirmedBookings = allBookings.filter(b => ['confirmed', 'completed'].includes(b.status))
-  const totalRevenue      = allBookings
-    .filter(b => !['cancelled', 'refunded', 'declined'].includes(b.status))
-    .reduce((sum, b) => sum + b.total_eur, 0)
-  const guideEarnings     = confirmedBookings.reduce((sum, b) => sum + b.guide_payout_eur, 0)
 
   // ── Profile completeness ──────────────────────────────────────────────────
   const hasBoat    = guide.boat_type != null
@@ -257,13 +238,6 @@ export default async function AdminGuideDetailPage({
                   <Mail width={11} height={11} strokeWidth={1.3} />
                   Payouts
                 </Link>
-                <Link href={`/admin/guides/${guide.id}/trips/new`}
-                  className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
-                  style={{ background: '#E67E50' }}
-                >
-                  <Plus width={11} height={11} />
-                  Add Trip
-                </Link>
                 <DeleteGuideButton guideId={guide.id} guideName={guide.full_name} hasAuthUser={guide.user_id != null} />
               </div>
             </div>
@@ -301,7 +275,7 @@ export default async function AdminGuideDetailPage({
         </div>
       </div>
 
-      {/* ─── Account & Stripe + Booking Stats ────────────────────────── */}
+      {/* ─── Account & Stripe + Ratings ──────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
 
         {/* Account & Stripe */}
@@ -319,29 +293,15 @@ export default async function AdminGuideDetailPage({
           />
         </div>
 
-        {/* Booking Stats */}
+        {/* Ratings */}
         <div
           className="p-6 rounded-3xl"
           style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)' }}
         >
-          <h2 className="text-[#0A2E4D] text-base font-bold f-display mb-5">Booking Stats</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Total bookings',   value: allBookings.length.toString(),                     sub: 'all time' },
-              { label: 'Confirmed',        value: confirmedBookings.length.toString(),               sub: 'confirmed + completed' },
-              { label: 'Total revenue',    value: `€${totalRevenue.toFixed(0)}`,                     sub: 'excl. cancelled' },
-              { label: 'Guide earnings',   value: `€${guideEarnings.toFixed(0)}`,                    sub: 'payout total' },
-            ].map((stat) => (
-              <div key={stat.label} className="p-3.5 rounded-2xl" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.06)' }}>
-                <p className="text-[10px] uppercase tracking-[0.15em] f-body mb-1.5" style={{ color: 'rgba(10,46,77,0.38)' }}>{stat.label}</p>
-                <p className="text-2xl font-bold f-display text-[#0A2E4D]">{stat.value}</p>
-                <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.35)' }}>{stat.sub}</p>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-[#0A2E4D] text-base font-bold f-display mb-5">Ratings</h2>
 
           {/* Ratings row */}
-          <div className="mt-3 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             {guide.average_rating != null && (
               <span className="text-sm font-semibold f-body" style={{ color: '#D97706' }}>
                 ★ {guide.average_rating.toFixed(1)} <span className="font-normal text-xs" style={{ color: 'rgba(10,46,77,0.4)' }}>({guide.total_reviews} reviews)</span>
@@ -542,82 +502,8 @@ export default async function AdminGuideDetailPage({
         </div>
       </div>
 
-      {/* ─── Experiences ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[#0A2E4D] text-lg font-bold f-display">
-          Trips <span className="text-[#0A2E4D]/35 text-sm font-normal f-body">({exps.length})</span>
-        </h2>
-        <Link
-          href={`/admin/guides/${guide.id}/trips/new`}
-          className="flex items-center gap-1.5 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all hover:brightness-110 f-body"
-          style={{ background: '#E67E50' }}
-        >
-          <Plus size={11} />
-          Add Trip
-        </Link>
-      </div>
-
-      {exps.length === 0 ? (
-        <div
-          className="flex flex-col items-center justify-center py-16 text-center rounded-3xl"
-          style={{ background: '#FDFAF7', border: '2px dashed rgba(10,46,77,0.1)' }}
-        >
-          <p className="text-[#0A2E4D]/30 text-sm f-body mb-3">No trips yet for this guide.</p>
-          <Link href={`/admin/guides/${guide.id}/trips/new`} className="text-xs font-semibold f-body transition-colors hover:text-[#C96030]" style={{ color: '#E67E50' }}>
-            Create the first trip →
-          </Link>
-        </div>
-      ) : (
-        <div style={{ background: '#FDFAF7', borderRadius: '24px', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 16px rgba(10,46,77,0.05)', overflow: 'hidden' }}>
-          <div className="overflow-x-auto">
-            <div className="grid px-6 py-3" style={{ gridTemplateColumns: '2fr 1fr 1fr 0.8fr 0.8fr', borderBottom: '1px solid rgba(10,46,77,0.07)', background: 'rgba(10,46,77,0.02)', minWidth: '560px' }}>
-              {['Trip', 'Location', 'Price', 'Duration', 'Status'].map(col => (
-                <p key={col} className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>{col}</p>
-              ))}
-            </div>
-            <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '560px' }}>
-              {exps.map(exp => {
-                const duration = exp.duration_hours != null ? `${exp.duration_hours}h` : `${exp.duration_days ?? '?'} days`
-                return (
-                  <div key={exp.id} className="grid items-center px-6 py-4 hover:bg-[#F8F4EE] transition-colors" style={{ gridTemplateColumns: '2fr 1fr 1fr 0.8fr 0.8fr' }}>
-                    <div className="min-w-0 pr-4">
-                      <p className="text-[#0A2E4D] text-sm font-semibold f-body truncate">{exp.title}</p>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                        {exp.fish_types.slice(0, 2).map(f => (
-                          <span key={f} className="text-[9px] px-1.5 py-0.5 rounded f-body" style={{ background: 'rgba(201,96,48,0.08)', color: '#9E4820' }}>{f}</span>
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-[#0A2E4D]/55 text-xs f-body">{[exp.location_city, exp.location_country].filter(Boolean).join(', ') || '—'}</p>
-                    <p className="text-[#0A2E4D] text-sm font-semibold f-body">€{exp.price_per_person_eur}</p>
-                    <p className="text-[#0A2E4D]/55 text-xs f-body">{duration}</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span
-                        className="text-[9px] font-bold uppercase tracking-[0.12em] px-2 py-0.5 rounded-full f-body"
-                        style={exp.published ? { background: 'rgba(74,222,128,0.1)', color: '#16A34A' } : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.5)' }}
-                      >
-                        {exp.published ? 'Live' : 'Draft'}
-                      </span>
-                      <Link href={`/admin/guides/${guide.id}/trips/${exp.id}/edit`} className="text-[10px] font-medium f-body transition-colors hover:text-[#E67E50]" style={{ color: 'rgba(10,46,77,0.38)' }}>Edit</Link>
-                      <Link
-                        href={`/admin/experiences/new?experience_id=${exp.id}&guide_id=${guide.id}`}
-                        className="text-[10px] font-semibold f-body px-2 py-0.5 rounded-full transition-all"
-                        style={{ background: 'rgba(230,126,80,0.1)', color: '#E67E50' }}
-                      >
-                        + Exp page
-                      </Link>
-                      <DeleteExperienceButton experienceId={exp.id} title={exp.title} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ─── Guide Photo Gallery ──────────────────────────────────── */}
-      <div className="mt-8">
+      <div>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <h2 className="text-[#0A2E4D] text-lg font-bold f-display flex items-center gap-2">

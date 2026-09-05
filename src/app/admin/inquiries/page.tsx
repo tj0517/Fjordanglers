@@ -25,17 +25,12 @@ export default async function AdminInquiriesPage() {
   const allRows = (rawAll ?? []) as InquiryRow[]
 
   // ── Trip titles + slugs ──────────────────────────────────────────────────────
-  const tripIds = [...new Set(allRows.map(r => r.trip_id).filter(Boolean))] as string[]
-  const { data: trips } = tripIds.length > 0
-    ? await svc.from('experiences').select('id, title, slug, location_country').in('id', tripIds)
-    : { data: [] as Array<{ id: string; title: string; slug: string | null; location_country: string | null }> }
-  const tripMap    = Object.fromEntries((trips ?? []).map(t => [t.id, t.title]))
-  const slugMap    = Object.fromEntries(
-    (trips ?? []).filter(t => t.slug != null).map(t => [t.id, t.slug as string])
-  )
-  const countryMap = Object.fromEntries(
-    (trips ?? []).filter(t => t.location_country != null).map(t => [t.id, t.location_country as string])
-  )
+  // `inquiries.trip_id` points at the archived legacy `experiences` table (FA-1.06),
+  // so there is nothing to resolve titles from. The maps stay empty; the client
+  // components render '—' for those rows.
+  const tripMap:    Record<string, string> = {}
+  const slugMap:    Record<string, string> = {}
+  const countryMap: Record<string, string> = {}
 
   // ── Guide names ─────────────────────────────────────────────────────────────
   const guideIds = [...new Set(allRows.map(r => r.assigned_guide_id).filter(Boolean))] as string[]

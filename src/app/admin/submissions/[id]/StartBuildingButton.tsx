@@ -7,7 +7,6 @@ import { markSubmissionInProgress } from '@/actions/submissions'
 
 type Props = {
   submissionId: string
-  guideId: string
   status: string
   compact?: boolean
 }
@@ -15,9 +14,11 @@ type Props = {
 /**
  * StartBuildingButton — FA clicks this to:
  *  1. Mark the submission as in_progress
- *  2. Navigate to /admin/guides/[guideId]/trips/new (full ExperienceForm)
+ *  2. Navigate to /admin/experiences/new?submission_id=… (experience page builder,
+ *     pre-filled from the submission). The legacy `experiences` editor it used to
+ *     open was removed in FA-1.06.
  */
-export default function StartBuildingButton({ submissionId, guideId, status, compact = false }: Props) {
+export default function StartBuildingButton({ submissionId, status, compact = false }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -30,7 +31,7 @@ export default function StartBuildingButton({ submissionId, guideId, status, com
         alert(result.error)
         return
       }
-      router.push(`/admin/guides/${guideId}/trips/new`)
+      router.push(`/admin/experiences/new?submission_id=${submissionId}`)
     })
   }
 

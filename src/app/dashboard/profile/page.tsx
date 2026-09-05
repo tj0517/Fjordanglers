@@ -38,10 +38,7 @@ export default async function ProfilePage() {
         </p>
         <h1 className="text-[#0A2E4D] text-3xl font-bold f-display mb-4">My Profile</h1>
         <p className="text-[#0A2E4D]/55 f-body text-sm">
-          No guide profile found.{' '}
-          <Link href="/guides/apply" className="text-[#E67E50] underline underline-offset-2">
-            Apply to become a guide →
-          </Link>
+          No guide profile found. Contact FjordAnglers to get your profile set up.
         </p>
       </div>
     )

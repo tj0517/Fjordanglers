@@ -1,17 +1,9 @@
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/server'
-import { CountryFlag } from '@/components/ui/country-flag'
 import { Plus, AlertCircle, ArrowRight } from 'lucide-react'
 
 export const metadata = {
   title: 'Admin — FjordAnglers',
-}
-
-// ─── Status style maps ────────────────────────────────────────────────────────
-
-const LEAD_STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  new:       { label: 'New',       color: '#E67E50', bg: 'rgba(230,126,80,0.1)' },
-  contacted: { label: 'Contacted', color: '#D97706', bg: 'rgba(217,119,6,0.1)'  },
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -19,35 +11,17 @@ const LEAD_STATUS: Record<string, { label: string; color: string; bg: string }> 
 export default async function AdminPage() {
   const supabase = createServiceClient()
 
-  const [
-    { data: allGuidesData },
-    { data: tripsData },
-    { count: totalActiveLeads },
-    { data: recentLeads },
-  ] = await Promise.all([
-    supabase.from('guides').select('id, status, user_id, stripe_account_id'),
-    supabase.from('experiences').select('guide_id').eq('published', true),
-    supabase
-      .from('leads')
-      .select('id', { count: 'exact', head: true })
-      .in('status', ['new', 'contacted']),
-    supabase
-      .from('leads')
-      .select('id, name, country, status, created_at')
-      .in('status', ['new', 'contacted'])
-      .order('created_at', { ascending: false })
-      .limit(5),
-  ])
+  const { data: allGuidesData } = await supabase
+    .from('guides')
+    .select('id, status, user_id, stripe_account_id')
 
   const allG = allGuidesData ?? []
-  const guideIdsWithTrips = new Set((tripsData ?? []).map(e => e.guide_id))
 
   const totalGuides    = allG.length
   const activeGuides   = allG.filter(g => g.status === 'active').length
   const pendingGuides  = allG.filter(g => g.status === 'pending').length
   const noStripeLinked = allG.filter(g => g.status === 'active' && g.user_id != null && g.stripe_account_id == null).length
   const notRegistered  = allG.filter(g => g.user_id == null).length
-  const noTripsActive  = allG.filter(g => g.status === 'active' && g.user_id != null && !guideIdsWithTrips.has(g.id)).length
 
   // ── Attention items (only shown if count > 0) ─────────────────────────────
   const attentionItems = [
@@ -57,18 +31,14 @@ export default async function AdminPage() {
     noStripeLinked > 0
       ? { count: noStripeLinked, label: 'active guides with no Stripe account', href: '/admin/guides?filter=no_stripe',    color: '#DC2626', bg: 'rgba(239,68,68,0.1)'  }
       : null,
-    noTripsActive > 0
-      ? { count: noTripsActive,  label: 'active guides with no published trips', href: '/admin/guides?filter=no_trips',   color: '#E67E50', bg: 'rgba(230,126,80,0.1)' }
-      : null,
     notRegistered > 0
       ? { count: notRegistered,  label: 'profiles not yet claimed',             href: '/admin/guides?filter=unclaimed',    color: '#6B7280', bg: 'rgba(107,114,128,0.1)' }
       : null,
   ].filter((item): item is NonNullable<typeof item> => item !== null)
 
   const STATS = [
-    { label: 'Total guides',   value: totalGuides,              sub: `${activeGuides} active`, urgent: false },
-    { label: 'Pending review', value: pendingGuides,            sub: 'awaiting approval',      urgent: pendingGuides > 0 },
-    { label: 'Active leads',   value: totalActiveLeads ?? 0,   sub: 'new & contacted',        urgent: false },
+    { label: 'Total guides',   value: totalGuides,   sub: `${activeGuides} active`, urgent: false },
+    { label: 'Pending review', value: pendingGuides, sub: 'awaiting approval',      urgent: pendingGuides > 0 },
   ]
 
   return (
@@ -163,55 +133,11 @@ export default async function AdminPage() {
         </div>
       )}
 
-      {/* ─── Recent Leads ────────────────────────────────────────── */}
-      <div className="mb-4">
-        <div
-          className="overflow-hidden rounded-[20px]"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)', boxShadow: '0 2px 12px rgba(10,46,77,0.05)' }}
-        >
-          <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}>
-            <div>
-              <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Active Leads</h2>
-              <p className="text-[10px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.38)' }}>New & contacted</p>
-            </div>
-            <Link href="/admin/leads" className="text-xs f-body font-medium hover:text-[#E67E50] transition-colors" style={{ color: 'rgba(10,46,77,0.38)' }}>
-              View all →
-            </Link>
-          </div>
-          {(recentLeads ?? []).length === 0 ? (
-            <p className="px-5 py-10 text-sm text-center f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No active leads</p>
-          ) : (
-            <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)' }}>
-              {(recentLeads ?? []).map((lead) => {
-                const ls = LEAD_STATUS[lead.status] ?? LEAD_STATUS.new
-                return (
-                  <div key={lead.id} className="flex items-center gap-3 px-5 py-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold f-body text-[#0A2E4D] truncate">{lead.name ?? '—'}</p>
-                      <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-                        {lead.country != null && <><CountryFlag country={lead.country} /> {lead.country} · </>}
-                        {new Date(lead.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body flex-shrink-0"
-                      style={{ background: ls.bg, color: ls.color }}
-                    >
-                      {ls.label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* ─── Quick nav ────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {[
-          { label: 'All Guides', href: '/admin/guides',    icon: '🧭' },
-          { label: 'All Leads',  href: '/admin/leads',     icon: '📋' },
+          { label: 'All Guides', href: '/admin/guides',     icon: '🧭' },
+          { label: 'Inquiries',  href: '/admin/inquiries',  icon: '📋' },
           { label: 'Add Guide',  href: '/admin/guides/new', icon: '+', accent: true },
         ].map((item) => (
           <Link

@@ -105,18 +105,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
   console.log(`[stripe-deposit/webhook] Deposit paid for inquiry ${inquiryId} — session ${session.id}`)
 
-  // Fetch trip + guide details for emails
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('title')
-    .eq('id', existing.trip_id)
-    .single()
-
+  // Fetch guide details for emails
   const { data: guide } = existing.guide_id != null
     ? await svc.from('guides').select('full_name, invite_email').eq('id', existing.guide_id).single()
     : { data: null }
 
-  const tripTitle        = trip?.title          ?? 'Your trip'
+  const tripTitle        = 'Your trip'
   const guideName        = guide?.full_name     ?? 'the guide'
   const guideEmail       = guide?.invite_email  ?? null
   const depositAmountEur = existing.deposit_amount ?? 0
@@ -153,7 +147,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
         guideName,
         tripTitle,
         anglerName:     existing.angler_name,
-        anglerCountry:  existing.angler_country,
+        anglerCountry:  existing.angler_country ?? '—',
         requestedDates,
         partySize:      existing.party_size ?? 1,
         inquiryId,

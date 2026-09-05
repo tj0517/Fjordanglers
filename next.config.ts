@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
     return [
       { source: '/terms',        destination: '/legal/terms-of-service', permanent: true },
       { source: '/privacy',      destination: '/legal/privacy-policy',   permanent: true },
+      // Guide application funnel removed in FA-1.06 (leads table archived, 0 rows).
+      // The page had a canonical and is indexed — keep the URL alive with a 301.
+      { source: '/guides/apply', destination: '/guides',                 permanent: true },
     ]
   },
   images: {

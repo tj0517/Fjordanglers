@@ -80,17 +80,7 @@ export async function extractTripDetailsAI(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  // Fetch experience title separately if trip_id is set
-  let experienceTitle: string | null = null
-  if (inquiry.trip_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: exp } = await (svc as any)
-      .from('experiences')
-      .select('title')
-      .eq('id', inquiry.trip_id)
-      .single()
-    experienceTitle = (exp as { title: string } | null)?.title ?? null
-  }
+  const experienceTitle: string | null = null
 
   // 2. Fetch lead_messages ordered by created_at ASC
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

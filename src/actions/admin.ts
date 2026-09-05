@@ -73,11 +73,8 @@ export type BetaGuidePayload = {
   pricing_model: 'flat_fee' | 'commission'
   /** Gallery photos to save into guide_images table. */
   gallery_images?: GuideGalleryImage[]
-  // ── Lead bridge fields ──────────────────────────────────────────────────────
-  // Set when creating a listing from a lead application.
-  // invite_email is used in Phase 2 to auto-link when the guide registers.
+  /** Used by /auth/callback to auto-link the guide's auth account on registration. */
   invite_email?: string
-  lead_id?: string
 }
 
 /**
@@ -111,9 +108,7 @@ export async function createBetaGuide(
         pricing_model:    payload.pricing_model,
         status:           'active',
         verified_at:      new Date().toISOString(),
-        // ── Lead bridge ──────────────────────────────────────────────────────
         invite_email:     payload.invite_email?.trim() || null,
-        lead_id:          payload.lead_id ?? null,
       })
       .select('id')
       .single()
@@ -135,14 +130,6 @@ export async function createBetaGuide(
       )
     }
 
-    // If this listing was created from a lead, mark the lead as onboarded
-    if (payload.lead_id != null) {
-      await supabase
-        .from('leads')
-        .update({ status: 'onboarded' })
-        .eq('id', payload.lead_id)
-    }
-
     return { success: true, guideId: data.id }
   } catch (err) {
     // redirect() throws — let it bubble up
@@ -158,11 +145,11 @@ export type AdminDeleteResult =
   | { error: string }
   | { success: true }
 
-// ─── Delete Guide (full cascade) ─────────────────────────────────────────────
+// ─── Delete Guide ─────────────────────────────────────────────────────────────
 
 /**
- * Permanently deletes a guide and ALL associated data in dependency order:
- *   payments → bookings → experience_images → experiences → guide row
+ * Permanently deletes a guide row. Dependent rows in live tables follow the
+ * FK `ON DELETE` rules of the baseline schema.
  *
  * If deleteAuthAccount is true AND the guide has a linked user_id,
  * the Supabase Auth account is also removed (irreversible).
@@ -177,36 +164,10 @@ export async function deleteGuide(
     await requireAdmin()
     const supabase = createServiceClient()
 
-    // 1. Fetch the guide's user_id and all their experience IDs before deletion
-    const [{ data: guide }, { data: exps }] = await Promise.all([
-      supabase.from('guides').select('user_id').eq('id', guideId).single(),
-      supabase.from('experiences').select('id').eq('guide_id', guideId),
-    ])
+    // 1. Fetch the guide's user_id before deletion
+    const { data: guide } = await supabase.from('guides').select('user_id').eq('id', guideId).single()
 
-    const expIds = (exps ?? []).map((e) => e.id)
-
-    if (expIds.length > 0) {
-      // 2. Find booking IDs for these experiences (needed to cascade payments)
-      const { data: bookings } = await supabase
-        .from('bookings')
-        .select('id')
-        .in('experience_id', expIds)
-
-      const bookingIds = (bookings ?? []).map((b) => b.id)
-
-      // 3. Delete payments → bookings → experience_images → experiences
-      if (bookingIds.length > 0) {
-        await supabase.from('payments').delete().in('booking_id', bookingIds)
-      }
-      await supabase.from('bookings').delete().in('experience_id', expIds)
-      await supabase.from('experience_images').delete().in('experience_id', expIds)
-      await supabase.from('experiences').delete().eq('guide_id', guideId)
-    }
-
-    // 4. Delete remaining bookings where guide_id matches (edge-case FK)
-    await supabase.from('bookings').delete().eq('guide_id', guideId)
-
-    // 5. Delete the guide row
+    // 2. Delete the guide row
     const { error: guideError } = await supabase
       .from('guides')
       .delete()
@@ -217,7 +178,7 @@ export async function deleteGuide(
       return { error: guideError.message }
     }
 
-    // 6. Optionally remove the Supabase Auth account
+    // 3. Optionally remove the Supabase Auth account
     if (opts.deleteAuthAccount === true && guide?.user_id != null) {
       const { error: authError } = await supabase.auth.admin.deleteUser(guide.user_id)
       if (authError != null) {
@@ -231,88 +192,6 @@ export async function deleteGuide(
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('[admin/deleteGuide] Unexpected error:', err)
     return { error: 'Failed to delete guide. Please try again.' }
-  }
-}
-
-// ─── Delete Trip ────────────────────────────────────────────────────────
-
-/**
- * Permanently deletes a single experience and its related data:
- *   payments → bookings → experience_images → experience
- */
-export async function deleteExperience(
-  experienceId: string,
-): Promise<AdminDeleteResult> {
-  try {
-    await requireAdmin()
-    const supabase = createServiceClient()
-
-    // 1. Payments for bookings of this experience
-    const { data: bookings } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('experience_id', experienceId)
-
-    const bookingIds = (bookings ?? []).map((b) => b.id)
-    if (bookingIds.length > 0) {
-      await supabase.from('payments').delete().in('booking_id', bookingIds)
-    }
-
-    // 2. Bookings → images → experience
-    await supabase.from('bookings').delete().eq('experience_id', experienceId)
-    await supabase.from('experience_images').delete().eq('experience_id', experienceId)
-
-    const { error } = await supabase
-      .from('experiences')
-      .delete()
-      .eq('id', experienceId)
-
-    if (error != null) {
-      console.error('[admin/deleteExperience]', error.message)
-      return { error: error.message }
-    }
-
-    return { success: true }
-  } catch (err) {
-    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
-    console.error('[admin/deleteExperience] Unexpected error:', err)
-    return { error: 'Failed to delete experience. Please try again.' }
-  }
-}
-
-// ─── Delete Lead ──────────────────────────────────────────────────────────────
-
-/**
- * Permanently deletes a single lead from the pipeline.
- * Does NOT delete any guide listing that may have been created from this lead —
- * the guides.lead_id FK is nullable, so that row will simply lose the reference.
- */
-export async function deleteLead(leadId: string): Promise<AdminDeleteResult> {
-  try {
-    await requireAdmin()
-    const supabase = createServiceClient()
-
-    // Nullify the FK reference on any guide that was created from this lead
-    await supabase
-      .from('guides')
-      .update({ lead_id: null })
-      .eq('lead_id', leadId)
-
-    const { error } = await supabase
-      .from('leads')
-      .delete()
-      .eq('id', leadId)
-
-    if (error != null) {
-      console.error('[admin/deleteLead]', error.message)
-      return { error: error.message }
-    }
-
-    return { success: true }
-  } catch (err) {
-    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
-    console.error('[admin/deleteLead] Unexpected error:', err)
-    return { error: 'Failed to delete lead. Please try again.' }
   }
 }
 
@@ -589,47 +468,5 @@ export async function adminSyncStripeStatus(
     if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
     console.error('[admin/adminSyncStripeStatus]', err)
     return { error: 'Failed to sync Stripe status. Please try again.' }
-  }
-}
-
-// ─── Update Lead Status ───────────────────────────────────────────────────────
-
-export type LeadStatus = 'new' | 'contacted' | 'responded' | 'onboarded' | 'rejected'
-
-/**
- * Updates the status of a lead in the pipeline.
- * Used by the admin leads page action buttons.
- */
-export async function updateLeadStatus(
-  leadId: string,
-  status: LeadStatus,
-): Promise<AdminActionResult> {
-  try {
-    const { supabase } = await requireAdmin()
-
-    const updateData: Record<string, unknown> = { status }
-
-    // Set timestamp fields based on the new status
-    if (status === 'contacted') {
-      updateData.contacted_at = new Date().toISOString()
-    } else if (status === 'responded') {
-      updateData.responded_at = new Date().toISOString()
-    }
-
-    const { error } = await supabase
-      .from('leads')
-      .update(updateData)
-      .eq('id', leadId)
-
-    if (error != null) {
-      console.error('[admin/updateLeadStatus]', error.message)
-      return { error: error.message }
-    }
-
-    return { success: true, guideId: leadId }
-  } catch (err) {
-    if (err instanceof Error && err.message === 'NEXT_REDIRECT') throw err
-    console.error('[admin/updateLeadStatus] Unexpected error:', err)
-    return { error: 'Failed to update lead status. Please try again.' }
   }
 }

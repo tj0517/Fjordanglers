@@ -498,15 +498,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
 
   // Fetch trip title
   let tripTitle = 'your trip'
-  if (inquiry.trip_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: trip } = await (supabase as any)
-      .from('experiences')
-      .select('title')
-      .eq('id', inquiry.trip_id)
-      .single()
-    if (trip?.title) tripTitle = trip.title
-  } else if (inquiry.experience_page_id) {
+  if (inquiry.experience_page_id) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: expPage } = await (supabase as any)
       .from('experience_pages')

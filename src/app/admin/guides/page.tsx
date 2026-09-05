@@ -20,7 +20,6 @@ const FILTER_TABS = [
   { key: 'needs_action', label: 'Needs Action' },
   { key: 'active',       label: 'Active'       },
   { key: 'pending',      label: 'Pending'      },
-  { key: 'no_trips',     label: 'No Trips'     },
   { key: 'no_payment',   label: 'No Payment'   },
   { key: 'no_stripe',    label: 'No Stripe'    },
   { key: 'unclaimed',    label: 'Unclaimed'    },
@@ -37,23 +36,12 @@ export default async function AdminGuidesPage({
   const { filter = '' } = await searchParams
   const supabase = createServiceClient()
 
-  const [{ data: guides }, { data: expCounts }] = await Promise.all([
-    supabase
-      .from('guides')
-      .select('id, slug, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, payment_ready')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('experiences')
-      .select('guide_id')
-      .eq('published', true),
-  ])
+  const { data: guides } = await supabase
+    .from('guides')
+    .select('id, slug, full_name, country, city, status, is_beta_listing, user_id, invite_email, avatar_url, cover_url, bio, photo_marketing_consent, fish_expertise, created_at, stripe_account_id, stripe_charges_enabled, stripe_payouts_enabled, iban, payment_ready')
+    .order('created_at', { ascending: false })
 
   const allGuides = guides ?? []
-
-  const tripCountByGuide = (expCounts ?? []).reduce<Record<string, number>>((acc, { guide_id }) => {
-    acc[guide_id] = (acc[guide_id] ?? 0) + 1
-    return acc
-  }, {})
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function getMissingProfile(g: typeof allGuides[number]): string[] {
@@ -69,7 +57,6 @@ export default async function AdminGuidesPage({
     return (
       g.status === 'pending' ||
       (g.status === 'active' && g.user_id != null && g.stripe_account_id == null) ||
-      (g.status === 'active' && g.user_id != null && (tripCountByGuide[g.id] ?? 0) === 0) ||
       g.user_id == null ||
       getMissingProfile(g).length > 0
     )
@@ -81,7 +68,6 @@ export default async function AdminGuidesPage({
     if (filter === 'active')       return allGuides.filter(g => g.status === 'active')
     if (filter === 'no_payment')   return allGuides.filter(g => !g.payment_ready)
     if (filter === 'no_stripe')    return allGuides.filter(g => g.status === 'active' && g.user_id != null && g.stripe_account_id == null)
-    if (filter === 'no_trips')     return allGuides.filter(g => g.status === 'active' && g.user_id != null && (tripCountByGuide[g.id] ?? 0) === 0)
     if (filter === 'unclaimed')    return allGuides.filter(g => g.user_id == null)
     if (filter === 'incomplete')   return allGuides.filter(g => getMissingProfile(g).length > 0)
     if (filter === 'needs_action') return allGuides.filter(isNeedsAction)
@@ -159,7 +145,7 @@ export default async function AdminGuidesPage({
               minWidth: '1020px',
             }}
           >
-            {['Guide', 'Status', 'Account', 'Payment', 'Profile', 'Trips', 'Actions'].map(col => (
+            {['Guide', 'Status', 'Account', 'Payment', 'Profile', 'Actions'].map(col => (
               <p key={col} className="text-[10px] uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
                 {col}
               </p>
@@ -177,8 +163,6 @@ export default async function AdminGuidesPage({
             <div className="divide-y" style={{ borderColor: 'rgba(10,46,77,0.05)', minWidth: '1020px' }}>
               {filteredGuides.map((guide) => {
                 const s = STATUS_STYLES[guide.status as keyof typeof STATUS_STYLES] ?? STATUS_STYLES.pending
-                const tripCount = tripCountByGuide[guide.id] ?? 0
-
                 const isClaimed = guide.user_id != null
                 const accountStyle = isClaimed
                   ? { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Claimed'   }
@@ -286,14 +270,6 @@ export default async function AdminGuidesPage({
                         </div>
                       )}
                     </div>
-
-                    {/* Trips count */}
-                    <p
-                      className="text-sm font-bold f-display"
-                      style={{ color: tripCount === 0 ? 'rgba(10,46,77,0.2)' : '#0A2E4D' }}
-                    >
-                      {tripCount}
-                    </p>
 
                     {/* Actions */}
                     <div className="flex items-center gap-3 flex-wrap">
