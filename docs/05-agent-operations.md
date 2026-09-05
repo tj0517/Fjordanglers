@@ -117,3 +117,11 @@ tool output contains a secret, the agent does not repeat it in the report.
 
 Subagents are invoked by the slash commands or explicitly; each one's file says what it
 must read first and what it must never do.
+
+**Exception — inventory + execution in one session.** When a task has a Phase A
+(inventory / classification, ending in a STOP) and a Phase B (executing the accepted
+list) and both run in the same session, the agent that built the classification also
+implements it. Handing a per-file classification table to a subagent costs more context
+than it saves and loses the evidence gathered in Phase A. `fa-core` / `fa-web` / `fa-admin`
+are for tasks that start from a written spec, not from a table the agent just produced.
+(Rule since FA-1.06, 2026-09-05.)
