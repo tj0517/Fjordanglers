@@ -2,7 +2,7 @@
 id: FA-0.12
 title: Strona mówi o swoim regionie — stopka, `/trips` per kraj, cross-sell po kraju, tytuł bez podwójnego sufiksu
 stage: 0
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
