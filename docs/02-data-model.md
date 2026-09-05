@@ -8,32 +8,51 @@ moving to, and the mapping between them. Column-level detail for the current sta
 actual columns (`information_schema.columns`) — the dashboard has been used to add
 columns that appear in no migration and no types file.
 
-## 1. Current state (Aug 2026)
+## 1. Current state (Sep 2026, after FA-1.01 baseline + FA-1.06)
+
+Authoritative source: `supabase/migrations/20260904165037_baseline_prod.sql` and the
+types generated from it (`supabase gen types typescript --local`). Since FA-1.06 the
+types file is exactly the generator's output and every `.from('…')` in `src` names a
+table that exists in `public`.
 
 ### Live spine
 `guides` → `experience_pages` (+ `experience_page_options`) → `inquiries` →
 `lead_messages`, `unmatched_messages`. Plus `profiles` (role only), `guide_photos`,
-`reviews`, `leads`, `guide_intake_forms`, `guide_intake_responses`, back-office
+`reviews`, `guide_intake_forms`, `guide_intake_responses`, back-office
 `ad_campaigns`, `ad_campaign_defs`, `fixed_costs`, `manual_cost_entries`, `finance_settings`.
 
-### Ghost tables (exist in DB, in no migration, in no types)
-`inquiry_trip_details`, `guide_unavailable_dates`. Code accesses them via `as any` in
-try/catch. Stage 1 baseline migration records them; stage 4 replaces them.
+### Formerly ghost, now in the baseline and in the types
+`inquiry_trip_details`, `guide_unavailable_dates`, and the `inquiries` columns that used to
+be undeclared (`assigned_guide_id`, `assigned_at`, `guide_acceptance`, `guide_offer_eta`,
+`deal_currency`, `angler_phone`, the `offer_*` / `internal_*` / agent columns). The
+`as any` casts that hid them were removed in FA-1.06 where the real types compile; the
+remaining casts (9 files) cover `Json` columns and nullable columns, not missing tables.
+`inquiries.source` / `utm` are **not** in the baseline — FA-0.05 adds them by migration.
+`guides.lead_id` is **not** in the baseline either (the audit listed it; production does not
+have it).
 
-### Ghost columns on `inquiries` (same situation)
-`assigned_guide_id`, `assigned_at`, `guide_acceptance`, `guide_offer_eta`,
-`deal_currency`, `source`, `angler_phone`, plus ~40 migrated `offer_*` / `internal_*` /
-agent columns. `inquiries` is ~60 columns wide.
+### Archived in FA-1.01 (schema `archive`, no code references since FA-1.06)
+`booking_messages`, `bookings`, `experience_accommodations`,
+`experience_availability_config`, `experience_blocked_dates`, `experience_images`,
+`experiences`, `guide_accommodations`, `leads`, `payments`. Dropping them is FA-1.02.
+`inquiries.trip_id` still holds ids of `archive.experiences` rows; nothing resolves them
+any more (trip title / list price come back as "Your trip" / "—" until stage 4 maps
+`trip_id → experience_pages.trip_id`).
 
-### Dead (zero code references, or referenced only from dead modules)
-`bookings` (58 cols), `booking_messages`, `payments` (old), `guide_calendars`,
-`calendar_blocked_dates`, `calendar_experiences`, `experience_availability_config`,
-`experience_blocked_dates`, `guide_weekly_schedules`, `audit_log`, `experience_images`,
-`guide_images`, `guide_accommodations`, `experience_accommodations`, `inquiry_messages`,
-`guide_submissions` (read-only archive), legacy `experiences` (written by a legacy admin
-editor, read by the public site only for `max_guests`). Functions `search_trips_near`,
-`get_licenses_for_point`, `import_license_zone`; PostGIS. Enums `booking_status`,
-`payment_status`, `trip_inquiry_status`.
+### Still in `public`, dead or near-dead in code (candidates for FA-1.02 / FA-1.07)
+`guide_images` (admin insert + guide profile read), `guide_submissions` (read-only
+archive), `inquiry_messages` (insert in try/catch), `audit_log`, `spatial_ref_sys`, and the
+`expedition_*` / `waters` / `regions` / `countries` / `species_windows` / `media*` /
+`requests` / `request_guides` / `offers` / `inquiry_todos` / `guide_availability` /
+`guide_private` / `guide_intake_submissions` tables that appear in the baseline but have
+no query in `src`. PostGIS functions `search_trips_near`, `get_licenses_for_point`,
+`import_license_zone` — no `.rpc()` calls anywhere.
+
+### Removed from the product in FA-1.06
+The public guide-application funnel (`/guides/apply` → `leads`) — 0 rows, table
+archived, 301 to `/guides`. The legacy `experiences` admin editor
+(`/admin/guides/[id]/trips/*`). The marketplace `bookings` actions and the
+`booking_fee` branch of the Stripe Connect webhook.
 
 ### Known wrong-but-live
 - Money as `NUMERIC` euros; one global FX rate in `finance_settings`.

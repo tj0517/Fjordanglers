@@ -2,7 +2,7 @@
 id: FA-1.06
 title: Typy mówią prawdę — regeneracja z baseline i usunięcie zapytań do tabel w archive
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -331,3 +331,156 @@ tabela żywa, semantyka ta sama; wycięcie zostawia „0 trips" na stronie głó
   na oko większość dotyczy `inquiries` z kolumnami, które **są** w typach, więc część zniknie.
 
 ⛔ **STOP — czekam na akceptację tabeli i odpowiedzi D1–D4. Zero usunięć przed zgodą.**
+
+**Decyzje tj (5 IX 2026):** D3 skorygowane na **wariant A** (lejek `leads` w całości, łącznie
+z trasą publiczną, + 301 `/guides/apply → /guides`, + `sendGuideApplicationEmail` z szablonem
+jako świadomy wyjątek od brzegu zadania). D1, D2, D4 bez korekty → wykonane zgodnie
+z rekomendacją (D1: edytor usunięty tutaj; D2: opcja A „wyciąć"; D4: przepięcie na
+`experience_pages`).
+
+---
+
+## Report — FA-1.06 Typy mówią prawdę
+
+**Branch:** `chore/types-truth` · **Commits:** `b9228838` (start) → `399dcd34` (config + typy +
+faza A) → `ca066c2c` (faza B: usunięcia i wycięcia) → `a37e082d` (`as any`) → docs.
+Implementacja wykonana bezpośrednio (bez delegacji do `fa-core`): klasyfikacja z fazy A
+była już w kontekście, a każda zmiana to chirurgiczne wycięcie z tabeli.
+
+### Done
+- **Lokalny stack + typy z generatora** — `supabase init` (`config.toml`, `.gitignore`
+  zacommitowane), porty +100; `supabase migration list` lokalnie = zdalnie
+  (`20260904165037`, `20260904165038`). Evidence: sekcja „Stan bieżący" wyżej.
+- **`database.types.ts` = wynik generatora** — evidence:
+  `supabase gen types typescript --local > src/lib/supabase/database.types.ts && git diff --exit-code --stat src/lib/supabase/database.types.ts` → `OK-types-are-generated`.
+- **Kategoria (a) usunięta (9 plików + `GenerateDraftsButton.tsx`):** `actions/bookings.ts`,
+  `components/booking/BookingChat.tsx`, `actions/accommodations.ts`, `lib/mock-data.ts`,
+  `app/admin/guides/[id]/trips/**` (2 strony), `components/trips/experience-form.tsx`,
+  `actions/experiences.ts`, `components/admin/delete-experience-button.tsx`,
+  `app/admin/experiences/GenerateDraftsButton.tsx`. Evidence: `git show --stat ca066c2c`
+  (45 plików, −9401 linii); dowody importów w tabeli fazy A.
+- **Kategoria (b) wycięta (b1–b21)** — evidence: grep poniżej = 0 trafień; typecheck = 0.
+  Odstępstwa od tabeli: b14 (`submissions/[id]`) — poza `expSlug` usunięty też blok
+  „View experience", który bez sluga linkowałby do `#`; `StartBuildingButton.tsx`
+  (nie było w tabeli — link nie w `href`, tylko `router.push`) kierował do usuniętego
+  `/admin/guides/[id]/trips/new`, teraz kieruje do `/admin/experiences/new?submission_id=…`.
+- **Lejek `leads` (D3 wariant A):** usunięte `app/(public)/guides/apply/`,
+  `components/guides/{apply-form,onboarding-wizard}.tsx`, `actions/guide-apply.ts`,
+  `app/admin/leads/`, `components/admin/lead-actions.tsx`, `emails/guide-application.tsx`,
+  `sendGuideApplicationEmail` w `lib/email.ts` (**wyjątek od brzegu zadania, za zgodą tj**),
+  CTA na `/guides`, pozycja w stopce, link w `dashboard/profile`, prefill `?lead_id=` i
+  `guides.lead_id` (kolumny nie ma w baseline), `deleteLead`/`updateLeadStatus`/`LeadStatus`
+  w `admin.ts`, widgety leadów na `/admin`. Dodany 301 w `next.config.ts`. Evidence:
+  ```
+  grep -rn "guides/apply" src              → 0
+  grep -rn "sendGuideApplicationEmail" src → 0
+  git diff fb3da9b8 -- next.config.ts      → + { source: '/guides/apply', destination: '/guides', permanent: true }
+  ```
+- **D4:** `getPlatformStats` liczy `experience_pages.status='active'`, `getSpeciesCounts`
+  zlicza `experience_pages.target_species` — `src/lib/supabase/queries.ts`.
+- **`as any`:** 142 w 32 plikach → **78 w 14 plikach**. Metoda: masowe usunięcie
+  `(svc as any)`, `(supabase as any)`, `(supabase.from as any)('t')`,
+  `createServiceClient() as any` w 26 plikach → typecheck → 9 plików czerwonych przywrócone
+  `git checkout`, 17 zostało bez castów (commit `a37e082d`). Evidence: typecheck 0 po
+  przywróceniu; lista 9 plików i przyczyn w `deferred-tasks.md`.
+- **`pnpm typecheck` → 0 błędów** (przed: 805 w 24 plikach).
+- **`pnpm build` → exit 0** (`✓ Compiled successfully`, 47/47 stron).
+- **`pnpm test -- --run` → 3 pliki, 17/17** (tyle samo co przed).
+- **`pnpm lint` → 42 błędy / 60 ostrzeżeń** (przed: 62 / 65) — nie gorzej.
+- **`docs/02-data-model.md` §1** przepisane na stan po zadaniu; `docs/deferred-tasks.md`
+  — 9 nowych wierszy FA-1.06, wiersz FA-0.02 zamknięty (strona usunięta).
+- **INDEX:** FA-1.06 → `review`; tytuł/diff/model w INDEX zsynchronizowane z plikiem
+  zadania (INDEX miał jeszcze stary opis M/sonnet).
+
+### Not done
+- **Odczyt produkcji** (liczby `trip_id` vs `experience_page_id`, wiersze `archive.*`) —
+  brak `SUPABASE_DB_PASSWORD` w sesji, MCP `Unauthorized`, CLI bez `db query`. tj podał
+  `archive.leads = 0` z własnego odczytu; reszty nie potwierdzam. Żadne kryterium akceptacji
+  tego nie wymaga.
+- **Delegacja do `fa-core`** — świadomie pominięta (patrz nagłówek raportu).
+
+### Noticed, not touched (→ docs/deferred-tasks.md)
+- 8 miejsc z `'Your trip'` po D2-A + puste `tripMap/slugMap/countryMap` w komponentach
+  klienckich — kandydat na helper `experience_pages` (S/M).
+- Kompilujący się martwy kod: `experience-location-map.tsx`, typy w `types/index.ts`,
+  `handleAccountUpdated` (Connect), `CACHE_TAG_EXPERIENCES`.
+- 78 `as any` z przyczyn innych niż brak tabel (Json kolumny, nullable, Leaflet).
+- Lint 42/60 — przyczyny sprzed zadania.
+- FA-1.09 traci przedmiot (D1).
+- Prod-SELECT wymaga `! supabase login` + hasła w sesji — do runbooka.
+
+### Needs a decision
+- **FA-1.09** — `dropped` czy zawęzić do „gorących akcji na `experience_pages`"? Rekomendacja:
+  zawęzić, tytuł zmienić.
+- **FA-0.05** — po merge tej gałęzi: rebase `feat/inquiry-source-and-utm` (WIP `d9209f7a`)
+  na `main`, wyrzucić z niej `config.toml`/`.gitignore`, zregenerować typy, `blocked → review`.
+  Kto: ta sama sesja po „go", albo osobne `/fa-task FA-0.05`.
+
+### Verification
+
+```
+$ supabase gen types typescript --local > src/lib/supabase/database.types.ts
+$ git diff --exit-code --stat src/lib/supabase/database.types.ts && echo OK-types-are-generated
+OK-types-are-generated
+
+$ grep -rn "from('bookings')\|from('booking_messages')\|from('experiences')\|from('experience_accommodations')\|from('experience_availability_config')\|from('experience_blocked_dates')\|from('experience_images')\|from('guide_accommodations')\|from('leads')\|from('payments')" src || echo OK-no-archive-queries
+OK-no-archive-queries
+
+$ grep -rn "guides/apply" src || echo OK-0
+OK-0
+$ grep -rn "sendGuideApplicationEmail" src || echo OK-0
+OK-0
+$ grep -rn "/admin/leads\|trips/new\|trips/\${\|experience_id=\|lead_id=" src --include='*.tsx' --include='*.ts' || echo OK-no-links
+OK-no-links
+$ grep -n "apply\|leads\|trips/" src/app/sitemap.ts || echo OK-sitemap-clean
+OK-sitemap-clean
+
+$ pnpm typecheck
+> tsc --noEmit
+(exit 0, 0 errors)
+
+$ pnpm build
+✓ Compiled successfully in 35.6s
+✓ Generating static pages using 7 workers (47/47)
+(exit 0)
+
+$ pnpm test -- --run
+ Test Files  3 passed (3)
+      Tests  17 passed (17)
+
+$ pnpm lint
+✖ 102 problems (42 errors, 60 warnings)        # przed zadaniem: ✖ 127 problems (62 errors, 65 warnings)
+
+$ grep -rn "as any" src | wc -l; grep -rln "as any" src | wc -l
+78
+14                                              # przed: 142 / 32
+```
+
+**Czerwony dowód** — dopisane na końcu `src/actions/admin.ts`:
+```ts
+export async function __fa106RedProof() {
+  const supabase = createServiceClient()
+  await supabase.from('experiences').select('id')
+}
+```
+```
+$ pnpm typecheck
+src/actions/admin.ts(476,23): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(relation: "ad_campaign_defs" | "ad_campaigns" | "audit_log" | "countries" | "expedition_guides" | "expeditions" | "guides" | … 30 more … | "unmatched_messages"): PostgrestQueryBuilder<...>', gave the following error.
+    Argument of type '"experiences"' is not assignable to parameter of type '"ad_campaign_defs" | "ad_campaigns" | "audit_log" | … | "unmatched_messages"'.
+  Overload 2 of 2, '(relation: "expedition_waters_public" | "geography_columns" | "geometry_columns"): …
+    Argument of type '"experiences"' is not assignable to parameter of type '"expedition_waters_public" | "geography_columns" | "geometry_columns"'.
+ ELIFECYCLE  Command failed with exit code 2.
+$ git checkout -- src/actions/admin.ts && pnpm typecheck
+(exit 0, 0 errors)
+```
+
+**Dowód dla usuniętych tras** (nawigacja i sitemap osobno):
+- `/admin/guides/[id]/trips/new`, `/admin/guides/[id]/trips/[expId]/edit` — linki były
+  wyłącznie w `app/admin/guides/[id]/page.tsx` (sekcja Trips, usunięta) i w
+  `StartBuildingButton.tsx` (`router.push`, przepięty). Sidenav: brak. Sitemap: brak.
+  `grep -rn "trips/new\|trips/\${" src` → 0.
+- `/admin/leads` — linki były w `app/admin/page.tsx` (przepisane) i `admin/guides/new`
+  (przepisane). Sidenav: brak. Sitemap: brak. `grep -rn "/admin/leads" src` → 0.
+- `/guides/apply` — linki były w stopce, `/guides`, `dashboard/profile` (wszystkie usunięte);
+  sitemap nie zawierał tej trasy (`grep apply src/app/sitemap.ts` → 0); 301 w `next.config.ts`.
