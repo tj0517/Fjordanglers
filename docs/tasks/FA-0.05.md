@@ -82,6 +82,14 @@ nie liczy się jako aktualny.
 - [x] `supabase db diff` (lokalnie, po migracji) → `No schema changes found`.
 - [x] `database.types.ts` zregenerowany `supabase gen types typescript --local`; `inquiries.Row`
       zawiera `source` i `utm`.
+- [x] Parytet typów z produkcją po `db push`: **sekcja `Database.public` identyczna** między
+      regeneracją lokalną a `gen types --project-id uwxrstbplaoxfghrchcy`; różnice poza nią
+      dopuszczalne i wymienione w raporcie. (Przeformułowane 5 IX z „pusty `git diff` po
+      `pnpm supabase:types`": zdalny i lokalny generator dają inny szkielet pliku — nagłówek
+      `__InternalSupabase`, nawiasy w helperach `Tables<>`/`Enums<>`, końcowy newline — przy
+      identycznym schemacie, więc dosłownie pusty diff jest nieosiągalny bez wyboru jednego
+      kanonicznego generatora, co należy do FA-1.11. Plik w repo pochodzi z generatora lokalnego,
+      jak od FA-1.06.)
 - [x] `pnpm typecheck` i `pnpm build` zielone; `pnpm test -- --run` zielone.
 - [x] `pnpm lint`: zero NOWYCH błędów względem `main` (liczby z obu gałęzi w raporcie).
       „Lint zielony" jest nieosiągalny — 42 błędy na `main` sprzed tego zadania, wiersz w
@@ -409,10 +417,9 @@ bramka „FA-1.06 usunęła plik, który modyfikujesz" nie zadziałała.
 - Status `blocked → review` tu i w `INDEX.md`; `depends` = FA-1.06.
 
 #### Not done
-- `db push` na produkcję — poza tym zadaniem, bramka STOP. Produkcja **nie ma** `source`/`utm`
-  do czasu osobnej zgody; po merge kod na Vercelu będzie wstawiał kolumny, których tam nie ma —
-  **każde nowe zapytanie z widgetu i z admina padnie na insercie**, dopóki migracja nie wejdzie.
-  Kolejność: push migracji **przed** deployem tego PR-a (albo w tym samym oknie). Patrz „Needs a decision".
+- ~~`db push` na produkcję — poza tym zadaniem, bramka STOP.~~ **Zrobione później tego samego
+  dnia przez tj** (nie przez agenta) — sekcja „Push na produkcję" niżej. Kolejność „migracja przed
+  merge'em" zachowana.
 - Odczyt produkcji (`select distinct source`) — jak w FA-1.06: brak `SUPABASE_DB_PASSWORD` w sesji.
   Nie jest potrzebny: kolumny na produkcji nie istnieją (baseline z 4 IX to jej odczyt), więc nie ma
   wartości do sprawdzenia; migracja używa `ADD COLUMN IF NOT EXISTS`, a CHECK dopuszcza `NULL`.
@@ -460,3 +467,92 @@ $ pnpm lint        → main: ✖ 102 problems (42 errors, 60 warnings) · branch
 $ psql … -c "insert into public.inquiries (angler_name, angler_email, source) values ('Test Bad','bad@example.com','foo');"
 ERROR:  new row for relation "inquiries" violates check constraint "inquiries_source_check"
 ```
+
+---
+
+## Push na produkcję (wykonany przez tj, 5 IX 2026)
+
+**Kto i dlaczego.** `supabase migration list --linked`, `supabase db push` i oba SELECT-y na
+produkcji wykonał **tj ręcznie w swoim terminalu**, nie agent. Poświadczenia produkcyjne
+(`SUPABASE_DB_PASSWORD`) są świadomie poza zasięgiem sesji agenta do czasu zamknięcia
+FA-0.09 (sekrety poza `settings.local.json`); agent nie łączył się z produkcją ani zapisem, ani
+odczytem. Zgoda tj z 5 IX obejmowała wyłącznie tę jedną migrację i wyłącznie po kroku 1.
+Kolejność (migracja **przed** merge'em PR-a) była częścią zgody: kod z tej gałęzi wstawia
+`source` i `utm`, więc bez kolumn na produkcji każde nowe zapytanie padłoby na insercie.
+
+### Krok 1 — pending przed pushem (`supabase migration list --linked`, tj)
+
+```
+   Local          | Remote         | Time (UTC)
+  ----------------|----------------|---------------------
+   20260904165037 | 20260904165037 | 2026-09-04 16:50:37
+   20260904165038 | 20260904165038 | 2026-09-04 16:50:38
+   20260904210532 |                | 2026-09-04 21:05:32
+```
+
+Pending: wyłącznie `20260904210532`. Historia pogodzona w FA-1.01 trzyma się — potwierdzone
+odczytem, nie założeniem.
+
+### Krok 2 — `supabase db push` (tj) i stan produkcji po pushu (psql, session pooler, tj)
+
+```
+select column_name, data_type, is_nullable from information_schema.columns
+where table_name='inquiries' and column_name in ('source','utm','gclid','trip_length');
+
+ column_name | data_type | is_nullable
+-------------+-----------+-------------
+ utm         | jsonb     | YES
+ trip_length | text      | YES
+ gclid       | text      | YES
+ source      | text      | YES
+(4 rows)
+
+select conname, pg_get_constraintdef(oid) from pg_constraint
+where conrelid='public.inquiries'::regclass and conname='inquiries_source_check';
+
+        conname         |                              pg_get_constraintdef
+------------------------+-------------------------------------------------------------------------------
+ inquiries_source_check | CHECK (((source IS NULL) OR (source = ANY (ARRAY['web_form'::text, 'manual'::text, 'email'::text, 'whatsapp'::text]))))
+(1 row)
+```
+
+CHECK: dokładnie cztery wartości, `NULL` dopuszczony. Żadnego INSERT-a na produkcji, także
+testowego — czerwony dowód pochodzi z bazy lokalnej (wyżej) i wystarcza.
+
+### Krok 3 — parytet typów (agent)
+
+Przebieg, bez upiększania:
+- `pnpm supabase:types` padło na `flag needs an argument: --project-id` (`$SUPABASE_PROJECT_ID`
+  nie ma w env sesji), a przekierowanie `>` w skrypcie **wyzerowało** `database.types.ts` przed
+  uruchomieniem komendy. Plik przywrócony z gita; od tego momentu generacja szła do pliku w
+  scratchpadzie. Wiersz w `docs/deferred-tasks.md` → FA-1.11.
+- `supabase gen types typescript --project-id uwxrstbplaoxfghrchcy` → `Unauthorized`: martwy
+  `SUPABASE_ACCESS_TOKEN` z `settings.local.json`. Prefiks `SUPABASE_ACCESS_TOKEN=""` (obejście
+  z FA-1.01, logowanie CLI z keychaina) zadziałał. To token API zarządzania, nie hasło do bazy.
+  Wiersz w `deferred-tasks.md` → FA-0.09.
+
+Wynik (`supabase gen types typescript --project-id uwxrstbplaoxfghrchcy --schema public,graphql_public`
+vs plik w repo z `--local`, obie strony CLI 2.75.0):
+
+```
+raw diff: 13 hunków; po wyrównaniu listy schematów (zdalny generator domyślnie pomija graphql_public): 12
+wszystkie 12 poza Database['public']:
+  10,14d9                       nagłówek __InternalSupabase { PostgrestVersion: "14.5" } — tylko zdalny generator
+  3701c3696 3706c3701 3730c3725 3734c3729 3755c3750 3759c3754
+  3780c3775 3784c3779 3797c3792 3801c3796
+                                nawiasy wokół typów warunkowych w helperach
+                                Tables<> / TablesInsert<> / TablesUpdate<> / Enums<> / CompositeTypes<>
+  3864a3860                     końcowy pusty wiersz
+
+sekcja Database.public wycięta z obu plików (od "  public: {" do "type DatabaseWithoutInternals"):
+  prod lines: 3653   local lines: 3653   identical: True
+  inquiries.source: string | null  → obecne po stronie produkcji
+  inquiries.utm: Json | null       → obecne po stronie produkcji
+```
+
+Decyzja tj 5 IX: parytet **spełniony** — schemat identyczny co do bajtu, różnice to szkielet
+generatora, nie schemat. Plik w repo zostaje z generatora lokalnego (źródło od FA-1.06); wersja
+z produkcji **nie** została podmieniona. Wybór jednego kanonicznego generatora dla CI → FA-1.11.
+
+### Stan po kroku 4
+Status `review` (plik + `INDEX.md`). Merge — tj.
