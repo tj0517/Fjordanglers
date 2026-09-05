@@ -4,6 +4,7 @@ import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExpPageMapSection from './exp-page-map-section'
 import type { ExpPage } from './exp-page-map-section'
+import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 
 const PAGE_SIZE = 12
 
@@ -88,18 +89,43 @@ function Pagination({
 // ─── Metadata ─────────────────────────────────────────────────────────────────
 
 export const revalidate = 60
-export const metadata = {
-  title: 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland',
-  description: 'Browse 20+ hand-picked guided fishing trips across Norway, Sweden, Iceland and Finland. Salmon, sea trout, pike & fly fishing. Filter by country.',
-  alternates: { canonical: 'https://fjordanglers.com/trips' },
-  openGraph: {
-    url: 'https://fjordanglers.com/trips',
-    images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland | FjordAnglers' }],
-  },
-  twitter: {
-    card: 'summary_large_image' as const,
-    images: ['/brand/og-default.png'],
-  },
+
+const DEFAULT_TITLE = 'Guided Fishing Trips with Local Guides'
+const DEFAULT_DESCRIPTION = 'Browse 20+ hand-picked guided fishing trips across Norway, Sweden, Iceland and Finland. Salmon, sea trout, pike & fly fishing. Filter by country.'
+
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams
+  const matched = params.country
+    ? COUNTRIES.find(c => c.toLowerCase() === params.country!.toLowerCase().trim())
+    : undefined
+
+  const title = matched != null
+    ? `Guided Fishing Trips in ${matched}`
+    : DEFAULT_TITLE
+  const description = matched != null
+    ? `Browse guided fishing trips in ${matched} with verified local guides. Filter by species, price and dates.`
+    : DEFAULT_DESCRIPTION
+
+  return {
+    title,
+    description,
+    // Overrides the root layout's Nordic-specific keywords — without this, every
+    // /trips?country=... page (Patagonia and NZ included) inherits them too.
+    keywords: matched != null ? [matched, 'guided fishing trip'] : ['guided fishing trip', 'fishing guide'],
+    alternates: { canonical: 'https://fjordanglers.com/trips' },
+    openGraph: {
+      title,
+      description,
+      url: 'https://fjordanglers.com/trips',
+      images: [{ url: '/brand/og-default.png', width: 1200, height: 630, alt: `${title} | FjordAnglers` }],
+    },
+    twitter: {
+      card: 'summary_large_image' as const,
+      title,
+      description,
+      images: ['/brand/og-default.png'],
+    },
+  }
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -135,6 +161,11 @@ export default async function TripsPage({
   const total      = count ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  const matchedCountry = params.country
+    ? COUNTRIES.find(c => c.toLowerCase() === params.country!.toLowerCase().trim())
+    : undefined
+  const pageRegion = matchedCountry != null ? getRegionGroup(matchedCountry) : null
+
   // Preserve active filters in pagination links (strip 'page' key)
   const baseParams = new URLSearchParams(
     Object.entries(params).filter(([k, v]) => k !== 'page' && v != null) as [string, string][]
@@ -143,9 +174,9 @@ export default async function TripsPage({
   const itemListSchema = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: params.country
-      ? `Guided Fishing Trips in ${params.country}`
-      : 'Guided Fishing Trips in Norway, Sweden, Iceland & Finland',
+    name: matchedCountry != null
+      ? `Guided Fishing Trips in ${matchedCountry}`
+      : DEFAULT_TITLE,
     numberOfItems: total,
     itemListElement: pages.map((exp, i) => ({
       '@type': 'ListItem',
@@ -176,7 +207,7 @@ export default async function TripsPage({
       {/* Spacer for fixed nav */}
       <div style={{ height: '72px' }} />
 
-      <h1 className="sr-only">Guided Fishing Trips in Norway, Sweden, Iceland &amp; Finland</h1>
+      <h1 className="sr-only">{matchedCountry != null ? `Guided Fishing Trips in ${matchedCountry}` : DEFAULT_TITLE}</h1>
 
       {/* ── TWO-COLUMN (map + list) ── */}
       <ExpPageMapSection
@@ -190,7 +221,7 @@ export default async function TripsPage({
         }
 
       />
-      <SiteFooter />
+      <SiteFooter neutralTagline={pageRegion != null && pageRegion !== 'Nordic'} />
     </div>
   )
 }

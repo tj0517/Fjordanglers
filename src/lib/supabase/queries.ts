@@ -11,6 +11,7 @@
 import { unstable_cache } from 'next/cache'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
+import { COUNTRIES } from '@/lib/countries'
 
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'
@@ -360,6 +361,37 @@ export async function getFeaturedExperiencePages(limit = 8): Promise<FeaturedExp
       return all.slice(0, limit)
     },
     ['featured-experience-pages', String(limit)],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
+  )()
+}
+
+// ─── Active destination countries (footer) ────────────────────────────────────
+
+/**
+ * Distinct countries with at least one active experience page, ordered to match
+ * COUNTRIES (Nordic first, then Patagonia, then New Zealand) rather than alphabetically.
+ * Used by the footer's "Destinations" list — a country with 0 active pages disappears
+ * on its own, no hardcoded array to maintain.
+ */
+export async function getActiveDestinationCountries(): Promise<string[]> {
+  return unstable_cache(
+    async () => {
+      const db = createPublicClient()
+
+      const { data, error } = await db
+        .from('experience_pages')
+        .select('country')
+        .eq('status', 'active')
+
+      if (error) {
+        console.error('[getActiveDestinationCountries]', error.message)
+        return []
+      }
+
+      const active = new Set((data ?? []).map(row => row.country))
+      return COUNTRIES.filter(c => active.has(c))
+    },
+    ['active-destination-countries'],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }

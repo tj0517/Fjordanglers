@@ -15,6 +15,7 @@ import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import type { SpeciesDetailItem, SpecialAttraction, ContentBlock, FaqItem, Accommodation, Boat } from '@/actions/experience-pages'
 import type { TripOption } from '@/components/trips/TripOptionsAccordion'
 import { formatPrice, currencySymbol } from '@/lib/format-price'
+import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 
 export const revalidate = 3600
 
@@ -56,6 +57,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (page == null) return {}
 
   const title      = page.meta_title ?? page.experience_name
+  // meta_title already carrying the site suffix would otherwise double up against
+  // the root layout's title.template ("%s | FjordAnglers") — absolute{} bypasses it.
+  const titleMeta  = title.endsWith('| FjordAnglers') ? { absolute: title } : title
   const speciesList = ((page.target_species as string[] | null) ?? []).slice(0, 2).join(' & ')
   const fishingType = speciesList ? `${speciesList} fishing` : 'fishing'
   const description = page.meta_description
@@ -66,8 +70,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const ogImage    = page.og_image_url ?? gallery[0] ?? page.hero_image_url
 
   return {
-    title,
+    title: titleMeta,
     description,
+    // Overrides the root layout's Nordic-specific keywords — without this, every
+    // page (Patagonia and NZ included) inherits "fishing guide Scandinavia" etc.
+    keywords: [page.country, page.region, `${fishingType} guide`].filter(Boolean),
     alternates: { canonical: `https://fjordanglers.com/experiences/${slug}` },
     openGraph: {
       title,
@@ -174,7 +181,10 @@ export default async function ExperiencePublicPage({
 
   const hasOptions = tripOptions.length > 0
 
-  // Similar experience pages
+  // Region group of the current page — used for the cross-sell fallback and the footer tagline
+  const pageRegion = getRegionGroup(page.country)
+
+  // Similar experience pages: same country first, then same region group — never "any 3"
   const { data: sameCountryRaw } = await svc
     .from('experience_pages')
     .select('id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
@@ -185,14 +195,16 @@ export default async function ExperiencePublicPage({
 
   let similarTrips = sameCountryRaw ?? []
 
-  if (similarTrips.length === 0) {
-    const { data: anyRaw } = await svc
+  if (similarTrips.length === 0 && pageRegion != null) {
+    const regionCountries = COUNTRIES.filter(c => getRegionGroup(c) === pageRegion)
+    const { data: regionRaw } = await svc
       .from('experience_pages')
       .select('id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, gallery_image_urls, technique, target_species, difficulty')
       .eq('status', 'active')
+      .in('country', regionCountries)
       .neq('id', page.id)
       .limit(3)
-    similarTrips = anyRaw ?? []
+    similarTrips = regionRaw ?? []
   }
 
   // Quick Fit: when options exist, aggregate all target_species across options (union)
@@ -1597,7 +1609,7 @@ export default async function ExperiencePublicPage({
         </section>
       )}
 
-      <SiteFooter />
+      <SiteFooter neutralTagline={pageRegion !== 'Nordic'} />
     </>
   )
 }
