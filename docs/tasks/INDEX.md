@@ -27,7 +27,7 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-1.03 | Rejestrator zdarzeń `inquiry_events` + `transition()` | L | opus | todo | FA-1.01 |
 | FA-1.04 | `inquiries.qualified` z agenta + korekta ręczna + `unknown` dla starych | M | sonnet | todo | FA-1.01 |
 | FA-1.05 | Backfill zdarzeń historycznych z `offer_sent_at` / `deposit_paid_at` | M | sonnet | todo | FA-1.03 |
-| FA-1.06 | Typy mówią prawdę — regeneracja z baseline + usunięcie zapytań do tabel w `archive` | L | opus | review | FA-1.01 |
+| FA-1.06 | Typy mówią prawdę — regeneracja z baseline + usunięcie zapytań do tabel w `archive`. Raport rozbity na dwa PR-y: #11 (kod + raport) i `docs/fa-1.06-tail` (uzupełnienie D4, checklista po deployu, `FA-1.09.md`, reguła §8) — `fa-review` czyta oba | L | opus | review | FA-1.01 |
 | FA-1.07 | Wycięcie martwego kodu — paczka 1: actions + lib | M | sonnet | todo | FA-1.06 |
 | FA-1.08 | Wycięcie martwego kodu — paczka 2: komponenty i trasy | M | sonnet | todo | FA-1.07 |
 | FA-1.09 | Legacy edytor `experiences` poza nawigacją; gorące akcje na `experience_pages` | M | sonnet | todo | FA-1.06 |
