@@ -1,7 +1,11 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { CountryFlag } from '@/components/ui/country-flag'
+import { getActiveDestinationCountries } from '@/lib/supabase/queries'
 
-export function SiteFooter() {
+export async function SiteFooter({ neutralTagline = false }: { neutralTagline?: boolean }) {
+  const destinations = await getActiveDestinationCountries()
+
   return (
     <footer style={{ background: '#070D1A' }}>
       <div className="mx-auto px-4 sm:px-6 lg:px-10" style={{ maxWidth: '1280px', paddingTop: '64px', paddingBottom: '32px' }}>
@@ -19,7 +23,9 @@ export function SiteFooter() {
               </span>
             </Link>
             <p className="f-body text-[14px] leading-relaxed mt-4 mb-6" style={{ color: 'rgba(255,255,255,0.4)', maxWidth: '220px' }}>
-              Connecting anglers with the best fishing trips in Scandinavia.
+              {neutralTagline
+                ? 'Hand-picked guided fishing trips with local owner-guides.'
+                : 'Connecting anglers with the best fishing trips in Scandinavia.'}
             </p>
             <a
               href="https://instagram.com/fjordanglers"
@@ -62,16 +68,15 @@ export function SiteFooter() {
               Destinations
             </p>
             <div className="flex flex-col gap-3">
-              {[
-                ['/trips?country=norway',  '🇳🇴', 'Norway'],
-                ['/trips?country=sweden',  '🇸🇪', 'Sweden'],
-                ['/trips?country=finland', '🇫🇮', 'Finland'],
-                ['/trips?country=iceland', '🇮🇸', 'Iceland'],
-                ['/trips?country=denmark', '🇩🇰', 'Denmark'],
-              ].map(([href, flag, name]) => (
-                <Link key={href} href={href} className="f-body text-[14px] inline-flex items-center gap-2 hover:opacity-70 transition-opacity" style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}>
-                  <span>{flag}</span>
-                  <span>{name}</span>
+              {destinations.map(country => (
+                <Link
+                  key={country}
+                  href={`/trips?country=${encodeURIComponent(country)}`}
+                  className="f-body text-[14px] inline-flex items-center gap-2 hover:opacity-70 transition-opacity"
+                  style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}
+                >
+                  <CountryFlag country={country} size={16} />
+                  <span>{country}</span>
                 </Link>
               ))}
             </div>

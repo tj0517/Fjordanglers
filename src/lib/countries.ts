@@ -7,6 +7,8 @@ export const COUNTRIES = [
   'Finland',
   'Iceland',
   'Denmark',
+  'Argentina',
+  'Chile',
   'New Zealand',
 ] as const
 
@@ -19,7 +21,30 @@ export const COUNTRY_CODE: Record<Country, string> = {
   Finland:     'fi',
   Iceland:     'is',
   Denmark:     'dk',
+  Argentina:   'ar',
+  Chile:       'cl',
   'New Zealand': 'nz',
+}
+
+/** Region group used for footer tagline context and same-region cross-sell fallback. */
+export const REGION_GROUPS = ['Nordic', 'Patagonia', 'New Zealand'] as const
+export type RegionGroup = (typeof REGION_GROUPS)[number]
+
+export const COUNTRY_REGION: Record<Country, RegionGroup> = {
+  Norway:      'Nordic',
+  Sweden:      'Nordic',
+  Finland:     'Nordic',
+  Iceland:     'Nordic',
+  Denmark:     'Nordic',
+  Argentina:   'Patagonia',
+  Chile:       'Patagonia',
+  'New Zealand': 'New Zealand',
+}
+
+/** Returns the region group for a country string, or null if it isn't a known `Country`. */
+export function getRegionGroup(country: string): RegionGroup | null {
+  const match = COUNTRIES.find(c => c.toLowerCase() === country.toLowerCase().trim())
+  return match != null ? COUNTRY_REGION[match] : null
 }
 
 /** Extended ISO codes for angler-origin countries (Central/Western Europe + Scandinavia) */
@@ -31,7 +56,7 @@ const EXTENDED_CODES: Record<string, string> = {
   uk: 'gb', 'united kingdom': 'gb', 'great britain': 'gb',
   ireland: 'ie', portugal: 'pt', 'united states': 'us', usa: 'us',
   estonia: 'ee', latvia: 'lv', lithuania: 'lt',
-  'new zealand': 'nz', australia: 'au',
+  'new zealand': 'nz', australia: 'au', argentina: 'ar', chile: 'cl',
 }
 
 /** Converts an ISO 3166-1 alpha-2 code to a Twemoji SVG path segment.
@@ -58,6 +83,8 @@ export const COUNTRY_FLAG: Record<Country, string> = {
   Finland:       '🇫🇮',
   Iceland:       '🇮🇸',
   Denmark:       '🇩🇰',
+  Argentina:     '🇦🇷',
+  Chile:         '🇨🇱',
   'New Zealand': '🇳🇿',
 }
 
