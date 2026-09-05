@@ -68,8 +68,7 @@ export default async function DashboardHomePage() {
   const statusStyle = statusLabel[guide.status] ?? statusLabel['pending']!
 
   // Fetch active trips assigned to this guide
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rawTrips } = await (svc as any)
+  const { data: rawTrips } = await svc
     .from('inquiries')
     .select('id, angler_name, requested_dates, guide_acceptance, status')
     .eq('assigned_guide_id', guide.id)
@@ -89,8 +88,7 @@ export default async function DashboardHomePage() {
   // Fetch guide_options to detect offer submission
   const offerMap: Record<string, boolean> = {}
   if (trips.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: tdRows } = await (svc as any)
+    const { data: tdRows } = await svc
       .from('inquiry_trip_details')
       .select('inquiry_id, guide_options')
       .in('inquiry_id', trips.map(t => t.id))

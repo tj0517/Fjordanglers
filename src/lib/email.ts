@@ -12,7 +12,6 @@
 import { createElement } from 'react'
 import { render } from '@react-email/components'
 import { env } from '@/lib/env'
-import { GuideApplicationEmail } from '@/emails/guide-application'
 import { GuideWelcomeEmail } from '@/emails/guide-welcome'
 import { PasswordResetEmail } from '@/emails/password-reset'
 import { EmailVerificationEmail } from '@/emails/email-verification'
@@ -35,7 +34,6 @@ import { InquiryOfferAnglerEmail } from '@/emails/inquiry-offer-angler'
 import { InquiryRichOfferAnglerEmail } from '@/emails/inquiry-rich-offer-angler'
 import { GuideAssignedEmail } from '@/emails/guide-assigned'
 import { InquiryAgentEmail } from '@/emails/inquiry-agent-email'
-import type { GuideApplicationEmailProps } from '@/emails/guide-application'
 import type { GuideWelcomeEmailProps } from '@/emails/guide-welcome'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
 import type { EmailVerificationProps } from '@/emails/email-verification'
@@ -117,21 +115,6 @@ async function sendEmail({
 }
 
 // ─── Typed send functions ─────────────────────────────────────────────────────
-
-/**
- * Sent to the guide applicant after they submit /guides/apply.
- * Non-blocking: caller should fire-and-forget with .catch().
- */
-export async function sendGuideApplicationEmail(
-  props: { to: string } & GuideApplicationEmailProps,
-): Promise<void> {
-  const { to, ...templateProps } = props
-  await sendEmail({
-    to,
-    subject: 'We received your FjordAnglers application',
-    react: createElement(GuideApplicationEmail, templateProps),
-  })
-}
 
 /**
  * Sent to the guide after they successfully claim their invite profile.

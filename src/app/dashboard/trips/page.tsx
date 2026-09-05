@@ -64,23 +64,9 @@ export default async function GuideTripsPage() {
     party_size: number
     assigned_at: string
     trip_id: string | null
-    experience_name?: string | null
   }
 
   const trips: TripRow[] = rawTrips ?? []
-
-  // Fetch experience names for all trip_ids
-  const tripIds = [...new Set(trips.map(t => t.trip_id).filter(Boolean))] as string[]
-  const expMap: Record<string, string> = {}
-  if (tripIds.length > 0) {
-    const { data: exps } = await svc
-      .from('experiences')
-      .select('id, title')
-      .in('id', tripIds)
-    for (const exp of exps ?? []) {
-      expMap[exp.id] = exp.title
-    }
-  }
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-2xl">
@@ -116,7 +102,6 @@ export default async function GuideTripsPage() {
           {trips.map(trip => {
             const flag = COUNTRY_FLAG[trip.angler_country ?? ''] ?? ''
             const dates = (trip.requested_dates ?? [])
-            const expName = trip.trip_id ? expMap[trip.trip_id] : null
 
             return (
               <Link
@@ -132,11 +117,6 @@ export default async function GuideTripsPage() {
                     {flag && <span className="mr-1.5">{flag}</span>}
                     {trip.angler_name}
                   </p>
-                  {expName != null && (
-                    <p className="text-xs f-body mb-2 truncate" style={{ color: 'rgba(10,46,77,0.5)' }}>
-                      {expName}
-                    </p>
-                  )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
                       {trip.party_size} {trip.party_size === 1 ? 'angler' : 'anglers'}

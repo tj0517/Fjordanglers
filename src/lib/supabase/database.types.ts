@@ -7,13 +7,102 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      ad_campaign_defs: {
+        Row: {
+          active: boolean
+          created_at: string | null
+          google_campaign_id: string | null
+          id: string
+          key: string
+          name: string
+          platform: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string | null
+          google_campaign_id?: string | null
+          id?: string
+          key: string
+          name: string
+          platform: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string | null
+          google_campaign_id?: string | null
+          id?: string
+          key?: string
+          name?: string
+          platform?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      ad_campaigns: {
+        Row: {
+          avg_cpc: number
+          campaign_name: string
+          clicks: number
+          created_at: string | null
+          date: string
+          id: string
+          impressions: number
+          platform: string
+          spend: number
+        }
+        Insert: {
+          avg_cpc?: number
+          campaign_name: string
+          clicks?: number
+          created_at?: string | null
+          date: string
+          id?: string
+          impressions?: number
+          platform?: string
+          spend?: number
+        }
+        Update: {
+          avg_cpc?: number
+          campaign_name?: string
+          clicks?: number
+          created_at?: string | null
+          date?: string
+          id?: string
+          impressions?: number
+          platform?: string
+          spend?: number
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           changed_at: string | null
@@ -47,699 +136,522 @@ export type Database = {
         }
         Relationships: []
       }
-      booking_messages: {
+      countries: {
         Row: {
-          body: string
-          booking_id: string
           created_at: string
           id: string
-          read_at: string | null
-          sender_id: string
-          sender_role: string | null
-        }
-        Insert: {
-          body: string
-          booking_id: string
-          created_at?: string
-          id?: string
-          read_at?: string | null
-          sender_id: string
-          sender_role?: string | null
-        }
-        Update: {
-          body?: string
-          booking_id?: string
-          created_at?: string
-          id?: string
-          read_at?: string | null
-          sender_id?: string
-          sender_role?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "booking_messages_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      bookings: {
-        Row: {
-          // ── Origin ──────────────────────────────────────────────
-          source: 'direct' | 'inquiry'
-          // ── Participants ────────────────────────────────────────
-          accepted_at: string | null
-          angler_country: string | null
-          angler_email: string | null
-          angler_full_name: string | null
-          angler_id: string | null
-          angler_phone: string | null
-          // ── Balance ─────────────────────────────────────────────
-          balance_paid_at: string | null
-          balance_payment_method: string | null
-          balance_stripe_checkout_id: string | null
-          balance_stripe_payment_intent_id: string | null
-          // ── Guide direct payment (new model 2026-04-05) ─────────
-          guide_stripe_checkout_id: string | null
-          guide_amount_paid_at: string | null
-          guide_amount_stripe_pi_id: string | null
-          iban_shared_at: string | null
-          // ── Dates ───────────────────────────────────────────────
-          booking_date: string
-          date_to: string | null
-          // ── Financials ──────────────────────────────────────────
-          commission_rate: number
-          completed_at: string | null
-          confirmed_at: string | null
-          created_at: string
-          declined_at: string | null
-          declined_reason: string | null
-          deposit_eur: number | null
-          duration_option: string | null
-          experience_id: string | null
-          guests: number
-          guide_id: string | null
-          guide_payout_eur: number
-          id: string
-          marketing_consent: boolean
-          payout_sent_at: string | null
-          payout_status: string
-          platform_fee_eur: number
-          service_fee_eur: number
-          requested_dates: string[] | null
-          special_requests: string | null
-          status: Database["public"]["Enums"]["booking_status"]
-          stripe_checkout_id: string | null
-          stripe_payment_intent_id: string | null
-          total_eur: number
-          updated_at: string
-          // ── Inquiry request data ────────────────────────────────
-          target_species: string[] | null
-          experience_level: string | null
-          preferences: import('@/lib/supabase/database.types').Json | null
-          assigned_river: string | null
-          // ── Offer (guide → angler) ──────────────────────────────
-          offer_price_eur: number | null
-          offer_price_min_eur: number | null
-          offer_price_tiers: import('@/lib/supabase/database.types').Json | null
-          offer_details: string | null
-          offer_date_from: string | null
-          offer_date_to: string | null
-          offer_days: string[] | null
-          offer_meeting_lat: number | null
-          offer_meeting_lng: number | null
-          // ── Confirmed trip dates ────────────────────────────────
-          confirmed_days: string[] | null
-          confirmed_date_from: string | null
-          confirmed_date_to: string | null
-        }
-        Insert: {
-          source?: 'direct' | 'inquiry'
-          accepted_at?: string | null
-          angler_country?: string | null
-          angler_email?: string | null
-          angler_full_name?: string | null
-          angler_id?: string | null
-          angler_phone?: string | null
-          balance_paid_at?: string | null
-          balance_payment_method?: string | null
-          balance_stripe_checkout_id?: string | null
-          balance_stripe_payment_intent_id?: string | null
-          guide_stripe_checkout_id?: string | null
-          guide_amount_paid_at?: string | null
-          guide_amount_stripe_pi_id?: string | null
-          iban_shared_at?: string | null
-          booking_date: string
-          date_to?: string | null
-          commission_rate?: number
-          completed_at?: string | null
-          confirmed_at?: string | null
-          created_at?: string
-          declined_at?: string | null
-          declined_reason?: string | null
-          deposit_eur?: number | null
-          duration_option?: string | null
-          experience_id?: string | null
-          guests?: number
-          guide_id?: string | null
-          guide_payout_eur: number
-          id?: string
-          marketing_consent?: boolean
-          payout_sent_at?: string | null
-          payout_status?: string
-          platform_fee_eur?: number
-          service_fee_eur?: number
-          requested_dates?: string[] | null
-          special_requests?: string | null
-          status?: Database["public"]["Enums"]["booking_status"]
-          stripe_checkout_id?: string | null
-          stripe_payment_intent_id?: string | null
-          total_eur: number
-          updated_at?: string
-          target_species?: string[] | null
-          experience_level?: string | null
-          preferences?: import('@/lib/supabase/database.types').Json | null
-          assigned_river?: string | null
-          offer_price_eur?: number | null
-          offer_price_min_eur?: number | null
-          offer_price_tiers?: import('@/lib/supabase/database.types').Json | null
-          offer_details?: string | null
-          offer_date_from?: string | null
-          offer_date_to?: string | null
-          offer_days?: string[] | null
-          offer_meeting_lat?: number | null
-          offer_meeting_lng?: number | null
-          confirmed_days?: string[] | null
-          confirmed_date_from?: string | null
-          confirmed_date_to?: string | null
-        }
-        Update: {
-          source?: 'direct' | 'inquiry'
-          accepted_at?: string | null
-          angler_country?: string | null
-          angler_email?: string | null
-          angler_full_name?: string | null
-          angler_id?: string | null
-          angler_phone?: string | null
-          balance_paid_at?: string | null
-          balance_payment_method?: string | null
-          balance_stripe_checkout_id?: string | null
-          balance_stripe_payment_intent_id?: string | null
-          guide_stripe_checkout_id?: string | null
-          guide_amount_paid_at?: string | null
-          guide_amount_stripe_pi_id?: string | null
-          iban_shared_at?: string | null
-          booking_date?: string
-          date_to?: string | null
-          commission_rate?: number
-          completed_at?: string | null
-          confirmed_at?: string | null
-          created_at?: string
-          declined_at?: string | null
-          declined_reason?: string | null
-          deposit_eur?: number | null
-          duration_option?: string | null
-          experience_id?: string | null
-          guests?: number
-          guide_id?: string | null
-          guide_payout_eur?: number
-          id?: string
-          marketing_consent?: boolean
-          payout_sent_at?: string | null
-          payout_status?: string
-          platform_fee_eur?: number
-          service_fee_eur?: number
-          requested_dates?: string[] | null
-          special_requests?: string | null
-          status?: Database["public"]["Enums"]["booking_status"]
-          stripe_checkout_id?: string | null
-          stripe_payment_intent_id?: string | null
-          total_eur?: number
-          updated_at?: string
-          target_species?: string[] | null
-          experience_level?: string | null
-          preferences?: import('@/lib/supabase/database.types').Json | null
-          assigned_river?: string | null
-          offer_price_eur?: number | null
-          offer_price_min_eur?: number | null
-          offer_price_tiers?: import('@/lib/supabase/database.types').Json | null
-          offer_details?: string | null
-          offer_date_from?: string | null
-          offer_date_to?: string | null
-          offer_days?: string[] | null
-          offer_meeting_lat?: number | null
-          offer_meeting_lng?: number | null
-          confirmed_days?: string[] | null
-          confirmed_date_from?: string | null
-          confirmed_date_to?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "bookings_experience_id_fkey"
-            columns: ["experience_id"]
-            isOneToOne: false
-            referencedRelation: "experiences"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "bookings_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: false
-            referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      calendar_blocked_dates: {
-        Row: {
-          calendar_id: string
-          created_at:  string
-          date_end:    string
-          date_start:  string
-          id:          string
-          reason:      string | null
-        }
-        Insert: {
-          calendar_id: string
-          created_at?: string
-          date_end:    string
-          date_start:  string
-          id?:         string
-          reason?:     string | null
-        }
-        Update: {
-          calendar_id?: string
-          created_at?:  string
-          date_end?:    string
-          date_start?:  string
-          id?:          string
-          reason?:      string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_blocked_dates_calendar_id_fkey"
-            columns: ["calendar_id"]
-            isOneToOne: false
-            referencedRelation: "guide_calendars"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      calendar_experiences: {
-        Row: {
-          calendar_id: string
-          experience_id: string
-        }
-        Insert: {
-          calendar_id: string
-          experience_id: string
-        }
-        Update: {
-          calendar_id?: string
-          experience_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_experiences_calendar_id_fkey"
-            columns: ["calendar_id"]
-            isOneToOne: false
-            referencedRelation: "guide_calendars"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "calendar_experiences_experience_id_fkey"
-            columns: ["experience_id"]
-            isOneToOne: false
-            referencedRelation: "experiences"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      experience_availability_config: {
-        Row: {
-          advance_notice_hours: number
-          available_months: number[]
-          available_weekdays: number[]
-          created_at: string
-          experience_id: string
-          max_advance_days: number
-          slots_per_day: number
-          start_time: string | null
-          updated_at: string
-        }
-        Insert: {
-          advance_notice_hours?: number
-          available_months?: number[]
-          available_weekdays?: number[]
-          created_at?: string
-          experience_id: string
-          max_advance_days?: number
-          slots_per_day?: number
-          start_time?: string | null
-          updated_at?: string
-        }
-        Update: {
-          advance_notice_hours?: number
-          available_months?: number[]
-          available_weekdays?: number[]
-          created_at?: string
-          experience_id?: string
-          max_advance_days?: number
-          slots_per_day?: number
-          start_time?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "experience_availability_config_experience_id_fkey"
-            columns: ["experience_id"]
-            isOneToOne: true
-            referencedRelation: "experiences"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      experience_blocked_dates: {
-        Row: {
-          created_at: string
-          date_end: string
-          date_start: string
-          experience_id: string
-          id: string
-          reason: string | null
-        }
-        Insert: {
-          created_at?: string
-          date_end: string
-          date_start: string
-          experience_id: string
-          id?: string
-          reason?: string | null
-        }
-        Update: {
-          created_at?: string
-          date_end?: string
-          date_start?: string
-          experience_id?: string
-          id?: string
-          reason?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "experience_blocked_dates_experience_id_fkey"
-            columns: ["experience_id"]
-            isOneToOne: false
-            referencedRelation: "experiences"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      experience_accommodations: {
-        Row: {
-          experience_id:    string
-          accommodation_id: string
-        }
-        Insert: {
-          experience_id:    string
-          accommodation_id: string
-        }
-        Update: {
-          experience_id?:    string
-          accommodation_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "experience_accommodations_experience_id_fkey"
-            columns: ["experience_id"]
-            isOneToOne: false
-            referencedRelation: "experiences"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "experience_accommodations_accommodation_id_fkey"
-            columns: ["accommodation_id"]
-            isOneToOne: false
-            referencedRelation: "guide_accommodations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      experience_images: {
-        Row: {
-          created_at: string
-          experience_id: string
-          id: string
-          is_cover: boolean
+          intro: string | null
+          iso_code: string | null
+          name: string
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
           sort_order: number
-          url: string
+          status: Database["public"]["Enums"]["publish_state"]
+          tagline: string | null
+          updated_at: string
         }
         Insert: {
           created_at?: string
-          experience_id: string
           id?: string
-          is_cover?: boolean
+          intro?: string | null
+          iso_code?: string | null
+          name: string
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
           sort_order?: number
-          url: string
+          status?: Database["public"]["Enums"]["publish_state"]
+          tagline?: string | null
+          updated_at?: string
         }
         Update: {
           created_at?: string
-          experience_id?: string
           id?: string
-          is_cover?: boolean
+          intro?: string | null
+          iso_code?: string | null
+          name?: string
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
           sort_order?: number
-          url?: string
+          status?: Database["public"]["Enums"]["publish_state"]
+          tagline?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expedition_guides: {
+        Row: {
+          availability_confidence: string
+          created_at: string
+          excludes: string[]
+          expedition_id: string
+          gear_policy: string | null
+          guide_id: string
+          includes: string[]
+          internal_notes: string | null
+          is_lead: boolean
+          last_confirmed_at: string | null
+          licence_policy: string | null
+          max_rods: number | null
+          pickup_from: string | null
+          rate_cents: number | null
+          rate_unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          availability_confidence?: string
+          created_at?: string
+          excludes?: string[]
+          expedition_id: string
+          gear_policy?: string | null
+          guide_id: string
+          includes?: string[]
+          internal_notes?: string | null
+          is_lead?: boolean
+          last_confirmed_at?: string | null
+          licence_policy?: string | null
+          max_rods?: number | null
+          pickup_from?: string | null
+          rate_cents?: number | null
+          rate_unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          availability_confidence?: string
+          created_at?: string
+          excludes?: string[]
+          expedition_id?: string
+          gear_policy?: string | null
+          guide_id?: string
+          includes?: string[]
+          internal_notes?: string | null
+          is_lead?: boolean
+          last_confirmed_at?: string | null
+          licence_policy?: string | null
+          max_rods?: number | null
+          pickup_from?: string | null
+          rate_cents?: number | null
+          rate_unit?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "experience_images_experience_id_fkey"
-            columns: ["experience_id"]
+            foreignKeyName: "expedition_guides_expedition_id_fkey"
+            columns: ["expedition_id"]
             isOneToOne: false
-            referencedRelation: "experiences"
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expedition_guides_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
             referencedColumns: ["id"]
           },
         ]
       }
-      experiences: {
+      expedition_options: {
         Row: {
-          accommodation_description: string | null
-          boat_description: string | null
-          booking_type: string
-          inquiry_form_config: Json | null
-          catch_and_release: boolean | null
+          content_blocks: Json
           created_at: string
-          description: string
-          difficulty: string | null
-          duration_days: number | null
-          duration_hours: number | null
-          duration_options: Json | null
-          fish_types: string[]
-          fishing_methods: string[]
-          food_description: string | null
-          gear_description: string | null
-          group_pricing: Json | null
-          guide_id: string
+          currency: string
+          description: string | null
+          excludes: string[]
+          expedition_id: string
           id: string
-          images: string[] | null
-          inclusions: Json | null
-          itinerary: Json | null
-          landscape_url: string | null
-          license_description: string | null
-          license_region: string | null
-          location_area: Json | null
-          location_city: string | null
-          location_country: string | null
-          location_description: string | null
-          location_lat: number | null
-          location_lng: number | null
-          location_spots: Json | null
-          max_guests: number
-          meeting_point: string | null
-          meeting_point_address: string | null
-          meeting_point_lat: number | null
-          meeting_point_lng: number | null
-          packages: Json | null
-          price_per_person_eur: number | null
-          price_range_min_eur: number | null
-          price_range_max_eur: number | null
-          published: boolean
-          season_from: number | null
-          season_to: number | null
-          slug: string | null
-          technique: string | null
-          title: string
-          transport_description: string | null
+          includes: string[]
+          label: string
+          legacy_option_id: string | null
+          peak_months: number[]
+          price_from_cents: number | null
+          price_type: string | null
+          season_months: number[]
+          sort_order: number
+          target_species: string[]
           updated_at: string
-          what_excluded: string[]
-          what_included: string[]
         }
         Insert: {
-          accommodation_description?: string | null
-          boat_description?: string | null
-          booking_type?: string
-          inquiry_form_config?: Json | null
-          catch_and_release?: boolean | null
+          content_blocks?: Json
           created_at?: string
-          description: string
-          difficulty?: string | null
-          duration_days?: number | null
-          duration_hours?: number | null
-          duration_options?: Json | null
-          fish_types?: string[]
-          fishing_methods?: string[]
-          food_description?: string | null
-          gear_description?: string | null
-          group_pricing?: Json | null
-          guide_id: string
+          currency?: string
+          description?: string | null
+          excludes?: string[]
+          expedition_id: string
           id?: string
-          images?: string[] | null
-          inclusions?: Json | null
-          itinerary?: Json | null
-          landscape_url?: string | null
-          license_description?: string | null
-          license_region?: string | null
-          location_area?: Json | null
-          location_city?: string | null
-          location_country?: string | null
-          location_description?: string | null
-          location_lat?: number | null
-          location_lng?: number | null
-          location_spots?: Json | null
-          max_guests?: number
-          meeting_point?: string | null
-          meeting_point_address?: string | null
-          meeting_point_lat?: number | null
-          meeting_point_lng?: number | null
-          packages?: Json | null
-          price_per_person_eur?: number | null
-          price_range_min_eur?: number | null
-          price_range_max_eur?: number | null
-          published?: boolean
-          season_from?: number | null
-          season_to?: number | null
-          slug?: string | null
-          technique?: string | null
-          title: string
-          transport_description?: string | null
+          includes?: string[]
+          label: string
+          legacy_option_id?: string | null
+          peak_months?: number[]
+          price_from_cents?: number | null
+          price_type?: string | null
+          season_months?: number[]
+          sort_order?: number
+          target_species?: string[]
           updated_at?: string
-          what_excluded?: string[]
-          what_included?: string[]
         }
         Update: {
-          accommodation_description?: string | null
-          boat_description?: string | null
-          booking_type?: string
-          inquiry_form_config?: Json | null
-          catch_and_release?: boolean | null
+          content_blocks?: Json
           created_at?: string
-          description?: string
-          difficulty?: string | null
-          duration_days?: number | null
-          duration_hours?: number | null
-          duration_options?: Json | null
-          fish_types?: string[]
-          fishing_methods?: string[]
-          food_description?: string | null
-          gear_description?: string | null
-          group_pricing?: Json | null
-          guide_id?: string
+          currency?: string
+          description?: string | null
+          excludes?: string[]
+          expedition_id?: string
           id?: string
-          images?: string[] | null
-          inclusions?: Json | null
-          itinerary?: Json | null
-          landscape_url?: string | null
-          license_description?: string | null
-          license_region?: string | null
-          location_area?: Json | null
-          location_city?: string | null
-          location_country?: string | null
-          location_description?: string | null
-          location_lat?: number | null
-          location_lng?: number | null
-          location_spots?: Json | null
-          max_guests?: number
-          meeting_point?: string | null
-          meeting_point_address?: string | null
-          meeting_point_lat?: number | null
-          meeting_point_lng?: number | null
-          packages?: Json | null
-          price_per_person_eur?: number | null
-          price_range_min_eur?: number | null
-          price_range_max_eur?: number | null
-          published?: boolean
-          season_from?: number | null
-          season_to?: number | null
-          slug?: string | null
-          technique?: string | null
-          title?: string
-          transport_description?: string | null
+          includes?: string[]
+          label?: string
+          legacy_option_id?: string | null
+          peak_months?: number[]
+          price_from_cents?: number | null
+          price_type?: string | null
+          season_months?: number[]
+          sort_order?: number
+          target_species?: string[]
           updated_at?: string
-          what_excluded?: string[]
-          what_included?: string[]
         }
         Relationships: [
           {
-            foreignKeyName: "experiences_guide_id_fkey"
-            columns: ["guide_id"]
+            foreignKeyName: "expedition_options_expedition_id_fkey"
+            columns: ["expedition_id"]
+            isOneToOne: false
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expedition_private: {
+        Row: {
+          access_notes: string | null
+          exact_address: string | null
+          exact_lat: number | null
+          exact_lng: number | null
+          expedition_id: string
+          lodge_contact: string | null
+          lodge_name: string | null
+          meeting_point: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_notes?: string | null
+          exact_address?: string | null
+          exact_lat?: number | null
+          exact_lng?: number | null
+          expedition_id: string
+          lodge_contact?: string | null
+          lodge_name?: string | null
+          meeting_point?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_notes?: string | null
+          exact_address?: string | null
+          exact_lat?: number | null
+          exact_lng?: number | null
+          expedition_id?: string
+          lodge_contact?: string | null
+          lodge_name?: string | null
+          meeting_point?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expedition_private_expedition_id_fkey"
+            columns: ["expedition_id"]
+            isOneToOne: true
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expedition_waters: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by_guide_id: string | null
+          created_at: string
+          expedition_id: string
+          internal_notes: string | null
+          is_primary: boolean
+          is_public: boolean
+          months: number[]
+          source: string
+          updated_at: string
+          water_id: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by_guide_id?: string | null
+          created_at?: string
+          expedition_id: string
+          internal_notes?: string | null
+          is_primary?: boolean
+          is_public?: boolean
+          months?: number[]
+          source?: string
+          updated_at?: string
+          water_id: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by_guide_id?: string | null
+          created_at?: string
+          expedition_id?: string
+          internal_notes?: string | null
+          is_primary?: boolean
+          is_public?: boolean
+          months?: number[]
+          source?: string
+          updated_at?: string
+          water_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expedition_waters_confirmed_by_guide_id_fkey"
+            columns: ["confirmed_by_guide_id"]
             isOneToOne: false
             referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expedition_waters_expedition_id_fkey"
+            columns: ["expedition_id"]
+            isOneToOne: false
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expedition_waters_water_id_fkey"
+            columns: ["water_id"]
+            isOneToOne: false
+            referencedRelation: "expedition_waters_public"
+            referencedColumns: ["water_id"]
+          },
+          {
+            foreignKeyName: "expedition_waters_water_id_fkey"
+            columns: ["water_id"]
+            isOneToOne: false
+            referencedRelation: "waters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expeditions: {
+        Row: {
+          collection_type: string
+          content_blocks: Json
+          country_id: string
+          created_at: string
+          currency: string
+          difficulty: string | null
+          display_coords: string | null
+          environment: string[]
+          featured: boolean
+          gallery_image_urls: string[]
+          hero_image_url: string | null
+          id: string
+          intro: string | null
+          legacy_content: Json
+          legacy_page_id: string | null
+          legacy_trip_id: string | null
+          non_angler_friendly: boolean
+          og_image_url: string | null
+          peak_months: number[]
+          physical_effort: string | null
+          price_basis: string | null
+          price_confirmed_at: string | null
+          price_from_cents: number | null
+          price_type: string | null
+          region_id: string | null
+          season_months: number[]
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          sort_order: number
+          status: Database["public"]["Enums"]["publish_state"]
+          subtitle: string | null
+          target_species: string[]
+          technique: string[]
+          title: string
+          updated_at: string
+          video_urls: string[]
+        }
+        Insert: {
+          collection_type?: string
+          content_blocks?: Json
+          country_id: string
+          created_at?: string
+          currency?: string
+          difficulty?: string | null
+          display_coords?: string | null
+          environment?: string[]
+          featured?: boolean
+          gallery_image_urls?: string[]
+          hero_image_url?: string | null
+          id?: string
+          intro?: string | null
+          legacy_content?: Json
+          legacy_page_id?: string | null
+          legacy_trip_id?: string | null
+          non_angler_friendly?: boolean
+          og_image_url?: string | null
+          peak_months?: number[]
+          physical_effort?: string | null
+          price_basis?: string | null
+          price_confirmed_at?: string | null
+          price_from_cents?: number | null
+          price_type?: string | null
+          region_id?: string | null
+          season_months?: number[]
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["publish_state"]
+          subtitle?: string | null
+          target_species?: string[]
+          technique?: string[]
+          title: string
+          updated_at?: string
+          video_urls?: string[]
+        }
+        Update: {
+          collection_type?: string
+          content_blocks?: Json
+          country_id?: string
+          created_at?: string
+          currency?: string
+          difficulty?: string | null
+          display_coords?: string | null
+          environment?: string[]
+          featured?: boolean
+          gallery_image_urls?: string[]
+          hero_image_url?: string | null
+          id?: string
+          intro?: string | null
+          legacy_content?: Json
+          legacy_page_id?: string | null
+          legacy_trip_id?: string | null
+          non_angler_friendly?: boolean
+          og_image_url?: string | null
+          peak_months?: number[]
+          physical_effort?: string | null
+          price_basis?: string | null
+          price_confirmed_at?: string | null
+          price_from_cents?: number | null
+          price_type?: string | null
+          region_id?: string | null
+          season_months?: number[]
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["publish_state"]
+          subtitle?: string | null
+          target_species?: string[]
+          technique?: string[]
+          title?: string
+          updated_at?: string
+          video_urls?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expeditions_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expeditions_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
             referencedColumns: ["id"]
           },
         ]
       }
       experience_page_options: {
         Row: {
-          id:                        string
-          experience_page_id:        string
-          sort_order:                number
-          label:                     string
-          price_from:                number
-          price_type:                string
-          description:               string | null
-          catches_text:              string | null
-          target_species:            string[]
-          boat_description:          string | null
-          boat_image_url:            string | null
-          special_attractions:       Json
-          meeting_point_name:        string | null
+          boat_description: string | null
+          boat_image_url: string | null
+          boats: Json | null
+          catches_text: string | null
+          content_blocks: Json
+          created_at: string
+          description: string | null
+          excludes: string[]
+          experience_page_id: string
+          id: string
+          includes: string[]
+          label: string
+          location_lat: number | null
+          location_lng: number | null
           meeting_point_description: string | null
-          location_lat:              number | null
-          location_lng:              number | null
-          what_to_bring:             string[]
-          includes:                  string[]
-          excludes:                  string[]
-          content_blocks:            Json
-          created_at:                string
-          updated_at:                string
+          meeting_point_name: string | null
+          peak_months: number[] | null
+          price_from: number
+          price_type: string
+          season_months: number[] | null
+          sort_order: number
+          special_attractions: Json
+          target_species: string[]
+          updated_at: string
+          what_to_bring: string[]
         }
         Insert: {
-          id?:                        string
-          experience_page_id:         string
-          sort_order?:                number
-          label?:                     string
-          price_from?:                number
-          price_type?:                string
-          description?:               string | null
-          catches_text?:              string | null
-          target_species?:            string[]
-          boat_description?:          string | null
-          boat_image_url?:            string | null
-          special_attractions?:       Json
-          meeting_point_name?:        string | null
+          boat_description?: string | null
+          boat_image_url?: string | null
+          boats?: Json | null
+          catches_text?: string | null
+          content_blocks?: Json
+          created_at?: string
+          description?: string | null
+          excludes?: string[]
+          experience_page_id: string
+          id?: string
+          includes?: string[]
+          label?: string
+          location_lat?: number | null
+          location_lng?: number | null
           meeting_point_description?: string | null
-          location_lat?:              number | null
-          location_lng?:              number | null
-          what_to_bring?:             string[]
-          includes?:                  string[]
-          excludes?:                  string[]
-          content_blocks?:            Json | null
-          created_at?:                string
-          updated_at?:                string
+          meeting_point_name?: string | null
+          peak_months?: number[] | null
+          price_from?: number
+          price_type?: string
+          season_months?: number[] | null
+          sort_order?: number
+          special_attractions?: Json
+          target_species?: string[]
+          updated_at?: string
+          what_to_bring?: string[]
         }
         Update: {
-          id?:                        string
-          experience_page_id?:        string
-          sort_order?:                number
-          label?:                     string
-          price_from?:                number
-          price_type?:                string
-          description?:               string | null
-          catches_text?:              string | null
-          target_species?:            string[]
-          boat_description?:          string | null
-          boat_image_url?:            string | null
-          special_attractions?:       Json
-          meeting_point_name?:        string | null
+          boat_description?: string | null
+          boat_image_url?: string | null
+          boats?: Json | null
+          catches_text?: string | null
+          content_blocks?: Json
+          created_at?: string
+          description?: string | null
+          excludes?: string[]
+          experience_page_id?: string
+          id?: string
+          includes?: string[]
+          label?: string
+          location_lat?: number | null
+          location_lng?: number | null
           meeting_point_description?: string | null
-          location_lat?:              number | null
-          location_lng?:              number | null
-          what_to_bring?:             string[]
-          includes?:                  string[]
-          excludes?:                  string[]
-          content_blocks?:            Json | null
-          created_at?:                string
-          updated_at?:                string
+          meeting_point_name?: string | null
+          peak_months?: number[] | null
+          price_from?: number
+          price_type?: string
+          season_months?: number[] | null
+          sort_order?: number
+          special_attractions?: Json
+          target_species?: string[]
+          updated_at?: string
+          what_to_bring?: string[]
         }
         Relationships: [
           {
@@ -753,270 +665,268 @@ export type Database = {
       }
       experience_pages: {
         Row: {
-          id:                        string
-          trip_id:                   string | null
-          guide_id:                  string | null
-          experience_name:           string
-          slug:                      string
-          country:                   string
-          region:                    string
-          season_start:              string | null
-          season_end:                string | null
-          price_from:                number
-          price_type:                string
-          currency:                  string
-          status:                    string
-          difficulty:                string | null
-          physical_effort:           string | null
-          non_angler_friendly:       boolean
-          technique:                 string[] | null
-          target_species:            string[] | null
-          environment:               string[] | null
-          hero_image_url:            string | null
-          gallery_image_urls:        string[] | null
-          story_text:                string | null
-          meeting_point_name:        string | null
+          accommodations: Json
+          best_months: string | null
+          boat_description: string | null
+          boat_image_url: string | null
+          boats: Json | null
+          catches_text: string | null
+          content_blocks: Json
+          content_photo_urls: string[]
+          country: string
+          created_at: string
+          currency: string
+          difficulty: string | null
+          environment: string[]
+          excludes: string[]
+          experience_name: string
+          faq: Json
+          gallery_image_urls: string[]
+          guide_id: string | null
+          hero_image_url: string | null
+          id: string
+          includes: string[]
+          intro_text: string | null
+          location_area: Json | null
+          location_lat: number | null
+          location_lng: number | null
+          location_spots: Json | null
           meeting_point_description: string | null
-          catches_text:              string | null
-          rod_setup:                 string | null
-          best_months:               string | null
-          season_months:             number[] | null
-          peak_months:               number[] | null
-          includes:                  string[] | null
-          excludes:                  string[] | null
-          meta_title:                string | null
-          meta_description:          string | null
-          og_image_url:              string | null
-          location_lat:              number | null
-          location_lng:              number | null
-          location_area:             Json | null
-          location_spots:            Json | null
-          intro_text:                string | null
-          species_details:           Json
-          boat_description:          string | null
-          boat_image_url:            string | null
-          special_attraction_text:   string | null
+          meeting_point_name: string | null
+          meta_description: string | null
+          meta_title: string | null
+          non_angler_friendly: boolean
+          og_image_url: string | null
+          peak_months: number[]
+          physical_effort: string | null
+          price_from: number
+          price_type: string
+          region: string
+          rod_setup: string | null
+          season_end: string | null
+          season_months: number[]
+          season_start: string | null
+          slug: string
           special_attraction_image_url: string | null
-          what_to_bring:             string[]
-          special_attractions:       Json
-          faq:                       Json
-          views_image_urls:          string[] | null
-          created_at:                string
-          updated_at:                string
+          special_attraction_text: string | null
+          special_attractions: Json
+          species_details: Json
+          status: string
+          story_text: string | null
+          target_species: string[]
+          technique: string[]
+          trip_id: string | null
+          updated_at: string
+          views_image_urls: string[] | null
+          what_to_bring: string[]
         }
         Insert: {
-          id?:                        string
-          trip_id?:                   string | null
-          guide_id?:                  string | null
-          experience_name:            string
-          slug:                       string
-          country:                    string
-          region:                     string
-          season_start?:              string | null
-          season_end?:                string | null
-          price_from:                 number
-          price_type?:                string
-          currency?:                  string
-          status?:                    string
-          difficulty?:                string | null
-          physical_effort?:           string | null
-          non_angler_friendly?:       boolean
-          technique?:                 string[] | null
-          target_species?:            string[] | null
-          environment?:               string[] | null
-          hero_image_url?:            string | null
-          gallery_image_urls?:        string[] | null
-          story_text?:                string | null
-          meeting_point_name?:        string | null
+          accommodations?: Json
+          best_months?: string | null
+          boat_description?: string | null
+          boat_image_url?: string | null
+          boats?: Json | null
+          catches_text?: string | null
+          content_blocks?: Json
+          content_photo_urls?: string[]
+          country: string
+          created_at?: string
+          currency?: string
+          difficulty?: string | null
+          environment?: string[]
+          excludes?: string[]
+          experience_name: string
+          faq?: Json
+          gallery_image_urls?: string[]
+          guide_id?: string | null
+          hero_image_url?: string | null
+          id?: string
+          includes?: string[]
+          intro_text?: string | null
+          location_area?: Json | null
+          location_lat?: number | null
+          location_lng?: number | null
+          location_spots?: Json | null
           meeting_point_description?: string | null
-          catches_text?:              string | null
-          rod_setup?:                 string | null
-          best_months?:               string | null
-          season_months?:             number[] | null
-          peak_months?:               number[] | null
-          includes?:                  string[] | null
-          excludes?:                  string[] | null
-          meta_title?:                string | null
-          meta_description?:          string | null
-          og_image_url?:              string | null
-          location_lat?:              number | null
-          location_lng?:              number | null
-          location_area?:             Json | null
-          location_spots?:            Json | null
-          intro_text?:                string | null
-          species_details?:           Json | null
-          boat_description?:          string | null
-          boat_image_url?:            string | null
-          special_attraction_text?:   string | null
+          meeting_point_name?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          non_angler_friendly?: boolean
+          og_image_url?: string | null
+          peak_months?: number[]
+          physical_effort?: string | null
+          price_from?: number
+          price_type?: string
+          region?: string
+          rod_setup?: string | null
+          season_end?: string | null
+          season_months?: number[]
+          season_start?: string | null
+          slug: string
           special_attraction_image_url?: string | null
-          what_to_bring?:             string[] | null
-          special_attractions?:       Json | null
-          faq?:                       Json | null
-          views_image_urls?:          string[] | null
-          created_at?:                string
-          updated_at?:                string
+          special_attraction_text?: string | null
+          special_attractions?: Json
+          species_details?: Json
+          status?: string
+          story_text?: string | null
+          target_species?: string[]
+          technique?: string[]
+          trip_id?: string | null
+          updated_at?: string
+          views_image_urls?: string[] | null
+          what_to_bring?: string[]
         }
         Update: {
-          id?:                        string
-          trip_id?:                   string | null
-          guide_id?:                  string | null
-          experience_name?:           string
-          slug?:                      string
-          country?:                   string
-          region?:                    string
-          season_start?:              string | null
-          season_end?:                string | null
-          price_from?:                number
-          price_type?:                string
-          currency?:                  string
-          status?:                    string
-          difficulty?:                string | null
-          physical_effort?:           string | null
-          non_angler_friendly?:       boolean
-          technique?:                 string[] | null
-          target_species?:            string[] | null
-          environment?:               string[] | null
-          hero_image_url?:            string | null
-          gallery_image_urls?:        string[] | null
-          story_text?:                string | null
-          meeting_point_name?:        string | null
+          accommodations?: Json
+          best_months?: string | null
+          boat_description?: string | null
+          boat_image_url?: string | null
+          boats?: Json | null
+          catches_text?: string | null
+          content_blocks?: Json
+          content_photo_urls?: string[]
+          country?: string
+          created_at?: string
+          currency?: string
+          difficulty?: string | null
+          environment?: string[]
+          excludes?: string[]
+          experience_name?: string
+          faq?: Json
+          gallery_image_urls?: string[]
+          guide_id?: string | null
+          hero_image_url?: string | null
+          id?: string
+          includes?: string[]
+          intro_text?: string | null
+          location_area?: Json | null
+          location_lat?: number | null
+          location_lng?: number | null
+          location_spots?: Json | null
           meeting_point_description?: string | null
-          catches_text?:              string | null
-          rod_setup?:                 string | null
-          best_months?:               string | null
-          season_months?:             number[] | null
-          peak_months?:               number[] | null
-          includes?:                  string[] | null
-          excludes?:                  string[] | null
-          meta_title?:                string | null
-          meta_description?:          string | null
-          og_image_url?:              string | null
-          location_lat?:              number | null
-          location_lng?:              number | null
-          location_area?:             Json | null
-          location_spots?:            Json | null
-          intro_text?:                string | null
-          species_details?:           Json | null
-          boat_description?:          string | null
-          boat_image_url?:            string | null
-          special_attraction_text?:   string | null
+          meeting_point_name?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          non_angler_friendly?: boolean
+          og_image_url?: string | null
+          peak_months?: number[]
+          physical_effort?: string | null
+          price_from?: number
+          price_type?: string
+          region?: string
+          rod_setup?: string | null
+          season_end?: string | null
+          season_months?: number[]
+          season_start?: string | null
+          slug?: string
           special_attraction_image_url?: string | null
-          what_to_bring?:             string[] | null
-          special_attractions?:       Json | null
-          faq?:                       Json | null
-          views_image_urls?:          string[] | null
-          created_at?:                string
-          updated_at?:                string
+          special_attraction_text?: string | null
+          special_attractions?: Json
+          species_details?: Json
+          status?: string
+          story_text?: string | null
+          target_species?: string[]
+          technique?: string[]
+          trip_id?: string | null
+          updated_at?: string
+          views_image_urls?: string[] | null
+          what_to_bring?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_pages_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
         }
         Relationships: []
       }
-      guide_calendars: {
+      fixed_costs: {
         Row: {
+          active: boolean
+          amount_pln: number
+          billing_cycle: string
+          category: string
           created_at: string
-          guide_id: string
           id: string
           name: string
+          notes: string | null
+          updated_at: string
         }
         Insert: {
+          active?: boolean
+          amount_pln: number
+          billing_cycle?: string
+          category?: string
           created_at?: string
-          guide_id: string
           id?: string
           name: string
+          notes?: string | null
+          updated_at?: string
         }
         Update: {
+          active?: boolean
+          amount_pln?: number
+          billing_cycle?: string
+          category?: string
           created_at?: string
-          guide_id?: string
           id?: string
           name?: string
+          notes?: string | null
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "guide_calendars_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: false
-            referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      guide_accommodations: {
+      guide_availability: {
         Row: {
-          id:            string
-          guide_id:      string
-          name:          string
-          type:          string
-          description:   string | null
-          max_guests:    number | null
-          location_note: string | null
-          link_url:      string | null
-          images:        string[]
-          created_at:    string
-        }
-        Insert: {
-          id?:            string
-          guide_id:       string
-          name:           string
-          type:           string
-          description?:   string | null
-          max_guests?:    number | null
-          location_note?: string | null
-          link_url?:      string | null
-          images?:        string[]
-          created_at?:    string
-        }
-        Update: {
-          id?:            string
-          guide_id?:      string
-          name?:          string
-          type?:          string
-          description?:   string | null
-          max_guests?:    number | null
-          location_note?: string | null
-          link_url?:      string | null
-          images?:        string[]
-          created_at?:    string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guide_accommodations_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: false
-            referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guide_weekly_schedules: {
-        Row: {
-          blocked_weekdays: number[]
           created_at: string
+          end_date: string
           guide_id: string
           id: string
-          label: string | null
-          period_from: string
-          period_to: string
+          note: string | null
+          start_date: string
+          state: string
         }
         Insert: {
-          blocked_weekdays: number[]
           created_at?: string
+          end_date: string
           guide_id: string
           id?: string
-          label?: string | null
-          period_from: string
-          period_to: string
+          note?: string | null
+          start_date: string
+          state?: string
         }
         Update: {
-          blocked_weekdays?: number[]
           created_at?: string
+          end_date?: string
           guide_id?: string
           id?: string
-          label?: string | null
-          period_from?: string
-          period_to?: string
+          note?: string | null
+          start_date?: string
+          state?: string
         }
         Relationships: [
           {
-            foreignKeyName: "guide_weekly_schedules_guide_id_fkey"
+            foreignKeyName: "guide_availability_guide_id_fkey"
             columns: ["guide_id"]
             isOneToOne: false
             referencedRelation: "guides"
@@ -1059,6 +969,325 @@ export type Database = {
           },
         ]
       }
+      guide_intake_forms: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          questions: Json
+          title: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          questions?: Json
+          title: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          questions?: Json
+          title?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      guide_intake_responses: {
+        Row: {
+          answers: Json
+          form_id: string
+          id: string
+          respondent_email: string
+          respondent_name: string
+          submitted_at: string
+        }
+        Insert: {
+          answers?: Json
+          form_id: string
+          id?: string
+          respondent_email: string
+          respondent_name: string
+          submitted_at?: string
+        }
+        Update: {
+          answers?: Json
+          form_id?: string
+          id?: string
+          respondent_email?: string
+          respondent_name?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_intake_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "guide_intake_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_intake_submissions: {
+        Row: {
+          access_rights: string | null
+          additional_notes: string | null
+          created_at: string
+          external_media_link: string | null
+          fishing_technique: string | null
+          guide_id: string
+          id: string
+          photo_urls: string[]
+          reviewed_by_admin: boolean
+          submitted_at: string | null
+          token: string
+          updated_at: string
+          video_urls: string[]
+          what_you_do: string | null
+        }
+        Insert: {
+          access_rights?: string | null
+          additional_notes?: string | null
+          created_at?: string
+          external_media_link?: string | null
+          fishing_technique?: string | null
+          guide_id: string
+          id?: string
+          photo_urls?: string[]
+          reviewed_by_admin?: boolean
+          submitted_at?: string | null
+          token: string
+          updated_at?: string
+          video_urls?: string[]
+          what_you_do?: string | null
+        }
+        Update: {
+          access_rights?: string | null
+          additional_notes?: string | null
+          created_at?: string
+          external_media_link?: string | null
+          fishing_technique?: string | null
+          guide_id?: string
+          id?: string
+          photo_urls?: string[]
+          reviewed_by_admin?: boolean
+          submitted_at?: string | null
+          token?: string
+          updated_at?: string
+          video_urls?: string[]
+          what_you_do?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_intake_submissions_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: true
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          guide_id: string
+          id: string
+          is_cover: boolean
+          sort_order: number
+          url: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          guide_id: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          url: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          guide_id?: string
+          id?: string
+          is_cover?: boolean
+          sort_order?: number
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_photos_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_private: {
+        Row: {
+          email: string | null
+          guide_id: string
+          iban: string | null
+          iban_bank_name: string | null
+          iban_bic: string | null
+          iban_holder_name: string | null
+          internal_notes: string | null
+          invite_email: string | null
+          phone: string | null
+          updated_at: string
+          whatsapp: string | null
+        }
+        Insert: {
+          email?: string | null
+          guide_id: string
+          iban?: string | null
+          iban_bank_name?: string | null
+          iban_bic?: string | null
+          iban_holder_name?: string | null
+          internal_notes?: string | null
+          invite_email?: string | null
+          phone?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Update: {
+          email?: string | null
+          guide_id?: string
+          iban?: string | null
+          iban_bank_name?: string | null
+          iban_bic?: string | null
+          iban_holder_name?: string | null
+          internal_notes?: string | null
+          invite_email?: string | null
+          phone?: string | null
+          updated_at?: string
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_private_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: true
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_submissions: {
+        Row: {
+          country: string
+          created_at: string
+          experience_id: string | null
+          fa_notes: string | null
+          fishing_methods: string[] | null
+          guide_id: string
+          id: string
+          includes: string[] | null
+          includes_notes: string | null
+          location_name: string
+          max_anglers: number | null
+          personal_note: string | null
+          price_approx_eur: number | null
+          region: string | null
+          season_months: number[] | null
+          species: string[]
+          status: string
+          trip_types: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          experience_id?: string | null
+          fa_notes?: string | null
+          fishing_methods?: string[] | null
+          guide_id: string
+          id?: string
+          includes?: string[] | null
+          includes_notes?: string | null
+          location_name: string
+          max_anglers?: number | null
+          personal_note?: string | null
+          price_approx_eur?: number | null
+          region?: string | null
+          season_months?: number[] | null
+          species?: string[]
+          status?: string
+          trip_types?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          experience_id?: string | null
+          fa_notes?: string | null
+          fishing_methods?: string[] | null
+          guide_id?: string
+          id?: string
+          includes?: string[] | null
+          includes_notes?: string | null
+          location_name?: string
+          max_anglers?: number | null
+          personal_note?: string | null
+          price_approx_eur?: number | null
+          region?: string | null
+          season_months?: number[] | null
+          species?: string[]
+          status?: string
+          trip_types?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_submissions_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experience_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guide_submissions_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guide_unavailable_dates: {
+        Row: {
+          date: string
+          guide_id: string
+        }
+        Insert: {
+          date: string
+          guide_id: string
+        }
+        Update: {
+          date?: string
+          guide_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_available_dates_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guides: {
         Row: {
           accepted_payment_methods: string[] | null
@@ -1083,10 +1312,15 @@ export type Database = {
           external_reviews: Json | null
           facebook_url: string | null
           fish_expertise: string[]
+          founding_guide_until: string | null
           full_name: string
           google_profile_url: string | null
           google_rating: number | null
           google_review_count: number | null
+          iban: string | null
+          iban_bank_name: string | null
+          iban_bic: string | null
+          iban_holder_name: string | null
           id: string
           instagram_url: string | null
           invite_email: string | null
@@ -1094,7 +1328,8 @@ export type Database = {
           is_hidden: boolean
           landscape_url: string | null
           languages: string[]
-          lead_id: string | null
+          payment_ready: boolean | null
+          photo_marketing_consent: boolean
           pricing_model: Database["public"]["Enums"]["pricing_model"]
           slug: string | null
           specialties: string[] | null
@@ -1103,22 +1338,14 @@ export type Database = {
           stripe_charges_enabled: boolean
           stripe_payouts_enabled: boolean
           tagline: string | null
+          terms_accepted_at: string | null
           total_reviews: number
           updated_at: string
           user_id: string | null
           verified_at: string | null
-          photo_marketing_consent: boolean
-          terms_accepted_at: string | null
           website_url: string | null
           years_experience: number | null
           youtube_url: string | null
-          iban: string | null
-          iban_holder_name: string | null
-          iban_bic: string | null
-          iban_bank_name: string | null
-          founding_guide_until: string | null
-          /** Auto-computed generated column. true = Stripe Connect active OR IBAN saved. Read-only. */
-          payment_ready: boolean | null
         }
         Insert: {
           accepted_payment_methods?: string[] | null
@@ -1143,10 +1370,15 @@ export type Database = {
           external_reviews?: Json | null
           facebook_url?: string | null
           fish_expertise?: string[]
+          founding_guide_until?: string | null
           full_name: string
           google_profile_url?: string | null
           google_rating?: number | null
           google_review_count?: number | null
+          iban?: string | null
+          iban_bank_name?: string | null
+          iban_bic?: string | null
+          iban_holder_name?: string | null
           id?: string
           instagram_url?: string | null
           invite_email?: string | null
@@ -1154,7 +1386,8 @@ export type Database = {
           is_hidden?: boolean
           landscape_url?: string | null
           languages?: string[]
-          lead_id?: string | null
+          payment_ready?: boolean | null
+          photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           slug?: string | null
           specialties?: string[] | null
@@ -1163,20 +1396,14 @@ export type Database = {
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           tagline?: string | null
+          terms_accepted_at?: string | null
           total_reviews?: number
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
           website_url?: string | null
-          photo_marketing_consent?: boolean
-          terms_accepted_at?: string | null
           years_experience?: number | null
           youtube_url?: string | null
-          iban?: string | null
-          iban_holder_name?: string | null
-          iban_bic?: string | null
-          iban_bank_name?: string | null
-          founding_guide_until?: string | null
         }
         Update: {
           accepted_payment_methods?: string[] | null
@@ -1201,10 +1428,15 @@ export type Database = {
           external_reviews?: Json | null
           facebook_url?: string | null
           fish_expertise?: string[]
+          founding_guide_until?: string | null
           full_name?: string
           google_profile_url?: string | null
           google_rating?: number | null
           google_review_count?: number | null
+          iban?: string | null
+          iban_bank_name?: string | null
+          iban_bic?: string | null
+          iban_holder_name?: string | null
           id?: string
           instagram_url?: string | null
           invite_email?: string | null
@@ -1212,7 +1444,8 @@ export type Database = {
           is_hidden?: boolean
           landscape_url?: string | null
           languages?: string[]
-          lead_id?: string | null
+          payment_ready?: boolean | null
+          photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           slug?: string | null
           specialties?: string[] | null
@@ -1221,283 +1454,646 @@ export type Database = {
           stripe_charges_enabled?: boolean
           stripe_payouts_enabled?: boolean
           tagline?: string | null
+          terms_accepted_at?: string | null
           total_reviews?: number
           updated_at?: string
           user_id?: string | null
           verified_at?: string | null
-          photo_marketing_consent?: boolean
-          terms_accepted_at?: string | null
           website_url?: string | null
           years_experience?: number | null
           youtube_url?: string | null
-          iban?: string | null
-          iban_holder_name?: string | null
-          iban_bic?: string | null
-          iban_bank_name?: string | null
-          founding_guide_until?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guides_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guide_submissions: {
-        Row: {
-          id:               string
-          guide_id:         string
-          // Location
-          location_name:    string
-          country:          string
-          region:           string | null
-          // Fishing
-          species:          string[]
-          fishing_methods:  string[] | null
-          season_months:    number[] | null
-          // Trip details
-          trip_types:       string[] | null
-          max_anglers:      number | null
-          price_approx_eur: number | null
-          // What's included
-          includes:         string[] | null
-          includes_notes:   string | null
-          // About
-          personal_note:    string | null
-          // Status & link
-          status:           string
-          fa_notes:         string | null
-          experience_id:    string | null
-          created_at:       string
-          updated_at:       string
-        }
-        Insert: {
-          id?:              string
-          guide_id:         string
-          location_name:    string
-          country:          string
-          region?:          string | null
-          species:          string[]
-          fishing_methods?: string[] | null
-          season_months?:   number[] | null
-          trip_types?:      string[] | null
-          max_anglers?:     number | null
-          price_approx_eur?: number | null
-          includes?:        string[] | null
-          includes_notes?:  string | null
-          personal_note?:   string | null
-          status?:          string
-          fa_notes?:        string | null
-          experience_id?:   string | null
-          created_at?:      string
-          updated_at?:      string
-        }
-        Update: {
-          id?:              string
-          guide_id?:        string
-          location_name?:   string
-          country?:         string
-          region?:          string | null
-          species?:         string[]
-          fishing_methods?: string[] | null
-          season_months?:   number[] | null
-          trip_types?:      string[] | null
-          max_anglers?:     number | null
-          price_approx_eur?: number | null
-          includes?:        string[] | null
-          includes_notes?:  string | null
-          personal_note?:   string | null
-          status?:          string
-          fa_notes?:        string | null
-          experience_id?:   string | null
-          created_at?:      string
-          updated_at?:      string
-        }
-        Relationships: []
-      }
-      guide_photos: {
-        Row: {
-          id:         string
-          guide_id:   string
-          url:        string
-          caption:    string | null
-          sort_order: number
-          is_cover:   boolean
-          created_at: string
-        }
-        Insert: {
-          id?:         string
-          guide_id:    string
-          url:         string
-          caption?:    string | null
-          sort_order?: number
-          is_cover?:   boolean
-          created_at?: string
-        }
-        Update: {
-          id?:         string
-          guide_id?:   string
-          url?:        string
-          caption?:    string | null
-          sort_order?: number
-          is_cover?:   boolean
-          created_at?: string
         }
         Relationships: []
       }
       inquiries: {
         Row: {
-          id: string
-          trip_id: string
-          guide_id: string | null
-          angler_name: string
+          agent_round: number
+          agent_status: string | null
+          angler_country: string | null
           angler_email: string
-          angler_country: string
-          requested_dates: string[] | null
-          party_size: number
-          message: string | null
-          status: string
-          fa_notes: string | null
-          deposit_amount: number | null
-          deposit_stripe_session_id: string | null
-          deposit_paid_at: string | null
-          selected_option: string | null
+          angler_name: string
+          angler_phone: string | null
+          assigned_at: string | null
+          assigned_guide_id: string | null
           created_at: string
+          deal_currency: string
+          deposit_amount: number | null
+          deposit_paid_at: string | null
+          deposit_stripe_session_id: string | null
+          email_thread_message_id: string | null
+          experience_page_id: string | null
+          external_offer_sent: boolean
+          fa_notes: string | null
+          gclid: string | null
+          guide_acceptance: string | null
+          guide_decline_reason: string | null
+          guide_id: string | null
+          guide_offer_eta: string | null
+          guide_responded_at: string | null
+          id: string
+          internal_commission_eur: number | null
+          internal_deal_total_eur: number | null
+          internal_notes: string | null
+          last_contact_at: string | null
+          lost_reason: string | null
+          message: string | null
+          next_action: string | null
+          offer_answers: Json
+          offer_deposit_eur: number | null
+          offer_inclusions: Json
+          offer_license_heading: string | null
+          offer_license_info: string | null
+          offer_location: string | null
+          offer_location_geojson: Json | null
+          offer_location_lat: number | null
+          offer_location_lng: number | null
+          offer_location_zoom: number | null
+          offer_notes: string | null
+          offer_options: Json | null
+          offer_photos: Json
+          offer_questions: Json
+          offer_refund_reason: string | null
+          offer_schedule: Json
+          offer_sent_at: string | null
+          offer_token: string | null
+          offer_token_expires_at: string | null
+          offer_total_eur: number | null
+          offer_trip_plan: string | null
+          offer_what_to_bring: Json
+          party_size: number
+          priority: string | null
+          requested_dates: string[] | null
+          selected_option: string | null
+          selected_option_id: string | null
+          stage_reached: string
+          status: string
+          trip_country: string | null
+          trip_id: string | null
+          trip_length: string | null
+          trip_type: string | null
           updated_at: string
         }
         Insert: {
-          id?: string
-          trip_id: string
-          guide_id?: string | null
-          angler_name: string
+          agent_round?: number
+          agent_status?: string | null
+          angler_country?: string | null
           angler_email: string
-          angler_country: string
-          requested_dates?: string[] | null
-          party_size?: number
-          message?: string | null
-          status?: string
-          fa_notes?: string | null
-          deposit_amount?: number | null
-          deposit_stripe_session_id?: string | null
-          deposit_paid_at?: string | null
-          selected_option?: string | null
+          angler_name: string
+          angler_phone?: string | null
+          assigned_at?: string | null
+          assigned_guide_id?: string | null
           created_at?: string
+          deal_currency?: string
+          deposit_amount?: number | null
+          deposit_paid_at?: string | null
+          deposit_stripe_session_id?: string | null
+          email_thread_message_id?: string | null
+          experience_page_id?: string | null
+          external_offer_sent?: boolean
+          fa_notes?: string | null
+          gclid?: string | null
+          guide_acceptance?: string | null
+          guide_decline_reason?: string | null
+          guide_id?: string | null
+          guide_offer_eta?: string | null
+          guide_responded_at?: string | null
+          id?: string
+          internal_commission_eur?: number | null
+          internal_deal_total_eur?: number | null
+          internal_notes?: string | null
+          last_contact_at?: string | null
+          lost_reason?: string | null
+          message?: string | null
+          next_action?: string | null
+          offer_answers?: Json
+          offer_deposit_eur?: number | null
+          offer_inclusions?: Json
+          offer_license_heading?: string | null
+          offer_license_info?: string | null
+          offer_location?: string | null
+          offer_location_geojson?: Json | null
+          offer_location_lat?: number | null
+          offer_location_lng?: number | null
+          offer_location_zoom?: number | null
+          offer_notes?: string | null
+          offer_options?: Json | null
+          offer_photos?: Json
+          offer_questions?: Json
+          offer_refund_reason?: string | null
+          offer_schedule?: Json
+          offer_sent_at?: string | null
+          offer_token?: string | null
+          offer_token_expires_at?: string | null
+          offer_total_eur?: number | null
+          offer_trip_plan?: string | null
+          offer_what_to_bring?: Json
+          party_size?: number
+          priority?: string | null
+          requested_dates?: string[] | null
+          selected_option?: string | null
+          selected_option_id?: string | null
+          stage_reached?: string
+          status?: string
+          trip_country?: string | null
+          trip_id?: string | null
+          trip_length?: string | null
+          trip_type?: string | null
           updated_at?: string
         }
         Update: {
-          id?: string
-          trip_id?: string
-          guide_id?: string | null
-          angler_name?: string
+          agent_round?: number
+          agent_status?: string | null
+          angler_country?: string | null
           angler_email?: string
-          angler_country?: string
-          requested_dates?: string[] | null
-          party_size?: number
-          message?: string | null
-          status?: string
-          fa_notes?: string | null
-          deposit_amount?: number | null
-          deposit_stripe_session_id?: string | null
-          deposit_paid_at?: string | null
-          selected_option?: string | null
+          angler_name?: string
+          angler_phone?: string | null
+          assigned_at?: string | null
+          assigned_guide_id?: string | null
           created_at?: string
+          deal_currency?: string
+          deposit_amount?: number | null
+          deposit_paid_at?: string | null
+          deposit_stripe_session_id?: string | null
+          email_thread_message_id?: string | null
+          experience_page_id?: string | null
+          external_offer_sent?: boolean
+          fa_notes?: string | null
+          gclid?: string | null
+          guide_acceptance?: string | null
+          guide_decline_reason?: string | null
+          guide_id?: string | null
+          guide_offer_eta?: string | null
+          guide_responded_at?: string | null
+          id?: string
+          internal_commission_eur?: number | null
+          internal_deal_total_eur?: number | null
+          internal_notes?: string | null
+          last_contact_at?: string | null
+          lost_reason?: string | null
+          message?: string | null
+          next_action?: string | null
+          offer_answers?: Json
+          offer_deposit_eur?: number | null
+          offer_inclusions?: Json
+          offer_license_heading?: string | null
+          offer_license_info?: string | null
+          offer_location?: string | null
+          offer_location_geojson?: Json | null
+          offer_location_lat?: number | null
+          offer_location_lng?: number | null
+          offer_location_zoom?: number | null
+          offer_notes?: string | null
+          offer_options?: Json | null
+          offer_photos?: Json
+          offer_questions?: Json
+          offer_refund_reason?: string | null
+          offer_schedule?: Json
+          offer_sent_at?: string | null
+          offer_token?: string | null
+          offer_token_expires_at?: string | null
+          offer_total_eur?: number | null
+          offer_trip_plan?: string | null
+          offer_what_to_bring?: Json
+          party_size?: number
+          priority?: string | null
+          requested_dates?: string[] | null
+          selected_option?: string | null
+          selected_option_id?: string | null
+          stage_reached?: string
+          status?: string
+          trip_country?: string | null
+          trip_id?: string | null
+          trip_length?: string | null
+          trip_type?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "inquiries_trip_id_fkey"
-            columns: ["trip_id"]
+            foreignKeyName: "inquiries_assigned_guide_id_fkey"
+            columns: ["assigned_guide_id"]
             isOneToOne: false
-            referencedRelation: "experiences"
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inquiries_experience_page_id_fkey"
+            columns: ["experience_page_id"]
+            isOneToOne: false
+            referencedRelation: "experience_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inquiries_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
             referencedColumns: ["id"]
           },
         ]
       }
-      leads: {
+      inquiry_messages: {
         Row: {
-          contacted_at: string | null
-          country: string | null
-          created_at: string
-          fish_types: string[]
+          body: string
           id: string
-          instagram_handle: string | null
-          name: string | null
-          notes: string | null
-          responded_at: string | null
-          status: string
-          updated_at: string
+          inquiry_id: string
+          sent_at: string | null
+          subject: string | null
         }
         Insert: {
-          contacted_at?: string | null
-          country?: string | null
-          created_at?: string
-          fish_types?: string[]
+          body: string
           id?: string
-          instagram_handle?: string | null
-          name?: string | null
-          notes?: string | null
-          responded_at?: string | null
-          status?: string
-          updated_at?: string
+          inquiry_id: string
+          sent_at?: string | null
+          subject?: string | null
         }
         Update: {
-          contacted_at?: string | null
-          country?: string | null
-          created_at?: string
-          fish_types?: string[]
+          body?: string
           id?: string
-          instagram_handle?: string | null
-          name?: string | null
-          notes?: string | null
-          responded_at?: string | null
-          status?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      payments: {
-        Row: {
-          amount_eur: number
-          booking_id: string
-          created_at: string
-          currency: string
-          id: string
-          status: Database["public"]["Enums"]["payment_status"]
-          stripe_payment_intent_id: string
-          stripe_transfer_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          amount_eur: number
-          booking_id: string
-          created_at?: string
-          currency?: string
-          id?: string
-          status?: Database["public"]["Enums"]["payment_status"]
-          stripe_payment_intent_id: string
-          stripe_transfer_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          amount_eur?: number
-          booking_id?: string
-          created_at?: string
-          currency?: string
-          id?: string
-          status?: Database["public"]["Enums"]["payment_status"]
-          stripe_payment_intent_id?: string
-          stripe_transfer_id?: string | null
-          updated_at?: string
+          inquiry_id?: string
+          sent_at?: string | null
+          subject?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "payments_booking_id_fkey"
-            columns: ["booking_id"]
+            foreignKeyName: "inquiry_messages_inquiry_id_fkey"
+            columns: ["inquiry_id"]
             isOneToOne: false
-            referencedRelation: "bookings"
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inquiry_todos: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          input_label: string | null
+          input_value: string | null
+          inquiry_id: string
+          sort_order: number
+          title: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          input_label?: string | null
+          input_value?: string | null
+          inquiry_id: string
+          sort_order?: number
+          title: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          input_label?: string | null
+          input_value?: string | null
+          inquiry_id?: string
+          sort_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiry_todos_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inquiry_trip_details: {
+        Row: {
+          accommodation: string | null
+          confirmed_date: string | null
+          confirmed_party_size: number | null
+          date_flexibility: string | null
+          guide_final_dates: string | null
+          guide_notes: string | null
+          guide_options: Json
+          inquiry_id: string
+          price_range: string | null
+          target_species: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accommodation?: string | null
+          confirmed_date?: string | null
+          confirmed_party_size?: number | null
+          date_flexibility?: string | null
+          guide_final_dates?: string | null
+          guide_notes?: string | null
+          guide_options?: Json
+          inquiry_id: string
+          price_range?: string | null
+          target_species?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accommodation?: string | null
+          confirmed_date?: string | null
+          confirmed_party_size?: number | null
+          date_flexibility?: string | null
+          guide_final_dates?: string | null
+          guide_notes?: string | null
+          guide_options?: Json
+          inquiry_id?: string
+          price_range?: string | null
+          target_species?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiry_trip_details_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: true
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_messages: {
+        Row: {
+          channel: string
+          contact_name: string
+          contact_type: string
+          content: string
+          created_at: string
+          created_by: string
+          direction: string
+          id: string
+          inquiry_id: string
+        }
+        Insert: {
+          channel: string
+          contact_name?: string
+          contact_type: string
+          content: string
+          created_at?: string
+          created_by?: string
+          direction: string
+          id?: string
+          inquiry_id: string
+        }
+        Update: {
+          channel?: string
+          contact_name?: string
+          contact_type?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          direction?: string
+          id?: string
+          inquiry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_messages_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manual_cost_entries: {
+        Row: {
+          amount_pln: number
+          category: string
+          created_at: string
+          id: string
+          month: string
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          amount_pln: number
+          category?: string
+          created_at?: string
+          id?: string
+          month: string
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          amount_pln?: number
+          category?: string
+          created_at?: string
+          id?: string
+          month?: string
+          name?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
+      media: {
+        Row: {
+          alt: string | null
+          caption: string | null
+          created_at: string
+          credit: string | null
+          focal_x: number | null
+          focal_y: number | null
+          height: number | null
+          id: string
+          lqip: string | null
+          public_url: string | null
+          storage_path: string
+          taken_at: string | null
+          width: number | null
+        }
+        Insert: {
+          alt?: string | null
+          caption?: string | null
+          created_at?: string
+          credit?: string | null
+          focal_x?: number | null
+          focal_y?: number | null
+          height?: number | null
+          id?: string
+          lqip?: string | null
+          public_url?: string | null
+          storage_path: string
+          taken_at?: string | null
+          width?: number | null
+        }
+        Update: {
+          alt?: string | null
+          caption?: string | null
+          created_at?: string
+          credit?: string | null
+          focal_x?: number | null
+          focal_y?: number | null
+          height?: number | null
+          id?: string
+          lqip?: string | null
+          public_url?: string | null
+          storage_path?: string
+          taken_at?: string | null
+          width?: number | null
+        }
+        Relationships: []
+      }
+      media_links: {
+        Row: {
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["media_entity"]
+          id: string
+          media_id: string
+          role: Database["public"]["Enums"]["media_role"]
+          sort_order: number
+        }
+        Insert: {
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["media_entity"]
+          id?: string
+          media_id: string
+          role?: Database["public"]["Enums"]["media_role"]
+          sort_order?: number
+        }
+        Update: {
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["media_entity"]
+          id?: string
+          media_id?: string
+          role?: Database["public"]["Enums"]["media_role"]
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_links_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          accepted_at: string | null
+          anglers: number | null
+          cancellation_terms: string | null
+          commission_cents: number | null
+          content: Json
+          created_at: string
+          currency: string
+          deposit_cents: number | null
+          deposit_paid_at: string | null
+          deposit_pct: number | null
+          end_date: string | null
+          expedition_id: string | null
+          expires_at: string | null
+          guide_id: string | null
+          guide_payout_cents: number | null
+          id: string
+          legacy_inquiry_id: string | null
+          location_released_at: string | null
+          notes: string | null
+          public_token: string | null
+          refund_reason: string | null
+          request_id: string
+          sent_at: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["offer_state"]
+          stripe_session_id: string | null
+          terms: string | null
+          token_expires_at: string | null
+          total_cents: number | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string | null
+          anglers?: number | null
+          cancellation_terms?: string | null
+          commission_cents?: number | null
+          content?: Json
+          created_at?: string
+          currency?: string
+          deposit_cents?: number | null
+          deposit_paid_at?: string | null
+          deposit_pct?: number | null
+          end_date?: string | null
+          expedition_id?: string | null
+          expires_at?: string | null
+          guide_id?: string | null
+          guide_payout_cents?: number | null
+          id?: string
+          legacy_inquiry_id?: string | null
+          location_released_at?: string | null
+          notes?: string | null
+          public_token?: string | null
+          refund_reason?: string | null
+          request_id: string
+          sent_at?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["offer_state"]
+          stripe_session_id?: string | null
+          terms?: string | null
+          token_expires_at?: string | null
+          total_cents?: number | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          accepted_at?: string | null
+          anglers?: number | null
+          cancellation_terms?: string | null
+          commission_cents?: number | null
+          content?: Json
+          created_at?: string
+          currency?: string
+          deposit_cents?: number | null
+          deposit_paid_at?: string | null
+          deposit_pct?: number | null
+          end_date?: string | null
+          expedition_id?: string | null
+          expires_at?: string | null
+          guide_id?: string | null
+          guide_payout_cents?: number | null
+          id?: string
+          legacy_inquiry_id?: string | null
+          location_released_at?: string | null
+          notes?: string | null
+          public_token?: string | null
+          refund_reason?: string | null
+          request_id?: string
+          sent_at?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["offer_state"]
+          stripe_session_id?: string | null
+          terms?: string | null
+          token_expires_at?: string | null
+          total_cents?: number | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_expedition_id_fkey"
+            columns: ["expedition_id"]
+            isOneToOne: false
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
             referencedColumns: ["id"]
           },
         ]
@@ -1529,6 +2125,297 @@ export type Database = {
         }
         Relationships: []
       }
+      regions: {
+        Row: {
+          country_id: string
+          created_at: string
+          id: string
+          intro: string | null
+          name: string
+          slug: string
+          sort_order: number
+          status: Database["public"]["Enums"]["publish_state"]
+          updated_at: string
+        }
+        Insert: {
+          country_id: string
+          created_at?: string
+          id?: string
+          intro?: string | null
+          name: string
+          slug: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["publish_state"]
+          updated_at?: string
+        }
+        Update: {
+          country_id?: string
+          created_at?: string
+          id?: string
+          intro?: string | null
+          name?: string
+          slug?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["publish_state"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "regions_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      request_guides: {
+        Row: {
+          asked_at: string
+          decline_reason: string | null
+          guide_currency: string | null
+          guide_id: string
+          guide_price_cents: number | null
+          id: string
+          note: string | null
+          offer_eta: string | null
+          request_id: string
+          responded_at: string | null
+          state: Database["public"]["Enums"]["assign_state"]
+        }
+        Insert: {
+          asked_at?: string
+          decline_reason?: string | null
+          guide_currency?: string | null
+          guide_id: string
+          guide_price_cents?: number | null
+          id?: string
+          note?: string | null
+          offer_eta?: string | null
+          request_id: string
+          responded_at?: string | null
+          state?: Database["public"]["Enums"]["assign_state"]
+        }
+        Update: {
+          asked_at?: string
+          decline_reason?: string | null
+          guide_currency?: string | null
+          guide_id?: string
+          guide_price_cents?: number | null
+          id?: string
+          note?: string | null
+          offer_eta?: string | null
+          request_id?: string
+          responded_at?: string | null
+          state?: Database["public"]["Enums"]["assign_state"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_guides_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "request_guides_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requests: {
+        Row: {
+          accommodation: string | null
+          agent_round: number | null
+          agent_status: string | null
+          assigned_at: string | null
+          assigned_guide_id: string | null
+          client_country: string | null
+          client_email: string
+          client_name: string
+          client_phone: string | null
+          country_id: string | null
+          created_at: string
+          dates_flexible: boolean
+          email_thread_message_id: string | null
+          expedition_id: string | null
+          expedition_option_id: string | null
+          id: string
+          internal_notes: string | null
+          last_contact_at: string | null
+          legacy_inquiry_id: string | null
+          legacy_status: string | null
+          lost_reason: string | null
+          message: string | null
+          next_action: string | null
+          party_size: number | null
+          preferred_end: string | null
+          preferred_start: string | null
+          price_range: string | null
+          priority: string | null
+          reference: string
+          requested_dates_raw: string[]
+          stage_reached: string | null
+          status: Database["public"]["Enums"]["req_state"]
+          target_species: string | null
+          updated_at: string
+        }
+        Insert: {
+          accommodation?: string | null
+          agent_round?: number | null
+          agent_status?: string | null
+          assigned_at?: string | null
+          assigned_guide_id?: string | null
+          client_country?: string | null
+          client_email: string
+          client_name: string
+          client_phone?: string | null
+          country_id?: string | null
+          created_at?: string
+          dates_flexible?: boolean
+          email_thread_message_id?: string | null
+          expedition_id?: string | null
+          expedition_option_id?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_contact_at?: string | null
+          legacy_inquiry_id?: string | null
+          legacy_status?: string | null
+          lost_reason?: string | null
+          message?: string | null
+          next_action?: string | null
+          party_size?: number | null
+          preferred_end?: string | null
+          preferred_start?: string | null
+          price_range?: string | null
+          priority?: string | null
+          reference?: string
+          requested_dates_raw?: string[]
+          stage_reached?: string | null
+          status?: Database["public"]["Enums"]["req_state"]
+          target_species?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accommodation?: string | null
+          agent_round?: number | null
+          agent_status?: string | null
+          assigned_at?: string | null
+          assigned_guide_id?: string | null
+          client_country?: string | null
+          client_email?: string
+          client_name?: string
+          client_phone?: string | null
+          country_id?: string | null
+          created_at?: string
+          dates_flexible?: boolean
+          email_thread_message_id?: string | null
+          expedition_id?: string | null
+          expedition_option_id?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_contact_at?: string | null
+          legacy_inquiry_id?: string | null
+          legacy_status?: string | null
+          lost_reason?: string | null
+          message?: string | null
+          next_action?: string | null
+          party_size?: number | null
+          preferred_end?: string | null
+          preferred_start?: string | null
+          price_range?: string | null
+          priority?: string | null
+          reference?: string
+          requested_dates_raw?: string[]
+          stage_reached?: string | null
+          status?: Database["public"]["Enums"]["req_state"]
+          target_species?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requests_assigned_guide_id_fkey"
+            columns: ["assigned_guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_expedition_id_fkey"
+            columns: ["expedition_id"]
+            isOneToOne: false
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requests_expedition_option_id_fkey"
+            columns: ["expedition_option_id"]
+            isOneToOne: false
+            referencedRelation: "expedition_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string | null
+          id: string
+          inquiry_id: string
+          media_urls: Json | null
+          overall_rating: number | null
+          submitted_at: string | null
+          token: string
+          token_expires_at: string
+          trip_description: string | null
+          would_recommend: boolean | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          inquiry_id: string
+          media_urls?: Json | null
+          overall_rating?: number | null
+          submitted_at?: string | null
+          token: string
+          token_expires_at?: string
+          trip_description?: string | null
+          would_recommend?: boolean | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          inquiry_id?: string
+          media_urls?: Json | null
+          overall_rating?: number | null
+          submitted_at?: string | null
+          token?: string
+          token_expires_at?: string
+          trip_description?: string | null
+          would_recommend?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spatial_ref_sys: {
         Row: {
           auth_name: string | null
@@ -1553,9 +2440,193 @@ export type Database = {
         }
         Relationships: []
       }
-      // trip_inquiries table removed — unified into bookings (source='inquiry')
+      species_windows: {
+        Row: {
+          cr_policy: string | null
+          created_at: string
+          expedition_id: string
+          method_note: string | null
+          peak_months: number[]
+          season_months: number[]
+          sort_order: number
+          species: string
+          typical_size_note: string | null
+          updated_at: string
+        }
+        Insert: {
+          cr_policy?: string | null
+          created_at?: string
+          expedition_id: string
+          method_note?: string | null
+          peak_months?: number[]
+          season_months?: number[]
+          sort_order?: number
+          species: string
+          typical_size_note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cr_policy?: string | null
+          created_at?: string
+          expedition_id?: string
+          method_note?: string | null
+          peak_months?: number[]
+          season_months?: number[]
+          sort_order?: number
+          species?: string
+          typical_size_note?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "species_windows_expedition_id_fkey"
+            columns: ["expedition_id"]
+            isOneToOne: false
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unmatched_messages: {
+        Row: {
+          content: string
+          created_at: string
+          from_identifier: string
+          id: string
+          matched_at: string | null
+          matched_by: string | null
+          matched_inquiry_id: string | null
+          raw_payload: Json | null
+          sender_name: string
+          source: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          from_identifier: string
+          id?: string
+          matched_at?: string | null
+          matched_by?: string | null
+          matched_inquiry_id?: string | null
+          raw_payload?: Json | null
+          sender_name?: string
+          source: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          from_identifier?: string
+          id?: string
+          matched_at?: string | null
+          matched_by?: string | null
+          matched_inquiry_id?: string | null
+          raw_payload?: Json | null
+          sender_name?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unmatched_messages_matched_inquiry_id_fkey"
+            columns: ["matched_inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waters: {
+        Row: {
+          access_type: string
+          centroid_lat: number | null
+          centroid_lng: number | null
+          country_id: string
+          created_at: string
+          id: string
+          internal_notes: string | null
+          licence_authority: string | null
+          name: string
+          name_local: string | null
+          region_id: string | null
+          updated_at: string
+          water_type: string | null
+        }
+        Insert: {
+          access_type?: string
+          centroid_lat?: number | null
+          centroid_lng?: number | null
+          country_id: string
+          created_at?: string
+          id?: string
+          internal_notes?: string | null
+          licence_authority?: string | null
+          name: string
+          name_local?: string | null
+          region_id?: string | null
+          updated_at?: string
+          water_type?: string | null
+        }
+        Update: {
+          access_type?: string
+          centroid_lat?: number | null
+          centroid_lng?: number | null
+          country_id?: string
+          created_at?: string
+          id?: string
+          internal_notes?: string | null
+          licence_authority?: string | null
+          name?: string
+          name_local?: string | null
+          region_id?: string | null
+          updated_at?: string
+          water_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waters_country_id_fkey"
+            columns: ["country_id"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waters_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
+      expedition_waters_public: {
+        Row: {
+          expedition_id: string | null
+          is_primary: boolean | null
+          months: number[] | null
+          name: string | null
+          name_local: string | null
+          region_id: string | null
+          water_id: string | null
+          water_type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expedition_waters_expedition_id_fkey"
+            columns: ["expedition_id"]
+            isOneToOne: false
+            referencedRelation: "expeditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waters_region_id_fkey"
+            columns: ["region_id"]
+            isOneToOne: false
+            referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geography_columns: {
         Row: {
           coord_dimension: number | null
@@ -1727,6 +2798,14 @@ export type Database = {
             }
             Returns: string
           }
+      column_fill: {
+        Args: { p_schema: string; p_table: string }
+        Returns: {
+          col: string
+          filled: number
+          pct: number
+        }[]
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -1948,6 +3027,7 @@ export type Database = {
           trip_title: string
         }[]
       }
+      slugify: { Args: { txt: string }; Returns: string }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -2542,21 +3622,48 @@ export type Database = {
       }
     }
     Enums: {
+      assign_state: "pending" | "accepted" | "declined" | "withdrawn"
       booking_status:
         | "pending"
+        | "confirmed"
+        | "cancelled"
+        | "completed"
+        | "refunded"
+        | "accepted"
+        | "declined"
         | "reviewing"
         | "offer_sent"
         | "offer_accepted"
+      guide_status: "pending" | "verified" | "active" | "suspended"
+      media_entity: "country" | "region" | "expedition" | "guide"
+      media_role: "hero" | "card" | "gallery" | "portrait"
+      offer_state:
+        | "draft"
+        | "sent"
         | "accepted"
+        | "declined"
+        | "expired"
+        | "cancelled"
+      payment_status: "pending" | "paid" | "failed" | "refunded"
+      pricing_model: "flat_fee" | "commission"
+      publish_state: "draft" | "published" | "archived"
+      req_state:
+        | "new"
+        | "reviewing"
+        | "guide_outreach"
+        | "offer_sent"
+        | "deposit_pending"
+        | "confirmed"
+        | "completed"
+        | "lost"
+      trip_inquiry_status:
+        | "inquiry"
+        | "reviewing"
+        | "offer_sent"
+        | "offer_accepted"
         | "confirmed"
         | "completed"
         | "cancelled"
-        | "refunded"
-        | "declined"
-      guide_status: "pending" | "verified" | "active" | "suspended"
-      payment_status: "pending" | "paid" | "failed" | "refunded"
-      pricing_model: "flat_fee" | "commission"
-      // trip_inquiry_status removed — statuses merged into booking_status
     }
     CompositeTypes: {
       geometry_dump: {
@@ -2690,8 +3797,12 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
+      assign_state: ["pending", "accepted", "declined", "withdrawn"],
       booking_status: [
         "pending",
         "confirmed",
@@ -2700,10 +3811,34 @@ export const Constants = {
         "refunded",
         "accepted",
         "declined",
+        "reviewing",
+        "offer_sent",
+        "offer_accepted",
       ],
       guide_status: ["pending", "verified", "active", "suspended"],
+      media_entity: ["country", "region", "expedition", "guide"],
+      media_role: ["hero", "card", "gallery", "portrait"],
+      offer_state: [
+        "draft",
+        "sent",
+        "accepted",
+        "declined",
+        "expired",
+        "cancelled",
+      ],
       payment_status: ["pending", "paid", "failed", "refunded"],
       pricing_model: ["flat_fee", "commission"],
+      publish_state: ["draft", "published", "archived"],
+      req_state: [
+        "new",
+        "reviewing",
+        "guide_outreach",
+        "offer_sent",
+        "deposit_pending",
+        "confirmed",
+        "completed",
+        "lost",
+      ],
       trip_inquiry_status: [
         "inquiry",
         "reviewing",
@@ -2716,3 +3851,4 @@ export const Constants = {
     },
   },
 } as const
+

@@ -21,7 +21,7 @@ export async function getReviewUploadUrl(
   filename: string,
   contentType: string,
 ): Promise<{ signedUrl: string; publicUrl: string; path: string } | { error: string }> {
-  const svc = createServiceClient() as any
+  const svc = createServiceClient()
 
   // Validate the review token
   const { data: review } = await svc

@@ -228,27 +228,15 @@ export async function sendDepositLink(
 
   const offerDepositEur = rawInquiry.offer_deposit_eur as number | null
 
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('id, title, slug, price_per_person_eur, guide_id')
-    .eq('id', rawInquiry.trip_id)
-    .single()
-
-  if (trip == null) {
-    return { success: false, error: 'Trip not found' }
+  // The legacy `experiences` list price is gone (table archived, FA-1.06); the
+  // deposit can only come from the saved offer.
+  if (offerDepositEur == null || offerDepositEur <= 0) {
+    return { success: false, error: 'No offer deposit set — save an offer first' }
   }
 
-  let depositCents: number
-  let depositPctUsed: number
-
-  if (offerDepositEur != null && offerDepositEur > 0) {
-    depositCents   = Math.round(offerDepositEur * 100)
-    depositPctUsed = 0
-  } else {
-    const tripPriceEur = (trip.price_per_person_eur ?? 0) * (rawInquiry.party_size ?? 1)
-    depositCents       = Math.round(tripPriceEur * (depositPercent / 100) * 100)
-    depositPctUsed     = depositPercent
-  }
+  const depositCents   = Math.round(offerDepositEur * 100)
+  const depositPctUsed = depositPercent
+  const tripTitle      = 'Your trip'
 
   if (depositCents < 50) {
     return { success: false, error: 'Deposit amount is below Stripe minimum (€0.50)' }
@@ -275,7 +263,7 @@ export async function sendDepositLink(
             currency: 'eur',
             unit_amount: depositCents,
             product_data: {
-              name: `Booking & Curation Fee — ${trip.title}`,
+              name: `Booking & Curation Fee — ${tripTitle}`,
               description,
             },
           },
@@ -288,7 +276,7 @@ export async function sendDepositLink(
           payment_type: 'inquiry_deposit',
         },
         success_url: `${baseUrl}/inquiry/${inquiryId}/confirmed?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url:  trip.slug != null ? `${baseUrl}/experiences/${trip.slug}` : baseUrl,
+        cancel_url:  baseUrl,
       },
       {
         idempotencyKey: `deposit-${inquiryId}-${Date.now()}`,
@@ -316,11 +304,11 @@ export async function sendDepositLink(
   sendDepositLinkAnglerEmail({
     to:               rawInquiry.angler_email,
     anglerName:       rawInquiry.angler_name,
-    tripTitle:        trip.title,
+    tripTitle,
     requestedDates,
     partySize:        rawInquiry.party_size ?? 1,
     depositAmountEur: depositCents / 100,
-    depositPercent:   depositPctUsed || Math.round((depositCents / 100 / ((trip.price_per_person_eur ?? 0) * (rawInquiry.party_size ?? 1))) * 100),
+    depositPercent:   depositPctUsed,
     checkoutUrl:      session.url!,
     inquiryId,
   }).catch(err => console.error('[sendDepositLink] Email error:', err))
@@ -376,12 +364,6 @@ export async function saveRichOffer(
     return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
   }
 
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('title, guide_id')
-    .eq('id', inquiry.trip_id)
-    .single()
-
   // Generate unique token (crypto.randomUUID is available in Node 19+/Edge)
   const token = crypto.randomUUID().replace(/-/g, '')
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
@@ -423,17 +405,11 @@ export async function saveRichOffer(
     return { success: false, error: 'Failed to save offer' }
   }
 
-  // Fetch guide info for the email
-  const guideId = trip?.guide_id
-  const { data: guide } = guideId
-    ? await svc.from('guides').select('full_name').eq('id', guideId).single()
-    : { data: null }
-
   await sendRichOfferAnglerEmail({
     to:              inquiry.angler_email,
     anglerName:      inquiry.angler_name,
-    tripTitle:       trip?.title ?? 'Your trip',
-    guideName:       guide?.full_name ?? 'Your guide',
+    tripTitle:       'Your trip',
+    guideName:       'Your guide',
     requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
     partySize:       inquiry.party_size ?? 1,
     offerTotalEur:   totalPriceEur,
@@ -472,13 +448,7 @@ export async function getOfferByToken(token: string): Promise<OfferPageData | nu
     if (expires < new Date()) return null
   }
 
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('title, guide_id')
-    .eq('id', inquiry.trip_id)
-    .single()
-
-  const guideId = (inquiry.assigned_guide_id as string | null) ?? trip?.guide_id ?? null
+  const guideId = (inquiry.assigned_guide_id as string | null) ?? null
   const { data: guide } = guideId
     ? await svc
         .from('guides')
@@ -491,7 +461,7 @@ export async function getOfferByToken(token: string): Promise<OfferPageData | nu
     inquiryId:        inquiry.id,
     anglerName:       inquiry.angler_name,
     anglerCountry:    (inquiry.angler_country as string | null) ?? '',
-    tripTitle:        trip?.title ?? 'Your trip',
+    tripTitle:        'Your trip',
     guideName:        guide?.full_name ?? 'Your guide',
     guidePhotoUrl:    guide?.avatar_url ?? null,
     guideBio:         guide?.bio ?? null,
@@ -559,12 +529,6 @@ export async function submitOfferAnswers(
     .update({ offer_answers: answers })
     .eq('id', inquiry.id)
 
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('title')
-    .eq('id', inquiry.trip_id)
-    .single()
-
   const depositCents = Math.round(Number(inquiry.offer_deposit_eur ?? 0) * 100)
   if (depositCents < 50) {
     return { success: false, error: 'Deposit amount is too low' }
@@ -583,7 +547,7 @@ export async function submitOfferAnswers(
             currency: 'eur',
             unit_amount: depositCents,
             product_data: {
-              name: `Refundable Deposit — ${trip?.title ?? 'Your Trip'}`,
+              name: 'Refundable Deposit — Your Trip',
               description: `Secures your spot. The deposit is refundable — ${inquiry.party_size} person(s).`,
             },
           },
@@ -747,12 +711,6 @@ export async function sendMessageToAngler(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('title')
-    .eq('id', inquiry.trip_id)
-    .single()
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: insertError } = await (svc as any).from('inquiry_messages')
     .insert({
@@ -770,7 +728,7 @@ export async function sendMessageToAngler(
     anglerName:  inquiry.angler_name,
     subject:     subject.trim(),
     body:        body.trim(),
-    tripTitle:   trip?.title ?? 'Your trip',
+    tripTitle:   'Your trip',
     inquiryId,
   })
 
@@ -1453,24 +1411,13 @@ export async function sendOfferEmail(
   if (inquiry == null) return { success: false, error: 'Inquiry not found' }
   if (inquiry.offer_token == null) return { success: false, error: 'No offer draft — save a draft first' }
 
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('title, guide_id')
-    .eq('id', inquiry.trip_id)
-    .single()
-
-  const guideId = trip?.guide_id
-  const { data: guide } = guideId
-    ? await svc.from('guides').select('full_name').eq('id', guideId).single()
-    : { data: null }
-
   const offerUrl = `${env.NEXT_PUBLIC_APP_URL}/offers/${inquiry.offer_token}`
 
   await sendRichOfferAnglerEmail({
     to:              inquiry.angler_email,
     anglerName:      inquiry.angler_name,
-    tripTitle:       trip?.title ?? 'Your trip',
-    guideName:       guide?.full_name ?? 'Your guide',
+    tripTitle:       'Your trip',
+    guideName:       'Your guide',
     requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
     partySize:       inquiry.party_size ?? 1,
     offerTotalEur:   Number(inquiry.offer_total_eur ?? 0),
@@ -1647,14 +1594,8 @@ export async function getInquiryConfirmation(id: string): Promise<InquiryConfirm
 
   if (inquiry == null) return null
 
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('title')
-    .eq('id', inquiry.trip_id)
-    .single()
-
   return {
-    tripTitle:         trip?.title ?? 'Your trip',
+    tripTitle:         'Your trip',
     anglerName:        inquiry.angler_name,
     depositAmountEur:  Number(inquiry.deposit_amount ?? 0),
     depositPaidAt:     inquiry.deposit_paid_at ?? null,

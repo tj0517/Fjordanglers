@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
-import { ArrowLeft, ExternalLink, Sparkles } from 'lucide-react'
+import { ArrowLeft, Sparkles } from 'lucide-react'
 import StartBuildingButton from './StartBuildingButton'
 
 /**
@@ -102,12 +102,6 @@ export default async function SubmissionDetailPage({
     .eq('id', sub.guide_id)
     .single()
 
-  // Fetch experience slug (to build public URL)
-  const { data: expSlugRow } = sub.experience_id != null
-    ? await (svc as any).from('experiences').select('slug').eq('id', sub.experience_id).single()
-    : { data: null }
-  const expSlug: string | null = expSlugRow?.slug ?? null
-
   const st = STATUS_STYLE[sub.status] ?? STATUS_STYLE.submitted
   const submittedDate = new Date(sub.created_at).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
@@ -164,24 +158,11 @@ export default async function SubmissionDetailPage({
             </Link>
             <StartBuildingButton
               submissionId={sub.id}
-              guideId={sub.guide_id}
               status={sub.status}
             />
           </div>
         )}
 
-        {/* If published, show link to experience */}
-        {sub.status === 'published' && sub.experience_id != null && (
-          <Link
-            href={expSlug != null ? `/experiences/${expSlug}` : '#'}
-            target="_blank"
-            className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl f-body transition-all hover:brightness-105"
-            style={{ background: 'rgba(74,222,128,0.12)', color: '#16A34A', border: '1px solid rgba(74,222,128,0.3)' }}
-          >
-            <ExternalLink size={13} strokeWidth={1.5} />
-            View experience
-          </Link>
-        )}
       </div>
 
       {/* ─── Two-column layout ───────────────────────────────── */}

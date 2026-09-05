@@ -12,10 +12,6 @@ import type { Tables, Enums } from '@/lib/supabase'
 
 export type Profile              = Tables<'profiles'>
 export type Guide                = Tables<'guides'>
-export type Experience           = Tables<'experiences'>
-export type ExperienceImage      = Tables<'experience_images'>
-export type GuideAccommodation   = Tables<'guide_accommodations'>
-export type Lead                 = Tables<'leads'>
 
 // ─── Enum aliases ──────────────────────────────────────────────────────────
 
@@ -23,7 +19,6 @@ export type GuideStatus   = Enums<'guide_status'>
 export type PricingModel  = Enums<'pricing_model'>
 
 export type UserRole      = Profile['role']                  // 'guide' | 'angler' | 'admin'
-export type LeadStatus    = Lead['status']
 
 // ─── Domain-specific string unions ─────────────────────────────────────────
 // These mirror TEXT CHECK constraints in the DB (not PostgreSQL ENUMs, so they
@@ -129,33 +124,6 @@ export type InquiryCustomField = {
   required?: boolean
   placeholder?: string
   options?: string[]
-}
-
-// ─── Joined / enriched types ───────────────────────────────────────────────
-
-/**
- * Experience with guide summary + images — listing and detail pages.
- *
- * The DB `experiences` table has an `images TEXT[] | null` column (legacy URL
- * array). Queries instead JOIN `experience_images` via FK and alias the result
- * to `images`. We Omit the column-level type and replace it with the richer
- * `ExperienceImage[]` shape returned by those joined queries.
- */
-export type ExperienceWithGuide = Omit<Experience, 'images'> & {
-  guide: Pick<
-    Guide,
-    'id' | 'full_name' | 'avatar_url' | 'country' | 'city' | 'average_rating' | 'cancellation_policy' | 'languages' | 'is_hidden'
-  > & { calendar_disabled?: boolean | null }
-  images: ExperienceImage[]
-  /** Linked accommodations — populated when querying via EXP_SELECT. */
-  accommodations?: Array<{
-    accommodation: Pick<GuideAccommodation, 'id' | 'name' | 'type' | 'description' | 'max_guests' | 'location_note'>
-  }>
-}
-
-/** Guide with published experiences — guide profile page. */
-export type GuideWithExperiences = Guide & {
-  experiences: Experience[]
 }
 
 // ─── Utility ───────────────────────────────────────────────────────────────

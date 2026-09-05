@@ -388,30 +388,6 @@ export default async function GuidesPage({
         )}
       </main>
 
-      {/* ─── GUIDE CTA BAND ──────────────────────────────────────── */}
-      <section className="px-4 md:px-8 py-12 md:py-20" style={{ borderTop: '1px solid rgba(10,46,77,0.07)' }}>
-        <div
-          className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 px-5 py-6 md:px-10 md:py-10 rounded-2xl md:rounded-3xl"
-          style={{ background: '#07111C', border: '1px solid rgba(255,255,255,0.04)' }}
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-3 f-body" style={{ color: '#E67E50' }}>
-              Are you a guide?
-            </p>
-            <h2 className="text-white text-2xl font-bold f-display" style={{ lineHeight: 1.2, maxWidth: '400px' }}>
-              Join our community of guides and earn on FjordAnglers.
-            </h2>
-          </div>
-          <Link
-            href="/guides/apply"
-            className="text-white font-semibold px-8 py-4 rounded-full transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] flex-shrink-0 f-body"
-            style={{ background: '#E67E50' }}
-          >
-            Apply now →
-          </Link>
-        </div>
-      </section>
-
     </div>
     </>
   )

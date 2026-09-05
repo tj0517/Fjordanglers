@@ -35,8 +35,7 @@ export async function matchInquiryByPhone(phone: string): Promise<string | null>
   // Query with normalised phone — strip non-digits from DB value via replace
   // We fetch recent inquiries and compare normalised values in JS to avoid
   // DB-side function overhead.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('inquiries')
     .select('id, angler_phone')
     .not('status', 'in', '("cancelled","refunded")')

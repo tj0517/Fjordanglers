@@ -41,8 +41,7 @@ export async function setOpenSeason(from: string, to: string): Promise<ActionRes
   const maxDate = twoYearsOut.toISOString().slice(0, 10)
 
   // Delete all existing blocks from today forward
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: delError } = await (supabase as any)
+  const { error: delError } = await supabase
     .from('guide_unavailable_dates')
     .delete()
     .eq('guide_id', guide.id)
@@ -55,8 +54,7 @@ export async function setOpenSeason(from: string, to: string): Promise<ActionRes
   if (to < maxDate)  toBlock.push(...genDatesInRange(addDays(to, 1), maxDate))
 
   if (toBlock.length > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: insError } = await (supabase as any)
+    const { error: insError } = await supabase
       .from('guide_unavailable_dates')
       .upsert(
         toBlock.map(d => ({ guide_id: guide.id, date: d })),
@@ -93,8 +91,7 @@ export async function setAvailability(
   if (guide == null) return { success: false, error: 'Guide not found' }
 
   if (blocked) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('guide_unavailable_dates')
       .upsert(
         dates.map(d => ({ guide_id: guide.id, date: d })),
@@ -102,8 +99,7 @@ export async function setAvailability(
       )
     if (error != null) return { success: false, error: error.message }
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from('guide_unavailable_dates')
       .delete()
       .eq('guide_id', guide.id)

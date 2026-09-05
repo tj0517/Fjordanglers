@@ -6,9 +6,8 @@ import type { ExperiencePageFormProps } from '@/components/admin/ExperiencePageF
 /**
  * /admin/experiences/new — FA creates a new experience_page.
  *
- * Supports two pre-fill sources:
+ * Optional pre-fill source:
  *   ?submission_id=UUID  — pre-fill from a guide_submission
- *   ?experience_id=UUID  — pre-fill from an existing experience (trip)
  */
 
 export const metadata = {
@@ -18,13 +17,12 @@ export const metadata = {
 export default async function AdminNewExperiencePagePage({
   searchParams,
 }: {
-  searchParams: Promise<{ submission_id?: string; experience_id?: string; guide_id?: string }>
+  searchParams: Promise<{ submission_id?: string }>
 }) {
-  const { submission_id, experience_id, guide_id } = await searchParams
+  const { submission_id } = await searchParams
 
   let prefill: ExperiencePageFormProps['prefill'] = undefined
   let prefillLabel: string | undefined
-  let prefillSource: 'submission' | 'experience' | undefined
   let guidePhotos: string[] = []
   let backHref: string | undefined
 
@@ -50,7 +48,6 @@ export default async function AdminNewExperiencePagePage({
         location_name:  sub.location_name,
       }
       prefillLabel  = sub.location_name
-      prefillSource = 'submission'
       backHref      = `/admin/submissions/${submission_id}`
 
       if (sub.guide_id) {
@@ -58,42 +55,6 @@ export default async function AdminNewExperiencePagePage({
           .from('guide_photos')
           .select('url')
           .eq('guide_id', sub.guide_id)
-          .order('sort_order', { ascending: true })
-        guidePhotos = (photos ?? []).map(p => p.url)
-      }
-    }
-  }
-
-  // ── Pre-fill from existing experience (trip) ──────────────────────────────
-  if (!prefill && experience_id) {
-    const { data: exp } = await svc
-      .from('experiences')
-      .select('id, title, guide_id, location_city, location_country, fish_types, price_per_person_eur, difficulty')
-      .eq('id', experience_id)
-      .single()
-
-    if (exp != null) {
-      const resolvedGuideId = guide_id ?? exp.guide_id
-
-      prefill = {
-        guide_id:       resolvedGuideId,
-        country:        exp.location_country ?? '',
-        region:         exp.location_city ?? '',
-        species:        (exp.fish_types as string[] | null) ?? [],
-        technique:      [],
-        season_months:  [],
-        price_approx:   exp.price_per_person_eur,
-        location_name:  exp.title,
-      }
-      prefillLabel  = exp.title
-      prefillSource = 'experience'
-      backHref      = resolvedGuideId ? `/admin/guides/${resolvedGuideId}` : undefined
-
-      if (resolvedGuideId) {
-        const { data: photos } = await svc
-          .from('guide_photos')
-          .select('url')
-          .eq('guide_id', resolvedGuideId)
           .order('sort_order', { ascending: true })
         guidePhotos = (photos ?? []).map(p => p.url)
       }
@@ -135,14 +96,10 @@ export default async function AdminNewExperiencePagePage({
             className="mt-5 flex items-center gap-3 px-4 py-3 rounded-xl"
             style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.2)' }}
           >
-            <span className="text-lg">
-              {prefillSource === 'experience' ? '🎣' : '📋'}
-            </span>
+            <span className="text-lg">📋</span>
             <div>
               <p className="text-xs font-bold f-body" style={{ color: '#E67E50' }}>
-                {prefillSource === 'experience'
-                  ? 'Pre-filled from existing trip'
-                  : 'Pre-filled from guide submission'}
+                Pre-filled from guide submission
               </p>
               <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.55)' }}>
                 Fields populated from: <strong>{prefillLabel}</strong>.

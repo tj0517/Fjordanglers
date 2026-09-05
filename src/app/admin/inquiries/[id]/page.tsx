@@ -195,39 +195,28 @@ export default async function AdminInquiryDetailPage({
     // Table doesn't exist yet — safe to ignore
   }
 
-  // ── Fetch trip ─────────────────────────────────────────────────────────────
-  const { data: trip } = await svc
-    .from('experiences')
-    .select('id, title, price_per_person_eur, guide_id, location_country')
-    .eq('id', inquiry.trip_id)
-    .single()
+  // `inquiries.trip_id` points at the archived legacy `experiences` table (FA-1.06):
+  // no trip title, list price, or trip country can be resolved from it any more.
+  const tripTitle: string | null = null
+  const tripLocationCountry: string | null = null
 
-  // ── Fetch guide linked to this experience ──────────────────────────────────
-  const { data: guide } = trip?.guide_id
-    ? await svc.from('guides').select('full_name, invite_email').eq('id', trip.guide_id).single()
+  // ── Fetch assigned guide (name + contact) ─────────────────────────────────
+  const { data: guide } = inquiry.assigned_guide_id != null
+    ? await svc.from('guides').select('full_name, invite_email').eq('id', inquiry.assigned_guide_id).single()
     : { data: null }
 
-  // ── Fetch guides in the same country as the trip, with their blocked dates ─
-  const tripLocationCountry = (trip as (typeof trip & { location_country?: string }) | null)
-    ?.location_country ?? null
+  // ── Fetch active guides with their blocked dates ───────────────────────────
 
   let countryGuides: GuideWithCalendar[] = []
   try {
     const today     = new Date().toISOString().slice(0, 10)
     const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
-    // Fetch active guides — filtered by country when the trip has a known location
-    let guidesQuery = svc
+    const { data: guideRows } = await svc
       .from('guides')
       .select('id, full_name, avatar_url, country')
       .eq('status', 'active')
       .order('full_name')
-
-    if (tripLocationCountry != null && tripLocationCountry !== '') {
-      guidesQuery = guidesQuery.eq('country', tripLocationCountry)
-    }
-
-    const { data: guideRows } = await guidesQuery
 
     const guideIds = (guideRows ?? []).map(g => g.id)
 
@@ -286,7 +275,6 @@ export default async function AdminInquiryDetailPage({
   }
 
   const st             = STATUS_STYLE[inquiry.status] ?? STATUS_STYLE.pending
-  const tripPriceEur   = (trip?.price_per_person_eur ?? 0) * (inquiry.party_size ?? 1)
   const requestedDates = inquiry.requested_dates as string[] | null
 
   // ── Build correspondence thread ────────────────────────────────────────────
@@ -355,7 +343,7 @@ export default async function AdminInquiryDetailPage({
           <h2 className="text-sm font-bold f-display text-[#0A2E4D]">Booking Request</h2>
         </div>
         <div className="px-6 pb-2">
-          <Row label="Trip"        value={trip?.title ?? '—'} />
+          <Row label="Trip"        value={tripTitle ?? '—'} />
           <Row label="Guide"       value={guide?.full_name ?? '—'} />
           <Row label="Guide email" value={guide?.invite_email ?? '—'} />
           <RequestedDatesEditor
@@ -363,13 +351,6 @@ export default async function AdminInquiryDetailPage({
             initialDates={requestedDates ?? []}
           />
           <Row label="Party size" value={`${inquiry.party_size} ${inquiry.party_size === 1 ? 'person' : 'people'}`} />
-          <Row
-            label="List price"
-            value={tripPriceEur > 0
-              ? `€${tripPriceEur.toFixed(2)} (${inquiry.party_size}× €${trip?.price_per_person_eur?.toFixed(2) ?? '0.00'}/person)`
-              : '—'
-            }
-          />
           {inquiry.selected_option != null && (
             <Row label="Option" value={inquiry.selected_option} />
           )}
@@ -592,7 +573,7 @@ export default async function AdminInquiryDetailPage({
       anglerName={inquiry.angler_name}
       requestedDates={requestedDates ?? []}
       partySize={inquiry.party_size ?? 1}
-      experienceTitle={trip?.title ?? null}
+      experienceTitle={tripTitle}
       anglerMessage={inquiry.message ?? null}
       initialDetails={tripDetails}
     />
@@ -626,7 +607,7 @@ export default async function AdminInquiryDetailPage({
     <ProposalTab
       inquiryId={inquiry.id}
       anglerName={inquiry.angler_name}
-      experienceTitle={trip?.title ?? null}
+      experienceTitle={tripTitle}
       guideOptions={tripDetails?.guide_options ?? []}
       guideFinalDates={tripDetails?.guide_final_dates ?? null}
       existingToken={inquiry.offer_token ?? null}
@@ -660,7 +641,7 @@ export default async function AdminInquiryDetailPage({
         <div>
           <h1 className="text-3xl font-bold f-display text-[#0A2E4D]">{inquiry.angler_name}</h1>
           <p className="text-sm f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-            {trip?.title ?? inquiry.trip_id}
+            {tripTitle ?? inquiry.trip_id}
           </p>
         </div>
         <span className="px-3 py-1.5 rounded-full text-sm font-semibold f-body flex-shrink-0"

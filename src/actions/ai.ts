@@ -36,8 +36,7 @@ export async function setAgentStatus(
   status: 'waiting' | 'stopped',
 ): Promise<{ success: boolean; error?: string }> {
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ agent_status: status })
     .eq('id', inquiryId)
@@ -68,8 +67,7 @@ export async function extractTripDetailsAI(
   const svc = createServiceClient()
 
   // 1. Fetch inquiry fields directly (angler_name is a column, not a join)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry, error: inqErr } = await (svc as any)
+  const { data: inquiry, error: inqErr } = await svc
     .from('inquiries')
     .select('id, message, party_size, requested_dates, angler_name, trip_id')
     .eq('id', inquiryId)
@@ -80,21 +78,10 @@ export async function extractTripDetailsAI(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  // Fetch experience title separately if trip_id is set
-  let experienceTitle: string | null = null
-  if (inquiry.trip_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: exp } = await (svc as any)
-      .from('experiences')
-      .select('title')
-      .eq('id', inquiry.trip_id)
-      .single()
-    experienceTitle = (exp as { title: string } | null)?.title ?? null
-  }
+  const experienceTitle: string | null = null
 
   // 2. Fetch lead_messages ordered by created_at ASC
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: messages, error: msgErr } = await (svc as any)
+  const { data: messages, error: msgErr } = await svc
     .from('lead_messages')
     .select('direction, channel, contact_name, content, created_at')
     .eq('inquiry_id', inquiryId)

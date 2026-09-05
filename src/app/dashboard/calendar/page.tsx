@@ -23,8 +23,7 @@ export default async function CalendarPage() {
   const today     = new Date().toISOString().slice(0, 10)
   const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rows } = await (supabase as any)
+  const { data: rows } = await supabase
     .from('guide_unavailable_dates')
     .select('date')
     .eq('guide_id', guide.id)

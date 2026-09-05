@@ -143,10 +143,8 @@ export type GuideFormDefaults = {
 }
 
 type Props = {
-  /** Pre-fills the form fields when creating a listing from a lead. */
+  /** Pre-fills the form fields. */
   defaultValues?: GuideFormDefaults
-  /** If set, the guide listing will be linked back to this lead (audit trail + auto-onboard). */
-  leadId?: string
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -160,7 +158,7 @@ function normaliseCountry(raw: string | undefined): string {
 
 // ─── Main form ────────────────────────────────────────────────────────────────
 
-export default function CreateGuideForm({ defaultValues, leadId }: Props) {
+export default function CreateGuideForm({ defaultValues }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
@@ -185,8 +183,6 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
   const [error, setError]                 = useState<string | null>(null)
   const [success, setSuccess]             = useState(false)
   const [createdId, setCreatedId]         = useState<string | null>(null)
-
-  const isFromLead = leadId != null
 
   // ── Toggle helpers ─────────────────────────────────────────────────────────
   const toggleLanguage = (lang: string) =>
@@ -241,9 +237,8 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
       instagram_url:    instagramUrl || undefined,
       youtube_url:      youtubeUrl || undefined,
       pricing_model:    pricingModel,
-      // Lead bridge — auto-pin the guide's auth account on registration
+      // Auto-link the guide's auth account on registration
       invite_email:     inviteEmail.trim() || undefined,
-      lead_id:          leadId ?? undefined,
     }
 
     startTransition(async () => {
@@ -320,22 +315,6 @@ export default function CreateGuideForm({ defaultValues, leadId }: Props) {
   // ── Form ───────────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit} className="max-w-[720px]">
-
-      {/* Lead pre-fill banner */}
-      {isFromLead && (
-        <div
-          className="flex items-start gap-3 px-5 py-4 rounded-2xl mb-6 f-body text-sm"
-          style={{ background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)', color: '#1D4ED8' }}
-        >
-          <Info size={16} strokeWidth={1.5} className="flex-shrink-0 mt-0.5" />
-          <span>
-            <strong>Pre-filled from lead application.</strong>{' '}
-            Review and complete the form, then click &ldquo;Create Beta Listing&rdquo;.
-            The lead will be automatically marked as <em>Onboarded</em> and a bridge
-            to the future guide dashboard will be stored.
-          </span>
-        </div>
-      )}
 
       {/* Error banner */}
       {error != null && (

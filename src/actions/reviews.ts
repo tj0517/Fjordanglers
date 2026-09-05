@@ -1,7 +1,5 @@
 'use server'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { createServiceClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
 
@@ -37,7 +35,7 @@ export interface ReviewSubmitInput {
 export async function generateReviewLink(
   inquiryId: string,
 ): Promise<{ url: string; token: string }> {
-  const svc = createServiceClient() as any
+  const svc = createServiceClient()
 
   // Return existing token if already generated
   const { data: existing } = await svc
@@ -69,7 +67,7 @@ export async function generateReviewLink(
  * Public — fetches review data by token (for the angler-facing review page).
  */
 export async function getReviewByToken(token: string): Promise<ReviewPageData | null> {
-  const svc = createServiceClient() as any
+  const svc = createServiceClient()
 
   const { data: review } = await svc
     .from('reviews')
@@ -79,23 +77,15 @@ export async function getReviewByToken(token: string): Promise<ReviewPageData | 
 
   if (review == null) return null
 
-  // Fetch inquiry for angler name + trip
+  // Fetch inquiry for angler name
   const typedSvc = createServiceClient()
   const { data: inquiry } = await typedSvc
     .from('inquiries')
-    .select('angler_name, trip_id')
+    .select('angler_name')
     .eq('id', review.inquiry_id)
     .single()
 
-  let tripTitle: string | null = null
-  if (inquiry?.trip_id) {
-    const { data: exp } = await typedSvc
-      .from('experiences')
-      .select('title')
-      .eq('id', inquiry.trip_id)
-      .single()
-    tripTitle = exp?.title ?? null
-  }
+  const tripTitle: string | null = null
 
   return {
     id: review.id,
@@ -118,7 +108,7 @@ export async function submitReview(
   token: string,
   input: ReviewSubmitInput,
 ): Promise<{ ok: boolean; error?: string }> {
-  const svc = createServiceClient() as any
+  const svc = createServiceClient()
 
   const { data: review } = await svc
     .from('reviews')
