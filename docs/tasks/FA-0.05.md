@@ -2,16 +2,15 @@
 id: FA-0.05
 title: Jedna ścieżka tworzenia zapytania — source + UTM; usunięcie landingu /plan-your-trip
 stage: 0
-status: blocked
+status: review
 difficulty: M
 model: sonnet
-model_approved: fable by tj 2026-09-04
+model_approved: fable by tj 2026-09-04 (first pass); rebase + verification 2026-09-05 on sonnet/high per tj
 effort: medium-high
 agent: fa-core
 branch: feat/inquiry-source-and-utm
-depends_on: []
-blocked_by_questions:
-  - "pnpm typecheck / pnpm build fail via ~23 files unrelated to this task that still query tables FA-1.01's baseline pull shows as gone from public (experiences, bookings, booking_messages, guide_accommodations, experience_accommodations, experience_images, guide_images, leads, payments). tj chose 'full regen, accept red build, report as blocked' on 2026-09-04 — this task cannot reach done until FA-1.06/1.07/1.08 land (or scope is explicitly reassigned)."
+depends_on: [FA-1.06]
+blocked_by_questions: []
 touches_db: true
 touches_prod: false
 estimate_h: 4
@@ -62,18 +61,32 @@ obok `gclid`, a martwy landing zbierający leady wyłącznie do skrzynki znika z
 - [ ] **Usunięcie landingu**: `src/app/plan-your-trip/` (cały katalog), `src/actions/trip-plan.ts`,
       wpis `'/plan-your-trip/'` z `src/app/robots.ts`. Przed usunięciem — dowód, że nic tego nie importuje.
       Znika przy okazji `router.push('/thank-you')` na nieistniejącą trasę.
-- [ ] Regeneracja typów po migracji (`pnpm supabase:types`) i commit typów w tym samym PR.
+- [x] Regeneracja typów po migracji i commit typów w tym samym PR — **z lokalnej bazy**
+      (`supabase gen types typescript --local`), nie `pnpm supabase:types`, który czyta produkcję,
+      gdzie kolumn nie ma do czasu STOP-owanego pushu (zmiana tj 5 IX).
 
 ## Gotowe, gdy
-- [ ] Submit widgetu w dev tworzy wiersz z `source='web_form'`, wypełnionym `utm` i `gclid` — SELECT w raporcie.
-- [ ] Ręczne dodanie zapytania w adminie tworzy wiersz z `source='manual'` — SELECT w raporcie.
-- [ ] `INSERT ... source='foo'` odrzucony przez CHECK — **czerwony dowód**, komunikat błędu wklejony do raportu.
-- [ ] `grep -rn "plan-your-trip\|trip-plan\|thank-you" src` → 0 wyników.
-- [ ] `grep -rn "from('inquiries')" src | grep insert` → wyłącznie `src/lib/inquiries/create.ts`.
-- [ ] `grep -rn "api.resend.com" src` → 0 wyników (jedyne dwa były w `trip-plan.ts`).
-- [ ] `supabase db diff` po migracji pusty; wygenerowane typy zawierają `utm`.
-- [ ] `pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build` zielone.
-      (`pnpm test` bez `--run` to tryb watch i nigdy nie wraca.)
+Kryteria doprecyzowane przez tj 5 IX 2026 (po rebase na FA-1.06); poprzedni dowód z 4 IX
+nie liczy się jako aktualny.
+
+- [x] Submit widgetu tworzy wiersz z `source='web_form'`, wypełnionym `utm` i `gclid` — SELECT
+      w raporcie, na bazie lokalnej, po rebase.
+- [x] Ręczne dodanie zapytania w adminie tworzy wiersz z `source='manual'` — SELECT w raporcie.
+- [x] `INSERT ... source='foo'` odrzucony przez CHECK — **czerwony dowód**, komunikat błędu wklejony.
+- [x] `grep -rn "plan-your-trip\|trip-plan\|thank-you" src` → 0 wyników.
+- [x] `grep -rn -A3 "from('inquiries')" src | grep "\.insert("` → wyłącznie `src/lib/inquiries/create.ts`
+      (grep jednoliniowy nigdy nie trafia — `.insert(` stoi w linii po `.from('inquiries')`).
+- [x] `grep -rn "api.resend.com" src` → dokładnie 2 trafienia: `src/lib/email.ts` i
+      `src/app/api/webhooks/email-inbound/route.ts` (poza zakresem, nietknięte; z `trip-plan.ts`
+      znikają wszystkie).
+- [x] `supabase db diff` (lokalnie, po migracji) → `No schema changes found`.
+- [x] `database.types.ts` zregenerowany `supabase gen types typescript --local`; `inquiries.Row`
+      zawiera `source` i `utm`.
+- [x] `pnpm typecheck` i `pnpm build` zielone; `pnpm test -- --run` zielone.
+- [x] `pnpm lint`: zero NOWYCH błędów względem `main` (liczby z obu gałęzi w raporcie).
+      „Lint zielony" jest nieosiągalny — 42 błędy na `main` sprzed tego zadania, wiersz w
+      `docs/deferred-tasks.md`.
+- [x] Status `blocked → review` tu i w `docs/tasks/INDEX.md`, w tym samym PR.
 
 ## Poza zakresem
 - Kwalifikacja (`qualified`) — FA-1.04.
@@ -95,11 +108,12 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 ## Weryfikacja
 ```
 grep -rn "plan-your-trip\|trip-plan\|thank-you" src || echo OK-landing-gone
-grep -rn "api.resend.com" src || echo OK-no-raw-resend
-grep -rn "from('inquiries')" src | grep insert
-pnpm supabase:types && git diff --stat src/lib/supabase/database.types.ts
-supabase db diff            # oczekiwane: No schema changes found
-pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
+grep -rn "api.resend.com" src            # oczekiwane: dokładnie email.ts + email-inbound
+grep -rn -A3 "from('inquiries')" src | grep "\.insert("   # oczekiwane: tylko lib/inquiries/create.ts
+supabase migration up --local && supabase db diff --local   # oczekiwane: No schema changes found
+supabase gen types typescript --local > src/lib/supabase/database.types.ts
+pnpm typecheck && pnpm test -- --run && pnpm build
+pnpm lint                                # liczba błędów vs main
 # SELECT id, source, gclid, utm, created_at FROM inquiries ORDER BY created_at DESC LIMIT 3;
 # INSERT ... source='foo'  → oczekiwany błąd CHECK
 ```
@@ -242,7 +256,7 @@ accurate regeneration against the real current schema, not a hand patch.
 
 `pnpm test -- --run`: **green** — 3 files, 17 tests passed, none touch the affected dead tables.
 
-### Blocked — `pnpm typecheck` / `pnpm build` are NOT green
+### Blocked (4 IX) — `pnpm typecheck` / `pnpm build` were NOT green — *resolved by FA-1.06, see "Rebase" below*
 
 Regenerating types accurately (as required above) surfaces that FA-1.01's baseline pull —
 the authoritative read of production, done the same week — no longer has these tables in
@@ -302,3 +316,147 @@ non-default choice in case tj wants to pick different ones.
 `qualified`, backfill `source` na historyczne wiersze, `/admin/ads`, zachowanie agenta AI,
 `InquiryWidget.tsx` poza przekazaniem `utm`, `email.ts`/`email-inbound` resend calls, SELECT/UPDATE
 na `inquiries` poza tym PR-em.
+
+---
+
+## Rebase na `main` po FA-1.06 (2026-09-05)
+
+Warunek startu: `origin/main` = `4d7b8c18 Merge pull request #11 from tj0517/chore/types-truth`
+(FA-1.06). WIP `d9209f7a` przepisany na `07b50430` przez `git rebase origin/main`.
+
+**Uwaga:** PR #11 został zmergowany o 16:58:12, a ostatni commit FA-1.06 `5a0aabc7`
+(uzupełnienie D4, `docs/tasks/FA-1.09.md`, reguła §8 w `05-agent-operations.md`, wiersz o
+martwych tokenach w `deferred-tasks.md`) wszedł na `origin/chore/types-truth` o 16:59:51 —
+99 sekund po merge. **Nie ma go na `main`.** Ten PR go nie zawiera (nie mój zakres); decyzja
+w raporcie poniżej.
+
+### Konflikty i rozwiązanie
+
+| Plik | Konflikt | Rozwiązanie | Co przepadło |
+|---|---|---|---|
+| `src/lib/supabase/database.types.ts` | oba: pełna regeneracja | wersja z `main`, potem `supabase migration up --local` i `supabase gen types typescript --local` — diff do `main`: **+6 linii**, dokładnie `source`/`utm` w `Row`/`Insert`/`Update`; druga generacja bajt w bajt identyczna | nic — moja regeneracja z 4 IX była przeciw baseline bez FA-1.06 |
+| `src/app/api/inquiries/route.ts` | FA-1.06 zdjęła `as any` z insertu; ja zastąpiłem insert `createInquiry(...)` | moja strona (insert znika w całości, więc i rzutowanie) | nic |
+| `src/actions/inquiries.ts` | brak — auto-merge | `createManualInquiry` (`channel`, `source='manual'`) obok przepisanych przez FA-1.06 funkcji; potwierdzone grepem | nic |
+| `docs/02-data-model.md` | FA-1.06 przepisała §1 | wersja z `main`; zdanie „`source`/`utm` **not** in the baseline — FA-0.05 adds them" rozwinięte o nazwę migracji, CHECK i ścieżkę insertu | moja stara notka o ghost columns (już nieaktualna po §1 z FA-1.06) |
+| `docs/deferred-tasks.md` | FA-1.06 dodała wiersz „FA-0.05 … odblokowane" | wersja z `main`; wiersz FA-1.06 o FA-0.05 zamknięty (`closed`), do wiersza o lint dopisane liczby po rebase | mój wiersz o 23 plikach — usunięty, FA-1.06 go domknęła |
+| `docs/tasks/INDEX.md` | FA-1.06 zmieniła własny wiersz | wersja z `main`; FA-0.05 `todo → review`, `depends` = FA-1.06 | mój `blocked` (nieaktualny) |
+| `supabase/config.toml`, `supabase/.gitignore` | add/add | identyczne bajt w bajt (te same porty +100) — git scalił sam; wersja `main` | nic; porty się nie różnią |
+
+Żaden plik z mojego diffu nie został usunięty przez FA-1.06 (`comm` na listach — pusty), więc
+bramka „FA-1.06 usunęła plik, który modyfikujesz" nie zadziałała.
+
+### Report — FA-0.05 Jedna ścieżka tworzenia zapytania: `source` + UTM (po rebase)
+
+#### Done
+- Rebase na `main` (FA-1.06) — evidence: `git log --oneline -3` → `07b50430` na `4d7b8c18`; tabela wyżej.
+- Odczyt stanu lokalnej bazy **przed** migracją (nie z notatek) — evidence:
+  ```
+  select column_name, data_type from information_schema.columns
+  where table_schema='public' and table_name='inquiries'
+    and column_name in ('source','gclid','utm','trip_length');
+   gclid | text
+   trip_length | text
+  (2 rows)
+  pg_constraint inquiries_source_check → (0 rows)
+  schema_migrations → 20260904165037, 20260904165038
+  select count(*) from inquiries → 0
+  ```
+  0 wierszy, więc `select distinct source` nie ma czego sprawdzać — bramka „wartości spoza CHECK-a" bezprzedmiotowa.
+- Migracja zastosowana lokalnie — evidence: `supabase migration up --local` →
+  `Applying migration 20260904210532_inquiries_source_utm.sql... Local database is up to date.`
+- Stan **po** migracji — evidence:
+  ```
+   gclid       | text
+   source      | text
+   trip_length | text
+   utm         | jsonb
+  inquiries_source_check | CHECK (((source IS NULL) OR (source = ANY (ARRAY['web_form'::text, 'manual'::text, 'email'::text, 'whatsapp'::text]))))
+  schema_migrations → 20260904165037, 20260904165038, 20260904210532
+  ```
+- `supabase db diff --local` — evidence: `Diffing schemas... No schema changes found`.
+- Typy zregenerowane z lokalnej bazy — evidence: `git diff --stat` vs `main`: `database.types.ts | 6 ++++++`;
+  `inquiries.Row`: `source: string | null`, `utm: Json | null`; `supabase gen types typescript --local | diff -q - src/lib/supabase/database.types.ts` → identyczne.
+- Widget → `source='web_form'` + `utm` + `gclid`; admin → `source='manual'` — evidence: skrypt jednorazowy
+  (`pnpm dlx tsx`, `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` z `supabase status -o env`,
+  z blokadą na adres inny niż `127.0.0.1`) wywołał **prawdziwe** `createInquiry(...)` dla ścieżki widgetu
+  i **prawdziwą** akcję `createManualInquiry(...)` dla admina (nie imitację jak 4 IX):
+  ```
+  select id, source, gclid, utm, internal_notes, status, angler_email, created_at from public.inquiries order by created_at;
+   021a2868-… | web_form | PROOF_GCLID_0905 | {"utm_medium": "cpc", "utm_source": "google", "utm_campaign": "fa-0-05-rebase"} |                   | pending        | proof-web@example.com    | 2026-09-05 15:22:38
+   90aa4cee-… | manual   |                  |                                                                                 | Source: instagram | in_negotiation | proof-manual@example.com | 2026-09-05 15:22:39
+  (2 rows)
+  DELETE 2 → rows_after_cleanup = 0
+  ```
+  (`Proof-Manual@Example.com` → `proof-manual@example.com`: lower-case z `createManualInquiry` działa.)
+- Czerwony dowód CHECK — evidence:
+  ```
+  insert into public.inquiries (angler_name, angler_email, source) values ('Test Bad', 'bad@example.com', 'foo');
+  ERROR:  new row for relation "inquiries" violates check constraint "inquiries_source_check"
+  DETAIL:  Failing row contains (e6408ebe-…, …, foo, null).
+  rows_after_failed_insert = 0
+  ```
+- Grepy — evidence:
+  ```
+  grep -rn "plan-your-trip\|trip-plan\|thank-you" src → OK-landing-gone (0 hits)
+  grep -rn -A3 "from('inquiries')" src | grep "\.insert(" → src/lib/inquiries/create.ts-44-    .insert({
+  grep -rn "api.resend.com" src → src/app/api/webhooks/email-inbound/route.ts:91, src/lib/email.ts:101
+  ```
+- `pnpm typecheck` → `tsc --noEmit`, exit 0, 0 błędów.
+- `pnpm build` → exit 0, `Compiled successfully in 35.5s`, 46/46 stron (FA-1.06: 47; −1 = `/plan-your-trip`).
+- `pnpm test -- --run` → 3 pliki, **17 passed**.
+- `pnpm lint` — `main` (`4d7b8c18`, worktree z podlinkowanym `node_modules`): **42 błędy / 60 ostrzeżeń**;
+  gałąź: **40 / 60**. Zero nowych; −2 to `eslint-disable no-explicit-any` zdjęte razem z insertami.
+- Status `blocked → review` tu i w `INDEX.md`; `depends` = FA-1.06.
+
+#### Not done
+- `db push` na produkcję — poza tym zadaniem, bramka STOP. Produkcja **nie ma** `source`/`utm`
+  do czasu osobnej zgody; po merge kod na Vercelu będzie wstawiał kolumny, których tam nie ma —
+  **każde nowe zapytanie z widgetu i z admina padnie na insercie**, dopóki migracja nie wejdzie.
+  Kolejność: push migracji **przed** deployem tego PR-a (albo w tym samym oknie). Patrz „Needs a decision".
+- Odczyt produkcji (`select distinct source`) — jak w FA-1.06: brak `SUPABASE_DB_PASSWORD` w sesji.
+  Nie jest potrzebny: kolumny na produkcji nie istnieją (baseline z 4 IX to jej odczyt), więc nie ma
+  wartości do sprawdzenia; migracja używa `ADD COLUMN IF NOT EXISTS`, a CHECK dopuszcza `NULL`.
+
+#### Noticed, not touched (→ docs/deferred-tasks.md)
+- `5a0aabc7` z FA-1.06 nie jest na `main` (merge 99 s przed pushem) — `origin/chore/types-truth`
+  wciąż go ma; to docs-only. Nie w tym PR.
+- Lint 42/60 na `main` — wiersz FA-1.06 uzupełniony o liczby po rebase (nie dublowany).
+- Kontenery lokalnego stacka nazywają się `supabase_*_uwxrstbplaoxfghrchcy` mimo
+  `project_id = "fjordanglers"` — CLI bierze id z `supabase/.temp/project-ref` po `supabase link`.
+  Kosmetyka; wart jednej linii w runbooku sesji (`05-agent-operations.md` §4), nie tutaj.
+
+#### Needs a decision
+- **Kolejność push migracji vs deploy** — opcje: (a) `supabase db push` (STOP, zgoda tj) na
+  `uwxrstbplaoxfghrchcy` **przed** merge tego PR-a, potem merge; (b) merge i push w jednym oknie,
+  push pierwszy. Rekomendacja: (a) — migracja jest addytywna (`IF NOT EXISTS`, `NULL` dozwolony),
+  stary kod z `main` jej nie zauważy, a nowy kod bez niej nie działa.
+- `5a0aabc7` — osobny mini-PR `docs(FA-1.06)` z `origin/chore/types-truth` (jeden commit, tylko
+  docs) albo cherry-pick do następnego PR-a docs. Rekomendacja: osobny PR, żeby `docs/tasks/FA-1.09.md`
+  i reguła §8 istniały na `main` zanim ktoś weźmie FA-1.09.
+
+#### Verification
+```
+$ git log --oneline -3
+07b50430 wip(FA-0.05): source + utm single insert path, remove /plan-your-trip (blocked on FA-1.06)
+4d7b8c18 Merge pull request #11 from tj0517/chore/types-truth
+f8ba6421 docs(FA-1.06): report, data-model §1 after archive cleanup, deferred rows, status review
+
+$ supabase migration up --local
+Applying migration 20260904210532_inquiries_source_utm.sql...
+Local database is up to date.
+
+$ supabase db diff --local
+Diffing schemas...
+No schema changes found
+
+$ supabase gen types typescript --local > src/lib/supabase/database.types.ts && git diff --stat
+ src/lib/supabase/database.types.ts | 6 ++++++
+
+$ pnpm typecheck   → exit 0
+$ pnpm build       → exit 0, ✓ Compiled successfully in 35.5s, 46/46 pages
+$ pnpm test -- --run → Test Files 3 passed (3) · Tests 17 passed (17)
+$ pnpm lint        → main: ✖ 102 problems (42 errors, 60 warnings) · branch: ✖ 100 problems (40 errors, 60 warnings)
+
+$ psql … -c "insert into public.inquiries (angler_name, angler_email, source) values ('Test Bad','bad@example.com','foo');"
+ERROR:  new row for relation "inquiries" violates check constraint "inquiries_source_check"
+```

@@ -1525,6 +1525,7 @@ export type Database = {
           requested_dates: string[] | null
           selected_option: string | null
           selected_option_id: string | null
+          source: string | null
           stage_reached: string
           status: string
           trip_country: string | null
@@ -1532,6 +1533,7 @@ export type Database = {
           trip_length: string | null
           trip_type: string | null
           updated_at: string
+          utm: Json | null
         }
         Insert: {
           agent_round?: number
@@ -1592,6 +1594,7 @@ export type Database = {
           requested_dates?: string[] | null
           selected_option?: string | null
           selected_option_id?: string | null
+          source?: string | null
           stage_reached?: string
           status?: string
           trip_country?: string | null
@@ -1599,6 +1602,7 @@ export type Database = {
           trip_length?: string | null
           trip_type?: string | null
           updated_at?: string
+          utm?: Json | null
         }
         Update: {
           agent_round?: number
@@ -1659,6 +1663,7 @@ export type Database = {
           requested_dates?: string[] | null
           selected_option?: string | null
           selected_option_id?: string | null
+          source?: string | null
           stage_reached?: string
           status?: string
           trip_country?: string | null
@@ -1666,6 +1671,7 @@ export type Database = {
           trip_length?: string | null
           trip_type?: string | null
           updated_at?: string
+          utm?: Json | null
         }
         Relationships: [
           {
