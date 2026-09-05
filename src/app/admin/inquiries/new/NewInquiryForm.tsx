@@ -56,7 +56,7 @@ export function NewInquiryForm({ trips }: { trips: Trip[] }) {
   const [email,  setEmail]  = useState('')
   const [pax,    setPax]    = useState('1')
   const [tripId, setTripId] = useState('')
-  const [source, setSource] = useState('instagram')
+  const [channel, setChannel] = useState('instagram')
   const [status, setStatus] = useState('in_negotiation')
   const [dates,  setDates]  = useState<string[]>([])
   const [message, setMessage] = useState('')
@@ -84,7 +84,7 @@ export function NewInquiryForm({ trips }: { trips: Trip[] }) {
         tripId:         tripId || null,
         requestedDates: validDates,
         message:        message.trim() || null,
-        source,
+        channel,
         status,
       })
       if (res.success && res.inquiryId != null) {
@@ -139,8 +139,8 @@ export function NewInquiryForm({ trips }: { trips: Trip[] }) {
         </Field>
         <Field label="Source">
           <select
-            value={source}
-            onChange={e => setSource(e.target.value)}
+            value={channel}
+            onChange={e => setChannel(e.target.value)}
             className={inputCls}
             style={inputStyle}
           >

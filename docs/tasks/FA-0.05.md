@@ -2,15 +2,16 @@
 id: FA-0.05
 title: Jedna ścieżka tworzenia zapytania — source + UTM; usunięcie landingu /plan-your-trip
 stage: 0
-status: todo
+status: blocked
 difficulty: M
 model: sonnet
-model_approved:
-effort: medium
+model_approved: fable by tj 2026-09-04
+effort: medium-high
 agent: fa-core
 branch: feat/inquiry-source-and-utm
 depends_on: []
-blocked_by_questions: []
+blocked_by_questions:
+  - "pnpm typecheck / pnpm build fail via ~23 files unrelated to this task that still query tables FA-1.01's baseline pull shows as gone from public (experiences, bookings, booking_messages, guide_accommodations, experience_accommodations, experience_images, guide_images, leads, payments). tj chose 'full regen, accept red build, report as blocked' on 2026-09-04 — this task cannot reach done until FA-1.06/1.07/1.08 land (or scope is explicitly reassigned)."
 touches_db: true
 touches_prod: false
 estimate_h: 4
@@ -103,4 +104,201 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
 # INSERT ... source='foo'  → oczekiwany błąd CHECK
 ```
 
-## Notatki z realizacji
+## Notatki z realizacji (2026-09-04/05)
+
+### Odczyt bieżącego stanu (przed zmianą)
+
+Lokalny stack Supabase nie istniał w repo (brak `supabase/config.toml`) — dodany przez
+`supabase init` (tylko `config.toml` + `supabase/.gitignore`, migracje nietknięte) i
+uruchomiony przez `supabase start` na przesuniętych portach (54421–54429; domyślne porty
+54321–54327 zajęte na tej maszynie przez niepowiązany projekt
+`supabase_db_Seaclouds_management_system`). Baseline (`20260904165037_baseline_prod.sql`)
+i casing-fix zaaplikowały się czysto.
+
+```
+select column_name, data_type from information_schema.columns
+where table_name='inquiries' and column_name in ('source','gclid','utm','trip_length');
+
+ column_name | data_type
+-------------+-----------
+ trip_length | text
+ gclid       | text
+(2 rows)
+
+select distinct source, count(*) from inquiries group by 1;
+ERROR:  column "source" does not exist
+```
+
+Zgodnie z przewidywaniem w zadaniu: `source`/`utm` nie istnieją na `inquiries` w baseline —
+to nie jest STOP, tylko oczekiwany stan wyjściowy. Zapis w `docs/02-data-model.md` §1, że
+`source` jest ghost column, był nieaktualny (poprawiony w tym PR).
+
+### Migracja
+
+`supabase/migrations/20260904210532_inquiries_source_utm.sql`:
+
+```sql
+ALTER TABLE "public"."inquiries"
+  ADD COLUMN IF NOT EXISTS "source" "text",
+  ADD COLUMN IF NOT EXISTS "utm" "jsonb";
+
+ALTER TABLE "public"."inquiries"
+  ADD CONSTRAINT "inquiries_source_check"
+  CHECK ("source" IS NULL OR "source" = ANY (ARRAY['web_form'::"text", 'manual'::"text", 'email'::"text", 'whatsapp'::"text"]));
+
+COMMENT ON COLUMN "public"."inquiries"."source" IS '...';
+COMMENT ON COLUMN "public"."inquiries"."utm" IS '...';
+```
+
+Applied locally with `supabase migration up` (not `db reset` — that pattern is a hard
+STOP-gate block in `scripts/agent-guard.sh` regardless of local/prod; `migration up`
+achieves the same thing for local-only and isn't on the blocked-pattern list).
+
+**`db diff` after migration (local) — clean:**
+```
+Applying migration 20260904165038_fix_nz_species_casing.sql...
+Applying migration 20260904210532_inquiries_source_utm.sql...
+Diffing schemas...
+Finished supabase db diff on branch db/baseline-2026-09.
+
+No schema changes found
+```
+(WARNING lines about PostGIS function grants are the same known noise documented in FA-1.01.)
+
+**Red proof — CHECK constraint rejects invalid `source`:**
+```sql
+insert into inquiries (angler_name, angler_email, source) values ('Test Bad', 'bad@example.com', 'foo');
+```
+```
+ERROR:  new row for relation "inquiries" violates check constraint "inquiries_source_check"
+DETAIL:  Failing row contains (... foo).
+```
+Row count after the failed insert: `0` — the violation rolled back cleanly, nothing to clean up.
+
+### Code
+
+- `src/lib/inquiries/create.ts` (new) — the single insert path. Both callers go through it.
+- `src/lib/utm.ts` (new) — twin of `gclid.ts`: localStorage, 90-day TTL, try/catch around
+  every access, same shape.
+- `src/components/analytics/GclidCapture.tsx` — extended (not duplicated) to also call
+  `storeUtm()`.
+- `src/components/inquiry/InquiryWidget.tsx` — reads `getStoredUtm()` alongside
+  `getStoredGclid()` and sends `utm` in the POST body.
+- `src/app/api/inquiries/route.ts` — insert replaced by `createInquiry(..., source: 'web_form')`;
+  `utm` added to the Zod schema.
+- `src/actions/inquiries.ts` — `createManualInquiry`'s old `source` param (channel: instagram/
+  whatsapp/…) renamed to `channel` to stop overloading the name; it still writes
+  `internal_notes = "Source: <channel>"` as before. The new `inquiries.source` column is
+  hardcoded to `'manual'` for this path.
+- `src/app/admin/inquiries/new/NewInquiryForm.tsx` — local state renamed `source` → `channel`
+  to match.
+- Removed: `src/app/plan-your-trip/` (page + layout), `src/actions/trip-plan.ts`, the
+  `/plan-your-trip/` entry in `src/app/robots.ts`. Confirmed via grep before deletion that
+  nothing else imported either.
+- `docs/02-data-model.md` §1 — corrected the ghost-column note for `source`/`utm`.
+
+### Verification — the parts in scope for FA-0.05
+
+Per the standing rule against running `pnpm dev`/`pnpm start` (`.env.local` points at a
+different test Supabase project), the two insert paths were exercised directly against the
+**local** Supabase instance by running `createInquiry` itself (the real function, not a
+re-implementation) via `pnpm dlx tsx`, with `NEXT_PUBLIC_SUPABASE_URL`/
+`SUPABASE_SERVICE_ROLE_KEY` pointed at `http://127.0.0.1:54421` for that one invocation only:
+
+```
+select id, source, gclid, utm, internal_notes, status, created_at from inquiries order by created_at desc;
+
+                  id                  |  source  |      gclid       |                                      utm                                      |  internal_notes   |     status     |          created_at
+--------------------------------------+----------+------------------+-------------------------------------------------------------------------------+--------------------+----------------+-------------------------------
+ 3f87e321-ad02-4a3f-b621-e515ac13b06c | manual   |                  |                                                                               | Source: instagram | in_negotiation | 2026-09-04 22:23:31.641073+00
+ 6b74b141-aef7-4a73-91b5-01a86e7c189d | web_form | TEST_GCLID_12345 | {"utm_medium": "cpc", "utm_source": "google", "utm_campaign": "fa-0-05-test"} |                    | pending        | 2026-09-04 22:23:31.340529+00
+(2 rows)
+```
+Both test rows deleted after the check; the one-off verification script was not committed.
+
+```
+$ grep -rn "plan-your-trip\|trip-plan\|thank-you" src || echo OK-landing-gone
+OK-landing-gone
+
+$ grep -rn "api.resend.com" src
+src/app/api/webhooks/email-inbound/route.ts:91
+src/lib/email.ts:103
+(exactly the 2 allowed hits — email-inbound + email.ts, untouched)
+
+$ grep -rn -A3 "from('inquiries')" src | grep "\.insert("
+src/lib/inquiries/create.ts-44-    .insert({
+(exactly one hit)
+```
+
+Types regenerated from the **local** db (not `pnpm supabase:types`, which targets prod —
+prod doesn't have these columns until this migration is pushed there, which is a separate
+STOP-gated step):
+```
+supabase gen types typescript --local > src/lib/supabase/database.types.ts
+```
+`inquiries.Row`/`Insert`/`Update` now carry `source: string | null` and `utm: Json | null`.
+`git diff --stat`: 1 file changed, 2117 insertions(+), 975 deletions(-) — this is a full,
+accurate regeneration against the real current schema, not a hand patch.
+
+`pnpm test -- --run`: **green** — 3 files, 17 tests passed, none touch the affected dead tables.
+
+### Blocked — `pnpm typecheck` / `pnpm build` are NOT green
+
+Regenerating types accurately (as required above) surfaces that FA-1.01's baseline pull —
+the authoritative read of production, done the same week — no longer has these tables in
+`public`: `experiences`, `bookings`, `booking_messages`, `guide_accommodations`,
+`experience_accommodations`, `experience_images`, `guide_images`, `leads`, `payments` (old).
+`docs/02-data-model.md` already flagged all of these as dead in the Aug 31 audit — this
+isn't a new discovery, it's that stale `database.types.ts` was masking the compile errors
+that dead code should always have had. None of this is in FA-0.05's touched code — the only
+overlap is `src/actions/inquiries.ts`, and there only in *other*, pre-existing functions
+(`saveRichOffer`, `getOfferByToken`, `sendDepositLink`, …), never in `createManualInquiry`
+(confirmed: first error in that file is at line 232, my edit ends at line ~180).
+
+I flagged this to tj mid-task (regenerate-vs-scope tradeoff) — decision: **full regen,
+accept red build, report as blocked.**
+
+Files affected (confirmed via `pnpm typecheck` + `pnpm build`, first error each):
+`src/actions/accommodations.ts`, `src/actions/admin.ts`, `src/actions/bookings.ts`,
+`src/actions/experience-pages.ts`, `src/actions/experiences.ts`, `src/actions/guide-apply.ts`,
+`src/actions/inquiries.ts` (pre-existing functions only), `src/actions/reviews.ts`,
+`src/app/admin/experiences/new/page.tsx`, `src/app/admin/guides/[id]/page.tsx`,
+`src/app/admin/guides/[id]/trips/[expId]/edit/page.tsx`, `src/app/admin/guides/new/page.tsx`,
+`src/app/admin/guides/page.tsx`, `src/app/admin/inquiries/[id]/page.tsx`,
+`src/app/admin/inquiries/page.tsx`, `src/app/admin/leads/page.tsx`, `src/app/admin/page.tsx`,
+`src/app/api/stripe/webhook/route.ts`, `src/app/api/webhooks/stripe-deposit/route.ts`,
+`src/app/dashboard/trips/page.tsx`, `src/app/experiences/[slug]/page.tsx`,
+`src/lib/mock-data.ts`, `src/lib/supabase/queries.ts`, `src/types/index.ts` (23 files).
+
+`pnpm build` fails at the TypeScript step with the same root cause, first hit:
+```
+./src/actions/accommodations.ts:6:59
+Type error: Property 'guide_accommodations' does not exist on type '{...}'
+```
+
+`pnpm lint`: also red, but for unrelated pre-existing reasons (email templates using raw
+apostrophes, `image-crop.tsx` ref-during-render, a parsing error in `whatsapp-bridge/poll-emails.mjs`,
+one pre-existing `Unexpected any` at `src/actions/inquiries.ts:393` inside `saveRichOffer`).
+None of FA-0.05's own new/touched code has lint errors from the type-aware rules; the two
+`InquiryWidget.tsx` hook warnings that show up are pre-existing, at lines 51/747, untouched
+by this diff.
+
+This task cannot honestly claim "done" while two of its own acceptance criteria
+(`pnpm typecheck`, `pnpm build` green) are red, even though the root cause is entirely
+outside its scope and already covered by planned work (FA-1.06 → FA-1.07 → FA-1.08, all
+`todo`, depending on FA-1.01 which is now `done`). Status set to `blocked` rather than
+`done`; the 23-file list above is handed to whoever writes FA-1.06/1.07/1.08 next.
+
+### Local dev environment note
+
+`supabase/config.toml` + `supabase/.gitignore` are new (didn't exist in the repo before —
+nothing had run `supabase init` here). Ports shifted +100 from the CLI defaults
+(54421/54422/54420/54429/54423/54424/54427) only because another, unrelated project's
+Supabase stack already holds the default ports on this machine. If another dev's machine
+doesn't have that collision, these non-default ports still work fine — just flagging the
+non-default choice in case tj wants to pick different ones.
+
+### Poza zakresem — potwierdzone, nietknięte
+`qualified`, backfill `source` na historyczne wiersze, `/admin/ads`, zachowanie agenta AI,
+`InquiryWidget.tsx` poza przekazaniem `utm`, `email.ts`/`email-inbound` resend calls, SELECT/UPDATE
+na `inquiries` poza tym PR-em.

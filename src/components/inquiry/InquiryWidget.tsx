@@ -25,6 +25,7 @@ import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check, Mail } from 
 import { trackFormStart, trackSubmitLeadForm } from '@/lib/gtag'
 import { estimateLeadValue, type TripLength } from '@/lib/leadValue'
 import { getStoredGclid } from '@/lib/gclid'
+import { getStoredUtm } from '@/lib/utm'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
 const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
@@ -304,6 +305,7 @@ function InquiryModal({
 
     try {
       const gclid     = getStoredGclid()
+      const utm       = getStoredUtm()
       const leadValue = estimateLeadValue({
         tripLength: tripLength as TripLength,
         groupSize:  partySize,
@@ -323,6 +325,7 @@ function InquiryModal({
           selected_option: selectedOptionLabel ?? null,
           angler_phone:    phone.trim() || null,
           gclid:           gclid ?? null,
+          utm:             utm ?? null,
         }),
       })
 
