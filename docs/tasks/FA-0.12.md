@@ -173,9 +173,12 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
 ### Not done
 
 - **Punkt 8 (partnerzy → draft)** — pominięty na wyraźną prośbę tj; bramka STOP zostaje otwarta,
-  wiersz w `docs/deferred-tasks.md` z dokładnymi dwoma slugami z odczytu 5 IX
-  (`flywise-anglers-aysen-lodge-week`, `fly-fishing-torres-del-paine-puerto-natales`;
-  `patagonia-river-guides-argentina` już `draft`, więc poza `UPDATE`). Nie wykonuję `UPDATE` sam.
+  wiersz w `docs/deferred-tasks.md`. **Lista partnerów skorygowana przez tj 5 IX:** `UPDATE`
+  obejmuje `flywise-anglers-aysen-lodge-week` i `patagonia-river-guides-argentina` (u obu pytanie
+  o prowizję bez odpowiedzi). `fly-fishing-torres-del-paine-puerto-natales` (Natales) **zostaje
+  `active`** — warunki handlowe potwierdzone mailem z 1 IX (net rates, marża 10–15% dzień /
+  20% programy); lista w sekcji Zakres tego pliku powstała przed tym mailem i była nieaktualna.
+  Nie wykonuję `UPDATE` sam.
 - **Trzy produkcyjne SELECT-y z Zakresu** (rozkład krajów, `meta_title ilike '%fjordanglers%'`, spójność
   zapisu kraju) — brak poświadczeń Supabase w tej sesji (`mcp__supabase` → `Unauthorized`, jak w
   FA-0.11/FA-1.06). Bez nich nie mogę: potwierdzić listy slugów z podwójnym sufiksem do

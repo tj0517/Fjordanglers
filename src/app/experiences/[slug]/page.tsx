@@ -499,6 +499,7 @@ export default async function ExperiencePublicPage({
             priceFrom={page.price_from ?? null}
             priceType={page.price_type ?? null}
             currency={page.currency}
+            country={page.country}
           >
             {/* These server-rendered sections go in the left column */}
 
@@ -1392,6 +1393,7 @@ export default async function ExperiencePublicPage({
                 priceFrom={page.price_from ?? null}
                 priceType={page.price_type ?? null}
                 currency={page.currency}
+                country={page.country}
               />
             </div>
           </div>

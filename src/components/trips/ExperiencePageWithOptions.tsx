@@ -47,6 +47,7 @@ interface ExperiencePageWithOptionsProps {
   priceFrom?:         number | null
   priceType?:         string | null
   currency:           string
+  country:            string
   children?:          React.ReactNode
 }
 
@@ -63,6 +64,7 @@ export function ExperiencePageWithOptions({
   priceFrom,
   priceType,
   currency,
+  country,
   children,
 }: ExperiencePageWithOptionsProps) {
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -135,6 +137,7 @@ export function ExperiencePageWithOptions({
             priceFrom={activePriceFrom}
             priceType={activePriceType}
             currency={currency}
+            country={country}
           />
         </div>
       </div>
