@@ -542,3 +542,20 @@ $ pnpm lint   # main
 ✖ 100 problems (40 errors, 60 warnings)
 → zero nowych błędów
 ```
+
+## Notatki z realizacji — hero H1, druga linijka (2026-09-06)
+
+Nie było w oryginalnym grepie (nie zawiera dosłownie "Nordic"/"Scandinavia"/"Norway, Sweden"),
+ale ten sam problem: `page.tsx:123` "In the wild North." — twierdzenie o regionie tuż pod
+eyebrow, który już mówi "Independent guides, seven countries". Zgłoszone w rozmowie, tj
+odpowiedział "yes try... fix it" — moje własne sformułowanie (nie dosłowne słowa tj):
+"With someone who lives there." Nawiązuje do pozycjonowania "independent owner-guides" z
+reszty strony zamiast powtarzać "seven countries" z eyebrow. Do potwierdzenia/poprawy jak
+reszta samodzielnie sformułowanych fragmentów w tym zadaniu.
+
+```
+$ pnpm typecheck && pnpm test -- --run && pnpm build
+tsc --noEmit → exit 0
+Test Files 4 passed (4) · Tests 21 passed (21)
+pnpm build → exit 0, 46/46 pages
+```

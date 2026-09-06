@@ -120,7 +120,7 @@ export default async function HomePage() {
           >
             Catch the fish of your life.
             <br />
-            <span style={{ color: '#E67E50' }}>In the wild North.</span>
+            <span style={{ color: '#E67E50' }}>With someone who lives there.</span>
           </h1>
           <p
             className="f-body mt-5 max-w-[460px]"
