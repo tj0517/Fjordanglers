@@ -39,4 +39,19 @@ describe('estimateLeadValue', () => {
   it('combined: 4-7 days, 4 anglers → 1800', () => {
     expect(estimateLeadValue({ tripLength: '4-7', groupSize: 4 })).toBe(1800)
   })
+
+  describe('region group rates (FA-0.13)', () => {
+    it('Argentina, 2-3 days, 2 anglers → 600 (Patagonia rate)', () => {
+      expect(estimateLeadValue({ tripLength: '2-3', groupSize: 2, location: 'Argentina' })).toBe(600)
+    })
+    it('Chile, 4-7 days, 2 anglers → 1200 (Patagonia rate)', () => {
+      expect(estimateLeadValue({ tripLength: '4-7', groupSize: 2, location: 'Chile' })).toBe(1200)
+    })
+    it('New Zealand, 2-3 days, 2 anglers → 400 (Nordic rate — NZ rates not decided, see FA-0.13 STOP)', () => {
+      expect(estimateLeadValue({ tripLength: '2-3', groupSize: 2, location: 'New Zealand' })).toBe(400)
+    })
+    it('unknown location "Atlantis" falls back to Nordic, not NaN/undefined/throw', () => {
+      expect(estimateLeadValue({ tripLength: '4-7', groupSize: 2, location: 'Atlantis' })).toBe(900)
+    })
+  })
 })

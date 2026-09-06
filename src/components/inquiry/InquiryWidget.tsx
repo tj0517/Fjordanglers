@@ -59,6 +59,8 @@ export interface InquiryWidgetProps {
   priceFrom?:           number | null
   priceType?:           string | null
   currency:             string
+  /** Country the trip page is in — used for the lead-value estimate sent to Google Ads. */
+  country:              string
 }
 
 type Step        = 'calendar' | 'form'
@@ -222,6 +224,7 @@ function InquiryModal({
   priceFrom,
   priceType,
   currency,
+  country,
   onClose,
 }: {
   tripId?:              string
@@ -235,6 +238,7 @@ function InquiryModal({
   priceFrom?:           number | null
   priceType?:           string | null
   currency:             string
+  country:              string
   onClose:              () => void
 }) {
   const [step,          setStep]          = useState<Step>('calendar')
@@ -313,6 +317,7 @@ function InquiryModal({
       const leadValue = estimateLeadValue({
         tripLength: tripLength as TripLength,
         groupSize:  partySize,
+        location:   country,
       })
 
       const res = await fetch('/api/inquiries', {
@@ -743,6 +748,7 @@ export function InquiryWidget({
   priceFrom,
   priceType,
   currency,
+  country,
 }: InquiryWidgetProps) {
   const [isOpen,      setIsOpen]      = useState(false)
   const [mounted,     setMounted]     = useState(false)
@@ -909,6 +915,7 @@ export function InquiryWidget({
           priceFrom={priceFrom}
           priceType={priceType}
           currency={currency}
+          country={country}
           onClose={closeModal}
         />,
         document.body,

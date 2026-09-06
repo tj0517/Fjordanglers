@@ -39,6 +39,7 @@ interface ExperienceTabLayoutProps {
   priceFrom?:        number | null
   priceType?:        string | null
   currency:          string
+  country:           string
   children?:         React.ReactNode
 }
 
@@ -59,6 +60,7 @@ export function ExperienceTabLayout({
   priceFrom,
   priceType,
   currency,
+  country,
   children,
 }: ExperienceTabLayoutProps) {
   const [activeTab,      setActiveTab]      = useState(0)
@@ -307,6 +309,7 @@ export function ExperienceTabLayout({
             priceFrom={activePriceFrom}
             priceType={activePriceType}
             currency={currency}
+            country={country}
           />
         </div>
       </div>
