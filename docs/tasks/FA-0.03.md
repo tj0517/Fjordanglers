@@ -2,7 +2,7 @@
 id: FA-0.03
 title: Cron sync-google-ads odpowiada na GET (Vercel cron woła GET)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -218,3 +218,7 @@ Route (app)                                Revalidate  Expire
 
 Nic poza zakresem nie napotkano.
 
+#### Uwaga z przeglądu (fa-review, 11 IX 2026)
+
+Kryterium „ręczne uruchomienie z panelu Vercel" nie zostało zweryfikowane w tym przeglądzie —
+routing `GET` działa, ale powodzenie samego syncu zależy od tokenu Google Ads (FA-0.10).

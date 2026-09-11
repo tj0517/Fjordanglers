@@ -7,10 +7,10 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 
 | id | title | diff | model | status | depends |
 |---|---|---|---|---|---|
-| FA-0.01 | Strona potwierdzenia po depozycie (`/inquiry-confirmed` → 404) | S | sonnet | review | — |
-| FA-0.02 | Redirect zalogowanych `/login` → `/dashboard` zamiast `/account` | S | sonnet | review | — |
-| FA-0.03 | Cron `sync-google-ads` odpowiada na GET | S | sonnet | review | — |
-| FA-0.04 | `AI_AUTO_REPLY_ENABLED` jako enum, nie `coerce.boolean` | S | sonnet | review | — |
+| FA-0.01 | Strona potwierdzenia po depozycie (`/inquiry-confirmed` → 404) | S | sonnet | done | — |
+| FA-0.02 | Redirect zalogowanych `/login` → `/dashboard` zamiast `/account` | S | sonnet | done | — |
+| FA-0.03 | Cron `sync-google-ads` odpowiada na GET | S | sonnet | done | — |
+| FA-0.04 | `AI_AUTO_REPLY_ENABLED` jako enum, nie `coerce.boolean` | S | sonnet | done | — |
 | FA-0.05 | Jedna ścieżka tworzenia zapytania — `source` + UTM; usunięcie `/plan-your-trip` | M | sonnet | done | FA-1.06 |
 | FA-0.06 | `requireAdmin()` we wszystkich mutujących akcjach | M | sonnet | done | — |
 | FA-0.07 | Naprawa migracji `20260815_fix_nz_species_casing.sql` (1 bajt) | S | sonnet | done | — |

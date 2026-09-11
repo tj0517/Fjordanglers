@@ -2,7 +2,7 @@
 id: FA-0.02
 title: Martwe redirecty i linki (/account, /auth/login, /admin/trips, /invite)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
