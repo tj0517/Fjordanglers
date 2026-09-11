@@ -2,26 +2,24 @@ import { type RegionGroup, getRegionGroup } from '@/lib/countries'
 
 export type TripLength = '1' | '2-3' | '4-7' | '7+'
 
-// New Zealand rates are not decided yet (tj, 2026-09-05) — using Nordic values
-// until a decision is made. Do not interpolate from NZ page prices.
 const BASE_VALUES: Record<RegionGroup, Record<TripLength, number>> = {
   Nordic: {
-    '1':   100,
-    '2-3': 400,
-    '4-7': 900,
-    '7+':  1600,
+    '1':   650,
+    '2-3': 2500,
+    '4-7': 5000,
+    '7+':  7500,
   },
   Patagonia: {
-    '1':   150,
-    '2-3': 600,
-    '4-7': 1200,
-    '7+':  2000,
+    '1':   650,
+    '2-3': 2500,
+    '4-7': 5000,
+    '7+':  7500,
   },
   'New Zealand': {
-    '1':   100,
-    '2-3': 400,
-    '4-7': 900,
-    '7+':  1600,
+    '1':   500,
+    '2-3': 1200,
+    '4-7': 3000,
+    '7+':  5000,
   },
 }
 
