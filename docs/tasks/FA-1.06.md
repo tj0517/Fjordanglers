@@ -2,7 +2,7 @@
 id: FA-1.06
 title: Typy mówią prawdę — regeneracja z baseline i usunięcie zapytań do tabel w archive
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
