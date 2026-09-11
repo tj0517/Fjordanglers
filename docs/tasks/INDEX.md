@@ -20,7 +20,7 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-0.11 | Cena mówi prawdę — jeden `formatPrice` z `currency` strony i jednostką ceny (audyt lejka 5 IX) | S | sonnet | done | — |
 | FA-0.12 | Strona mówi o swoim regionie — stopka, `/trips` per kraj, cross-sell po kraju, tytuł bez podwójnego sufiksu | M | sonnet | review | — |
 | FA-0.13 | `estimateLeadValue(location)` — wartość konwersji per destynacja | S | sonnet | done | FA-0.12 |
-| FA-0.14 | Strona hub `/patagonia` dla grupy reklam „Patagonia ogólna" | M | sonnet | todo | FA-0.11, FA-0.12 |
+| FA-0.14 | Strony hub destynacji — `/patagonia`, `/iceland`, `/new-zealand` na jednej trasie dynamicznej | M | sonnet | todo | FA-0.11, FA-0.12 |
 | FA-0.15 | Własna telemetria lejka bez cookies — `web_events` + widok `web_funnel_daily` (wyciągnięte z etapu 5) | M | sonnet | done | — |
 | FA-0.16 | SLA 48 h — data w auto-mailu, licznik i alarm w adminie, `lost_reason_code` jako lista | M | sonnet | done | — |
 | FA-0.17 | Copy przestaje obiecywać wyłącznie Skandynawię | M | sonnet | done | FA-0.12 |
