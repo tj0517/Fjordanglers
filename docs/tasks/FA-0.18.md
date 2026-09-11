@@ -20,10 +20,13 @@ owner: tj
 # FA-0.18 — `trip_country` zapisywane przy tworzeniu zapytania
 
 **Skąd to zadanie (przegląd 11 IX 2026).** Przy wycenie leadów dla FA-0.13 odczyt produkcji
-pokazał, że **47 z 92 zapytań ma `trip_country = NULL`**. Grep wyjaśnia dlaczego: w całym `src`
-nie ma ani jednego miejsca, które **zapisuje** tę kolumnę — jedyne trafienia to odczyt w
-`src/app/api/cron/offer-sla/route.ts:48,81`. Kolumna istnieje od czasów marketplace'u i nigdy
-nie została podłączona; 45 wypełnionych wierszy to wpisy ręczne albo relikt.
+pokazał, że **47 z 92 zapytań ma `trip_country = NULL`**. Kolumna istnieje od czasów
+marketplace'u. Agent AI (`src/lib/ai/inquiry-agent.ts`, Round 1) klasyfikuje kraj z treści
+wiadomości i ustawia go po fakcie dla zapytań z maila/WhatsAppa — ale tylko wtedy, gdy
+`existing.trip_country` jest pusty; ta ścieżka nie pomaga zapytaniom z formularza, bo trafiają
+tam z `trip_country = NULL` i zostają z wartością AI. Zapis ze strony przy insercie ma mieć
+pierwszeństwo — AI zostaje jako fallback. 45 wypełnionych wierszy to efekt klasyfikacji AI
+albo wpisy ręczne.
 
 Skutek: żadna metryka per destynacja nie działa i nie zadziała — ani „ile zapytań z Patagonii",
 ani „win rate per region", ani koszt per zapytanie w rozbiciu na kraje. Test Patagonii mierzy
@@ -34,7 +37,9 @@ lejek przed formularzem (`web_events`, FA-0.15), ale po formularzu ślad po dest
 - `src/app/api/inquiries/route.ts:84–140` — obie gałęzie (`trip_id` / `experience_page_id`)
   pobierają już `experience_pages` (`select('id, guide_id, experience_name')`) i wołają
   `createInquiry(...)`. To jest miejsce, w którym kraj jest znany i dziś wyrzucany.
-- `src/lib/supabase/queries.ts` — `createInquiry`, sygnatura i mapowanie pól na kolumny
+- `src/lib/inquiries/create.ts` — `createInquiry`, sygnatura i mapowanie pól na kolumny
+- `src/lib/ai/inquiry-agent.ts` — `classificationUpdate` i `runAgentRound1`: AI zapisuje
+  `trip_country` po fakcie gdy pusty; to jest fallback dla maila/WhatsAppa, nie formularz
 - `src/actions/inquiries.ts` — `createManualInquiry` (zapytania wpisywane ręcznie przez admina)
 - `src/app/api/webhooks/email-inbound/route.ts`, `src/app/api/webhooks/whatsapp/route.ts`,
   `src/actions/ai.ts` — ścieżki spoza formularza; tu kraju często nie da się ustalić przy
@@ -62,10 +67,11 @@ strony. Zapytania z maila/WhatsAppa dostają kraj najpóźniej w chwili przypisa
 - [ ] `src/app/api/inquiries/route.ts` — dodaj `country` do obu `select(...)` na
       `experience_pages` i przekaż do `createInquiry` jako `tripCountry`. Zero zmian w walidacji
       wejścia — kraj bierze się ze strony, nigdy z ciała żądania.
-- [ ] `createInquiry` w `queries.ts` — nowy opcjonalny parametr `tripCountry`, mapowany na
-      kolumnę `trip_country`. Brak → `null`, jak dziś.
-- [ ] `createManualInquiry` (`src/actions/inquiries.ts`) — jeśli admin wskazuje wyprawę,
-      kraj z tej samej strony; jeśli nie, zostaje `null`.
+- [ ] `createInquiry` w `src/lib/inquiries/create.ts` — nowy opcjonalny parametr `tripCountry`,
+      mapowany na kolumnę `trip_country`. Brak → `null`, jak dziś.
+- [ ] `createManualInquiry` (`src/actions/inquiries.ts`) — dropdown przekazuje
+      `experience_page_id`; pobierz kraj z tej samej strony i zapisz. Jeśli admin nie wskazał
+      wyprawy, zostaje `null`.
 - [ ] **Przypisanie przewodnika/wyprawy** — w miejscu, gdzie zapytanie dostaje `trip_id` albo
       `experience_page_id` po fakcie (ścieżka mailowa/WhatsApp), uzupełnij `trip_country`, jeśli
       jest `null`. Znajdź to miejsce odczytem, nie z pamięci; jeśli takich miejsc jest kilka,
@@ -80,7 +86,8 @@ strony. Zapytania z maila/WhatsAppa dostają kraj najpóźniej w chwili przypisa
 - [ ] **Czerwony dowód**: lokalnie utwórz zapytanie przez `POST /api/inquiries` dla strony z
       `country='Chile'` → `SELECT trip_country` zwraca `Chile`; to samo dla strony z `country='Iceland'`.
       Oba wyniki wklejone. Wiersz wstawiony psql-em nie zalicza tego kryterium.
-- [ ] `grep -rn "trip_country" src` → co najmniej jedno miejsce **zapisujące**, nie tylko odczyty.
+- [ ] `grep -n "trip_country\|tripCountry" src/lib/inquiries/create.ts` → parametr obecny w
+      insert (nie tylko typy — konkretne mapowanie na kolumnę).
 - [ ] Po backfillu (po „go" tj): `select coalesce(trip_country,'(null)'), count(*) from inquiries
       group by 1 order by 2 desc` — liczba NULL-i spadła o tyle, ile zapowiadał SELECT przed.
 - [ ] `supabase db diff --local` → `No schema changes found` (to zadanie nie zmienia schematu).
@@ -89,6 +96,8 @@ strony. Zapytania z maila/WhatsAppa dostają kraj najpóźniej w chwili przypisa
 
 ## Poza zakresem
 - Zgadywanie kraju z treści maila/WhatsAppa przez AI — jeśli wyprawa nie jest przypisana, zostaje `NULL`.
+- Ujednolicenie listy krajów agenta AI z `COUNTRIES` w `src/lib/countries.ts` (agent może
+  zwracać `'Other'`) — odkładamy do `docs/deferred-tasks.md`.
 - Zmiana typu kolumny na enum / FK do `countries` — etap 4, do rozważenia przy refaktorze schematu.
 - `angler_country` (kraj klienta) — inny byt, nie dotykamy.
 - Jakiekolwiek metryki i ekrany czytające `trip_country` — etap 5/6.
@@ -98,8 +107,9 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 - `UPDATE` backfillowy na produkcji — **STOP**: SELECT przed, dokładny SQL, zgoda tj.
   Zapis przez `apply_migration`/`execute_sql` w `supabase-fa` to ta sama bramka co `db push`;
   po `apply_migration` rename pliku lokalnego wg `docs/03-conventions.md`.
-- Jeśli odczyt pokaże wartości `trip_country` spoza `COUNTRIES` (literówki, skróty, `NZ`) —
-  **STOP**, nie normalizuj w locie; zgłoś listę i zaproponuj osobne zadanie.
+- Jeśli odczyt pokaże wartości `trip_country` spoza `COUNTRIES` — `'Other'` od agenta AI to
+  stan znany, zgłoś liczbę i kontynuuj; **STOP** tylko dla innych nieoczekiwanych wartości
+  (literówki, skróty, `NZ` itp.); zgłoś listę i zaproponuj osobne zadanie do ujednolicenia.
 - Jeśli miejsc przypisujących wyprawę po fakcie jest więcej niż jedno — **STOP**, wypisz i zapytaj.
 - Stan bazy ustalasz bieżącym odczytem, nigdy z pamięci ani z `database.types.ts`.
 
