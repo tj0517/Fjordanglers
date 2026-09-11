@@ -24,6 +24,8 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-0.15 | Własna telemetria lejka bez cookies — `web_events` + widok `web_funnel_daily` (wyciągnięte z etapu 5) | M | sonnet | done | — |
 | FA-0.16 | SLA 48 h — data w auto-mailu, licznik i alarm w adminie, `lost_reason_code` jako lista | M | sonnet | done | — |
 | FA-0.17 | Copy przestaje obiecywać wyłącznie Skandynawię | M | sonnet | done | FA-0.12 |
+| FA-0.18 | `inquiries.trip_country` faktycznie zapisywane — dziś nic go nie ustawia | S | sonnet | todo | — |
+| FA-0.19 | Hub prowizji ustawia `external_offer_sent` — licznik SLA bez fałszywych pozytywów | S | sonnet | todo | FA-0.16 |
 
 ## Stage 1 — schema tells the truth + event log
 
