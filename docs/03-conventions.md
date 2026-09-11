@@ -96,3 +96,9 @@ application), `offer`, `deposit`, `booking` (= paid deposit), `deal`, `guide`,
 
 Code, comments, docs, ADRs, commit messages: English. Task files and human review notes
 may be Polish. UI copy: English (site) — see brand voice in `CLAUDE.md`.
+
+## Production verification
+
+Pages that export `revalidate` serve an ISR render from before the last deploy until the
+TTL expires — run a production `curl` only after a Vercel redeploy (or with a cache-bypass
+header), otherwise the evidence refers to old code, not the current deployment.

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/server'
 import { Plus, ExternalLink } from 'lucide-react'
 import { PublishAllDraftsButton } from './PublishAllDraftsButton'
+import { formatPrice } from '@/lib/format-price'
 
 export const metadata = {
   title: 'Experience Pages — Admin',
@@ -18,7 +19,7 @@ export default async function AdminExperiencesPage() {
 
   const { data: pages } = await svc
     .from('experience_pages')
-    .select('id, experience_name, slug, country, region, status, price_from, target_species, created_at')
+    .select('id, experience_name, slug, country, region, status, price_from, price_type, currency, target_species, created_at')
     .order('created_at', { ascending: false })
 
   const rows = pages ?? []
@@ -110,7 +111,7 @@ export default async function AdminExperiencesPage() {
                 </div>
 
                 <div className="hidden sm:flex flex-col items-end gap-0.5 flex-shrink-0">
-                  <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>from €{row.price_from}</p>
+                  <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{formatPrice({ priceFrom: Number(row.price_from), priceType: (row.price_type as string | null) ?? 'per_person', currency: row.currency as string })}</p>
                   <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{date}</p>
                 </div>
 

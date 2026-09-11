@@ -2,7 +2,7 @@
 id: FA-0.11
 title: Cena mówi prawdę — jeden `formatPrice` z `currency` strony i jednostką ceny
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -219,26 +219,48 @@ patrz „Needs a decision" niżej dla dwóch decyzji do potwierdzenia przed merg
 
 ### Not done
 
-- **SELECT-y na produkcji (Argentyna/Chile/NZ)** — brak poświadczeń Supabase w tej sesji
-  (`mcp__supabase` → `Unauthorized`, brak `SUPABASE_ACCESS_TOKEN`/`SUPABASE_DB_PASSWORD`
-  w env, ten sam stan co FA-0.05/FA-1.06). Dokładne zapytania z sekcji „Zakres" poniżej —
-  wykonaj i wklej wynik przed decyzją o ewentualnym UPDATE-cie:
-  ```sql
-  select slug, country, currency, price_type, price_from, status
-  from experience_pages
-  where country in ('Argentina','Chile','New Zealand') order by country, slug;
+_(nic — wszystko zweryfikowane w rundzie 2, patrz niżej)_
 
-  select ep.slug, o.label, o.price_from, o.price_type
-  from experience_page_options o join experience_pages ep on ep.id = o.experience_page_id
-  where ep.country in ('Argentina','Chile') order by 1,2;
-  ```
-  Jeśli `currency='EUR'` na stronach Patagonii/NZ albo `price_type='per_person'` przy cenie za
-  dwóch — to bloker danych z sekcji „Bramki STOP" pliku zadania; przygotuję `UPDATE ... WHERE
-  slug IN (...)` po zobaczeniu wyniku, wykonanie zostaje po twojej stronie.
-- **Weryfikacja produkcji** (`curl fjordanglers.com/experiences/fly-fishing-bariloche-limay-manso`
-  i `fly-fishing-coyhaique-aysen` → oczekiwane `$`, nie `€`) — zgodnie z punktem 10 uzupełnień:
-  nie jest kryterium zamknięcia tego PR-a, zależy od UPDATE-u danych, który wykonujesz ty po
-  akceptacji. Krok po deployu.
+### Weryfikacja produkcji (11 IX 2026)
+
+Wykonana przez fa-reviewer w rundzie 2 przeglądu, po wykryciu pozornego blokera
+(ISR render sprzed deployu FA-0.11 — patrz niżej).
+
+**SELECT-y na produkcji (`uwxrstbplaoxfghrchcy`, supabase-fa MCP, 11 IX):**
+
+Aktywne strony Argentina/Chile/NZ — `currency` i `price_type`:
+- `fly-fishing-bariloche-limay-manso` → `USD / flat` ✓
+- `fly-fishing-coyhaique-aysen` → `USD / flat` ✓
+- `fly-fishing-torres-del-paine-puerto-natales` → `USD / flat` ✓
+- `chinook-sea-run-browns-chilean-tierra-del-fuego` → `USD / request` ✓
+- `walk-and-wade-magallanes-punta-arenas` → `USD / request` ✓
+- `fly-fishing-southland-new-zealand` → `NZD / flat` ✓
+- `fly-fishing-taupo-tongariro-central-north-island` → `NZD / flat` ✓
+- `guided-fly-fishing-central-north-island-new-zealand` → `NZD / per_person` ✓
+
+Brak `currency='EUR'` na żadnej aktywnej stronie Patagonia/NZ. UPDATE danych nie był potrzebny.
+
+**curl na produkcji (po redeployu przy rotacji kluczy Supabase):**
+
+```
+$ curl -sL https://fjordanglers.com/experiences/fly-fishing-coyhaique-aysen \
+    | grep -o 'from [^<"]*' | head -3
+from $600 per trip
+from $600 per trip
+from $600
+
+$ curl -sL https://fjordanglers.com/experiences/fly-fishing-bariloche-limay-manso \
+    | grep -o 'from [^<"]*' | head -3
+from $550 per trip
+from $550 per trip
+from $550
+```
+
+**Wcześniejszy pozorny bloker:** ok. 2 godz. przed weryfikacją na stronie Coyhaique widoczne
+było `"from €600 / person"`. Przyczyna: `export const revalidate = 3600` na stronie doświadczenia
+— Vercel serwował render ISR z przed wdrożenia FA-0.11, nie świeży fetch z DB. Redeploy
+(przy rotacji kluczy Supabase) przebudował stronę i rozbieżność zniknęła. Dane w DB były
+poprawne przez cały czas.
 
 ### Noticed, not touched (→ `docs/deferred-tasks.md`)
 

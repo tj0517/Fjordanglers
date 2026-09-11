@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { ExternalLink, Pencil } from 'lucide-react'
+import { formatPrice } from '@/lib/format-price'
 
 export const metadata = { title: 'Experience Page — Admin' }
 
@@ -89,7 +90,7 @@ export default async function AdminExperienceDetailPage({
           </div>
           <div className="px-6 pb-4">
             <Row label="URL" value={<span style={{ color: '#E67E50' }}>/experiences/{page.slug}</span>} />
-            <Row label="Price from" value={`€${page.price_from} ${page.currency}`} />
+            <Row label="Price from" value={formatPrice({ priceFrom: Number(page.price_from), priceType: (page.price_type as string | null) ?? 'per_person', currency: page.currency as string })} />
             <Row label="Season" value={page.season_start && page.season_end ? `${page.season_start} – ${page.season_end}` : '—'} />
             <Row label="Best months" value={page.best_months ?? '—'} />
             <Row label="Difficulty" value={page.difficulty ?? '—'} />
