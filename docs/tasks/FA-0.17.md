@@ -2,7 +2,7 @@
 id: FA-0.17
 title: Copy przestaje obiecywać wyłącznie Skandynawię
 stage: 0
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -542,6 +542,32 @@ $ pnpm lint   # main
 ✖ 100 problems (40 errors, 60 warnings)
 → zero nowych błędów
 ```
+
+## Zamknięcie (11 IX 2026)
+
+Weryfikacja na produkcji (curl + przeglądarka): eyebrow "Independent guides, seven countries", H1
+"Catch the fish of your life. / With someone who lives there.", podtytuł z Brynjarem/Alexem/Juanem,
+stopka "Iceland, Scandinavia, Patagonia and New Zealand". Fraza "Nordic countries" nie występuje.
+
+Pięć pozycji z "Pozostaje jawnie otwarte" zatwierdzone przez tj przez akceptację stanu produkcji
+(11 IX 2026) — każda bez zmiany kodu:
+
+1. **Eyebrow "Independent guides, seven countries"** — tekst dosłownie podany przez tj, bez
+   wątpliwości. Wdrożone w Fazie 2 dokończonej. Status: zatwierdzone.
+2. **`home-faq.tsx` trust-question mapowanie** — odpowiedź na "Why trust a Polish company for
+   Nordic fishing?" zastąpiona tekstem "Where do you operate?" (tematyczne dopasowanie agenta,
+   nie 1:1). Produkcja zaakceptowana. Status: zatwierdzone.
+3. **`home-faq.tsx` companion-question łącznikowe zdanie** — zdanie "Nordic nature is
+   extraordinary on its own." zastąpione sformułowaniem agenta: "Iceland, Norway, Sweden,
+   Finland, Argentina, Chile and New Zealand are worth the trip even without a rod." Produkcja
+   zaakceptowana. Status: zatwierdzone.
+4. **`/guides` JSON-LD `description`** — inferowane powtórzenie `metadata.description` (agent nie
+   dostał osobnego tekstu). Produkcja zaakceptowana. Status: zatwierdzone.
+5. **H1 druga linijka "With someone who lives there."** — własne sformułowanie agenta zamiast
+   "In the wild North." (patrz sekcja niżej). Produkcja zaakceptowana. Status: zatwierdzone.
+
+Liczby `20+`/`7` na stronie głównej — literały, nie liczone z bazy — osobna sprawa; zgłoszone do
+`docs/deferred-tasks.md`.
 
 ## Notatki z realizacji — hero H1, druga linijka (2026-09-06)
 
