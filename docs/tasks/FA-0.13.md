@@ -2,7 +2,7 @@
 id: FA-0.13
 title: `estimateLeadValue(location)` — wartość konwersji per destynacja
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
