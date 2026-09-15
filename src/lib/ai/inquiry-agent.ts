@@ -407,11 +407,17 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
 
   const supabase = createServiceClient()
 
-  // Save classification + priority regardless of whether we stop here or continue
-  const classUpdate: Record<string, string | null> = {}
-  if (result.trip_country) classUpdate.trip_country = result.trip_country
-  if (result.trip_type)    classUpdate.trip_type    = result.trip_type
-  if (result.priority)     classUpdate.priority     = result.priority
+  // Save classification + priority regardless of whether we stop here or continue.
+  // The country may already be known from the experience page the angler used
+  // (FA-0.18) — the AI is the fallback for inquiries that arrive without one, so
+  // it fills gaps only, exactly like rounds 2–3.
+  const { data: existing } = await supabase
+    .from('inquiries')
+    .select('trip_country, trip_type, priority')
+    .eq('id', inquiryId)
+    .single()
+
+  const classUpdate: Record<string, string | null> = classificationUpdate(result, existing ?? {})
 
   // Generate a Message-ID for this outbound email so the angler's reply lands in the same thread
   const outboundMsgId = newMessageId()

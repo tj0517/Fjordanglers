@@ -76,7 +76,7 @@ strony. Zapytania z maila/WhatsAppa dostają kraj najpóźniej w chwili przypisa
       `experience_page_id` po fakcie (ścieżka mailowa/WhatsApp), uzupełnij `trip_country`, jeśli
       jest `null`. Znajdź to miejsce odczytem, nie z pamięci; jeśli takich miejsc jest kilka,
       wypisz je i zapytaj, zanim dotkniesz więcej niż jednego.
-- [ ] **Backfill historyczny** — `UPDATE inquiries SET trip_country = ep.country FROM
+- [x] **Backfill historyczny** — `UPDATE inquiries SET trip_country = ep.country FROM
       experience_pages ep WHERE ...` dla wierszy z `trip_id`/`experience_page_id` i `trip_country IS NULL`.
       **STOP** przed wykonaniem: pokaż SELECT z liczbą wierszy i przykładami, czekaj na „go".
       Wiersze bez żadnego powiązania zostają `NULL` — nie zgaduj po treści wiadomości.
@@ -88,7 +88,7 @@ strony. Zapytania z maila/WhatsAppa dostają kraj najpóźniej w chwili przypisa
       Oba wyniki wklejone. Wiersz wstawiony psql-em nie zalicza tego kryterium.
 - [x] `grep -n "trip_country\|tripCountry" src/lib/inquiries/create.ts` → parametr obecny w
       insert (nie tylko typy — konkretne mapowanie na kolumnę).
-- [ ] Po backfillu (po „go" tj): `select coalesce(trip_country,'(null)'), count(*) from inquiries
+- [x] Po backfillu (po „go" tj): `select coalesce(trip_country,'(null)'), count(*) from inquiries
       group by 1 order by 2 desc` — liczba NULL-i spadła o tyle, ile zapowiadał SELECT przed.
 - [x] `supabase db diff --local` → `No schema changes found` (to zadanie nie zmienia schematu).
 - [x] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` bez nowych błędów vs `main`.
@@ -204,11 +204,48 @@ Po zmianie:
 [E] przewodnik z country='' → log „has no usable country" → {"trip_country":null}
 ```
 
-### Otwarte
+### Backfill produkcji — wykonany po „go" tj (15 IX 2026)
 
-- **STOP backfillu jest otwarty** — na 15 IX 2026, godz. realizacji zadania, zgody „go"
-  nie było; żaden `UPDATE` na produkcji nie został wykonany.
-- `runAgentRound1` nadpisuje `trip_country` bezwarunkowo (`inquiry-agent.ts:412`), więc przy
-  `AI_AUTO_REPLY_ENABLED=true` zapis ze strony nie ma pierwszeństwa w produkcji, mimo że
-  ma je w kodzie ścieżki formularza. Plik był poza zakresem (decyzja tj) →
-  `docs/deferred-tasks.md`, wymaga decyzji.
+Zgoda: tj, 15 IX 2026, w sesji realizacji zadania — krok 1 wykonać, krok 2 pominąć
+(SELECT pokazał 0 pasujących wierszy, więc nie ma czego uruchamiać).
+
+```sql
+update inquiries i
+set trip_country = sub.kraj
+from (
+  select i2.id, coalesce(ep_page.country, ep_trip.country) as kraj
+  from inquiries i2
+  left join experience_pages ep_page on ep_page.id = i2.experience_page_id
+  left join lateral (
+    select country from experience_pages where trip_id = i2.trip_id limit 1
+  ) ep_trip on true
+  where i2.trip_country is null
+    and (i2.trip_id is not null or i2.experience_page_id is not null)
+) sub
+where i.id = sub.id and sub.kraj is not null;
+```
+
+Po backfillu:
+```
+select coalesce(trip_country,'(null)') as kraj, count(*) from inquiries group by 1 order by 2 desc;
+ Iceland 75 | New Zealand 13 | Norway 3 | Sweden 2 | (null) 1 | Argentina 1 | Finland 1 | Chile 1 | Other 1
+```
+NULL-e 53 → 1, czyli dokładnie 52 zapowiedziane (Iceland +39, New Zealand +8, Sweden +2,
+Argentina +1, Chile +1, Norway +1). Jedyny pozostały NULL — `a1836796-…` z 12 VIII 2026 —
+nie ma `trip_id`, `experience_page_id` ani przewodnika, więc zostaje bez kraju zgodnie z zadaniem.
+
+### Runda 1 agenta — poprawiona w tym PR (decyzja tj, 15 IX 2026)
+
+`runAgentRound1` budowała własny `classUpdate` bez sprawdzenia, co jest w wierszu, i wklejała
+go do obu `update()` — przy `AI_AUTO_REPLY_ENABLED=true` kraj ze strony wyprawy ginął sekundę
+po insercie. Teraz runda 1 czyta `trip_country`/`trip_type`/`priority` przed zapisem i przechodzi
+przez ten sam `classificationUpdate()`, co rundy 2–3: kraj i typ tylko gdy puste, priorytet
+zawsze. Nowy test `src/lib/ai/inquiry-agent-round1.test.ts` (Anthropic, mail i Supabase mockowane).
+
+Czerwony dowód testu — `git stash push -- src/lib/ai/inquiry-agent.ts`:
+```
+× leaves a country that came from the experience page untouched
+× still overwrites priority — later rounds have more context
+```
+Po przywróceniu poprawki: 3/3 zielone, cała suita 59 passed / 1 failed
+(`getInquiryConfirmation.test.ts` — znany stan main).
