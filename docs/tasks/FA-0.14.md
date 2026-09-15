@@ -2,7 +2,7 @@
 id: FA-0.14
 title: Strony hub destynacji — `/patagonia`, `/iceland`, `/new-zealand` na jednej trasie dynamicznej
 stage: 0
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -208,3 +208,29 @@ FjordAnglers`, `New Zealand Fly Fishing Trips | FjordAnglers` — dokładnie jed
 **Test `getInquiryConfirmation.test.ts`** — `returns depositPaidAt: null for an unpaid inquiry`
 pada tak samo na `main` (`5c47b326`) jak na gałęzi: `AssertionError: expected null not to be null`,
 `1 failed | 56 passed (57)`. Nie wprowadzone przez to zadanie.
+
+---
+
+## Odbiór (fa-review, 15 IX 2026)
+
+Werdykt: **done**. Sześć kryteriów udowodnionych odczytem produkcji, pięć przyjętych
+z raportu jako zadeklarowane.
+
+| kryterium | werdykt | dowód (produkcja, `https://www.fjordanglers.com`) |
+|---|---|---|
+| trzy huby 200, nieznany slug 404 | udowodnione | `/patagonia` 200, `/iceland` 200, `/new-zealand` 200, `/atlantis` 404 |
+| liczba kart = wiersze `active` | udowodnione | 5 / 4 / 3 — zgodne co do jednej z odczytem bazy (Argentina 1 + Chile 4, Iceland 4, New Zealand 3) |
+| `<title>` z nazwą, jedno `FjordAnglers` | udowodnione | `Patagonia Fly Fishing Trips \| FjordAnglers` i analogicznie dla pozostałych |
+| ceny przez `formatPrice` | udowodnione | `from $550`, `from €700`, `from NZ$600` |
+| trzy trasy w `sitemap.xml` | udowodnione | trzy wpisy `<loc>` obecne |
+| stopka linkuje do hubów | udowodnione | zrzut stopki produkcji: `Iceland → /iceland` |
+
+**Zadeklarowane, nieweryfikowane w tym odbiorze:** czerwony dowód konfiguracji (tymczasowy hub
+`norway` → 200 z wpisem, 404 bez, przy niezmienionym wierszu w bazie), `<WebEventTracker />`
+i `page_view` z lokalnej bazy, `pnpm typecheck / test / build / lint`. Raport sam zgłasza swoje
+ograniczenia (weryfikacja na lokalnym stacku z sześcioma wierszami, bo `.env.local` celował
+w pusty projekt testowy) i dostarcza czerwony dowód — przyjęte bez powtarzania.
+
+**Poza kryteriami, do naprawy osobno:** `sitemap.xml` zgłasza adresy na apeksie
+(`https://fjordanglers.com/patagonia`), a kanoniczna domena to `www` — każdy zgłoszony URL
+zwraca 307. To samo dotyczy `metadataBase`, OG i JSON-LD. Wpis w `docs/deferred-tasks.md`.
