@@ -122,6 +122,28 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
 
 ## Notatki z realizacji
 
+### Decyzje i odstępstwa od pliku zadania (tj, 15 IX 2026)
+
+- **Punkt Zakresu „Przypisanie przewodnika/wyprawy po fakcie" dotyczył miejsca, które nie
+  istnieje.** Odczyt kodu: nic nie ustawia `trip_id` ani `experience_page_id` po utworzeniu
+  zapytania. Po fakcie ustawiany jest `assigned_guide_id`. Zrealizowane jako uzupełnienie
+  `trip_country` z `guides.country` w chwili przypisania przewodnika — trzy miejsca
+  (`assignGuideToInquiry`, `assignGuideSilently`, `updateInquiryGuide`), jeden helper
+  `src/lib/inquiries/trip-country.ts`, patch w tym samym `update()` co `assigned_guide_id`,
+  wartość niepusta nigdy nie nadpisywana. Decyzja tj z 15 IX; ta sama decyzja zdejmuje bramkę
+  STOP „jeśli miejsc jest więcej niż jedno".
+- **Zakres poszerzony o `src/lib/ai/inquiry-agent.ts`** — pierwotnie wprost poza zakresem.
+  Runda 1 nadpisywała `trip_country` bezwarunkowo, więc przy `AI_AUTO_REPLY_ENABLED=true`
+  kraj zapisany ze strony wyprawy i tak by ginął; runda 1 przechodzi teraz przez
+  `classificationUpdate()` jak rundy 2–3. Zatwierdzone przez tj 15 IX w sesji realizacji,
+  po przedstawieniu opcji. Pokryte testem `src/lib/ai/inquiry-agent-round1.test.ts`.
+- **Backfill produkcji wykonany 15 IX po „go" tj**: 52 wiersze, NULL-e 53 → 1. Krok 2
+  (z `guides.country`) pominięty — SELECT przed pokazał 0 pasujących wierszy. Pozostały
+  jeden NULL, `a1836796-b7f2-40ec-8f30-d4db7e6c6d6d` (12 VIII 2026), nie ma ani wyprawy,
+  ani przewodnika, więc zostaje bez kraju zgodnie z zadaniem.
+- **Status `todo → review`** ustawiony w tym pliku (frontmatter) i w `docs/tasks/INDEX.md`
+  na tej samej gałęzi.
+
 ### Co zmienione (15 IX 2026, gałąź `fix/inquiry-trip-country`)
 
 - `src/lib/inquiries/create.ts` — nowy opcjonalny `tripCountry`, mapowany na kolumnę
