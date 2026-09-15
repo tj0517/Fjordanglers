@@ -2,7 +2,7 @@
 id: FA-0.12
 title: Strona mówi o swoim regionie — stopka, `/trips` per kraj, cross-sell po kraju, tytuł bez podwójnego sufiksu
 stage: 0
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -71,9 +71,15 @@ partnera, którego nie umiemy wycenić. Tytuł strony ma jeden sufiks.
       w przeciwnym razie zostaw template. Nie edytuj danych w tym zadaniu.
 
 ## Gotowe, gdy
-- [ ] `curl -s https://fjordanglers.com/experiences/fly-fishing-bariloche-limay-manso | grep -c "Scandinavia"` → 0.
-- [ ] `curl -s "https://fjordanglers.com/trips?country=New%20Zealand" | grep -o "<title>[^<]*"` → zawiera `New Zealand`, nie `Norway`.
-- [ ] `curl -s https://fjordanglers.com/experiences/fly-fishing-coyhaique-aysen | grep -o "<title>[^<]*"` → dokładnie jedno wystąpienie `FjordAnglers`.
+Kanoniczna domena to `https://www.fjordanglers.com`; apex zwraca 307, więc `curl` bez `-L`
+zapisuje pustą stronę przekierowania i każdy `grep -c` daje fałszywe zero (pomyłka przy odbiorze 15 IX).
+Stopka linkuje dziś do hubów `/iceland`, `/chile` itd., nie do `/trips?country=…` — `grep` po `country=`
+gubi większość pozycji i też daje fałszywy wynik (druga pomyłka przy odbiorze 15 IX).
+- [x] `curl -sSL https://www.fjordanglers.com/experiences/fly-fishing-bariloche-limay-manso | grep -c "best fishing trips in Scandinavia"` → 0.
+      (Pierwotnie `grep -c "Scandinavia"` → 0. Unieważnione przez FA-0.17: nowy tagline celowo zawiera
+      „Scandinavia". Kryterium zawężone do starego taglinu — decyzja tj, 15 IX.)
+- [x] `curl -sSL "https://www.fjordanglers.com/trips?country=New%20Zealand" | grep -o "<title>[^<]*"` → zawiera `New Zealand`, nie `Norway`.
+- [x] `curl -sSL https://www.fjordanglers.com/experiences/fly-fishing-coyhaique-aysen | grep -o "<title>[^<]*"` → dokładnie jedno wystąpienie `FjordAnglers`.
 - [ ] Sekcja „More like this" pod Bariloche pokazuje wyłącznie strony z grupy Patagonia (Argentyna/Chile) — zrzut listy slugów w raporcie.
 - [ ] Stopka na stronie Bariloche zawiera `Argentina` i `Chile` w destynacjach, a nie zawiera `Denmark` (o ile Dania nie ma aktywnej strony — z odczytu).
 - [ ] Po STOP-owanym UPDATE: `select slug, status from experience_pages where slug in (<Flywise, PRG, Natales>)` → `draft`; strony zwracają 404 lub redirect, nie treść.
@@ -282,3 +288,39 @@ $ curl -s "http://localhost:3000/trips" | grep -o '<meta name="keywords"[^>]*>'
 $ curl -s "http://localhost:3000/trips" | grep -o "<title>[^<]*"
 <title>Guided Fishing Trips with Local Guides | FjordAnglers
 ```
+
+---
+
+## Odbiór (fa-review, 15 IX 2026)
+
+Werdykt: **done**. Siedem z siedmiu kryteriów udowodnionych odczytem produkcji, nie deklaracją.
+Raport agenta weryfikował logikę na czterech zasianych stronach testowych na `localhost`; ten
+odbiór powtórzył kryteria na prawdziwych danych.
+
+| kryterium | werdykt | dowód |
+|---|---|---|
+| K1 stary tagline zniknął | udowodnione | 4 trafienia `Scandinavia`, wszystkie z taglinu FA-0.17; zero po `best fishing trips in Scandinavia` |
+| K2 title per kraj | udowodnione | `<title>Guided Fishing Trips in New Zealand \| FjordAnglers` |
+| K3 jeden sufiks | udowodnione | `grep -o FjordAnglers \| wc -l` → 1 na `fly-fishing-coyhaique-aysen` |
+| K4 cross-sell po regionie | udowodnione | pod Bariloche wyłącznie Chile: `chinook-sea-run-browns-chilean-tierra-del-fuego`, `fly-fishing-torres-del-paine-puerto-natales`, `walk-and-wade-magallanes-punta-arenas` |
+| K5 stopka per region | udowodnione | zrzut stopki z produkcji: Norway, Sweden, Finland, Iceland, Argentina, Chile, New Zealand; brak Denmark (0 stron `active`) |
+| K6 partnerzy → draft | udowodnione | `flywise-anglers-aysen-lodge-week` i `patagonia-river-guides-argentina` → `draft` w bazie i `404` na produkcji; `fly-fishing-torres-del-paine-puerto-natales` → `active`, zgodnie z korektą tj z 5 IX |
+| K7 stary tag Ads | udowodnione | `grep -c "18008446689"` → 0 w HTML produkcji |
+
+**Zadeklarowane, nieweryfikowane w tym odbiorze:** `pnpm typecheck`, `pnpm test`, `pnpm build`,
+`pnpm lint` — przyjęte z raportu agenta bez powtórzenia.
+
+**Bramki STOP — obie zamknięte.** `UPDATE … status='draft'` wykonany przez tj (potwierdzony
+odczytem powyżej). Bramka o niespójnym zapisie `country` **nie odpaliła**: pełny odczyt
+`select slug, country, status from experience_pages` (29 wierszy) pokazał zapis spójny, bez
+wariantów wielkości liter. Migracja normalizująca niepotrzebna.
+
+**Odczyt produkcji wykonany przy odbiorze** (uzupełnia trzy SELECT-y, których agent nie mógł zrobić):
+kraje ze stronami `active` — Argentina 1, Chile 4, Finland 3, Iceland 4, New Zealand 3, Norway 4,
+Sweden 5. Denmark: 0.
+
+**Dwie pomyłki metodyczne przy tym odbiorze**, zapisane, żeby się nie powtórzyły: (1) kryteria
+celowały w apex `fjordanglers.com`, który zwraca 307 — `curl` bez `-L` dawał puste pliki i serię
+fałszywych zer; (2) stopkę sprawdzano przez `grep` po `country=`, podczas gdy linkuje ona do hubów
+`/iceland`, `/chile` itd. — przez kilka rund wyglądało to na usterkę K5, której nie było. Obie
+naprawione w sekcji „Gotowe, gdy" powyżej.
