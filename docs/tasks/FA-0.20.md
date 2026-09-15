@@ -2,7 +2,7 @@
 id: FA-0.20
 title: Martwy status `pending_fa_review` — default kolumny łamie własny constraint tabeli
 stage: 0
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
