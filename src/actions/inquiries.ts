@@ -26,6 +26,7 @@
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
+import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
@@ -166,6 +167,18 @@ export async function createManualInquiry(params: {
     ? `Source: ${params.channel.trim()}`
     : null
 
+  // Destination country comes from the experience page the admin picked, if any.
+  const experiencePageId = params.tripId != null && params.tripId !== '' ? params.tripId : null
+  let tripCountry: string | null = null
+  if (experiencePageId != null) {
+    const { data: expPage } = await createServiceClient()
+      .from('experience_pages')
+      .select('country')
+      .eq('id', experiencePageId)
+      .single()
+    tripCountry = expPage?.country ?? null
+  }
+
   let inquiry: { id: string; status: string }
   try {
     inquiry = await createInquiry({
@@ -176,7 +189,8 @@ export async function createManualInquiry(params: {
       requestedDates:   params.requestedDates,
       // tripId here is experience_pages.id (the dropdown value from the admin form).
       // Store as experience_page_id — trip_id FK points to the non-existent experiences table.
-      experiencePageId: params.tripId != null && params.tripId !== '' ? params.tripId : null,
+      experiencePageId,
+      tripCountry,
       message:          params.message != null && params.message.trim() !== '' ? params.message.trim() : null,
       internalNotes,
       source:           'manual',
@@ -979,11 +993,14 @@ export async function assignGuideToInquiry(
   await requireAdmin()
   const svc = createServiceClient()
 
+  // An inquiry with no destination yet (e-mail / WhatsApp) takes the guide's country.
+  const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
+
   // Update inquiry
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: updateError } = await (svc as any)
     .from('inquiries')
-    .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString() })
+    .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString(), ...countryPatch })
     .eq('id', inquiryId)
 
   if (updateError != null) {
@@ -1128,6 +1145,8 @@ export async function assignGuideSilently(
   await requireAdmin()
   const svc = createServiceClient()
 
+  const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (svc as any)
     .from('inquiries')
@@ -1135,6 +1154,7 @@ export async function assignGuideSilently(
       assigned_guide_id: guideId,
       assigned_at:       new Date().toISOString(),
       guide_acceptance:  'accepted',   // silent = no need to accept, treat as already confirmed
+      ...countryPatch,
     })
     .eq('id', inquiryId)
 
@@ -1552,10 +1572,11 @@ export async function updateInquiryGuide(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
+  const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (svc as any)
     .from('inquiries')
-    .update({ assigned_guide_id: guideId })
+    .update({ assigned_guide_id: guideId, ...countryPatch })
     .eq('id', inquiryId)
   if (error != null) return { success: false, error: error.message }
   revalidatePath('/admin/inquiries/' + inquiryId)

@@ -16,6 +16,8 @@ export interface CreateInquiryParams {
   tripId?:            string | null
   experiencePageId?:  string | null
   guideId?:           string | null
+  /** Destination country, taken from `experience_pages.country` — never from the request body. */
+  tripCountry?:       string | null
   anglerName:         string
   anglerEmail:        string
   anglerPhone?:       string | null
@@ -45,6 +47,7 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       trip_id:            params.tripId ?? null,
       experience_page_id: params.experiencePageId ?? null,
       guide_id:            params.guideId ?? null,
+      trip_country:        params.tripCountry ?? null,
       angler_name:         params.anglerName,
       angler_email:        params.anglerEmail,
       angler_phone:        params.anglerPhone ?? null,

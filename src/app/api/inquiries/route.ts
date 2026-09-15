@@ -80,6 +80,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let tripTitle: string
   let guideId: string | null = null
+  // Destination country comes from the experience page, never from the request body.
+  let tripCountry: string | null = null
 
   if (parsed.data.trip_id != null) {
     // trip_id is the expedition UUID stored in experience_pages.trip_id.
@@ -87,7 +89,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // that links to this expedition to get guide_id and title.
     const { data: expPage } = await svc
       .from('experience_pages')
-      .select('id, guide_id, experience_name')
+      .select('id, guide_id, experience_name, country')
       .eq('trip_id', parsed.data.trip_id)
       .eq('status', 'active')
       .single()
@@ -96,13 +98,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
     }
 
-    tripTitle = expPage.experience_name
-    guideId   = expPage.guide_id
+    tripTitle   = expPage.experience_name
+    guideId     = expPage.guide_id
+    tripCountry = expPage.country
   } else {
     // Fetch experience page title
     const { data: expPage } = await svc
       .from('experience_pages')
-      .select('id, guide_id, experience_name')
+      .select('id, guide_id, experience_name, country')
       .eq('id', parsed.data.experience_page_id!)
       .eq('status', 'active')
       .single()
@@ -111,8 +114,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'Experience not found' }, { status: 404 })
     }
 
-    tripTitle = expPage.experience_name
-    guideId   = expPage.guide_id
+    tripTitle   = expPage.experience_name
+    guideId     = expPage.guide_id
+    tripCountry = expPage.country
   }
 
   // Sort dates before storing
@@ -124,6 +128,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       tripId:            parsed.data.trip_id ?? null,
       experiencePageId:  parsed.data.experience_page_id ?? null,
       guideId,
+      tripCountry,
       anglerName:        parsed.data.angler_name,
       anglerEmail:       parsed.data.angler_email,
       requestedDates:    sortedDates,
