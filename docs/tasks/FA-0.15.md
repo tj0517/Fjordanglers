@@ -57,7 +57,7 @@ wysłań — niezależnie od zgody na cookies, bez identyfikowania nikogo. Jeden
       **Bez** IP, user-agenta, gclid, e-maila, session id. Indeks `(path, created_at)`. RLS: brak SELECT dla anon; INSERT tylko przez service role w route handlerze.
 - [ ] `POST /api/events` — zod, rate limit prosty (np. 60/min per ścieżka w pamięci procesu — dopuszczalny, bo to liczniki),
       `device` z `sec-ch-ua-mobile` / UA **po stronie serwera, bez zapisu UA**, `referrer_host` z nagłówka `Referer` (tylko host).
-- [ ] Klient: `page_view` z komponentu w layoucie strony doświadczenia i `/trips`, `/patagonia` (po FA-0.14);
+- [x] Klient: `page_view` z komponentu w layoucie strony doświadczenia i `/trips`; `/patagonia` podpięte w FA-0.14;
       `form_open`, `form_submit` z widgetu. `utm_campaign`/`utm_content` z `getStoredUtm()` — patrz STOP.
       `navigator.sendBeacon` z fallbackiem na `fetch keepalive`.
 - [ ] Widok `web_funnel_daily` (zwykły VIEW): `day, path, page_views, form_opens, form_submits`.
@@ -123,7 +123,7 @@ Lokalizacja `form_open` i `form_submit` w kodzie:
 4. `path` = `window.location.pathname` bez query stringu.
 5. `sendBeacon` z `Blob` (type `application/json`); handler parsuje `req.text()` → `JSON.parse` co obsługuje oba typy.
 6. UTM — WARIANT B: tylko `utm_campaign` i `utm_content` z `window.location.search` bieżącej strony, wyłącznie przy `page_view`; zero importów z `src/lib/utm.ts`.
-7. `/patagonia` — wypada (FA-0.14 `todo`); notatka dopisana do FA-0.14.
+7. `/patagonia` — wypadło z tej rundy (FA-0.14 było wtedy `todo`); podpięte w FA-0.14 (huby `/patagonia`, `/iceland`, `/new-zealand` mają `<WebEventTracker />` bez `country`).
 
 ### Pliki
 
@@ -136,7 +136,7 @@ Lokalizacja `form_open` i `form_submit` w kodzie:
 - `src/components/inquiry/InquiryWidget.tsx` — `form_open` w InquiryModal mount, `form_submit` po sukcesie POST
 - `src/lib/supabase/database.types.ts` — zregenerowane z lokalnej bazy
 - `docs/04-open-questions.md` — O-13 (GclidCapture + localStorage + PT art. 173)
-- `docs/tasks/FA-0.14.md` — notatka o podpięciu `page_view` gdy FA-0.14 zrealizowane
+- `docs/tasks/FA-0.14.md` — notatka o podpięciu `page_view` (zdjęta w FA-0.14, gdzie `<WebEventTracker />` faktycznie wszedł na huby)
 
 ### Test E2E lokalnie — runda finalna (2026-09-09)
 

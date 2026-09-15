@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { createServiceClient } from '@/lib/supabase/server'
 import { BLOG_POSTS } from '@/lib/blog-data'
+import { DESTINATION_HUBS } from '@/lib/destinations'
 
 export const revalidate = 3600
 
@@ -10,6 +11,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date()
 
   // ── Static pages ──────────────────────────────────────────────────────────
+  const destinationHubPages: MetadataRoute.Sitemap = DESTINATION_HUBS.map(hub => ({
+    url:             `${BASE}/${hub.slug}`,
+    lastModified:    now,
+    changeFrequency: 'weekly' as const,
+    priority:        0.85,
+  }))
+
   const staticPages: MetadataRoute.Sitemap = [
     { url: BASE,                              lastModified: now, changeFrequency: 'weekly',  priority: 1.00 },
     { url: `${BASE}/trips`,                   lastModified: now, changeFrequency: 'daily',   priority: 0.90 },
@@ -64,5 +72,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Fail silently — sitemap degrades to static pages only
   }
 
-  return [...staticPages, ...blogPages, ...experiencePages, ...guidePages]
+  return [...staticPages, ...destinationHubPages, ...blogPages, ...experiencePages, ...guidePages]
 }
