@@ -2,7 +2,7 @@
 id: FA-0.18
 title: `inquiries.trip_country` faktycznie zapisywane — dziś nic go nie ustawia
 stage: 0
-status: todo
+status: review
 difficulty: S
 model: sonnet
 model_approved:
@@ -55,7 +55,7 @@ strony. Zapytania z maila/WhatsAppa dostają kraj najpóźniej w chwili przypisa
 `select trip_country, count(*) from inquiries group by 1` przestaje być zdominowane przez NULL.
 
 ## Zakres
-- [ ] **Odczyt bieżącego stanu** (przez `supabase-fa`, tylko SELECT, wklej do raportu):
+- [x] **Odczyt bieżącego stanu** (przez `supabase-fa`, tylko SELECT, wklej do raportu):
       ```sql
       select coalesce(trip_country,'(null)') as kraj, count(*) from inquiries group by 1 order by 2 desc;
       select source, count(*) filter (where trip_country is null) as bez_kraju, count(*) as razem
@@ -64,35 +64,35 @@ strony. Zapytania z maila/WhatsAppa dostają kraj najpóźniej w chwili przypisa
       where i.trip_country is null and (i.trip_id is not null or i.experience_page_id is not null);
       ```
       Ostatnie zapytanie mówi, ile wierszy da się uzupełnić backfillem bez zgadywania.
-- [ ] `src/app/api/inquiries/route.ts` — dodaj `country` do obu `select(...)` na
+- [x] `src/app/api/inquiries/route.ts` — dodaj `country` do obu `select(...)` na
       `experience_pages` i przekaż do `createInquiry` jako `tripCountry`. Zero zmian w walidacji
       wejścia — kraj bierze się ze strony, nigdy z ciała żądania.
-- [ ] `createInquiry` w `src/lib/inquiries/create.ts` — nowy opcjonalny parametr `tripCountry`,
+- [x] `createInquiry` w `src/lib/inquiries/create.ts` — nowy opcjonalny parametr `tripCountry`,
       mapowany na kolumnę `trip_country`. Brak → `null`, jak dziś.
-- [ ] `createManualInquiry` (`src/actions/inquiries.ts`) — dropdown przekazuje
+- [x] `createManualInquiry` (`src/actions/inquiries.ts`) — dropdown przekazuje
       `experience_page_id`; pobierz kraj z tej samej strony i zapisz. Jeśli admin nie wskazał
       wyprawy, zostaje `null`.
-- [ ] **Przypisanie przewodnika/wyprawy** — w miejscu, gdzie zapytanie dostaje `trip_id` albo
+- [x] **Przypisanie przewodnika/wyprawy** — w miejscu, gdzie zapytanie dostaje `trip_id` albo
       `experience_page_id` po fakcie (ścieżka mailowa/WhatsApp), uzupełnij `trip_country`, jeśli
       jest `null`. Znajdź to miejsce odczytem, nie z pamięci; jeśli takich miejsc jest kilka,
       wypisz je i zapytaj, zanim dotkniesz więcej niż jednego.
-- [ ] **Backfill historyczny** — `UPDATE inquiries SET trip_country = ep.country FROM
+- [x] **Backfill historyczny** — `UPDATE inquiries SET trip_country = ep.country FROM
       experience_pages ep WHERE ...` dla wierszy z `trip_id`/`experience_page_id` i `trip_country IS NULL`.
       **STOP** przed wykonaniem: pokaż SELECT z liczbą wierszy i przykładami, czekaj na „go".
       Wiersze bez żadnego powiązania zostają `NULL` — nie zgaduj po treści wiadomości.
-- [ ] Regeneracja typów, jeśli cokolwiek zmieni się w schemacie (nie powinno — kolumna istnieje).
+- [x] Regeneracja typów, jeśli cokolwiek zmieni się w schemacie (nie powinno — kolumna istnieje).
 
 ## Gotowe, gdy
-- [ ] **Czerwony dowód**: lokalnie utwórz zapytanie przez `POST /api/inquiries` dla strony z
+- [x] **Czerwony dowód**: lokalnie utwórz zapytanie przez `POST /api/inquiries` dla strony z
       `country='Chile'` → `SELECT trip_country` zwraca `Chile`; to samo dla strony z `country='Iceland'`.
       Oba wyniki wklejone. Wiersz wstawiony psql-em nie zalicza tego kryterium.
-- [ ] `grep -n "trip_country\|tripCountry" src/lib/inquiries/create.ts` → parametr obecny w
+- [x] `grep -n "trip_country\|tripCountry" src/lib/inquiries/create.ts` → parametr obecny w
       insert (nie tylko typy — konkretne mapowanie na kolumnę).
-- [ ] Po backfillu (po „go" tj): `select coalesce(trip_country,'(null)'), count(*) from inquiries
+- [x] Po backfillu (po „go" tj): `select coalesce(trip_country,'(null)'), count(*) from inquiries
       group by 1 order by 2 desc` — liczba NULL-i spadła o tyle, ile zapowiadał SELECT przed.
-- [ ] `supabase db diff --local` → `No schema changes found` (to zadanie nie zmienia schematu).
-- [ ] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` bez nowych błędów vs `main`.
-- [ ] Status `todo → review` tu i w `INDEX.md`, w tym samym PR.
+- [x] `supabase db diff --local` → `No schema changes found` (to zadanie nie zmienia schematu).
+- [x] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` bez nowych błędów vs `main`.
+- [x] Status `todo → review` tu i w `INDEX.md`, w tym samym PR.
 
 ## Poza zakresem
 - Zgadywanie kraju z treści maila/WhatsAppa przez AI — jeśli wyprawa nie jest przypisana, zostaje `NULL`.
@@ -121,3 +121,153 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
 ```
 
 ## Notatki z realizacji
+
+### Decyzje i odstępstwa od pliku zadania (tj, 15 IX 2026)
+
+- **Punkt Zakresu „Przypisanie przewodnika/wyprawy po fakcie" dotyczył miejsca, które nie
+  istnieje.** Odczyt kodu: nic nie ustawia `trip_id` ani `experience_page_id` po utworzeniu
+  zapytania. Po fakcie ustawiany jest `assigned_guide_id`. Zrealizowane jako uzupełnienie
+  `trip_country` z `guides.country` w chwili przypisania przewodnika — trzy miejsca
+  (`assignGuideToInquiry`, `assignGuideSilently`, `updateInquiryGuide`), jeden helper
+  `src/lib/inquiries/trip-country.ts`, patch w tym samym `update()` co `assigned_guide_id`,
+  wartość niepusta nigdy nie nadpisywana. Decyzja tj z 15 IX; ta sama decyzja zdejmuje bramkę
+  STOP „jeśli miejsc jest więcej niż jedno".
+- **Zakres poszerzony o `src/lib/ai/inquiry-agent.ts`** — pierwotnie wprost poza zakresem.
+  Runda 1 nadpisywała `trip_country` bezwarunkowo, więc przy `AI_AUTO_REPLY_ENABLED=true`
+  kraj zapisany ze strony wyprawy i tak by ginął; runda 1 przechodzi teraz przez
+  `classificationUpdate()` jak rundy 2–3. Zatwierdzone przez tj 15 IX w sesji realizacji,
+  po przedstawieniu opcji. Pokryte testem `src/lib/ai/inquiry-agent-round1.test.ts`.
+- **Backfill produkcji wykonany 15 IX po „go" tj**: 52 wiersze, NULL-e 53 → 1. Krok 2
+  (z `guides.country`) pominięty — SELECT przed pokazał 0 pasujących wierszy. Pozostały
+  jeden NULL, `a1836796-b7f2-40ec-8f30-d4db7e6c6d6d` (12 VIII 2026), nie ma ani wyprawy,
+  ani przewodnika, więc zostaje bez kraju zgodnie z zadaniem.
+- **Status `todo → review`** ustawiony w tym pliku (frontmatter) i w `docs/tasks/INDEX.md`
+  na tej samej gałęzi.
+
+### Co zmienione (15 IX 2026, gałąź `fix/inquiry-trip-country`)
+
+- `src/lib/inquiries/create.ts` — nowy opcjonalny `tripCountry`, mapowany na kolumnę
+  `trip_country` w insercie (`create.ts:20` typ, `create.ts:48` mapowanie).
+- `src/app/api/inquiries/route.ts` — `country` dodane do obu `select(...)` na
+  `experience_pages` (gałąź `trip_id` i gałąź `experience_page_id`), przekazane jako
+  `tripCountry`. Schemat Zod nietknięty — kraj nie może przyjść z ciała żądania.
+- `src/actions/inquiries.ts` `createManualInquiry` — kraj pobierany ze strony wskazanej
+  w dropdownie (`params.tripId` to `experience_pages.id`); bez wyprawy zostaje `null`.
+- `src/lib/inquiries/trip-country.ts` (nowy) — `tripCountryPatchFromGuide(inquiryId, guideId)`
+  zwraca `{ trip_country }` tylko gdy zapytanie nie ma jeszcze kraju, a przewodnik ma kraj
+  z `COUNTRIES`; w przeciwnym razie `{}`. Nie robi własnego `update()` — patch jest wklejany
+  do tego samego `update()`, który zapisuje `assigned_guide_id`.
+- Trzy miejsca przypisujące przewodnika po fakcie (korekta zakresu tj z 15 IX — `trip_id` /
+  `experience_page_id` po utworzeniu nie ustawia nic): `assignGuideToInquiry` (`:996`),
+  `assignGuideSilently` (`:1147`), `updateInquiryGuide` (`:1574`).
+- Bez migracji — kolumna istnieje; `supabase db diff --local` → `No schema changes found`.
+  Typów nie regenerowano (schemat bez zmian).
+
+### Odczyt produkcji przed backfillem (`uwxrstbplaoxfghrchcy`, 15 IX 2026)
+
+```
+select coalesce(trip_country,'(null)') as kraj, count(*) from inquiries group by 1 order by 2 desc;
+ (null) 53 | Iceland 36 | New Zealand 5 | Norway 2 | Other 1 | Finland 1      → razem 98
+
+select source, count(*) filter (where trip_country is null) as bez_kraju, count(*) as razem
+from inquiries group by 1 order by 3 desc;
+ (null) 39/84 | web_form 14/14
+
+select count(*) from inquiries i
+where i.trip_country is null and (i.trip_id is not null or i.experience_page_id is not null);
+ 52
+
+select count(*) from inquiries where trip_country is null
+  and assigned_guide_id is not null and trip_id is null and experience_page_id is null;
+ 0
+```
+
+Rozbicie tych 52: 12 po `experience_page_id`, 40 po `trip_id`, 0 bez dopasowania.
+Żaden `trip_id` nie wskazuje więcej niż jednej strony, więc kraj jest jednoznaczny.
+Krok 2 backfillu (z `guides.country`) naprawiłby **0 wierszy** — zostaje jako procedura
+na przyszłość, nie ma czego uruchamiać.
+
+Wartości spoza `COUNTRIES`: `'Other'` ×1 (znany stan, agent AI) — zgłoszone, nie ruszone.
+`guides.country` = `''` u dwóch przewodników → `docs/deferred-tasks.md`.
+
+### Dowody lokalne (stack lokalny, `AI_AUTO_REPLY_ENABLED=false`, `RESEND_API_KEY` atrapa)
+
+Skrypty jednorazowe (niecommitowane) uruchamiane przez `pnpm dlx tsx` — prawdziwy handler
+`POST` i prawdziwe server actions, nie reimplementacje. Dla akcji z `requireAdmin()`
+`next/headers` i `next/cache` podmienione na atrapy (słoik na ciasteczka / no-op), a sesja
+jest prawdziwa: konto `fa018-admin@example.invalid` z `profiles.role='admin'`, logowanie
+przez `signInWithPassword`, token wpisany do słoika przez `auth.setSession`. Strażnik
+**nie jest obchodzony** — działa na tej sesji.
+
+Czerwony przebieg (kod sprzed zmiany, `git stash push -- src`):
+```
+[Chile]   POST /api/inquiries → 201 … "trip_country":null
+[Iceland] POST /api/inquiries → 201 … "trip_country":null
+[A after] assignGuideToInquiry → "assigned_guide_id":"e0fd7188…","trip_country":null
+```
+
+Po zmianie:
+```
+[Chile]   POST /api/inquiries → 201 {"id":"289e2a32-…","status":"pending"}
+[Chile]   SELECT → {"source":"web_form","experience_page_id":"0ed4d6f8-…","trip_country":"Chile"}
+[Iceland] POST /api/inquiries → 201 {"id":"9c6d0b32-…","status":"pending"}
+[Iceland] SELECT → {"source":"web_form","experience_page_id":"18fd2970-…","trip_country":"Iceland"}
+
+[A before] {"source":"email","assigned_guide_id":null,"trip_country":null}
+[B before] {"source":"email","assigned_guide_id":null,"trip_country":"Chile"}
+[A after ] {"assigned_guide_id":"594ec412-…","trip_country":"Norway"}     ← uzupełnione
+[B after ] {"assigned_guide_id":"594ec412-…","trip_country":"Chile"}      ← nienadpisane
+
+[New Zealand page] createManualInquiry → {"source":"manual","trip_country":"New Zealand"}
+[no page picked]   createManualInquiry → {"source":"manual","trip_country":null}
+
+[C] assignGuideSilently  → {"trip_country":"Sweden"}
+[D] updateInquiryGuide   → {"trip_country":"Sweden"}
+[E] przewodnik z country='' → log „has no usable country" → {"trip_country":null}
+```
+
+### Backfill produkcji — wykonany po „go" tj (15 IX 2026)
+
+Zgoda: tj, 15 IX 2026, w sesji realizacji zadania — krok 1 wykonać, krok 2 pominąć
+(SELECT pokazał 0 pasujących wierszy, więc nie ma czego uruchamiać).
+
+```sql
+update inquiries i
+set trip_country = sub.kraj
+from (
+  select i2.id, coalesce(ep_page.country, ep_trip.country) as kraj
+  from inquiries i2
+  left join experience_pages ep_page on ep_page.id = i2.experience_page_id
+  left join lateral (
+    select country from experience_pages where trip_id = i2.trip_id limit 1
+  ) ep_trip on true
+  where i2.trip_country is null
+    and (i2.trip_id is not null or i2.experience_page_id is not null)
+) sub
+where i.id = sub.id and sub.kraj is not null;
+```
+
+Po backfillu:
+```
+select coalesce(trip_country,'(null)') as kraj, count(*) from inquiries group by 1 order by 2 desc;
+ Iceland 75 | New Zealand 13 | Norway 3 | Sweden 2 | (null) 1 | Argentina 1 | Finland 1 | Chile 1 | Other 1
+```
+NULL-e 53 → 1, czyli dokładnie 52 zapowiedziane (Iceland +39, New Zealand +8, Sweden +2,
+Argentina +1, Chile +1, Norway +1). Jedyny pozostały NULL — `a1836796-…` z 12 VIII 2026 —
+nie ma `trip_id`, `experience_page_id` ani przewodnika, więc zostaje bez kraju zgodnie z zadaniem.
+
+### Runda 1 agenta — poprawiona w tym PR (decyzja tj, 15 IX 2026)
+
+`runAgentRound1` budowała własny `classUpdate` bez sprawdzenia, co jest w wierszu, i wklejała
+go do obu `update()` — przy `AI_AUTO_REPLY_ENABLED=true` kraj ze strony wyprawy ginął sekundę
+po insercie. Teraz runda 1 czyta `trip_country`/`trip_type`/`priority` przed zapisem i przechodzi
+przez ten sam `classificationUpdate()`, co rundy 2–3: kraj i typ tylko gdy puste, priorytet
+zawsze. Nowy test `src/lib/ai/inquiry-agent-round1.test.ts` (Anthropic, mail i Supabase mockowane).
+
+Czerwony dowód testu — `git stash push -- src/lib/ai/inquiry-agent.ts`:
+```
+× leaves a country that came from the experience page untouched
+× still overwrites priority — later rounds have more context
+```
+Po przywróceniu poprawki: 3/3 zielone, cała suita 59 passed / 1 failed
+(`getInquiryConfirmation.test.ts` — znany stan main).
