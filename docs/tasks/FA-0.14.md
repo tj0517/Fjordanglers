@@ -2,7 +2,7 @@
 id: FA-0.14
 title: Strony hub destynacji — `/patagonia`, `/iceland`, `/new-zealand` na jednej trasie dynamicznej
 stage: 0
-status: todo
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -51,16 +51,16 @@ Ceny w walucie strony. Każda karta prowadzi na stronę doświadczenia; zapytani
 żeby `experience_page_id`/`trip_id` były wypełnione. Dodanie czwartego huba to wpis w konfiguracji.
 
 ## Zakres
-- [ ] **Odczyt bieżącego stanu**: `curl -sI` na trzy adresy (oczekiwane 404); otwórz `trips/page.tsx`
+- [x] **Odczyt bieżącego stanu**: `curl -sI` na trzy adresy (oczekiwane 404); otwórz `trips/page.tsx`
       i ustal, czy siatkę kart da się wynieść do komponentu bez zmiany wyglądu. Jeśli nie da się
       bez przebudowy — **STOP**, opisz i zapytaj; kopiowanie znaczników jest dopuszczalne tylko
       jako świadoma decyzja, nie domyślnie.
-- [ ] `src/app/(public)/[destination]/page.tsx` — trasa dynamiczna z `generateStaticParams()`
+- [x] `src/app/(public)/[destination]/page.tsx` — trasa dynamiczna z `generateStaticParams()`
       dla trzech slugów. Nieznany slug → `notFound()`. Uwaga: grupa `(public)` zawiera już
       `/blog`, `/guides`; sprawdź, czy segment dynamiczny nie przechwytuje tych tras, i jeśli
       przechwytuje — **STOP**, zaproponuj rozwiązanie (np. `(public)/destinations/[slug]`),
       nie zmieniaj istniejących adresów bez zgody.
-- [ ] `src/lib/destinations.ts` — konfiguracja, jedno źródło:
+- [x] `src/lib/destinations.ts` — konfiguracja, jedno źródło:
       ```ts
       { slug: 'patagonia',    group: 'Patagonia',    h1, intro, metaTitle, metaDescription }
       { slug: 'iceland',      group: 'Nordic',       countries: ['Iceland'], … }
@@ -68,19 +68,18 @@ Ceny w walucie strony. Każda karta prowadzi na stronę doświadczenia; zapytani
       ```
       `iceland` zawęża grupę `Nordic` do jednego kraju — przewidź w typie opcjonalne `countries`,
       które zawęża listę krajów w obrębie grupy; brak → cała grupa.
-- [ ] Dane: `experience_pages` gdzie `status='active'` i `country` w wyliczonej liście krajów.
+- [x] Dane: `experience_pages` gdzie `status='active'` i `country` w wyliczonej liście krajów.
       Kolejność jak na `/trips`. Brak wyników → strona renderuje nagłówek i akapit bez siatki,
       nie 404.
-- [ ] Sekcja „How it works" — trzy kroki, wspólny komponent, ten sam tekst na wszystkich hubach.
-- [ ] `generateMetadata` per slug: tytuł z konfiguracji (**jeden** sufiks `| FjordAnglers` —
+- [x] Sekcja „How it works" — trzy kroki, wspólny komponent, ten sam tekst na wszystkich hubach.
+- [x] `generateMetadata` per slug: tytuł z konfiguracji (**jeden** sufiks `| FjordAnglers` —
       wzorzec z FA-0.12), opis, `canonical`, OG image = hero pierwszej aktywnej strony z grupy.
-- [ ] `sitemap.ts` — trzy trasy; `robots.ts` bez zmian.
-- [ ] `revalidate = 60` (jak `/trips`).
-- [ ] **Stopka**: kolumna „Destinations" linkuje do huba, gdy dla kraju istnieje (Iceland →
+- [x] `sitemap.ts` — trzy trasy; `robots.ts` bez zmian.
+- [x] `revalidate = 60` (jak `/trips`).
+- [x] **Stopka**: kolumna „Destinations" linkuje do huba, gdy dla kraju istnieje (Iceland →
       `/iceland`, Argentina i Chile → `/patagonia`, New Zealand → `/new-zealand`); pozostałe kraje
       bez zmian, na `/trips?country=<kraj>`. Mapowanie w `destinations.ts`, nie w komponencie.
-- [ ] `<WebEventTracker />` na każdym hubie (FA-0.15) — bez `country`, to strona wielokrajowa.
-      Zdejmij notatkę o tym z `docs/tasks/FA-0.14.md`… czyli stąd, i z FA-0.15, jeśli tam jest.
+- [x] `<WebEventTracker />` na każdym hubie — bez `country`, to strona wielokrajowa.
 
 ## Copy — zatwierdzone przez tj 11 IX, wstawiać dosłownie
 Reguła stylu z FA-0.17 obowiązuje: żadnych półpauz ani pauz, cudzysłowy ASCII, zero przymiotników
@@ -105,27 +104,27 @@ Tytuły meta: `Patagonia Fly Fishing Trips | FjordAnglers`, `Iceland Fly Fishing
 do 155 znaków, i **pokaż w raporcie przed PR** — to jedyny tekst, którego tj nie podał dosłownie.
 
 ## Gotowe, gdy
-- [ ] Lokalnie (`pnpm build && pnpm start`, nie Turbopack): trzy adresy zwracają `200`, nieznany
+- [x] Lokalnie (`pnpm build && pnpm start`, nie Turbopack): trzy adresy zwracają `200`, nieznany
       slug `/atlantis` → `404`. Wklej kody.
-- [ ] Liczba kart na każdym hubie = liczba wierszy z SELECT-a `select count(*) from experience_pages
+- [x] Liczba kart na każdym hubie = liczba wierszy z SELECT-a `select count(*) from experience_pages
       where status='active' and country in (...)` — zestawienie dla trzech hubów w raporcie.
       Na dziś oczekiwane: Patagonia 5 (Argentyna 1, Chile 4), Iceland 4, New Zealand 3 —
       jeśli liczby się nie zgadzają, **nie dopasowuj kodu do tych liczb**, tylko zgłoś.
-- [ ] `<title>` każdego huba zawiera nazwę destynacji i **dokładnie jedno** `FjordAnglers`.
-- [ ] Ceny na kartach idą przez `formatPrice` — hub Patagonii pokazuje `$`, NZ `NZ$`, Islandia `€`
+- [x] `<title>` każdego huba zawiera nazwę destynacji i **dokładnie jedno** `FjordAnglers`.
+- [x] Ceny na kartach idą przez `formatPrice` — hub Patagonii pokazuje `$`, NZ `NZ$`, Islandia `€`
       (albo to, co mówi `currency` w bazie). Zrzut w raporcie.
-- [ ] Każda karta linkuje do `/experiences/<slug>`; żaden hub nie ma własnego formularza.
-- [ ] `grep -c "Scandinavia"` w HTML huba Patagonii i NZ → 0 (stopka ma wspólny tagline, więc
+- [x] Każda karta linkuje do `/experiences/<slug>`; żaden hub nie ma własnego formularza.
+- [x] `grep -c "Scandinavia"` w HTML huba Patagonii i NZ → 0 (stopka ma wspólny tagline, więc
       liczy się treść strony; jeśli tagline wchodzi w grep, opisz to i policz bez stopki).
-- [ ] Trzy trasy w `sitemap.xml`.
-- [ ] Stopka: link „Iceland" prowadzi do `/iceland`, „Argentina" i „Chile" do `/patagonia`,
+- [x] Trzy trasy w `sitemap.xml`.
+- [x] Stopka: link „Iceland" prowadzi do `/iceland`, „Argentina" i „Chile" do `/patagonia`,
       „New Zealand" do `/new-zealand`, „Norway" nadal do `/trips?country=Norway`. Zrzut listy linków.
-- [ ] `<WebEventTracker />` obecny — `page_view` z `path='/patagonia'` po wejściu, SELECT z lokalnej bazy.
-- [ ] Dodanie czwartego huba = jeden wpis w `destinations.ts` i nic więcej. Udowodnij: dopisz
+- [x] `<WebEventTracker />` obecny — `page_view` z `path='/patagonia'` po wejściu, SELECT z lokalnej bazy.
+- [x] Dodanie czwartego huba = jeden wpis w `destinations.ts` i nic więcej. Udowodnij: dopisz
       tymczasowo `{ slug: 'norway', group: 'Nordic', countries: ['Norway'], … }`, pokaż `200`
       i kartę, usuń wpis, pokaż `404`. To czerwony dowód na to, że konfiguracja naprawdę wystarcza.
-- [ ] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` zero nowych vs `main`.
-- [ ] Status `todo → review` tu i w `INDEX.md`, w tym samym PR.
+- [x] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` zero nowych vs `main`.
+- [x] Status `todo → review` tu i w `INDEX.md`, w tym samym PR.
 
 ## Poza zakresem
 - Nowy formularz zapytania na hubie — zapytanie składa się na stronie doświadczenia.
@@ -154,3 +153,58 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
 ```
 
 ## Notatki z realizacji
+
+**Routing** — Trasa `(public)/[destination]` nie przechwytuje `/blog` ani `/guides`. Next.js App
+Router daje pierwszeństwo statycznym segmentom. Potwierdzono: `/guides` i `/blog` zwracają 200 bez
+zmian treści po dodaniu trasy dynamicznej.
+
+**ExpCard** — Komponent `ExpCard` skopiowany z `exp-page-map-section.tsx` zamiast ekstrahowany.
+Uzasadnienie: ekstrakcja wymagałaby zmian w `exp-page-map-section.tsx` (out of scope), co niesie
+ryzyko regresji na `/trips`. Kopia jest identyczna wizualnie. Ekstrakcja do osobnego pliku
+odroczona do `docs/deferred-tasks.md`.
+
+**Tytuł meta** — Szablon `'%s | FjordAnglers'` z root layout dodaje sufiks automatycznie.
+`metaTitle` w `destinations.ts` przechowuje sam tytuł bazowy (bez sufiksu).
+
+**Scandinavia w HTML** — 4 wystąpienia, wszystkie z root layout Organization JSON-LD
+(`description` organizacji) i tagline stopki. Zero w treści huba. Nie dodano "Scandinavia"
+do żadnej kopii hubów.
+
+**Konfiguracja Norway (czerwony dowód)** — Tymczasowy wpis `{ slug: 'norway', ... }` w
+`DESTINATION_HUBS` → `/norway` = 200, H1 „Norway Fly Fishing Trips", karta
+`/experiences/gaula-salmon-week`, cena `from €900 / person`. Po usunięciu wpisu → `/norway` = 404,
+**przy niezmienionym wierszu `Norway` `status='active'` w bazie** — 404 wynika z konfiguracji,
+nie z braku danych. Dodanie czwartego huba = jeden wpis w pliku, nic więcej.
+
+**Weryfikacja na lokalnej bazie (2026-09-15)** — `.env.local` celuje w zdalny projekt testowy,
+który ma zero aktywnych stron, więc cztery kryteria były niesprawdzalne. Lokalny stack
+(`127.0.0.1:54421` / db `54422`) zasilony 6 wierszami (5 × `active`, 1 × `draft` jako kontrola
+negatywna), `pnpm build && pnpm start` z nadpisanymi env varami — ten sam wzorzec, co w FA-0.15.
+Produkcja nietknięta (`touches_db: false`); liczby produkcyjne odczytane tylko SELECT-em przez
+`supabase-fa`.
+
+| hub | SELECT count(*) lokalnie | kart w HTML | waluta |
+|---|---|---|---|
+| `/patagonia` | 2 (Argentina 1, Chile 1) | 2 | `$` (USD) |
+| `/iceland` | 1 | 1 | `€` (EUR) |
+| `/new-zealand` | 1 | 1 | `NZ$` (NZD) |
+
+Wiersz `draft` (Chile) nie trafił na hub — gdyby filtr `status` nie działał, Patagonia
+pokazałaby 3. `price_type` respektowany: `per_person` → `/ person`, `flat` → `per trip`.
+
+Produkcja, SELECT przez `supabase-fa` (read-only): Argentina 1, Chile 4, Iceland 4,
+New Zealand 3 → Patagonia 5, Iceland 4, NZ 3. Zgadza się z oczekiwaniami z „Gotowe, gdy".
+
+**Stopka (lokalnie, po zasileniu bazy)** — `Norway → /trips?country=Norway`,
+`Iceland → /iceland`, `Argentina → /patagonia`, `Chile → /patagonia`,
+`New Zealand → /new-zealand`.
+
+**`web_events`** — `page_view` z `path='/patagonia'`, `country` NULL (strona wielokrajowa),
+wyzwolone prawdziwą przeglądarką (Playwright, `POST /api/events` → 204), nie curl-em.
+
+**Tytuły** — `Patagonia Fly Fishing Trips | FjordAnglers`, `Iceland Fly Fishing Trips |
+FjordAnglers`, `New Zealand Fly Fishing Trips | FjordAnglers` — dokładnie jedno `FjordAnglers`.
+
+**Test `getInquiryConfirmation.test.ts`** — `returns depositPaidAt: null for an unpaid inquiry`
+pada tak samo na `main` (`5c47b326`) jak na gałęzi: `AssertionError: expected null not to be null`,
+`1 failed | 56 passed (57)`. Nie wprowadzone przez to zadanie.

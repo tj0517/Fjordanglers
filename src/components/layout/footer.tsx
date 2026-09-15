@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { getActiveDestinationCountries } from '@/lib/supabase/queries'
+import { getHubSlugForCountry } from '@/lib/destinations'
 
 export async function SiteFooter() {
   const destinations = await getActiveDestinationCountries()
@@ -66,17 +67,23 @@ export async function SiteFooter() {
               Destinations
             </p>
             <div className="flex flex-col gap-3">
-              {destinations.map(country => (
-                <Link
-                  key={country}
-                  href={`/trips?country=${encodeURIComponent(country)}`}
-                  className="f-body text-[14px] inline-flex items-center gap-2 hover:opacity-70 transition-opacity"
-                  style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}
-                >
-                  <CountryFlag country={country} size={16} />
-                  <span>{country}</span>
-                </Link>
-              ))}
+              {destinations.map(country => {
+                const hubSlug = getHubSlugForCountry(country)
+                const href = hubSlug != null
+                  ? `/${hubSlug}`
+                  : `/trips?country=${encodeURIComponent(country)}`
+                return (
+                  <Link
+                    key={country}
+                    href={href}
+                    className="f-body text-[14px] inline-flex items-center gap-2 hover:opacity-70 transition-opacity"
+                    style={{ color: 'rgba(255,255,255,0.55)', textDecoration: 'none' }}
+                  >
+                    <CountryFlag country={country} size={16} />
+                    <span>{country}</span>
+                  </Link>
+                )
+              })}
             </div>
           </div>
 
