@@ -2,15 +2,15 @@
 id: FA-1.03
 title: Maszyna stanów §4 + inquiry_events + transition() — statusy „na kogo czekamy"
 stage: 1
-status: review
+status: todo
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
-branch: feat/state-machine-events
+branch: stage-1/state-machine-events
 depends_on: [FA-1.01]
-blocked_by_questions: []
+blocked_by_questions: [O-14]
 touches_db: true
 touches_prod: false
 estimate_h: 10
@@ -38,16 +38,7 @@ Statusy mają mówić, na kogo czekamy, a nie w którym kroku liniowego procesu 
 bo rozmowy z klientem i przewodnikiem toczą się równolegle i zapętlają. Po zadaniu
 `inquiries.status` zmienia wyłącznie `transition()`, każda zmiana zostawia wiersz
 w append-only `inquiry_events` z aktorem, kanałem i źródłem, a stare statusy są
-zmapowane na nowe.
-
-Migracja przepisuje **dane**, więc każde miejsce porównujące status do starej wartości
-trzeba podmienić w tym samym PR — inaczej panel po cichu pokazuje zera. Poza
-`StatusChanger` czytają status (ustalone grepem 16 IX, decyzja tj D3: podmiana samych
-literałów, zero zmian logiki):
-`InquiriesClient.tsx` (41–42, 73–76, 97–112, 139, 154), `InquiriesCalendar.tsx` (168–171),
-`PipelineClient.tsx` (49–53 — `STAGE_ORDER` to `stage_reached`, nie status: zostaje),
-`InquiryActionPanel.tsx` (41, 563–565), `offers/[token]/page.tsx` (67, 87, 106),
-`UnmatchedLinker.tsx` (162–163), `NewInquiryForm.tsx` (21–22, 60).
+zmapowane na nowe. Nic tego jeszcze nie czyta poza `StatusChanger`.
 
 ## Zakres
 - [ ] Odczyt bieżącego stanu (wklej do raportu): `grep -rnE "status:\s*'" src/actions/inquiries.ts src/app/api src/app/admin/inquiries`; rozkład statusów na gałęzi podglądowej `SELECT status, count(*) FROM inquiries GROUP BY 1`; definicja constraintu statusów i triggera `inquiries_stage_must_advance` z `\d inquiries`.
@@ -61,13 +52,13 @@ literałów, zero zmian logiki):
 - [ ] Testy Vitest: odrzucenie `qualifying → paid`; dozwolone `offer_presented → waiting_guide`; każde `transition()` = dokładnie jedno `status.changed`; `emitEvent` odrzuca nieznany typ.
 
 ## Gotowe, gdy
-- [ ] `grep -rnE "status:\s*'(new|qualifying|waiting_guide|offer_presented|awaiting_payment|paid|handed_over|completed|lost|cancelled|pending|in_negotiation|offer_sent|deposit_sent|deposit_paid)'" src/actions src/app/api src/lib --include=*.ts | grep -v state.ts | grep -v "\.test\."` → jedyny **zapis statusu zapytania** to insert w `src/lib/inquiries/create.ts` (status `new`). Wzorzec łapie też trzy trafienia, które nie dotyczą `inquiries.status` i mają zostać: `src/actions/dashboard.ts:120` i `src/actions/admin.ts:186` (kolumna `guides.status`, enum `guide_status`) oraz `src/actions/inquiries.ts:166` (adnotacja typu parametru `createManualInquiry`, nie zapis). Wynik w raporcie.
+- [ ] `grep -rnE "status:\s*'(new|qualifying|waiting_guide|offer_presented|awaiting_payment|paid|handed_over|completed|lost|cancelled|pending|in_negotiation|offer_sent|deposit_sent|deposit_paid)'" src/actions src/app/api src/lib --include=*.ts | grep -v state.ts | grep -v "\.test\."` → tylko insert w `src/lib/inquiries/create.ts` (status `new`). Wynik w raporcie.
 - [ ] `qualifying → paid` odrzucone przez `transition()` — **na czerwono w teście**.
 - [ ] `UPDATE inquiry_events SET type='x'` jako `authenticated` i jako `service_role` → błąd polityki — **na czerwono, wynik w raporcie**.
-- [ ] Po migracji **na lokalnym stacku** (decyzja tj 16 IX: STOP 1 odrzucony, gałąź podglądowa nie powstaje; stack zasiany rozkładem produkcji): `SELECT status, count(*) FROM inquiries GROUP BY 1` nie zawiera żadnej wartości legacy. Wynik przed i po w raporcie.
-- [ ] Na lokalnym stacku: `new → qualifying → waiting_guide → offer_presented → awaiting_payment → paid` przez akcje aplikacji (route handlery i server actions, nie SQL) zostawia 5 `status.changed` w kolejności (SELECT w raporcie).
-- [ ] `supabase db diff --local` pusty; typy z `gen types --local` zawierają `inquiry_events` i nowe statusy (plik typów wyprzedza produkcję do czasu pushu paczki `stage-1`).
-- [ ] `pnpm typecheck && pnpm test && pnpm build` zielone. `pnpm lint` — kryterium „nie gorzej niż `main`": 40 błędów istnieje na `main` w plikach nietkniętych przez to zadanie, pełne zazielenienie idzie do FA-1.11 (decyzja tj 16 IX).
+- [ ] Po migracji na gałęzi podglądowej: `SELECT status, count(*) FROM inquiries GROUP BY 1` nie zawiera żadnej wartości legacy. Wynik w raporcie.
+- [ ] Na gałęzi podglądowej: `new → qualifying → waiting_guide → offer_presented → awaiting_payment → paid` przez akcje aplikacji zostawia 5 `status.changed` w kolejności (SELECT w raporcie).
+- [ ] `supabase db diff` pusty wobec gałęzi podglądowej; typy z `gen types --local` zawierają `inquiry_events` i nowe statusy.
+- [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm build` zielone.
 
 ## Poza zakresem
 - Tabela `messages`, wątek, wysyłka czegokolwiek — FA-1.12/1.13.
@@ -95,41 +86,3 @@ pnpm typecheck && pnpm lint && pnpm build
 
 ## Notatki z realizacji
 - 16 IX: przepisane po rozmowie z tj — poprzedni model zakładał proces, którego zespół nie wykonuje (zob. `docs/proposals/2026-09-16-stage-1-rewrite/README.md`).
-- 16 IX, decyzje tj przed startem:
-  - **STOP 1 odrzucony** — gałąź podglądowa Supabase **nie powstaje** w tym zadaniu
-    (koszt $0,01344/h; gałąź i tak nie dostaje danych produkcyjnych). Dowody bazodanowe
-    na lokalnym stacku, zasianym rozkładem produkcji 61/9/9/7/5/3/3/2.
-  - D1: `stage-1` z `origin/main` **po** merge'u FA-0.21 (robi tj) — bez tego
-    bezpiecznik `.env.test` nie istnieje na gałęzi i kryterium 7 jest niewykonalne.
-  - D3: czytelnicy starych wartości podmienieni w tym PR, wyłącznie literały.
-  - D4: `UnmatchedLinker` poza zakresem — dziś dopasowuje wiadomości, nie wpłaty
-    (`src/actions/messages.ts` nie zawiera słowa `status`); rola awaryjna przy
-    płatnościach powstaje w FA-1.12 (O-15). Jedyne `→ paid` to webhook Stripe.
-  - D5: `NewInquiryForm` — `qualifying` domyślnie, `new` jako druga opcja.
-- Ustalone odczytem, nie z pamięci: `status` to CHECK na TEXT (nie enum PG); żadna
-  polityka RLS ani funkcja nie czyta wartości statusu; `inquiries_advance_stage_reached`
-  i trigger `inquiries_stage_must_advance` zgodne z baseline 307–321 / 2634; rozkład
-  produkcji nie zawiera wartości spoza §4.1.
-- `service_role` ma `rolbypassrls = true`, więc same polityki RLS nie dają
-  append-only: potrzebne `REVOKE UPDATE, DELETE` + trigger. Trigger tylko na UPDATE —
-  na DELETE zablokowałby `ON DELETE CASCADE` z `inquiries` i zepsuł `deleteInquiry()`.
-- **Nazwa gałęzi zadania zmieniona na `feat/state-machine-events`**: git nie pozwala na
-  `stage-1` i `stage-1/<cokolwiek>` jednocześnie (`refs/heads/stage-1` to plik, nie
-  katalog — `fatal: cannot lock ref`). Decyzja tj 16 IX: integracyjna zostaje `stage-1`,
-  gałęzie zadań wracają do konwencji `<type>/<slug>` z `docs/03-conventions.md`.
-  Frontmatter FA-1.12/1.13/1.14 poprawiony w tym samym commicie docs.
-- Finalny wynik grepu z „Gotowe, gdy" pkt 1 (16 IX, po podmianie wszystkich miejsc):
-  ```
-  src/actions/admin.ts:186        status: 'pending' | 'verified' | 'active' | 'suspended'   ← typ guides.status
-  src/actions/dashboard.ts:120    status: 'pending',                                        ← insert do guides
-  src/actions/inquiries.ts:166    status: 'new' | 'qualifying'                              ← typ parametru
-  src/lib/inquiries/create.ts:66  status: 'new',                                            ← jedyny zapis ✅
-  ```
-- Krawędzie dołożone decyzją tj (16 IX): `qualifying ↔ offer_presented` wprost, powrót
-  z `awaiting_payment` do pętli, `new → waiting_guide` (lead z kompletnym briefem).
-  `paid → completed` **nie** istnieje — wyłącznie przez `handed_over`. Wszystkie cztery
-  reguły mają test w `src/lib/inquiries/state.test.ts`.
-- Poza literalną listą zakresu doszło `saveRichOffer` → `offer_presented`: bez tego
-  `sendDepositLink` nie ma z czego przejść do `awaiting_payment` (ścisła ścieżka
-  pieniędzy), czyli ścieżka depozytu byłaby martwa. Zdarzenie `offer.presented`
-  nadal należy do FA-1.12 — tu powstaje wyłącznie `status.changed`.

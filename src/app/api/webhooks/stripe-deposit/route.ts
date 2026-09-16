@@ -5,7 +5,7 @@
  * Identifies inquiry deposit sessions by metadata.payment_type === 'inquiry_deposit'
  *
  * On success:
- *   • inquiries.status  → 'deposit_paid'
+ *   • inquiries.status  → 'paid', through transition() (source 'webhook')
  *   • inquiries.deposit_paid_at → now
  *   • Sends emails: angler (confirmation), FA (deposit received), guide (booking confirmed)
  *
@@ -18,6 +18,7 @@ import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
+import { transition } from '@/lib/inquiries/state'
 import {
   sendDepositConfirmedAnglerEmail,
   sendDepositConfirmedFaEmail,
@@ -92,16 +93,28 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     return
   }
 
-  // Mark as paid
+  // Mark as paid. The money columns first, then the status through the machine, so
+  // the booking (= paid deposit) leaves a status.changed with source 'webhook'.
   await svc
     .from('inquiries')
     .update({
-      status:                    'deposit_paid',
       deposit_paid_at:           new Date().toISOString(),
       deposit_stripe_session_id: session.id,
-      stage_reached:             'deposit_paid',
     })
     .eq('id', inquiryId)
+
+  try {
+    await transition(svc, inquiryId, 'paid', {
+      actor:   { kind: 'system' },
+      source:  'webhook',
+      channel: 'stripe',
+      reason:  `Stripe checkout session ${session.id} completed`,
+    })
+  } catch (err) {
+    // The deposit is real and recorded in deposit_paid_at; the status is not. Loud,
+    // but not fatal — the webhook still returns 200 and the admin can move it by hand.
+    console.error('[stripe-deposit/webhook] transition error:', err)
+  }
 
   console.log(`[stripe-deposit/webhook] Deposit paid for inquiry ${inquiryId} — session ${session.id}`)
 

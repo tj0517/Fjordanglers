@@ -4,20 +4,36 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { updateInquiryStatus } from '@/actions/inquiries'
+import {
+  STATUSES as MACHINE_STATUSES,
+  STATUS_LABELS,
+  STATUS_MEANINGS,
+  canTransition,
+  isInquiryStatus,
+  type InquiryStatus,
+} from '@/lib/inquiries/state'
 
-// All statuses FA can set manually
-const STATUSES = [
-  { key: 'pending',                 label: 'Pending',            color: '#92400E', bg: 'rgba(251,191,36,0.2)',   border: 'rgba(251,191,36,0.45)'  },
-  { key: 'in_negotiation',          label: 'Negotiating',        color: '#5B21B6', bg: 'rgba(139,92,246,0.18)',  border: 'rgba(139,92,246,0.4)'   },
-  { key: 'waiting_for_guide_offer', label: 'Waiting Guide',      color: '#C2410C', bg: 'rgba(234,88,12,0.18)',   border: 'rgba(234,88,12,0.4)'    },
-  { key: 'offer_sent',              label: 'Offer Sent',         color: '#0E7490', bg: 'rgba(6,182,212,0.18)',   border: 'rgba(6,182,212,0.4)'    },
-  { key: 'waiting_for_deposit',     label: 'Waiting Deposit',    color: '#3730A3', bg: 'rgba(99,102,241,0.18)',  border: 'rgba(99,102,241,0.4)'   },
-  { key: 'deposit_sent',            label: 'Deposit Sent',       color: '#1E40AF', bg: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.35)'  },
-  { key: 'deposit_paid',            label: 'Confirmed',          color: '#065F46', bg: 'rgba(16,185,129,0.18)',  border: 'rgba(16,185,129,0.35)'  },
-  { key: 'completed',               label: 'Completed',          color: '#D1D5DB', bg: 'rgba(107,114,128,0.18)', border: 'rgba(107,114,128,0.35)' },
-  { key: 'lost',                    label: 'Lost',               color: '#FCA5A5', bg: 'rgba(239,68,68,0.18)',   border: 'rgba(239,68,68,0.35)'   },
-  { key: 'cancelled',               label: 'Cancelled',          color: '#FCA5A5', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)'   },
-] as const
+// Colours only — the list, the labels and what may follow what come from the state
+// machine (src/lib/inquiries/state.ts), so this panel cannot drift from it.
+const STATUS_COLORS: Record<InquiryStatus, { color: string; bg: string; border: string }> = {
+  new:              { color: '#92400E', bg: 'rgba(251,191,36,0.2)',   border: 'rgba(251,191,36,0.45)'  },
+  qualifying:       { color: '#5B21B6', bg: 'rgba(139,92,246,0.18)',  border: 'rgba(139,92,246,0.4)'   },
+  waiting_guide:    { color: '#C2410C', bg: 'rgba(234,88,12,0.18)',   border: 'rgba(234,88,12,0.4)'    },
+  offer_presented:  { color: '#0E7490', bg: 'rgba(6,182,212,0.18)',   border: 'rgba(6,182,212,0.4)'    },
+  awaiting_payment: { color: '#3730A3', bg: 'rgba(99,102,241,0.18)',  border: 'rgba(99,102,241,0.4)'   },
+  paid:             { color: '#065F46', bg: 'rgba(16,185,129,0.18)',  border: 'rgba(16,185,129,0.35)'  },
+  handed_over:      { color: '#1E40AF', bg: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.35)'  },
+  completed:        { color: '#D1D5DB', bg: 'rgba(107,114,128,0.18)', border: 'rgba(107,114,128,0.35)' },
+  lost:             { color: '#FCA5A5', bg: 'rgba(239,68,68,0.18)',   border: 'rgba(239,68,68,0.35)'   },
+  cancelled:        { color: '#FCA5A5', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)'   },
+}
+
+const STATUSES = MACHINE_STATUSES.map(key => ({
+  key,
+  label:   STATUS_LABELS[key],
+  meaning: STATUS_MEANINGS[key],
+  ...STATUS_COLORS[key],
+}))
 
 const LOST_REASON_CODES: { key: string; label: string }[] = [
   { key: 'client_silent',  label: 'Client went silent'       },
@@ -29,7 +45,7 @@ const LOST_REASON_CODES: { key: string; label: string }[] = [
   { key: 'other',          label: 'Other'                    },
 ]
 
-type StatusKey = typeof STATUSES[number]['key']
+type StatusKey = InquiryStatus
 
 export function StatusChanger({
   inquiryId,
@@ -101,25 +117,31 @@ export function StatusChanger({
       </div>
 
       <div className="px-5 py-4 space-y-3">
-        {/* Status pill grid */}
+        {/* Status pill grid — a status the machine will not accept from here is
+            greyed out rather than hidden, so the whole process stays readable. */}
         <div className="flex flex-wrap gap-1.5">
           {STATUSES.map(s => {
             const isActive  = currentStatus === s.key
             const isLoading = changingTo === s.key
+            const isAllowed = canTransition(currentStatus, s.key)
+            const disabled  = pending || (!isActive && !isAllowed)
 
             return (
               <button
                 key={s.key}
                 type="button"
-                disabled={pending}
+                disabled={disabled}
+                title={isActive || isAllowed
+                  ? s.meaning
+                  : `${s.meaning} — not reachable from ${currentStatus}`}
                 onClick={() => handleClick(s.key)}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold f-body transition-all"
                 style={{
                   background: isActive ? s.bg : 'rgba(255,255,255,0.05)',
                   color:      isActive ? s.color : 'rgba(255,255,255,0.4)',
                   border:     isActive ? `1px solid ${s.border}` : '1px solid rgba(255,255,255,0.08)',
-                  cursor:     isActive || pending ? 'default' : 'pointer',
-                  opacity:    pending && !isActive && !isLoading ? 0.5 : 1,
+                  cursor:     isActive || disabled ? 'default' : 'pointer',
+                  opacity:    isActive || isLoading ? 1 : (isAllowed ? (pending ? 0.5 : 1) : 0.25),
                 }}
               >
                 {isLoading
@@ -131,6 +153,13 @@ export function StatusChanger({
             )
           })}
         </div>
+
+        {!isInquiryStatus(currentStatus) && (
+          <p className="text-[10px] f-body" style={{ color: '#FCA5A5' }}>
+            This inquiry holds the retired status <strong>{currentStatus}</strong>, which has no
+            allowed moves. Tell tj — it should have been migrated.
+          </p>
+        )}
 
         {/* Lost form */}
         {showLostInput && (

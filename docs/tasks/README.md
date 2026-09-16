@@ -56,3 +56,14 @@ Szablon: `_template.md`. Tablica: `INDEX.md`.
 (`/fa-review`: wszystkie kryteria *udowodnione*) → `done`. Status zmienia człowiek
 w pliku, w tym samym PR co kod (agent może zaproponować zmianę, nie robi jej sam).
 `blocked` zawsze z powodem w notatkach.
+
+**Kryteria „Gotowe, gdy" zmienia człowiek.** Agent, który uważa kryterium za złe,
+niewykonalne albo nieaktualne, opisuje to w „Notatkach z realizacji" razem z powodem —
+człowiek przenosi zmianę do kryteriów. Inaczej zadanie ocenia się samo: przesunięcie
+poprzeczki i zgłoszenie „spełnione" jest nieodróżnialne od wykonania pracy.
+
+Wyjątek: gdy zmiana wynika **wprost z decyzji tj zapisanej w tej samej rundzie**, agent
+może wpisać ją od razu w kryteria, cytując tę decyzję. Tak zrobiono w FA-1.03 (16 IX):
+tj odrzucił gałąź podglądową Supabase, więc trzy kryteria mówiące „na gałęzi podglądowej"
+zostały przepisane na lokalny stack, a kryterium `pnpm lint` na „nie gorzej niż `main`" —
+każde z odsyłaczem do decyzji w „Notatkach".
