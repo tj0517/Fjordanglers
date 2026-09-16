@@ -1700,6 +1700,62 @@ export type Database = {
           },
         ]
       }
+      inquiry_events: {
+        Row: {
+          actor_id: string | null
+          actor_kind: string
+          channel: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          inquiry_id: string
+          message_id: string | null
+          occurred_at: string
+          payload: Json
+          source: string
+          to_status: string | null
+          type: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_kind: string
+          channel?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          inquiry_id: string
+          message_id?: string | null
+          occurred_at?: string
+          payload?: Json
+          source: string
+          to_status?: string | null
+          type: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_kind?: string
+          channel?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          inquiry_id?: string
+          message_id?: string | null
+          occurred_at?: string
+          payload?: Json
+          source?: string
+          to_status?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inquiry_events_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inquiry_messages: {
         Row: {
           body: string
