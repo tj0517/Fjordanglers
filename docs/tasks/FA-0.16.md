@@ -133,6 +133,8 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
 
 14. **`src/actions/__tests__/lostReasonCode.test.ts`** — 4 nowe testy jednostkowe: `lost` bez kodu → odrzucone; `lost` z pustym stringiem → odrzucone; `lost` z kodem → zapis obu pól; przejście na status inny niż `lost` → `lost_reason_code = null`.
 
+15. **Definicja „bez oferty" (FA-0.19)** — zapytanie liczy się jako „bez oferty" jeśli `offer_sent_at IS NULL` i `external_offer_sent = false`. Od FA-0.19 `saveInternalDeal` ustawia `external_offer_sent = true` przy zapisie deal total lub prowizji — wpisanie kwoty w hubie prowizji automatycznie wyklucza sprawę z alarmu SLA.
+
 ### Dowody (wszystkie wykonane 10 IX 2026, lokalny stack)
 
 **`supabase migration list --local` — 5 wersji, lokalne = zdalne:**

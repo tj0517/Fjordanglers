@@ -2,7 +2,7 @@
 id: FA-0.19
 title: Hub prowizji ustawia `external_offer_sent` — licznik SLA przestaje liczyć oferty wysłane poza systemem
 stage: 0
-status: todo
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -62,10 +62,13 @@ wyłącznie sprawy, w których faktycznie nic do klienta nie poszło.
       from inquiries;
       ```
       Drugi licznik to dokładnie tyle wierszy, ile naprawi backfill.
-- [ ] `saveInternalDeal` — jeśli `dealTotalEur` albo `commissionEur` jest niezerowe, ustaw w tym
-      samym `update` `external_offer_sent: true`. Nie nadpisuj na `false`, gdy admin wyczyści pola:
-      raz wysłana oferta zostaje wysłana. `offer_sent_at` **nie** jest ustawiane — hub nie zbiera daty,
-      a zmyślona data zepsułaby przyszłą metrykę czasu do oferty (patrz „Poza zakresem").
+- [ ] `saveInternalDeal` — jeśli `dealTotalEur` albo `commissionEur` ma jakąkolwiek wartość
+      (`!= null`, **zero włącznie**), ustaw w tym samym `update` `external_offer_sent: true`.
+      Nie nadpisuj na `false`, gdy admin wyczyści pola: raz wysłana oferta zostaje wysłana.
+      `offer_sent_at` **nie** jest ustawiane — hub nie zbiera daty, a zmyślona data zepsułaby
+      przyszłą metrykę czasu do oferty (patrz „Poza zakresem").
+      **Decyzja tj (16 IX 2026):** `!= null` (nie `> 0`) — każda wpisana wartość, w tym `0`,
+      oznacza ofertę jako wysłaną. Pierwotne brzmienie „niezerowe" sprzeczne z kodem i backfillem.
 - [ ] Przełącznik `external_offer_sent` w karcie zapytania zostaje — jest potrzebny dla ofert
       wysłanych bez wpisanej jeszcze ceny.
 - [ ] **Backfill jednorazowy**: `UPDATE inquiries SET external_offer_sent = true WHERE
@@ -82,10 +85,15 @@ wyłącznie sprawy, w których faktycznie nic do klienta nie poszło.
       na zapytaniu bez flagi → `external_offer_sent` pozostaje `false` (pusty zapis nie oznacza oferty).
 - [ ] **Czerwony dowód 3**: `saveInternalDeal` z prowizją na zapytaniu, które **ma już**
       `external_offer_sent = true` → wartość się nie zmienia i nic innego nie zostaje nadpisane.
-- [ ] Po backfillu (po „go" tj): ten sam SELECT co w Zakresie — `z_dealem_bez_flagi` = 0;
-      `curl -H "Authorization: Bearer $CRON_SECRET" https://www.fjordanglers.com/api/cron/offer-sla`
-      zwraca mniejszą liczbę niż przed (wklej przed i po).
-- [ ] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` bez nowych błędów vs `main`.
+- [x] Po backfillu (po „go" tj): ten sam SELECT co w Zakresie — `z_dealem_bez_flagi` = 0. ✓
+      ~~`curl` zwraca mniejszą liczbę niż przed~~ — kryterium zastąpione za zgodą tj (16 IX 2026):
+      curl PRZED nie był wykonany i jest nie do odtworzenia; `GET /api/cron/offer-sla` wysyła mail
+      przy wywołaniu (side effect), więc nie nadaje się do weryfikacji. Dowód zastępczy: SELECT
+      `z_dealem_bez_flagi` 11 → 0, `z_flaga` 13 → 24. Cron wywołany przez tj po backfillu:
+      `{"overdue":17,"mailed":true}` — liczba zaległych po czyszczeniu fałszywych pozytywów.
+- [x] `pnpm typecheck && pnpm build` zielone; `pnpm lint` bez nowych błędów vs `main`. ✓
+      `pnpm test` **świadomie nieuruchamiany** — testy integracyjne piszą do produkcji
+      (`uwxrstbplaoxfghrchcy`); patrz wpis FA-0.20 w `docs/deferred-tasks.md`.
 - [ ] Status `todo → review` tu i w `INDEX.md`, w tym samym PR.
 
 ## Poza zakresem
@@ -111,3 +119,140 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/offer-sl
 ```
 
 ## Notatki z realizacji
+
+### Odczyt produkcji (16 IX 2026, supabase-fa — przed zmianami)
+
+```
+z_dealem  z_dealem_bez_flagi  z_flaga
+19        11                  13
+```
+
+`external_offer_sent`: `NOT NULL DEFAULT false` — `NOT external_offer_sent` i `external_offer_sent IS NOT TRUE` dają identyczne wyniki. Backfill używa `NOT external_offer_sent` (zgodnie z `route.ts:50`).
+
+Różnica `z_dealem` między instrukcją (18) a odczytem (19): instrukcja liczyła tylko `internal_deal_total_eur IS NOT NULL`; zakres zadania liczy `OR internal_commission_eur IS NOT NULL` — wyższa liczba jest poprawna względem definicji.
+
+### Zmiana kodu
+
+`src/actions/inquiries.ts` — `saveInternalDeal`: payload budowany jako `Record<string, unknown>`; gdy `params.dealTotalEur != null || params.commissionEur != null`, do payloadu dokładane `external_offer_sent: true`. Gdy oba są null — pole nie wchodzi do UPDATE (raz wysłana oferta zostaje wysłana). Dodano też `revalidatePath` symetrycznie z `setExternalOffer`.
+
+**Znana konsekwencja (decyzja tj 16 IX 2026):** wpisanie `0` w hubie prowizji (celowe albo przypadkowe) na stałe wyklucza zapytanie z licznika SLA, bo `parseFloat("0")` w `InternalDealTracker.tsx:52` przepuszcza zero do `saveInternalDeal` jako `number`, nie `null`. Wiersz `b421e267-21d5-4651-ac1d-33241c4f14a4` (Jack Bruff, total=0, commission=0) jest w tym stanie po backfillu — pozostaje tak zgodnie z decyzją. Zapisane jako znany kompromis.
+
+### Czerwone dowody (lokalny stack, port 54422)
+
+**Proof 1 — CRON BEFORE `saveInternalDeal`** (pending >48h, bez flagi — 2 wiersze widoczne):
+```
+id                                   | angler_name   | status  | external_offer_sent | offer_sent_at
+--------------------------------------+---------------+---------+---------------------+---------------
+7511b489-847e-4b88-b5ee-88e7d2091942 | Proof2 Angler | pending | f                   |
+8d0c9dcf-159f-4d34-891b-5d3345236bc9 | Proof1 Angler | pending | f                   |
+(2 rows)
+```
+
+**Proof 1 — saveInternalDeal(commissionEur=500) → SELECT:**
+```
+id                                   | angler_name   | external_offer_sent
+--------------------------------------+---------------+--------------------
+8d0c9dcf-159f-4d34-891b-5d3345236bc9 | Proof1 Angler | t
+```
+
+**Proof 1 — CRON AFTER** (Proof1 zniknął):
+```
+id                                   | angler_name   | status
+--------------------------------------+---------------+--------
+7511b489-847e-4b88-b5ee-88e7d2091942 | Proof2 Angler | pending
+(1 row)
+```
+
+**Proof 2 — saveInternalDeal(null, null) → external_offer_sent zostaje false:**
+```
+id                                   | angler_name   | external_offer_sent
+--------------------------------------+---------------+--------------------
+7511b489-847e-4b88-b5ee-88e7d2091942 | Proof2 Angler | f
+```
+
+**Proof 3 — saveInternalDeal(commissionEur=1200) na zapytaniu z external_offer_sent=true → idempotentny:**
+```
+id                                   | angler_name   | external_offer_sent | internal_commission_eur | internal_deal_total_eur
+--------------------------------------+---------------+---------------------+-------------------------+------------------------
+1b89d743-f322-44b9-ad51-cf36f48e9a10 | Proof3 Angler | t                   | 1200                    | 6000
+```
+
+### Backfill (16 IX 2026 — zatwierdzony przez tj w sesji tego samego dnia)
+
+Lista 11 id zaktualizowanych wierszy (SELECT przed UPDATE — jedyna forma odwracalności; po UPDATE warunek przestał je opisywać):
+
+| id | angler_name | total | commission |
+|---|---|---|---|
+| c6a0a222-d74a-4fb4-89bd-b4950b511a62 | Marc moussa | 700 | 150 |
+| b421e267-21d5-4651-ac1d-33241c4f14a4 | Jack Bruff | 0 | 0 |
+| 2d7440d8-d872-4dc8-997b-7e99b0f88ce8 | Ross Lamb | 680 | 90 |
+| 1dbfe86d-95a5-41f2-8cc6-924eda3a5331 | Alexander Van Alen | 1600 | 280 |
+| 3a5ee20d-0ef5-47de-8ada-31e3e4927338 | Sean Engel | 1450 | 290 |
+| a45b417d-9897-47a9-8377-9c4b1198f07f | Taylor Ingraham | 1450 | 290 |
+| 1d68186d-2bdb-4d4b-93b9-5909390a6d8a | Scott Latimer | 12900 | 2100 |
+| 7a59b947-40e3-4cad-95ae-879c929480cf | Kevin Lavers | 1200 | 225 |
+| 29a1b8e0-2978-4e80-b574-5a90784eaf5d | Ben Forcier | 1600 | 260 |
+| 304ea655-cacf-4335-a150-34bcc306c1b6 | Karl Terauds | 11169.96 | 1873.67 |
+| d060360a-2208-419e-a470-b410f5f9df10 | Roz Tatton | NULL | 130 |
+
+SELECT weryfikacyjny po UPDATE:
+```
+z_dealem  z_dealem_bez_flagi  z_flaga
+19        0                   24
+```
+`z_flaga`: 13 → 24 (+11). `z_dealem_bez_flagi`: 11 → 0.
+
+### Kryterium „curl przed/po" — zastąpione (waiver tj 16 IX 2026)
+
+Curl PRZED UPDATE nie został wykonany i jest nie do odtworzenia. `GET /api/cron/offer-sla` nie jest odczytem bez skutków ubocznych — wysyła mail przy `OWNER_EMAIL` ustawionym i niepustej liście. Zamiast curl: SELECT `z_dealem_bez_flagi` 11 → 0, `z_flaga` 13 → 24. To jest zamiana dowodu za zgodą tj, nie spełnienie oryginalnego kryterium. Odnotowane w `docs/deferred-tasks.md` (FA-0.19).
+
+### Poza zakresem (odnotowane — korekta)
+
+`pnpm test --run` pisze do **produkcyjnej** tabeli `inquiries` przez klucz serwisowy — `.env.local` zawiera `NEXT_PUBLIC_SUPABASE_URL=https://uwxrstbplaoxfghrchcy.supabase.co` (produkcja, nie projekt testowy; sprawdzone odczytem, nie założeniem). Weryfikacja po fakcie przez tj potwierdziła, że `afterAll` w testach usunął wstawione wiersze — bez trwałych szkód. Poprzedni raport podał projekt testowy `xsilxmaiyyjgpxsalvet` — to było założenie, nie odczyt. `pnpm test` nie uruchamiany w tym zadaniu; patrz wpis FA-0.20 w `docs/deferred-tasks.md`.
+
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Kod i dokumentacja zweryfikowane odczytem repo; backfill potwierdzony
+odczytem produkcji.
+
+| kryterium | werdykt | dowód |
+|---|---|---|
+| czerwony dowód 1 — deal zdejmuje zapytanie z alarmu | udowodnione | Proof1: `external_offer_sent` `f` → `t`, znika z wyniku crona; Proof2 zostaje |
+| czerwony dowód 2 — pusty zapis nie oznacza oferty | udowodnione | `saveInternalDeal(null, null)` → flaga pozostaje `f` |
+| czerwony dowód 3 — idempotencja na wierszu z flagą | udowodnione | flaga `t` bez zmian, pola dealu zaktualizowane (1200/6000) |
+| backfill: `z_dealem_bez_flagi = 0` | udowodnione | 11 → 0; `z_flaga` 13 → 24 |
+| `curl` crona przed i po | **zastąpione** | pomiar „przed" nie został wykonany i jest nieodtwarzalny; zastąpiony dowodem z SELECT-ów (waiver tj, 16 IX) |
+| typecheck / lint / build | udowodnione | powtórzone przy odbiorze, zielone |
+| `pnpm test` | **nieuruchamiany świadomie** | testy piszą do produkcyjnej `inquiries` — patrz wpis FA-0.20 w `deferred-tasks.md` |
+| status w pliku i `INDEX.md` | udowodnione | ten PR |
+
+**Weryfikacja kodu przy odbiorze** (`src/actions/inquiries.ts:706`):
+`if (params.dealTotalEur != null || params.commissionEur != null) { updatePayload.external_offer_sent = true }`
+— pole nie wchodzi do `UPDATE`, gdy oba są `null`, więc raz wysłana oferta zostaje wysłana.
+`revalidatePath` na `/admin/inquiries/:id` i `/admin/inquiries` obecne, symetrycznie
+z `setExternalOffer`.
+
+**Decyzja tj (16 IX): `!= null`, nie `> 0`.** Pierwotne brzmienie Zakresu („niezerowe") było
+sprzeczne z kodem i backfillem — przepisane, nie obejście. **Znana konsekwencja, zapisana
+jawnie:** wpisanie `0` w hubie prowizji na stałe wyklucza zapytanie z licznika SLA
+(`InternalDealTracker.tsx:52` przepuszcza `parseFloat("0")` jako `number`). Wiersz
+`b421e267` (Jack Bruff, 0/0) jest w tym stanie i taki zostaje. Jeśli kiedyś okaże się,
+że zapytanie „zniknęło" z alarmu bez powodu — to jest pierwsze miejsce do sprawdzenia.
+
+**Bramki STOP — obsłużone.** `UPDATE` backfillowy wykonany po zgodzie tj (16 IX), SELECT
+przed z dokładnym SQL w pliku. `saveOffer`/`saveRichOffer` nietknięte.
+
+**Dwa braki po stronie agenta, oba naprawione w tym PR, oba warte zapamiętania:**
+1. Pomiar „przed" dla crona nie został zebrany przed `UPDATE` — kryterium w oryginalnym
+   brzmieniu jest niespełnialne po fakcie.
+2. W pierwszym raporcie agent napisał, że `pnpm test` trafia w projekt testowy
+   `xsilxmaiyyjgpxsalvet` — bez sprawdzenia. `.env.local:7` wskazuje na produkcję
+   (`uwxrstbplaoxfghrchcy`). Poprawione po konfrontacji; to ta klasa błędu, którą
+   `docs/05-agent-operations.md` §5 wymienia osobno: uzasadnienie w miejscu dowodu.
+
+**Odnotowane przy odbiorze:** `GET /api/cron/offer-sla` **nie jest odczytem bez skutków
+ubocznych** — zwraca `{"overdue":17,"mailed":true}`, czyli wysyła mail alarmowy. Każda
+weryfikacja tego endpointu przy kolejnych odbiorach wygeneruje fałszywy alarm do skrzynki.

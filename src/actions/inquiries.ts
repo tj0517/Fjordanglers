@@ -695,18 +695,27 @@ export async function saveInternalDeal(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
+
+  const updatePayload: Record<string, unknown> = {
+    internal_deal_total_eur: params.dealTotalEur,
+    internal_commission_eur: params.commissionEur,
+    internal_notes:          params.internalNotes,
+    deal_currency:           params.dealCurrency,
+  }
+  // Once a deal amount is recorded the offer is considered sent — never flip back to false.
+  if (params.dealTotalEur != null || params.commissionEur != null) {
+    updatePayload.external_offer_sent = true
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (svc as any)
     .from('inquiries')
-    .update({
-      internal_deal_total_eur: params.dealTotalEur,
-      internal_commission_eur: params.commissionEur,
-      internal_notes:          params.internalNotes,
-      deal_currency:           params.dealCurrency,
-    })
+    .update(updatePayload)
     .eq('id', inquiryId)
 
   if (error != null) return { success: false, error: error.message }
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/inquiries')
   console.log(`[saveInternalDeal] Inquiry ${inquiryId} — total ${params.dealCurrency} ${params.dealTotalEur}, commission ${params.dealCurrency} ${params.commissionEur}`)
   return { success: true }
 }
