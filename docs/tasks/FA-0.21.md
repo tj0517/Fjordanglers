@@ -2,7 +2,7 @@
 id: FA-0.21
 title: Testy integracyjne piszą do produkcji — `.env.test` i granica, której nie da się przekroczyć przypadkiem
 stage: 0
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
