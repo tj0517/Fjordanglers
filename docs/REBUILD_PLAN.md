@@ -449,6 +449,14 @@ czasie: tylko z `main`, cherry-pick do `stage-1` w tym samym dniu.
 
 Tag `v1-clean` po pushu.
 
+> **Uwaga przy scalaniu `main` → `stage-1`.** Na `main` jest revert
+> `1505c7f3618151ca845676c2162354d7f0c151e7` merge'a PR #47 — FA-1.03 trafiło 16 IX
+> omyłkowo do `main` (kod maszyny stanów na produkcji, migracje `20260916201225`
+> i `20260916201226` **nie** na produkcyjnej bazie, więc insert statusu `new` łamałby
+> `inquiries_status_check`). Przy pierwszym merge'u `main` → `stage-1` natychmiast
+> `git revert 1505c7f3618151ca845676c2162354d7f0c151e7` na `stage-1`, inaczej revert
+> skasuje FA-1.03 z etapu 1.
+
 ### Etap 2 — szkielet monorepo (3–4 dni)
 
 `pnpm-workspace.yaml` + `turbo.json`; obecna aplikacja w całości do `apps/web` (Vercel root directory `apps/web`, zero zmian funkcjonalnych). `packages/db` przejmuje `supabase/`, typy i klientów. `packages/core` zaczyna od `auth/` (guardy), `events/` (rejestrator) i czterech repozytoriów: `inquiries`, `guides`, `experiences`, `messaging`; `inquiries.ts` (1621 linii) rozbite przy okazji na `inquiries/`, `offers/`, `payments/`, `messaging/`. `packages/ui` — tokeny i preset Tailwind. Reguły ESLint z §3.2 jako błąd; CI: `turbo lint typecheck build` + `supabase db diff`.

@@ -57,6 +57,12 @@ Szablon: `_template.md`. Tablica: `INDEX.md`.
 w pliku, w tym samym PR co kod (agent może zaproponować zmianę, nie robi jej sam).
 `blocked` zawsze z powodem w notatkach.
 
+**PR zawsze z jawnym `--base`** (w etapie 1: `stage-1`). PR do `main` wyłącznie dla
+hotfixów etapu 0. Domyślna baza w GitHubie to `main`, więc PR bez `--base` celuje w
+produkcję — 16 IX FA-1.03 zostało tak zmergowane do `main` i wymagało reverta
+`1505c7f3` (kod maszyny stanów poszedł na produkcję bez migracji, które ta baza ma
+dopiero dostać w paczce `stage-1`).
+
 **Kryteria „Gotowe, gdy" zmienia człowiek.** Agent, który uważa kryterium za złe,
 niewykonalne albo nieaktualne, opisuje to w „Notatkach z realizacji" razem z powodem —
 człowiek przenosi zmianę do kryteriów. Inaczej zadanie ocenia się samo: przesunięcie
