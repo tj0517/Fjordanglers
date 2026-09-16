@@ -2,7 +2,7 @@
 id: FA-0.19
 title: Hub prowizji ustawia `external_offer_sent` — licznik SLA przestaje liczyć oferty wysłane poza systemem
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -210,3 +210,49 @@ Curl PRZED UPDATE nie został wykonany i jest nie do odtworzenia. `GET /api/cron
 
 `pnpm test --run` pisze do **produkcyjnej** tabeli `inquiries` przez klucz serwisowy — `.env.local` zawiera `NEXT_PUBLIC_SUPABASE_URL=https://uwxrstbplaoxfghrchcy.supabase.co` (produkcja, nie projekt testowy; sprawdzone odczytem, nie założeniem). Weryfikacja po fakcie przez tj potwierdziła, że `afterAll` w testach usunął wstawione wiersze — bez trwałych szkód. Poprzedni raport podał projekt testowy `xsilxmaiyyjgpxsalvet` — to było założenie, nie odczyt. `pnpm test` nie uruchamiany w tym zadaniu; patrz wpis FA-0.20 w `docs/deferred-tasks.md`.
 
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Kod i dokumentacja zweryfikowane odczytem repo; backfill potwierdzony
+odczytem produkcji.
+
+| kryterium | werdykt | dowód |
+|---|---|---|
+| czerwony dowód 1 — deal zdejmuje zapytanie z alarmu | udowodnione | Proof1: `external_offer_sent` `f` → `t`, znika z wyniku crona; Proof2 zostaje |
+| czerwony dowód 2 — pusty zapis nie oznacza oferty | udowodnione | `saveInternalDeal(null, null)` → flaga pozostaje `f` |
+| czerwony dowód 3 — idempotencja na wierszu z flagą | udowodnione | flaga `t` bez zmian, pola dealu zaktualizowane (1200/6000) |
+| backfill: `z_dealem_bez_flagi = 0` | udowodnione | 11 → 0; `z_flaga` 13 → 24 |
+| `curl` crona przed i po | **zastąpione** | pomiar „przed" nie został wykonany i jest nieodtwarzalny; zastąpiony dowodem z SELECT-ów (waiver tj, 16 IX) |
+| typecheck / lint / build | udowodnione | powtórzone przy odbiorze, zielone |
+| `pnpm test` | **nieuruchamiany świadomie** | testy piszą do produkcyjnej `inquiries` — patrz wpis FA-0.20 w `deferred-tasks.md` |
+| status w pliku i `INDEX.md` | udowodnione | ten PR |
+
+**Weryfikacja kodu przy odbiorze** (`src/actions/inquiries.ts:706`):
+`if (params.dealTotalEur != null || params.commissionEur != null) { updatePayload.external_offer_sent = true }`
+— pole nie wchodzi do `UPDATE`, gdy oba są `null`, więc raz wysłana oferta zostaje wysłana.
+`revalidatePath` na `/admin/inquiries/:id` i `/admin/inquiries` obecne, symetrycznie
+z `setExternalOffer`.
+
+**Decyzja tj (16 IX): `!= null`, nie `> 0`.** Pierwotne brzmienie Zakresu („niezerowe") było
+sprzeczne z kodem i backfillem — przepisane, nie obejście. **Znana konsekwencja, zapisana
+jawnie:** wpisanie `0` w hubie prowizji na stałe wyklucza zapytanie z licznika SLA
+(`InternalDealTracker.tsx:52` przepuszcza `parseFloat("0")` jako `number`). Wiersz
+`b421e267` (Jack Bruff, 0/0) jest w tym stanie i taki zostaje. Jeśli kiedyś okaże się,
+że zapytanie „zniknęło" z alarmu bez powodu — to jest pierwsze miejsce do sprawdzenia.
+
+**Bramki STOP — obsłużone.** `UPDATE` backfillowy wykonany po zgodzie tj (16 IX), SELECT
+przed z dokładnym SQL w pliku. `saveOffer`/`saveRichOffer` nietknięte.
+
+**Dwa braki po stronie agenta, oba naprawione w tym PR, oba warte zapamiętania:**
+1. Pomiar „przed" dla crona nie został zebrany przed `UPDATE` — kryterium w oryginalnym
+   brzmieniu jest niespełnialne po fakcie.
+2. W pierwszym raporcie agent napisał, że `pnpm test` trafia w projekt testowy
+   `xsilxmaiyyjgpxsalvet` — bez sprawdzenia. `.env.local:7` wskazuje na produkcję
+   (`uwxrstbplaoxfghrchcy`). Poprawione po konfrontacji; to ta klasa błędu, którą
+   `docs/05-agent-operations.md` §5 wymienia osobno: uzasadnienie w miejscu dowodu.
+
+**Odnotowane przy odbiorze:** `GET /api/cron/offer-sla` **nie jest odczytem bez skutków
+ubocznych** — zwraca `{"overdue":17,"mailed":true}`, czyli wysyła mail alarmowy. Każda
+weryfikacja tego endpointu przy kolejnych odbiorach wygeneruje fałszywy alarm do skrzynki.
