@@ -8,7 +8,7 @@ model: sonnet
 model_approved:
 effort: medium-high
 agent: fa-core
-branch: stage-1/ci
+branch: chore/ci
 depends_on: [FA-1.01]
 blocked_by_questions: []
 touches_db: false

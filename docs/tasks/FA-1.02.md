@@ -8,7 +8,7 @@ model: opus
 model_approved:
 effort: medium
 agent: fa-core
-branch: stage-1/drop-marketplace-leftovers
+branch: db/drop-marketplace-leftovers
 depends_on: [FA-1.01]
 blocked_by_questions: []
 touches_db: true

@@ -8,7 +8,7 @@ model: sonnet
 model_approved:
 effort: medium-high
 agent: fa-core
-branch: stage-1/inquiries-qualified
+branch: feat/inquiries-qualified
 depends_on: [FA-1.03]
 blocked_by_questions: []
 touches_db: true
