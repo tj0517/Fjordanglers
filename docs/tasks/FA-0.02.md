@@ -2,7 +2,7 @@
 id: FA-0.02
 title: Martwe redirecty i linki (/account, /auth/login, /admin/trips, /invite)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -314,3 +314,18 @@ nie wiem, czyje to i czy mają być zachowane. Zgłaszam do potwierdzenia przez 
 `| FA-0.02 | Martwe redirecty i linki (/account, /auth/login, /admin/trips, /invite) | S | sonnet | review | — |`
 
 Status w `docs/tasks/FA-0.02.md`: `review` (nie `done` — to decyzja reviewera).
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Oba kryteria udowodnione odczytem repo na `main`.
+
+- `grep -rnE "'/account'|/auth/login|/admin/trips|/invite/" src` → **0 trafień**.
+- Drugie kryterium przeszedł odbierający zamiast przyjmować z raportu: z `src/` wyciągnięto
+  22 unikalne wewnętrzne ścieżki z `href="/…"` i `redirect('/…')`, zestawiono z listą realnych
+  tras (`page.tsx`/`route.ts` w `src/app`, po usunięciu grup tras) — **żadna nie prowadzi
+  donikąd**. Sprawdzone m.in. `/admin/forms/new`, `/dashboard/profile/edit`,
+  `/legal/cookie-policy`, `/trips`, `/guides`, `/blog`.
+
+`pnpm typecheck / lint / build` — przyjęte z raportu, niepowtórzone przy odbiorze.

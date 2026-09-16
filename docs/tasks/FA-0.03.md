@@ -2,7 +2,7 @@
 id: FA-0.03
 title: Cron sync-google-ads odpowiada na GET (Vercel cron woła GET)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -218,3 +218,27 @@ Route (app)                                Revalidate  Expire
 
 Nic poza zakresem nie napotkano.
 
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Kryteria udowodnione odczytem produkcji.
+
+| kryterium | dowód |
+|---|---|
+| GET bez sekretu → 401 | `curl -o /dev/null -w "%{http_code}"` na `/api/cron/sync-google-ads` → `401` |
+| GET z sekretem → 200 + wpis z datą wczorajszą | `{"synced":4,"date":"2026-09-15"}`, http 200 |
+| wpis w `ad_campaigns` | 4 wiersze z `date = 2026-09-15`: `iceland`, `Patagonia`, `New-zeland`, `Search-7-Iceland (próbna) 823` |
+| routing GET | `src/app/api/cron/sync-google-ads/route.ts:74` — `export const GET = POST`; autoryzacja `Bearer ${env.CRON_SECRET}` (linia 13–14) |
+
+**Zamiana kryterium:** zamiast „ręczne uruchomienie z panelu Vercel (zrzut logu)" przyjęto
+mocniejszy dowód — `created_at` wszystkich czterech wierszy to **2026-09-16 06:00:19 UTC**,
+czyli wstawił je **automatyczny harmonogram Vercela**, nie ręczne wywołanie. `curl` przy odbiorze
+trafił w upsert i niczego nie podmienił. Cron działa sam, co było celem zadania.
+
+**Zauważone, nie w zakresie:** kampania `Search-7-Iceland (próbna) 823` ma zerowy wydatek,
+zero wyświetleń i zero kliknięć — martwa albo wstrzymana. Pozostałe trzy wydały 15 IX
+289,25 EUR przy 40 kliknięciach.
+
+`pnpm typecheck / lint / build` — przyjęte z raportu, niepowtórzone przy odbiorze.
