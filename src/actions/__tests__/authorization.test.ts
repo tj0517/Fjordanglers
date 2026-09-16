@@ -1,7 +1,7 @@
 /**
  * Authorization tests for server actions.
  *
- * These are pure unit tests — no network, no .env.local.
+ * These are pure unit tests — no network, no external services.
  * We mock @/lib/supabase/server, @/lib/stripe/client, @/lib/env,
  * @/lib/email and other side-effectful modules so no real I/O happens.
  *
