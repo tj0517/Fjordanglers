@@ -111,3 +111,54 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" localhost:3000/api/cron/offer-sl
 ```
 
 ## Notatki z realizacji
+
+### Odczyt produkcji (16 IX 2026, supabase-fa — przed zmianami)
+
+```
+z_dealem  z_dealem_bez_flagi  z_flaga
+19        11                  13
+```
+
+`external_offer_sent`: `NOT NULL DEFAULT false` — `NOT external_offer_sent` i `external_offer_sent IS NOT TRUE` dają identyczne wyniki. Backfill używa `NOT external_offer_sent` (zgodnie z `route.ts:50`).
+
+Różnica `z_dealem` między instrukcją (18) a odczytem (19): instrukcja liczyła tylko `internal_deal_total_eur IS NOT NULL`; zakres zadania liczy `OR internal_commission_eur IS NOT NULL` — wyższa liczba jest poprawna względem definicji.
+
+### Zmiana kodu
+
+`src/actions/inquiries.ts` — `saveInternalDeal`: payload budowany jako `Record<string, unknown>`; gdy `params.dealTotalEur != null || params.commissionEur != null`, do payloadu dokładane `external_offer_sent: true`. Gdy oba są null — pole nie wchodzi do UPDATE (raz wysłana oferta zostaje wysłana).
+
+### Backfill (16 IX 2026)
+
+Lista 11 id zaktualizowanych wierszy (SELECT przed UPDATE — jedyna forma odwracalności; po UPDATE warunek przestał je opisywać):
+
+| id | angler_name | total | commission |
+|---|---|---|---|
+| c6a0a222-d74a-4fb4-89bd-b4950b511a62 | Marc moussa | 700 | 150 |
+| b421e267-21d5-4651-ac1d-33241c4f14a4 | Jack Bruff | 0 | 0 |
+| 2d7440d8-d872-4dc8-997b-7e99b0f88ce8 | Ross Lamb | 680 | 90 |
+| 1dbfe86d-95a5-41f2-8cc6-924eda3a5331 | Alexander Van Alen | 1600 | 280 |
+| 3a5ee20d-0ef5-47de-8ada-31e3e4927338 | Sean Engel | 1450 | 290 |
+| a45b417d-9897-47a9-8377-9c4b1198f07f | Taylor Ingraham | 1450 | 290 |
+| 1d68186d-2bdb-4d4b-93b9-5909390a6d8a | Scott Latimer | 12900 | 2100 |
+| 7a59b947-40e3-4cad-95ae-879c929480cf | Kevin Lavers | 1200 | 225 |
+| 29a1b8e0-2978-4e80-b574-5a90784eaf5d | Ben Forcier | 1600 | 260 |
+| 304ea655-cacf-4335-a150-34bcc306c1b6 | Karl Terauds | 11169.96 | 1873.67 |
+| d060360a-2208-419e-a470-b410f5f9df10 | Roz Tatton | NULL | 130 |
+
+SELECT weryfikacyjny po UPDATE:
+```
+z_dealem  z_dealem_bez_flagi  z_flaga
+19        0                   24
+```
+`z_flaga`: 13 → 24 (+11). `z_dealem_bez_flagi`: 11 → 0.
+
+### Kryterium „curl przed/po" — niespełnione, zastąpione
+
+Oryginalne kryterium: „curl zwraca mniejszą liczbę niż przed" — curl PRZED UPDATE nie został wykonany i jest nie do odtworzenia. Kryterium zastąpione dowodem z SELECT-ów: `z_dealem_bez_flagi` 11 → 0, `z_flaga` 13 → 24. To jest zamiana dowodu, nie spełnienie oryginalnego kryterium.
+
+Cron wywołany przez tj PO backfillu: `{"overdue":17,"mailed":true}`. Uwaga: `GET /api/cron/offer-sla` wysyła mail przy `OWNER_EMAIL` ustawionym i niepustej liście — nie jest odczytem bez skutków ubocznych. Odnotowane w `docs/deferred-tasks.md`.
+
+### Poza zakresem (odnotowane — korekta)
+
+`pnpm test --run` pisze do **produkcyjnej** tabeli `inquiries` przez klucz serwisowy — `.env.local` zawiera `NEXT_PUBLIC_SUPABASE_URL=https://uwxrstbplaoxfghrchcy.supabase.co` (produkcja, nie projekt testowy). Weryfikacja po fakcie przez tj potwierdziła, że `afterAll` w testach usunął wstawione wiersze — bez trwałych szkód. Poprzedni raport podał projekt testowy `xsilxmaiyyjgpxsalvet` bez sprawdzenia — to było założenie, nie odczyt. Docelowa naprawa: FA-0.21.
+
