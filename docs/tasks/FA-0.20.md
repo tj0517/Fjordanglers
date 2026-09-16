@@ -2,7 +2,7 @@
 id: FA-0.20
 title: Martwy status `pending_fa_review` — default kolumny łamie własny constraint tabeli
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -231,3 +231,41 @@ select column_default from information_schema.columns
   where table_name='inquiries' and column_name='status';
 → expected: 'pending'::text
 ```
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Komplet dowodów, łącznie z czerwonym.
+
+| kryterium | werdykt | dowód |
+|---|---|---|
+| `column_default` = `'pending'::text` na produkcji | udowodnione | SELECT po `db push`: `'pending'::text` |
+| czerwony dowód: INSERT bez `status` pada PRZED migracją | udowodnione | `ERROR: violates check constraint "inquiries_status_check"` (lokalny stack) |
+| zielony dowód: ten sam INSERT PO migracji | udowodnione | zwraca `pending` |
+| `grep -rn "pending_fa_review" src/` → 0 | udowodnione | 0 trafień |
+| `supabase db diff` pusty | udowodnione | `No schema changes found` na gałęzi `fix/inquiry-status-default` |
+| testy / typecheck / build / lint | udowodnione | 61/61 (60 baseline + 1 regresyjny), typecheck i build czyste, lint bez nowych |
+| status `todo → review` w pliku i `INDEX.md` | udowodnione | PR #40 |
+
+**Bramka STOP zamknięta.** `db push` wykonany przez tj po resecie hasła do bazy; 0 wierszy
+ze statusem `pending_fa_review` w produkcji przed migracją, więc migracja danych była zbędna.
+
+**Trzy adnotacje do werdyktu:**
+
+1. **PR #40 niesie zmianę spoza zakresu** — `src/actions/getInquiryConfirmation.test.ts`.
+   To naprawa testu padającego na `main` (uczynienie go samowystarczalnym), zrobiona przy okazji.
+   Naprawia realny problem, nie proponuję wycofania, ale zakres zadania jej nie obejmował.
+2. **Kryterium `db diff` domknięte dopiero przy odbiorze.** Agent zgłosił je jako niewykonalne,
+   twierdząc, że porty 54420/54422 trzyma obcy kontener. W rzeczywistości `supabase_*_uwxrstbplaoxfghrchcy`
+   to własny lokalny stack fjordanglers (CLI nazywa kontenery referencją zlinkowanego projektu),
+   a port 54420 blokowała **osierocona shadow database z jego własnej wcześniejszej próby**
+   (`vigorous_carson`). Po `docker rm -f` `db diff` przeszedł od ręki.
+3. **Migracja weszła ręcznym `db push`** po dwóch nieudanych próbach (`28P01`) i resecie hasła.
+   To czwarty raz, gdy brak dostępu do hasła zatrzymuje pracę (FA-1.01, FA-1.06, FA-0.20 ×2) —
+   uzasadnienie dla rozszerzenia FA-1.11 o deploy migracji z CI (decyzja tj, wpis w `deferred-tasks.md`).
+
+**Znalezione przy odbiorze, do osobnego zadania (FA-0.21, P0):** testy integracyjne
+(`getInquiryConfirmation.test.ts`, `inquiryStatusDefault.test.ts`) parsują `.env.local`, wołają
+`createServiceClient()` i wstawiają wiersze do `inquiries` **na produkcji**. Produkcja sprawdzona
+16 IX — czysta (0 wierszy testowych), ale mechanizm zostaje. Szczegóły w `deferred-tasks.md`.
