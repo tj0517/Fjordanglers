@@ -2,7 +2,7 @@
 id: FA-1.03
 title: Maszyna stanów §4 + inquiry_events + transition() — statusy „na kogo czekamy"
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
