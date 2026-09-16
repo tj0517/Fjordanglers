@@ -2,7 +2,7 @@
 id: FA-0.20
 title: Martwy status `pending_fa_review` — default kolumny łamie własny constraint tabeli
 stage: 0
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
@@ -124,3 +124,110 @@ pnpm typecheck && pnpm lint && pnpm test -- --run && pnpm build
 ```
 
 ## Notatki z realizacji
+
+## Report — FA-0.20 Martwy status `pending_fa_review` — default kolumny łamie własny constraint tabeli
+
+### Done
+
+- **Odczyt bieżącego stanu (produkcja, 15 IX 2026)** — evidence:
+  ```
+  select column_name, column_default from information_schema.columns
+    where table_name='inquiries' and column_name='status';
+  → status | 'pending_fa_review'::text
+
+  select pg_get_constraintdef(oid) from pg_constraint where conname='inquiries_status_check';
+  → CHECK ((status = ANY (ARRAY['pending'::text, 'in_negotiation'::text, ...])))
+    (pending_fa_review absent from the list)
+
+  select status, count(*) from inquiries group by 1;
+  → completed:9, deposit_paid:9, in_negotiation:2, lost:61, offer_sent:5,
+    pending:8, waiting_for_deposit:1, waiting_for_guide_offer:3
+    (NO row with pending_fa_review — STOP gate cleared)
+  ```
+
+- **Migracja `20260916093436_inquiries_status_default.sql`** created — `ALTER TABLE inquiries ALTER COLUMN status SET DEFAULT 'pending';`. Applied to local DB at port 54422.
+
+- **RED proof (local DB, before migration):**
+  ```
+  psql> INSERT INTO inquiries (angler_name, angler_email) VALUES ('Red-proof Angler', 'red@proof.local');
+  ERROR: new row for relation "inquiries" violates check constraint "inquiries_status_check"
+  DETAIL: Failing row contains (..., pending_fa_review, ...)
+  ```
+
+- **GREEN proof (local DB, after migration):**
+  ```
+  psql> INSERT INTO inquiries (angler_name, angler_email)
+        VALUES ('Green-proof Angler', 'green@proof.local') RETURNING id, status;
+  → 2f8147e1-... | pending
+  ```
+
+- **`NewInquiryForm.tsx:22`** — `pending_fa_review` → `pending`; label "Pending review" unchanged.
+
+- **`inquiry-received-fa.tsx:70`** — hardcoded `pending_fa_review` → `pending`. No `status` prop exists in `InquiryReceivedFaEmailProps`; literal `'pending'` used. Reported as limitation below.
+
+- **Test regresyjny `src/actions/__tests__/inquiryStatusDefault.test.ts`** — self-contained INSERT without `status`, asserts `data.status === 'pending'`, cleans up in `afterAll`. Result: **61 tests, 61 passed** (test project already had correct default applied).
+
+- **`getInquiryConfirmation.test.ts`** fixed to be self-contained (insert + cleanup, explicit `status: 'pending'`). Was previously failing on main (depended on pre-existing data with `deposit_paid_at = null`).
+
+- **`grep -rn "pending_fa_review" src/`** → 0 hits.
+
+- **`pnpm typecheck`** → 0 errors.
+
+- **`pnpm test -- --run`** → 61/61 passed (9 test files).
+
+- **`pnpm build`** → completed without errors.
+
+- **`pnpm lint`** → 96 problems; identical count on main — zero new warnings or errors introduced.
+
+### Not done
+
+- **`supabase db diff`** — could not run: local fjordanglers stack failed to start (port 54420 and 54422 already allocated by `supabase_db_uwxrstbplaoxfghrchcy` container). Migration correctness is proved by the red/green psql proofs above.
+
+- **`select column_default from information_schema.columns where table_name='inquiries' and column_name='status'` → `'pending'::text` on production** — STOP gate: `db push` executed by tj. The migration file is `supabase/migrations/20260916093436_inquiries_status_default.sql`.
+
+### Noticed, not touched (→ docs/deferred-tasks.md)
+
+- `inquiry-received-fa.tsx` has no `status` prop — the component always sends `Status: pending` now, which is accurate for all new inquiries but misleading for re-sends on inquiries that have progressed. Adding a `status` prop would require tracing all callers. Filed in deferred-tasks.md.
+
+### Needs a decision
+
+- None.
+
+### Verification
+
+```
+# Red proof — local DB, before migration
+psql postgresql://postgres:postgres@127.0.0.1:54422/postgres
+  INSERT INTO inquiries (angler_name, angler_email) VALUES ('Red-proof Angler', 'red@proof.local');
+  → ERROR: new row for relation "inquiries" violates check constraint "inquiries_status_check"
+    DETAIL: Failing row contains (..., pending_fa_review, ...)
+
+# Migration applied
+  psql -f supabase/migrations/20260916093436_inquiries_status_default.sql
+  → ALTER TABLE
+
+# Green proof — local DB, after migration
+  INSERT INTO inquiries (angler_name, angler_email)
+    VALUES ('Green-proof Angler', 'green@proof.local') RETURNING id, status;
+  → 2f8147e1-... | pending
+
+# grep
+grep -rn "pending_fa_review" src/   → (no output, exit 1)
+
+# Tests
+pnpm test -- --run
+→ Test Files: 9 passed (9)
+→ Tests: 61 passed (61)
+
+# TypeScript
+pnpm typecheck → (no output, exit 0)
+
+# Build
+pnpm build → completed (see route list)
+
+# Pending — executed by tj
+supabase db push   # applies 20260916093436_inquiries_status_default.sql to uwxrstbplaoxfghrchcy
+select column_default from information_schema.columns
+  where table_name='inquiries' and column_name='status';
+→ expected: 'pending'::text
+```
