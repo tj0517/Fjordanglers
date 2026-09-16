@@ -2,7 +2,7 @@
 id: FA-0.21
 title: Testy integracyjne piszą do produkcji — `.env.test` i granica, której nie da się przekroczyć przypadkiem
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -196,3 +196,40 @@ Brak nowych obserwacji poza zakresem.
 ### Needs a decision
 
 Brak.
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Czerwony dowód wykonany i pokazany w całości — bezpiecznik przerywa
+przebieg, nie ostrzega.
+
+| kryterium | werdykt | dowód |
+|---|---|---|
+| czerwony dowód — bezpiecznik przerywa przebieg | udowodnione | `SAFETY FUSE — test run aborted`, zero uruchomionych testów, zero zapytań |
+| `grep -rn "\.env\.local" src --include=*.test.ts` → 0 | udowodnione | 0 trafień (sprawdzone przy odbiorze) |
+| `setupFiles` ładuje env przed testami | udowodnione | `vitest.config.ts:8` — `setupFiles: ['./src/tests/setup.ts']` |
+| bezpiecznik sprawdza prefiks URL | udowodnione | `src/tests/setup.ts:28` — `if (!url.startsWith('http://127.0.0.1') && !url.startsWith('http://localhost'))` |
+| `.env.test` w repo | udowodnione | `git ls-files .env.test` → śledzony; wyjątek `!.env.test` w `.gitignore:35` |
+| produkcja bez wierszy testowych po przebiegu | udowodnione | `select count(*) from inquiries where angler_email like '%test%' or like '%regression%'` → **0** |
+| typecheck / lint / build | zadeklarowane | przyjęte z raportu |
+
+**Zamiana w czerwonym dowodzie, świadoma:** wykonano go z URL `https://nie-istnieje.supabase.co`,
+nie z adresem produkcji, mimo że tak brzmiało kryterium. Bezpiecznik sprawdza prefiks, więc dowolny
+obcy host wyzwala go identycznie — a gdyby zawiódł, połączenie idzie donikąd zamiast w bazę
+klientów. Pierwotne brzmienie kryterium kazało wskazać produkcję „na chwilę", co przy niedziałającym
+bezpieczniku oznaczałoby dokładnie tę szkodę, przed którą zadanie ma chronić. Decyzja tj, 16 IX.
+
+**Dodatkowa właściwość, niewymagana przez zadanie:** bezpiecznik działa również, gdy `.env.test`
+w ogóle nie istnieje (`setup.ts:21`) — wtedy URL nie jest lokalny i przebieg i tak się przerywa.
+Granica nie zależy od obecności pliku konfiguracyjnego.
+
+**Drobiazg do ewentualnej poprawki:** komunikat bezpiecznika pojawia się wielokrotnie w jednym
+przebiegu (raz na plik testowy albo na worker). Nieszkodliwe, ale przy 61 testach ten sam ekran
+powtórzony kilkanaście razy zasłania resztę wyjścia.
+
+**Kontekst historyczny, wart zapamiętania:** wzorzec „test parsuje `.env.local` i woła
+`createServiceClient()`" był w repo starszy niż zadanie, które go ujawniło — agent FA-0.20 poszedł
+za tym, co zastał. Przez 11–15 IX produkcję chroniły przypadkowo **martwe klucze legacy**;
+wymiana kluczy 15 IX tę osłonę zdjęła i dopiero wtedy problem stał się realny. Szkód nie było:
+produkcja sprawdzana trzykrotnie (15 i 16 IX), zawsze czysta.
