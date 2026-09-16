@@ -1,27 +1,17 @@
 /**
- * Integration test for getInquiryConfirmation against the test/dev Supabase
- * project (env from .env.local — never printed). Confirms:
+ * Integration test for getInquiryConfirmation against the local Supabase stack.
+ * Env is loaded by vitest setupFiles (src/tests/setup.ts) before this file executes.
+ * Confirms:
  *  - an unpaid inquiry (deposit_paid_at = null) returns depositPaidAt: null
  *  - a nonexistent id returns null
  *
  * The test inserts and cleans up its own row so it never depends on pre-existing data.
  */
-import fs from 'fs'
-import path from 'path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 
 let testInquiryId: string
 
 beforeAll(async () => {
-  const envPath = path.resolve(__dirname, '../../.env.local')
-  const raw = fs.readFileSync(envPath, 'utf-8')
-  for (const line of raw.split('\n')) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/)
-    if (match == null) continue
-    const [, key, value] = match
-    if (process.env[key] == null) process.env[key] = value
-  }
-
   const { createServiceClient } = await import('@/lib/supabase/server')
   const svc = createServiceClient()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,11 +28,11 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  if (testInquiryId == null) return
   const { createServiceClient } = await import('@/lib/supabase/server')
   const svc = createServiceClient()
+  // Delete by email so cleanup runs even if testInquiryId was never assigned.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any).from('inquiries').delete().eq('id', testInquiryId)
+  await (svc as any).from('inquiries').delete().eq('angler_email', 'test-vitest@example.com')
 })
 
 describe('getInquiryConfirmation', () => {

@@ -7,30 +7,16 @@
  * This test inserts without an explicit status and asserts the returned value
  * is 'pending'. It fails (with a constraint error) until the migration is applied.
  * The test is self-contained: it inserts its own row and deletes it in afterAll.
+ * Env is loaded by vitest setupFiles (src/tests/setup.ts) before this file executes.
  */
-import fs from 'fs'
-import path from 'path'
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-
-let insertedId: string
-
-beforeAll(async () => {
-  const envPath = path.resolve(process.cwd(), '.env.local')
-  const raw = fs.readFileSync(envPath, 'utf-8')
-  for (const line of raw.split('\n')) {
-    const match = line.match(/^([A-Z0-9_]+)=(.*)$/)
-    if (match == null) continue
-    const [, key, value] = match
-    if (process.env[key] == null) process.env[key] = value
-  }
-})
+import { describe, it, expect, afterAll } from 'vitest'
 
 afterAll(async () => {
-  if (insertedId == null) return
   const { createServiceClient } = await import('@/lib/supabase/server')
   const svc = createServiceClient()
+  // Delete by email so cleanup runs even if the insert never completed.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any).from('inquiries').delete().eq('id', insertedId)
+  await (svc as any).from('inquiries').delete().eq('angler_email', 'fa-0.20@regression.test')
 })
 
 describe('FA-0.20 — inquiries.status column default', () => {
@@ -47,6 +33,5 @@ describe('FA-0.20 — inquiries.status column default', () => {
     expect(error).toBeNull()
     expect(data).not.toBeNull()
     expect(data.status).toBe('pending')
-    insertedId = data.id
   })
 })
