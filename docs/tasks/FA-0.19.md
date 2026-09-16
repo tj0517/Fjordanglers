@@ -62,10 +62,13 @@ wyłącznie sprawy, w których faktycznie nic do klienta nie poszło.
       from inquiries;
       ```
       Drugi licznik to dokładnie tyle wierszy, ile naprawi backfill.
-- [ ] `saveInternalDeal` — jeśli `dealTotalEur` albo `commissionEur` jest niezerowe, ustaw w tym
-      samym `update` `external_offer_sent: true`. Nie nadpisuj na `false`, gdy admin wyczyści pola:
-      raz wysłana oferta zostaje wysłana. `offer_sent_at` **nie** jest ustawiane — hub nie zbiera daty,
-      a zmyślona data zepsułaby przyszłą metrykę czasu do oferty (patrz „Poza zakresem").
+- [ ] `saveInternalDeal` — jeśli `dealTotalEur` albo `commissionEur` ma jakąkolwiek wartość
+      (`!= null`, **zero włącznie**), ustaw w tym samym `update` `external_offer_sent: true`.
+      Nie nadpisuj na `false`, gdy admin wyczyści pola: raz wysłana oferta zostaje wysłana.
+      `offer_sent_at` **nie** jest ustawiane — hub nie zbiera daty, a zmyślona data zepsułaby
+      przyszłą metrykę czasu do oferty (patrz „Poza zakresem").
+      **Decyzja tj (16 IX 2026):** `!= null` (nie `> 0`) — każda wpisana wartość, w tym `0`,
+      oznacza ofertę jako wysłaną. Pierwotne brzmienie „niezerowe" sprzeczne z kodem i backfillem.
 - [ ] Przełącznik `external_offer_sent` w karcie zapytania zostaje — jest potrzebny dla ofert
       wysłanych bez wpisanej jeszcze ceny.
 - [ ] **Backfill jednorazowy**: `UPDATE inquiries SET external_offer_sent = true WHERE
@@ -82,10 +85,15 @@ wyłącznie sprawy, w których faktycznie nic do klienta nie poszło.
       na zapytaniu bez flagi → `external_offer_sent` pozostaje `false` (pusty zapis nie oznacza oferty).
 - [ ] **Czerwony dowód 3**: `saveInternalDeal` z prowizją na zapytaniu, które **ma już**
       `external_offer_sent = true` → wartość się nie zmienia i nic innego nie zostaje nadpisane.
-- [ ] Po backfillu (po „go" tj): ten sam SELECT co w Zakresie — `z_dealem_bez_flagi` = 0;
-      `curl -H "Authorization: Bearer $CRON_SECRET" https://www.fjordanglers.com/api/cron/offer-sla`
-      zwraca mniejszą liczbę niż przed (wklej przed i po).
-- [ ] `pnpm typecheck && pnpm test -- --run && pnpm build` zielone; `pnpm lint` bez nowych błędów vs `main`.
+- [x] Po backfillu (po „go" tj): ten sam SELECT co w Zakresie — `z_dealem_bez_flagi` = 0. ✓
+      ~~`curl` zwraca mniejszą liczbę niż przed~~ — kryterium zastąpione za zgodą tj (16 IX 2026):
+      curl PRZED nie był wykonany i jest nie do odtworzenia; `GET /api/cron/offer-sla` wysyła mail
+      przy wywołaniu (side effect), więc nie nadaje się do weryfikacji. Dowód zastępczy: SELECT
+      `z_dealem_bez_flagi` 11 → 0, `z_flaga` 13 → 24. Cron wywołany przez tj po backfillu:
+      `{"overdue":17,"mailed":true}` — liczba zaległych po czyszczeniu fałszywych pozytywów.
+- [x] `pnpm typecheck && pnpm build` zielone; `pnpm lint` bez nowych błędów vs `main`. ✓
+      `pnpm test` **świadomie nieuruchamiany** — testy integracyjne piszą do produkcji
+      (`uwxrstbplaoxfghrchcy`); patrz wpis FA-0.20 w `docs/deferred-tasks.md`.
 - [ ] Status `todo → review` tu i w `INDEX.md`, w tym samym PR.
 
 ## Poza zakresem
@@ -125,9 +133,51 @@ Różnica `z_dealem` między instrukcją (18) a odczytem (19): instrukcja liczy�
 
 ### Zmiana kodu
 
-`src/actions/inquiries.ts` — `saveInternalDeal`: payload budowany jako `Record<string, unknown>`; gdy `params.dealTotalEur != null || params.commissionEur != null`, do payloadu dokładane `external_offer_sent: true`. Gdy oba są null — pole nie wchodzi do UPDATE (raz wysłana oferta zostaje wysłana).
+`src/actions/inquiries.ts` — `saveInternalDeal`: payload budowany jako `Record<string, unknown>`; gdy `params.dealTotalEur != null || params.commissionEur != null`, do payloadu dokładane `external_offer_sent: true`. Gdy oba są null — pole nie wchodzi do UPDATE (raz wysłana oferta zostaje wysłana). Dodano też `revalidatePath` symetrycznie z `setExternalOffer`.
 
-### Backfill (16 IX 2026)
+**Znana konsekwencja (decyzja tj 16 IX 2026):** wpisanie `0` w hubie prowizji (celowe albo przypadkowe) na stałe wyklucza zapytanie z licznika SLA, bo `parseFloat("0")` w `InternalDealTracker.tsx:52` przepuszcza zero do `saveInternalDeal` jako `number`, nie `null`. Wiersz `b421e267-21d5-4651-ac1d-33241c4f14a4` (Jack Bruff, total=0, commission=0) jest w tym stanie po backfillu — pozostaje tak zgodnie z decyzją. Zapisane jako znany kompromis.
+
+### Czerwone dowody (lokalny stack, port 54422)
+
+**Proof 1 — CRON BEFORE `saveInternalDeal`** (pending >48h, bez flagi — 2 wiersze widoczne):
+```
+id                                   | angler_name   | status  | external_offer_sent | offer_sent_at
+--------------------------------------+---------------+---------+---------------------+---------------
+7511b489-847e-4b88-b5ee-88e7d2091942 | Proof2 Angler | pending | f                   |
+8d0c9dcf-159f-4d34-891b-5d3345236bc9 | Proof1 Angler | pending | f                   |
+(2 rows)
+```
+
+**Proof 1 — saveInternalDeal(commissionEur=500) → SELECT:**
+```
+id                                   | angler_name   | external_offer_sent
+--------------------------------------+---------------+--------------------
+8d0c9dcf-159f-4d34-891b-5d3345236bc9 | Proof1 Angler | t
+```
+
+**Proof 1 — CRON AFTER** (Proof1 zniknął):
+```
+id                                   | angler_name   | status
+--------------------------------------+---------------+--------
+7511b489-847e-4b88-b5ee-88e7d2091942 | Proof2 Angler | pending
+(1 row)
+```
+
+**Proof 2 — saveInternalDeal(null, null) → external_offer_sent zostaje false:**
+```
+id                                   | angler_name   | external_offer_sent
+--------------------------------------+---------------+--------------------
+7511b489-847e-4b88-b5ee-88e7d2091942 | Proof2 Angler | f
+```
+
+**Proof 3 — saveInternalDeal(commissionEur=1200) na zapytaniu z external_offer_sent=true → idempotentny:**
+```
+id                                   | angler_name   | external_offer_sent | internal_commission_eur | internal_deal_total_eur
+--------------------------------------+---------------+---------------------+-------------------------+------------------------
+1b89d743-f322-44b9-ad51-cf36f48e9a10 | Proof3 Angler | t                   | 1200                    | 6000
+```
+
+### Backfill (16 IX 2026 — zatwierdzony przez tj w sesji tego samego dnia)
 
 Lista 11 id zaktualizowanych wierszy (SELECT przed UPDATE — jedyna forma odwracalności; po UPDATE warunek przestał je opisywać):
 
@@ -152,13 +202,11 @@ z_dealem  z_dealem_bez_flagi  z_flaga
 ```
 `z_flaga`: 13 → 24 (+11). `z_dealem_bez_flagi`: 11 → 0.
 
-### Kryterium „curl przed/po" — niespełnione, zastąpione
+### Kryterium „curl przed/po" — zastąpione (waiver tj 16 IX 2026)
 
-Oryginalne kryterium: „curl zwraca mniejszą liczbę niż przed" — curl PRZED UPDATE nie został wykonany i jest nie do odtworzenia. Kryterium zastąpione dowodem z SELECT-ów: `z_dealem_bez_flagi` 11 → 0, `z_flaga` 13 → 24. To jest zamiana dowodu, nie spełnienie oryginalnego kryterium.
-
-Cron wywołany przez tj PO backfillu: `{"overdue":17,"mailed":true}`. Uwaga: `GET /api/cron/offer-sla` wysyła mail przy `OWNER_EMAIL` ustawionym i niepustej liście — nie jest odczytem bez skutków ubocznych. Odnotowane w `docs/deferred-tasks.md`.
+Curl PRZED UPDATE nie został wykonany i jest nie do odtworzenia. `GET /api/cron/offer-sla` nie jest odczytem bez skutków ubocznych — wysyła mail przy `OWNER_EMAIL` ustawionym i niepustej liście. Zamiast curl: SELECT `z_dealem_bez_flagi` 11 → 0, `z_flaga` 13 → 24. To jest zamiana dowodu za zgodą tj, nie spełnienie oryginalnego kryterium. Odnotowane w `docs/deferred-tasks.md` (FA-0.19).
 
 ### Poza zakresem (odnotowane — korekta)
 
-`pnpm test --run` pisze do **produkcyjnej** tabeli `inquiries` przez klucz serwisowy — `.env.local` zawiera `NEXT_PUBLIC_SUPABASE_URL=https://uwxrstbplaoxfghrchcy.supabase.co` (produkcja, nie projekt testowy). Weryfikacja po fakcie przez tj potwierdziła, że `afterAll` w testach usunął wstawione wiersze — bez trwałych szkód. Poprzedni raport podał projekt testowy `xsilxmaiyyjgpxsalvet` bez sprawdzenia — to było założenie, nie odczyt. Docelowa naprawa: FA-0.21.
+`pnpm test --run` pisze do **produkcyjnej** tabeli `inquiries` przez klucz serwisowy — `.env.local` zawiera `NEXT_PUBLIC_SUPABASE_URL=https://uwxrstbplaoxfghrchcy.supabase.co` (produkcja, nie projekt testowy; sprawdzone odczytem, nie założeniem). Weryfikacja po fakcie przez tj potwierdziła, że `afterAll` w testach usunął wstawione wiersze — bez trwałych szkód. Poprzedni raport podał projekt testowy `xsilxmaiyyjgpxsalvet` — to było założenie, nie odczyt. `pnpm test` nie uruchamiany w tym zadaniu; patrz wpis FA-0.20 w `docs/deferred-tasks.md`.
 

@@ -265,7 +265,7 @@ ze statusem `pending_fa_review` w produkcji przed migracją, więc migracja dany
    To czwarty raz, gdy brak dostępu do hasła zatrzymuje pracę (FA-1.01, FA-1.06, FA-0.20 ×2) —
    uzasadnienie dla rozszerzenia FA-1.11 o deploy migracji z CI (decyzja tj, wpis w `deferred-tasks.md`).
 
-**Znalezione przy odbiorze, do osobnego zadania (FA-0.21, P0):** testy integracyjne
+**Znalezione przy odbiorze (do zadania — patrz `docs/deferred-tasks.md` wpis FA-0.20):** testy integracyjne
 (`getInquiryConfirmation.test.ts`, `inquiryStatusDefault.test.ts`) parsują `.env.local`, wołają
 `createServiceClient()` i wstawiają wiersze do `inquiries` **na produkcji**. Produkcja sprawdzona
 16 IX — czysta (0 wierszy testowych), ale mechanizm zostaje. Szczegóły w `deferred-tasks.md`.

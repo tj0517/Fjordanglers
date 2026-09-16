@@ -188,4 +188,4 @@ Werdykt: **done**. Komplet dowodów, łącznie z czerwonymi przypadkami.
 Kryterium „przypadek `1` pokazany jako błąd" spełnione wprost testem, nie deklaracją.
 
 `pnpm typecheck / lint / test / build` — przyjęte z raportu, niepowtórzone przy odbiorze
-(`pnpm test` świadomie nieuruchamiany do czasu FA-0.21 — testy integracyjne piszą do produkcji).
+(`pnpm test` świadomie nieuruchamiany — testy integracyjne piszą do produkcji; patrz wpis FA-0.20 w `docs/deferred-tasks.md`).

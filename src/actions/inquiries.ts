@@ -714,6 +714,8 @@ export async function saveInternalDeal(
     .eq('id', inquiryId)
 
   if (error != null) return { success: false, error: error.message }
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/inquiries')
   console.log(`[saveInternalDeal] Inquiry ${inquiryId} — total ${params.dealCurrency} ${params.dealTotalEur}, commission ${params.dealCurrency} ${params.commissionEur}`)
   return { success: true }
 }
