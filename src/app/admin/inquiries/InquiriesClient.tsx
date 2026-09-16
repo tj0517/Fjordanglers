@@ -6,7 +6,6 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Search, X, CalendarDays, ChevronDown, List, Calendar } from 'lucide-react'
 import { ExternalOfferToggle } from './ExternalOfferToggle'
 import { InquiriesCalendar } from './InquiriesCalendar'
-import { STATUS_LABELS } from '@/lib/inquiries/state'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,20 +38,21 @@ const COLD_DAYS  = 3
 const STALE_DAYS = 7
 
 const ACTIVE_STATUSES = new Set([
-  'new', 'qualifying', 'waiting_guide', 'offer_presented', 'awaiting_payment',
+  'pending', 'in_negotiation', 'waiting_for_guide_offer',
+  'offer_sent', 'waiting_for_deposit', 'deposit_sent',
 ])
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  new:              { label: STATUS_LABELS.new,              color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'   },
-  qualifying:       { label: STATUS_LABELS.qualifying,       color: '#5B21B6', bg: 'rgba(139,92,246,0.15)',  border: '1px solid rgba(139,92,246,0.35)'  },
-  waiting_guide:    { label: STATUS_LABELS.waiting_guide,    color: '#C2410C', bg: 'rgba(234,88,12,0.12)',   border: '1px solid rgba(234,88,12,0.35)'   },
-  offer_presented:  { label: STATUS_LABELS.offer_presented,  color: '#0E7490', bg: 'rgba(6,182,212,0.12)',   border: '1px solid rgba(6,182,212,0.35)'   },
-  awaiting_payment: { label: STATUS_LABELS.awaiting_payment, color: '#3730A3', bg: 'rgba(99,102,241,0.12)',  border: '1px solid rgba(99,102,241,0.35)'  },
-  paid:             { label: STATUS_LABELS.paid,             color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'   },
-  handed_over:      { label: STATUS_LABELS.handed_over,      color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'   },
-  completed:        { label: STATUS_LABELS.completed,        color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)'  },
-  lost:             { label: STATUS_LABELS.lost,             color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
-  cancelled:        { label: STATUS_LABELS.cancelled,        color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
+  pending:                 { label: 'Pending',         color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'   },
+  in_negotiation:          { label: 'Negotiating',     color: '#5B21B6', bg: 'rgba(139,92,246,0.15)',  border: '1px solid rgba(139,92,246,0.35)'  },
+  waiting_for_guide_offer: { label: 'Waiting Guide',   color: '#C2410C', bg: 'rgba(234,88,12,0.12)',   border: '1px solid rgba(234,88,12,0.35)'   },
+  offer_sent:              { label: 'Offer Sent',      color: '#0E7490', bg: 'rgba(6,182,212,0.12)',   border: '1px solid rgba(6,182,212,0.35)'   },
+  waiting_for_deposit:     { label: 'Waiting Deposit', color: '#3730A3', bg: 'rgba(99,102,241,0.12)',  border: '1px solid rgba(99,102,241,0.35)'  },
+  deposit_sent:            { label: 'Deposit Sent',    color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'   },
+  deposit_paid:            { label: 'Confirmed',       color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'   },
+  completed:               { label: 'Completed',       color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)'  },
+  lost:                    { label: 'Lost',            color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
+  cancelled:               { label: 'Cancelled',       color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
 }
 
 type GuideStage = 'no_guide' | 'awaiting_response' | 'declined' | 'needs_offer' | 'offer_sent'
@@ -70,9 +70,9 @@ const GUIDE_STAGE_STYLE: Record<GuideStage, { label: string; color: string; bg: 
 export type MainFilter = 'lead' | 'guide' | 'confirmed' | 'lost'
 
 export const STATUS_GROUPS: Record<MainFilter, string[]> = {
-  lead:      ['new', 'qualifying'],
-  guide:     ['waiting_guide', 'offer_presented', 'awaiting_payment'],
-  confirmed: ['paid', 'handed_over', 'completed'],
+  lead:      ['pending', 'in_negotiation'],
+  guide:     ['waiting_for_guide_offer', 'offer_sent', 'waiting_for_deposit', 'deposit_sent'],
+  confirmed: ['deposit_paid', 'completed'],
   lost:      ['lost', 'cancelled'],
 }
 
@@ -94,18 +94,18 @@ export interface SubOption { key: string; label: string; special?: boolean }
 
 export const SUB_OPTIONS: Record<MainFilter, SubOption[]> = {
   lead: [
-    { key: 'new',        label: STATUS_LABELS.new        },
-    { key: 'qualifying', label: STATUS_LABELS.qualifying },
+    { key: 'pending',        label: 'Pending'     },
+    { key: 'in_negotiation', label: 'Negotiating' },
   ],
   guide: [
-    { key: 'waiting_guide',    label: STATUS_LABELS.waiting_guide    },
-    { key: 'offer_presented',  label: STATUS_LABELS.offer_presented  },
-    { key: 'awaiting_payment', label: STATUS_LABELS.awaiting_payment },
+    { key: 'waiting_for_guide_offer', label: 'Waiting Guide'   },
+    { key: 'offer_sent',              label: 'Offer Sent'      },
+    { key: 'waiting_for_deposit',     label: 'Waiting Deposit' },
+    { key: 'deposit_sent',            label: 'Deposit Sent'    },
   ],
   confirmed: [
-    { key: 'paid',        label: STATUS_LABELS.paid        },
-    { key: 'handed_over', label: STATUS_LABELS.handed_over },
-    { key: 'completed',   label: STATUS_LABELS.completed   },
+    { key: 'deposit_paid', label: 'Confirmed' },
+    { key: 'completed',    label: 'Completed' },
   ],
   lost: [
     { key: 'lost',      label: 'Lost'      },
@@ -136,7 +136,7 @@ function silenceDays(row: InquiryRow): number {
   return Math.floor((Date.now() - new Date(ref).getTime()) / 86_400_000)
 }
 
-const SLA_STATUSES_EXCLUDED = new Set(['lost', 'cancelled', 'paid', 'handed_over', 'completed'])
+const SLA_STATUSES_EXCLUDED = new Set(['lost', 'cancelled', 'deposit_paid', 'completed'])
 
 function noOfferSinceHours(row: InquiryRow): number | null {
   if (row.offer_sent_at != null || row.external_offer_sent) return null
@@ -151,7 +151,7 @@ function needsAttention(row: InquiryRow): boolean {
 }
 
 function isNewUnresponded(row: InquiryRow): boolean {
-  if (row.status !== 'new') return false
+  if (row.status !== 'pending') return false
   if (row.last_contact_at != null) return false
   return (Date.now() - new Date(row.created_at).getTime()) < 86_400_000
 }
@@ -337,7 +337,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
       if (!Number.isFinite(c)) return sum
       return sum + (r.deal_currency === 'USD' ? c * USD_EUR_RATE : c)
     }, 0)
-    const wonCount    = (statusCounts['paid'] ?? 0) + (statusCounts['handed_over'] ?? 0) + (statusCounts['completed'] ?? 0)
+    const wonCount    = (statusCounts['deposit_paid'] ?? 0) + (statusCounts['completed'] ?? 0)
     const closedCount = allRows.filter(r => !ACTIVE_STATUSES.has(r.status)).length
     const pct         = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : null
     return { totalCommission: total, hasMixedCurrency: mixed, convPct: pct }

@@ -1,8 +1,7 @@
 /**
  * POST /api/inquiries — create a new FA inquiry.
  *
- * Saves to the `inquiries` table with status = 'new' (set by createInquiry, which
- * also emits `inquiry.created`).
+ * Saves to the `inquiries` table with status = 'pending'.
  * Fires two emails:
  *   • FA: new inquiry notification (with dashboard link)
  *   • Angler: inquiry received confirmation
@@ -140,8 +139,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       tripLength:        parsed.data.trip_length ?? null,
       gclid:             parsed.data.gclid ?? null,
       utm:               parsed.data.utm ?? null,
+      status:            'pending',
       source:            'web_form',
-      actor:             { kind: 'system' },
     })
   } catch (dbError) {
     console.error('[inquiries/POST] DB insert error:', dbError)

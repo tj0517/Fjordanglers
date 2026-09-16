@@ -44,122 +44,35 @@ Until stage 2 the same responsibilities live in one Next.js app: `src/lib/supaba
 
 Every domain mutation emits an `inquiry_events` row **in the same transaction**. The
 emitter is part of the repository method, not something the caller remembers to do.
-Events are never a separate manual step: they are a side effect of sending, receiving,
-transitioning or paying. If a fact can only reach the table by someone "logging it later",
-the design is wrong — the action itself has to happen in the app.
 
 ```
 inquiry_events(id, inquiry_id, type, from_status, to_status,
                actor_kind ∈ {admin,guide,system,agent,angler}, actor_id,
-               channel ∈ {email,whatsapp,instagram,stripe,app} NULL,   -- where it happened
-               source  ∈ {app,webhook,cron,backfill},                   -- how it got here
-               message_id → messages.id NULL,                           -- for message.* types
                payload jsonb, occurred_at, created_at)      -- append-only, no UPDATE/DELETE policy
 ```
 
-`source` matters for the next months: metrics must be able to tell an event the app
-produced from one a backfill guessed. The event type catalogue is `REBUILD_PLAN.md`
-Appendix C. Adding a type means adding it there and in `src/lib/events/types.ts` in the
-same PR. `occurred_at` is separate from `created_at` so backfills can carry the real time.
+The event type catalogue is `REBUILD_PLAN.md` Appendix C. Adding a type means adding it
+there and in `packages/core/events/types.ts` in the same PR. `occurred_at` is separate
+from `created_at` so historical imports can carry their real time.
 
-This table exists from stage 1 and is written to **before anything reads it**.
-
-## 3a. Messages — one thread per inquiry, every channel
-
-```
-messages(id, inquiry_id, channel ∈ {email,whatsapp,instagram},
-         direction ∈ {inbound,outbound},
-         counterpart ∈ {angler,guide}, counterpart_id NULL,     -- guide id when known
-         external_id UNIQUE NULL,                                -- provider message id (idempotency)
-         thread_key NULL,                                        -- email Message-ID chain / wa conversation
-         body, subject NULL, media jsonb,
-         status ∈ {draft,queued,sent,delivered,read,failed,received},
-         sent_by NULL,                                           -- admin uid for outbound
-         drafted_by ∈ {admin,agent} NULL,                        -- who wrote the text
-         occurred_at, created_at)
-```
-
-The inquiry page shows this thread and is the only place messages are written or sent.
-Channel adapters live in `src/lib/channels/<channel>.ts` and expose the same interface
-(`send`, `parseInbound`, `canSendFreeform`); the WhatsApp adapter enforces Meta's 24-hour
-window (outside it, `send` requires a template). The Instagram adapter implements the
-interface but stays disabled until Meta app review — absence of keys is a config state,
-not an error. Inbound that cannot be matched to an inquiry lands in `unmatched_messages`
-and is matched from the app, which then moves it to `messages` and emits `message.received`.
-
-`lead_messages` and `inquiry_messages` are migrated into `messages` and dropped in stage 1.
-
-## 3b. Offers — a separate object, several options
-
-An offer is what the guide proposed for this inquiry, and it usually comes with
-variants (3 days / 5 days, lodge / camp). It is **not** a set of `offer_*` columns on
-`inquiries` (those are legacy, dropped in stage 4).
-
-```
-offers(id, inquiry_id, guide_id NULL, source_message_id → messages.id NULL,
-       status ∈ {draft,presented,accepted,declined,superseded}, notes, created_by, created_at)
-offer_options(id, offer_id, label, price_cents, currency, date_from NULL, date_to NULL,
-              party_size NULL, includes jsonb, notes, is_accepted bool default false)
-```
-
-Marking an inbound guide message as "this is the offer" creates an `offers` row with its
-options typed in by the admin; presenting it to the angler emits `offer.presented`
-(`payload.offer_id`); the angler's answer marks one option `is_accepted` and emits
-`offer.accepted` (`payload.option_id`). A new offer for the same inquiry supersedes the
-previous one; history stays.
+This table exists from stage 1 and is written to **before anything reads it**. Do not
+"wait until the metrics screens exist" — the point is to have history when they do.
 
 ## 4. Inquiry state machine
 
-Statuses describe **who we are waiting for**, not a step in a linear pipeline, because the
-angler and the guide conversations run in parallel and loop.
+Ten statuses, kept because they are the founders' operational vocabulary. Transitions
+are restricted and go through one function:
 
 ```
-new ─▶ qualifying ◀─▶ waiting_guide ◀─▶ offer_presented ─▶ awaiting_payment ─▶ paid
- └─────────────────▶ waiting_guide  (lead arrives with a complete brief)          │
-                                                                     handed_over ◀┘ ─▶ completed
+pending ─▶ in_negotiation ─▶ waiting_for_guide_offer ─▶ offer_sent ─▶ waiting_for_deposit
+        ─▶ deposit_sent ─▶ deposit_paid ─▶ completed
 any non-terminal ─▶ lost | cancelled
 ```
 
-| status | meaning | typical trigger |
-|---|---|---|
-| `new` | landed, nobody replied yet | `inquiry.created` |
-| `qualifying` | we asked the angler something (dates, party, budget) | outbound to angler |
-| `waiting_guide` | we asked a guide for availability/price | outbound to guide |
-| `offer_presented` | angler has a concrete offer | `offer.presented` |
-| `awaiting_payment` | payment link sent | `payment.link_sent` |
-| `paid` | deposit received | `payment.received` |
-| `handed_over` | guide notified, contacts exchanged | `contacts.exchanged` |
-| `completed` | trip happened | `trip.completed` |
-| `lost` / `cancelled` | terminal | `inquiry.lost` / manual |
-
-Loops between `qualifying`, `waiting_guide` and `offer_presented` are allowed in both
-directions, all three ways (angler changes dates after seeing an offer → back to the
-guide), and `awaiting_payment` can fall back into that loop while nobody has paid yet.
-The money path is strict: `paid` is reachable **only** from `awaiting_payment`;
-`awaiting_payment` only from `offer_presented`; `completed` only through `handed_over`.
-
-`transition(client, inquiryId, to, { actor, reason, channel? })` in
-`src/lib/inquiries/state.ts` validates the edge, updates `status`, recomputes
-`stage_reached`, emits `status.changed`. Webhooks, the agent, the admin `StatusChanger`
-and any cron call the same function. Sending a message from the thread may propose a
-transition (outbound to guide → `waiting_guide`) but the admin confirms it in the same
-click — no silent status changes from messaging.
-
-### 4.1 Mapping from the ten legacy statuses (migration, one-off)
-
-| legacy | new |
-|---|---|
-| `pending` | `new` |
-| `in_negotiation` | `qualifying` |
-| `waiting_for_guide_offer` | `waiting_guide` |
-| `offer_sent` | `offer_presented` |
-| `waiting_for_deposit`, `deposit_sent` | `awaiting_payment` |
-| `deposit_paid` | `paid` |
-| `completed` | `completed` |
-| `lost`, `cancelled` | unchanged |
-
-Legacy values are kept in the enum as deprecated until the backfill (FA-1.05) has run and
-no row uses them; then dropped in stage 4.
+`transition(inquiryId, to, { actor, reason })` in `packages/core/inquiries/state.ts`
+validates the edge, updates `status`, recomputes `stage_reached`, emits
+`status.changed`. Webhooks, the agent, the admin `StatusChanger` and any cron all call
+the same function. If you find yourself writing `.update({ status: ... })` directly, stop.
 
 ## 5. Money
 

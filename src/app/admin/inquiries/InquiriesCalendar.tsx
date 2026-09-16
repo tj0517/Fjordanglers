@@ -165,9 +165,9 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
   }, [allRows, country, countryMap])
 
   const groupCounts = useMemo(() => ({
-    lead:      (statusCounts['new'] ?? 0) + (statusCounts['qualifying'] ?? 0),
-    guide:     (statusCounts['waiting_guide'] ?? 0) + (statusCounts['offer_presented'] ?? 0) + (statusCounts['awaiting_payment'] ?? 0),
-    confirmed: (statusCounts['paid'] ?? 0) + (statusCounts['handed_over'] ?? 0) + (statusCounts['completed'] ?? 0),
+    lead:      (statusCounts['pending'] ?? 0) + (statusCounts['in_negotiation'] ?? 0),
+    guide:     (statusCounts['waiting_for_guide_offer'] ?? 0) + (statusCounts['offer_sent'] ?? 0) + (statusCounts['waiting_for_deposit'] ?? 0) + (statusCounts['deposit_sent'] ?? 0),
+    confirmed: (statusCounts['deposit_paid'] ?? 0) + (statusCounts['completed'] ?? 0),
     lost:      (statusCounts['lost'] ?? 0) + (statusCounts['cancelled'] ?? 0),
   }), [statusCounts])
 

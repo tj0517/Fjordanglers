@@ -269,7 +269,3 @@ ze statusem `pending_fa_review` w produkcji przed migracją, więc migracja dany
 (`getInquiryConfirmation.test.ts`, `inquiryStatusDefault.test.ts`) parsują `.env.local`, wołają
 `createServiceClient()` i wstawiają wiersze do `inquiries` **na produkcji**. Produkcja sprawdzona
 16 IX — czysta (0 wierszy testowych), ale mechanizm zostaje. Szczegóły w `deferred-tasks.md`.
-
-- 16 IX (FA-1.03): default kolumny `inquiries.status` zmieniony z `'pending'` na `'new'` w migracji
-  `20260916201225_inquiries_status_v2.sql` (nowe słownictwo statusów, §4.1). Regresja z tego zadania
-  (`src/actions/__tests__/inquiryStatusDefault.test.ts`) dalej pilnuje defaultu — oczekuje `'new'`.

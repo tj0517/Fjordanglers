@@ -47,9 +47,10 @@ type Mode = 'monthly' | 'weekly'
 
 const LOST_STATUSES   = new Set(['lost', 'cancelled'])
 const ACTIVE_STATUSES = new Set([
-  'new', 'qualifying', 'waiting_guide', 'offer_presented', 'awaiting_payment',
+  'pending', 'in_negotiation', 'waiting_for_guide_offer',
+  'offer_sent', 'waiting_for_deposit', 'deposit_sent',
 ])
-const DEPOSIT_STATUSES = new Set(['paid', 'handed_over', 'completed'])
+const DEPOSIT_STATUSES = new Set(['deposit_paid', 'completed'])
 
 // stage_reached ordering — used to express "reached at least this stage"
 const STAGE_ORDER = ['inquiry', 'offer_sent', 'deposit_paid', 'completed'] as const

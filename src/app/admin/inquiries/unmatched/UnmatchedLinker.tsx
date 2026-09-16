@@ -159,8 +159,8 @@ export function UnmatchedLinker({
                 <span
                   className="text-[11px] font-semibold f-body px-2 py-0.5 rounded-full"
                   style={{
-                    color:      inq.status === 'paid' ? '#065F46' : '#92400E',
-                    background: inq.status === 'paid' ? 'rgba(16,185,129,0.12)' : 'rgba(251,191,36,0.15)',
+                    color:      inq.status === 'deposit_paid' ? '#065F46' : '#92400E',
+                    background: inq.status === 'deposit_paid' ? 'rgba(16,185,129,0.12)' : 'rgba(251,191,36,0.15)',
                   }}
                 >
                   {inq.status.replace(/_/g, ' ')}

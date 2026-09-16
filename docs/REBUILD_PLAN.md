@@ -421,33 +421,19 @@ Rzeczy, które szkodzą dziś i nie zależą od przebudowy:
 8. Naprawić `20260815_fix_nz_species_casing.sql` (plik ma 1 bajt: znak `4`).
 9. `pg_dump` całej bazy. Bez tego nie ruszamy dalej.
 
-### Etap 1 — jedno miejsce na rozmowę + schemat mówi prawdę (gałąź `stage-1`, jeden push)
+### Etap 1 — schemat mówi prawdę + rejestrator zdarzeń (3–4 dni)
 
-Cel: **aplikacja jest jedynym miejscem, z którego czyta się i wysyła komunikację z klientem
-i przewodnikiem**, a każda wysyłka/odbiór/decyzja zostawia zdarzenie. Bez tego agent nie
-ma kontekstu, a metryki czasu nie mają danych. Zero kroków „zaimportuj później".
+Cel: migracje w repo = stan bazy, typy = schemat, zero martwego kodu, **i zaczynamy zbierać historię**.
 
-Dostawa: cała praca na gałęzi `stage-1` i gałęzi podglądowej Supabase. Zadania to osobne
-PR-y do `stage-1` z osobnym review. Produkcja dostaje **jedną paczkę** (`db push` +
-deploy) po zakończeniu wszystkich zadań i przeszkoleniu zespołu. Hotfixy produkcji w tym
-czasie: tylko z `main`, cherry-pick do `stage-1` w tym samym dniu.
+1. `supabase db pull` → migracja „baseline" zapisująca wszystko, co zrobiono w dashboardzie (tabele-duchy, kolumny na `inquiries`, polityki bucketów). Od tego momentu drift wykrywa CI.
+2. Migracja `drop_marketplace_leftovers` — tabele z §5.4 poza `experiences` i `inquiry_trip_details` (te wymagają przeniesienia danych, etap 4).
+3. **`inquiry_events` + `emitEvent()` podpięte w kilkunastu miejscach** (lista w załączniku C), na razie **bez żadnego interfejsu**. Nic tego nie czyta — chodzi wyłącznie o to, żeby wrzesień i październik miały historię, gdy w listopadzie powstaną ekrany. To jest najważniejsza pojedyncza decyzja w tym planie.
+4. **`inquiries.qualified`** wypełniane przez agenta przy klasyfikacji + ręczna korekta na karcie zapytania; starsze wiersze na `unknown`.
+5. `supabase gen types` → koniec `as any` tam, gdzie wynikało z braku typów.
+6. Wycięcie martwego kodu z audytu (~10 tys. linii): `actions/bookings.ts`, `actions/accommodations.ts`, `lib/mock-data.ts`, `lib/stripe/{connect,webhooks}.ts`, `lib/field-encryption.ts`, sześć iteracji home, pięć komponentów trips, oba wizardy onboardingu, `GuideSubmissionForm`, `BookingChat`, `InquiryActionPanel`, `AssignGuidePanel`, `OfferBuilderModal`, `SendDepositButton`, `InquiriesFilters`, faceted search w `/trips`, całe UI Stripe Connect w `/dashboard/account`, `actions/stripe-connect.ts`, gałąź `booking_fee` w webhooku, 8 martwych eksportów `queries.ts`. `tsc --noEmit` + `next build` po każdej paczce.
+7. Legacy edytor `experiences` wyłączony z nawigacji; cztery gorące akcje w `inquiries.ts` i webhook depozytu przepięte na `experience_pages`.
 
-1. `supabase db pull` → baseline (FA-1.01, done).
-2. `drop_marketplace_leftovers` (FA-1.02).
-3. **Maszyna stanów wg §4 + `inquiry_events` + `transition()`** (FA-1.03) — statusy
-   „na kogo czekamy", luźne pętle, ścisła ścieżka pieniędzy.
-4. **`messages` + wątek na karcie zapytania + e-mail w obie strony** (FA-1.12) — migracja
-   `lead_messages`/`inquiry_messages`, wysyłka z wątku, oznaczanie wiadomości jako
-   oferta/akceptacja/wpłata, link Stripe generowany z aplikacji.
-5. **WhatsApp w obie strony + adapter Instagram bez kluczy** (FA-1.13) — Meta Cloud API,
-   szablony na okno 24 h, dopasowanie nieznanych numerów.
-6. **Agent w wątku** (FA-1.14) — propozycja odpowiedzi na podstawie całego wątku i bazy
-   wiedzy (przewodnicy, oferty, lokacje); admin edytuje i wysyła; auto-wysyłka wyłączona.
-7. `inquiries.qualified` (FA-1.04), backfill zdarzeń (FA-1.05), typy (FA-1.06 done),
-   martwy kod (FA-1.07/1.08), legacy edytor (FA-1.09), przegląd tygodniowy (FA-1.10),
-   CI (FA-1.11).
-
-Tag `v1-clean` po pushu.
+Tag `v1-clean`.
 
 ### Etap 2 — szkielet monorepo (3–4 dni)
 
@@ -508,12 +494,6 @@ Wrzesień jest przeładowany — osiem zadań z deadline'em do 15 IX na dwóch f
 **Odłożyć na po 30 IX:** monorepo, `apps/admin`, refaktor schematu, warstwa pomiarowa, pozostałe sześć ekranów, front.
 
 Jedyny wyjątek, który warto rozważyć przed 30 IX, to **`/destinations` w prostej formie** — nawet jako ręczna checklista trzech warunków na trzy destynacje. Nie dlatego, że to metryka, tylko dlatego, że to jedyna lista, która pilnuje celu z twardą datą.
-
----
-
-**Dopisek 16 IX.** Etap 1 w nowym kształcie nie zmieści się przed 30 IX i nie próbuje. Do 30 IX na
-produkcji zostaje etap 0. `stage-1` idzie na produkcję jako paczka, gdy FA-1.03, 1.12,
-1.13 są `done` i zespół przeszedł wdrożenie; FA-1.14 może dojechać w drugiej paczce.
 
 ---
 
@@ -601,37 +581,27 @@ from inquiries group by 1 order by 1;
 
 ## Załącznik C — katalog typów zdarzeń (etap 1)
 
-Minimalny zestaw pokrywający **to, co dziś naprawdę się dzieje**. Każde zdarzenie ma
-`channel` (gdzie) i `source` (jak trafiło do bazy). Zdarzenie powstaje jako skutek akcji
-w aplikacji — nigdy jako osobny krok „dopisz".
+Minimalny zestaw, który pokrywa wszystkie metryki czasowe. Kolumna „aktor" wskazuje typową wartość `actor_kind`.
 
-| Typ | Aktor | Kanał | Emitowany w | Zasila |
-|---|---|---|---|---|
-| `inquiry.created` | system / admin | app | `core.inquiries.create` | M5, M7, M9b |
-| `inquiry.qualified_set` | agent / admin | app | klasyfikacja + korekta (FA-1.04) | M5, M6 |
-| `message.sent` | admin (tekst: admin lub agent) | email / whatsapp / instagram | wysyłka z wątku; `payload.counterpart`, `payload.drafted_by` | M11, M12, czas odpowiedzi |
-| `message.received` | angler / guide | email / whatsapp / instagram | webhooki + dopasowanie z `unmatched_messages` | czas odpowiedzi, M10 |
-| `guide.contacted` | admin | j.w. | pierwsza wiadomość wychodząca do danego przewodnika w tym zapytaniu (pochodna `message.sent`) | M10 (start zegara przewodnika) |
-| `guide.offer_received` | guide | j.w. | admin oznacza wiadomość przychodzącą od przewodnika jako „to jest oferta" (jedno kliknięcie w wątku, zapisuje cenę/termin) | M10 odcinek 2 |
-| `offer.presented` | admin | j.w. | wiadomość wychodząca do klienta oznaczona „przedstawia ofertę" | M7, M10 |
-| `offer.accepted` / `offer.declined` | angler | j.w. | admin oznacza odpowiedź klienta; `declined` → `inquiry.lost` | M7 |
-| `payment.link_sent` | admin | stripe | link generowany **z aplikacji** (Stripe Payment Link API z `metadata.inquiry_id`) i wklejany do wiadomości w wątku | M11 |
-| `payment.received` | system | stripe | webhook `checkout.session.completed` / `payment_link` z `metadata.inquiry_id`; awaryjnie `UnmatchedLinker` (source=app) | M1, M2, M3, M7 |
-| `guide.notified_paid` | admin | j.w. | wiadomość do przewodnika oznaczona „poinformowano o wpłacie" | M11 |
-| `contacts.exchanged` | admin | j.w. | wiadomości z numerami do obu stron (jedna akcja w wątku) | hand-over |
-| `status.changed` | admin / system | app | `transition()` | lejek, `stage_reached` |
-| `inquiry.lost` | admin | app | `transition(lost)` z `lost_reason_code` | powody przegranych |
-| `trip.completed` | admin / system | app | data zakończenia | M14–M16 |
-
-Zarezerwowane, bez emisji w etapie 1 (w `types.ts` z komentarzem `// stage N`):
-`agent.round_completed`, `inquiry.brief_completed`, `guide.assigned`/`unassigned`,
-`guide.accepted`/`declined`, `offer.viewed`, `review.requested`/`submitted`,
-`incident.opened`/`resolved`.
-
-Usunięte z katalogu (brak odpowiednika w rzeczywistym procesie): `offer.created`,
-`offer.updated`, `offer.sent` (builder ofert i `sendOfferEmail` nie są używane),
-`deposit.link_sent`/`deposit.paid` (zastąpione `payment.*`).
-
-**Ręczne dotknięcie** = zdarzenie `actor_kind='admin'` typu `message.sent`,
-`status.changed`, `payment.link_sent`, `contacts.exchanged`. M11 = liczba takich zdarzeń
-na zapytanie zakończone wpłatą.
+| Typ | Aktor | Emitowany w | Zasila |
+|---|---|---|---|
+| `inquiry.created` | system / admin | `core.inquiries.create` | M5, M7, M9b |
+| `inquiry.qualified_set` | agent / admin | klasyfikacja + korekta ręczna | M5, M6 |
+| `agent.round_completed` | agent | `inquiry-agent` | M10 (start zegara) |
+| `inquiry.brief_completed` | agent / admin | gdy zapytanie ma kraj + termin + liczbę osób | M10 |
+| `guide.assigned` / `guide.unassigned` | admin | `assignGuideToInquiry` | M10, M11, M13 |
+| `guide.accepted` / `guide.declined` | guide | `respondToAssignment` | M10, guide perf. |
+| `guide.offer_received` | admin | `saveGuideOfferResponse` | M10 (odcinek 2) |
+| `offer.created` / `offer.updated` | admin | `saveRichOffer` | M11 |
+| `offer.sent` | admin | `sendOfferEmail` | M7, M10 |
+| `offer.viewed` | angler | `/offers/[token]` | konwersja oferty |
+| `offer.accepted` / `offer.declined` | angler | `acceptOffer`, `declineOffer` | M7 |
+| `deposit.link_sent` | admin | `sendDepositLink` | M11 |
+| `deposit.paid` | system | webhook Stripe | M1, M2, M3, M7 |
+| `message.sent` | admin / system | `sendMessageToAngler`, maile | M11, M12 |
+| `message.received` | angler / guide | webhooki e-mail/WhatsApp | czas odpowiedzi |
+| `status.changed` | admin / system | `transition()` | lejek, `stage_reached` |
+| `inquiry.lost` | admin | `declineOffer`, ręczna zmiana | powody przegranych |
+| `trip.completed` | admin / system | data zakończenia | M14, M15, M16 |
+| `review.requested` / `review.submitted` | system / angler | `reviews` | M14 |
+| `incident.opened` / `incident.resolved` | admin | `incidents` | M16 |
