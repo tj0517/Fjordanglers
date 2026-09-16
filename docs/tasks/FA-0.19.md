@@ -2,7 +2,7 @@
 id: FA-0.19
 title: Hub prowizji ustawia `external_offer_sent` — licznik SLA przestaje liczyć oferty wysłane poza systemem
 stage: 0
-status: todo
+status: review
 difficulty: S
 model: sonnet
 model_approved:
