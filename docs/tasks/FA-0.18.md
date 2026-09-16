@@ -2,7 +2,7 @@
 id: FA-0.18
 title: `inquiries.trip_country` faktycznie zapisywane — dziś nic go nie ustawia
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -271,3 +271,36 @@ Czerwony dowód testu — `git stash push -- src/lib/ai/inquiry-agent.ts`:
 ```
 Po przywróceniu poprawki: 3/3 zielone, cała suita 59 passed / 1 failed
 (`getInquiryConfirmation.test.ts` — znany stan main).
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Raport wzorowy — czerwony dowód zrobiony na kodzie sprzed zmiany, nie
+zadeklarowany.
+
+| kryterium | werdykt | dowód |
+|---|---|---|
+| czerwony dowód przez `POST /api/inquiries` | udowodnione | przebieg na kodzie sprzed zmiany (`git stash push -- src`): `[Chile]`/`[Iceland]` → `trip_country: null`; po zmianie → `Chile` / `Iceland`. Prawdziwy handler i prawdziwa sesja admina, `requireAdmin()` nieobchodzony |
+| `trip_country` w insercie | udowodnione | `src/lib/inquiries/create.ts:50` — `trip_country: params.tripCountry ?? null`, parametr w typie (linia 20) |
+| NULL-e spadły o zapowiedzianą liczbę | udowodnione | 53 → 1, czyli dokładnie 52 zapowiedziane SELECT-em przed backfillem |
+| `db diff --local` pusty | zadeklarowane | przyjęte z raportu |
+| typecheck / test / build / lint | zadeklarowane | przyjęte z raportu |
+| status w pliku i `INDEX.md` | udowodnione | PR #37 |
+
+**Weryfikacja stanu produkcji przy odbiorze (16 IX):**
+`Iceland 75 | New Zealand 14 | Norway 3 | Sweden 2 | (null) 1 | Argentina 1 | Finland 1 | Chile 1 | Other 1`
+
+Zgodne z raportem z jednym wyjątkiem, który jest **dodatkowym dowodem**: New Zealand 13 → 14.
+Od backfillu przyszło nowe zapytanie i ma ustawiony kraj — mechanizm działa na bieżącym
+ruchu, nie tylko na danych historycznych. Tego raport nie mógł wykazać, bo pisany był w dniu
+backfillu.
+
+**Bramki STOP — obsłużone poprawnie.** `UPDATE` wykonany po zgodzie tj, z SELECT-em przed
+i dokładnym SQL w pliku. Wartość `'Other'` ×1 zgłoszona i nietknięta, zgodnie z brzmieniem
+bramki. `guides.country = ''` u dwóch przewodników zgłoszone do `deferred-tasks.md`.
+Krok 2 backfillu (z `guides.country`) pominięty, bo SELECT pokazał 0 pasujących wierszy —
+zapisane jako procedura na przyszłość, nie jako wykonane.
+
+**Pozostały NULL** (`a1836796-…`, 12 VIII 2026) nie ma `trip_id`, `experience_page_id`
+ani przewodnika, więc zostaje bez kraju zgodnie z zakresem zadania.

@@ -43,6 +43,7 @@ next-env.d.ts
 .claude/settings.local.json
 .claude/settings.local.json.bak*
 .mcp.json
+.mcp.json.bak*
 *.mov
 *.mp4
 docs/node_modules/
