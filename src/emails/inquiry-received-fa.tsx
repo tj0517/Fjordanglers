@@ -67,7 +67,7 @@ export function InquiryReceivedFaEmail({
 
       <Hr style={hr} />
       <Text style={textSmall}>
-        Inquiry ID: {inquiryId} · Status: pending_fa_review
+        Inquiry ID: {inquiryId} · Status: pending
       </Text>
     </EmailLayout>
   )

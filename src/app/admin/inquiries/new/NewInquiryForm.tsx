@@ -19,7 +19,7 @@ const SOURCES = [
 
 const INITIAL_STATUSES = [
   { value: 'in_negotiation',    label: 'Negotiating'   },
-  { value: 'pending_fa_review', label: 'Pending review' },
+  { value: 'pending', label: 'Pending review' },
 ]
 
 // ─── Field wrapper ────────────────────────────────────────────────────────────
