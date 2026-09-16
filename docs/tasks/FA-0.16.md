@@ -324,3 +324,7 @@ Wszystkie pozycje z tej sekcji zostały domknięte po review — zostawione dla 
 - Digest email: inline HTML przez Resend REST (nie React email template) — cron route samowystarczalny.
 - `vercel.json` `"0 5 * * *"`: DST caveat zanotowany w komentarzu modułu i w notatce powyżej.
 
+- 16 IX (FA-1.03): reguła „`lost` wymaga `lost_reason_code`" przeniosła się z `updateInquiryStatus`
+  do `transition()` w `src/lib/inquiries/state.ts` — komunikat błędu został zachowany słowo w słowo.
+  Test `src/actions/__tests__/lostReasonCode.test.ts` sprawdza ją teraz przez akcję i dodatkowo
+  wymaga pary zdarzeń `status.changed` + `inquiry.lost` z kodem powodu w payloadzie.
