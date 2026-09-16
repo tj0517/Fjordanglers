@@ -2,7 +2,7 @@
 id: FA-0.01
 title: Strona potwierdzenia po wpłacie depozytu (/inquiry-confirmed → 404)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -184,3 +184,21 @@ Vercel preview powinien powstać automatycznie dla tej gałęzi — tj przeklika
 - `src/actions/inquiries.ts`
 - `src/app/inquiry/[id]/confirmed/page.tsx`
 - `src/actions/getInquiryConfirmation.test.ts` (nowy test)
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done — decyzją tj**, nie kompletem dowodów.
+
+Udowodnione statycznie: `grep -rn "inquiry-confirmed" src` → 0; strona
+`src/app/inquiry/[id]/confirmed/page.tsx` istnieje; `success_url` wskazuje na nią w obu
+miejscach (`src/actions/inquiries.ts:295` i `:578`); wariant `deposit_paid_at = null` ma
+test (`getInquiryConfirmation.test.ts` — „returns depositPaidAt: null for an unpaid inquiry").
+
+**Nieudowodnione:** pełna ścieżka Stripe w trybie testowym (oferta → Checkout → powrót, 200
+z nazwą wyprawy). **Decyzja tj z 16 IX: ta ścieżka nie jest obecnie w użyciu, więc zadanie
+zamykamy bez tego dowodu.** Zapisane jawnie: przy pierwszej prawdziwej płatności przez Stripe
+ta ścieżka nigdy nie przeszła próby end-to-end i należy ją wtedy sprawdzić.
+
+`pnpm typecheck / lint / build` — przyjęte z raportu, niepowtórzone przy odbiorze.

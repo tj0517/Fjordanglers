@@ -2,7 +2,7 @@
 id: FA-0.04
 title: AI_AUTO_REPLY_ENABLED jako enum 'true'|'false' (dziś "false" włącza agenta)
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -171,3 +171,21 @@ Vercel, `PLATFORM_COMMISSION_RATE` i pozostałe `z.coerce.*`, naprawa `env.ts:14
 
 **Proponowany status:** `review` — ustawiony we frontmatterze tego pliku i w
 `docs/tasks/INDEX.md` (wiersz FA-0.04).
+
+---
+
+## Odbiór (fa-review, 16 IX 2026)
+
+Werdykt: **done**. Komplet dowodów, łącznie z czerwonymi przypadkami.
+
+- `grep -n "coerce.boolean" src/lib/env.ts` → **0 trafień**.
+- Definicja (`src/lib/env.ts:116`):
+  `AI_AUTO_REPLY_ENABLED: z.enum(['true','false']).optional().default('false').transform(v => v === 'true')`.
+- `src/lib/env.test.ts` pokrywa oba kierunki i oba czerwone przypadki: `"true"` → `true`,
+  `"false"` → `false` (z komentarzem nazywającym naprawiany błąd: „z.coerce.boolean() gave true
+  here"), `undefined` → `false` (default), **`"1"` → błąd walidacji**, **`""` → błąd walidacji**.
+
+Kryterium „przypadek `1` pokazany jako błąd" spełnione wprost testem, nie deklaracją.
+
+`pnpm typecheck / lint / test / build` — przyjęte z raportu, niepowtórzone przy odbiorze
+(`pnpm test` świadomie nieuruchamiany do czasu FA-0.21 — testy integracyjne piszą do produkcji).
