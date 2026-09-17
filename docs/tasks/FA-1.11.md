@@ -359,3 +359,143 @@ $ gh pr list --json number,headRefName
 $ git ls-remote --heads origin 'refs/heads/test/*' | wc -l
 0
 ```
+
+---
+
+## Aneks — reguły pracy z lokalnym stackiem na maszynie 8 GB (zadanie dodatkowe, 17 IX)
+
+### Done
+
+- **`docs/05-agent-operations.md` §9 „Lokalne środowisko (8 GB RAM)"** — pięć reguł
+  z zadania plus szósta, która wyszła przy weryfikacji (patrz niżej).
+- **`CLAUDE.md` reguła 11** — jedna linia odsyłająca do §9.
+- **`supabase/config.toml`** — `project_id = "uwxrstbplaoxfghrchcy"` (decyzja tj).
+- **`docs/deferred-tasks.md`** — wpis „OrbStack pada przy build + stack na 8 GB" dodany
+  i od razu zamknięty tą sekcją, z datą; wpis FA-1.03 o nazwach kontenerów zamknięty.
+- CI po tych zmianach nadal zielone: run
+  [35200834576](https://github.com/tj0517/Fjordanglers/actions/runs/35200834576) (`c7240028`).
+
+### Punkt 1 — limit pamięci OrbStacka: nic do zrobienia, już ustawiony
+
+```
+$ orb config show | grep -E '^(memory_mib|cpu):'
+cpu: 8
+memory_mib: 3072
+```
+
+I limit **działa**, nie tylko siedzi w konfiguracji:
+
+```
+$ docker info --format '{{.MemTotal}} / {{.NCPU}} CPU'
+3125583872 / 8 CPU          # 3 125 583 872 B = 2,91 GiB ≈ 3072 MiB
+$ sysctl -n hw.memsize      # host: 8,0 GB
+```
+
+`orb config set memory_mib 3072` nie było potrzebne i restartu OrbStacka nie robiłem —
+nie ma czego zmieniać. To zarazem podważa pierwotną diagnozę: skoro limit był ustawiony
+przez cały czas, samo 3 GB nie tłumaczy dwóch awarii. Prawdziwa przyczyna niżej.
+
+### Przyczyna awarii — `supabase stop` był cichym no-opem
+
+To jest najważniejsze ustalenie tego zadania i nie było w jego opisie.
+
+```
+$ supabase stop
+Stopping containers...
+Stopped supabase local development setup.          <- komunikat o sukcesie
+
+$ docker ps --format '{{.Names}}' | grep -c uwxrstbplaoxfghrchcy
+11                                                  <- i 11 dzialajacych kontenerow
+```
+
+Dlaczego:
+
+```
+$ docker inspect supabase_db_uwxrstbplaoxfghrchcy \
+    --format '{{index .Config.Labels "com.supabase.cli.project"}}'
+uwxrstbplaoxfghrchcy         <- etykieta dzialajacych kontenerow (stare CLI, z .temp/project-ref)
+$ grep '^project_id' supabase/config.toml
+project_id = "fjordanglers"  <- czego szukalo CLI 2.75
+```
+
+CLI szukało projektu `fjordanglers`, trafiło na jeden osierocony wolumen
+(`supabase_edge_runtime_fjordanglers`), uznało robotę za zrobioną i wyszło z kodem 0.
+Skutek praktyczny: **reguła „zatrzymaj stack przed buildem" była niewykonalna** — kto ją
+stosował, dostawał potwierdzenie i budował przy komplecie kontenerów. To wyjaśnia obie
+awarie znacznie lepiej niż sam limit 3 GB.
+
+Po zmianie `project_id` (decyzja tj):
+
+```
+$ supabase stop
+Stopped supabase local development setup.
+$ docker ps --format '{{.Names}}' | grep -c uwxrstbplaoxfghrchcy
+0                            <- naprawde zatrzymany
+$ docker ps --format '{{.Names}}' | grep -c Seaclouds
+11                           <- drugi projekt nietkniety
+```
+
+Przy okazji zamyka to wpis deferred FA-1.03 o nazwach kontenerów: `db diff --local`
+i `gen types --local` działają teraz bez podmiany `project_id`, po raz pierwszy od 16 IX.
+
+### Punkt 3 — weryfikacja listy `-x`
+
+`supabase stop` → `supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,realtime`
+(start **30,6 s**) → cztery sprawdzenia:
+
+| krok | wynik |
+|---|---|
+| `pnpm test run` | `Test Files 11 passed (11)` · `Tests 89 passed (89)` |
+| `supabase db diff --local` | `No schema changes found` |
+| `supabase gen types typescript --local` + `diff` | brak różnic |
+| `pnpm supabase:types:local` (nowy skrypt) | plik odtworzony identycznie, `git status` pusty |
+
+Żadna z wyłączonych usług nie okazała się potrzebna — lista przechodzi bez zmian.
+Stack zszedł z **11 kontenerów do 6** (`db`, `kong`, `rest`, `auth`, `storage`, `pg_meta`).
+
+### Punkt 2 — jedna reguła dopisana ponad listę z zadania
+
+Do §9 doszła szósta reguła: **„`supabase stop` sprawdzamy, nie wierzymy mu"** z gotowym
+`grep -c`. Powód powyżej: instrukcja, która polega na komendzie zgłaszającej fałszywy
+sukces, jest gorsza niż jej brak.
+
+### Poprawki faktograficzne wobec treści zadania
+
+Dwie rzeczy w opisie zadania nie zgadzały się ze stanem maszyny; w dokumentacji jest wersja
+sprawdzona:
+
+1. **`--max-old-space-size=2048` jest w skrypcie `dev`, nie w `build`.** `"build": "next build"`
+   nie ma żadnego `NODE_OPTIONS`, czyli build **nie ma pułapu sterty** i rośnie, dopóki
+   system pozwala. To czyni regułę „build tylko przy zatrzymanym stacku" ważniejszą,
+   nie mniej ważną. Zmierzony szczyt RSS procesu głównego przy zatrzymanym stacku:
+   **1 550 254 080 B = 1,44 GiB** (`/usr/bin/time -l`), plus workery generujące strony
+   statyczne, których `time -l` nie wlicza.
+2. **Na tej maszynie nie ma `timeout` ani `gtimeout`** (brak coreutils w brew), więc
+   `timeout 10 docker ps` kończy się `command not found`. Decyzja tj: przenośny
+   `perl -e 'alarm 10; exec @ARGV' -- docker ps …`. Sprawdzony na żywo na zawieszonym
+   Dockerze i na działającym.
+
+### Noticed, not touched
+
+- **Drugi pełny stack Supabase na tej samej maszynie.** Obok FjordAnglers chodzi komplet
+  jedenastu kontenerów projektu `Seaclouds_management_system`; 17 IX było ich razem 22
+  w jednym 3 GB VM. Największe pozycje z obu stacków to `analytics`/logflare (238 i 206 MiB)
+  oraz `realtime` (172 i 108 MiB). Reguła „nie dwie ciężkie rzeczy naraz" to obejmuje, ale
+  wyłączenie tamtego stacku jest poza moim zakresem — to inny projekt. Nie ruszałem go
+  i po `supabase stop` sprawdziłem, że nadal ma swoje 11 kontenerów.
+- **Dwie usługi spoza listy `-x` są największe w odchudzonym stacku:** `storage-api`
+  (235 MiB) i `pg_meta` (100 MiB) — razem 60% pamięci pozostałych sześciu kontenerów.
+  W CI wyłączam obie i `db` przechodzi (`gen types` sam podnosi `pg_meta` na chwilę).
+  Nie dopisuję ich do listy lokalnej samodzielnie, bo lista jest z zadania — do decyzji.
+
+### Needs a decision
+
+- **Czy dopisać `storage-api` i `postgres-meta` do lokalnej listy `-x`?** Zysk ~335 MiB
+  z ~555 MiB, czyli stack schodzi do czterech kontenerów. Ryzyko: test dotykający Storage
+  padnie, a `gen types --local` będzie za każdym razem podnosić `pg_meta` (kilka sekund
+  narzutu). Dziś żaden test nie używa Storage. Rekomendacja: dopisać, bo 335 MiB na 3 GB
+  VM to nie jest drobiazg — ale to zmiana listy, którą podałeś, więc nie robię jej sam.
+- **`project_id` jest teraz równy refowi produkcji** (`uwxrstbplaoxfghrchcy`). Działa
+  i niczego nie łączy z produkcją — to tylko nazwa lokalnych kontenerów — ale czyta się
+  mylnie. Jeśli przeszkadza, alternatywą jest przestawienie kontenerów na nazwę
+  `fjordanglers` kosztem skasowania lokalnej bazy (opcja B z pytania).
