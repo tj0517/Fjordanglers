@@ -36,7 +36,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | id | title | diff | model | status | depends |
 |---|---|---|---|---|---|
 | FA-1.01 | Baseline: `db pull` produkcji, archiwizacja 61 migracji, pogodzenie historii (`migration repair`) | L | opus | done | FA-0.08 |
-| FA-1.02 | `drop_marketplace_leftovers` — schemat `archive` + martwe tabele `public` bez danych | M | opus | review | FA-1.01 |
+| FA-1.02 | `drop_marketplace_leftovers` — schemat `archive` + martwe tabele `public` bez danych | M | opus | done | FA-1.01 |
 | FA-1.03 | Maszyna stanów §4 + `inquiry_events` + `transition()` — statusy „na kogo czekamy" (przepisane 16 IX) | L | opus | done | FA-1.01 |
 | FA-1.04 | `inquiries.qualified` z agenta + korekta ręczna + `unknown` dla starych (emituje `inquiry.qualified_set`) | M | sonnet | todo | FA-1.03 |
 | FA-1.05 | Backfill zdarzeń historycznych z `offer_sent_at` / `deposit_paid_at` — *plik do napisania po FA-1.12* | M | sonnet | todo | FA-1.03 |

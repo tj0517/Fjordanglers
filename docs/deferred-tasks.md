@@ -5,6 +5,8 @@ where, why it matters, which task noticed it. Promote to `docs/tasks/` when sche
 
 | Noticed in | What | Where | Why it matters |
 |---|---|---|---|
+| FA-1.02 | `audit_log` pisany triggerem `audit_trigger_fn` z `guides` i `guide_images`; żaden `src/` go nie czyta. Decyzja: zostaje, rozważyć w etapie 4 razem z `guide_images` | `public.audit_log`, `audit_trigger_fn` | nie dropować bez decyzji o potrzebie operacyjnej |
+| FA-1.02 | `public.offers` (14 wierszy, era ekspedycji) koliduje nazwą z nową tabelą `offers` z FA-1.12 | `public.offers` | rozstrzygnąć w FA-1.12 — rename albo drop (dane: era ekspedycji, brak kodu-czytnika) |
 | audit 2026-08-31 | `robots.ts` disallows ghost routes `/account/`, `/book/`, `/invite/` | `src/app/robots.ts` | cosmetic; clean with stage 7 |
 | audit 2026-08-31 | `docs/01-05` duplicated in `head/` with two diverged copies | `docs/`, `head/` | one source of brand truth; fold into `docs/brand/` |
 | audit 2026-08-31 | `.claude/settings.local.json` holds live secrets | `.claude/` | O-11 |

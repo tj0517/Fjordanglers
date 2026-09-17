@@ -2,7 +2,7 @@
 id: FA-1.02
 title: drop_marketplace_leftovers — usunięcie tabel ze schematu archive i martwych tabel public bez danych
 stage: 1
-status: review
+status: done
 difficulty: M
 model: opus
 model_approved:
@@ -254,9 +254,9 @@ docker ps --filter label=com.supabase.cli.project=fjordanglers -q | wc -l → 0
 
 `pnpm build` — lokalnie fail: `Error: Neither apiKey nor config.authenticator provided`
 na `/api/stripe/webhook`. Brak `STRIPE_SECRET_KEY` w lokalnym env build — preexistujący
-problem środowiskowy (nie wywołany przez FA-1.02). Weryfikacja buildu: **CI job `check`**
-(branch protection wymaga 3 CI checks). Po pushu gałęzi — link do zielonego runu CI
-w raporcie PR (zgodnie z docs/05-agent-operations §9 — lokalny build nie jest wymagany).
+problem środowiskowy (nie wywołany przez FA-1.02). Weryfikacja buildu przez CI:
+**[job `check` — zielony](https://github.com/tj0517/Fjordanglers/actions/runs/35208975287/job/105161600882)**
+(run `35208975287`, wszystkie 3 checki: check ✅, db ✅, sync ✅).
 
 ```
 supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,realtime,storage-api,postgres-meta
