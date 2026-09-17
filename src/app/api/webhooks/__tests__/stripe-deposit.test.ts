@@ -42,8 +42,14 @@ vi.mock('@/lib/inquiries/state', () => ({
   TransitionError: class TransitionError extends Error {},
 }))
 
+vi.mock('@/lib/events/emit', () => ({
+  emitEvent:  vi.fn(),
+  EventError: class EventError extends Error {},
+}))
+
 import { createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
+import { emitEvent } from '@/lib/events/emit'
 
 // Mock next/headers (no real request context in tests)
 vi.mock('next/headers', () => ({
@@ -90,5 +96,60 @@ describe('stripe-deposit webhook — no inquiry_id in metadata', () => {
     expect(response.status).toBe(200)
     // No DB writes: no update to inquiries, no insert to anything
     expect(dbWrites).toHaveLength(0)
+  })
+})
+
+describe('stripe-deposit webhook — idempotency', () => {
+  it('returns 200 and emits no events when deposit_paid_at is already set', async () => {
+    vi.mocked(createServiceClient).mockReturnValue({
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: async () => ({
+              data: {
+                id:                        'inq-idempotent',
+                deposit_paid_at:           '2026-09-17T13:00:00.000Z',
+                angler_email:              'test@fjordanglers.com',
+                angler_name:               'Test Angler',
+                angler_country:            'NO',
+                requested_dates:           [],
+                party_size:                1,
+                deposit_amount:            360,
+                trip_id:                   null,
+                guide_id:                  null,
+              },
+              error: null,
+            }),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({ eq: () => ({ error: null }) }),
+        insert: vi.fn().mockReturnValue({ error: null }),
+      }),
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const session: Partial<Stripe.Checkout.Session> = {
+      id:             'cs_test_duplicate_session',
+      object:         'checkout.session',
+      payment_status: 'paid',
+      metadata:       { payment_type: 'inquiry_deposit', inquiry_id: 'inq-idempotent' },
+    }
+
+    vi.mocked(stripe.webhooks.constructEvent).mockReturnValue({
+      id:   'evt_test_dup',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    } as unknown as Stripe.Event)
+
+    const rawBody = JSON.stringify({ type: 'checkout.session.completed', data: { object: session } })
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    const response = await POST(new NextRequest('http://localhost/api/webhooks/stripe-deposit', {
+      method:  'POST',
+      headers: { 'content-type': 'application/json', 'stripe-signature': 'test-sig' },
+      body:    rawBody,
+    }))
+
+    expect(response.status).toBe(200)
+    // deposit_paid_at was already set → early return before any event emission
+    expect(emitEvent).not.toHaveBeenCalled()
   })
 })

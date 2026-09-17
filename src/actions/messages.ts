@@ -671,6 +671,65 @@ export async function createPaymentLink(
   return { success: true, url: paymentLink.url }
 }
 
+// ─── markPaymentReceived ──────────────────────────────────────────────────────
+
+/**
+ * Admin manually logs a received payment — the UnmatchedLinker fallback path for
+ * when the Stripe webhook did not fire or carried no inquiry_id.
+ * Emits payment.received with source='app'; does not call transition() — admin decides.
+ */
+export async function markPaymentReceived(
+  inquiryId:   string,
+  params: {
+    stripeSessionId?: string
+    amountCents?:     number
+    currency?:        string
+  } = {},
+): Promise<ActionResult> {
+  await requireAdmin()
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inq, error } = await (svc as any)
+    .from('inquiries')
+    .select('id, deposit_paid_at')
+    .eq('id', inquiryId)
+    .single()
+
+  if (error != null || inq == null) {
+    return { success: false, error: 'Inquiry not found' }
+  }
+
+  if (inq.deposit_paid_at == null) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (svc as any)
+      .from('inquiries')
+      .update({
+        deposit_paid_at:            new Date().toISOString(),
+        ...(params.stripeSessionId != null
+          ? { deposit_stripe_session_id: params.stripeSessionId }
+          : {}),
+      })
+      .eq('id', inquiryId)
+  }
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:    'payment.received',
+    actor:   { kind: 'admin' },
+    source:  'app',
+    channel: 'stripe',
+    payload: {
+      ...(params.stripeSessionId != null ? { stripe_session_id: params.stripeSessionId } : {}),
+      ...(params.amountCents     != null ? { amount_cents: params.amountCents }           : {}),
+      ...(params.currency        != null ? { currency: params.currency }                  : {}),
+    },
+  })
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
+}
+
 // ─── deleteUnmatchedMessages (kept from old messages.ts) ─────────────────────
 
 export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
