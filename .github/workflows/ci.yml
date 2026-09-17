@@ -66,13 +66,18 @@ jobs:
       - name: env for build (from committed .env.test — no secrets)
         run: |
           cp .env.test .env.local
+          # Nazwy, nigdy wartości — i do logu, i do summary, żeby lista dała się
+          # sprawdzić z przebiegu, a nie tylko z ekranu.
+          names=$(grep -oE '^[A-Z0-9_]+' .env.test | sort)
+          echo "zmienne z .env.test użyte w CI:"
+          echo "$names"
           {
             echo '### Zmienne env użyte w CI'
             echo ''
             echo 'Źródło: commitowany `.env.test`. Zero `secrets.*`.'
             echo ''
             echo '```'
-            grep -oE '^[A-Z0-9_]+' .env.test | sort
+            echo "$names"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
