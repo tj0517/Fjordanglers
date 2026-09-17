@@ -58,9 +58,10 @@ Enums also dropped: `booking_status`, `payment_status`, `trip_inquiry_status`
 `guide_images` (admin insert + guide profile read — FA-1.07/1.08),
 `guide_submissions` (read-only archive; writer component unrendered — FA-1.07),
 `inquiry_messages` (insert in try/catch — FA-1.12),
-`offers` (0 rows; name collides with FA-1.12's planned `offers` table — FA-1.12),
+`offers` (**14 wierszy** prod 2026-09-17; name collides with FA-1.12's planned table — stays, FA-1.12 decides),
 `audit_log` (written by `audit_trigger_fn` on `guides`, `guide_images` triggers;
-             no reader in `src` — investigate before dropping).
+             no reader in `src` — investigate before dropping; stage 4),
+`expedition_waters` (3 rows), `regions` (16 rows), `guide_private` (18 rows) — have data, not in FA-1.02 scope.
 `spatial_ref_sys` and PostGIS functions `search_trips_near`, `get_licenses_for_point`,
 `import_license_zone` — etap 4.
 
