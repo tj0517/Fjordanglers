@@ -17,9 +17,11 @@ const SOURCES = [
   { value: 'other',     label: 'Other'      },
 ]
 
-const INITIAL_STATUSES = [
-  { value: 'in_negotiation',    label: 'Negotiating'   },
-  { value: 'pending', label: 'Pending review' },
+// Where a manually entered inquiry starts. `qualifying` is the default: a lead typed
+// in by hand is one we are already talking to. `new` is for one nobody has answered.
+const INITIAL_STATUSES: { value: 'qualifying' | 'new'; label: string }[] = [
+  { value: 'qualifying', label: 'Qualifying — we are already talking' },
+  { value: 'new',        label: 'New — nobody replied yet'            },
 ]
 
 // ─── Field wrapper ────────────────────────────────────────────────────────────
@@ -57,7 +59,7 @@ export function NewInquiryForm({ trips }: { trips: Trip[] }) {
   const [pax,    setPax]    = useState('1')
   const [tripId, setTripId] = useState('')
   const [channel, setChannel] = useState('instagram')
-  const [status, setStatus] = useState('in_negotiation')
+  const [status, setStatus] = useState<'qualifying' | 'new'>('qualifying')
   const [dates,  setDates]  = useState<string[]>([])
   const [message, setMessage] = useState('')
 

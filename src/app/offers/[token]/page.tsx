@@ -64,7 +64,7 @@ export default async function OfferPage({
     )
   }
 
-  if (offer.status === 'deposit_paid' || offer.status === 'completed') {
+  if (offer.status === 'paid' || offer.status === 'handed_over' || offer.status === 'completed') {
     return (
       <main className="min-h-screen flex items-center justify-center px-4"
         style={{ background: '#F8FAFB' }}>
@@ -84,7 +84,9 @@ export default async function OfferPage({
     )
   }
 
-  if (offer.status === 'in_negotiation' || offer.status === 'deposit_sent') {
+  // Both accepting the offer and going to checkout land on awaiting_payment, which is
+  // what the legacy in_negotiation / deposit_sent pair meant on this page.
+  if (offer.status === 'awaiting_payment') {
     return (
       <main className="min-h-screen flex items-center justify-center px-4"
         style={{ background: '#F8FAFB' }}>
