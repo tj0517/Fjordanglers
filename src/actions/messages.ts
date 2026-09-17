@@ -1,83 +1,116 @@
 'use server'
 
 /**
- * messages.ts — Server Actions for the unmatched_messages queue.
+ * messages.ts — Server Actions for the messages thread. FA-1.12.
  *
  * matchUnmatchedMessage(unmatchedId, inquiryId)
- *   Links an unmatched_message to an inquiry by inserting a lead_messages row
+ *   Links an unmatched_message to an inquiry by inserting a messages row
+ *   (occurred_at = unmatched_messages.created_at per tj decision 2026-09-17)
  *   and marking the unmatched_message as matched.
+ *
+ * bulkMatchUnmatchedMessages(ids, inquiryId)
+ *   Same, bulk.
+ *
+ * sendMessageFromThread(inquiryId, params)
+ *   Admin sends a freeform message from the inquiry thread UI.
+ *
+ * markAsGuideOffer(messageId, { guideId, options })
+ *   Admin marks an inbound guide message as "this is the offer".
+ *   Inserts an offers + offer_options row and emits guide.offer_received.
+ *
+ * markOfferPresented(offerId, messageId?)
+ *   Admin marks the outbound message to the angler as "presents this offer".
+ *   Emits offer.presented + proposes offer_presented transition.
+ *
+ * markClientAccepted(offerId, optionId)
+ *   Admin marks the client's reply as accepting an option.
+ *   Sets offer_options.is_accepted, emits offer.accepted + proposes awaiting_payment.
+ *
+ * markClientDeclined(offerId, messageId?)
+ *   Admin marks the client's reply as declining.
+ *   Emits offer.declined + proposes lost.
+ *
+ * markGuideNotifiedPaid(messageId)
+ *   Admin marks a guide message as "guide was told about the deposit".
+ *   Emits guide.notified_paid.
+ *
+ * markContactsExchanged(messageId)
+ *   Admin marks the step where contacts were exchanged.
+ *   Emits contacts.exchanged + proposes handed_over.
+ *
+ * createPaymentLink(inquiryId, amountCents, currency)
+ *   Creates a Stripe Payment Link, inserts a draft message, emits payment.link_sent.
  */
 
+import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { ActionResult } from '@/actions/inquiries'
 import { requireAdmin } from '@/lib/auth/guards'
+import { emitEvent } from '@/lib/events/emit'
+import { transition, TransitionError } from '@/lib/inquiries/state'
+import { stripe } from '@/lib/stripe/client'
+import { env } from '@/lib/env'
 
 // ─── matchUnmatchedMessage ────────────────────────────────────────────────────
 
 /**
- * Link an unmatched_message to an inquiry.
- *
- * 1. Fetches the unmatched_message row.
- * 2. Inserts a lead_messages row (direction=inbound, channel from source).
- * 3. Marks unmatched_messages.matched_inquiry_id + matched_at.
- * 4. Bumps inquiries.last_contact_at.
+ * Link one unmatched_message to an inquiry.
+ * occurred_at = unmatched_messages.created_at (decision tj 2026-09-17).
  */
 export async function matchUnmatchedMessage(
   unmatchedId: string,
-  inquiryId: string,
+  inquiryId:   string,
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
 
-  // 1. Fetch the unmatched message
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: msg, error: fetchErr } = await (svc as any)
     .from('unmatched_messages')
-    .select('id, source, from_identifier, sender_name, content, matched_inquiry_id')
+    .select('id, source, content, matched_inquiry_id, created_at')
     .eq('id', unmatchedId)
     .maybeSingle()
 
-  if (fetchErr || !msg) {
+  if (fetchErr != null || msg == null) {
     return { success: false, error: fetchErr?.message ?? 'Message not found' }
   }
-
   if (msg.matched_inquiry_id != null) {
     return { success: false, error: 'Message is already linked to an inquiry' }
   }
 
   const now = new Date().toISOString()
 
-  // 2. Insert lead_messages row
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertErr } = await (svc as any).from('lead_messages').insert({
-    inquiry_id:   inquiryId,
-    direction:    'inbound',
-    channel:      msg.source,   // 'whatsapp' | 'email'
-    contact_type: 'client',
-    contact_name: msg.sender_name || msg.from_identifier,
-    content:      msg.content,
-    created_by:   'webhook',
+  const { error: insertErr } = await (svc as any).from('messages').insert({
+    inquiry_id:  inquiryId,
+    direction:   'inbound',
+    channel:     msg.source as 'email' | 'whatsapp' | 'instagram',
+    counterpart: 'angler',
+    body:        msg.content,
+    status:      'received',
+    drafted_by:  null,
+    occurred_at: msg.created_at ?? now,
   })
 
-  if (insertErr) {
-    console.error('[matchUnmatchedMessage] insert lead_messages error:', insertErr)
+  if (insertErr != null) {
+    console.error('[matchUnmatchedMessage] insert messages error:', insertErr)
     return { success: false, error: insertErr.message }
   }
 
-  // 3. Mark unmatched_message as matched
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (svc as any)
     .from('unmatched_messages')
     .update({ matched_inquiry_id: inquiryId, matched_at: now, matched_by: 'admin' })
     .eq('id', unmatchedId)
 
-  // 4. Bump last_contact_at on the inquiry
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (svc as any)
     .from('inquiries')
     .update({ last_contact_at: now })
     .eq('id', inquiryId)
 
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/inquiries/unmatched')
   console.log(`[matchUnmatchedMessage] Linked unmatched ${unmatchedId} → inquiry ${inquiryId}`)
   return { success: true }
 }
@@ -86,69 +119,581 @@ export async function matchUnmatchedMessage(
 
 export async function bulkMatchUnmatchedMessages(
   unmatchedIds: string[],
-  inquiryId: string,
+  inquiryId:    string,
 ): Promise<ActionResult> {
   await requireAdmin()
   if (unmatchedIds.length === 0) return { success: true }
 
   const svc = createServiceClient()
 
-  // Fetch all unmatched messages in one query
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: msgs, error: fetchErr } = await (svc as any)
     .from('unmatched_messages')
-    .select('id, source, sender_name, from_identifier, content, raw_payload')
+    .select('id, source, content, raw_payload, created_at')
     .in('id', unmatchedIds)
     .is('matched_inquiry_id', null)
 
-  if (fetchErr || !msgs?.length) {
+  if (fetchErr != null || !msgs?.length) {
     return { success: false, error: fetchErr?.message ?? 'No messages found' }
   }
 
   const now = new Date().toISOString()
 
-  // Build lead_messages rows — preserve original timestamp from raw_payload if available
-  const leadRows = msgs.map((msg: {
+  const rows = msgs.map((msg: {
     id: string
     source: string
-    sender_name: string
-    from_identifier: string
     content: string
     raw_payload: { timestamp?: number; fromMe?: boolean } | null
+    created_at: string
   }) => {
-    const ts        = msg.raw_payload?.timestamp
-    const fromMe    = msg.raw_payload?.fromMe ?? false
-    const createdAt = ts ? new Date(ts * 1000).toISOString() : now
+    const ts     = msg.raw_payload?.timestamp
+    const fromMe = msg.raw_payload?.fromMe ?? false
     return {
-      inquiry_id:   inquiryId,
-      direction:    fromMe ? 'outbound' : 'inbound',
-      channel:      msg.source,
-      contact_type: 'client',
-      contact_name: msg.sender_name || msg.from_identifier,
-      content:      msg.content,
-      created_at:   createdAt,
-      created_by:   'admin-bulk-link',
+      inquiry_id:  inquiryId,
+      direction:   fromMe ? 'outbound' : ('inbound' as 'inbound' | 'outbound'),
+      channel:     msg.source as 'email' | 'whatsapp' | 'instagram',
+      counterpart: 'angler' as const,
+      body:        msg.content,
+      status:      fromMe ? 'sent' : ('received' as 'sent' | 'received'),
+      drafted_by:  fromMe ? ('admin' as const) : null,
+      // Use raw_payload.timestamp when available (WhatsApp), else unmatched_messages.created_at
+      occurred_at: ts ? new Date(ts * 1000).toISOString() : (msg.created_at ?? now),
     }
   })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertErr } = await (svc as any).from('lead_messages').insert(leadRows)
-  if (insertErr) return { success: false, error: insertErr.message }
+  const { error: insertErr } = await (svc as any).from('messages').insert(rows)
+  if (insertErr != null) {
+    console.error('[bulkMatchUnmatchedMessages] insert messages error:', insertErr)
+    return { success: false, error: insertErr.message }
+  }
 
-  // Mark all as matched
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (svc as any)
     .from('unmatched_messages')
     .update({ matched_inquiry_id: inquiryId, matched_at: now, matched_by: 'admin' })
     .in('id', unmatchedIds)
 
-  // Bump last_contact_at
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (svc as any)
     .from('inquiries')
     .update({ last_contact_at: now })
     .eq('id', inquiryId)
 
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/inquiries/unmatched')
   console.log(`[bulkMatchUnmatchedMessages] Linked ${msgs.length} messages → inquiry ${inquiryId}`)
+  return { success: true }
+}
+
+// ─── sendMessageFromThread ────────────────────────────────────────────────────
+
+export interface SendMessageFromThreadParams {
+  channel:     'email'
+  counterpart: 'angler' | 'guide'
+  subject?:    string
+  body:        string
+}
+
+export async function sendMessageFromThread(
+  inquiryId: string,
+  params:    SendMessageFromThreadParams,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  if (params.body.trim() === '') return { success: false, error: 'Body is required' }
+
+  const svc = createServiceClient()
+
+  // Fetch the counterpart's email address
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inq } = await (svc as any)
+    .from('inquiries')
+    .select('id, angler_name, angler_email, assigned_guide_id')
+    .eq('id', inquiryId)
+    .single()
+
+  if (inq == null) return { success: false, error: 'Inquiry not found' }
+
+  let to: string
+  let counterpartId: string | null = null
+
+  if (params.counterpart === 'angler') {
+    to = inq.angler_email as string
+  } else {
+    if (inq.assigned_guide_id == null) return { success: false, error: 'No guide assigned' }
+    counterpartId = inq.assigned_guide_id as string
+    const { data: guide } = await svc
+      .from('guides')
+      .select('invite_email, user_id')
+      .eq('id', counterpartId)
+      .single()
+    if (guide == null) return { success: false, error: 'Guide not found' }
+    let guideEmail: string | null = guide.invite_email ?? null
+    if ((guideEmail == null || guideEmail === '') && guide.user_id != null) {
+      const { data: authUser } = await svc.auth.admin.getUserById(guide.user_id)
+      guideEmail = authUser?.user?.email ?? null
+    }
+    if (guideEmail == null) return { success: false, error: 'Guide has no email address' }
+    to = guideEmail
+  }
+
+  // Get last outbound thread_key for In-Reply-To
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: lastMsg } = await (svc as any)
+    .from('messages')
+    .select('thread_key')
+    .eq('inquiry_id', inquiryId)
+    .eq('direction', 'outbound')
+    .eq('counterpart', params.counterpart)
+    .order('occurred_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { sendMessage } = await import('@/lib/messages/send')
+  try {
+    await sendMessage(svc, {
+      inquiryId,
+      channel:      params.channel,
+      counterpart:  params.counterpart,
+      to,
+      subject:      params.subject?.trim() || undefined,
+      body:         params.body.trim(),
+      draftedBy:    'admin',
+      actor:        { kind: 'admin', id: userId },
+      counterpartId,
+      threadKey:    lastMsg?.thread_key ?? null,
+    })
+  } catch (err) {
+    console.error('[sendMessageFromThread] error:', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Send failed' }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
+}
+
+// ─── markAsGuideOffer ─────────────────────────────────────────────────────────
+
+export interface OfferOptionInput {
+  label:      string
+  priceCents: number
+  currency:   string
+  dateFrom?:  string | null
+  dateTo?:    string | null
+  partySize?: number | null
+  includes?:  string[]
+  notes?:     string | null
+}
+
+export interface MarkAsGuideOfferParams {
+  guideId?: string | null
+  options:  OfferOptionInput[]
+}
+
+export async function markAsGuideOffer(
+  messageId: string,
+  params:    MarkAsGuideOfferParams,
+): Promise<ActionResult & { offerId?: string }> {
+  const { userId } = await requireAdmin()
+  if (params.options.length === 0) return { success: false, error: 'At least one option is required' }
+
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: msg } = await (svc as any)
+    .from('messages')
+    .select('id, inquiry_id')
+    .eq('id', messageId)
+    .single()
+  if (msg == null) return { success: false, error: 'Message not found' }
+
+  const inquiryId: string = msg.inquiry_id
+
+  // Insert offer + options in the same transaction (deferred constraint fires at commit)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: offer, error: offerErr } = await (svc as any)
+    .from('offers')
+    .insert({
+      inquiry_id:        inquiryId,
+      guide_id:          params.guideId ?? null,
+      source_message_id: messageId,
+      status:            'draft',
+      created_by:        userId,
+    })
+    .select('id')
+    .single()
+
+  if (offerErr != null || offer == null) {
+    console.error('[markAsGuideOffer] offer insert error:', offerErr)
+    return { success: false, error: offerErr?.message ?? 'Failed to create offer' }
+  }
+
+  const offerId: string = offer.id
+
+  const optionRows = params.options.map(o => ({
+    offer_id:   offerId,
+    label:      o.label,
+    price_cents: o.priceCents,
+    currency:   o.currency,
+    date_from:  o.dateFrom ?? null,
+    date_to:    o.dateTo ?? null,
+    party_size: o.partySize ?? null,
+    includes:   o.includes ?? [],
+    notes:      o.notes ?? null,
+  }))
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: optErr } = await (svc as any).from('offer_options').insert(optionRows)
+  if (optErr != null) {
+    console.error('[markAsGuideOffer] offer_options insert error:', optErr)
+    return { success: false, error: optErr.message }
+  }
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:      'guide.offer_received',
+    actor:     { kind: 'admin', id: userId },
+    source:    'app',
+    messageId,
+    payload:   { offer_id: offerId, guide_id: params.guideId ?? null },
+  })
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true, offerId }
+}
+
+// ─── markOfferPresented ───────────────────────────────────────────────────────
+
+export async function markOfferPresented(
+  offerId:    string,
+  messageId?: string | null,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: offer } = await (svc as any)
+    .from('offers')
+    .select('id, inquiry_id, status')
+    .eq('id', offerId)
+    .single()
+  if (offer == null) return { success: false, error: 'Offer not found' }
+
+  const inquiryId: string = offer.inquiry_id
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('offers')
+    .update({ status: 'presented' })
+    .eq('id', offerId)
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:      'offer.presented',
+    actor:     { kind: 'admin', id: userId },
+    source:    'app',
+    channel:   'email',
+    messageId: messageId ?? null,
+    payload:   { offer_id: offerId },
+  })
+
+  // Propose status transition (best-effort — not a hard failure)
+  try {
+    await transition(svc, inquiryId, 'offer_presented', {
+      actor:  { kind: 'admin', id: userId },
+      reason: 'Offer presented to angler',
+    })
+  } catch (err) {
+    if (!(err instanceof TransitionError && err.message.includes('already'))) {
+      console.warn('[markOfferPresented] transition warn:', err)
+    }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
+}
+
+// ─── markClientAccepted ───────────────────────────────────────────────────────
+
+export async function markClientAccepted(
+  offerId:    string,
+  optionId:   string,
+  messageId?: string | null,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: option } = await (svc as any)
+    .from('offer_options')
+    .select('id, offer_id')
+    .eq('id', optionId)
+    .eq('offer_id', offerId)
+    .single()
+
+  if (option == null) {
+    return { success: false, error: 'Option not found or does not belong to this offer' }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: offer } = await (svc as any)
+    .from('offers')
+    .select('id, inquiry_id')
+    .eq('id', offerId)
+    .single()
+  if (offer == null) return { success: false, error: 'Offer not found' }
+
+  const inquiryId: string = offer.inquiry_id
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('offer_options')
+    .update({ is_accepted: true })
+    .eq('id', optionId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('offers')
+    .update({ status: 'accepted' })
+    .eq('id', offerId)
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:      'offer.accepted',
+    actor:     { kind: 'admin', id: userId },
+    source:    'app',
+    messageId: messageId ?? null,
+    payload:   { offer_id: offerId, option_id: optionId },
+  })
+
+  try {
+    await transition(svc, inquiryId, 'awaiting_payment', {
+      actor:  { kind: 'admin', id: userId },
+      reason: 'Client accepted the offer',
+    })
+  } catch (err) {
+    if (!(err instanceof TransitionError && err.message.includes('already'))) {
+      console.warn('[markClientAccepted] transition warn:', err)
+    }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
+}
+
+// ─── markClientDeclined ───────────────────────────────────────────────────────
+
+export async function markClientDeclined(
+  offerId:    string,
+  messageId?: string | null,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: offer } = await (svc as any)
+    .from('offers')
+    .select('id, inquiry_id')
+    .eq('id', offerId)
+    .single()
+  if (offer == null) return { success: false, error: 'Offer not found' }
+
+  const inquiryId: string = offer.inquiry_id
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any)
+    .from('offers')
+    .update({ status: 'declined' })
+    .eq('id', offerId)
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:      'offer.declined',
+    actor:     { kind: 'admin', id: userId },
+    source:    'app',
+    messageId: messageId ?? null,
+    payload:   { offer_id: offerId },
+  })
+
+  try {
+    await transition(svc, inquiryId, 'lost', {
+      actor:          { kind: 'admin', id: userId },
+      lostReasonCode: 'offer_declined',
+      lostReason:     'Client declined the offer',
+    })
+  } catch (err) {
+    if (!(err instanceof TransitionError && err.message.includes('already'))) {
+      console.warn('[markClientDeclined] transition warn:', err)
+    }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
+}
+
+// ─── markGuideNotifiedPaid ────────────────────────────────────────────────────
+
+export async function markGuideNotifiedPaid(messageId: string): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: msg } = await (svc as any)
+    .from('messages')
+    .select('id, inquiry_id')
+    .eq('id', messageId)
+    .single()
+  if (msg == null) return { success: false, error: 'Message not found' }
+
+  await emitEvent(svc, {
+    inquiryId: msg.inquiry_id,
+    type:      'guide.notified_paid',
+    actor:     { kind: 'admin', id: userId },
+    source:    'app',
+    messageId,
+  })
+
+  revalidatePath('/admin/inquiries/' + msg.inquiry_id)
+  return { success: true }
+}
+
+// ─── markContactsExchanged ────────────────────────────────────────────────────
+
+export async function markContactsExchanged(messageId: string): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: msg } = await (svc as any)
+    .from('messages')
+    .select('id, inquiry_id')
+    .eq('id', messageId)
+    .single()
+  if (msg == null) return { success: false, error: 'Message not found' }
+
+  const inquiryId: string = msg.inquiry_id
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:      'contacts.exchanged',
+    actor:     { kind: 'admin', id: userId },
+    source:    'app',
+    messageId,
+  })
+
+  try {
+    await transition(svc, inquiryId, 'handed_over', {
+      actor:  { kind: 'admin', id: userId },
+      reason: 'Contacts exchanged',
+    })
+  } catch (err) {
+    if (!(err instanceof TransitionError && err.message.includes('already'))) {
+      console.warn('[markContactsExchanged] transition warn:', err)
+    }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true }
+}
+
+// ─── createPaymentLink ────────────────────────────────────────────────────────
+
+export type CreatePaymentLinkResult =
+  | { success: true;  url: string }
+  | { success: false; error: string }
+
+export async function createPaymentLink(
+  inquiryId:   string,
+  amountCents: number,
+  currency:    string,
+): Promise<CreatePaymentLinkResult> {
+  const { userId } = await requireAdmin()
+  if (amountCents < 50) return { success: false, error: 'Amount must be at least 50 cents' }
+
+  const svc = createServiceClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: inq } = await (svc as any)
+    .from('inquiries')
+    .select('id, angler_name, angler_email, party_size')
+    .eq('id', inquiryId)
+    .single()
+  if (inq == null) return { success: false, error: 'Inquiry not found' }
+
+  let paymentLink: { url: string; id: string }
+  try {
+    // Create a Payment Link (not a Checkout Session) so the admin can paste it manually
+    const price = await stripe.prices.create({
+      currency:     currency.toLowerCase(),
+      unit_amount:  amountCents,
+      product_data: {
+        name: `Booking & Curation Fee — FjordAnglers`,
+        metadata: { inquiry_id: inquiryId },
+      },
+    })
+    const link = await stripe.paymentLinks.create({
+      line_items: [{ price: price.id, quantity: 1 }],
+      metadata:   { inquiry_id: inquiryId, payment_type: 'inquiry_deposit' },
+      after_completion: {
+        type: 'redirect',
+        redirect: { url: `${env.NEXT_PUBLIC_APP_URL}/inquiry/${inquiryId}/confirmed` },
+      },
+    })
+    paymentLink = { url: link.url, id: link.id }
+  } catch (err) {
+    console.error('[createPaymentLink] Stripe error:', err)
+    return { success: false, error: err instanceof Error ? err.message : 'Stripe error' }
+  }
+
+  // Insert a draft message row with the link as body — admin will paste and send
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (svc as any).from('messages').insert({
+    inquiry_id:  inquiryId,
+    channel:     'email',
+    direction:   'outbound',
+    counterpart: 'angler',
+    body:        `Payment link: ${paymentLink.url}`,
+    status:      'draft',
+    drafted_by:  'admin',
+    occurred_at: new Date().toISOString(),
+  })
+
+  await emitEvent(svc, {
+    inquiryId,
+    type:    'payment.link_sent',
+    actor:   { kind: 'admin', id: userId },
+    source:  'app',
+    channel: 'app',
+    payload: { amount_cents: amountCents, currency, link_id: paymentLink.id },
+  })
+
+  try {
+    await transition(svc, inquiryId, 'awaiting_payment', {
+      actor:  { kind: 'admin', id: userId },
+      reason: 'Payment link created',
+    })
+  } catch (err) {
+    if (!(err instanceof TransitionError && err.message.includes('already'))) {
+      console.warn('[createPaymentLink] transition warn:', err)
+    }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  return { success: true, url: paymentLink.url }
+}
+
+// ─── deleteUnmatchedMessages (kept from old messages.ts) ─────────────────────
+
+export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
+  await requireAdmin()
+  if (ids.length === 0) return { success: true }
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('unmatched_messages')
+    .delete()
+    .in('id', ids)
+  if (error != null) return { success: false, error: error.message }
+  revalidatePath('/admin/inquiries/unmatched')
   return { success: true }
 }

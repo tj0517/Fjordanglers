@@ -1613,36 +1613,11 @@ export type Database = {
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      inquiry_messages: {
-        Row: {
-          body: string
-          id: string
-          inquiry_id: string
-          sent_at: string | null
-          subject: string | null
-        }
-        Insert: {
-          body: string
-          id?: string
-          inquiry_id: string
-          sent_at?: string | null
-          subject?: string | null
-        }
-        Update: {
-          body?: string
-          id?: string
-          inquiry_id?: string
-          sent_at?: string | null
-          subject?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "inquiry_messages_inquiry_id_fkey"
-            columns: ["inquiry_id"]
+            foreignKeyName: "inquiry_events_message_id_fkey"
+            columns: ["message_id"]
             isOneToOne: false
-            referencedRelation: "inquiries"
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1697,50 +1672,6 @@ export type Database = {
           },
         ]
       }
-      lead_messages: {
-        Row: {
-          channel: string
-          contact_name: string
-          contact_type: string
-          content: string
-          created_at: string
-          created_by: string
-          direction: string
-          id: string
-          inquiry_id: string
-        }
-        Insert: {
-          channel: string
-          contact_name?: string
-          contact_type: string
-          content: string
-          created_at?: string
-          created_by?: string
-          direction: string
-          id?: string
-          inquiry_id: string
-        }
-        Update: {
-          channel?: string
-          contact_name?: string
-          contact_type?: string
-          content?: string
-          created_at?: string
-          created_by?: string
-          direction?: string
-          id?: string
-          inquiry_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lead_messages_inquiry_id_fkey"
-            columns: ["inquiry_id"]
-            isOneToOne: false
-            referencedRelation: "inquiries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       manual_cost_entries: {
         Row: {
           amount_pln: number
@@ -1771,114 +1702,166 @@ export type Database = {
         }
         Relationships: []
       }
-      offers: {
+      messages: {
         Row: {
-          accepted_at: string | null
-          anglers: number | null
-          cancellation_terms: string | null
-          commission_cents: number | null
-          content: Json
+          body: string
+          channel: string
+          counterpart: string
+          counterpart_id: string | null
           created_at: string
-          currency: string
-          deposit_cents: number | null
-          deposit_paid_at: string | null
-          deposit_pct: number | null
-          end_date: string | null
-          expedition_id: string | null
-          expires_at: string | null
-          guide_id: string | null
-          guide_payout_cents: number | null
+          direction: string
+          drafted_by: string | null
+          external_id: string | null
           id: string
-          legacy_inquiry_id: string | null
-          location_released_at: string | null
-          notes: string | null
-          public_token: string | null
-          refund_reason: string | null
-          request_id: string
-          sent_at: string | null
-          start_date: string | null
-          status: Database["public"]["Enums"]["offer_state"]
-          stripe_session_id: string | null
-          terms: string | null
-          token_expires_at: string | null
-          total_cents: number | null
-          updated_at: string
-          version: number
+          inquiry_id: string
+          media: Json
+          occurred_at: string
+          sent_by: string | null
+          status: string
+          subject: string | null
+          thread_key: string | null
         }
         Insert: {
-          accepted_at?: string | null
-          anglers?: number | null
-          cancellation_terms?: string | null
-          commission_cents?: number | null
-          content?: Json
+          body: string
+          channel: string
+          counterpart: string
+          counterpart_id?: string | null
           created_at?: string
-          currency?: string
-          deposit_cents?: number | null
-          deposit_paid_at?: string | null
-          deposit_pct?: number | null
-          end_date?: string | null
-          expedition_id?: string | null
-          expires_at?: string | null
-          guide_id?: string | null
-          guide_payout_cents?: number | null
+          direction: string
+          drafted_by?: string | null
+          external_id?: string | null
           id?: string
-          legacy_inquiry_id?: string | null
-          location_released_at?: string | null
-          notes?: string | null
-          public_token?: string | null
-          refund_reason?: string | null
-          request_id: string
-          sent_at?: string | null
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["offer_state"]
-          stripe_session_id?: string | null
-          terms?: string | null
-          token_expires_at?: string | null
-          total_cents?: number | null
-          updated_at?: string
-          version?: number
+          inquiry_id: string
+          media?: Json
+          occurred_at?: string
+          sent_by?: string | null
+          status: string
+          subject?: string | null
+          thread_key?: string | null
         }
         Update: {
-          accepted_at?: string | null
-          anglers?: number | null
-          cancellation_terms?: string | null
-          commission_cents?: number | null
-          content?: Json
+          body?: string
+          channel?: string
+          counterpart?: string
+          counterpart_id?: string | null
           created_at?: string
-          currency?: string
-          deposit_cents?: number | null
-          deposit_paid_at?: string | null
-          deposit_pct?: number | null
-          end_date?: string | null
-          expedition_id?: string | null
-          expires_at?: string | null
-          guide_id?: string | null
-          guide_payout_cents?: number | null
+          direction?: string
+          drafted_by?: string | null
+          external_id?: string | null
           id?: string
-          legacy_inquiry_id?: string | null
-          location_released_at?: string | null
-          notes?: string | null
-          public_token?: string | null
-          refund_reason?: string | null
-          request_id?: string
-          sent_at?: string | null
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["offer_state"]
-          stripe_session_id?: string | null
-          terms?: string | null
-          token_expires_at?: string | null
-          total_cents?: number | null
-          updated_at?: string
-          version?: number
+          inquiry_id?: string
+          media?: Json
+          occurred_at?: string
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+          thread_key?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "offers_expedition_id_fkey"
-            columns: ["expedition_id"]
+            foreignKeyName: "messages_counterpart_id_fkey"
+            columns: ["counterpart_id"]
             isOneToOne: false
-            referencedRelation: "expeditions"
+            referencedRelation: "guides"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "messages_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_options: {
+        Row: {
+          created_at: string
+          currency: string
+          date_from: string | null
+          date_to: string | null
+          id: string
+          includes: Json
+          is_accepted: boolean
+          label: string
+          notes: string | null
+          offer_id: string
+          party_size: number | null
+          price_cents: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          date_from?: string | null
+          date_to?: string | null
+          id?: string
+          includes?: Json
+          is_accepted?: boolean
+          label: string
+          notes?: string | null
+          offer_id: string
+          party_size?: number | null
+          price_cents: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          date_from?: string | null
+          date_to?: string | null
+          id?: string
+          includes?: Json
+          is_accepted?: boolean
+          label?: string
+          notes?: string | null
+          offer_id?: string
+          party_size?: number | null
+          price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_options_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          guide_id: string | null
+          id: string
+          inquiry_id: string
+          notes: string | null
+          source_message_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          guide_id?: string | null
+          id?: string
+          inquiry_id: string
+          notes?: string | null
+          source_message_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          guide_id?: string | null
+          id?: string
+          inquiry_id?: string
+          notes?: string | null
+          source_message_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
             foreignKeyName: "offers_guide_id_fkey"
             columns: ["guide_id"]
@@ -1887,10 +1870,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "offers_request_id_fkey"
-            columns: ["request_id"]
+            foreignKeyName: "offers_inquiry_id_fkey"
+            columns: ["inquiry_id"]
             isOneToOne: false
-            referencedRelation: "requests"
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -3469,13 +3459,6 @@ export type Database = {
       guide_status: "pending" | "verified" | "active" | "suspended"
       media_entity: "country" | "region" | "expedition" | "guide"
       media_role: "hero" | "card" | "gallery" | "portrait"
-      offer_state:
-        | "draft"
-        | "sent"
-        | "accepted"
-        | "declined"
-        | "expired"
-        | "cancelled"
       pricing_model: "flat_fee" | "commission"
       publish_state: "draft" | "published" | "archived"
       req_state:
@@ -3629,14 +3612,6 @@ export const Constants = {
       guide_status: ["pending", "verified", "active", "suspended"],
       media_entity: ["country", "region", "expedition", "guide"],
       media_role: ["hero", "card", "gallery", "portrait"],
-      offer_state: [
-        "draft",
-        "sent",
-        "accepted",
-        "declined",
-        "expired",
-        "cancelled",
-      ],
       pricing_model: ["flat_fee", "commission"],
       publish_state: ["draft", "published", "archived"],
       req_state: [

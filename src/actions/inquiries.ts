@@ -21,7 +21,7 @@
  *
  * sendMessageToAngler(inquiryId, subject, body)
  *   FA sends a plain-text email to the angler from the admin.
- *   Message is stored in inquiry_messages for audit trail.
+ *   Message is stored in messages for audit trail.
  */
 
 import { createServiceClient } from '@/lib/supabase/server'
@@ -800,7 +800,7 @@ export async function saveInternalDeal(
 
 /**
  * FA sends a plain-text message to the angler via email.
- * Stored in inquiry_messages for audit trail.
+ * Stored in messages for audit trail.
  */
 export async function sendMessageToAngler(
   inquiryId: string,
@@ -824,12 +824,17 @@ export async function sendMessageToAngler(
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertError } = await (svc as any).from('inquiry_messages')
-    .insert({
-      inquiry_id: inquiryId,
-      subject:    subject.trim(),
-      body:       body.trim(),
-    })
+  const { error: insertError } = await (svc as any).from('messages').insert({
+    inquiry_id:  inquiryId,
+    channel:     'email',
+    direction:   'outbound',
+    counterpart: 'angler',
+    subject:     subject.trim(),
+    body:        body.trim(),
+    status:      'sent',
+    drafted_by:  'admin',
+    occurred_at: new Date().toISOString(),
+  })
 
   if (insertError != null) {
     console.error('[sendMessageToAngler] DB error:', insertError)
@@ -888,20 +893,24 @@ export async function logLeadMessage(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any).from('lead_messages').insert({
-    inquiry_id:   inquiryId,
-    direction:    params.direction,
-    channel:      params.channel,
-    contact_type: params.contactType,
-    contact_name: params.contactName.trim(),
-    content:      params.content.trim(),
-    created_by:   params.createdBy ?? 'tymon',
-  })
+  // 'note' channel not supported in messages table — skip DB insert but still update last_contact_at
+  if (params.channel !== 'note') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (svc as any).from('messages').insert({
+      inquiry_id:  inquiryId,
+      direction:   params.direction,
+      channel:     params.channel as 'email' | 'whatsapp' | 'instagram',
+      counterpart: params.contactType === 'client' ? 'angler' : 'guide',
+      body:        params.content.trim(),
+      status:      params.direction === 'inbound' ? 'received' : 'sent',
+      drafted_by:  params.direction === 'inbound' ? null : 'admin',
+      occurred_at: new Date().toISOString(),
+    })
 
-  if (error != null) {
-    console.error('[logLeadMessage] DB error:', error)
-    return { success: false, error: error.message }
+    if (error != null) {
+      console.error('[logLeadMessage] DB error:', error)
+      return { success: false, error: error.message }
+    }
   }
 
   // Bump last_contact_at on the parent inquiry
@@ -918,7 +927,7 @@ export async function logLeadMessage(
 // ─── bulkLogLeadMessages ──────────────────────────────────────────────────────
 
 /**
- * Bulk-insert multiple lead_messages in one transaction.
+ * Bulk-insert multiple messages in one transaction.
  * Used by the conversation importer (paste WhatsApp/email thread).
  * Each message may carry its own createdAt for historical imports.
  * Content is stored as Markdown for AI readability.
@@ -944,22 +953,26 @@ export async function bulkLogLeadMessages(
   const svc = createServiceClient()
 
   const now = new Date().toISOString()
-  const rows = messages.map(m => ({
-    inquiry_id:   inquiryId,
-    direction:    m.direction,
-    channel:      m.channel,
-    contact_type: m.contactType,
-    contact_name: m.contactName.trim() || 'Unknown',
-    content:      m.content.trim(),
-    created_by:   m.createdBy ?? 'tymon',
-    created_at:   m.createdAt ?? now,
+  // Filter out 'note' channel — not supported in messages table
+  const filteredMessages = messages.filter(m => m.channel !== 'note')
+  const rows = filteredMessages.map(m => ({
+    inquiry_id:  inquiryId,
+    direction:   m.direction,
+    channel:     m.channel as 'email' | 'whatsapp' | 'instagram',
+    counterpart: m.contactType === 'client' ? 'angler' : 'guide',
+    body:        m.content.trim(),
+    status:      m.direction === 'inbound' ? 'received' : 'sent',
+    drafted_by:  m.direction === 'inbound' ? null : 'admin',
+    occurred_at: m.createdAt ?? now,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any).from('lead_messages').insert(rows)
-  if (error != null) {
-    console.error('[bulkLogLeadMessages] DB error:', error)
-    return { success: false, error: error.message }
+  if (rows.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (svc as any).from('messages').insert(rows)
+    if (error != null) {
+      console.error('[bulkLogLeadMessages] DB error:', error)
+      return { success: false, error: error.message }
+    }
   }
 
   // Bump last_contact_at to the most recent message
@@ -1686,20 +1699,6 @@ export async function updateInquiryGuide(
   if (error != null) return { success: false, error: error.message }
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[updateInquiryGuide] Inquiry ${inquiryId} → guide ${guideId ?? '(default)'}`)
-  return { success: true }
-}
-
-export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
-  await requireAdmin()
-  if (ids.length === 0) return { success: true }
-  const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
-    .from('unmatched_messages')
-    .delete()
-    .in('id', ids)
-  if (error != null) return { success: false, error: error.message }
-  revalidatePath('/admin/inquiries/unmatched')
   return { success: true }
 }
 

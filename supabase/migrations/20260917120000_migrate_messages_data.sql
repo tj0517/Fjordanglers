@@ -5,8 +5,12 @@
 --                     contact_type = 'client' (100% of 594 rows) → counterpart='angler';
 --                     content → body; created_at → occurred_at.
 --                     status: inbound → 'received'; outbound → 'sent'.
+--                     drafted_by: outbound+agent → 'agent'; outbound+other → 'admin'; inbound → NULL.
+--                     contact_name: dropped — angler name already on inquiries.angler_name.
+--                     created_by: dropped — replaced by drafted_by (above).
 --   inquiry_messages: all outbound email to angler; sent_at always NOT NULL (75 rows);
---                     channel='email', direction='outbound', counterpart='angler'.
+--                     channel='email', direction='outbound', counterpart='angler',
+--                     drafted_by='admin' (all sent by founders via sendMessageToAngler).
 --
 -- Original IDs are preserved for traceability. Migration is idempotent (skips rows
 -- already present in messages by id).
@@ -49,29 +53,48 @@ BEGIN
       v_lead_skipped;
   END IF;
 
+  -- For admin-bulk-link rows (matched via bulkMatchUnmatchedMessages), use the
+  -- original receipt time from unmatched_messages.created_at rather than
+  -- lm.created_at (which equals raw_payload.timestamp for WhatsApp, but using the
+  -- unmatched row's created_at is the canonical source). Decision: tj 2026-09-17.
+  -- For all other rows, lm.created_at is already the correct receipt/send time.
   INSERT INTO messages (
     id, inquiry_id, channel, direction, counterpart,
-    body, status, occurred_at, created_at
+    body, status, drafted_by, occurred_at, created_at
   )
   SELECT
     lm.id,
     lm.inquiry_id,
     lm.channel,
     lm.direction,
-    'angler'                                                     AS counterpart,
-    lm.content                                                   AS body,
+    'angler'                                                      AS counterpart,
+    lm.content                                                    AS body,
     CASE lm.direction WHEN 'inbound' THEN 'received' ELSE 'sent' END AS status,
-    lm.created_at                                                AS occurred_at,
+    CASE
+      WHEN lm.direction = 'outbound' AND lm.created_by = 'agent' THEN 'agent'
+      WHEN lm.direction = 'outbound'                              THEN 'admin'
+      ELSE NULL
+    END                                                           AS drafted_by,
+    COALESCE(um.created_at, lm.created_at)                        AS occurred_at,
     lm.created_at
   FROM lead_messages lm
+  LEFT JOIN unmatched_messages um
+    ON um.content = lm.content
+    AND um.matched_inquiry_id = lm.inquiry_id
   WHERE NOT EXISTS (SELECT 1 FROM messages m WHERE m.id = lm.id);
 
   GET DIAGNOSTICS v_lead_inserted = ROW_COUNT;
 
+  RAISE NOTICE 'migrate_messages: lead_messages rows using um.created_at as occurred_at=%',
+    (SELECT count(*) FROM messages m
+     JOIN lead_messages lm ON lm.id = m.id
+     JOIN unmatched_messages um ON um.content = lm.content AND um.matched_inquiry_id = lm.inquiry_id
+     WHERE m.occurred_at = um.created_at AND m.occurred_at <> lm.created_at);
+
   -- ── inquiry_messages → messages ──────────────────────────────────────────────
   INSERT INTO messages (
     id, inquiry_id, channel, direction, counterpart,
-    subject, body, status, occurred_at, created_at
+    subject, body, status, drafted_by, occurred_at, created_at
   )
   SELECT
     im.id,
@@ -82,6 +105,7 @@ BEGIN
     im.subject,
     im.body,
     'sent'                                                       AS status,
+    'admin'                                                      AS drafted_by,
     im.sent_at                                                   AS occurred_at,
     im.sent_at                                                   AS created_at
   FROM inquiry_messages im

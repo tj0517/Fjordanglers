@@ -16,6 +16,7 @@ import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByEmail } from '@/lib/inquiry-matcher'
 import { runAgentRound2 } from '@/lib/ai/inquiry-agent'
+import { emitEvent } from '@/lib/events/emit'
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
@@ -115,24 +116,36 @@ export async function POST(req: Request) {
 
   if (inquiryId) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('lead_messages').insert({
-      inquiry_id:   inquiryId,
-      direction:    'inbound',
-      channel:      'email',
-      contact_type: 'client',
-      contact_name: senderName || fromEmail,
-      content,
-      created_by:   'webhook',
-    })
+    const { data: newMsg, error } = await (supabase as any).from('messages').insert({
+      inquiry_id:  inquiryId,
+      direction:   'inbound',
+      channel:     'email',
+      counterpart: 'angler',
+      body:        content,
+      subject:     subject || null,
+      external_id: emailData.email_id,
+      status:      'received',
+      drafted_by:  null,
+      occurred_at: new Date().toISOString(),
+    }).select('id').single()
 
     if (error) {
-      console.error('[email-inbound] lead_messages insert error:', error)
+      console.error('[email-inbound] messages insert error:', error)
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any)
         .from('inquiries')
         .update({ last_contact_at: new Date().toISOString() })
         .eq('id', inquiryId)
+
+      await emitEvent(supabase, {
+        inquiryId,
+        type:      'message.received',
+        actor:     { kind: 'angler' },
+        source:    'webhook',
+        channel:   'email',
+        messageId: newMsg?.id ?? null,
+      })
 
       console.log(`[email-inbound] Email from ${fromEmail} → inquiry ${inquiryId}`)
 

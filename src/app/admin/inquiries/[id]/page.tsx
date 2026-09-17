@@ -1,24 +1,8 @@
 /**
  * /admin/inquiries/[id] — FA inquiry detail.
  *
- * Left column : angler info · booking details · original message · correspondence thread
+ * Left column : angler info · booking details · original message · messages thread
  * Right column: InquiryActionPanel (sticky) — offer builder, message composer, deposit link
- *
- * DB migration required for offer fields + inquiry_messages table:
- *   ALTER TABLE inquiries
- *     ADD COLUMN IF NOT EXISTS offer_total_eur   NUMERIC,
- *     ADD COLUMN IF NOT EXISTS offer_deposit_eur  NUMERIC,
- *     ADD COLUMN IF NOT EXISTS offer_notes        TEXT,
- *     ADD COLUMN IF NOT EXISTS offer_sent_at      TIMESTAMPTZ;
- *
- *   CREATE TABLE IF NOT EXISTS inquiry_messages (
- *     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
- *     inquiry_id UUID REFERENCES inquiries(id) ON DELETE CASCADE NOT NULL,
- *     subject TEXT,
- *     body TEXT NOT NULL,
- *     sent_at TIMESTAMPTZ DEFAULT NOW()
- *   );
- *   ALTER TABLE inquiry_messages ENABLE ROW LEVEL SECURITY;
  */
 
 import Link from 'next/link'
@@ -27,7 +11,6 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { MessageComposer } from './MessageComposer'
 import { StatusChanger } from './StatusChanger'
 import { InternalDealTracker } from './InternalDealTracker'
-import { LeadCommsLogger } from './LeadCommsLogger'
 import { NextActionEditor } from './NextActionEditor'
 import { InquiryDetailTabs } from './InquiryDetailTabs'
 import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab'
@@ -37,7 +20,7 @@ import { ReviewLinkGenerator } from './ReviewLinkGenerator'
 import { AgentToggle } from './AgentToggle'
 import { RequestedDatesEditor } from './RequestedDatesEditor'
 import { DeleteInquiryButton } from './DeleteInquiryButton'
-import type { LeadMessage, TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
+import type { TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
 import type { InitialOfferData } from './OfferBuilder'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
@@ -104,7 +87,7 @@ function Row({ label, value }: { label: string; value: string | null | undefined
 type ThreadItem =
   | { kind: 'angler_inquiry'; body: string; sentAt: string }
   | { kind: 'offer_sent'; totalEur: number; depositEur: number; notes: string | null; sentAt: string }
-  | { kind: 'fa_message'; subject: string; body: string; sentAt: string }
+  | { kind: 'message'; id: string; direction: 'inbound' | 'outbound'; channel: string; counterpart: string; subject: string | null; body: string; draftedBy: string | null; sentAt: string }
   | { kind: 'deposit_sent'; depositEur: number; sentAt: string }
   | { kind: 'deposit_paid'; depositEur: number; paidAt: string }
 
@@ -167,32 +150,29 @@ export default async function AdminInquiryDetailPage({
 
   // (AssignGuidePanel removed — guide assignment is now in the Guide Attachment tab)
 
-  // ── Fetch messages (graceful if table doesn't exist yet) ───────────────────
-  type InquiryMessage = { id: string; subject: string | null; body: string; sent_at: string }
-  let messages: InquiryMessage[] = []
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (svc as any).from('inquiry_messages')
-      .select('id, subject, body, sent_at')
-      .eq('inquiry_id', id)
-      .order('sent_at', { ascending: true })
-    if (!error && data != null) messages = data as InquiryMessage[]
-  } catch {
-    // Table doesn't exist yet — safe to ignore until migration is run
+  // ── Fetch messages thread ──────────────────────────────────────────────────
+  type MessageRow = {
+    id:          string
+    direction:   'inbound' | 'outbound'
+    channel:     string
+    counterpart: string
+    body:        string
+    subject:     string | null
+    status:      string
+    drafted_by:  string | null
+    occurred_at: string
   }
-
-  // ── Fetch lead_messages (CRM log) ──────────────────────────────────────────
-  let leadMessages: LeadMessage[] = []
+  let threadMessages: MessageRow[] = []
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: lmData, error: lmError } = await (svc as any)
-      .from('lead_messages')
-      .select('id, inquiry_id, direction, channel, contact_type, contact_name, content, created_at, created_by')
+    const { data, error } = await (svc as any)
+      .from('messages')
+      .select('id, direction, channel, counterpart, body, subject, status, drafted_by, occurred_at')
       .eq('inquiry_id', id)
-      .order('created_at', { ascending: true })
-    if (!lmError && lmData != null) leadMessages = lmData as LeadMessage[]
+      .order('occurred_at', { ascending: true })
+    if (!error && data != null) threadMessages = data as MessageRow[]
   } catch {
-    // Table doesn't exist yet — safe to ignore
+    // Table not yet migrated — graceful fallback
   }
 
   // `inquiries.trip_id` points at the archived legacy `experiences` table (FA-1.06):
@@ -285,6 +265,21 @@ export default async function AdminInquiryDetailPage({
     thread.push({ kind: 'angler_inquiry', body: inquiry.message, sentAt: inquiry.created_at })
   }
 
+  // All messages from the messages table
+  for (const msg of threadMessages) {
+    thread.push({
+      kind:        'message',
+      id:          msg.id,
+      direction:   msg.direction,
+      channel:     msg.channel,
+      counterpart: msg.counterpart,
+      subject:     msg.subject,
+      body:        msg.body,
+      draftedBy:   msg.drafted_by,
+      sentAt:      msg.occurred_at,
+    })
+  }
+
   // Offer sent
   if (inquiry.offer_sent_at != null && inquiry.offer_total_eur != null && inquiry.offer_deposit_eur != null) {
     thread.push({
@@ -294,11 +289,6 @@ export default async function AdminInquiryDetailPage({
       notes:      inquiry.offer_notes,
       sentAt:     inquiry.offer_sent_at,
     })
-  }
-
-  // FA messages
-  for (const msg of messages) {
-    thread.push({ kind: 'fa_message', subject: msg.subject ?? '(no subject)', body: msg.body, sentAt: msg.sent_at })
   }
 
   // Deposit link sent
@@ -415,23 +405,42 @@ export default async function AdminInquiryDetailPage({
                 </div>
               )
 
-              if (item.kind === 'fa_message') return (
-                <div key={i} className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px]"
-                    style={{ background: '#0A2E4D', color: '#fff' }}>FA</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>FjordAnglers</span>
-                      <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{fmtDateTime(item.sentAt)}</span>
+              if (item.kind === 'message') {
+                const isInbound = item.direction === 'inbound'
+                const channelLabel = item.channel.charAt(0).toUpperCase() + item.channel.slice(1)
+                const senderLabel = isInbound
+                  ? (item.counterpart === 'guide' ? 'Guide' : inquiry.angler_name)
+                  : (item.draftedBy === 'agent' ? 'AI Agent' : 'FjordAnglers')
+                const avatarBg = isInbound ? 'rgba(10,46,77,0.1)' : (item.draftedBy === 'agent' ? '#6366F1' : '#0A2E4D')
+                return (
+                  <div key={item.id} className="flex gap-3">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold f-body"
+                      style={{ background: avatarBg, color: '#fff' }}>
+                      {isInbound ? senderLabel.charAt(0).toUpperCase() : 'FA'}
                     </div>
-                    <div className="px-3 py-2.5 rounded-xl"
-                      style={{ background: 'rgba(10,46,77,0.05)', border: '1px solid rgba(10,46,77,0.09)' }}>
-                      <p className="text-xs font-bold f-body mb-1" style={{ color: '#0A2E4D' }}>{item.subject}</p>
-                      <p className="text-sm f-body leading-relaxed" style={{ color: '#374151', whiteSpace: 'pre-wrap' }}>{item.body}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>{senderLabel}</span>
+                        <span className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>{fmtDateTime(item.sentAt)}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded f-body"
+                          style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.38)' }}>
+                          {channelLabel} · {item.direction}
+                        </span>
+                      </div>
+                      <div className="px-3 py-2.5 rounded-xl"
+                        style={{
+                          background: isInbound ? 'rgba(10,46,77,0.04)' : 'rgba(10,46,77,0.06)',
+                          border: '1px solid rgba(10,46,77,0.09)',
+                        }}>
+                        {item.subject != null && item.subject.trim() !== '' && (
+                          <p className="text-xs font-bold f-body mb-1" style={{ color: '#0A2E4D' }}>{item.subject}</p>
+                        )}
+                        <p className="text-sm f-body leading-relaxed" style={{ color: '#374151', whiteSpace: 'pre-wrap' }}>{item.body}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
+                )
+              }
 
               if (item.kind === 'deposit_sent') return (
                 <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
@@ -456,14 +465,6 @@ export default async function AdminInquiryDetailPage({
           </div>
         </div>
       )}
-
-      {/* CRM communications */}
-      <LeadCommsLogger
-        inquiryId={inquiry.id}
-        initialMessages={leadMessages}
-        anglerName={inquiry.angler_name ?? ''}
-        guideName={guide?.full_name ?? null}
-      />
 
       {/* Internal deal summary */}
       {inquiry.internal_deal_total_eur != null && (
