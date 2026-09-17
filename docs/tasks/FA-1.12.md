@@ -2,7 +2,7 @@
 id: FA-1.12
 title: messages — jeden wątek na zapytanie; e-mail w obie strony z karty; oznaczanie oferta/akceptacja/wpłata; link Stripe z aplikacji
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
