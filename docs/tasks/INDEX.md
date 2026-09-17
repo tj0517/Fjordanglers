@@ -45,7 +45,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.08 | Wycięcie martwego kodu — paczka 2: komponenty i trasy — *plik do napisania po FA-1.12* | M | sonnet | todo | FA-1.07 |
 | FA-1.09 | Legacy edytor `experiences` poza nawigacją; gorące akcje na `experience_pages` | M | sonnet | todo | FA-1.06 |
 | FA-1.10 | Tymczasowy przegląd tygodniowy w obecnym `/admin` (8 liczb, do wyrzucenia w etapie 6) — *plik do napisania po FA-1.12* | M | sonnet | todo | FA-1.04 |
-| FA-1.11 | CI: typecheck/lint/test/build, migracje na czysto, typy bez dryfu, `stage-1` zawiera `main` | M | sonnet | todo | FA-1.01 |
+| FA-1.11 | CI: typecheck/lint/test/build, migracje na czysto, typy bez dryfu, `stage-1` zawiera `main` | M | sonnet | in_progress | FA-1.01 |
 | FA-1.12 | `messages` — jeden wątek na zapytanie; e-mail w obie strony z karty; `offers` z opcjami; link Stripe z aplikacji | L | opus | todo | FA-1.03 |
 | FA-1.13 | WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy | L | opus | todo | FA-1.12 |
 | FA-1.14 | Agent w wątku — propozycja odpowiedzi z bazy wiedzy; auto-wysyłka off | L | opus | todo | FA-1.12 |

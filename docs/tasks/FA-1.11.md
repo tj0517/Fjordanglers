@@ -2,7 +2,7 @@
 id: FA-1.11
 title: CI na PR do stage-1 i main — typecheck/lint/test/build, migracje aplikują się czysto, typy bez dryfu, stage-1 nie odstaje od main
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
