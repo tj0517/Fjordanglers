@@ -65,13 +65,11 @@ if (trySignIn.error) {
     throw new Error(`create user failed: ${createErr?.message}`)
   }
   adminUserId = created.user.id
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any).from('profiles').upsert({ id: adminUserId, role: 'admin' })
+  await svc.from('profiles').upsert({ id: adminUserId, role: 'admin' })
   console.log('   created admin user', ADMIN_EMAIL)
 } else {
   adminUserId = trySignIn.data.user!.id
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any).from('profiles').upsert({ id: adminUserId, role: 'admin' })
+  await svc.from('profiles').upsert({ id: adminUserId, role: 'admin' })
   console.log('   admin user exists', ADMIN_EMAIL)
 }
 
@@ -93,8 +91,7 @@ console.log('   session set for', signIn.user?.email)
 
 step(1, 'POST /api/inquiries → new')
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: pages } = await (svc as any)
+const { data: pages } = await svc
   .from('experience_pages')
   .select('id')
   .eq('status', 'active')
@@ -138,8 +135,7 @@ console.log('   ok → waiting_guide')
 // ── 3. Find a guide ───────────────────────────────────────────────────────────
 
 step(3, 'find guide with email')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: guide } = await (svc as any)
+const { data: guide } = await svc
   .from('guides')
   .select('id, invite_email')
   .not('invite_email', 'is', null)
@@ -147,15 +143,13 @@ const { data: guide } = await (svc as any)
   .single()
 if (guide == null) throw new Error('no guide with invite_email in local DB')
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-await (svc as any).from('inquiries').update({ assigned_guide_id: guide.id }).eq('id', inquiryId)
+await svc.from('inquiries').update({ assigned_guide_id: guide.id }).eq('id', inquiryId)
 console.log(`   guide ${guide.id} assigned`)
 
 // ── 4. Outbound to angler (simulate sendMessageFromThread) ────────────────────
 
 step(4, 'outbound email → angler (simulates sendMessageFromThread)')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: anglerMsg } = await (svc as any).from('messages').insert({
+const { data: anglerMsg } = await svc.from('messages').insert({
   inquiry_id:  inquiryId,
   channel:     'email',
   direction:   'outbound',
@@ -173,15 +167,14 @@ await emitEvent(svc, {
   actor:     { kind: 'admin', id: adminUserId },
   source:    'app',
   channel:   'email',
-  messageId: anglerMsg.id,
+  messageId: anglerMsg!.id,
 })
-console.log(`   message ${anglerMsg.id} → message.sent`)
+console.log(`   message ${anglerMsg!.id} → message.sent`)
 
 // ── 5. Outbound to guide (simulate sendMessageFromThread + guide.contacted) ───
 
 step(5, 'outbound email → guide (simulates sendMessageFromThread + guide.contacted)')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: guideOutMsg } = await (svc as any).from('messages').insert({
+const { data: guideOutMsg } = await svc.from('messages').insert({
   inquiry_id:    inquiryId,
   channel:       'email',
   direction:     'outbound',
@@ -200,7 +193,7 @@ await emitEvent(svc, {
   actor:     { kind: 'admin', id: adminUserId },
   source:    'app',
   channel:   'email',
-  messageId: guideOutMsg.id,
+  messageId: guideOutMsg!.id,
 })
 await emitEvent(svc, {
   inquiryId,
@@ -208,16 +201,15 @@ await emitEvent(svc, {
   actor:     { kind: 'admin', id: adminUserId },
   source:    'app',
   channel:   'email',
-  messageId: guideOutMsg.id,
+  messageId: guideOutMsg!.id,
   payload:   { guide_id: guide.id },
 })
-console.log(`   message ${guideOutMsg.id} → message.sent + guide.contacted`)
+console.log(`   message ${guideOutMsg!.id} → message.sent + guide.contacted`)
 
 // ── 6. Inbound from guide (simulate email-inbound webhook) ───────────────────
 
 step(6, 'inbound email from guide (simulates email-inbound webhook)')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: guideInMsg } = await (svc as any).from('messages').insert({
+const { data: guideInMsg } = await svc.from('messages').insert({
   inquiry_id:  inquiryId,
   channel:     'email',
   direction:   'inbound',
@@ -234,15 +226,15 @@ await emitEvent(svc, {
   actor:     { kind: 'guide' },
   source:    'webhook',
   channel:   'email',
-  messageId: guideInMsg.id,
+  messageId: guideInMsg!.id,
 })
-console.log(`   guide inbound message ${guideInMsg.id} → message.received`)
+console.log(`   guide inbound message ${guideInMsg!.id} → message.received`)
 
 // ── 7. Mark as guide offer ────────────────────────────────────────────────────
 
 step(7, 'markAsGuideOffer → guide.offer_received')
 const { markAsGuideOffer } = await import('@/actions/messages')
-const offerResult = await markAsGuideOffer(guideInMsg.id, {
+const offerResult = await markAsGuideOffer(guideInMsg!.id, {
   guideId: guide.id,
   options: [
     {
@@ -270,8 +262,7 @@ console.log(`   offer ${offerId} created → guide.offer_received`)
 // ── 8. Outbound to angler presenting offer ────────────────────────────────────
 
 step(8, 'outbound presenting offer message')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: presentMsg } = await (svc as any).from('messages').insert({
+const { data: presentMsg } = await svc.from('messages').insert({
   inquiry_id:  inquiryId,
   channel:     'email',
   direction:   'outbound',
@@ -287,15 +278,14 @@ const { data: presentMsg } = await (svc as any).from('messages').insert({
 
 step(9, 'markOfferPresented → offer.presented + offer_presented')
 const { markOfferPresented } = await import('@/actions/messages')
-const presentResult = await markOfferPresented(offerId, presentMsg.id)
+const presentResult = await markOfferPresented(offerId, presentMsg!.id)
 if (!presentResult.success) throw new Error(`markOfferPresented: ${presentResult.error}`)
 console.log('   ok → offer.presented + offer_presented')
 
 // ── 10. Inbound acceptance from angler ────────────────────────────────────────
 
 step(10, 'inbound acceptance from angler')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: acceptMsg } = await (svc as any).from('messages').insert({
+const { data: acceptMsg } = await svc.from('messages').insert({
   inquiry_id:  inquiryId,
   channel:     'email',
   direction:   'inbound',
@@ -312,15 +302,14 @@ await emitEvent(svc, {
   actor:     { kind: 'angler' },
   source:    'webhook',
   channel:   'email',
-  messageId: acceptMsg.id,
+  messageId: acceptMsg!.id,
 })
-console.log(`   angler acceptance message ${acceptMsg.id}`)
+console.log(`   angler acceptance message ${acceptMsg!.id}`)
 
 // ── 11. Mark client accepted ──────────────────────────────────────────────────
 
 step(11, 'markClientAccepted → offer.accepted + awaiting_payment')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: options } = await (svc as any)
+const { data: options } = await svc
   .from('offer_options')
   .select('id')
   .eq('offer_id', offerId)
@@ -329,7 +318,7 @@ const { data: options } = await (svc as any)
 if (options == null) throw new Error('no offer options found')
 
 const { markClientAccepted } = await import('@/actions/messages')
-const acceptResult = await markClientAccepted(offerId, options.id, acceptMsg.id)
+const acceptResult = await markClientAccepted(offerId, options.id, acceptMsg!.id)
 if (!acceptResult.success) throw new Error(`markClientAccepted: ${acceptResult.error}`)
 console.log('   ok → offer.accepted + awaiting_payment')
 
@@ -371,8 +360,7 @@ console.log(`   ${webhookResp.status} ${await webhookResp.text()}`)
 // ── 14. markContactsExchanged → handed_over ───────────────────────────────────
 
 step(14, 'markContactsExchanged → contacts.exchanged + handed_over')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: contactMsg } = await (svc as any).from('messages').insert({
+const { data: contactMsg } = await svc.from('messages').insert({
   inquiry_id:  inquiryId,
   channel:     'email',
   direction:   'outbound',
@@ -384,23 +372,21 @@ const { data: contactMsg } = await (svc as any).from('messages').insert({
 }).select('id').single()
 
 const { markContactsExchanged } = await import('@/actions/messages')
-const contactResult = await markContactsExchanged(contactMsg.id)
+const contactResult = await markContactsExchanged(contactMsg!.id)
 if (!contactResult.success) throw new Error(`markContactsExchanged: ${contactResult.error}`)
 console.log('   ok → contacts.exchanged + handed_over')
 
 // ── 15. Results ───────────────────────────────────────────────────────────────
 
 step(15, 'result')
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: finalRow } = await (svc as any)
+const { data: finalRow } = await svc
   .from('inquiries')
   .select('status, stage_reached, deposit_paid_at')
   .eq('id', inquiryId)
   .single()
 console.log('   inquiry:', finalRow)
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { data: events } = await (svc as any)
+const { data: events } = await svc
   .from('inquiry_events')
   .select('type, channel, source, actor_kind, occurred_at')
   .eq('inquiry_id', inquiryId)

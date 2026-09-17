@@ -164,8 +164,7 @@ export default async function AdminInquiryDetailPage({
   }
   let threadMessages: MessageRow[] = []
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (svc as any)
+    const { data, error } = await svc
       .from('messages')
       .select('id, direction, channel, counterpart, body, subject, status, drafted_by, occurred_at')
       .eq('inquiry_id', id)
@@ -202,8 +201,7 @@ export default async function AdminInquiryDetailPage({
 
     if (guideIds.length > 0) {
       // Fetch their blocked dates
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: blockedRows } = await (svc as any)
+      const { data: blockedRows } = await svc
         .from('guide_unavailable_dates')
         .select('guide_id, date')
         .in('guide_id', guideIds)
@@ -229,8 +227,7 @@ export default async function AdminInquiryDetailPage({
   // ── Fetch review link (graceful if table doesn't exist yet) ───────────────
   let existingReview: { token: string; submitted_at: string | null } | null = null
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: reviewRow } = await (svc as any)
+    const { data: reviewRow } = await svc
       .from('reviews')
       .select('token, submitted_at')
       .eq('inquiry_id', id)
@@ -243,13 +240,12 @@ export default async function AdminInquiryDetailPage({
   // ── Fetch trip brief ───────────────────────────────────────────────────────
   let tripDetails: TripDetails | null = null
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: tdData } = await (svc as any)
+    const { data: tdData } = await svc
       .from('inquiry_trip_details')
       .select('confirmed_date,confirmed_party_size,price_range,date_flexibility,target_species,accommodation,guide_notes,guide_final_dates,guide_options')
       .eq('inquiry_id', id)
       .maybeSingle()
-    if (tdData != null) tripDetails = tdData as TripDetails
+    if (tdData != null) tripDetails = tdData as unknown as TripDetails
   } catch {
     // Table not yet migrated — safe to ignore
   }

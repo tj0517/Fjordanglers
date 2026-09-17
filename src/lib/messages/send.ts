@@ -48,8 +48,7 @@ export async function sendMessage(
   } = params
 
   // 1. Insert row with status 'queued'
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inserted, error: insertErr } = await (client as any)
+  const { data: inserted, error: insertErr } = await client
     .from('messages')
     .insert({
       inquiry_id:     inquiryId,
@@ -95,8 +94,7 @@ export async function sendMessage(
   }
 
   // 3. Update message with result
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (client as any)
+  await client
     .from('messages')
     .update({
       status:      sendError != null ? 'failed' : 'sent',
@@ -121,8 +119,7 @@ export async function sendMessage(
 
   // 5. If first outbound to guide, emit guide.contacted
   if (counterpart === 'guide') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count } = await (client as any)
+    const { count } = await client
       .from('messages')
       .select('id', { count: 'exact', head: true })
       .eq('inquiry_id', inquiryId)

@@ -64,8 +64,7 @@ export async function matchUnmatchedMessage(
   await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: msg, error: fetchErr } = await (svc as any)
+  const { data: msg, error: fetchErr } = await svc
     .from('unmatched_messages')
     .select('id, source, content, matched_inquiry_id, created_at')
     .eq('id', unmatchedId)
@@ -80,8 +79,7 @@ export async function matchUnmatchedMessage(
 
   const now = new Date().toISOString()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertErr } = await (svc as any).from('messages').insert({
+  const { error: insertErr } = await svc.from('messages').insert({
     inquiry_id:  inquiryId,
     direction:   'inbound',
     channel:     msg.source as 'email' | 'whatsapp' | 'instagram',
@@ -97,14 +95,12 @@ export async function matchUnmatchedMessage(
     return { success: false, error: insertErr.message }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('unmatched_messages')
     .update({ matched_inquiry_id: inquiryId, matched_at: now, matched_by: 'admin' })
     .eq('id', unmatchedId)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ last_contact_at: now })
     .eq('id', inquiryId)
@@ -126,8 +122,7 @@ export async function bulkMatchUnmatchedMessages(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: msgs, error: fetchErr } = await (svc as any)
+  const { data: msgs, error: fetchErr } = await svc
     .from('unmatched_messages')
     .select('id, source, content, raw_payload, created_at')
     .in('id', unmatchedIds)
@@ -139,15 +134,10 @@ export async function bulkMatchUnmatchedMessages(
 
   const now = new Date().toISOString()
 
-  const rows = msgs.map((msg: {
-    id: string
-    source: string
-    content: string
-    raw_payload: { timestamp?: number; fromMe?: boolean } | null
-    created_at: string
-  }) => {
-    const ts     = msg.raw_payload?.timestamp
-    const fromMe = msg.raw_payload?.fromMe ?? false
+  const rows = msgs.map((msg) => {
+    const rawPayload = msg.raw_payload as { timestamp?: number; fromMe?: boolean } | null
+    const ts     = rawPayload?.timestamp
+    const fromMe = rawPayload?.fromMe ?? false
     return {
       inquiry_id:  inquiryId,
       direction:   fromMe ? 'outbound' : ('inbound' as 'inbound' | 'outbound'),
@@ -161,21 +151,18 @@ export async function bulkMatchUnmatchedMessages(
     }
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertErr } = await (svc as any).from('messages').insert(rows)
+  const { error: insertErr } = await svc.from('messages').insert(rows)
   if (insertErr != null) {
     console.error('[bulkMatchUnmatchedMessages] insert messages error:', insertErr)
     return { success: false, error: insertErr.message }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('unmatched_messages')
     .update({ matched_inquiry_id: inquiryId, matched_at: now, matched_by: 'admin' })
     .in('id', unmatchedIds)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ last_contact_at: now })
     .eq('id', inquiryId)
@@ -205,8 +192,7 @@ export async function sendMessageFromThread(
   const svc = createServiceClient()
 
   // Fetch the counterpart's email address
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inq } = await (svc as any)
+  const { data: inq } = await svc
     .from('inquiries')
     .select('id, angler_name, angler_email, assigned_guide_id')
     .eq('id', inquiryId)
@@ -238,8 +224,7 @@ export async function sendMessageFromThread(
   }
 
   // Get last outbound thread_key for In-Reply-To
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: lastMsg } = await (svc as any)
+  const { data: lastMsg } = await svc
     .from('messages')
     .select('thread_key')
     .eq('inquiry_id', inquiryId)
@@ -299,8 +284,7 @@ export async function markAsGuideOffer(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: msg } = await (svc as any)
+  const { data: msg } = await svc
     .from('messages')
     .select('id, inquiry_id')
     .eq('id', messageId)
@@ -323,10 +307,10 @@ export async function markAsGuideOffer(
     notes:      o.notes ?? null,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: offerId, error: offerErr } = await (svc as any).rpc('create_offer_with_options', {
+  const { data: offerId, error: offerErr } = await svc.rpc('create_offer_with_options', {
     p_inquiry_id:        inquiryId,
-    p_guide_id:          params.guideId ?? null,
+    // Postgres function accepts NULL uuid; generator typed p_guide_id as non-nullable string
+    p_guide_id:          (params.guideId ?? null) as unknown as string,
     p_source_message_id: messageId,
     p_created_by:        userId,
     p_options:           optionsJson,
@@ -360,8 +344,7 @@ export async function markOfferPresented(
   if (!messageId) return { success: false, error: 'messageId is required to present an offer' }
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: offer } = await (svc as any)
+  const { data: offer } = await svc
     .from('offers')
     .select('id, inquiry_id, status')
     .eq('id', offerId)
@@ -370,8 +353,7 @@ export async function markOfferPresented(
 
   const inquiryId: string = offer.inquiry_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('offers')
     .update({ status: 'presented' })
     .eq('id', offerId)
@@ -412,8 +394,7 @@ export async function markClientAccepted(
   const { userId } = await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: option } = await (svc as any)
+  const { data: option } = await svc
     .from('offer_options')
     .select('id, offer_id')
     .eq('id', optionId)
@@ -424,8 +405,7 @@ export async function markClientAccepted(
     return { success: false, error: 'Option not found or does not belong to this offer' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: offer } = await (svc as any)
+  const { data: offer } = await svc
     .from('offers')
     .select('id, inquiry_id')
     .eq('id', offerId)
@@ -434,14 +414,12 @@ export async function markClientAccepted(
 
   const inquiryId: string = offer.inquiry_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('offer_options')
     .update({ is_accepted: true })
     .eq('id', optionId)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('offers')
     .update({ status: 'accepted' })
     .eq('id', offerId)
@@ -479,8 +457,7 @@ export async function markClientDeclined(
   const { userId } = await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: offer } = await (svc as any)
+  const { data: offer } = await svc
     .from('offers')
     .select('id, inquiry_id')
     .eq('id', offerId)
@@ -489,8 +466,7 @@ export async function markClientDeclined(
 
   const inquiryId: string = offer.inquiry_id
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('offers')
     .update({ status: 'declined' })
     .eq('id', offerId)
@@ -526,8 +502,7 @@ export async function markGuideNotifiedPaid(messageId: string): Promise<ActionRe
   const { userId } = await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: msg } = await (svc as any)
+  const { data: msg } = await svc
     .from('messages')
     .select('id, inquiry_id')
     .eq('id', messageId)
@@ -552,8 +527,7 @@ export async function markContactsExchanged(messageId: string): Promise<ActionRe
   const { userId } = await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: msg } = await (svc as any)
+  const { data: msg } = await svc
     .from('messages')
     .select('id, inquiry_id')
     .eq('id', messageId)
@@ -601,8 +575,7 @@ export async function createPaymentLink(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inq } = await (svc as any)
+  const { data: inq } = await svc
     .from('inquiries')
     .select('id, angler_name, angler_email, party_size')
     .eq('id', inquiryId)
@@ -635,8 +608,7 @@ export async function createPaymentLink(
   }
 
   // Insert a draft message row with the link as body — admin will paste and send
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any).from('messages').insert({
+  await svc.from('messages').insert({
     inquiry_id:  inquiryId,
     channel:     'email',
     direction:   'outbound',
@@ -671,86 +643,13 @@ export async function createPaymentLink(
   return { success: true, url: paymentLink.url }
 }
 
-// ─── markPaymentReceived ──────────────────────────────────────────────────────
-
-/**
- * Admin manually logs a received payment — the UnmatchedLinker fallback path for
- * when the Stripe webhook did not fire or carried no inquiry_id.
- * Emits payment.received with source='app'; does not call transition() — admin decides.
- */
-export async function markPaymentReceived(
-  inquiryId:   string,
-  params: {
-    stripeSessionId?: string
-    amountCents?:     number
-    currency?:        string
-  } = {},
-): Promise<ActionResult> {
-  const { userId } = await requireAdmin()
-  const svc = createServiceClient()
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inq, error } = await (svc as any)
-    .from('inquiries')
-    .select('id, deposit_paid_at')
-    .eq('id', inquiryId)
-    .single()
-
-  if (error != null || inq == null) {
-    return { success: false, error: 'Inquiry not found' }
-  }
-
-  if (inq.deposit_paid_at == null) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (svc as any)
-      .from('inquiries')
-      .update({
-        deposit_paid_at:            new Date().toISOString(),
-        ...(params.stripeSessionId != null
-          ? { deposit_stripe_session_id: params.stripeSessionId }
-          : {}),
-      })
-      .eq('id', inquiryId)
-  }
-
-  await emitEvent(svc, {
-    inquiryId,
-    type:    'payment.received',
-    actor:   { kind: 'admin', id: userId },
-    source:  'app',
-    channel: 'stripe',
-    payload: {
-      ...(params.stripeSessionId != null ? { stripe_session_id: params.stripeSessionId } : {}),
-      ...(params.amountCents     != null ? { amount_cents: params.amountCents }           : {}),
-      ...(params.currency        != null ? { currency: params.currency }                  : {}),
-    },
-  })
-
-  try {
-    await transition(svc, inquiryId, 'paid', {
-      actor:   { kind: 'admin', id: userId },
-      source:  'app',
-      channel: 'stripe',
-      reason:  'Payment manually logged by admin',
-    })
-  } catch (err) {
-    if (!(err instanceof TransitionError)) {
-      console.warn('[markPaymentReceived] transition warn:', err)
-    }
-  }
-
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  return { success: true }
-}
-
 // ─── deleteUnmatchedMessages (kept from old messages.ts) ─────────────────────
 
 export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
   await requireAdmin()
   if (ids.length === 0) return { success: true }
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('unmatched_messages')
     .delete()
     .in('id', ids)

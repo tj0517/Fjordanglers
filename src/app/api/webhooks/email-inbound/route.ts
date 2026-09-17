@@ -12,6 +12,7 @@
  */
 
 import crypto from 'crypto'
+import type { Json } from '@/lib/supabase/database.types'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByEmail } from '@/lib/inquiry-matcher'
@@ -115,8 +116,7 @@ export async function POST(req: Request) {
   const content   = subject ? `**${subject}**\n\n${bodyText}` : bodyText
 
   if (inquiryId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: newMsg, error } = await (supabase as any).from('messages').insert({
+    const { data: newMsg, error } = await supabase.from('messages').insert({
       inquiry_id:  inquiryId,
       direction:   'inbound',
       channel:     'email',
@@ -132,8 +132,7 @@ export async function POST(req: Request) {
     if (error) {
       console.error('[email-inbound] messages insert error:', error)
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
+      await supabase
         .from('inquiries')
         .update({ last_contact_at: new Date().toISOString() })
         .eq('id', inquiryId)
@@ -150,8 +149,7 @@ export async function POST(req: Request) {
       console.log(`[email-inbound] Email from ${fromEmail} → inquiry ${inquiryId}`)
 
       if (env.AI_AUTO_REPLY_ENABLED) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: inq } = await (supabase as any)
+        const { data: inq } = await supabase
           .from('inquiries')
           .select('agent_status')
           .eq('id', inquiryId)
@@ -163,13 +161,12 @@ export async function POST(req: Request) {
       }
     }
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('unmatched_messages').insert({
+    const { error } = await supabase.from('unmatched_messages').insert({
       source:          'email',
       from_identifier: fromEmail,
       sender_name:     senderName,
       content,
-      raw_payload:     payload as unknown as Record<string, unknown>,
+      raw_payload:     payload as unknown as Json,
     })
 
     if (error) {

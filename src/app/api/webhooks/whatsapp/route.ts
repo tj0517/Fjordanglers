@@ -13,6 +13,7 @@
  */
 
 import crypto from 'crypto'
+import type { Json } from '@/lib/supabase/database.types'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByPhone } from '@/lib/inquiry-matcher'
@@ -90,8 +91,7 @@ export async function POST(req: Request) {
         const inquiryId = await matchInquiryByPhone(from)
 
         if (inquiryId) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: newMsg, error } = await (supabase as any).from('messages').insert({
+          const { data: newMsg, error } = await supabase.from('messages').insert({
             inquiry_id:  inquiryId,
             direction:   'inbound',
             channel:     'whatsapp',
@@ -108,8 +108,7 @@ export async function POST(req: Request) {
           if (error) {
             console.error('[whatsapp-webhook] messages insert error:', error)
           } else {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase as any)
+            await supabase
               .from('inquiries')
               .update({ last_contact_at: new Date().toISOString() })
               .eq('id', inquiryId)
@@ -127,13 +126,12 @@ export async function POST(req: Request) {
           }
         } else {
           // No match — queue for manual linking
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { error } = await (supabase as any).from('unmatched_messages').insert({
+          const { error } = await supabase.from('unmatched_messages').insert({
             source:           'whatsapp',
             from_identifier:  from,
             sender_name:      senderName,
             content,
-            raw_payload:      rawPayload,
+            raw_payload:      rawPayload as unknown as Json,
           })
 
           if (error) {
