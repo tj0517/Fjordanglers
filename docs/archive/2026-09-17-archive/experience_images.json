@@ -1,0 +1,1074 @@
+[
+  {
+    "id": "026c8496-e815-4b7d-8773-b5b66bf166f8",
+    "experience_id": "7f3f2fe2-a861-4bc3-8d86-b9a5a2a1761d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d09a9107-a385-486a-bd98-63f0893205d7.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:46:42.059511+00:00"
+  },
+  {
+    "id": "3396528f-ee55-4097-ae40-7f0c374a9a08",
+    "experience_id": "7f3f2fe2-a861-4bc3-8d86-b9a5a2a1761d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/2e568723-55d2-4159-9056-2329b7861018.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-18T22:46:42.059511+00:00"
+  },
+  {
+    "id": "5cfa7ae4-01dd-46b7-95ac-c5d8ae46b7c7",
+    "experience_id": "7f3f2fe2-a861-4bc3-8d86-b9a5a2a1761d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ff569434-d186-496f-82ed-84f5310e5a00.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:46:42.059511+00:00"
+  },
+  {
+    "id": "66ba8712-3c08-43f8-877e-885f4f5b82dc",
+    "experience_id": "7f3f2fe2-a861-4bc3-8d86-b9a5a2a1761d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/e7adbf23-53b9-4681-ae6f-e0e3228a9445.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:46:42.059511+00:00"
+  },
+  {
+    "id": "ff3f8a18-1f2b-4aa9-a5bf-d67b0b6deb7d",
+    "experience_id": "7f3f2fe2-a861-4bc3-8d86-b9a5a2a1761d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d130a2bc-2215-4b72-899d-80e77adee13b.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:46:42.059511+00:00"
+  },
+  {
+    "id": "0247b984-7f07-4d98-9fab-0d5060dd8b86",
+    "experience_id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/da1b7b63-91b7-48eb-af40-c6ce9dd3adef.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:47:45.060602+00:00"
+  },
+  {
+    "id": "0ade9e52-2403-4705-896a-1b0a0d01be96",
+    "experience_id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f91ecf0a-e7f6-44b8-8c69-070d1369255b.webp",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:47:45.060602+00:00"
+  },
+  {
+    "id": "1d503ea4-20dd-4226-be08-01719ce1cde5",
+    "experience_id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/573da082-3303-4b6d-b68c-885f4e775516.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:47:45.060602+00:00"
+  },
+  {
+    "id": "79635b9f-2b0d-4561-baef-a02f54260530",
+    "experience_id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/7df53a7c-9d40-46fa-9f31-41937ee31d19.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-18T22:47:45.060602+00:00"
+  },
+  {
+    "id": "9156bd48-f0c2-4284-93a7-40cc87b5000b",
+    "experience_id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f2f4e2ae-f8f9-4baf-a078-05c807a455b3.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:47:45.060602+00:00"
+  },
+  {
+    "id": "cbb0dcfb-9cc8-4752-b6d4-3070d1b1fc63",
+    "experience_id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/53a4dc14-b29b-4d16-bdcd-9f1f006e502c.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:47:45.060602+00:00"
+  },
+  {
+    "id": "d188edd0-315d-4bb7-a2bc-76bdc0aaf569",
+    "experience_id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/a4ece187-002f-48c2-93c7-35edacae2b2c.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-03-18T22:47:45.060602+00:00"
+  },
+  {
+    "id": "049134c2-1805-4769-afe9-e7d4867a88c0",
+    "experience_id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/fb7a71cf-0862-4630-8a7d-5942ead606ac.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-19T15:34:44.426887+00:00"
+  },
+  {
+    "id": "2c2a37f6-161b-4887-9c80-2821cc642203",
+    "experience_id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/5606b0de-2964-4a1a-b0ff-620f76952207.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-03-19T15:34:44.426887+00:00"
+  },
+  {
+    "id": "31d80439-bb55-4c3d-b277-a1ced356b663",
+    "experience_id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d82a2a2e-0809-426a-9f5c-300abad93c8f.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-19T15:34:44.426887+00:00"
+  },
+  {
+    "id": "4e238b99-843a-48b2-a7d9-da3ff6fb7d41",
+    "experience_id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/6b4741e4-7e80-41a6-948e-d49820f47c5c.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-03-19T15:34:44.426887+00:00"
+  },
+  {
+    "id": "563ec420-2e68-4205-b5fc-5c91d4085ad6",
+    "experience_id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/943129da-c9f5-4aba-9cd8-05d9c80ee8ca.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-19T15:34:44.426887+00:00"
+  },
+  {
+    "id": "7135b97b-a4c0-45d2-b642-a9e61b3f22f0",
+    "experience_id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/76dc335a-f8ac-44c6-b35a-1c8df25908de.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-19T15:34:44.426887+00:00"
+  },
+  {
+    "id": "8dde74fb-db2b-4457-b391-a10f1344fa6b",
+    "experience_id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/27254cde-9f90-42ca-97e8-acc258d9aec2.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-19T15:34:44.426887+00:00"
+  },
+  {
+    "id": "0204df4d-e5ba-4e4c-9a54-fd4ed8b9e550",
+    "experience_id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/bd0c5e6d-7726-4544-824e-01270079a8ea.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-03-21T19:37:38.516018+00:00"
+  },
+  {
+    "id": "285401d8-cbba-44e9-bc3d-d8a0057695e8",
+    "experience_id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/fb32684e-36c6-4856-92be-5e94cd885493.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-21T19:37:38.516018+00:00"
+  },
+  {
+    "id": "35a0ce7b-7f91-4ab6-bc42-a855d01769c4",
+    "experience_id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/a82c5796-18d2-4142-94c5-c34688fd9a5a.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-21T19:37:38.516018+00:00"
+  },
+  {
+    "id": "91ac2b7f-03b8-40c8-8ab8-828440d08d80",
+    "experience_id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/4f2caf05-4e4c-48f4-a60b-987778a5fbec.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-21T19:37:38.516018+00:00"
+  },
+  {
+    "id": "977643e3-e4a8-43e6-820b-602f780fd5ec",
+    "experience_id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f95d9cb2-4b8d-402e-99d6-db4627b91b35.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-03-21T19:37:38.516018+00:00"
+  },
+  {
+    "id": "a1a6c53c-4a05-40b3-ac78-52725f1cc5ac",
+    "experience_id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/b8f57f85-8f00-43fb-be00-8a2c8e63beb0.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-21T19:37:38.516018+00:00"
+  },
+  {
+    "id": "de4dcc51-eed2-4285-b960-5be605baf290",
+    "experience_id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/e2de5155-7317-46a6-b0f6-91bd65e571ea.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-21T19:37:38.516018+00:00"
+  },
+  {
+    "id": "13758cff-9691-41e2-9ac3-83dd2a48fb99",
+    "experience_id": "7bb9b9b2-0d3c-48d5-b21a-7cacb88929b3",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/cf5398d4-9179-4a9a-bf42-f003ab018292.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-29T14:21:06.285643+00:00"
+  },
+  {
+    "id": "1fa53dd1-626d-44c8-ae04-5fe7f270baad",
+    "experience_id": "7bb9b9b2-0d3c-48d5-b21a-7cacb88929b3",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/37ded62a-ee6c-400b-8460-cf23c8cd9db9.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-03-29T14:21:06.285643+00:00"
+  },
+  {
+    "id": "39801ad5-241e-4d8d-a07f-706c0bf9bfb3",
+    "experience_id": "7bb9b9b2-0d3c-48d5-b21a-7cacb88929b3",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/094830c1-ad46-4e57-8c9e-6bd0869b1838.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-29T14:21:06.285643+00:00"
+  },
+  {
+    "id": "76af9fa5-ff08-4f3c-8409-014791808505",
+    "experience_id": "7bb9b9b2-0d3c-48d5-b21a-7cacb88929b3",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/0b4bf7e8-7158-40f3-b232-5232c7d95b3c.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-29T14:21:06.285643+00:00"
+  },
+  {
+    "id": "a246ce8a-77d4-4ebb-a0aa-9f2b8dc43370",
+    "experience_id": "7bb9b9b2-0d3c-48d5-b21a-7cacb88929b3",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/c173effc-d3a2-4e7e-8185-1ee115e8c6ee.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-29T14:21:06.285643+00:00"
+  },
+  {
+    "id": "e678203d-6496-4c6f-bb3b-7848e46988cb",
+    "experience_id": "7bb9b9b2-0d3c-48d5-b21a-7cacb88929b3",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/5a5a5a60-0cad-4c5b-8589-f57761f1c6df.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-29T14:21:06.285643+00:00"
+  },
+  {
+    "id": "0066df35-0adb-490a-93ac-9c20b8fe8034",
+    "experience_id": "f584bb7b-95d7-46b0-832c-55fdb571f087",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/eeeabb86-25bb-4147-8672-106d704f401e.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-29T18:47:14.327505+00:00"
+  },
+  {
+    "id": "3a29fcd6-4fe4-4107-9c2f-091b919e18dc",
+    "experience_id": "f584bb7b-95d7-46b0-832c-55fdb571f087",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/50b44a43-07e2-4675-bd83-40c7719db47c.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-29T18:47:14.327505+00:00"
+  },
+  {
+    "id": "509016ed-0c4e-4540-af85-9e6514e54a04",
+    "experience_id": "f584bb7b-95d7-46b0-832c-55fdb571f087",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/0e537f53-0b95-4077-a6ed-f8ff7072fc1f.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-29T18:47:14.327505+00:00"
+  },
+  {
+    "id": "f2170f4d-72ce-4af7-8c5f-3723ed2cf9b3",
+    "experience_id": "f584bb7b-95d7-46b0-832c-55fdb571f087",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/a3614942-4be1-4742-967b-c8158f81fb6f.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-29T18:47:14.327505+00:00"
+  },
+  {
+    "id": "f5e307e0-414b-43c2-a208-14628c2ea901",
+    "experience_id": "f584bb7b-95d7-46b0-832c-55fdb571f087",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/bdf065d6-2198-4e8d-8509-b5b55e5861c9.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-29T18:47:14.327505+00:00"
+  },
+  {
+    "id": "2b071c3d-a8e0-4234-81c1-b6571f360bc3",
+    "experience_id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/b916891f-62eb-41ad-9107-5c77ad3c607d.webp",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-03-30T18:50:41.130125+00:00"
+  },
+  {
+    "id": "6b7f77f1-fce6-4569-a234-06acd29f7b35",
+    "experience_id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/3965a82c-632c-478b-b8c1-30fbd890974b.webp",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-03-30T18:50:41.130125+00:00"
+  },
+  {
+    "id": "7d75ec8c-9047-41e7-9310-4884d91159f8",
+    "experience_id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/617ebf34-2bb0-4e67-99c0-afdad5b8bc3f.webp",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-30T18:50:41.130125+00:00"
+  },
+  {
+    "id": "ac5ee502-8571-46ec-abd9-741c994de55e",
+    "experience_id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/19e194cd-e847-47da-ac83-5db542af4d61.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-30T18:50:41.130125+00:00"
+  },
+  {
+    "id": "c3f4d3c0-05c0-4a30-a7df-bc83bc2e624b",
+    "experience_id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/76a92690-3888-4d15-9b5d-66aac58c5337.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-30T18:50:41.130125+00:00"
+  },
+  {
+    "id": "e67dbce6-9da5-4122-9f57-c83da51cc0f5",
+    "experience_id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d22b21c4-d195-4df5-93f8-b7cb9ae14871.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-30T18:50:41.130125+00:00"
+  },
+  {
+    "id": "e8c33b44-a72e-48d8-b967-4d90c12a6ac3",
+    "experience_id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/76ffc727-ca41-4c8e-a27c-12dd40395d5a.webp",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-30T18:50:41.130125+00:00"
+  },
+  {
+    "id": "17564825-b940-4074-bf32-dbf8ab5f6a03",
+    "experience_id": "dffe9998-02e9-4f97-9154-c20356f82200",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/8163891d-a81f-49bd-b2c5-bc8651b67f94.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-31T02:32:15.603882+00:00"
+  },
+  {
+    "id": "1a43e1e4-8c32-4736-994e-3808fc7651af",
+    "experience_id": "dffe9998-02e9-4f97-9154-c20356f82200",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/8e34dad2-48a2-4ecd-9a97-01f9d393ecd1.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-31T02:32:15.603882+00:00"
+  },
+  {
+    "id": "3bfcdb1e-95b9-4497-8f16-4f517bcbafc0",
+    "experience_id": "dffe9998-02e9-4f97-9154-c20356f82200",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/bca17ea5-b0ca-40c3-862a-252a19ab1f94.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-31T02:32:15.603882+00:00"
+  },
+  {
+    "id": "3e4bad27-dfa7-4f0c-a156-5ab6edc8f131",
+    "experience_id": "dffe9998-02e9-4f97-9154-c20356f82200",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/83b0bc0f-e000-429f-94dd-f5b810733439.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-31T02:32:15.603882+00:00"
+  },
+  {
+    "id": "e66003fe-3831-414d-8278-fb781dbcd436",
+    "experience_id": "dffe9998-02e9-4f97-9154-c20356f82200",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/9ae148ee-5166-4475-83b5-fc7f1e46e2fa.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-31T02:32:15.603882+00:00"
+  },
+  {
+    "id": "033bf21b-e748-469e-831a-d3c92dd1b501",
+    "experience_id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f60864f5-4411-4d1d-aaed-cafc6b3d822f.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-03-31T12:35:51.593812+00:00"
+  },
+  {
+    "id": "7cae745c-fe3a-4acd-a366-bdc0538d11f1",
+    "experience_id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d5a9c4f1-06fd-4177-bb96-22006c52331a.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-31T12:35:51.593812+00:00"
+  },
+  {
+    "id": "957c62fb-ef98-4f5a-877b-1f33ce2a3184",
+    "experience_id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f0d0ff11-d185-4196-8a1a-93fd4dd6f2af.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-31T12:35:51.593812+00:00"
+  },
+  {
+    "id": "a3d1d730-0e95-4cec-9c59-74a9cc59debe",
+    "experience_id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/069ab884-83d1-43f1-8af5-909150b69af7.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-31T12:35:51.593812+00:00"
+  },
+  {
+    "id": "b2fbd052-9206-43a1-954c-255e6cc9837c",
+    "experience_id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d332bdf7-ab5c-495a-9d1a-eb2d1f4f7cc8.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-03-31T12:35:51.593812+00:00"
+  },
+  {
+    "id": "b5620f76-a4b9-483d-9cb9-666321f894b2",
+    "experience_id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d95cd23b-77c0-4b3a-9acb-716499a4f52d.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-31T12:35:51.593812+00:00"
+  },
+  {
+    "id": "e411194b-41c2-40e8-b872-c6cec8687f9a",
+    "experience_id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d1752776-058f-42fe-aab3-4fd4a72d9a7e.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-31T12:35:51.593812+00:00"
+  },
+  {
+    "id": "2de864bd-5655-4fbf-9200-46b7dbc4f16a",
+    "experience_id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/99d36524-089a-4c28-b56b-e35712afb9d2.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-03-31T18:53:08.541567+00:00"
+  },
+  {
+    "id": "7d55b3f1-382d-4dc3-b7b3-58de9dfade2d",
+    "experience_id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/e6cb5ebd-8fd6-4ffd-b146-0814cb3bb9dd.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-03-31T18:53:08.541567+00:00"
+  },
+  {
+    "id": "b60dc235-0561-44e3-87a2-5e8983684f2d",
+    "experience_id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/73108f1b-903e-4531-879c-b938d4849fd6.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-03-31T18:53:08.541567+00:00"
+  },
+  {
+    "id": "c4e756ad-66cf-44e0-a0e2-bf54e3559f7c",
+    "experience_id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/0ba2f5ef-6e1e-4278-a493-6d4b9952851f.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-03-31T18:53:08.541567+00:00"
+  },
+  {
+    "id": "c7fd2fab-080d-48d2-9aa2-4c40bcd13097",
+    "experience_id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/c14ffb7e-87b0-4930-9a3e-407fb0bd471e.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-03-31T18:53:08.541567+00:00"
+  },
+  {
+    "id": "d444dce1-16e8-47e5-af02-d155d812d147",
+    "experience_id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ece36686-939a-4b02-96cd-5fbace837193.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-03-31T18:53:08.541567+00:00"
+  },
+  {
+    "id": "deba964c-c379-4438-9d56-5a55131baee8",
+    "experience_id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/b832d622-7f8a-41fe-aa2e-9d105b7080a2.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-03-31T18:53:08.541567+00:00"
+  },
+  {
+    "id": "14cc8a6e-bd94-4223-bb44-ce967857d976",
+    "experience_id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/11c8db6c-f40b-4499-8443-8b49c0bef0fb.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-02T12:19:58.285327+00:00"
+  },
+  {
+    "id": "1756f117-494b-40c6-9309-8eca383e7ce3",
+    "experience_id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f7c37e37-039a-4eb0-8cdc-8dc0932135fe.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-02T12:19:58.285327+00:00"
+  },
+  {
+    "id": "324d1a02-a9d2-4f99-967b-49c452b1cf48",
+    "experience_id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/08808236-917d-4f06-b8ca-709c8cf52d58.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-02T12:19:58.285327+00:00"
+  },
+  {
+    "id": "35f642ff-db2b-438f-959b-0e3d66f2f00a",
+    "experience_id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/aa58bab1-29a7-431f-bdf7-f93854208aca.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-02T12:19:58.285327+00:00"
+  },
+  {
+    "id": "66810dc2-9749-4801-af61-d075bfbabb94",
+    "experience_id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/63982e48-f2db-4403-a497-ae87a747467e.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-02T12:19:58.285327+00:00"
+  },
+  {
+    "id": "75209dff-8fd5-49d6-840e-defecc2ac93b",
+    "experience_id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/e76f0bf9-8ed1-4653-a02c-629f39558f04.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-02T12:19:58.285327+00:00"
+  },
+  {
+    "id": "9c74c9df-00c4-47f6-b02f-8a3d9358dd13",
+    "experience_id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/7a181965-a7a7-4c0a-8f1b-73196ef3e8ef.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-04-02T12:19:58.285327+00:00"
+  },
+  {
+    "id": "1872a3e8-1185-44e5-a2a0-76c2116b3103",
+    "experience_id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/3c690faf-1077-4578-b763-b191a7aa3f68.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-04T08:19:42.517302+00:00"
+  },
+  {
+    "id": "2d5f1dce-e26c-4b87-b667-b5b2aa1bdb04",
+    "experience_id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/c3771d3c-cd83-4b44-99d4-a256d8ba8d64.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-04T08:19:42.517302+00:00"
+  },
+  {
+    "id": "63a540c9-5f0a-44f1-95c6-8f725f531b75",
+    "experience_id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/575c47a7-3a1a-403d-abc1-e3b20adcee29.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-04T08:19:42.517302+00:00"
+  },
+  {
+    "id": "7b7cdc8a-4303-4a0f-a3bd-a2d555244915",
+    "experience_id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/8657c41a-a24c-4fb5-8105-1c915a8ae4c5.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-04-04T08:19:42.517302+00:00"
+  },
+  {
+    "id": "8ce1d36d-0359-4ad8-9f0e-a63247ff50c7",
+    "experience_id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/03afdb3e-21fe-4f22-85cc-c7b6b15fed30.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-04T08:19:42.517302+00:00"
+  },
+  {
+    "id": "da46be85-e629-4e4d-92eb-141788587c2f",
+    "experience_id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f24f7c00-d357-4470-8b21-e653082469da.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-04T08:19:42.517302+00:00"
+  },
+  {
+    "id": "ebbbf422-bee1-476f-932a-106e627b0e3f",
+    "experience_id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/2db2cee4-f79b-4cda-89bb-84bf97278935.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-04T08:19:42.517302+00:00"
+  },
+  {
+    "id": "0561849d-059c-4ba0-8fc1-2838d6d321f9",
+    "experience_id": "02b510d0-3612-40fd-9890-4259fd05b17b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/9b8ba331-5933-4b0b-b136-e64c655c8b67.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-05T11:35:27.733434+00:00"
+  },
+  {
+    "id": "1f70c1c9-f968-4214-9d5a-1793727f753b",
+    "experience_id": "02b510d0-3612-40fd-9890-4259fd05b17b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ef78bec7-dc3f-472b-bcb7-983a43322214.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-05T11:35:27.733434+00:00"
+  },
+  {
+    "id": "2c39e375-df21-40ae-bca0-aaf80606794e",
+    "experience_id": "02b510d0-3612-40fd-9890-4259fd05b17b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/5b13c7db-4308-4c41-a250-9fd45b84d13f.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-05T11:35:27.733434+00:00"
+  },
+  {
+    "id": "548e4cbc-8ae4-4488-a489-c6894cd39ebf",
+    "experience_id": "02b510d0-3612-40fd-9890-4259fd05b17b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/38ef9336-d5ac-4dba-971b-7a8731d732b8.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-05T11:35:27.733434+00:00"
+  },
+  {
+    "id": "adbdd4df-93bb-42bf-940b-02fdd8753eab",
+    "experience_id": "02b510d0-3612-40fd-9890-4259fd05b17b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/c36178fa-7f14-459b-be44-bde0bc5d4824.webp",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-05T11:35:27.733434+00:00"
+  },
+  {
+    "id": "b58d336e-d2a6-4a35-933b-e33e35086da1",
+    "experience_id": "02b510d0-3612-40fd-9890-4259fd05b17b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/5cd2bae5-7031-4984-8f9d-c1cb54e35352.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-05T11:35:27.733434+00:00"
+  },
+  {
+    "id": "10c2e5b8-75a1-470c-bcc1-ca8771178085",
+    "experience_id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/15450368-7009-4584-bb47-5857b31c114d.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-09T22:46:56.593835+00:00"
+  },
+  {
+    "id": "292c7580-02f5-4ff4-9bbf-5e4f7698a8d3",
+    "experience_id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/bac18e7e-f196-4a9f-b136-2f8ca4c892ed.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:46:56.593835+00:00"
+  },
+  {
+    "id": "37b6b90f-4169-47c8-b385-61f3cc7c50e8",
+    "experience_id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/11c650cf-119d-49e2-8832-fa1fc0f90423.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:46:56.593835+00:00"
+  },
+  {
+    "id": "5c45969b-6a75-4643-b821-d23a81ff1c7f",
+    "experience_id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/2601e899-6f49-4f64-82b3-8ee52004770a.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:46:56.593835+00:00"
+  },
+  {
+    "id": "9e83780f-dae2-4d3f-a205-4a469efd812b",
+    "experience_id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f41c215b-4cdc-4549-9d07-b325ffc23be2.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:46:56.593835+00:00"
+  },
+  {
+    "id": "b520c45d-70f6-44da-a10f-51d67edfd1bb",
+    "experience_id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/1dfff409-aa21-4bfe-af43-bcef7cf50321.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:46:56.593835+00:00"
+  },
+  {
+    "id": "eb27fabe-4178-4e3a-9e9f-6dfca7e37b04",
+    "experience_id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/8e74769a-3a33-4cfa-9299-b9375501e301.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:46:56.593835+00:00"
+  },
+  {
+    "id": "30860d21-44c5-4ce2-994e-2da7cc932ce2",
+    "experience_id": "505e50f5-297d-4cc4-8829-026233b4f99e",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/72251113-ed6d-43d5-a8ca-b2490032be3b.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:47:37.802622+00:00"
+  },
+  {
+    "id": "c35329a5-69ca-4827-b43d-a479558a4d46",
+    "experience_id": "505e50f5-297d-4cc4-8829-026233b4f99e",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/b4b62691-be9b-4f88-a830-ea4edb7e1ea4.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:47:37.802622+00:00"
+  },
+  {
+    "id": "c588046e-55b5-4ec6-8796-4d692d3e96df",
+    "experience_id": "505e50f5-297d-4cc4-8829-026233b4f99e",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ffd15ef5-47f9-43ec-b63e-9cf0b5c8c351.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-09T22:47:37.802622+00:00"
+  },
+  {
+    "id": "d09ab5f2-7bfc-4b78-a795-008075d19837",
+    "experience_id": "505e50f5-297d-4cc4-8829-026233b4f99e",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/69487d6e-6b47-44ed-a679-f8cd9edf4512.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:47:37.802622+00:00"
+  },
+  {
+    "id": "ec0780da-146f-474c-9d9a-39d325196b94",
+    "experience_id": "505e50f5-297d-4cc4-8829-026233b4f99e",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/95cf71ac-a2ad-4d34-9cf6-2a3ae6cfa0ca.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:47:37.802622+00:00"
+  },
+  {
+    "id": "2d2a4d81-d936-45a9-a923-270207d4221d",
+    "experience_id": "eae53ef6-9d6d-4959-87c9-93071b6b0f94",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/4459365e-310d-4e83-a575-7026ae520747.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:48:57.079848+00:00"
+  },
+  {
+    "id": "38d69640-06a2-4d38-81e1-7de0346dd56f",
+    "experience_id": "eae53ef6-9d6d-4959-87c9-93071b6b0f94",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/bc8049b5-71d6-435d-94af-995e811a0b81.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:48:57.079848+00:00"
+  },
+  {
+    "id": "c6aaae5e-3eb7-461f-8c39-f7b7dd672cf5",
+    "experience_id": "eae53ef6-9d6d-4959-87c9-93071b6b0f94",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/7d06a269-61be-42e0-a06b-bf8fe9251533.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:48:57.079848+00:00"
+  },
+  {
+    "id": "df6ce7b5-b68d-48dc-bbe7-66d0e7fd39b8",
+    "experience_id": "eae53ef6-9d6d-4959-87c9-93071b6b0f94",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/505312ba-79b8-4f62-9217-3748b1b29bcd.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:48:57.079848+00:00"
+  },
+  {
+    "id": "eddf5cf3-0c14-4b32-acac-877f670e5d3d",
+    "experience_id": "eae53ef6-9d6d-4959-87c9-93071b6b0f94",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/33fb171a-3477-4cd1-98be-659647d4ed2f.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-09T22:48:57.079848+00:00"
+  },
+  {
+    "id": "22952e0f-48c0-4f43-927d-0292811e895e",
+    "experience_id": "aa0d8efd-5eb3-42f5-8ec3-1bb37a65030b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/49ab83b2-b3e8-4493-9122-d1af3696e522.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:49:37.421304+00:00"
+  },
+  {
+    "id": "2cf75a53-73b2-47d5-83af-a9adf187a204",
+    "experience_id": "aa0d8efd-5eb3-42f5-8ec3-1bb37a65030b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ded7eeae-2f19-47ed-995c-2d1a3f1a1ff0.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:49:37.421304+00:00"
+  },
+  {
+    "id": "39b8f04a-c70e-452e-bc54-fdf9d2b7473f",
+    "experience_id": "aa0d8efd-5eb3-42f5-8ec3-1bb37a65030b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ffb90ba3-5491-4a2f-8eff-42bfe3980524.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:49:37.421304+00:00"
+  },
+  {
+    "id": "46f41623-025c-49e8-87cb-ebe26540ab96",
+    "experience_id": "aa0d8efd-5eb3-42f5-8ec3-1bb37a65030b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d3d59bcb-530e-4b5f-81cd-66daec6d32b5.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:49:37.421304+00:00"
+  },
+  {
+    "id": "8a1bfe18-609d-4d51-8eca-e1b1b9b3b485",
+    "experience_id": "aa0d8efd-5eb3-42f5-8ec3-1bb37a65030b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d054f572-1af8-4290-8990-bb6db99af6e7.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-09T22:49:37.421304+00:00"
+  },
+  {
+    "id": "abe8b9f5-fa3f-48cd-85d5-c4d6024ff16f",
+    "experience_id": "aa0d8efd-5eb3-42f5-8ec3-1bb37a65030b",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/bcd9c04b-fd0c-4403-9a50-69661233fec8.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-09T22:49:37.421304+00:00"
+  },
+  {
+    "id": "00a35f6f-483e-476c-beda-d14f20c7a8ab",
+    "experience_id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/12ed7233-da71-4bc8-8b77-9e508868c52a.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-10T17:14:06.822462+00:00"
+  },
+  {
+    "id": "4b574175-5dda-4a3e-9761-c8471b4c1ae7",
+    "experience_id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/f4e47ae3-6fb9-4dab-9dc3-e22e27776aeb.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-10T17:14:06.822462+00:00"
+  },
+  {
+    "id": "4b8e9d79-2da9-4499-9871-4568d47482a1",
+    "experience_id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/5db41037-3637-4258-9623-b1061407aaac.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-10T17:14:06.822462+00:00"
+  },
+  {
+    "id": "7a72e07e-04ed-4f7c-961e-d97d0f38bc40",
+    "experience_id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d713a595-d4bf-4b54-afa9-61e888b8f5d4.jpg",
+    "sort_order": 6,
+    "is_cover": false,
+    "created_at": "2026-04-10T17:14:06.822462+00:00"
+  },
+  {
+    "id": "ce9cf917-644d-4cba-9e65-b646d0bbc44a",
+    "experience_id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/36ca6cc6-4882-4f59-aff5-560c1f658667.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-10T17:14:06.822462+00:00"
+  },
+  {
+    "id": "cf748c93-26c2-471f-b2fd-4ee0b9aab98c",
+    "experience_id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/13b58b90-7366-4f75-9c48-2a2f4e8fb9d6.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-10T17:14:06.822462+00:00"
+  },
+  {
+    "id": "e364a53a-cdc5-4c69-a707-bce9c231b078",
+    "experience_id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/0b9bf8d0-532a-40cf-a71b-90c16c378a44.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-10T17:14:06.822462+00:00"
+  },
+  {
+    "id": "0ef80b74-0dbd-4692-a248-d40011103271",
+    "experience_id": "d1c361ce-7023-48ad-b35c-05bb5def0f36",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/364feb71-8344-4708-9fe3-dbfc7d958d3a.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-10T19:00:20.916919+00:00"
+  },
+  {
+    "id": "79f02daa-1b4c-469b-a817-d84d30e40b26",
+    "experience_id": "d1c361ce-7023-48ad-b35c-05bb5def0f36",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/9090363b-c921-41b5-ac4a-03c60623d74e.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:20.916919+00:00"
+  },
+  {
+    "id": "9e77e170-44a3-4848-8887-c6e50d7b5e12",
+    "experience_id": "d1c361ce-7023-48ad-b35c-05bb5def0f36",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/4c3c5c0c-f0b0-4985-ab5c-37db0671d756.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:20.916919+00:00"
+  },
+  {
+    "id": "cf0d9f6a-6961-4118-a227-b66e31c88806",
+    "experience_id": "d1c361ce-7023-48ad-b35c-05bb5def0f36",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/662dbfc9-f5e5-439f-bcf3-0cfa643440df.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:20.916919+00:00"
+  },
+  {
+    "id": "426499be-5f7c-41f8-9dd0-b7f4534a5a82",
+    "experience_id": "ab0d891d-97a3-4f1b-8761-62104e4f679d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/edf81c2b-0032-4359-a178-89522a3a82df.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-10T19:00:58.414507+00:00"
+  },
+  {
+    "id": "4ca92758-4286-475f-954c-09daf5498a50",
+    "experience_id": "ab0d891d-97a3-4f1b-8761-62104e4f679d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/8befdb7e-f867-4555-b56b-e03aca69c373.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:58.414507+00:00"
+  },
+  {
+    "id": "6a46d09d-dd5e-4502-bd99-12fdb580b894",
+    "experience_id": "ab0d891d-97a3-4f1b-8761-62104e4f679d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/174d3f1b-ce38-4cdc-bfdc-1bba188f4504.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:58.414507+00:00"
+  },
+  {
+    "id": "9f1bde8d-8f7f-4e3c-b967-6d856ee8dab1",
+    "experience_id": "ab0d891d-97a3-4f1b-8761-62104e4f679d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/5449f91f-e070-48ad-9358-4e52cdd341aa.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:58.414507+00:00"
+  },
+  {
+    "id": "c28d4529-0e25-4ce9-8a84-503cb95d15bd",
+    "experience_id": "ab0d891d-97a3-4f1b-8761-62104e4f679d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/1c3edbfc-0c4d-46bf-b764-ac42bb6c49a3.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:58.414507+00:00"
+  },
+  {
+    "id": "cbbcacb6-8c1b-414b-a8cc-eac030065b47",
+    "experience_id": "ab0d891d-97a3-4f1b-8761-62104e4f679d",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/c89ec8f5-1e8c-4ac2-b0ef-bf76870cc0b6.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-10T19:00:58.414507+00:00"
+  },
+  {
+    "id": "0f1e0638-49ca-4c7e-aa9e-5a8dce24d6f5",
+    "experience_id": "bf37ab45-e151-4256-ba30-23e2bcf9766c",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/cef43d2c-024c-4f0e-82d7-231350090fcb.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-16T13:29:02.526558+00:00"
+  },
+  {
+    "id": "41c2b206-577e-4206-989f-7f3ae38a4c02",
+    "experience_id": "bf37ab45-e151-4256-ba30-23e2bcf9766c",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/c256a7e0-2e91-422e-9027-b35d09132962.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-16T13:29:02.526558+00:00"
+  },
+  {
+    "id": "5b21b82a-c842-4ea0-8b9e-e381c419168d",
+    "experience_id": "bf37ab45-e151-4256-ba30-23e2bcf9766c",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/69c53b63-b5fc-4b49-85f6-a10f4d68f3e8.jpg",
+    "sort_order": 5,
+    "is_cover": false,
+    "created_at": "2026-04-16T13:29:02.526558+00:00"
+  },
+  {
+    "id": "8af3ebb9-8fc3-4abb-8d8c-edcd7a0c4fd6",
+    "experience_id": "bf37ab45-e151-4256-ba30-23e2bcf9766c",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ffff4b45-79e5-470c-a9cf-37f708c76946.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-16T13:29:02.526558+00:00"
+  },
+  {
+    "id": "b32b60d1-e0fb-4a82-bbf1-6390dc39aad1",
+    "experience_id": "bf37ab45-e151-4256-ba30-23e2bcf9766c",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/97af0de5-0b1e-4c85-a577-8a274c4fc39b.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-16T13:29:02.526558+00:00"
+  },
+  {
+    "id": "f161b0f5-3feb-4c31-a245-9b7a443cfdda",
+    "experience_id": "bf37ab45-e151-4256-ba30-23e2bcf9766c",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/9c6c558b-8f10-43d8-88bb-efe2fe749361.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-16T13:29:02.526558+00:00"
+  },
+  {
+    "id": "3dd5e295-a797-45d9-9235-319c2e41228b",
+    "experience_id": "bf0781aa-9768-4b53-846f-d3a02603027f",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/10514d89-9e25-4538-a39f-ed4076a29a51.jpg",
+    "sort_order": 4,
+    "is_cover": false,
+    "created_at": "2026-04-20T07:07:17.763751+00:00"
+  },
+  {
+    "id": "7ef234e6-7bb3-47c9-a726-5c42a7e70999",
+    "experience_id": "bf0781aa-9768-4b53-846f-d3a02603027f",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/6387d09f-5471-4b40-9edd-3171049f20bd.jpg",
+    "sort_order": 2,
+    "is_cover": false,
+    "created_at": "2026-04-20T07:07:17.763751+00:00"
+  },
+  {
+    "id": "a7adb2e6-6fe0-4655-a20e-0684cb452675",
+    "experience_id": "bf0781aa-9768-4b53-846f-d3a02603027f",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/56cccc7e-4adc-4d69-abde-4582033f1fb1.jpg",
+    "sort_order": 0,
+    "is_cover": true,
+    "created_at": "2026-04-20T07:07:17.763751+00:00"
+  },
+  {
+    "id": "ae34383d-2d62-467a-a471-9d2789d66932",
+    "experience_id": "bf0781aa-9768-4b53-846f-d3a02603027f",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ebb44a7d-2ebc-49bb-95bb-77cd05660c67.jpg",
+    "sort_order": 1,
+    "is_cover": false,
+    "created_at": "2026-04-20T07:07:17.763751+00:00"
+  },
+  {
+    "id": "ce5c8e16-83cf-468e-96e9-4d229728e368",
+    "experience_id": "bf0781aa-9768-4b53-846f-d3a02603027f",
+    "url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/1e736cf0-8445-44d8-91dc-fe85feb07ca7.jpg",
+    "sort_order": 3,
+    "is_cover": false,
+    "created_at": "2026-04-20T07:07:17.763751+00:00"
+  }
+]

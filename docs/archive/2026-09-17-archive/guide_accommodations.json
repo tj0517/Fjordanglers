@@ -1,0 +1,30 @@
+[
+  {
+    "id": "458bfe3b-0024-440c-9e0c-30c74a1ac48a",
+    "guide_id": "30e804b6-368b-4dbc-947d-7eb3d4650a21",
+    "name": "Base Camp Pello",
+    "type": "cabin",
+    "description": "Old style cabin with electricity, running water, modern day kitchen, outside fire place and wooden sauna.",
+    "max_guests": 3,
+    "location_note": "200m to river",
+    "created_at": "2026-04-09T12:15:44.018576+00:00",
+    "images": [
+      "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/acc-images/458bfe3b-0024-440c-9e0c-30c74a1ac48a/9bc713a4-08ce-499f-b331-70e054417f03.jpg"
+    ],
+    "link_url": "https://www.laplandfishing.fi/traditional-salmon-fishing.html"
+  },
+  {
+    "id": "034bc0ba-e23d-420e-add1-545992cdd8e0",
+    "guide_id": "30e804b6-368b-4dbc-947d-7eb3d4650a21",
+    "name": "Base Camp Ounas",
+    "type": "cabin",
+    "description": "Finnish \"old style\" cabin - no electricity, no running water etc. This is the place where you unwind from modern day life.",
+    "max_guests": 3,
+    "location_note": "on island",
+    "created_at": "2026-04-09T12:27:06.791415+00:00",
+    "images": [
+      "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/acc-images/034bc0ba-e23d-420e-add1-545992cdd8e0/29c369b3-ef85-43bf-9f10-a8cafd42dd21.jpg"
+    ],
+    "link_url": "https://www.laplandfishing.fi/grayling--trout-fishing.html"
+  }
+]

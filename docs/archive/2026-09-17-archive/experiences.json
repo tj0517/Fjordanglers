@@ -1,0 +1,3429 @@
+[
+  {
+    "id": "f584bb7b-95d7-46b0-832c-55fdb571f087",
+    "guide_id": "64802cf6-db00-4712-878e-19c7250511eb",
+    "title": "Inshore multispecious fishing in Egersund",
+    "description": "Enjoy 5 hours fishing from shore, targeting a variety of species local to Egersund. You can keep any legal catch and \u00d8ystein can cook it for you after the trip if you wish so. Ready to have the whole family unplug? Then you'll be glad to know that kids are more than welcome.",
+    "fish_types": [
+      "Sea Trout",
+      "Sea Bass",
+      "Cod",
+      "Pollock",
+      "Haddock",
+      "Whitefish",
+      "Mackerel",
+      "Garfish",
+      "Flounder",
+      "Brown Trout",
+      "Spiny Dogfish"
+    ],
+    "duration_days": null,
+    "duration_hours": 5,
+    "max_guests": 5,
+    "price_per_person_eur": 85,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Fishing license"
+    ],
+    "what_excluded": [
+      "Bait",
+      "Boat & fuel",
+      "Safety equipment",
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Norway",
+    "location_city": "Egersund",
+    "published": true,
+    "created_at": "2026-03-09T16:01:46.660193+00:00",
+    "updated_at": "2026-03-29T18:47:13.897194+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 58.45402,
+    "location_lng": 6.012955,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 5,
+        "label": "5h trip",
+        "price_eur": 85,
+        "group_prices": {
+          "1": 85,
+          "2": 135,
+          "3": 190,
+          "4": 235,
+          "5": 270
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Spinning",
+      "Jigging",
+      "Shore fishing"
+    ],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": null,
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": null,
+    "location_description": null,
+    "boat_description": "This is trips done from shore.",
+    "accommodation_description": null,
+    "food_description": "Make sure to bring your own snacks and drinks! For the main event, I can cook your fresh catch right on the shore, or clean it for you to take home.",
+    "license_description": "Norway shore fishing is completly free, so you don't need to worry about licence.",
+    "gear_description": "You don't have to bring anything but good clothes and suitable footwear - I will provide you with all the eqiupment you need.",
+    "transport_description": "The meeting location is in Egersund area but varies depending on the weather and where the fish are biting.",
+    "packages": [
+      {
+        "id": "5h-trip",
+        "label": "5h trip",
+        "level": "beginner",
+        "max_group": 5,
+        "min_group": 1,
+        "price_eur": 85,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 85,
+          "2": 135,
+          "3": 190,
+          "4": 235,
+          "5": 270
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 5
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "33fe5870-0784-4925-a29f-729bdcc132c6",
+    "guide_id": "23004f13-2281-4e62-a39b-52d620e93d36",
+    "title": "Fishing adventure in sweden around Stockholm",
+    "description": "Dan Bjurshammar Fishing offers 2 different fishing packages:\n1 full day of fishing with fishing guide all-inclusive.\n\n2: Incooperation with Rastaholm Inn (Eker\u00f6), fishing packages nr 2 that include overnight accommodation, a breakfast bag, and bed linen at the inn, as well as a full day with a fishing guide.\n\nNow only 2990 SEK per person (example price based on 4 people), which includes accommodation, bed linen and breakfast bag, a fully equipped fishing boat, a fishing guide, and lunch.\n\nGreat fishing for pike, zander, and perch.\n\nWe offer accommodation in the hostel where a sauna is also available. Near the hostel you will find the restaurant and bar.\n\nThere is also access to a grill area right by the shore of Lake M\u00e4laren, with a magical view.\n\nFree parking is available.\n\nUp to 58 beds can be arranged, making it suitable both for small groups and corporate events.\n\nSo we welcome both local and long-distance guests to a wonderful fishing adventure.\n\nPlease email or call to express your interest.\n\nKind regards,\nDan Bjurshammar",
+    "fish_types": [
+      "Pike",
+      "Zander",
+      "Perch",
+      "Sea Trout"
+    ],
+    "duration_days": null,
+    "duration_hours": 7,
+    "max_guests": 4,
+    "price_per_person_eur": 950,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license",
+      "Lunch / snacks",
+      "Drinks"
+    ],
+    "what_excluded": [
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Sweden",
+    "location_city": "Stockholm",
+    "published": true,
+    "created_at": "2026-03-10T17:01:42.176673+00:00",
+    "updated_at": "2026-03-31T12:35:51.175885+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 59.25085,
+    "location_lng": 17.869248,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 7,
+        "label": "Full day trip",
+        "price_eur": 950,
+        "pricing_type": "per_boat",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Jigging",
+      "Spinning",
+      "Trolling",
+      "Baitcasting"
+    ],
+    "season_from": 3,
+    "season_to": 11,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ec7ed73c-5af4-4f0a-ac02-234d0dee9b10.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": null,
+    "location_description": null,
+    "boat_description": "Silver Eagle 6.3m, 175 hk Suzuki, the latest electronics from Lowrance, fish finder, electric motor while fishing",
+    "accommodation_description": null,
+    "food_description": "Warm grilled lunch is included, also coffee, soft drinks, life vest,",
+    "license_description": "Fishing license is including in the boat price",
+    "gear_description": "Spinning rods, lures, insurance for all customers",
+    "transport_description": "In the map you see the meeting point where I have my boats",
+    "packages": [
+      {
+        "id": "full-day-trip",
+        "label": "Full day trip",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 950,
+        "availability": {
+          "notes": null,
+          "season_to": 11,
+          "season_from": 3,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_boat",
+        "duration_hours": 7
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "7bb9b9b2-0d3c-48d5-b21a-7cacb88929b3",
+    "guide_id": "64677705-bb33-46f5-bace-8075c39e19a5",
+    "title": "Fishing for Zander, Perch and Pike around Alings\u00e5s, near Gothenburg",
+    "description": "Welcome to Fishing Guide Sweden! Since 2018, I have been working as a fishing guide, mainly on the lakes Mj\u00f6rn, Anten, and S\u00e4vel\u00e5ngen in the municipality of Alings\u00e5s, about 50 km east of Gothenburg.\n\nAnyone can book a guided fishing trip \u2014 beginners, hobby anglers, or professionals. Families with children are also very welcome. The main target species are pike, zander, and perch.\n\nThe day is tailored to the client\u2019s experience and level of ambition, and I provide all the necessary equipment. In addition, I have partners with whom I offer larger guided packages for companies.\n\nWe have fantastic zander fishing in Lake Mj\u00f6rn and the chance to catch very large pike and zander in Lake Anten. In several forest lakes, there is also the possibility of catching perch weighing close to 2 kilograms.\n\nPopular methods include spinning, trolling, and vertical fishing. For more advanced anglers looking for really big zander or pike, I offer spot casting with Active Target.\n\nThe maximum number of guests is three, excluding myself. It is also possible to request a quote for longer fishing trips or larger groups.\n\nVisit the gallery to see previous catches and build your appetite for fishing!",
+    "fish_types": [
+      "Zander",
+      "Perch",
+      "Pike"
+    ],
+    "duration_days": null,
+    "duration_hours": 7,
+    "max_guests": 3,
+    "price_per_person_eur": 650,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license"
+    ],
+    "what_excluded": [
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Sweden",
+    "location_city": "Alings\u00e5s",
+    "published": true,
+    "created_at": "2026-03-10T17:09:13.293768+00:00",
+    "updated_at": "2026-03-29T14:21:05.906832+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 57.989176,
+    "location_lng": 12.440643,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 7,
+        "label": "7h fishing trip",
+        "price_eur": 650,
+        "pricing_type": "per_boat",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 4,
+        "label": "4h fishing trip",
+        "price_eur": 450,
+        "pricing_type": "per_boat",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Spinning",
+      "Trolling",
+      "Jigging",
+      "Baitcasting"
+    ],
+    "season_from": 4,
+    "season_to": 12,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/b9bb5805-1214-4b1a-8ed3-4c82bc64d354.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": null,
+    "location_description": null,
+    "boat_description": "Finval 555 FishPro with 150 HP Honda",
+    "accommodation_description": null,
+    "food_description": "Bring your own food and drinks",
+    "license_description": "Fishing license included",
+    "gear_description": "All gear included",
+    "transport_description": null,
+    "packages": [
+      {
+        "id": "7h-fishing-trip",
+        "label": "7h fishing trip",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 650,
+        "availability": {
+          "notes": null,
+          "season_to": 12,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_boat",
+        "duration_hours": 7
+      },
+      {
+        "id": "4h-fishing-trip",
+        "label": "4h fishing trip",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 450,
+        "availability": {
+          "notes": null,
+          "season_to": 12,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_boat",
+        "duration_hours": 4
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "77dec55f-41e3-4fe8-8c7e-960a11a3adf5",
+    "guide_id": "3af2c7a2-9d2a-4d4c-b8c9-90db93e7f70f",
+    "title": "Fishing & Nature Experience in Southern Norway",
+    "description": "Do you have a free day or weekend and don't know what to do with your time? Instead of sitting at home, join me for a real fishing adventure around Kristiansand! My name is Marcin, and fishing is my absolute passion. Whether you are coming alone or with your family and kids, we will spend some truly special moments together.\n\nWhen you step out into the Norwegian wild with me, you are signing up for absolute silence, raw nature, and crystal-clear waters. This isn't just about catching local favourites like cod, saithe, mackerel, flounder, and wolffish\u2014it's a total mental reset and a chance to completely detach from everyday life. Expect to leave the city noise behind, recharge your batteries, and even take your fresh catch home to enjoy a taste you simply cannot buy in a shop. I organise one-day, weekend, and multi-day trips tailored to you. You just bring a smile and a good mood, and I will take care of the rest!",
+    "fish_types": [
+      "Mackerel",
+      "Wolffish",
+      "Cod",
+      "Pollock",
+      "Flounder",
+      "Sea Trout",
+      "Haddock",
+      "Garfish",
+      "Whitefish",
+      "Pike",
+      "Perch",
+      "Ling",
+      "Brosme",
+      "Sea Bass"
+    ],
+    "duration_days": null,
+    "duration_hours": 5,
+    "max_guests": 4,
+    "price_per_person_eur": 150,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license",
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Norway",
+    "location_city": "Kristiansand",
+    "published": true,
+    "created_at": "2026-03-13T07:53:51.682625+00:00",
+    "updated_at": "2026-04-04T08:19:42.241301+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 58.085628,
+    "location_lng": 7.931858,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 5,
+        "label": "5",
+        "price_eur": 150,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 7,
+        "label": "7",
+        "price_eur": 200,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Spinning",
+      "Trolling",
+      "Jigging",
+      "Shore fishing",
+      "Fly fishing"
+    ],
+    "season_from": 1,
+    "season_to": 1,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/baee282f-4858-4b07-9e90-a09fb1b79035.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": null,
+    "location_description": "A beautiful fjord with many islands and a boat with a fishing spirit",
+    "boat_description": "We sail a sea boat with a fishing spirit, fishing with spinning, bottom fishing, and trolling. You can count on beautiful views.",
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": "Fishing in Norway sea is completly free, so you don't have to worry about a license",
+    "gear_description": "Fishing rods, bait, life jackets and my guidance are available.",
+    "transport_description": "I can pick you up at the airport and drop you off after your trip. Transportation is available for an additional fee upon request. Oslo Sandefjord-Torp Airport or Stavanger Airport",
+    "packages": [
+      {
+        "id": "5",
+        "label": "5",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 150,
+        "availability": {
+          "notes": null,
+          "season_to": 1,
+          "season_from": 1,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 5
+      },
+      {
+        "id": "7",
+        "label": "7",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 200,
+        "availability": {
+          "notes": null,
+          "season_to": 1,
+          "season_from": 1,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 7
+      }
+    ],
+    "inquiry_form_config": {
+      "gear": "required",
+      "notes": "optional",
+      "budget": "optional",
+      "dietary": "optional",
+      "numDays": "required",
+      "tripType": "required",
+      "stayingAt": "optional",
+      "transport": "optional",
+      "photography": "optional",
+      "accommodation": "required",
+      "boatPreference": "optional",
+      "experienceLevel": "required",
+      "groupComposition": "required",
+      "regionExperience": "optional"
+    },
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "02b510d0-3612-40fd-9890-4259fd05b17b",
+    "guide_id": "e055a87f-cbc9-4eb9-bcbf-3e71ea7814d6",
+    "title": "Guided fishing tours on the Baltic sea coast",
+    "description": "Guided trip dedicated for fly & spin anglers with good physical condition. Be prepared for walking long distance in waders and warm clothes on. But the reward is worth all our sacrifices!",
+    "fish_types": [
+      "Sea Trout",
+      "Pike",
+      "Whitefish"
+    ],
+    "duration_days": null,
+    "duration_hours": 8,
+    "max_guests": 3,
+    "price_per_person_eur": 370,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing"
+    ],
+    "what_excluded": [
+      "Fishing license",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Sweden",
+    "location_city": "Kyrkhult/Blekinge",
+    "published": true,
+    "created_at": "2026-03-14T17:45:13.869543+00:00",
+    "updated_at": "2026-04-05T11:35:27.306707+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 56.078376,
+    "location_lng": 14.710999,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Coast fishing - winter/spring - 1 angler",
+        "price_eur": 370,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": null,
+        "label": "Coast fishing - winter/spring - 2 anglers",
+        "price_eur": 440,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": null,
+        "label": "Coast fishing - winter/spring - 3 anglers",
+        "price_eur": 540,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": 1,
+    "season_to": 4,
+    "meeting_point_address": "To discuss under booking",
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/d4a84d5b-7de7-4d24-bd39-6a02e2626f49.jpg",
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            15.117188,
+            56.13687
+          ],
+          [
+            14.749146,
+            55.991205
+          ],
+          [
+            14.339905,
+            55.915857
+          ],
+          [
+            14.290466,
+            55.948167
+          ],
+          [
+            14.471741,
+            56.060273
+          ],
+          [
+            14.658508,
+            56.124625
+          ],
+          [
+            14.69696,
+            56.187341
+          ],
+          [
+            14.974365,
+            56.184284
+          ],
+          [
+            15.100708,
+            56.15676
+          ],
+          [
+            15.117188,
+            56.13687
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": null,
+    "location_description": "Sea coast fishing with fly and spin rod",
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": "Simple lunch and coffee/water included. Bring your own snacks and energy bars.",
+    "license_description": null,
+    "gear_description": "Bring your own rods/baits and chest waders/boots",
+    "transport_description": "Exactly meeting point will be send after trip booking.",
+    "packages": [
+      {
+        "id": "coast-fishing---winterspring---1-angler",
+        "label": "Coast fishing - winter/spring - 1 angler",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 370,
+        "availability": {
+          "notes": null,
+          "season_to": 4,
+          "season_from": 1,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 8
+      },
+      {
+        "id": "coast-fishing---winterspring---2-anglers",
+        "label": "Coast fishing - winter/spring - 2 anglers",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 440,
+        "availability": {
+          "notes": null,
+          "season_to": 4,
+          "season_from": 1,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": null
+      },
+      {
+        "id": "coast-fishing---winterspring---3-anglers",
+        "label": "Coast fishing - winter/spring - 3 anglers",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 540,
+        "availability": {
+          "notes": null,
+          "season_to": 4,
+          "season_from": 1,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": null
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "e9f99a3d-882d-45b3-bba8-706ce24c01b9",
+    "guide_id": "1947875e-a1bc-4fdf-a32a-8330346953ac",
+    "title": "Salmon fishing in Kalix",
+    "description": "Fishing for salmon is not always easy \u2014 and it can be even harder when you arrive at a new river. Where are the best spots? What\u2019s working right now? Where does the salmon stop, and where does it bite?\n\nI have fished these rivers for many years, and I have chosen to dedicate myself fully to guiding, where the customer\u2019s wishes and experience are my top priority. I do everything I can to help you hook your dream fish, while also making sure you are comfortable during the sometimes long fishing sessions.\n\nTell me your preferences and I will create a tailored package for you.\n\nThere is an incredible amount of water to fish within a reasonable driving distance.\nWithin a radius of about 150 km, you\u2019ll find for example:\n\nKalix River\nLainio River\n\u00c4nges\u00e5n\nTorne River\nHow long does it take to get here?\nFrom Stockholm by plane, you can be out fishing in one of the rivers within 3\u20134 hours, depending on where we choose to start.",
+    "fish_types": [
+      "Salmon"
+    ],
+    "duration_days": null,
+    "duration_hours": null,
+    "max_guests": 4,
+    "price_per_person_eur": null,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide"
+    ],
+    "what_excluded": [
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license",
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Sweden",
+    "location_city": "Kalix",
+    "published": true,
+    "created_at": "2026-03-14T17:57:17.483462+00:00",
+    "updated_at": "2026-04-10T21:43:53.509684+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 65.859126,
+    "location_lng": 23.140265,
+    "slug": null,
+    "duration_options": null,
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/beb05f6d-f9e5-443c-99c0-305a3f9fa69a.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "icelandic",
+    "itinerary": null,
+    "location_description": null,
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": null,
+    "gear_description": null,
+    "transport_description": null,
+    "packages": null,
+    "inquiry_form_config": {
+      "fields": [
+        {
+          "id": "experience_level",
+          "status": "optional"
+        },
+        {
+          "id": "fishing_method",
+          "status": "optional"
+        },
+        {
+          "id": "target_species",
+          "status": "included"
+        },
+        {
+          "id": "own_gear",
+          "status": "included"
+        },
+        {
+          "id": "accommodation",
+          "status": "optional"
+        },
+        {
+          "id": "notes",
+          "status": "optional"
+        }
+      ]
+    },
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "e048bd5b-ce32-4fb7-8da2-4c95dfa65841",
+    "guide_id": "4efe9bf3-e9b5-4bf2-a4e8-cf8a8c4646ef",
+    "title": "Boat fishing with Berra (famous angler)",
+    "description": "Welcome to a fantastic fishing experience in the archipelago, lake M\u00e4laren, V\u00e4ttern or V\u00e4nern. \nWe fish pike, zander, perch, salmon, sea trout, trout or char. All according to your wishes.  \n\nBerra M\u00e5rdh has 35 years of experience in fishing from the boat and all certificates needed. Everything  for a successful fishing trip is included, rods, reels, baits and more, as well as overalls and life jackets.  \n\nCoffee, cookies and cold drinks are also included. We cook lunch on a Muurika pan and I make stew in the pan, hamburgers or pork loin. I also make other requests.",
+    "fish_types": [
+      "Salmon",
+      "Sea Trout",
+      "Arctic Char",
+      "Pike",
+      "Perch",
+      "Zander",
+      "Brown Trout"
+    ],
+    "duration_days": null,
+    "duration_hours": 4,
+    "max_guests": 5,
+    "price_per_person_eur": 460,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license",
+      "Lunch / snacks",
+      "Drinks",
+      "Transport to fishing spot"
+    ],
+    "what_excluded": [
+      "Fish cleaning & packing"
+    ],
+    "meeting_point": null,
+    "location_country": "sweden",
+    "location_city": "malaren",
+    "published": true,
+    "created_at": "2026-03-14T18:10:37.164919+00:00",
+    "updated_at": "2026-03-18T22:47:44.75479+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 58.887473,
+    "location_lng": 14.798584,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 4,
+        "label": "Full day (min 3 person)",
+        "price_eur": 460,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 4,
+        "label": "Half day (min 3 person)",
+        "price_eur": 460,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/aeb67243-42b9-4da6-913c-57a413a070a4.jpg",
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            12.161865,
+            58.384438
+          ],
+          [
+            14.18335,
+            57.803798
+          ],
+          [
+            15.018311,
+            58.81943
+          ],
+          [
+            17.764893,
+            59.271495
+          ],
+          [
+            16.490479,
+            59.673288
+          ],
+          [
+            13.172607,
+            59.372391
+          ],
+          [
+            12.161865,
+            58.384438
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": null,
+    "location_description": null,
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": null,
+    "gear_description": null,
+    "transport_description": null,
+    "packages": [
+      {
+        "id": "full-day-min-3-person",
+        "label": "Full day (min 3 person)",
+        "level": "beginner",
+        "max_group": 5,
+        "min_group": 1,
+        "price_eur": 460,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 4
+      },
+      {
+        "id": "half-day-min-3-person",
+        "label": "Half day (min 3 person)",
+        "level": "beginner",
+        "max_group": 5,
+        "min_group": 1,
+        "price_eur": 460,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 4
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "7f3f2fe2-a861-4bc3-8d86-b9a5a2a1761d",
+    "guide_id": "8779da8a-2e77-4f3b-83af-14f5a4a55b5e",
+    "title": "Icelandic Trout fishing trip",
+    "description": "Iceland is one of the last places in Europe where truly wild, untouched rivers still run through open volcanic landscapes with barely another angler in sight. This is exactly where I take you.\nTogether we chase brown trout and sea trout in the pristine highland rivers around Hella in southern Iceland. These fish are something special \u2014 powerful, brilliantly coloured and completely wild. The kind you remember long after you're home.\nI guide anglers of all experience levels. If you've never held a fly rod before, I'll get you casting and catching. If you're a seasoned angler chasing a personal best, I know exactly which waters give you the best chance. We fish at the pace that suits you, in some of the most dramatic scenery you'll ever see from a riverbank.\nAs a Fishpartner guide, I can also help organise your full trip to Iceland, so getting here and making the most of your time on the water is as smooth as possible.\nTight lines are guaranteed. Trophy fish are very much on the cards.",
+    "fish_types": [
+      "Sea Trout",
+      "Brown Trout"
+    ],
+    "duration_days": null,
+    "duration_hours": null,
+    "max_guests": 4,
+    "price_per_person_eur": null,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Bait",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license"
+    ],
+    "what_excluded": [
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Iceland",
+    "location_city": "hella",
+    "published": true,
+    "created_at": "2026-03-15T18:32:35.135952+00:00",
+    "updated_at": "2026-04-10T21:43:53.509684+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 63.835504,
+    "location_lng": -20.398701,
+    "slug": null,
+    "duration_options": null,
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/landscapes/iceland-2.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "icelandic",
+    "itinerary": null,
+    "location_description": null,
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": null,
+    "gear_description": null,
+    "transport_description": null,
+    "packages": null,
+    "inquiry_form_config": {
+      "fields": [
+        {
+          "id": "experience_level",
+          "status": "optional"
+        },
+        {
+          "id": "fishing_method",
+          "status": "optional"
+        },
+        {
+          "id": "target_species",
+          "status": "included"
+        },
+        {
+          "id": "own_gear",
+          "status": "included"
+        },
+        {
+          "id": "accommodation",
+          "status": "optional"
+        },
+        {
+          "id": "notes",
+          "status": "optional"
+        }
+      ]
+    },
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "dffe9998-02e9-4f97-9154-c20356f82200",
+    "guide_id": "0d9721e8-b825-41c5-a502-e1dac5f8224c",
+    "title": "Experience Iceland Guided Fly Fishing in Iceland with a Local guide",
+    "description": "World-Class Fly Fishing, Tailored to You.\nExperience Iceland's waters on your terms. With access to some of the finest salmon, brown trout, and Arctic char rivers on the planet, I design custom itineraries built around your goals. Contact me today, and let's start planning your perfect Icelandic fishing trip.",
+    "fish_types": [
+      "Salmon",
+      "Brown Trout",
+      "Sea Trout",
+      "Arctic Char"
+    ],
+    "duration_days": 1,
+    "duration_hours": 12,
+    "max_guests": 4,
+    "price_per_person_eur": 660,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license"
+    ],
+    "what_excluded": [
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Iceland",
+    "location_city": "reykjavik",
+    "published": true,
+    "created_at": "2026-03-15T19:14:00.105875+00:00",
+    "updated_at": "2026-04-08T18:19:47.425233+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 64.145981,
+    "location_lng": -21.942237,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": 1,
+        "hours": 12,
+        "label": "Full day",
+        "price_eur": 660,
+        "group_prices": {
+          "1": 660,
+          "2": 660,
+          "3": 660,
+          "4": 660
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Fly fishing",
+      "Spinning"
+    ],
+    "season_from": 4,
+    "season_to": 9,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/2345af34-51ca-4709-a983-4ef819083e37.jpg",
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -22.741699,
+            63.908396
+          ],
+          [
+            -18.874512,
+            63.460329
+          ],
+          [
+            -13.776855,
+            64.988651
+          ],
+          [
+            -16.325684,
+            66.469437
+          ],
+          [
+            -21.643066,
+            65.449133
+          ],
+          [
+            -22.741699,
+            63.908396
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "both",
+    "itinerary": [
+      {
+        "time": "Pick up 08:30",
+        "label": "Your Hotel"
+      },
+      {
+        "time": "40 minutes drive ",
+        "label": "Area where the river meets the sea, Sea Trout fishing at it's finest "
+      },
+      {
+        "time": "Stress less",
+        "label": "The whole area you will be fishing is excluded for 2 rods only there for you with a few pointers from your guide decides how we fish that specific beat that specific day"
+      },
+      {
+        "time": "Fishing is allowed until 20:00",
+        "label": "Drive back to your Hotel"
+      }
+    ],
+    "location_description": null,
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": "\u200bIn Iceland, fishing permits for most areas must be booked well in advance. I will handle the logistics to ensure you and your group get the best rates at the optimal time of the season, on the perfect river or lake for your budget.",
+    "gear_description": "If requested, same goes for food & drinks.",
+    "transport_description": "All Transportation Included\nLeave the driving to me. Your trip includes pick-up and drop-off in Reykjav\u00edk, transportation to and from our fishing destination, and all driving between pools on the river or lake throughout our stay.",
+    "packages": [
+      {
+        "id": "full-day",
+        "label": "Full day",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 660,
+        "availability": {
+          "notes": null,
+          "season_to": 9,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 660,
+          "2": 660,
+          "3": 660,
+          "4": 660
+        },
+        "duration_days": 1,
+        "pricing_model": "per_group",
+        "duration_hours": 12
+      }
+    ],
+    "inquiry_form_config": {
+      "gear": "required",
+      "notes": "optional",
+      "budget": "optional",
+      "dietary": "optional",
+      "numDays": "optional",
+      "tripType": "required",
+      "stayingAt": "optional",
+      "transport": "optional",
+      "photography": "optional",
+      "accommodation": "required",
+      "boatPreference": "optional",
+      "experienceLevel": "required",
+      "groupComposition": "optional",
+      "regionExperience": "optional"
+    },
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "f02ed5d2-9787-405a-9c93-9fcec927e597",
+    "guide_id": "6c60e7d3-312e-4a8c-8f28-72da25603ae1",
+    "title": "World-class trout fishing in one of Norway\u2019s most beautiful rivers - Mistra",
+    "description": "Fishing with member of Rapala  Proguide Norway,  targeting trophy trout in Norway\u2019s finest trout river \u2014 the Mistra. This wild and beautiful river stretches for nearly 30 kilometers through untouched wilderness. As early as May and June, large trout begin their migration upstream from Lake Storsj\u00f8en, creating outstanding opportunities for anglers seeking truly big fish.\nThe river offers incredible variety, from powerful rapids and deep pools to calm, slow-moving stretches in the upper sections \u2014 perfect habitat for large, wild trout.",
+    "fish_types": [
+      "Brown Trout"
+    ],
+    "duration_days": null,
+    "duration_hours": 6,
+    "max_guests": 5,
+    "price_per_person_eur": 700,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Boat & fuel",
+      "Safety equipment",
+      "Fishing license",
+      "Transport to fishing spot"
+    ],
+    "what_excluded": [
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing"
+    ],
+    "meeting_point": null,
+    "location_country": "Norway",
+    "location_city": "Mistra",
+    "published": true,
+    "created_at": "2026-03-15T19:49:14.587806+00:00",
+    "updated_at": "2026-03-21T19:37:38.216705+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 61.806568,
+    "location_lng": 11.20216,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 6,
+        "label": "Day trip",
+        "price_eur": 700,
+        "group_prices": {
+          "1": 700,
+          "2": 1200,
+          "3": 1500,
+          "4": 1600,
+          "5": 2000
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Fly fishing",
+      "Spinning"
+    ],
+    "season_from": 5,
+    "season_to": 8,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/ba713cf1-f7c6-44bb-818d-d34bc9e15282.jpg",
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            11.098938,
+            61.765328
+          ],
+          [
+            11.318665,
+            61.658595
+          ],
+          [
+            12.159119,
+            61.923442
+          ],
+          [
+            11.846008,
+            62.078171
+          ],
+          [
+            11.098938,
+            61.765328
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "both",
+    "itinerary": null,
+    "location_description": null,
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": null,
+    "gear_description": "You do not need any of your own gear. As a Rapala Pro-Guide, I provide all the necessary, high-quality rods and baits we need to trigger the big trout.",
+    "transport_description": null,
+    "packages": [
+      {
+        "id": "day-trip",
+        "label": "Day trip",
+        "level": "beginner",
+        "max_group": 5,
+        "min_group": 1,
+        "price_eur": 700,
+        "availability": {
+          "notes": null,
+          "season_to": 8,
+          "season_from": 5,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 700,
+          "2": 1200,
+          "3": 1500,
+          "4": 1600,
+          "5": 2000
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 6
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "cfe76489-35b0-44d9-b93c-116458a80542",
+    "guide_id": "99b63d74-d322-48dc-9b40-27fc9ee9437a",
+    "title": "Trout fishing in icelandic river",
+    "description": "Fly fishing guide by day, Fly tying by night \u2014 and salmon fanatic always. That's me in a nutshell. I'm Magn\u00fas Haukur, an Icelandic fly fishing guide with a simple philosophy: long live the salmon.\nMy sessions take place on Iceland's coastal flats and rivers, wading in search of sea trout and salmon with a fly rod in hand. From the photos you can see the kind of fish these waters produce \u2014 heavy, silver-flanked sea trout caught in stunning Icelandic settings, often with mountains and open sky stretching out behind you.\nI fish in all conditions, in all seasons. Freezing coastal flats in winter, calm river bends at golden hour in summer \u2014 Iceland's fishing is unlike anywhere else, and I know how to make the most of every session regardless of what the weather throws at us.\nWhen tying flies I make patterns built specifically for Icelandic conditions. When you're out with me, every detail is thought through.",
+    "fish_types": [
+      "Sea Trout",
+      "Brown Trout",
+      "Salmon",
+      "Arctic Char"
+    ],
+    "duration_days": null,
+    "duration_hours": null,
+    "max_guests": 4,
+    "price_per_person_eur": null,
+    "difficulty": "beginner",
+    "what_included": [
+      "Fishing guide",
+      "Fishing rods & reels",
+      "Tackle & lures",
+      "Safety equipment",
+      "Fishing license"
+    ],
+    "what_excluded": [
+      "Boat & fuel",
+      "Lunch / snacks",
+      "Drinks",
+      "Fish cleaning & packing",
+      "Transport to fishing spot"
+    ],
+    "meeting_point": null,
+    "location_country": "Iceland",
+    "location_city": "Reykjavik",
+    "published": true,
+    "created_at": "2026-03-15T20:10:54.135888+00:00",
+    "updated_at": "2026-04-10T21:43:53.509684+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 64.046197,
+    "location_lng": -21.429932,
+    "slug": null,
+    "duration_options": null,
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/b82ac8d5-8047-4cd6-bf47-ac52e1a86d1c.jpg",
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -22.752686,
+            64.105805
+          ],
+          [
+            -21.390381,
+            64.401685
+          ],
+          [
+            -20.379639,
+            64.37319
+          ],
+          [
+            -19.918213,
+            63.533867
+          ],
+          [
+            -22.70874,
+            63.81644
+          ],
+          [
+            -22.752686,
+            64.105805
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "icelandic",
+    "itinerary": [
+      {
+        "time": "07:00",
+        "label": "Pick-Up"
+      },
+      {
+        "time": "07:00-09:00",
+        "label": "Drive to location"
+      },
+      {
+        "time": "09:00-12:00",
+        "label": "Fishing"
+      },
+      {
+        "time": "12:00-13:00",
+        "label": "Lunch Break"
+      },
+      {
+        "time": "13:00-16:00",
+        "label": "Fishing"
+      },
+      {
+        "time": "16:00-18:00",
+        "label": "End of day and drive back"
+      }
+    ],
+    "location_description": null,
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": "Price of license depends on location and time of year",
+    "gear_description": null,
+    "transport_description": "Pick-up and Drop-off included",
+    "packages": null,
+    "inquiry_form_config": {
+      "fields": [
+        {
+          "id": "experience_level",
+          "status": "optional"
+        },
+        {
+          "id": "fishing_method",
+          "status": "optional"
+        },
+        {
+          "id": "target_species",
+          "status": "included"
+        },
+        {
+          "id": "own_gear",
+          "status": "included"
+        },
+        {
+          "id": "accommodation",
+          "status": "optional"
+        },
+        {
+          "id": "notes",
+          "status": "optional"
+        }
+      ]
+    },
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "043aad98-b64d-47f5-8ec3-fab212c5a8b0",
+    "guide_id": "30e804b6-368b-4dbc-947d-7eb3d4650a21",
+    "title": "Baltic Salmon Fishing on Tornion-Muonion River in Finnish Lapland",
+    "description": "The Tornio River, also known as the Tornion-Muonionjoki, is the largest free-flowing Salmon river in Europe, stretching approximately 510 kilometers from its source in the mountains of Sweden to the Gulf of Bothnia. \nThe river forms a natural border between Sweden and Finland, making it a unique and significant waterway in the region. It is renowned for its pristine waters and stunning natural landscapes, offering a serene environment for fishing enthusiasts.",
+    "fish_types": [
+      "Sea Trout",
+      "Salmon",
+      "Grayling"
+    ],
+    "duration_days": null,
+    "duration_hours": null,
+    "max_guests": 6,
+    "price_per_person_eur": null,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Finland",
+    "location_city": "Lapland",
+    "published": true,
+    "created_at": "2026-03-17T20:43:34.582723+00:00",
+    "updated_at": "2026-04-10T21:43:53.509684+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 66.589229,
+    "location_lng": 23.892996,
+    "slug": null,
+    "duration_options": null,
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/4880a91d-2a63-4966-ae3d-4e364a134af6.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "icelandic",
+    "itinerary": [
+      {
+        "time": "8:00",
+        "label": "Meeting in point"
+      },
+      {
+        "time": "8:10",
+        "label": "Travel to fishing spot"
+      },
+      {
+        "time": "8:40",
+        "label": "Preparing the equipment"
+      },
+      {
+        "time": "9:00",
+        "label": "Fishing in best salmon places"
+      },
+      {
+        "time": "13:00",
+        "label": "Little break"
+      },
+      {
+        "time": "16:00",
+        "label": "End of fishing"
+      }
+    ],
+    "location_description": "We operate from Base Camp Pello.",
+    "boat_description": "Traditional river boat and modern day river boat.",
+    "accommodation_description": "Whether you\u2019re fishing for salmon, grayling, trout, pike, or perch right from your doorstep at Base Camp Ounas and Base Camp Pello, or just relaxing in the peaceful surroundings, our accommodations offer a perfect escape. If you prefer just the peacefulness, you can rent the cabin alone and immerse yourself in the tranquility.",
+    "food_description": "You can enjoy grilling together at the end of the trip",
+    "license_description": null,
+    "gear_description": "All needed equipment provided",
+    "transport_description": "The guide will pick you up from Rovaniemi (or other town if agreed so).",
+    "packages": null,
+    "inquiry_form_config": {
+      "fields": [
+        {
+          "id": "experience_level",
+          "status": "optional"
+        },
+        {
+          "id": "fishing_method",
+          "status": "optional"
+        },
+        {
+          "id": "target_species",
+          "status": "included"
+        },
+        {
+          "id": "own_gear",
+          "status": "included"
+        },
+        {
+          "id": "accommodation",
+          "status": "optional"
+        },
+        {
+          "id": "notes",
+          "status": "optional"
+        }
+      ]
+    },
+    "price_range_min_eur": 500,
+    "price_range_max_eur": 600
+  },
+  {
+    "id": "ab0d891d-97a3-4f1b-8761-62104e4f679d",
+    "guide_id": "58241085-3e41-4e55-a581-5f5cd57fc97d",
+    "title": "Perch fishing on Saimaa Lake",
+    "description": "Casting for perch on lake Saimaa\nCome and experience an unforgettable perch fishing trip on Lake Saimaa! Saimaa is renowned for its excellent perch population, and it truly offers the chance to catch a real \u201ctrophy-sized\u201d perch.\n\nDuring the trip, you will get to try various perch fishing methods under professional guidance. We maintain a relaxed atmosphere while tailoring the trip to the customers\u2019 wishes and the prevailing conditions, making it perfect for both beginners and more experienced anglers.\n\nLake Saimaa provides the perfect setting for a memorable fishing experience: beautiful nature combined with exciting fishing for the unpredictable but rewarding perch. As Finland\u2019s national fish, the perch is not only fun to catch but also an excellent food fish, the perfect crown for your day\u2019s catch.",
+    "fish_types": [
+      "Perch"
+    ],
+    "duration_days": null,
+    "duration_hours": 4,
+    "max_guests": 4,
+    "price_per_person_eur": 640,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Finland",
+    "location_city": "South Karelia",
+    "published": true,
+    "created_at": "2026-03-17T21:22:44.489386+00:00",
+    "updated_at": "2026-04-10T19:00:58.122906+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 61.060944,
+    "location_lng": 28.20318,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 4,
+        "label": "Prices",
+        "price_eur": 640,
+        "group_prices": {
+          "1": 640,
+          "2": 640,
+          "3": 700,
+          "4": 700
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 6,
+        "label": "Prices",
+        "price_eur": 765,
+        "group_prices": {
+          "1": 765,
+          "2": 765,
+          "3": 825,
+          "4": 825
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Prices",
+        "price_eur": 890,
+        "group_prices": {
+          "1": 890,
+          "2": 890,
+          "3": 950,
+          "4": 950
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Spinning",
+      "Trolling",
+      "Jigging",
+      "Baitcasting"
+    ],
+    "season_from": 5,
+    "season_to": 11,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/a7a016ad-6c93-4b4e-98b3-f3585d0bc058.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "both",
+    "itinerary": null,
+    "location_description": "Lake Saimaa is Finland\u2019s largest lake, a true playground for anglers looking for variety, excitement, and unforgettable moments on the water. Its diverse fish populations and ever-changing conditions create the perfect setting for an exceptional fishing experience.\nYou can explore darker, nutrient-rich waters teeming with life, or venture into crystal-clear, rugged areas for a completely different challenge. Saimaa is home to strong populations of perch, zander, and northern pike. Giving you excellent chances for a great catch.\nAnd there\u2019s more: alongside Saimaa, the South Karelia region offers a wide selection of smaller lakes, each with its own character and fishing opportunities waiting to be discovered.\nLappeenranta serves as the perfect base, from here, you can easily access the best fishing spots across South Karelia and experience the region\u2019s stunning waters in all their variety.",
+    "boat_description": "Boat Buster M with Yamaha 40hp motor, 2x Garmin Echomap Ultra 10 with GT65 side-imagin transducer, 2c LVS-36 Live scope transducers, Minn Kota Terravo-WR Trolling motor",
+    "accommodation_description": null,
+    "food_description": "Includes coffee, and soft drinks.  You are welcome to bring your own snacks and drinks.\nOur fishing trips remain substance-free. However, we can agree on drinks with meals separately.\nDining is arranged by agreement. Please request a separate quote for food and menu options.",
+    "license_description": "Fisheries management fee 18\u201369 years of age: \ndaily fee 6e\nweekly fee 16e",
+    "gear_description": "Lake Saimaa is Finland\u2019s largest lake, a true playground for anglers looking for variety, excitement, and unforgettable moments on the water. Its diverse fish populations and ever-changing conditions create the perfect setting for an exceptional fishing experience.\nYou can explore darker, nutrient-rich waters teeming with life, or venture into crystal-clear, rugged areas for a completely different challenge. Saimaa is home to strong populations of perch, zander, and northern pike. Giving you excellent chances for a great catch.\nAnd there\u2019s more: alongside Saimaa, the South Karelia region offers a wide selection of smaller lakes, each with its own character and fishing opportunities waiting to be discovered.\nLappeenranta serves as the perfect base, from here, you can easily access the best fishing spots across South Karelia and experience the region\u2019s stunning waters in all their variety.",
+    "transport_description": null,
+    "packages": [
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 640,
+        "availability": {
+          "notes": null,
+          "season_to": 11,
+          "season_from": 5,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 640,
+          "2": 640,
+          "3": 700,
+          "4": 700
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 4
+      },
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 765,
+        "availability": {
+          "notes": null,
+          "season_to": 11,
+          "season_from": 5,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 765,
+          "2": 765,
+          "3": 825,
+          "4": 825
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 6
+      },
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 890,
+        "availability": {
+          "notes": null,
+          "season_to": 11,
+          "season_from": 5,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 890,
+          "2": 890,
+          "3": 950,
+          "4": 950
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 8
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "d1c361ce-7023-48ad-b35c-05bb5def0f36",
+    "guide_id": "58241085-3e41-4e55-a581-5f5cd57fc97d",
+    "title": "Pike fishing. Excitement and strong strikes",
+    "description": "Join pike fishing adventure on Lake Saimaa! Finland\u2019s top predator promises thrilling strikes and a powerful fight. Just the right challenge for both beginners and experienced anglers.\n\nOn this trip, you\u2019ll explore different pike fishing techniques in a relaxed atmosphere with a professional guide. Everything is tailored to your preferences and the conditions, ensuring a personalized experience.\n\nThe stunning scenery of Lake Saimaa completes the adventure. At its best, you\u2019ll be rewarded with incredible catches and lasting memories.\n\nIncludes\nGuiding, fishing gear, safety equipments, coffee, and soft drinks",
+    "fish_types": [
+      "Pike"
+    ],
+    "duration_days": null,
+    "duration_hours": 4,
+    "max_guests": 4,
+    "price_per_person_eur": 640,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Finland",
+    "location_city": "South Karelia",
+    "published": true,
+    "created_at": "2026-03-20T10:45:00.748981+00:00",
+    "updated_at": "2026-04-10T19:00:20.368817+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 61.059448,
+    "location_lng": 28.185433,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 4,
+        "label": "Prices",
+        "price_eur": 640,
+        "group_prices": {
+          "1": 640,
+          "2": 640,
+          "3": 700,
+          "4": 700
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 6,
+        "label": "Prices",
+        "price_eur": 765,
+        "group_prices": {
+          "1": 765,
+          "2": 765,
+          "3": 825,
+          "4": 825
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Prices",
+        "price_eur": 890,
+        "group_prices": {
+          "1": 890,
+          "2": 890,
+          "3": 950,
+          "4": 950
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Spinning",
+      "Trolling",
+      "Jigging",
+      "Baitcasting"
+    ],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/235da379-3154-4bd9-841e-ebeae8de9393.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "both",
+    "itinerary": null,
+    "location_description": "Lake Saimaa is Finland\u2019s largest lake, a true playground for anglers looking for variety, excitement, and unforgettable moments on the water. Its diverse fish populations and ever-changing conditions create the perfect setting for an exceptional fishing experience.\nYou can explore darker, nutrient-rich waters teeming with life, or venture into crystal-clear, rugged areas for a completely different challenge. Saimaa is home to strong populations of perch, zander, and northern pike. Giving you excellent chances for a great catch.\nAnd there\u2019s more: alongside Saimaa, the South Karelia region offers a wide selection of smaller lakes, each with its own character and fishing opportunities waiting to be discovered.\nLappeenranta serves as the perfect base, from here, you can easily access the best fishing spots across South Karelia and experience the region\u2019s stunning waters in all their variety.",
+    "boat_description": "Boat Buster M with Yamaha 40hp motor, 2x Garmin Echomap Ultra 10 with GT65 side-imagin transducer, 2c LVS-36 Live scope transducers, Minn Kota Terravo-WR Trolling motor",
+    "accommodation_description": null,
+    "food_description": "Includes coffee, and soft drinks.  You are welcome to bring your own snacks and drinks.\nOur fishing trips remain substance-free. However, we can agree on drinks with meals separately.\nDining is arranged by agreement. Please request a separate quote for food and menu options.",
+    "license_description": "Fisheries management fee 18\u201369 years of age: daily fee 6e weekly fee 16e",
+    "gear_description": "Includes fishing gear, gass, safety equipments. Lost lures and damaged fishing equipment must be compensated. You should wear weather-appropriate clothing for the duration of the trip. Even though summers are warm, winds on the water can feel chilly. Furthermore, the weather can suddenly change on the lake. For this reason, we recommend that you bring wind and water-resistant clothing. Wearing sunglasses or a cap is recommended to keep your eyes protected",
+    "transport_description": null,
+    "packages": [
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 640,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 640,
+          "2": 640,
+          "3": 700,
+          "4": 700
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 4
+      },
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 765,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 765,
+          "2": 765,
+          "3": 825,
+          "4": 825
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 6
+      },
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 890,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 890,
+          "2": 890,
+          "3": 950,
+          "4": 950
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 8
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "505e50f5-297d-4cc4-8829-026233b4f99e",
+    "guide_id": "58241085-3e41-4e55-a581-5f5cd57fc97d",
+    "title": "Live sonar fishing; Live from beneath the surface",
+    "description": "Join us for a relaxed yet exciting live sonar fishing adventure in South Karelia. On the legendary Lake Saimaa or one of its peaceful smaller lakes. Whether you\u2019re after perch, pike, or zander, every trip is tailored to your wishes, giving you a real shot at the catch of a lifetime.\n\nWith modern live sonar technology, we don\u2019t just wait for fish, we actively find them. This dynamic and increasingly popular method keeps things engaging while still maintaining a laid-back, enjoyable atmosphere on the water.\n\nSurrounded by stunning Finnish nature, you\u2019ll experience either the vast open scenery of Saimaa or the calm beauty of hidden lakes. For an extra thrill, we also offer night trips, when predatory fish are often at their most active.\n\nThis is fishing with a modern edge, combining skill, technology, and great company into an unforgettable experience.",
+    "fish_types": [
+      "Zander",
+      "Pike",
+      "Perch"
+    ],
+    "duration_days": null,
+    "duration_hours": 6,
+    "max_guests": 4,
+    "price_per_person_eur": 765,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Finland",
+    "location_city": "South Karelia",
+    "published": true,
+    "created_at": "2026-03-20T17:33:58.652979+00:00",
+    "updated_at": "2026-04-09T22:47:37.513962+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 61.221599,
+    "location_lng": 28.342697,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 6,
+        "label": "Prices",
+        "price_eur": 765,
+        "group_prices": {
+          "1": 765,
+          "2": 765,
+          "3": 825,
+          "4": 825
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Prices",
+        "price_eur": 890,
+        "group_prices": {
+          "1": 890,
+          "2": 890,
+          "3": 950,
+          "4": 950
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 4,
+        "label": "Prices",
+        "price_eur": 640,
+        "group_prices": {
+          "1": 640,
+          "2": 640,
+          "3": 700,
+          "4": 700
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/0868b2e4-1e61-4627-96ca-9c184892ca53.jpg",
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            27.981459,
+            60.668041
+          ],
+          [
+            27.951238,
+            60.666023
+          ],
+          [
+            27.955359,
+            60.687544
+          ],
+          [
+            27.901785,
+            60.692922
+          ],
+          [
+            27.842717,
+            60.769463
+          ],
+          [
+            27.786396,
+            60.770134
+          ],
+          [
+            27.761669,
+            60.75739
+          ],
+          [
+            27.721832,
+            60.762757
+          ],
+          [
+            27.709469,
+            60.792256
+          ],
+          [
+            27.676501,
+            60.801637
+          ],
+          [
+            27.613311,
+            60.805656
+          ],
+          [
+            27.554243,
+            60.798957
+          ],
+          [
+            27.510285,
+            60.799627
+          ],
+          [
+            27.423742,
+            60.842477
+          ],
+          [
+            27.372916,
+            60.881928
+          ],
+          [
+            27.213568,
+            60.904641
+          ],
+          [
+            27.124278,
+            60.966018
+          ],
+          [
+            27.250658,
+            60.968017
+          ],
+          [
+            27.199831,
+            61.006648
+          ],
+          [
+            27.181973,
+            60.999325
+          ],
+          [
+            27.140763,
+            61.011973
+          ],
+          [
+            27.151752,
+            61.028607
+          ],
+          [
+            27.149005,
+            61.075136
+          ],
+          [
+            27.192963,
+            61.094392
+          ],
+          [
+            27.225931,
+            61.091073
+          ],
+          [
+            27.203952,
+            61.105675
+          ],
+          [
+            27.183347,
+            61.108329
+          ],
+          [
+            27.220437,
+            61.139499
+          ],
+          [
+            27.213568,
+            61.16269
+          ],
+          [
+            27.290495,
+            61.172624
+          ],
+          [
+            27.3372,
+            61.173948
+          ],
+          [
+            27.392147,
+            61.183879
+          ],
+          [
+            27.372916,
+            61.244057
+          ],
+          [
+            27.425116,
+            61.246039
+          ],
+          [
+            27.580343,
+            61.26189
+          ],
+          [
+            27.59408,
+            61.283012
+          ],
+          [
+            27.561111,
+            61.285651
+          ],
+          [
+            27.548748,
+            61.299503
+          ],
+          [
+            27.595453,
+            61.301482
+          ],
+          [
+            27.596827,
+            61.314668
+          ],
+          [
+            27.598201,
+            61.341683
+          ],
+          [
+            27.676501,
+            61.346293
+          ],
+          [
+            28.040528,
+            61.446883
+          ],
+          [
+            28.344113,
+            61.428499
+          ],
+          [
+            28.42516,
+            61.458696
+          ],
+          [
+            28.433403,
+            61.507213
+          ],
+          [
+            28.496592,
+            61.513109
+          ],
+          [
+            28.537803,
+            61.472472
+          ],
+          [
+            28.585882,
+            61.469849
+          ],
+          [
+            28.654566,
+            61.473784
+          ],
+          [
+            28.791935,
+            61.488209
+          ],
+          [
+            28.813914,
+            61.535371
+          ],
+          [
+            28.937546,
+            61.537989
+          ],
+          [
+            29.033704,
+            61.533407
+          ],
+          [
+            29.221899,
+            61.557617
+          ],
+          [
+            29.26311,
+            61.558271
+          ],
+          [
+            29.293331,
+            61.598143
+          ],
+          [
+            29.401507,
+            61.655572
+          ],
+          [
+            29.45096,
+            61.667957
+          ],
+          [
+            29.551239,
+            61.689457
+          ],
+          [
+            29.558107,
+            61.721353
+          ],
+          [
+            29.83834,
+            61.790241
+          ],
+          [
+            30.070493,
+            61.855736
+          ],
+          [
+            30.206488,
+            61.893931
+          ],
+          [
+            30.150167,
+            61.85444
+          ],
+          [
+            30.019666,
+            61.758416
+          ],
+          [
+            29.857571,
+            61.676429
+          ],
+          [
+            29.820482,
+            61.65818
+          ],
+          [
+            29.809492,
+            61.639267
+          ],
+          [
+            29.757292,
+            61.609898
+          ],
+          [
+            29.753171,
+            61.586383
+          ],
+          [
+            29.647397,
+            61.527516
+          ],
+          [
+            29.597944,
+            61.498695
+          ],
+          [
+            29.497665,
+            61.485587
+          ],
+          [
+            29.50316,
+            61.464601
+          ],
+          [
+            29.319086,
+            61.35156
+          ],
+          [
+            29.243533,
+            61.273112
+          ],
+          [
+            29.034732,
+            61.194468
+          ],
+          [
+            28.955058,
+            61.154741
+          ],
+          [
+            28.909727,
+            61.141487
+          ],
+          [
+            28.874011,
+            61.140824
+          ],
+          [
+            28.816316,
+            61.12027
+          ],
+          [
+            28.799832,
+            61.088417
+          ],
+          [
+            28.717411,
+            61.045232
+          ],
+          [
+            28.6501,
+            60.949351
+          ],
+          [
+            28.525094,
+            60.954019
+          ],
+          [
+            28.475642,
+            60.925336
+          ],
+          [
+            28.336899,
+            60.857193
+          ],
+          [
+            28.216015,
+            60.782203
+          ],
+          [
+            28.174804,
+            60.778851
+          ],
+          [
+            28.134967,
+            60.737258
+          ],
+          [
+            27.996225,
+            60.666023
+          ],
+          [
+            27.981459,
+            60.668041
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "both",
+    "itinerary": null,
+    "location_description": "Lake Saimaa is Finland\u2019s largest lake, a true playground for anglers looking for variety, excitement, and unforgettable moments on the water. Its diverse fish populations and ever-changing conditions create the perfect setting for an exceptional fishing experience.\nYou can explore darker, nutrient-rich waters teeming with life, or venture into crystal-clear, rugged areas for a completely different challenge. Saimaa is home to strong populations of perch, zander, and northern pike. Giving you excellent chances for a great catch.\nAnd there\u2019s more: alongside Saimaa, the South Karelia region offers a wide selection of smaller lakes, each with its own character and fishing opportunities waiting to be discovered.\nLappeenranta serves as the perfect base, from here, you can easily access the best fishing spots across South Karelia and experience the region\u2019s stunning waters in all their variety.",
+    "boat_description": "Boat Buster M with Yamaha 40hp motor, 2x Garmin Echomap Ultra 10 with GT65 side-imagin transducer, 2c LVS-36 Live scope transducers, Minn Kota Terravo-WR Trolling motor",
+    "accommodation_description": null,
+    "food_description": "Includes coffee, and soft drinks.  You are welcome to bring your own snacks and drinks.\nOur fishing trips remain substance-free. However, we can agree on drinks with meals separately.\nDining is arranged by agreement. Please request a separate quote for food and menu options",
+    "license_description": "Fisheries management fee 18\u201369 years of age: \ndaily fee 6e \nweekly fee 16e",
+    "gear_description": "Includes fishing gear, fuel, safety equipments. Lost lures and damaged fishing equipment must be compensated. You should wear weather-appropriate clothing for the duration of the trip. Even though summers are warm, winds on the water can feel chilly. Furthermore, the weather can suddenly change on the lake. For this reason, we recommend that you bring wind and water-resistant clothing. Wearing sunglasses or a cap is recommended to keep your eyes protected.",
+    "transport_description": null,
+    "packages": [
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 765,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 765,
+          "2": 765,
+          "3": 825,
+          "4": 825
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 6
+      },
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 890,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 890,
+          "2": 890,
+          "3": 950,
+          "4": 950
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 8
+      },
+      {
+        "id": "prices",
+        "label": "Prices",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 640,
+        "availability": {
+          "notes": null,
+          "season_to": null,
+          "season_from": null,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 640,
+          "2": 640,
+          "3": 700,
+          "4": 700
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 4
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "9f5ed5e7-642e-4b01-9db0-9543d7a4accc",
+    "guide_id": "3af2c7a2-9d2a-4d4c-b8c9-90db93e7f70f",
+    "title": "Pike & perch from a boat and belly boat\ud83d\ude0a",
+    "description": "Have a free day or weekend and don't know what to do? Instead of sitting at home, join me on a true fishing adventure near Kristiansand! My name is Marcin, and fishing is my absolute passion. Whether you're coming alone or with family and children, we'll spend truly special moments together. Embarking on a journey into the Norwegian wilderness with me guarantees you absolute peace, rugged nature, and crystal-clear waters. It's not just about catching local delicacies like cod, coalfish, mackerel, flounder, and catfish\u2014it's a complete mental reset and a chance to completely escape the everyday. On this trip, you'll fish for pike and perch in beautiful natural surroundings. Expect to leave the hustle and bustle of the city behind, recharge your batteries, and even take home a fresh catch to savor a taste you simply can't find in a store. I organize day, weekend, and multi-day trips tailored to your needs. Just bring a smile and a good mood, and I'll take care of the rest!",
+    "fish_types": [
+      "Perch",
+      "Pike"
+    ],
+    "duration_days": null,
+    "duration_hours": 5,
+    "max_guests": 4,
+    "price_per_person_eur": 150,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Norway",
+    "location_city": "Krystiansand",
+    "published": true,
+    "created_at": "2026-03-27T11:49:35.336949+00:00",
+    "updated_at": "2026-04-10T17:14:06.056064+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": null,
+    "location_lng": null,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 5,
+        "label": "5",
+        "price_eur": 150,
+        "group_prices": {
+          "1": 150,
+          "2": 240,
+          "3": 320,
+          "4": 400
+        },
+        "pricing_type": "per_group",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Jigging",
+      "Trolling",
+      "Spinning"
+    ],
+    "season_from": 5,
+    "season_to": 11,
+    "meeting_point_address": "Krystiansand / Grimstad / Arendal",
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/1af11f88-09a7-4006-bebb-fd7b214406ba.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": [
+      {
+        "time": "8:00",
+        "label": "If you're still looking for a fishing trip where you can not only catch fish but also relax from everyday worries, you should consider a fishing trip to southern Norway. \ud83d\ude0a Such a trip is not only about fishing but also about communing with nature, sleeping under the stars, and cooking over an open fire, even with the fish you've caught. \ud83d\ude0a As a guide, I can guarantee a wonderful fishing adventure, including the necessary equipment: rods, bait, essential utensils, a grill, and everything else you'll need for such a trip. \u25aa\ufe0fTwo belly boats are available, along with all the equipment you need to fish for things like beautiful and large Norwegian pike and perch. \u25aa\ufe0fTwo boats and a visit to a beautiful fjord with a huge potential for fishing (cod, pollack, coalfish, haddock, mackerel, catfish, and many other fish species). Below is a video presentation and several links to videos of Go Fishing Norway fishing trips."
+      }
+    ],
+    "location_description": null,
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": "The place where we fish for pike and perch does not require a license",
+    "gear_description": "A Mercury-powered boat and two belly boats. For groups of four, two people fish from the boat and two from the belly boat.",
+    "transport_description": "I can pick you up at the airport and drop you off after your trip. Transportation is available for an additional fee upon request. Oslo Sandefjord-Torp Airport or Stavanger Airport",
+    "packages": [
+      {
+        "id": "5",
+        "label": "5",
+        "level": "beginner",
+        "max_group": 4,
+        "min_group": 1,
+        "price_eur": 150,
+        "availability": {
+          "notes": null,
+          "season_to": 11,
+          "season_from": 5,
+          "blocked_dates": []
+        },
+        "group_prices": {
+          "1": 150,
+          "2": 240,
+          "3": 320,
+          "4": 400
+        },
+        "duration_days": null,
+        "pricing_model": "per_group",
+        "duration_hours": 5
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "bf37ab45-e151-4256-ba30-23e2bcf9766c",
+    "guide_id": "99b63d74-d322-48dc-9b40-27fc9ee9437a",
+    "title": "Chasing trophy Brown Trouts",
+    "description": "Here we will be hunting Brown Trouts in West Rang\u00e1 with big streamers in a stunning area. Expectations should be trophy fish, not quantity fishing. Warm clothes are recommended. This area will test your casting ability but I will be right on your side to teach and show you how we can approach them and if everything works out, you'll catch a Trout to remember",
+    "fish_types": [
+      "Brown Trout"
+    ],
+    "duration_days": null,
+    "duration_hours": 8,
+    "max_guests": 3,
+    "price_per_person_eur": 700,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Iceland",
+    "location_city": "Hella",
+    "published": false,
+    "created_at": "2026-03-30T16:18:29.462944+00:00",
+    "updated_at": "2026-04-16T13:29:02.075944+00:00",
+    "catch_and_release": true,
+    "images": null,
+    "technique": null,
+    "location_lat": 63.864006,
+    "location_lng": -20.317094,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Full Day Trout Fishing",
+        "price_eur": 700,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 4,
+        "label": "Half day Trout Fishing",
+        "price_eur": 400,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Fly fishing"
+    ],
+    "season_from": 4,
+    "season_to": 5,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": null,
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": [
+      {
+        "time": "07:00",
+        "label": "Departure from location where you will be picked up"
+      },
+      {
+        "time": "07:00-09.00",
+        "label": "Drive to location and setup of gear"
+      },
+      {
+        "time": "09:00-12:00",
+        "label": "Fishing. If half day the fishing shall end at 13:00 and we head back home"
+      },
+      {
+        "time": "12:00-13:00",
+        "label": "Lunch break"
+      },
+      {
+        "time": "13:00-16:00",
+        "label": "Fishing"
+      },
+      {
+        "time": "16:00-18:00",
+        "label": "Departure back home"
+      }
+    ],
+    "location_description": "West Rang\u00e1 has been known to produce some amazing specimen of Brown Trout, sitting in a gorgeus view point of Mount Hekla, a inactive volcano that stands over the valley you'll be fishing",
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": "Licence is included in pricing",
+    "gear_description": "Flies and leaders will be provided, Waders, boots, rods and reels will need to either be brought or rented through rental shop",
+    "transport_description": "From Reykjav\u00edk it should be about 1 hour and 20 minutes.",
+    "packages": [
+      {
+        "id": "full-day-trout-fishing",
+        "label": "Full Day Trout Fishing",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 700,
+        "availability": {
+          "notes": null,
+          "season_to": 5,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 8
+      },
+      {
+        "id": "half-day-trout-fishing",
+        "label": "Half day Trout Fishing",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 400,
+        "availability": {
+          "notes": null,
+          "season_to": 5,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 4
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "aa0d8efd-5eb3-42f5-8ec3-1bb37a65030b",
+    "guide_id": "99b63d74-d322-48dc-9b40-27fc9ee9437a",
+    "title": "Brown Trout, Arctic Char, Salmon, Seatrout",
+    "description": "This is a trip that offers the option to pick a species depending on the time of year to fish. This gives you the opportunity to aim for a specific fish without a fixed pricing, But license cost will entirely depend on the time of year and which species you pick.",
+    "fish_types": [
+      "Salmon",
+      "Sea Trout",
+      "Brown Trout",
+      "Arctic Char"
+    ],
+    "duration_days": null,
+    "duration_hours": 8,
+    "max_guests": 3,
+    "price_per_person_eur": 500,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Iceland",
+    "location_city": "Reykjavik and neighbouring towns",
+    "published": true,
+    "created_at": "2026-03-30T16:41:54.864072+00:00",
+    "updated_at": "2026-04-09T22:49:37.093558+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 64.103826,
+    "location_lng": -21.276826,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Full Day fishing",
+        "price_eur": 500,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Fly fishing"
+    ],
+    "season_from": 4,
+    "season_to": 10,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": null,
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -21.966582,
+            64.059662
+          ],
+          [
+            -21.719318,
+            64.213024
+          ],
+          [
+            -20.972032,
+            64.269125
+          ],
+          [
+            -20.449372,
+            63.873494
+          ],
+          [
+            -21.966582,
+            64.059662
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "both",
+    "itinerary": [
+      {
+        "time": "07:00",
+        "label": "Pick up"
+      },
+      {
+        "time": "07:00-10:00",
+        "label": "Drive to location and gear setup"
+      },
+      {
+        "time": "9:00-13:00",
+        "label": "Fishing"
+      },
+      {
+        "time": "13:00-14:00",
+        "label": "Lunch"
+      },
+      {
+        "time": "14:00-17:00",
+        "label": "Fishing"
+      },
+      {
+        "time": "17:00-19:00",
+        "label": "Departure back home"
+      }
+    ],
+    "location_description": "Here we will choose together what you aim for and how we can work on a trip fit for your pricing",
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": "Negotiable",
+    "license_description": "Negotiable",
+    "gear_description": "Negotiable",
+    "transport_description": "Pick up/Drop off will be included",
+    "packages": [
+      {
+        "id": "full-day-fishing",
+        "label": "Full Day fishing",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 500,
+        "availability": {
+          "notes": null,
+          "season_to": 10,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 8
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": 300,
+    "price_range_max_eur": 2000
+  },
+  {
+    "id": "eae53ef6-9d6d-4959-87c9-93071b6b0f94",
+    "guide_id": "99b63d74-d322-48dc-9b40-27fc9ee9437a",
+    "title": "Chasing the Arctic Char",
+    "description": "On this day trip we'll be pursuing the elusive Arctic Char. These trips will give you a view of the fish in its natural habitat while sight casting them and pursuing a fish that is both stunning in looks, and on the other end of a line!",
+    "fish_types": [
+      "Arctic Char"
+    ],
+    "duration_days": null,
+    "duration_hours": 8,
+    "max_guests": 3,
+    "price_per_person_eur": 500,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Iceland",
+    "location_city": "Reykjavik",
+    "published": true,
+    "created_at": "2026-03-30T19:17:13.381591+00:00",
+    "updated_at": "2026-04-09T22:48:56.765604+00:00",
+    "catch_and_release": true,
+    "images": null,
+    "technique": null,
+    "location_lat": 64.179034,
+    "location_lng": -20.667992,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Full Day",
+        "price_eur": 500,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": 4,
+        "label": "Half Day",
+        "price_eur": 300,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Fly fishing"
+    ],
+    "season_from": 4,
+    "season_to": 9,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": null,
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            -20.72603,
+            64.237172
+          ],
+          [
+            -20.818067,
+            64.156473
+          ],
+          [
+            -20.635367,
+            64.131319
+          ],
+          [
+            -20.492503,
+            64.191173
+          ],
+          [
+            -20.72603,
+            64.237172
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": [
+      {
+        "time": "07:00",
+        "label": "Pick up"
+      },
+      {
+        "time": "07:00-09:00",
+        "label": "Drive to location and gear setup"
+      },
+      {
+        "time": "09:00-12:00",
+        "label": "Fishing. If half day fishing will conclude at 13:00"
+      },
+      {
+        "time": "12:00-13:00",
+        "label": "Lunch"
+      },
+      {
+        "time": "13:00-16:00",
+        "label": "Fishing"
+      },
+      {
+        "time": "16:00-18:00",
+        "label": "Departure back home"
+      }
+    ],
+    "location_description": "The lakes of Apavatn and Laugarvatn are stacked with both Brown Trout and Arctic Char, and will be be fishing both these lakes, or the river system that run in and out of them",
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": "License is included in the price",
+    "gear_description": "Lures and leaders will be provided, waders, wading boots, rods and reels will either have to be brought or rented from rental store",
+    "transport_description": "The drive is included in pricing",
+    "packages": [
+      {
+        "id": "full-day",
+        "label": "Full Day",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 500,
+        "availability": {
+          "notes": null,
+          "season_to": 9,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 8
+      },
+      {
+        "id": "half-day",
+        "label": "Half Day",
+        "level": "beginner",
+        "max_group": 3,
+        "min_group": 1,
+        "price_eur": 300,
+        "availability": {
+          "notes": null,
+          "season_to": 9,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 4
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "b69018d8-2b7e-4de0-9fee-e5f32aaaccad",
+    "guide_id": "5a1ae028-e348-49e4-b23d-5bf873c6423b",
+    "title": "Char and brown trout fishing trip in small tundra lakes ( May - June ) ( Sep-Oct )",
+    "description": "Great one day trip or weekend trip to Norwegian tundra, fishing for brown trout and arctic char. Great spot and easy access for some world class fishing. Trip will be customized with client. \nWe can offer full package with all included or we can offer one day guided trips or if you want to experience wild tundra and sleep over night in campfire and tent ? Let me know! Suitable for all skill levels. Fishing time ( mid May to MId June ) or ( Sep / Oct )",
+    "fish_types": [
+      "Sea Trout",
+      "Arctic Char",
+      "Brown Trout",
+      "Cod"
+    ],
+    "duration_days": null,
+    "duration_hours": null,
+    "max_guests": 4,
+    "price_per_person_eur": null,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Norway",
+    "location_city": "B\u00f6rselva / Porsangerfjord",
+    "published": true,
+    "created_at": "2026-03-31T17:50:01.667255+00:00",
+    "updated_at": "2026-04-10T21:43:53.509684+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 70.317177,
+    "location_lng": 25.564327,
+    "slug": null,
+    "duration_options": null,
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": null,
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/a598b057-6047-4682-ab94-ebe60e0ae575.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "icelandic",
+    "itinerary": null,
+    "location_description": "B\u00f6rselva is well known salmon river, but also offers some of the best trout and char fishing in early summer on small tundra lakes.",
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": "All food included ( non alcohol )",
+    "license_description": "We arrange day license",
+    "gear_description": "We have all the gear, but you may bring your own. We have top quality products for lure fishing and fly fishing.",
+    "transport_description": null,
+    "packages": null,
+    "inquiry_form_config": {
+      "fields": [
+        {
+          "id": "experience_level",
+          "status": "optional"
+        },
+        {
+          "id": "fishing_method",
+          "status": "optional"
+        },
+        {
+          "id": "target_species",
+          "status": "included"
+        },
+        {
+          "id": "own_gear",
+          "status": "included"
+        },
+        {
+          "id": "accommodation",
+          "status": "optional"
+        },
+        {
+          "id": "notes",
+          "status": "optional"
+        }
+      ]
+    },
+    "price_range_min_eur": 400,
+    "price_range_max_eur": 800
+  },
+  {
+    "id": "b928d1e0-8a72-4a19-a168-cfaec471bbdb",
+    "guide_id": "5a1ae028-e348-49e4-b23d-5bf873c6423b",
+    "title": "Sea trout fishing in Alta region ( coastal fishing ) ( May-June)",
+    "description": "Sea Trout fishing in Alta region, coastal fishing with lure or fly. This is great fun and usually lots of fish in the fjords in May and June. Fishing is focusing on tidal waters and shallow reef areas.",
+    "fish_types": [
+      "Sea Trout"
+    ],
+    "duration_days": null,
+    "duration_hours": null,
+    "max_guests": 4,
+    "price_per_person_eur": null,
+    "difficulty": null,
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Norway",
+    "location_city": "Alta",
+    "published": true,
+    "created_at": "2026-03-31T18:43:30.971977+00:00",
+    "updated_at": "2026-04-10T21:43:53.509684+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 69.974317,
+    "location_lng": 23.46302,
+    "slug": null,
+    "duration_options": null,
+    "group_pricing": null,
+    "fishing_methods": [],
+    "season_from": null,
+    "season_to": null,
+    "meeting_point_address": "Alta",
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": "https://uwxrstbplaoxfghrchcy.supabase.co/storage/v1/object/public/guide-photos/aaa7867d-80e6-4b26-9907-117efba4c81f.jpg",
+    "location_area": null,
+    "location_spots": null,
+    "booking_type": "icelandic",
+    "itinerary": null,
+    "location_description": "Alta is one of the most famous salmon rivers in Norway, it has also great sea fishing out in the fjords. Great city and lovely small town.",
+    "boat_description": null,
+    "accommodation_description": null,
+    "food_description": null,
+    "license_description": null,
+    "gear_description": null,
+    "transport_description": null,
+    "packages": null,
+    "inquiry_form_config": {
+      "fields": [
+        {
+          "id": "experience_level",
+          "status": "optional"
+        },
+        {
+          "id": "fishing_method",
+          "status": "optional"
+        },
+        {
+          "id": "target_species",
+          "status": "included"
+        },
+        {
+          "id": "own_gear",
+          "status": "included"
+        },
+        {
+          "id": "accommodation",
+          "status": "optional"
+        },
+        {
+          "id": "notes",
+          "status": "optional"
+        }
+      ]
+    },
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  },
+  {
+    "id": "bf0781aa-9768-4b53-846f-d3a02603027f",
+    "guide_id": "e055a87f-cbc9-4eb9-bcbf-3e71ea7814d6",
+    "title": "Boat fishing on the lake (pike, zander, perch - day trip)",
+    "description": "A guiding day includes about 8 hours of active fishing. Coffee, snacks, and a simple lunch (hot dogs or luxury sandwich - night trip) are included in the fishing trip. New technology in the form of a Livescope sonar helps us locate the fish and see all the action beneath the water's surface. The preferred fishing methods are vertical fishing, casting, or jigging for perch. See you on board!\nLakes in range of 50km around Olofstr\u00f6m/Blekinge.",
+    "fish_types": [
+      "Pike",
+      "Zander",
+      "Perch"
+    ],
+    "duration_days": null,
+    "duration_hours": 8,
+    "max_guests": 2,
+    "price_per_person_eur": 480,
+    "difficulty": "beginner",
+    "what_included": [],
+    "what_excluded": [],
+    "meeting_point": null,
+    "location_country": "Sweden",
+    "location_city": "Olofstrom/Blekinge - about 50km around",
+    "published": false,
+    "created_at": "2026-04-05T11:15:12.664046+00:00",
+    "updated_at": "2026-04-20T07:07:17.236798+00:00",
+    "catch_and_release": false,
+    "images": null,
+    "technique": null,
+    "location_lat": 56.439783,
+    "location_lng": 14.554887,
+    "slug": null,
+    "duration_options": [
+      {
+        "days": null,
+        "hours": 8,
+        "label": "Day trip - 1 person",
+        "price_eur": 480,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": null,
+        "label": "Day trip - 2 persons",
+        "price_eur": 590,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": null,
+        "label": "Exclusive night trip - 1 person",
+        "price_eur": 640,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      },
+      {
+        "days": null,
+        "hours": null,
+        "label": "Exclusive night trip - 2 persons",
+        "price_eur": 760,
+        "pricing_type": "per_person",
+        "includes_lodging": false
+      }
+    ],
+    "group_pricing": null,
+    "fishing_methods": [
+      "Spinning",
+      "Jigging",
+      "Baitcasting"
+    ],
+    "season_from": 4,
+    "season_to": 12,
+    "meeting_point_address": "to discuss under booking",
+    "meeting_point_lat": null,
+    "meeting_point_lng": null,
+    "inclusions": null,
+    "license_region": null,
+    "landscape_url": null,
+    "location_area": {
+      "type": "Polygon",
+      "coordinates": [
+        [
+          [
+            14.683228,
+            56.193956
+          ],
+          [
+            15.078735,
+            56.218398
+          ],
+          [
+            15.177612,
+            56.446791
+          ],
+          [
+            15.012817,
+            56.646648
+          ],
+          [
+            14.848022,
+            56.854463
+          ],
+          [
+            14.452515,
+            56.869478
+          ],
+          [
+            14.040527,
+            56.691923
+          ],
+          [
+            13.842773,
+            56.376896
+          ],
+          [
+            13.980103,
+            56.193956
+          ],
+          [
+            14.370117,
+            56.16338
+          ],
+          [
+            14.61731,
+            56.181728
+          ],
+          [
+            14.683228,
+            56.193956
+          ]
+        ]
+      ]
+    },
+    "location_spots": null,
+    "booking_type": "classic",
+    "itinerary": null,
+    "location_description": "Southern Sweden - partly of Blekinge/Kronoberg/Sk\u00e5ne county",
+    "boat_description": "Two different boat to use:\n1. Scandica/Necko 4,3m 25hp Yamaha\n2. Tracker v16 Guide 4,88m 40hp Mercury",
+    "accommodation_description": null,
+    "food_description": "Simple lunch, coffee, snacks are included",
+    "license_description": null,
+    "gear_description": "Spinning rods, reels & lures provided + life jackets",
+    "transport_description": null,
+    "packages": [
+      {
+        "id": "day-trip---1-person",
+        "label": "Day trip - 1 person",
+        "level": "beginner",
+        "max_group": 2,
+        "min_group": 1,
+        "price_eur": 480,
+        "availability": {
+          "notes": null,
+          "season_to": 12,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": 8
+      },
+      {
+        "id": "day-trip---2-persons",
+        "label": "Day trip - 2 persons",
+        "level": "beginner",
+        "max_group": 2,
+        "min_group": 1,
+        "price_eur": 590,
+        "availability": {
+          "notes": null,
+          "season_to": 12,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": null
+      },
+      {
+        "id": "exclusive-night-trip---1-person",
+        "label": "Exclusive night trip - 1 person",
+        "level": "beginner",
+        "max_group": 2,
+        "min_group": 1,
+        "price_eur": 640,
+        "availability": {
+          "notes": null,
+          "season_to": 12,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": null
+      },
+      {
+        "id": "exclusive-night-trip---2-persons",
+        "label": "Exclusive night trip - 2 persons",
+        "level": "beginner",
+        "max_group": 2,
+        "min_group": 1,
+        "price_eur": 760,
+        "availability": {
+          "notes": null,
+          "season_to": 12,
+          "season_from": 4,
+          "blocked_dates": []
+        },
+        "group_prices": null,
+        "duration_days": null,
+        "pricing_model": "per_person",
+        "duration_hours": null
+      }
+    ],
+    "inquiry_form_config": null,
+    "price_range_min_eur": null,
+    "price_range_max_eur": null
+  }
+]
