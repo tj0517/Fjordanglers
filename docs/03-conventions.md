@@ -89,7 +89,7 @@ in the workflow.
 |---|---|---|---|
 | `check` | every PR + push to `stage-1` | `pnpm typecheck`, `pnpm build` pass; `pnpm test` runs in `db` | run the same command locally |
 | `db` | PRs only | migrations apply to an empty database; `database.types.ts` matches the schema; tests pass against a fresh stack | see the three cases below |
-| `sync` | PRs to `stage-1` only | `main` is an ancestor of both `stage-1` and the PR branch | `git merge origin/main` into whichever the error names |
+| `sync` | PRs to `stage-1` only | merging this PR leaves `main` an ancestor of `stage-1`, and the PR branch already contains `main` | `git merge origin/main` into whichever the error names |
 
 **Lint is deliberately not a gate** — `continue-on-error: true`, result in the job summary.
 `main` carries 40 errors in files no current task touches (`src/emails/*.tsx`,
@@ -110,9 +110,11 @@ Three ways `db` goes red, and the fix for each:
    database was built from those migrations); the honest catch for a bad migration is
    case 1.
 
-`sync` checks two different things and says which one failed: `stage-1` missing a hotfix
-that landed on `main`, and a PR branch cut before that hotfix. Both are fixed by a merge,
-not a force-push — `main` and `stage-1` are protected.
+`sync` checks two different things and says which one failed: the merge result still
+missing a hotfix that landed on `main`, and a PR branch cut before that hotfix. Both are
+fixed by a merge, not a force-push — `main` and `stage-1` are protected. The first check
+looks at what `stage-1` *becomes*, not at what it is, so that the PR which merges `main`
+into `stage-1` is not blocked by the very condition it removes.
 
 ## Admin UI
 
