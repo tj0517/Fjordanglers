@@ -38,7 +38,7 @@ export interface InquiryForPanel {
 export function InquiryActionPanel({ inquiry }: { inquiry: InquiryForPanel }) {
   const router    = useRouter()
   const hasOffer  = inquiry.offer_total_eur != null && inquiry.offer_deposit_eur != null
-  const isLocked  = ['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)
+  const isLocked  = ['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)
 
   // ── Offer state ──────────────────────────────────────────────────────────
   const [offerEditing, setOfferEditing] = useState(!hasOffer)
@@ -560,10 +560,9 @@ export function InquiryActionPanel({ inquiry }: { inquiry: InquiryForPanel }) {
         <div className="px-4 py-3 rounded-xl"
           style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
           <p className="text-sm f-body font-semibold" style={{ color: '#6EE7B7' }}>
-            {inquiry.status === 'paid'        && '✅ Deposit received — booking confirmed'}
-            {inquiry.status === 'handed_over' && '✅ Handed over to the guide'}
-            {inquiry.status === 'completed'   && '✅ Trip completed'}
-            {inquiry.status === 'cancelled'   && '❌ Inquiry cancelled'}
+            {inquiry.status === 'deposit_paid' && '✅ Deposit received — booking confirmed'}
+            {inquiry.status === 'completed'    && '✅ Trip completed'}
+            {inquiry.status === 'cancelled'    && '❌ Inquiry cancelled'}
           </p>
         </div>
       )}

@@ -38,12 +38,6 @@ import {
 } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin, requireGuide, requireToken, UnauthorizedError } from '@/lib/auth/guards'
-import {
-  transition,
-  TransitionError,
-  isInquiryStatus,
-  type InquiryStatus,
-} from '@/lib/inquiries/state'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -162,10 +156,9 @@ export async function createManualInquiry(params: {
   requestedDates: string[]
   message:        string | null
   channel:        string | null
-  /** Where the admin wants it to start: `new` (nobody replied yet) or `qualifying`. */
-  status:         'new' | 'qualifying'
+  status:         string
 }): Promise<ActionResult & { inquiryId?: string }> {
-  const { userId } = await requireAdmin()
+  await requireAdmin()
   if (params.anglerName.trim() === '') return { success: false, error: 'Name is required' }
   if (params.anglerEmail.trim() === '') return { success: false, error: 'Email is required' }
   if (params.partySize < 1) return { success: false, error: 'Party size must be at least 1' }
@@ -192,7 +185,7 @@ export async function createManualInquiry(params: {
       anglerName:       params.anglerName.trim(),
       anglerEmail:      params.anglerEmail.trim().toLowerCase(),
       partySize:        params.partySize,
-      actor:            { kind: 'admin', id: userId },
+      status:           params.status,
       requestedDates:   params.requestedDates,
       // tripId here is experience_pages.id (the dropdown value from the admin form).
       // Store as experience_page_id — trip_id FK points to the non-existent experiences table.
@@ -205,24 +198,6 @@ export async function createManualInquiry(params: {
   } catch (error) {
     console.error('[createManualInquiry] DB error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create inquiry' }
-  }
-
-  // Every inquiry is born `new`; starting the admin's way through the process is a
-  // transition of its own, so it shows up on the timeline like any other.
-  if (params.status === 'qualifying') {
-    try {
-      await transition(createServiceClient(), inquiry.id, 'qualifying', {
-        actor:  { kind: 'admin', id: userId },
-        reason: 'Created manually — conversation already started',
-      })
-    } catch (error) {
-      console.error('[createManualInquiry] transition error:', error)
-      return {
-        success:   false,
-        error:     error instanceof TransitionError ? error.message : 'Failed to set the initial status',
-        inquiryId: inquiry.id,
-      }
-    }
   }
 
   console.log(`[createManualInquiry] Created inquiry ${inquiry.id} for ${params.anglerName} (channel: ${params.channel ?? 'unspecified'})`)
@@ -238,15 +213,14 @@ export async function createManualInquiry(params: {
  *   1. inquiry.offer_deposit_eur — if FA created an offer, always use that exact amount.
  *   2. depositPercent × trip price — legacy fallback.
  *
- * Allowed statuses: any status from which `awaiting_payment` is reachable, plus
- * `awaiting_payment` itself (resend — the status does not move a second time).
- * Blocked statuses: paid, completed, cancelled.
+ * Allowed statuses: any active status or deposit_sent (resend).
+ * Blocked statuses: deposit_paid, completed, cancelled.
  */
 export async function sendDepositLink(
   inquiryId: string,
   depositPercent: number = 30,
 ): Promise<SendDepositLinkResult> {
-  const { userId } = await requireAdmin()
+  await requireAdmin()
   if (depositPercent < 1 || depositPercent > 100) {
     return { success: false, error: 'depositPercent must be 1–100' }
   }
@@ -264,7 +238,7 @@ export async function sendDepositLink(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  const blocked = ['paid', 'completed', 'cancelled', 'handed_over', 'lost']
+  const blocked = ['deposit_paid', 'completed', 'cancelled']
   if (blocked.includes(rawInquiry.status)) {
     return { success: false, error: `Cannot send deposit link — inquiry is ${rawInquiry.status}` }
   }
@@ -334,6 +308,7 @@ export async function sendDepositLink(
   const { error: updateError } = await (svc as any)
     .from('inquiries')
     .update({
+      status:                    'deposit_sent',
       deposit_amount:            depositCents / 100,
       deposit_stripe_session_id: session.id,
     })
@@ -341,25 +316,6 @@ export async function sendDepositLink(
 
   if (updateError != null) {
     console.error('[sendDepositLink] DB update error:', updateError)
-  }
-
-  // Resending the link to an inquiry that is already awaiting payment is not a
-  // transition — the status is where it should be, so there is nothing to record.
-  if (rawInquiry.status !== 'awaiting_payment') {
-    try {
-      await transition(svc, inquiryId, 'awaiting_payment', {
-        actor:  { kind: 'admin', id: userId },
-        reason: 'Deposit link sent',
-      })
-    } catch (error) {
-      console.error('[sendDepositLink] transition error:', error)
-      return {
-        success: false,
-        error:   error instanceof TransitionError
-          ? error.message
-          : 'Deposit link created, but the status could not be updated',
-      }
-    }
   }
 
   sendDepositLinkAnglerEmail({
@@ -390,7 +346,7 @@ export async function saveRichOffer(
   inquiryId: string,
   params: RichOfferParams,
 ): Promise<ActionResult & { offerUrl?: string }> {
-  const { userId } = await requireAdmin()
+  await requireAdmin()
   const {
     totalPriceEur, depositEur, notes,
     tripPlan, licenseInfo, licenseHeading, inclusions,
@@ -422,7 +378,7 @@ export async function saveRichOffer(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
+  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
     return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
   }
 
@@ -480,27 +436,6 @@ export async function saveRichOffer(
     offerUrl,
     inquiryId,
   })
-
-  // The angler now has a concrete offer in their inbox — that is what the status says.
-  // Re-saving an offer for an inquiry that is already there is not a new transition.
-  if (inquiry.status !== 'offer_presented') {
-    try {
-      await transition(svc, inquiryId, 'offer_presented', {
-        actor:   { kind: 'admin', id: userId },
-        reason:  'Offer sent to the angler',
-        channel: 'email',
-      })
-    } catch (error) {
-      console.error('[saveRichOffer] transition error:', error)
-      return {
-        success: false,
-        error:   error instanceof TransitionError
-          ? `Offer saved and sent, but the status could not be updated: ${error.message}`
-          : 'Offer saved and sent, but the status could not be updated',
-        offerUrl,
-      }
-    }
-  }
 
   console.log(`[saveRichOffer] Rich offer saved for inquiry ${inquiryId} — total €${totalPriceEur}, deposit €${depositEur} — token ${token}`)
 
@@ -599,7 +534,7 @@ export async function submitOfferAnswers(
     return { success: false, error: 'Offer not found or link has expired' }
   }
 
-  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
+  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
     return { success: false, error: `Inquiry is already ${inquiry.status}` }
   }
 
@@ -656,29 +591,11 @@ export async function submitOfferAnswers(
   await (svc as any)
     .from('inquiries')
     .update({
+      status:                    'deposit_sent',
       deposit_amount:            depositCents / 100,
       deposit_stripe_session_id: session.id,
     })
     .eq('id', inquiry.id)
-
-  // The angler is on the payment page — we are waiting for their money, not for them
-  // to answer. The actor is the angler: they, not an admin, took this step.
-  if (inquiry.status !== 'awaiting_payment') {
-    try {
-      await transition(svc, inquiry.id, 'awaiting_payment', {
-        actor:  { kind: 'angler' },
-        reason: 'Angler submitted the offer answers and went to checkout',
-      })
-    } catch (error) {
-      console.error('[submitOfferAnswers] transition error:', error)
-      return {
-        success: false,
-        error:   error instanceof TransitionError
-          ? error.message
-          : 'Could not move the inquiry to awaiting payment',
-      }
-    }
-  }
 
   return { success: true, checkoutUrl: session.url! }
 }
@@ -717,14 +634,12 @@ export async function saveOffer(
 // ─── updateInquiryStatus ──────────────────────────────────────────────────────
 
 /**
- * The admin moves an inquiry by hand from the StatusChanger.
+ * Manually update an inquiry's status.
+ * Used by FA from the admin panel — communication with angler happens via
+ * external email, so the status must be manually kept in sync.
  *
- * This is one caller of `transition()` among several (webhooks and the angler's own
- * actions are others); the machine, not this function, decides whether the move is
- * allowed, and the event is written by the same call.
- *
- * When marking as `lost` a reason code is required (FA-0.16); any other status clears
- * the previous loss reason.
+ * When marking as 'lost', optionally supply a reason (stored in lost_reason).
+ * All other status transitions clear lost_reason.
  */
 export async function updateInquiryStatus(
   inquiryId: string,
@@ -732,24 +647,33 @@ export async function updateInquiryStatus(
   lostReasonCode?: string | null,
   lostReason?: string | null,
 ): Promise<ActionResult> {
-  const { userId } = await requireAdmin()
+  await requireAdmin()
 
-  if (!isInquiryStatus(status)) {
-    return { success: false, error: `Unknown status ${status}` }
+  if (status === 'lost' && !lostReasonCode) {
+    return { success: false, error: 'A loss reason is required when marking as lost.' }
   }
 
-  try {
-    await transition(createServiceClient(), inquiryId, status, {
-      actor:          { kind: 'admin', id: userId },
-      lostReasonCode,
-      lostReason,
-    })
-  } catch (error) {
-    if (error instanceof TransitionError) return { success: false, error: error.message }
-    console.error('[updateInquiryStatus] error:', error)
-    return { success: false, error: 'Failed to update the status' }
+  const svc = createServiceClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const update: Record<string, any> = { status }
+  if (status === 'lost') {
+    update.lost_reason_code = lostReasonCode
+    update.lost_reason      = lostReason?.trim() || null
+  } else {
+    update.lost_reason_code = null
+    update.lost_reason      = null
+  }
+  if (status === 'completed') {
+    update.stage_reached = 'completed'
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update(update)
+    .eq('id', inquiryId)
+
+  if (error != null) return { success: false, error: error.message }
   console.log(`[updateInquiryStatus] Inquiry ${inquiryId} → ${status}`)
   return { success: true }
 }
@@ -1456,7 +1380,7 @@ export async function saveOfferDraft(
 
   if (inquiry == null) return { success: false, error: 'Inquiry not found' }
 
-  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
+  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
     return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
   }
 
@@ -1575,7 +1499,7 @@ export async function acceptOffer(
 
   if (inquiry == null) return { success: false, error: 'Offer not found or link has expired' }
 
-  if (['paid', 'handed_over', 'completed', 'cancelled', 'lost'].includes(inquiry.status)) {
+  if (['deposit_paid', 'completed', 'cancelled', 'lost'].includes(inquiry.status)) {
     return { success: false, error: `Inquiry is already ${inquiry.status}` }
   }
 
@@ -1584,6 +1508,7 @@ export async function acceptOffer(
     .from('inquiries')
     .update({
       offer_answers:       answers,
+      status:              'in_negotiation',
       selected_option_id:  selectedOptionId ?? null,
     })
     .eq('id', inquiry.id)
@@ -1591,27 +1516,6 @@ export async function acceptOffer(
   if (error != null) {
     console.error('[acceptOffer] DB error:', error)
     return { success: false, error: 'Failed to save acceptance' }
-  }
-
-  // An accepted offer means we are waiting for the deposit, not for another round of
-  // talking (that is why it is awaiting_payment and not qualifying).
-  if (inquiry.status !== 'awaiting_payment') {
-    try {
-      await transition(svc, inquiry.id, 'awaiting_payment', {
-        actor:   { kind: 'angler' },
-        reason:  selectedOptionId != null
-          ? `Angler accepted the offer (option ${selectedOptionId})`
-          : 'Angler accepted the offer',
-      })
-    } catch (error) {
-      console.error('[acceptOffer] transition error:', error)
-      return {
-        success: false,
-        error:   error instanceof TransitionError
-          ? error.message
-          : 'Acceptance saved, but the status could not be updated',
-      }
-    }
   }
 
   console.log(`[acceptOffer] Inquiry ${inquiry.id} accepted by angler${selectedOptionId != null ? ` (option ${selectedOptionId})` : ''}`)
@@ -1641,23 +1545,23 @@ export async function declineOffer(
 
   if (inquiry == null) return { success: false, error: 'Offer not found' }
 
-  if (['paid', 'handed_over', 'completed'].includes(inquiry.status)) {
+  if (['deposit_paid', 'completed'].includes(inquiry.status)) {
     return { success: false, error: 'Cannot decline a confirmed booking' }
   }
 
-  try {
-    await transition(svc, inquiry.id, 'lost', {
-      actor:          { kind: 'angler' },
-      reason:         'Angler declined the offer',
-      lostReasonCode: 'went_elsewhere',
-      lostReason:     note?.trim() || 'Declined by angler',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (svc as any)
+    .from('inquiries')
+    .update({
+      status:           'lost',
+      lost_reason_code: 'went_elsewhere',
+      lost_reason:      note?.trim() || 'Declined by angler',
     })
-  } catch (error) {
-    console.error('[declineOffer] transition error:', error)
-    return {
-      success: false,
-      error:   error instanceof TransitionError ? error.message : 'Failed to save response',
-    }
+    .eq('id', inquiry.id)
+
+  if (error != null) {
+    console.error('[declineOffer] DB error:', error)
+    return { success: false, error: 'Failed to save response' }
   }
 
   console.log(`[declineOffer] Inquiry ${inquiry.id} declined by angler`)
