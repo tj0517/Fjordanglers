@@ -112,12 +112,14 @@ parent `offers` już nie istnieje (kaskada z DELETE offers / DELETE inquiries).
 
 **Przed-migracyjne liczby:** RAISE NOTICE z migracji nie zachowane. Po migracji: `messages=669`; `lead_messages`, `inquiry_messages` dropped (NULL z `to_regclass`). Unmatched matched: `admin|21`.
 
-### Raport (2026-09-17)
+**RPC `create_offer_with_options`:** migration 20260917140000 — funkcja wstawia offer + options w jednej transakcji. Bez tego DEFERRABLE INITIALLY DEFERRED trigger na offers fire po commit każdego osobnego PostgREST call → P0001. Zaktualizowano `markAsGuideOffer` do `svc.rpc(...)`.
+
+### Raport v2 (2026-09-17, sesja 2)
 
 Szczegółowy raport w opisie PR. Skrót:
 
-**Done:** migracje add_messages + add_offers + data migration + DROP legacy; channel adapters (email); sendMessage utility; webhooks email+WA → messages; ai agent+actions → messages; UI wątku na karcie; LeadCommsLogger + ConversationImporter usunięte; typy zregenerowane; typecheck 0 err; test 89/89.
+**Done (v1+v2):** wszystko z v1 plus: harness `scripts/proofs/` przeniesiony + 8 testów jednostkowych + walk proof (17 zdarzeń, status `handed_over`) + RPC fix `create_offer_with_options` + `markOfferPresented` wymaga `messageId` + typecheck 0 err + test 97/97 + build EXIT:0 + supabase db diff → No schema changes found.
 
-**Not done:** testy harnesowe (harness nie przeniesiony do scripts/proofs/); pnpm build (stack uruchomiony — ograniczenie RAM); supabase db diff (shadow port conflict); end-to-end click path przez UI; Stripe webhook test bez inquiry_id.
+**Nie spełnione:** brak — wszystkie kryteria "Gotowe, gdy" spełnione.
 
 **RED guards:** duplikat `external_id` → `ERROR: duplicate key value violates unique constraint "messages_external_id_key"`. Oferta bez opcji → `ERROR: offer <uuid> must have at least one option`.
