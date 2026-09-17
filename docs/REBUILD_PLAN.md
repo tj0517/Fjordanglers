@@ -449,13 +449,9 @@ czasie: tylko z `main`, cherry-pick do `stage-1` w tym samym dniu.
 
 Tag `v1-clean` po pushu.
 
-> **Uwaga przy scalaniu `main` → `stage-1`.** Na `main` jest revert
-> `1505c7f3618151ca845676c2162354d7f0c151e7` merge'a PR #47 — FA-1.03 trafiło 16 IX
-> omyłkowo do `main` (kod maszyny stanów na produkcji, migracje `20260916201225`
-> i `20260916201226` **nie** na produkcyjnej bazie, więc insert statusu `new` łamałby
-> `inquiries_status_check`). Przy pierwszym merge'u `main` → `stage-1` natychmiast
-> `git revert 1505c7f3618151ca845676c2162354d7f0c151e7` na `stage-1`, inaczej revert
-> skasuje FA-1.03 z etapu 1.
+> **Revert `1505c7f3` na `main` — rozbrojone w FA-1.11, commit `6c3b7328`** (`main`
+> zmergowany do `stage-1`, revert odwrócony; drzewo `stage-1` bez zmian, `main` jest
+> odtąd przodkiem `stage-1`, więc job `sync` z CI jest zielony).
 
 ### Etap 2 — szkielet monorepo (3–4 dni)
 
