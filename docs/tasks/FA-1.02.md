@@ -2,7 +2,7 @@
 id: FA-1.02
 title: drop_marketplace_leftovers — usunięcie tabel ze schematu archive i martwych tabel public bez danych
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: opus
 model_approved:
