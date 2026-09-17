@@ -2639,6 +2639,16 @@ export type Database = {
           pct: number
         }[]
       }
+      create_offer_with_options: {
+        Args: {
+          p_created_by: string
+          p_guide_id: string
+          p_inquiry_id: string
+          p_options: Json
+          p_source_message_id: string
+        }
+        Returns: string
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
