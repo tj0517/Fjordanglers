@@ -14,7 +14,6 @@ CREATE OR REPLACE FUNCTION create_offer_with_options(
   p_options           jsonb
 ) RETURNS uuid
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
@@ -46,3 +45,10 @@ $$;
 
 COMMENT ON FUNCTION create_offer_with_options IS
   'Inserts an offer + its options in one transaction so the deferred constraint passes.';
+
+-- Caller is service_role (svc.rpc) which already has all necessary table privileges.
+-- No SECURITY DEFINER — function runs with the caller's role (service_role).
+REVOKE EXECUTE ON FUNCTION create_offer_with_options FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION create_offer_with_options FROM anon;
+REVOKE EXECUTE ON FUNCTION create_offer_with_options FROM authenticated;
+GRANT  EXECUTE ON FUNCTION create_offer_with_options TO   service_role;
