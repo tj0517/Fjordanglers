@@ -309,29 +309,10 @@ export async function markAsGuideOffer(
 
   const inquiryId: string = msg.inquiry_id
 
-  // Insert offer + options in the same transaction (deferred constraint fires at commit)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: offer, error: offerErr } = await (svc as any)
-    .from('offers')
-    .insert({
-      inquiry_id:        inquiryId,
-      guide_id:          params.guideId ?? null,
-      source_message_id: messageId,
-      status:            'draft',
-      created_by:        userId,
-    })
-    .select('id')
-    .single()
-
-  if (offerErr != null || offer == null) {
-    console.error('[markAsGuideOffer] offer insert error:', offerErr)
-    return { success: false, error: offerErr?.message ?? 'Failed to create offer' }
-  }
-
-  const offerId: string = offer.id
-
-  const optionRows = params.options.map(o => ({
-    offer_id:   offerId,
+  // Use RPC to insert offer + options in one server-side transaction.
+  // Separate PostgREST calls each commit immediately; the DEFERRABLE INITIALLY DEFERRED
+  // trigger on offers would fire after the first commit (before options exist) and raise P0001.
+  const optionsJson = params.options.map(o => ({
     label:      o.label,
     price_cents: o.priceCents,
     currency:   o.currency,
@@ -343,10 +324,17 @@ export async function markAsGuideOffer(
   }))
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: optErr } = await (svc as any).from('offer_options').insert(optionRows)
-  if (optErr != null) {
-    console.error('[markAsGuideOffer] offer_options insert error:', optErr)
-    return { success: false, error: optErr.message }
+  const { data: offerId, error: offerErr } = await (svc as any).rpc('create_offer_with_options', {
+    p_inquiry_id:        inquiryId,
+    p_guide_id:          params.guideId ?? null,
+    p_source_message_id: messageId,
+    p_created_by:        userId,
+    p_options:           optionsJson,
+  })
+
+  if (offerErr != null || offerId == null) {
+    console.error('[markAsGuideOffer] offer insert error:', offerErr)
+    return { success: false, error: offerErr?.message ?? 'Failed to create offer' }
   }
 
   await emitEvent(svc, {
@@ -365,10 +353,11 @@ export async function markAsGuideOffer(
 // ─── markOfferPresented ───────────────────────────────────────────────────────
 
 export async function markOfferPresented(
-  offerId:    string,
-  messageId?: string | null,
+  offerId:   string,
+  messageId: string,
 ): Promise<ActionResult> {
   const { userId } = await requireAdmin()
+  if (!messageId) return { success: false, error: 'messageId is required to present an offer' }
   const svc = createServiceClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -393,7 +382,7 @@ export async function markOfferPresented(
     actor:     { kind: 'admin', id: userId },
     source:    'app',
     channel:   'email',
-    messageId: messageId ?? null,
+    messageId,
     payload:   { offer_id: offerId },
   })
 

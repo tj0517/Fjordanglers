@@ -42,7 +42,6 @@ import {
   transition,
   TransitionError,
   isInquiryStatus,
-  type InquiryStatus,
 } from '@/lib/inquiries/state'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
