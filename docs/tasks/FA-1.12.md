@@ -2,7 +2,7 @@
 id: FA-1.12
 title: messages — jeden wątek na zapytanie; e-mail w obie strony z karty; oznaczanie oferta/akceptacja/wpłata; link Stripe z aplikacji
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -105,3 +105,19 @@ samej transakcji) nie wywoła fałszywego naruszenia RESTRICT.
 **Constraint ≥1 opcja na ofertę:** dwa osobne triggery DEFERRABLE INITIALLY DEFERRED
 (INSERT na `offers` + DELETE na `offer_options`). Trigger DELETE pomija sprawdzenie gdy
 parent `offers` już nie istnieje (kaskada z DELETE offers / DELETE inquiries).
+
+**`occurred_at` dla `matchUnmatchedMessage`:** = `unmatched_messages.created_at` (decyzja tj, 2026-09-17).
+
+**Stripe Payment Link:** użyto Payment Link API (nie Checkout Session) — bramka STOP nie wyzwolona (brak zmiany webhooka w tym PR). Webhook `stripe-deposit` obsługa sesji `payment_link` → do FA-1.08.
+
+**Przed-migracyjne liczby:** RAISE NOTICE z migracji nie zachowane. Po migracji: `messages=669`; `lead_messages`, `inquiry_messages` dropped (NULL z `to_regclass`). Unmatched matched: `admin|21`.
+
+### Raport (2026-09-17)
+
+Szczegółowy raport w opisie PR. Skrót:
+
+**Done:** migracje add_messages + add_offers + data migration + DROP legacy; channel adapters (email); sendMessage utility; webhooks email+WA → messages; ai agent+actions → messages; UI wątku na karcie; LeadCommsLogger + ConversationImporter usunięte; typy zregenerowane; typecheck 0 err; test 89/89.
+
+**Not done:** testy harnesowe (harness nie przeniesiony do scripts/proofs/); pnpm build (stack uruchomiony — ograniczenie RAM); supabase db diff (shadow port conflict); end-to-end click path przez UI; Stripe webhook test bez inquiry_id.
+
+**RED guards:** duplikat `external_id` → `ERROR: duplicate key value violates unique constraint "messages_external_id_key"`. Oferta bez opcji → `ERROR: offer <uuid> must have at least one option`.
