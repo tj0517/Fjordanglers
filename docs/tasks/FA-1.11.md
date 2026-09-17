@@ -2,7 +2,7 @@
 id: FA-1.11
 title: CI na PR do stage-1 i main — typecheck/lint/test/build, migracje aplikują się czysto, typy bez dryfu, stage-1 nie odstaje od main
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -72,3 +72,290 @@ supabase gen types typescript --local | diff - src/lib/supabase/database.types.t
 ```
 
 ## Notatki z realizacji
+
+## Report — FA-1.11 CI: check / db / sync na PR do `stage-1` i `main`
+
+### Rozbrojenie miny (przed jakimkolwiek CI)
+
+Dwa pierwsze commity na `chore/ci`, zgodnie z poleceniem:
+
+| commit | co |
+|---|---|
+| `5dc45076` | `git merge origin/main` — konflikt w 4 plikach, **STOP**, decyzja tj: „bierz HEAD we wszystkich czterech" |
+| `6c3b7328` | `git revert 1505c7f3` — revert reverta, ten sam konflikt, ta sama reguła |
+
+Konflikt (obie bramki STOP zgłoszone i rozstrzygnięte przez tj, 17 IX):
+
+```
+$ git diff --name-only --diff-filter=U
+docs/deferred-tasks.md
+docs/tasks/FA-1.03.md
+docs/tasks/INDEX.md
+docs/tasks/README.md
+```
+
+Każdy hunk miał ten sam kształt: `HEAD` ma treść, `origin/main` ją kasuje (bo to właśnie
+robi revert). Żaden nie był dwustronną edycją.
+
+**Dowody:**
+
+```
+$ ls src/lib/inquiries/state.ts src/lib/events/ \
+     supabase/migrations/20260916201225_inquiries_status_v2.sql \
+     supabase/migrations/20260916201226_add_inquiry_events.sql
+src/lib/inquiries/state.ts
+supabase/migrations/20260916201225_inquiries_status_v2.sql
+supabase/migrations/20260916201226_add_inquiry_events.sql
+src/lib/events/:  emit.test.ts  emit.ts  types.ts
+
+$ git merge-base --is-ancestor origin/main HEAD ; echo $?
+0
+
+$ pnpm test run
+Test Files  11 passed (11)
+      Tests  89 passed (89)
+```
+
+**Dodatkowy dowód, mocniejszy niż wymagany:** `main` nie niósł **żadnej** własnej treści —
+`git log --oneline 1f4dc01d..7d95296d` jest puste, czyli `7d95296d` (tip `main` sprzed
+merge'a #47) jest **przodkiem** `1f4dc01d`, a nie równoległą linią. Jedyne własne commity
+`main` to merge #47 i jego revert. Wobec tego poprawnym stanem końcowym jest „drzewo
+identyczne ze `stage-1`, `main` jako przodek" — i tak jest:
+
+```
+$ git diff --stat 577793d1 HEAD -- . ; echo "exit=$?"
+exit=0        # brak wyjścia = drzewa identyczne
+```
+
+`docs/REBUILD_PLAN.md` §8 Etap 1: notatka o minie usunięta, zastąpiona jedną linią
+wskazującą commit `6c3b7328` (commit `da8e1e54`).
+
+### Done
+
+- **`.github/workflows/ci.yml`** — trzy joby, `pull_request` do `main` i `stage-1`
+  plus `push` do `stage-1`. Nazwy do wpisania w ruleset: **`check`**, **`db`**, **`sync`**.
+  - `check` — `pnpm install --frozen-lockfile`, typecheck, lint, build. Blokujące:
+    typecheck i build. Lint z `continue-on-error: true` i wynikiem w summary
+    (decyzja tj; uzasadnienie w „Needs a decision" niżej).
+  - `db` — `supabase start` (bez zbędnych kontenerów) → `supabase db reset` →
+    `supabase db diff --local` pusty → `gen types typescript --local` + `diff`
+    z `src/lib/supabase/database.types.ts` → `pnpm test run`. Tylko na PR (decyzja tj).
+  - `sync` — tylko PR do `stage-1`; dwa sprawdzenia z osobnymi komunikatami.
+- **`.nvmrc`** = `20` (decyzja tj; brak `engines` w `package.json`, lokalnie `v20.20.0`,
+  `@types/node: ^20`, Next 16 wymaga ≥20.9). CI pinuje też `pnpm@10.30.3`
+  i Supabase CLI `2.75.0` — te same wersje, co na maszynie zespołu.
+- **`package.json`** — dodany `supabase:types:local` (`--local`, generator kanoniczny).
+  Przy okazji **naprawiony destrukcyjny `>`** w obu skryptach (deferred FA-0.05 wskazywał
+  FA-1.11 jako właściciela: „ten sam skrypt idzie do CI"): generacja do `$TMPDIR`, `mv`
+  po sukcesie, guard `${SUPABASE_PROJECT_ID:?…}`. Czerwony dowód niżej.
+- **`docs/03-conventions.md`** — sekcja „CI": co sprawdza każdy job, nazwy checków do
+  branch protection, trzy sposoby na czerwony `db` i naprawa każdego z nich, dlaczego
+  lint nie jest bramką.
+- **`docs/deferred-tasks.md`** — nowy wpis (niżej).
+
+### Weryfikacja — cztery przebiegi
+
+Wszystkie cztery na **finalnym** `ci.yml` (gałęzie dowodowe zaktualizowane po poprawce
+`sync`, żeby dowód dotyczył tego, co wchodzi do repo, a nie wersji roboczej).
+
+| # | co | run | `check` | `db` | `sync` |
+|---|---|---|---|---|---|
+| 1 | czysta gałąź (`chore/ci`), PR #48 | [35197219267](https://github.com/tj0517/Fjordanglers/actions/runs/35197219267) | ✅ | ✅ | ✅ |
+| 2 | celowo zła migracja, PR #49 | [35196695941](https://github.com/tj0517/Fjordanglers/actions/runs/35196695941) | ✅ | ❌ | ✅ |
+| 3 | ręczna edycja `database.types.ts`, PR #50 | [35196698746](https://github.com/tj0517/Fjordanglers/actions/runs/35196698746) | ✅ | ❌ | ✅ |
+| 4 | gałąź bez najnowszego `main`, PR #51 | [35196708598](https://github.com/tj0517/Fjordanglers/actions/runs/35196708598) | ✅ | ✅ | ❌ |
+
+Każdy czerwony przebieg jest czerwony **dokładnie w jednym jobie** — reszta zielona, więc
+dowód izoluje sprawdzenie, a nie łapie efektu ubocznego.
+
+**Kryterium 1 — zła migracja** (`ALTER TABLE nope ADD COLUMN x int`):
+
+```
+Applying migration 20260916201226_add_inquiry_events.sql...
+Applying migration 20260917120000_deliberately_broken.sql...
+ERROR: relation "nope" does not exist (SQLSTATE 42P01)
+-- FA-1.11 red proof. Deliberately broken: table "nope" does not exist.
+ALTER TABLE nope ADD COLUMN x int
+##[error]Process completed with exit code 1.
+```
+
+Uwaga co do uczciwości zapisu: pada **`supabase start`**, nie `db reset` — migracje
+aplikują się już przy starcie stacku, więc zła migracja zatrzymuje job o jeden krok
+wcześniej, niż zakładało brzmienie kryterium. Skutek ten sam (job czerwony, komunikat
+wskazuje plik i błąd Postgresa), ale krok w logu nazywa się inaczej.
+
+**Kryterium 2 — dryf typów** (ręcznie dopisany komentarz i zmyślona tabela):
+
+```
+##[error]src/lib/supabase/database.types.ts odstaje od schematu — uruchom pnpm supabase:types:local
++// FA-1.11 red proof: hand-edited, drifted from the schema on purpose.
+ export type Json =
++      fa_1_11_drift_probe: {
+```
+
+**Kryterium 3 — gałąź bez `main`** (wycięta z `1f4dc01d`):
+
+```
+##[error]stage-1 nie zawiera main i ten PR tego nie naprawia; zmerguj main do stage-1
+  commity na main, których nie miałby stage-1 po tym merge'u:
+1505c7f Revert "Merge pull request #47 …"
+51a1883 Merge pull request #47 …
+##[error]gałąź PR została wycięta przed ostatnim main; zmerguj main (albo stage-1) do gałęzi
+```
+
+**Kryterium 4 — czysta gałąź, wszystko zielone** (run 35197219267):
+
+```
+sync:   07:58:35 -> 07:58:42   (7 s)
+check:  07:58:37 -> 08:00:49   (2 min 12 s)
+db:     07:58:35 -> 08:03:41   (5 min 06 s)
+```
+
+Najdłuższy przebieg: **5 min 06 s** (joby idą równolegle) — limit 15 min z zapasem 3×.
+
+```
+db diff --local: pusty
+typy zgodne ze schematem
+Test Files  11 passed (11)
+      Tests  89 passed (89)
+✓ Compiled successfully in 32.7s
+```
+
+**Kryterium 5 — zero sekretów.**
+
+```
+$ gh secret list   -> 0 wierszy
+$ gh variable list -> 0 wierszy
+$ grep -n "secrets\." .github/workflows/ci.yml
+14:# … `secrets.*` nie występuje w tym pliku ani razu —      (komentarz)
+72:            echo 'Źródło: commitowany `.env.test`. Zero `secrets.*`.'   (tekst do summary)
+```
+
+Oba trafienia to proza, nie interpolacja. Jedyne wartości env w CI to osiem zmiennych
+z commitowanego `.env.test` — lista wypisana przez sam pipeline do logu i do summary
+(run 35197219267, job `check`):
+
+```
+NEXT_PUBLIC_APP_URL
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+NEXT_PUBLIC_SUPABASE_URL
+RESEND_API_KEY
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Supabase to klucze lokalnego stacku (deterministyczne, identyczne u każdego), Stripe
+i Resend to placeholdery z FA-0.21. `check` kopiuje `.env.test` na `.env.local`, bo
+`next build` czyta `.env.local`; artefakt buildu nigdzie nie jedzie — deploy robi Vercel
+z własnym env. Job `db` nie wstrzykuje nic: `src/tests/setup.ts` sam ładuje `.env.test`
+razem z bezpiecznikiem „tylko 127.0.0.1" z FA-0.21.
+
+**Kryterium 6 — lokalnie.**
+
+| komenda | wynik |
+|---|---|
+| `pnpm typecheck` | 0 błędów |
+| `pnpm build` | exit 0, 49/49 stron, 278,8 s |
+| `pnpm test run` | 89 passed (09:23) — **później niewykonalne lokalnie, patrz „Not done"** |
+| `pnpm lint` przed (`stage-1`) | `✖ 106 problems (40 errors, 66 warnings)` |
+| `pnpm lint` po (`chore/ci`) | `✖ 106 problems (40 errors, 66 warnings)` |
+
+Lint bez zmiany, co do błędu i co do ostrzeżenia — PR nie dotyka żadnego pliku,
+który ESLint sprawdza. (W CI ten sam lint daje `40 errors, 62 warnings`; różnica
+w ostrzeżeniach bierze się z czystego katalogu roboczego runnera, liczba **błędów**
+jest identyczna.)
+
+**Czerwony dowód dla naprawionego `supabase:types`** (deferred FA-0.05 — skrypt zerował
+plik typów, gdy komenda padła):
+
+```
+$ env -u SUPABASE_PROJECT_ID pnpm supabase:types
+sh: SUPABASE_PROJECT_ID: SUPABASE_PROJECT_ID is not set
+ ELIFECYCLE  Command failed.
+
+$ git status --short src/lib/supabase/database.types.ts
+(pusto)
+$ wc -l < src/lib/supabase/database.types.ts
+3965
+```
+
+Plik nietknięty. Przed poprawką ta sama sytuacja zostawiała w repo pusty plik typów.
+
+**Supabase CLI a nazwy kontenerów (deferred FA-1.03) — w Actions problemu nie ma.**
+`supabase/.temp/` jest w `.gitignore`, więc runner nie ma pliku `project-ref` i CLI bierze
+nazwy kontenerów z `config.toml` `project_id` — spójnie z tym, co sam wystartował. Żadnej
+podmiany `project_id` w workflow nie ma i nie była potrzebna; dowodem jest zielony job `db`
+(`supabase start`, `db reset`, `db diff --local`, `gen types --local` — wszystko przeszło).
+Wersja CLI przypięta na `2.75.0`, tę samą ma zespół lokalnie. Lokalnie pułapka nadal jest
+i nadal wymaga decyzji tj z tamtego wpisu.
+
+### Not done
+
+- **`pnpm test run` lokalnie na końcu sesji** — 1 failed / 86 passed / 2 skipped,
+  `inquiryStatusDefault.test.ts` przekracza 5 s w oczekiwaniu na lokalny stack. Przyczyna
+  jest poza repo: Docker na tej maszynie przestał odpowiadać (`docker ps` nie wrócił
+  w 120 s). Ten sam commit ma w CI `89 passed`, a o 09:23 tej samej sesji miał `89 passed`
+  także lokalnie. Nie ruszam Dockera — to maszyna tj, nie zakres zadania.
+- **Branch protection / ruleset** — robi tj. Do wymaganych checków wpisać dokładnie:
+  **`check`**, **`db`**, **`sync`**. `db` i `sync` mają `if:` na poziomie joba, więc na
+  zdarzeniach, których nie dotyczą, raportują się jako *skipped* (GitHub liczy skipped
+  jako spełniony wymagany check) — nie znikają, więc PR nigdy nie utknie w oczekiwaniu.
+
+### Noticed, not touched (→ `docs/deferred-tasks.md`)
+
+- **Nieśledzony katalog `HEAD/` w korzeniu repo** — kopia `docs/brand/` (`01-brand-overview.md`
+  … `voice-of-customer.md`, `.DS_Store`, xlsx). Praktyczny skutek: `git diff <rev> HEAD`
+  przestaje działać (`ambiguous argument 'HEAD': both revision and filename`) i wymaga `--`.
+  Bliźniak wpisu „`docs/01-05` duplicated in `head/`" z audytu 2026-08-31. Wpis dodany.
+
+### Needs a decision
+
+Wszystkie pięć zostało przedstawionych tj w trakcie zadania i rozstrzygniętych — zapisuję
+je tu z konsekwencjami, bo zmieniają zachowanie pipeline'u:
+
+1. **Konflikt merge'a** → „bierz HEAD we wszystkich czterech". Zastosowane też do drugiego
+   konfliktu (przy `git revert`), bo to ta sama reguła; pliki przywrócone byte-exact
+   z `577793d1`.
+2. **Node 20**, nie 22 — zgodnie z lokalnym `v20.20.0`. Dodany `.nvmrc`.
+3. **`supabase start -x <zbędne>`**, bez cache'owania obrazów docker. Wyłączone:
+   `gotrue, realtime, storage-api, imgproxy, mailpit, postgres-meta, studio, edge-runtime,
+   logflare, vector, supavisor`. Job `db` mieści się w 5 min bez żadnego cache.
+   (`postgres-meta` i tak podnosi się na chwilę przy `gen types` — CLI robi to sam.)
+4. **`db` tylko na PR**, nie na pushu do `stage-1`.
+5. **Semantyka `sync`** — zmiana wobec pierwszej implementacji, po tym jak pipeline sam
+   pokazał w niej błąd. Pierwsze sprawdzenie porównywało `origin/main` z `origin/<base>`
+   i przez to **blokowało PR, który wciąga `main` do `stage-1`** — czyli jedyny PR, który
+   ten warunek usuwa (run [35195209532](https://github.com/tj0517/Fjordanglers/actions/runs/35195209532),
+   `sync` czerwony na czystej gałęzi). Teraz pyta o `HEAD` merge refa: „czym `stage-1`
+   stanie się po tym merge'u" — dokładnie `git merge-base --is-ancestor origin/main HEAD`
+   z pliku zadania. Zagrożenie nadal złapane: gałąź wycięta ze starego `stage-1` daje merge
+   bez `main` → czerwone.
+
+Nierozstrzygnięte, do decyzji przy odbiorze:
+
+- **`db diff --local` po `db reset` jest bliski tautologii** — baza właśnie powstała z tych
+  migracji, więc krok łapie realnie tylko migrację zostawiającą schemat inny, niż opisuje.
+  Twardym dowodem na złą migrację jest `db reset` / `supabase start`. Zostawiam, bo tak brzmi
+  zadanie i `docs/03-conventions.md`, ale opisałem to wprost w sekcji „CI", żeby nikt nie
+  przypisał temu krokowi ochrony, której nie daje. Realny dryf wobec **produkcji** łapie
+  dopiero `db diff --linked` — świadomie poza zakresem.
+- **Drugie sprawdzenie w `sync` jest silniejsze niż pierwsze**: jeśli gałąź PR zawiera
+  `main`, to merge też go zawiera, więc pierwsze nie zapali się nigdy samo. Zostaje, bo ma
+  lepszy komunikat dla przypadku „`stage-1` nie wchłonął hotfixa" i bo jest literalnie tym,
+  czego wymaga plik zadania. Jeśli uznasz to za zbędne, do wycięcia jednym `if`-em.
+- **Lint jako bramka** — dziś `continue-on-error`. Po zamknięciu wpisu deferred „lint
+  czerwony na `main`" (40 błędów w `src/emails/*.tsx` i `whatsapp-bridge/poll-emails.mjs`)
+  wystarczy usunąć `continue-on-error` ze stepu `lint`; instrukcja jest w `docs/03-conventions.md`.
+
+### Sprzątanie
+
+Trzy PR-y dowodowe zamknięte bez merge'a, gałęzie usunięte zdalnie i lokalnie:
+
+```
+$ gh pr list --json number,headRefName
+#48 chore/ci   (jedyny otwarty)
+$ git ls-remote --heads origin 'refs/heads/test/*' | wc -l
+0
+```
