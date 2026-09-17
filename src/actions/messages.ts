@@ -686,7 +686,7 @@ export async function markPaymentReceived(
     currency?:        string
   } = {},
 ): Promise<ActionResult> {
-  await requireAdmin()
+  const { userId } = await requireAdmin()
   const svc = createServiceClient()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -716,7 +716,7 @@ export async function markPaymentReceived(
   await emitEvent(svc, {
     inquiryId,
     type:    'payment.received',
-    actor:   { kind: 'admin' },
+    actor:   { kind: 'admin', id: userId },
     source:  'app',
     channel: 'stripe',
     payload: {
@@ -725,6 +725,19 @@ export async function markPaymentReceived(
       ...(params.currency        != null ? { currency: params.currency }                  : {}),
     },
   })
+
+  try {
+    await transition(svc, inquiryId, 'paid', {
+      actor:   { kind: 'admin', id: userId },
+      source:  'app',
+      channel: 'stripe',
+      reason:  'Payment manually logged by admin',
+    })
+  } catch (err) {
+    if (!(err instanceof TransitionError)) {
+      console.warn('[markPaymentReceived] transition warn:', err)
+    }
+  }
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true }

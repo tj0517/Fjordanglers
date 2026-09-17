@@ -51,8 +51,16 @@ vi.mock('@/lib/channels/email', () => ({
   },
 }))
 
+vi.mock('@/lib/inquiries/state', () => ({
+  transition:      vi.fn().mockResolvedValue(undefined),
+  TransitionError: class TransitionError extends Error {},
+}))
+
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { UnauthorizedError } from '@/lib/auth/guards'
+import { transition } from '@/lib/inquiries/state'
 
 // ─── Mock helpers ─────────────────────────────────────────────────────────────
 
@@ -261,5 +269,69 @@ describe('sendMessage', () => {
     expect(eventTypes).toContain('message.sent')
     expect(eventTypes).toContain('guide.contacted')
     expect(eventTypes).toHaveLength(2)
+  })
+})
+
+// ─── messages.ts — markPaymentReceived (UnmatchedLinker fallback) ─────────────
+
+describe('markPaymentReceived', () => {
+  it('emits payment.received with source app and calls transition → paid', async () => {
+    mockAdmin('user-admin-42')
+
+    const eventInserts: Record<string, unknown>[] = []
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from: (table: string) => {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: { id: 'inq-manual-pay', deposit_paid_at: null },
+                  error: null,
+                }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        if (table === 'inquiry_events') {
+          return {
+            insert: (row: Record<string, unknown>) => {
+              eventInserts.push(row)
+              return { select: () => ({ single: async () => ({ data: { id: 'evt-1' }, error: null }) }) }
+            },
+          }
+        }
+        return {}
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { markPaymentReceived } = await import('@/actions/messages')
+    const result = await markPaymentReceived('inq-manual-pay', {
+      stripeSessionId: 'cs_test_manual',
+      amountCents:     36000,
+      currency:        'eur',
+    })
+
+    expect(result).toEqual({ success: true })
+
+    // payment.received with source 'app'
+    const paymentEvent = eventInserts.find(e => e['type'] === 'payment.received')
+    expect(paymentEvent).toMatchObject({
+      type:       'payment.received',
+      source:     'app',
+      channel:    'stripe',
+      actor_kind: 'admin',
+    })
+
+    // transition called once with 'paid' and source 'app'
+    expect(vi.mocked(transition)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(transition)).toHaveBeenCalledWith(
+      expect.anything(),
+      'inq-manual-pay',
+      'paid',
+      expect.objectContaining({ source: 'app', channel: 'stripe' }),
+    )
   })
 })

@@ -50,6 +50,7 @@ vi.mock('@/lib/events/emit', () => ({
 import { createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
 import { emitEvent } from '@/lib/events/emit'
+import { transition } from '@/lib/inquiries/state'
 
 // Mock next/headers (no real request context in tests)
 vi.mock('next/headers', () => ({
@@ -151,5 +152,77 @@ describe('stripe-deposit webhook — idempotency', () => {
     expect(response.status).toBe(200)
     // deposit_paid_at was already set → early return before any event emission
     expect(emitEvent).not.toHaveBeenCalled()
+  })
+})
+
+describe('stripe-deposit webhook — double call same session', () => {
+  it('emits exactly one payment.received and calls transition once for two calls with the same session', async () => {
+    // Stateful DB: deposit_paid_at starts null; set by the first webhook update
+    let depositPaidAt: string | null = null
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from: (table: string) => ({
+        select: () => ({
+          eq: () => ({
+            single: async () => ({
+              data: {
+                id:                        'inq-double',
+                deposit_paid_at:           depositPaidAt,
+                angler_email:              'test@fjordanglers.com',
+                angler_name:               'Test',
+                angler_country:            'NO',
+                requested_dates:           [],
+                party_size:                1,
+                deposit_amount:            360,
+                trip_id:                   null,
+                guide_id:                  null,
+              },
+              error: null,
+            }),
+          }),
+        }),
+        update: (data: Record<string, unknown>) => {
+          // First call sets deposit_paid_at; second call sees it and returns early
+          if (data['deposit_paid_at'] != null) depositPaidAt = data['deposit_paid_at'] as string
+          return { eq: () => ({ error: null }) }
+        },
+        insert: () => ({ error: null }),
+      }),
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const session: Partial<Stripe.Checkout.Session> = {
+      id:             'cs_test_double',
+      object:         'checkout.session',
+      payment_status: 'paid',
+      metadata:       { payment_type: 'inquiry_deposit', inquiry_id: 'inq-double' },
+    }
+
+    vi.mocked(stripe.webhooks.constructEvent).mockReturnValue({
+      id:   'evt_double',
+      type: 'checkout.session.completed',
+      data: { object: session },
+    } as unknown as Stripe.Event)
+
+    const rawBody = JSON.stringify({ type: 'checkout.session.completed', data: { object: session } })
+    const makeReq = () => new NextRequest('http://localhost/api/webhooks/stripe-deposit', {
+      method:  'POST',
+      headers: { 'content-type': 'application/json', 'stripe-signature': 'test-sig' },
+      body:    rawBody,
+    })
+
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+
+    const r1 = await POST(makeReq())
+    expect(r1.status).toBe(200)
+
+    // After first call deposit_paid_at is set; second call hits the idempotency guard
+    const r2 = await POST(makeReq())
+    expect(r2.status).toBe(200)
+
+    const paymentReceivedCalls = vi.mocked(emitEvent).mock.calls.filter(
+      ([, params]) => params.type === 'payment.received'
+    )
+    expect(paymentReceivedCalls).toHaveLength(1)
+    expect(vi.mocked(transition)).toHaveBeenCalledTimes(1)
   })
 })
