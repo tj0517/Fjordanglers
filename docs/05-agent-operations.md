@@ -137,3 +137,68 @@ implements it. Handing a per-file classification table to a subagent costs more 
 than it saves and loses the evidence gathered in Phase A. `fa-core` / `fa-web` / `fa-admin`
 are for tasks that start from a written spec, not from a table the agent just produced.
 (Rule since FA-1.06, 2026-09-05.)
+
+## 9. Lokalne środowisko (8 GB RAM)
+
+Maszyna tj ma 8 GB RAM, a OrbStack dostaje z tego 3 GB (`memory_mib: 3072`, limit działa —
+`docker info` pokazuje 2,91 GiB). Build Next.js i pełny stack Supabase nie mieszczą się
+w tym budżecie równocześnie: OrbStack padł z tego powodu dwa razy w dwa dni (16–17 IX).
+Poniższe reguły są warunkiem, nie sugestią.
+
+**Stack startuje wyłącznie odchudzony.**
+
+```
+supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,realtime
+```
+
+Pełnego `supabase start` nie używamy. Zostaje sześć kontenerów (`db`, `kong`, `rest`,
+`auth`, `storage`, `pg_meta`) zamiast jedenastu. Jeśli któraś z wyłączonych usług okaże się
+potrzebna — błąd przy starcie albo w teście — usuń ją z listy **tutaj**, w tym pliku,
+i w raporcie napisz dlaczego. Lista ma jedno miejsce prawdy.
+
+**`pnpm build` lokalnie tylko przy zatrzymanym stacku.**
+
+```
+supabase stop  →  pnpm build  →  supabase start -x …
+```
+
+Domyślnie build weryfikuje CI (job `check`); w raporcie wystarczy link do zielonego runu
+zamiast lokalnego outputu buildu. Uwaga na dwie rzeczy, które łatwo pomylić: `--max-old-space-size=2048`
+siedzi w skrypcie **`dev`**, nie w `build` — `next build` nie ma żadnego pułapu sterty,
+więc rośnie, dopóki system pozwala. Zmierzony szczyt RSS procesu głównego przy
+zatrzymanym stacku: 1,44 GiB (plus workery generujące strony statyczne, które `time -l`
+liczy osobno).
+
+**Przed każdą komendą na stacku sprawdź, czy Docker żyje.**
+
+```
+perl -e 'alarm 10; exec @ARGV' -- docker ps --format '{{.Names}}' | head -3
+```
+
+Na tej maszynie **nie ma `timeout` ani `gtimeout`** (brak coreutils), więc `timeout 10 docker ps`
+nie zadziała — stąd wariant z perlem, który jest wszędzie na macOS. Pusty wynik albo
+zawieszenie = OrbStack leży → `orb restart`, odczekaj, ponów **raz**. Drugi raz nie działa
+→ STOP, zgłoś tj. Nie diagnozuj kodu, dopóki środowisko nie żyje.
+
+**Test integracyjny z `fetch failed` albo timeoutem na `127.0.0.1:54421` to najpierw
+problem środowiska**, a dopiero potem błąd kodu. Kolejność: sprawdź Dockera (wyżej),
+potem `supabase status`, dopiero potem czytaj test. 17 IX `inquiryStatusDefault.test.ts`
+przekroczył 5 s i wyglądał jak regresja — w rzeczywistości wisiał sam `docker ps`.
+
+**Nie uruchamiaj równolegle dwóch rzeczy ciężkich pamięciowo** — build, Playwright, drugi
+stack Supabase. Drugi stack to nie teoria: 17 IX obok FjordAnglers chodził komplet
+jedenastu kontenerów innego projektu, razem 22 kontenery w tym samym 3 GB VM.
+
+**`supabase stop` musi zostać sprawdzony, nie uwierzony.** Do 17 IX `config.toml` miał
+`project_id = "fjordanglers"`, a kontenery — utworzone przez starsze CLI z
+`supabase/.temp/project-ref` — etykietę `com.supabase.cli.project=uwxrstbplaoxfghrchcy`.
+CLI 2.75 szuka po `project_id`, więc `supabase stop` nie znajdywał niczego, wypisywał
+„Stopped supabase local development setup." i **zostawiał cały stack działający**. To jest
+najbardziej prawdopodobna przyczyna obu awarii OrbStacka: build startował przy stacku,
+o którym wszyscy myśleli, że jest zatrzymany. Naprawione przez `project_id = "uwxrstbplaoxfghrchcy"`
+(decyzja tj, 17 IX) — od tej zmiany `stop`, `start`, `db diff --local` i `gen types --local`
+działają bez żadnego obejścia. Mimo to po `supabase stop` warto rzucić okiem:
+
+```
+docker ps --format '{{.Names}}' | grep -c uwxrstbplaoxfghrchcy    # ma być 0
+```
