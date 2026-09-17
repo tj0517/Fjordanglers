@@ -140,21 +140,32 @@ are for tasks that start from a written spec, not from a table the agent just pr
 
 ## 9. Lokalne środowisko (8 GB RAM)
 
-Maszyna tj ma 8 GB RAM, a OrbStack dostaje z tego 3 GB (`memory_mib: 3072`, limit działa —
-`docker info` pokazuje 2,91 GiB). Build Next.js i pełny stack Supabase nie mieszczą się
-w tym budżecie równocześnie: OrbStack padł z tego powodu dwa razy w dwa dni (16–17 IX).
-Poniższe reguły są warunkiem, nie sugestią.
+Maszyna tj ma 8 GB RAM, a OrbStack dostaje z tego 4 GB (`memory_mib: 4096`, limit działa —
+`docker info` pokazuje 3,89 GiB). Cztery, nie trzy, bo na tej maszynie stoją **dwa** stacki
+Supabase — FjordAnglers i drugi projekt — a trzy gigabajty na oba oznaczały wypychanie
+kontenerów na swap. Skutek uboczny: macOS i wszystko poza Dockerem dzielą pozostałe ~4 GB,
+więc reguła „build tylko przy zatrzymanym stacku FA" **zostaje bez zmian** — podniesienie
+limitu VM zabrało pamięć hostowi, a to host wykonuje build. Build Next.js i pełny stack
+Supabase nadal nie mieszczą się w tym budżecie równocześnie: OrbStack padł z tego powodu
+dwa razy w dwa dni (16–17 IX). Poniższe reguły są warunkiem, nie sugestią.
 
 **Stack startuje wyłącznie odchudzony.**
 
 ```
-supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,realtime
+supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,realtime,storage-api,postgres-meta
 ```
 
-Pełnego `supabase start` nie używamy. Zostaje sześć kontenerów (`db`, `kong`, `rest`,
-`auth`, `storage`, `pg_meta`) zamiast jedenastu. Jeśli któraś z wyłączonych usług okaże się
-potrzebna — błąd przy starcie albo w teście — usuń ją z listy **tutaj**, w tym pliku,
-i w raporcie napisz dlaczego. Lista ma jedno miejsce prawdy.
+Pełnego `supabase start` nie używamy. Zostają **cztery** kontenery (`db`, `kong`, `rest`,
+`auth`) zamiast jedenastu. Jeśli któraś z wyłączonych usług okaże się potrzebna — błąd przy
+starcie albo w teście — usuń ją z listy **tutaj**, w tym pliku, i w raporcie napisz dlaczego.
+Lista ma jedno miejsce prawdy.
+
+**Zadanie dotykające zdjęć albo Storage startuje stack bez `storage-api` na liście `-x`.**
+Dziś żaden test z `pnpm test run` nie wychodzi do Storage (`authorization.test.ts` importuje
+`guide-photos` / `offer-photos` / `review-media`, ale mockuje `@/lib/supabase/server`
+i sprawdza wyłącznie odmowę autoryzacji), więc domyślnie `storage-api` jest wyłączony —
+to najcięższy kontener w stacku (235 MiB). `postgres-meta` CLI podnosi sam na chwilę,
+kiedy potrzebuje go `gen types --local`.
 
 **`pnpm build` lokalnie tylko przy zatrzymanym stacku.**
 
@@ -187,18 +198,27 @@ przekroczył 5 s i wyglądał jak regresja — w rzeczywistości wisiał sam `do
 
 **Nie uruchamiaj równolegle dwóch rzeczy ciężkich pamięciowo** — build, Playwright, drugi
 stack Supabase. Drugi stack to nie teoria: 17 IX obok FjordAnglers chodził komplet
-jedenastu kontenerów innego projektu, razem 22 kontenery w tym samym 3 GB VM.
+jedenastu kontenerów innego projektu, razem 22 kontenery w jednym VM.
 
-**`supabase stop` musi zostać sprawdzony, nie uwierzony.** Do 17 IX `config.toml` miał
-`project_id = "fjordanglers"`, a kontenery — utworzone przez starsze CLI z
-`supabase/.temp/project-ref` — etykietę `com.supabase.cli.project=uwxrstbplaoxfghrchcy`.
-CLI 2.75 szuka po `project_id`, więc `supabase stop` nie znajdywał niczego, wypisywał
-„Stopped supabase local development setup." i **zostawiał cały stack działający**. To jest
-najbardziej prawdopodobna przyczyna obu awarii OrbStacka: build startował przy stacku,
-o którym wszyscy myśleli, że jest zatrzymany. Naprawione przez `project_id = "uwxrstbplaoxfghrchcy"`
-(decyzja tj, 17 IX) — od tej zmiany `stop`, `start`, `db diff --local` i `gen types --local`
-działają bez żadnego obejścia. Mimo to po `supabase stop` warto rzucić okiem:
+**`supabase stop` musi zostać sprawdzony, nie uwierzony.** Do 17 IX kontenery lokalnego
+stacku nosiły etykietę projektu wziętą ze **starego** źródła — `supabase/.temp/project-ref`,
+tak jak robiło starsze CLI — a nie z `project_id` w `config.toml`. CLI 2.75 szuka po
+`project_id`, więc `supabase stop` nie znajdywał niczego, wypisywał „Stopped supabase local
+development setup." i **zostawiał cały stack działający**. To jest najbardziej prawdopodobna
+przyczyna obu awarii OrbStacka: build startował przy stacku, o którym wszyscy myśleli, że
+jest zatrzymany.
+
+Naprawione **przez przestawienie kontenerów**, nie przez zmianę `project_id`: stack
+zatrzymany i wystartowany od nowa, więc CLI utworzyło go pod nazwą z `config.toml`
+(`supabase_db_fjordanglers` itd.). `project_id` zostaje `fjordanglers` — ref produkcji nie
+jest nazwą niczego lokalnego (decyzja tj, 17 IX). Od tej zmiany `stop`, `start`,
+`db diff --local` i `gen types --local` działają bez żadnego obejścia. Mimo to po
+`supabase stop` warto rzucić okiem:
 
 ```
-docker ps --format '{{.Names}}' | grep -c uwxrstbplaoxfghrchcy    # ma być 0
+docker ps --filter label=com.supabase.cli.project=fjordanglers -q | wc -l    # ma być 0
 ```
+
+Uwaga przy takich sprawdzeniach: `grep` w powłoce agenta bywa funkcją opakowującą
+narzędzie, które **pomija pliki ignorowane przez git**, więc „brak trafień" potrafi być
+fałszywy. Do audytu używaj `/usr/bin/grep`.
