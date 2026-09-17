@@ -181,11 +181,17 @@ jobs:
         run: pnpm test run
 
   # ───────────────────────────────────────────────────────────────────────────
-  # sync — FAIL 3: gałąź docelowa albo gałąź PR nie zawiera `main`
+  # sync — FAIL 3: `main` wypada z gałęzi docelowej albo z gałęzi PR
   #
   # Dwa sprawdzenia, bo chronią przed dwiema różnymi rzeczami:
-  #   (a) `stage-1` nie wchłonął hotfixa z `main` — paczka etapu 1 nadpisze produkcję
+  #   (a) po zmergowaniu tego PR `stage-1` **nadal** nie zawierałby `main` —
+  #       czyli hotfix z produkcji wypada z paczki etapu 1
   #   (b) gałąź PR wycięta przed tym hotfixem — autor pracuje na starym drzewie
+  #
+  # (a) pyta o wynik merge'a, nie o stan bazy: inaczej check blokowałby dokładnie
+  # ten PR, który wciąga `main` do `stage-1` — a więc jedyną rzecz, która go naprawia
+  # (zdarzyło się na PR #48; decyzja tj, 17 IX). `actions/checkout` na zdarzeniu
+  # `pull_request` daje w HEAD merge commit: gałąź PR wmergowaną w bazę.
   # ───────────────────────────────────────────────────────────────────────────
   sync:
     name: sync
@@ -206,13 +212,14 @@ jobs:
           git fetch --no-tags origin main "$BASE_REF"
           fail=0
 
-          if git merge-base --is-ancestor origin/main "origin/$BASE_REF"; then
-            echo "ok: origin/main jest przodkiem origin/$BASE_REF"
+          # (a) wynik merge'a — czym stanie się stage-1, gdy ten PR wejdzie
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "ok: origin/main będzie przodkiem $BASE_REF po zmergowaniu tego PR"
           else
             fail=1
-            echo "::error::$BASE_REF nie zawiera main; zmerguj main do $BASE_REF"
-            echo "  commity na main, których nie ma w $BASE_REF:"
-            git log --oneline "origin/$BASE_REF..origin/main"
+            echo "::error::$BASE_REF nie zawiera main i ten PR tego nie naprawia; zmerguj main do $BASE_REF"
+            echo "  commity na main, których nie miałby $BASE_REF po tym merge'u:"
+            git log --oneline "HEAD..origin/main"
           fi
 
           if git merge-base --is-ancestor origin/main "$HEAD_SHA"; then
