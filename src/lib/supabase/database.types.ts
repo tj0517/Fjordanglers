@@ -1,3 +1,4 @@
+// FA-1.11 red proof: hand-edited, drifted from the schema on purpose.
 export type Json =
   | string
   | number
@@ -34,6 +35,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      fa_1_11_drift_probe: {
+        Row: { id: string }
+        Insert: { id: string }
+        Update: { id?: string }
+        Relationships: []
+      }
       ad_campaign_defs: {
         Row: {
           active: boolean
