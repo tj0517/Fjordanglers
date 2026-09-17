@@ -12,8 +12,8 @@ DROP TABLE IF EXISTS archive.guide_accommodations;      -- 2 rows (exported)
 DROP TABLE IF EXISTS archive.experience_availability_config; -- 0 rows
 DROP TABLE IF EXISTS archive.experience_blocked_dates;  -- 0 rows
 DROP TABLE IF EXISTS archive.booking_messages;          -- 0 rows
+DROP TABLE IF EXISTS archive.payments;                  -- 0 rows (FK payments_booking_id_fkey → bookings; drop first)
 DROP TABLE IF EXISTS archive.bookings;                  -- 0 rows
-DROP TABLE IF EXISTS archive.payments;                  -- 0 rows
 DROP TABLE IF EXISTS archive.leads;                     -- 0 rows
 
 -- CASCADE drops:
@@ -32,8 +32,8 @@ DROP SCHEMA IF EXISTS archive;
 -- ─── public tables (all 0 rows on prod) ────────────────────────────────────────
 
 DROP TABLE IF EXISTS public.expedition_private;
+DROP TABLE IF EXISTS public.media_links;            -- FK media_links_media_id_fkey → media; drop first
 DROP TABLE IF EXISTS public.media;
-DROP TABLE IF EXISTS public.media_links;
 DROP TABLE IF EXISTS public.inquiry_todos;
 DROP TABLE IF EXISTS public.guide_availability;
 DROP TABLE IF EXISTS public.guide_intake_submissions;

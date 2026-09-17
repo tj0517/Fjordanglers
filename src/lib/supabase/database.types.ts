@@ -321,50 +321,6 @@ export type Database = {
           },
         ]
       }
-      expedition_private: {
-        Row: {
-          access_notes: string | null
-          exact_address: string | null
-          exact_lat: number | null
-          exact_lng: number | null
-          expedition_id: string
-          lodge_contact: string | null
-          lodge_name: string | null
-          meeting_point: string | null
-          updated_at: string
-        }
-        Insert: {
-          access_notes?: string | null
-          exact_address?: string | null
-          exact_lat?: number | null
-          exact_lng?: number | null
-          expedition_id: string
-          lodge_contact?: string | null
-          lodge_name?: string | null
-          meeting_point?: string | null
-          updated_at?: string
-        }
-        Update: {
-          access_notes?: string | null
-          exact_address?: string | null
-          exact_lat?: number | null
-          exact_lng?: number | null
-          expedition_id?: string
-          lodge_contact?: string | null
-          lodge_name?: string | null
-          meeting_point?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "expedition_private_expedition_id_fkey"
-            columns: ["expedition_id"]
-            isOneToOne: true
-            referencedRelation: "expeditions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       expedition_waters: {
         Row: {
           confirmed_at: string | null
@@ -896,44 +852,6 @@ export type Database = {
         }
         Relationships: []
       }
-      guide_availability: {
-        Row: {
-          created_at: string
-          end_date: string
-          guide_id: string
-          id: string
-          note: string | null
-          start_date: string
-          state: string
-        }
-        Insert: {
-          created_at?: string
-          end_date: string
-          guide_id: string
-          id?: string
-          note?: string | null
-          start_date: string
-          state?: string
-        }
-        Update: {
-          created_at?: string
-          end_date?: string
-          guide_id?: string
-          id?: string
-          note?: string | null
-          start_date?: string
-          state?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guide_availability_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: false
-            referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       guide_images: {
         Row: {
           created_at: string
@@ -1033,65 +951,6 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "guide_intake_forms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guide_intake_submissions: {
-        Row: {
-          access_rights: string | null
-          additional_notes: string | null
-          created_at: string
-          external_media_link: string | null
-          fishing_technique: string | null
-          guide_id: string
-          id: string
-          photo_urls: string[]
-          reviewed_by_admin: boolean
-          submitted_at: string | null
-          token: string
-          updated_at: string
-          video_urls: string[]
-          what_you_do: string | null
-        }
-        Insert: {
-          access_rights?: string | null
-          additional_notes?: string | null
-          created_at?: string
-          external_media_link?: string | null
-          fishing_technique?: string | null
-          guide_id: string
-          id?: string
-          photo_urls?: string[]
-          reviewed_by_admin?: boolean
-          submitted_at?: string | null
-          token: string
-          updated_at?: string
-          video_urls?: string[]
-          what_you_do?: string | null
-        }
-        Update: {
-          access_rights?: string | null
-          additional_notes?: string | null
-          created_at?: string
-          external_media_link?: string | null
-          fishing_technique?: string | null
-          guide_id?: string
-          id?: string
-          photo_urls?: string[]
-          reviewed_by_admin?: boolean
-          submitted_at?: string | null
-          token?: string
-          updated_at?: string
-          video_urls?: string[]
-          what_you_do?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guide_intake_submissions_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: true
-            referencedRelation: "guides"
             referencedColumns: ["id"]
           },
         ]
@@ -1788,50 +1647,6 @@ export type Database = {
           },
         ]
       }
-      inquiry_todos: {
-        Row: {
-          completed: boolean
-          completed_at: string | null
-          created_at: string | null
-          id: string
-          input_label: string | null
-          input_value: string | null
-          inquiry_id: string
-          sort_order: number
-          title: string
-        }
-        Insert: {
-          completed?: boolean
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          input_label?: string | null
-          input_value?: string | null
-          inquiry_id: string
-          sort_order?: number
-          title: string
-        }
-        Update: {
-          completed?: boolean
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          input_label?: string | null
-          input_value?: string | null
-          inquiry_id?: string
-          sort_order?: number
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inquiry_todos_inquiry_id_fkey"
-            columns: ["inquiry_id"]
-            isOneToOne: false
-            referencedRelation: "inquiries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       inquiry_trip_details: {
         Row: {
           accommodation: string | null
@@ -1955,89 +1770,6 @@ export type Database = {
           notes?: string | null
         }
         Relationships: []
-      }
-      media: {
-        Row: {
-          alt: string | null
-          caption: string | null
-          created_at: string
-          credit: string | null
-          focal_x: number | null
-          focal_y: number | null
-          height: number | null
-          id: string
-          lqip: string | null
-          public_url: string | null
-          storage_path: string
-          taken_at: string | null
-          width: number | null
-        }
-        Insert: {
-          alt?: string | null
-          caption?: string | null
-          created_at?: string
-          credit?: string | null
-          focal_x?: number | null
-          focal_y?: number | null
-          height?: number | null
-          id?: string
-          lqip?: string | null
-          public_url?: string | null
-          storage_path: string
-          taken_at?: string | null
-          width?: number | null
-        }
-        Update: {
-          alt?: string | null
-          caption?: string | null
-          created_at?: string
-          credit?: string | null
-          focal_x?: number | null
-          focal_y?: number | null
-          height?: number | null
-          id?: string
-          lqip?: string | null
-          public_url?: string | null
-          storage_path?: string
-          taken_at?: string | null
-          width?: number | null
-        }
-        Relationships: []
-      }
-      media_links: {
-        Row: {
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["media_entity"]
-          id: string
-          media_id: string
-          role: Database["public"]["Enums"]["media_role"]
-          sort_order: number
-        }
-        Insert: {
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["media_entity"]
-          id?: string
-          media_id: string
-          role?: Database["public"]["Enums"]["media_role"]
-          sort_order?: number
-        }
-        Update: {
-          entity_id?: string
-          entity_type?: Database["public"]["Enums"]["media_entity"]
-          id?: string
-          media_id?: string
-          role?: Database["public"]["Enums"]["media_role"]
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "media_links_media_id_fkey"
-            columns: ["media_id"]
-            isOneToOne: false
-            referencedRelation: "media"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       offers: {
         Row: {
@@ -3734,17 +3466,6 @@ export type Database = {
     }
     Enums: {
       assign_state: "pending" | "accepted" | "declined" | "withdrawn"
-      booking_status:
-        | "pending"
-        | "confirmed"
-        | "cancelled"
-        | "completed"
-        | "refunded"
-        | "accepted"
-        | "declined"
-        | "reviewing"
-        | "offer_sent"
-        | "offer_accepted"
       guide_status: "pending" | "verified" | "active" | "suspended"
       media_entity: "country" | "region" | "expedition" | "guide"
       media_role: "hero" | "card" | "gallery" | "portrait"
@@ -3755,7 +3476,6 @@ export type Database = {
         | "declined"
         | "expired"
         | "cancelled"
-      payment_status: "pending" | "paid" | "failed" | "refunded"
       pricing_model: "flat_fee" | "commission"
       publish_state: "draft" | "published" | "archived"
       req_state:
@@ -3767,14 +3487,6 @@ export type Database = {
         | "confirmed"
         | "completed"
         | "lost"
-      trip_inquiry_status:
-        | "inquiry"
-        | "reviewing"
-        | "offer_sent"
-        | "offer_accepted"
-        | "confirmed"
-        | "completed"
-        | "cancelled"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -3914,18 +3626,6 @@ export const Constants = {
   public: {
     Enums: {
       assign_state: ["pending", "accepted", "declined", "withdrawn"],
-      booking_status: [
-        "pending",
-        "confirmed",
-        "cancelled",
-        "completed",
-        "refunded",
-        "accepted",
-        "declined",
-        "reviewing",
-        "offer_sent",
-        "offer_accepted",
-      ],
       guide_status: ["pending", "verified", "active", "suspended"],
       media_entity: ["country", "region", "expedition", "guide"],
       media_role: ["hero", "card", "gallery", "portrait"],
@@ -3937,7 +3637,6 @@ export const Constants = {
         "expired",
         "cancelled",
       ],
-      payment_status: ["pending", "paid", "failed", "refunded"],
       pricing_model: ["flat_fee", "commission"],
       publish_state: ["draft", "published", "archived"],
       req_state: [
@@ -3949,15 +3648,6 @@ export const Constants = {
         "confirmed",
         "completed",
         "lost",
-      ],
-      trip_inquiry_status: [
-        "inquiry",
-        "reviewing",
-        "offer_sent",
-        "offer_accepted",
-        "confirmed",
-        "completed",
-        "cancelled",
       ],
     },
   },
