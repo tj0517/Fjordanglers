@@ -86,3 +86,22 @@ pnpm typecheck && pnpm lint && pnpm build
 ```
 
 ## Notatki z realizacji
+
+### Decyzje (STOP 1–1c, 2026-09-17)
+
+**Stara `public.offers` (14 wierszy):** eksport → `docs/archive/2026-09-17-offers-legacy.json`
+(commit `fc5d8482`) → DROP TABLE + DROP TYPE `offer_state`.
+
+**RLS messages / offers / offer_options:** opcja A — service_role pełny + authenticated
+admin-read. `anon` jawnie REVOKowany. Celowo węższe niż `inquiries` (brak polityk dla
+wędkarza i przewodnika) — ryzyko wycieku przy mistagged `counterpart`. Do rewizji przy
+portalu klienta/przewodnika. Decyzja: tj 2026-09-17.
+
+**FK `inquiry_events.message_id → messages.id`:** ON DELETE RESTRICT DEFERRABLE INITIALLY
+DEFERRED. SET NULL niemożliwe — trigger BEFORE UPDATE na `inquiry_events` blokowałby
+null-out. DEFERRED zapewnia, że kaskadowe usunięcie inquiry (events → messages w tej
+samej transakcji) nie wywoła fałszywego naruszenia RESTRICT.
+
+**Constraint ≥1 opcja na ofertę:** dwa osobne triggery DEFERRABLE INITIALLY DEFERRED
+(INSERT na `offers` + DELETE na `offer_options`). Trigger DELETE pomija sprawdzenie gdy
+parent `offers` już nie istnieje (kaskada z DELETE offers / DELETE inquiries).
