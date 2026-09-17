@@ -191,25 +191,60 @@ supabase/migrations/20260917100000_drop_marketplace_leftovers.sql | 45 +
 
 #### D5. Nie zrobione — czeka na sygnał „stack wolny"
 
-Kryteria 5, 6, 8, 10 wymagają lokalnego stacka Supabase:
+Kryteria 5, 6, 8, 10. Kolejność wykonania (testy potrzebują stacka, build nie może z nim współistnieć):
 
 ```bash
-# w katalogu fa-1.02, gdy stack wolny:
-FA_ALLOW_PROD=1 supabase db reset   # kryterium 5
-supabase db diff                    # kryterium 6 — musi być puste
+# 1. Najpierw rebase, żeby guard-fix z stage-1 wszedł do gałęzi
+git rebase stage-1
+
+# 2. Reset i weryfikacja schematu
+supabase db reset
+
+# 3. Diff musi być pusty (kryterium 6)
+supabase db diff
+
+# 4. Dowody na usunięcie archive (kryterium 5)
+psql -p 54422 -c \
+  "SELECT schema_name FROM information_schema.schemata WHERE schema_name='archive'"
+# → (0 rows)
+
 psql -p 54422 -c "SELECT * FROM archive.bookings"
-# → ERROR: relation "archive.bookings" does not exist (kryterium 5, czerwony dowód)
-psql -p 54422 -c "SELECT schema_name FROM information_schema.schemata WHERE schema_name='archive'"
-# → 0 rows (kryterium 5)
-pnpm supabase:types                 # kryterium 8
-grep -cw "booking_messages" src/lib/supabase/database.types.ts  # → 0
-grep -cw "expedition_private" src/lib/supabase/database.types.ts  # → 0
-# (i reszta dropowanych tabel — każda 0)
-pnpm test                           # kryterium 10
-pnpm build                          # kryterium 10 (przy ZATRZYMANYM stacku)
+# → ERROR:  relation "archive.bookings" does not exist
+
+# 5. Regeneracja typów + grep (kryterium 8)
+pnpm supabase:types
+grep -cw "booking_messages"           src/lib/supabase/database.types.ts  # → 0
+grep -cw "bookings"                   src/lib/supabase/database.types.ts  # → 0
+grep -cw "experience_accommodations"  src/lib/supabase/database.types.ts  # → 0
+grep -cw "experience_availability_config" src/lib/supabase/database.types.ts # → 0
+grep -cw "experience_blocked_dates"   src/lib/supabase/database.types.ts  # → 0
+grep -cw "experience_images"          src/lib/supabase/database.types.ts  # → 0
+grep -cw "experiences"                src/lib/supabase/database.types.ts  # → 0
+grep -cw "guide_accommodations"       src/lib/supabase/database.types.ts  # → 0
+grep -cw "leads"                      src/lib/supabase/database.types.ts  # → 0
+grep -cw "payments"                   src/lib/supabase/database.types.ts  # → 0
+grep -cw "expedition_private"         src/lib/supabase/database.types.ts  # → 0
+grep -cw "media_links"                src/lib/supabase/database.types.ts  # → 0
+grep -cw "inquiry_todos"              src/lib/supabase/database.types.ts  # → 0
+grep -cw "guide_availability"         src/lib/supabase/database.types.ts  # → 0
+grep -cw "guide_intake_submissions"   src/lib/supabase/database.types.ts  # → 0
+grep -c  "archive:"                   src/lib/supabase/database.types.ts  # → 0
+
+# 6. Testy przy działającym stacku (kryterium 10)
+pnpm test
+
+# 7. Zatrzymaj stack, build, restart (kryterium 10)
+supabase stop
+pnpm build
+supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,realtime
 ```
 
-`supabase db reset` jest zablokowane przez agent-guard.sh (linia 12, pattern `supabase db reset`). Czekam na sygnał „stack wolny" — wtedy uruchamiam te kryteria samodzielnie i wklejam wyniki do raportu.
+Wariant b (jeśli guard-fix nie wejdzie na czas): tj udzielił jednorazowego pozwolenia na
+`FA_ALLOW_PROD=1 supabase db reset` (bez `--linked`) dla tego zadania (17 IX).
+Każde użycie FA_ALLOW_PROD=1 będzie oznaczone w raporcie.
+
+Do raportu — każdy krok: komenda + pełny output dosłownie. Dopiero po zielonych
+kryteriach 5, 6, 8, 10: status `review` + `gh pr create --base stage-1 --draft`.
 
 #### D6. Zauważone (nie zrobione, nie w zakresie)
 
