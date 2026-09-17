@@ -77,6 +77,43 @@ justification, it goes in an ADR and this file links to it.
   a deliberately bad input in the PR (paste the error).
 - `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green before "done".
 
+## CI
+
+`.github/workflows/ci.yml` runs on every PR to `main` and to `stage-1`, and on push to
+`stage-1`. Three jobs; the exact names to require in branch protection are `check`, `db`
+and `sync`. No secrets: every value comes from the committed `.env.test` (local Supabase
+keys are deterministic, Stripe/Resend are placeholders), and `secrets.*` appears nowhere
+in the workflow.
+
+| job | when | what it proves | how to fix a red run |
+|---|---|---|---|
+| `check` | every PR + push to `stage-1` | `pnpm typecheck`, `pnpm build` pass; `pnpm test` runs in `db` | run the same command locally |
+| `db` | PRs only | migrations apply to an empty database; `database.types.ts` matches the schema; tests pass against a fresh stack | see the three cases below |
+| `sync` | PRs to `stage-1` only | `main` is an ancestor of both `stage-1` and the PR branch | `git merge origin/main` into whichever the error names |
+
+**Lint is deliberately not a gate** — `continue-on-error: true`, result in the job summary.
+`main` carries 40 errors in files no current task touches (`src/emails/*.tsx`,
+`whatsapp-bridge/poll-emails.mjs`); a gate today would be red forever and protect nothing.
+When the `docs/deferred-tasks.md` entry for it is closed, drop `continue-on-error` from the
+`lint` step. Until then the task criterion is "no worse than `main`", not "green".
+
+Three ways `db` goes red, and the fix for each:
+
+1. **`db reset` fails** — a migration does not apply to an empty database. Read the
+   Postgres error in the step; fix the migration file, never the database.
+2. **`gen types` diff is non-empty** — `src/lib/supabase/database.types.ts` is stale.
+   Run `pnpm supabase:types:local` against a local stack that has just been reset, and
+   commit the result. `--local` is the canonical generator: `--project-id` produces a
+   different file skeleton for an identical schema, so the two cannot be mixed.
+3. **`db diff --local` is non-empty** — the database holds objects the migrations do not
+   describe. Note that straight after `db reset` this is close to a tautology (the
+   database was built from those migrations); the honest catch for a bad migration is
+   case 1.
+
+`sync` checks two different things and says which one failed: `stage-1` missing a hotfix
+that landed on `main`, and a PR branch cut before that hotfix. Both are fixed by a merge,
+not a force-push — `main` and `stage-1` are protected.
+
 ## Admin UI
 
 - Every number is clickable to the rows it came from.
