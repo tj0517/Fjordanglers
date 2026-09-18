@@ -2,7 +2,7 @@
  * /admin/inquiries/[id] — FA inquiry detail.
  *
  * Left column : angler info · booking details · original message · messages thread
- * Right column: InquiryActionPanel (sticky) — offer builder, message composer, deposit link
+ * Right column: ThreadActionsPanel (sticky) — offer builder, message composer, deposit link
  */
 
 import Link from 'next/link'
