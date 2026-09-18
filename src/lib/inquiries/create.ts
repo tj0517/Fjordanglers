@@ -14,6 +14,7 @@
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEvent, type EventActor } from '@/lib/events/emit'
+import { normalisePhone } from '@/lib/inquiry-matcher'
 import type { UtmParams } from '@/lib/utm'
 
 export type InquirySource = 'web_form' | 'manual' | 'email' | 'whatsapp'
@@ -57,7 +58,9 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       trip_country:        params.tripCountry ?? null,
       angler_name:         params.anglerName,
       angler_email:        params.anglerEmail,
-      angler_phone:        params.anglerPhone ?? null,
+      angler_phone:        params.anglerPhone?.trim()
+                             ? normalisePhone(params.anglerPhone.trim())
+                             : null,
       requested_dates:     params.requestedDates ?? [],
       party_size:          params.partySize,
       message:             params.message ?? null,

@@ -45,9 +45,26 @@ vi.mock('@/lib/email', () => ({
 
 vi.mock('@/lib/channels/email', () => ({
   emailAdapter: {
-    canSendFreeform: true,
+    canSendFreeform: (_lastInboundAt: Date | null) => true,
     send: vi.fn().mockResolvedValue({ externalId: 'ext-test-123', threadKey: '<test@mail.fjordanglers.com>' }),
-    parseThreadKey: vi.fn().mockReturnValue(null),
+    parseInbound: vi.fn().mockReturnValue(null),
+  },
+}))
+
+vi.mock('@/lib/channels/whatsapp', () => ({
+  whatsappAdapter: {
+    canSendFreeform: vi.fn().mockReturnValue(true),
+    send: vi.fn().mockResolvedValue({ externalId: 'wa-ext-test', threadKey: '+48123456789' }),
+    parseInbound: vi.fn().mockReturnValue(null),
+  },
+}))
+
+vi.mock('@/lib/channels/instagram', () => ({
+  instagramAdapter: {
+    enabled: false,
+    canSendFreeform: vi.fn().mockReturnValue(false),
+    send: vi.fn().mockRejectedValue(new Error('[instagram-adapter] Instagram channel is not configured.')),
+    parseInbound: vi.fn().mockReturnValue(null),
   },
 }))
 

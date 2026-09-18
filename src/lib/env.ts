@@ -83,11 +83,22 @@ export const envSchema = z.object({
   // Random secret string used to verify Meta's hub.challenge GET request.
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   // Meta App Secret — used to verify HMAC-SHA256 signature on incoming messages.
+  // OPTION B: if absent the webhook rejects ALL incoming requests with 401.
   WHATSAPP_APP_SECRET: z.string().optional(),
   // Phone Number ID from Meta Business → WhatsApp → Getting Started (needed to SEND messages).
   WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
   // The FA WhatsApp business number in E.164 format, e.g. +48123456789 (for display / routing).
   WHATSAPP_BUSINESS_NUMBER: z.string().optional(),
+  // Bearer token for Graph API send requests (System User token from Meta Business).
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  // Pre-approved template name sent when 24-hour freeform window is closed (guide side).
+  WHATSAPP_TEMPLATE_GUIDE: z.string().optional().default('fa_guide_new_inquiry'),
+  // Pre-approved template name sent when 24-hour freeform window is closed (angler side).
+  WHATSAPP_TEMPLATE_ANGLER: z.string().optional().default('fa_angler_update'),
+
+  // ── Instagram (Meta Graph API) ─────────────────────────────────────────────
+  // Page access token — when absent the Instagram adapter is disabled gracefully.
+  INSTAGRAM_ACCESS_TOKEN: z.string().optional(),
 
   // ── Resend Inbound (email webhook) ─────────────────────────────────────────
   // Signing secret provided by Resend for inbound email webhooks.

@@ -310,6 +310,37 @@ export default async function AdminInquiryDetailPage({
     // Non-fatal — panel shows empty state
   }
 
+  // ── WA composer props ─────────────────────────────────────────────────────
+  const anglerHasPhone = Boolean(
+    (inquiry as typeof inquiry & { angler_phone?: string | null }).angler_phone,
+  )
+  let guideHasPhone   = false
+  let waLastInboundAt: string | null = null
+
+  try {
+    if (inquiry.assigned_guide_id != null) {
+      const { data: guidePhoneRow } = await svc
+        .from('guides')
+        .select('phone_e164')
+        .eq('id', inquiry.assigned_guide_id)
+        .single()
+      guideHasPhone = Boolean(
+        (guidePhoneRow as unknown as { phone_e164: string | null } | null)?.phone_e164,
+      )
+    }
+
+    const waInbounds = threadMessages.filter(
+      m => m.channel === 'whatsapp' && m.direction === 'inbound',
+    )
+    if (waInbounds.length > 0) {
+      waLastInboundAt = waInbounds[waInbounds.length - 1].occurred_at
+    }
+  } catch {
+    // Non-fatal — WA composer will show email fallback
+  }
+
+  const igEnabled = Boolean(process.env.INSTAGRAM_ACCESS_TOKEN)
+
   const st             = STATUS_STYLE[inquiry.status] ?? STATUS_STYLE.pending
   const requestedDates = inquiry.requested_dates as string[] | null
 
@@ -597,6 +628,10 @@ export default async function AdminInquiryDetailPage({
           <MessageComposer
             inquiryId={inquiry.id}
             guideAssigned={inquiry.assigned_guide_id != null}
+            anglerHasPhone={anglerHasPhone}
+            guideHasPhone={guideHasPhone}
+            waLastInboundAt={waLastInboundAt}
+            igEnabled={igEnabled}
           />
         </div>
       </div>
