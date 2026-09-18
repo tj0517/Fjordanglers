@@ -1,29 +1,35 @@
 'use client'
 
-/**
- * MessageComposer — FA sends a plain-text email to the angler at any time.
- * Calls sendMessageToAngler() server action. Refreshes the page on success
- * so the correspondence thread in the left column updates.
- */
-
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check } from 'lucide-react'
-import { sendMessageToAngler } from '@/actions/inquiries'
+import { sendMessageFromThread } from '@/actions/messages'
 
-export function MessageComposer({ inquiryId }: { inquiryId: string }) {
+export function MessageComposer({
+  inquiryId,
+  guideAssigned = false,
+}: {
+  inquiryId:     string
+  guideAssigned?: boolean
+}) {
   const router = useRouter()
 
-  const [subject,    setSubject]    = useState('')
-  const [body,       setBody]       = useState('')
-  const [isPending,  startTransition] = useTransition()
-  const [error,      setError]      = useState<string | null>(null)
-  const [sent,       setSent]       = useState(false)
+  const [counterpart, setCounterpart] = useState<'angler' | 'guide'>('angler')
+  const [subject,     setSubject]     = useState('')
+  const [body,        setBody]        = useState('')
+  const [isPending,   startTransition] = useTransition()
+  const [error,       setError]       = useState<string | null>(null)
+  const [sent,        setSent]        = useState(false)
 
   function handleSend() {
     setError(null)
     startTransition(async () => {
-      const res = await sendMessageToAngler(inquiryId, subject, body)
+      const res = await sendMessageFromThread(inquiryId, {
+        channel:     'email',
+        counterpart,
+        subject:     subject.trim() || undefined,
+        body:        body.trim(),
+      })
       if (res.success) {
         setSubject('')
         setBody('')
@@ -42,16 +48,37 @@ export function MessageComposer({ inquiryId }: { inquiryId: string }) {
         style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
         <Check size={14} style={{ color: '#6EE7B7', flexShrink: 0 }} />
         <p className="text-sm font-semibold f-body" style={{ color: '#6EE7B7' }}>
-          Message sent to angler
+          Message sent to {counterpart}
         </p>
       </div>
     )
   }
 
-  const canSend = subject.trim() !== '' && body.trim() !== ''
+  const canSend = body.trim() !== ''
 
   return (
     <div className="space-y-3">
+      {/* Counterpart selector */}
+      {guideAssigned && (
+        <div className="flex gap-1.5">
+          {(['angler', 'guide'] as const).map(cp => (
+            <button
+              key={cp}
+              type="button"
+              onClick={() => setCounterpart(cp)}
+              className="flex-1 py-1.5 rounded-lg text-xs font-semibold f-body capitalize"
+              style={{
+                background: counterpart === cp ? '#E67E50'              : 'rgba(255,255,255,0.07)',
+                color:      counterpart === cp ? '#fff'                  : 'rgba(255,255,255,0.45)',
+                border:     counterpart === cp ? '1px solid transparent' : '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              {cp}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div>
         <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block"
           style={{ color: 'rgba(255,255,255,0.38)' }}>Subject</label>
