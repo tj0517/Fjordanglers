@@ -54,11 +54,24 @@ stage 4 will map `trip_id → experience_pages.trip_id` or drop the column.
 Enums also dropped: `booking_status`, `payment_status`, `trip_inquiry_status`
 (no remaining columns use them after the table drops).
 
+### Dropped in FA-1.12 — legacy `offers` + enum `offer_state`
+14-row marketplace `offers` table (all `draft`/`sent`, 0 payments) exported to
+`docs/archive/2026-09-17-offers-legacy.json` (commit `fc5d8482`), then dropped.
+Enum `offer_state` dropped alongside (was used only by `offers.status`).
+New `offers` + `offer_options` tables replace them per §3b (FA-1.12 migration
+`20260917104506_add_offers.sql`). `inquiry_messages` replaced by `messages`
+(`20260917104503_add_messages.sql`); 75 rows migrated to `messages`.
+
+**RLS note (messages, offers, offer_options):** RLS is intentionally narrower than
+`inquiries`. No angler or guide policies — all access goes through server actions
+with `requireAdmin()` / `requireToken()` / `requireGuide()` which use service_role.
+`anon` is explicitly REVOKEd. Rationale: the thread contains messages to both
+counterparts; a counterpart-scoped policy would risk leaking mistagged messages.
+Decision: tj 2026-09-17. To revisit when building the client or guide portal.
+
 ### Still in `public`, dead or near-dead (candidates for later tasks)
 `guide_images` (admin insert + guide profile read — FA-1.07/1.08),
 `guide_submissions` (read-only archive; writer component unrendered — FA-1.07),
-`inquiry_messages` (insert in try/catch — FA-1.12),
-`offers` (**14 wierszy** prod 2026-09-17; name collides with FA-1.12's planned table — stays, FA-1.12 decides),
 `audit_log` (written by `audit_trigger_fn` on `guides`, `guide_images` triggers;
              no reader in `src` — investigate before dropping; stage 4),
 `expedition_waters` (3 rows), `regions` (16 rows), `guide_private` (18 rows) — have data, not in FA-1.02 scope.

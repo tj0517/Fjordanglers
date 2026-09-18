@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../../src/*"],
+      "next/headers": ["./stubs/next-headers.mts"],
+      "next/cache": ["./stubs/next-cache.mts"]
+    }
+  }
+}

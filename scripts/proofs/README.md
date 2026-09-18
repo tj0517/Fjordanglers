@@ -57,30 +57,6 @@ The script sets `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421` (and the
 matching anon / service-role keys) before starting `pnpm dev`, so the dev
 server talks to the local stack, not production.  A safety fuse in the spec
 throws immediately if the URL is not `127.0.0.1` / `localhost`.
-
-**Expected output (2026-09-18 baseline run — 22 s):**
-
-```
-── inquiry_events ─────────────────────────────────────────
-  status.changed|app|app        ← new → waiting_guide
-  status.changed|app|app        ← → offer_presented  (NOTE A)
-  status.changed|app|app        ← → awaiting_payment (NOTE A)
-  payment.received|stripe|webhook
-  status.changed|stripe|webhook ← → paid (from deposit webhook)
-  status.changed|app|app        ← → handed_over
-
- total events: 6
- final status: handed_over
-
- NOTE: full ≥10 event count requires markAsGuideOffer / markOfferPresented /
-       markClientAccepted wired to UI (none exist yet). See NOTE A in spec.
-       For 18-event walk: scripts/proofs/fa-1.12-walk.mts
-```
-
-The email-inbound step logs HTTP 401 (HMAC secret mismatch between local
-`.env.local` Resend secret and the test value) — this is expected and the
-test does not assert on that step's status.
-
 ## Files
 
 | File | Task | What it proves |

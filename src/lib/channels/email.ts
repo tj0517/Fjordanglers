@@ -65,6 +65,7 @@ export const emailAdapter: ChannelAdapter = {
       return { externalId: `fake-${t}`, threadKey: `<fake-${t}@dev.fjordanglers.com>` }
     }
 
+
     const outboundMsgId = newMessageId()
 
     const headers: Record<string, string> = {
