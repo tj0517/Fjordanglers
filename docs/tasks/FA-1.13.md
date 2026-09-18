@@ -131,3 +131,26 @@ Szczegółowy raport w opisie PR. Poniżej podsumowanie.
 w środowisku produkcyjnym Vercel.** Brak sekretu = webhook odrzuca wszystkie żądania
 z 401 (HMAC Option B).
 
+### Blokada zewnętrzna (18 IX 2026)
+
+Integracja WhatsApp Cloud API jest zablokowana po stronie Meta, nie kodu. Konto tj ma
+ograniczenie dostępu do reklam obejmujące tworzenie portfolio firmowych (komunikat:
+„Nie możesz zamieszczać reklam, zarządzać zasobami reklamowymi ani tworzyć kont
+reklamowych i portfolio firmowych"). Kreator aplikacji Meta na kroku „Business" zwraca
+„No businesses available". Istniejące portfolio „fan page" (ID 1258409340996834,
+utworzone 4 VIII 2019) ma pustą nazwę firmy, brak adresu i telefonu, status
+„Nie zweryfikowano" — i tak nie jest oferowane w kreatorze.
+Zmienne `WHATSAPP_*` w `.env.local` to zaślepki (`your_...`, `from...`), nie sekrety —
+aplikacja Meta nigdy nie istniała. tj złożył odwołanie w Account Quality 18 IX 2026.
+
+Grep na wołających `/api/webhooks/whatsapp` (poza `route.ts` i testami): **0 trafień** —
+żaden kod klienta ani cron nie woła tego endpointu.
+Blokada mergu (WHATSAPP_APP_SECRET w Vercel) jest tym samym **zdjęta**: sekret nie
+istnieje i nie powstanie do czasu rozpatrzenia odwołania; webhook zwraca 401, ale nikt
+do niego nie puka.
+
+**Kryteria nieudowodnione do odblokowania konta:**
+- Kryterium 1: E2E z prawdziwym numerem Meta (WA do przewodnika → odpowiedź → w wątku).
+- Kryterium 5 (częściowo): build kompiluje się bez `INSTAGRAM_*`, ale pełna weryfikacja
+  z testowym numerem Meta musi poczekać.
+
