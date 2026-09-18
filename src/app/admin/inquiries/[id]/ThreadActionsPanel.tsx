@@ -198,7 +198,7 @@ export function ThreadActionsPanel({
   // ─── Derived state ────────────────────────────────────────────────────────
 
   const noOffer        = offer == null
-  const offerPending2  = offer?.status === 'pending'
+  const offerPending2  = offer?.status === 'draft'
   const offerPresented = offer?.status === 'presented'
   const isPaid         = ['paid', 'handed_over', 'completed'].includes(inquiryStatus)
   const isHandedOver   = ['handed_over', 'completed'].includes(inquiryStatus)

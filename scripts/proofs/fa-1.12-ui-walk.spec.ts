@@ -1,52 +1,33 @@
 /**
  * FA-1.12 Playwright UI-walk proof
  *
- * Drives the admin panel through the full messages-thread path:
- *   new → waiting_guide
- *   outbound email to angler           (MessageComposer UI)
- *   inbound email from guide           (email-inbound webhook POST)
- *   waiting_guide → offer_presented    (StatusChanger UI)  ⚠ see NOTE A
- *   offer_presented → awaiting_payment (StatusChanger UI)  ⚠ see NOTE A
- *   Stripe deposit webhook             (stripe-deposit webhook POST)
- *   paid → handed_over                 (StatusChanger UI)
+ * Drives the admin panel through the full messages-thread path using only
+ * the real UI buttons wired to FA-1.12 server actions.
  *
- * ───────────────────────────────────────────────────────────────────────────
- * NOTE A — missing UI buttons (3 of 10 steps have no UI):
- *   markAsGuideOffer, markOfferPresented, markClientAccepted are exported
- *   server actions in src/actions/messages.ts but no React component calls
- *   them anywhere in src/app/. The guide.offer_received, offer.presented and
- *   offer.accepted events therefore cannot be emitted through the browser.
- *   The StatusChanger is used instead (direct status.changed transitions).
- *   Full event coverage is provided by scripts/proofs/fa-1.12-walk.mts which
- *   calls those actions directly (no browser required).
+ * Steps and expected events:
+ *   new → waiting_guide          (StatusChanger)             → status.changed
+ *   send to angler                (MessageComposer)           → message.sent
+ *   send to guide                 (MessageComposer guide tab) → message.sent + guide.contacted
+ *   inbound email from angler     (email-inbound webhook)     → message.received
+ *   Mark as Guide Offer           (ThreadActionsPanel)        → guide.offer_received
+ *   Present Offer to Angler       (ThreadActionsPanel)        → offer.presented
+ *   Client Accepted               (ThreadActionsPanel)        → offer.accepted
+ *   Create Deposit Link           (ThreadActionsPanel)        → payment.link_sent
+ *   Stripe deposit webhook                                    → payment.received + status.changed
+ *   Guide Notified Paid           (ThreadActionsPanel)        → guide.notified_paid
+ *   Contacts Exchanged            (ThreadActionsPanel)        → contacts.exchanged + status.changed
  *
- * NOTE B — "send to guide" UI:
- *   MessageComposer in the admin sidebar only sends to the angler.
- *   There is no "Send to guide" tab/button in the current admin panel.
- *   guide.contacted is not emitted in this walk as a result.
+ * Total: 13–14 events, final status: handed_over
  *
- * ───────────────────────────────────────────────────────────────────────────
- * HOW TO RUN (the dev server MUST use local Supabase, not production):
+ * ─────────────────────────────────────────────────────────────────────────────
+ * HOW TO RUN (dev server MUST use local Supabase, not production):
  *
  *   # 1. Start local Supabase
  *   supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,\
  *                     realtime,storage-api,postgres-meta
  *
- *   # 2. Start dev server with LOCAL env — use the helper script:
+ *   # 2. Start dev server + run spec:
  *   bash scripts/proofs/run-fa-1.12-ui-walk.sh
- *
- *   # OR manually:
- *   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421 \
- *   NEXT_PUBLIC_SUPABASE_ANON_KEY=<local anon key from supabase status> \
- *   SUPABASE_SERVICE_ROLE_KEY=<local service role key from supabase status> \
- *   STRIPE_WEBHOOK_SECRET=whsec_test_local \
- *   RESEND_INBOUND_SECRET=test-resend-secret \
- *   pnpm dev &
- *
- *   # 3. In a separate terminal:
- *   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54421 \
- *   STRIPE_WEBHOOK_SECRET=whsec_test_local \
- *   npx playwright test scripts/proofs/fa-1.12-ui-walk.spec.ts
  *
  * SAFETY FUSE: refuses to run against any host other than 127.0.0.1 / localhost.
  */
@@ -56,17 +37,13 @@ import { execSync }       from 'node:child_process'
 import { readFileSync }   from 'node:fs'
 import { resolve }        from 'node:path'
 
-// ── Local-stack constants (same for every `supabase start`) ───────────────────
+// ── Local-stack constants ──────────────────────────────────────────────────────
 
-// These are the standard Supabase demo JWT keys, always used for local stacks.
-// They are NOT production secrets.
 const LOCAL_SB_URL   = 'http://127.0.0.1:54421'
 const LOCAL_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 const LOCAL_PG       = 'postgresql://postgres:postgres@127.0.0.1:54422/postgres'
 
 // ── Read RESEND_INBOUND_SECRET from .env.local ─────────────────────────────────
-// The dev server loads .env.local at startup; the spec must use the same value
-// when computing the HMAC signature for the email-inbound webhook.
 function readEnvLocal(): Record<string, string> {
   try {
     const file = readFileSync(resolve(__dirname, '../../.env.local'), 'utf8')
@@ -81,9 +58,8 @@ function readEnvLocal(): Record<string, string> {
 const envLocal      = readEnvLocal()
 const RESEND_SECRET = envLocal['RESEND_INBOUND_SECRET'] ?? process.env.RESEND_INBOUND_SECRET ?? ''
 
-// Runtime env overrides (also honour variables passed by the run script)
 const SB_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL    || LOCAL_SB_URL
-const STRIPE_WH_SEC = process.env.STRIPE_WEBHOOK_SECRET       || 'whsec_test_local'
+const STRIPE_WH_SEC = process.env.STRIPE_WEBHOOK_SECRET       || 'whsec_test_local_fa112'
 
 // ── Safety fuse ────────────────────────────────────────────────────────────────
 
@@ -91,7 +67,7 @@ if (!/^https?:\/\/(127\.0\.0\.1|localhost)[:/]/.test(SB_URL)) {
   throw new Error(
     `SAFETY FUSE: fa-1.12-ui-walk.spec.ts only runs against the local stack.\n` +
     `Current NEXT_PUBLIC_SUPABASE_URL: ${SB_URL}\n` +
-    `Start the dev server with LOCAL Supabase env — see the HOW TO RUN comment above.`
+    `Start the dev server with LOCAL Supabase env — see HOW TO RUN above.`
   )
 }
 
@@ -99,27 +75,23 @@ if (!/^https?:\/\/(127\.0\.0\.1|localhost)[:/]/.test(SB_URL)) {
 
 const ADMIN_EMAIL    = 'fa112-ui-walk@local.test'
 const ADMIN_PASSWORD = 'fa112-ui-walk-pw!'
-// Resend test addresses — accepted by the API without actual delivery
 const ANGLER_EMAIL   = 'delivered@resend.dev'
 const GUIDE_EMAIL    = 'delivered+guide@resend.dev'
 
 const INQUIRY_ID     = '11111111-0001-4000-8000-000000fa1201'
 const GUIDE_ID       = '11111111-0002-4000-8000-000000fa1202'
 
+const OFFER_LABEL    = 'Iceland 3-day package'
+const OFFER_PRICE    = '3600'   // EUR
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-// psql helper — all setup goes through direct DB access to avoid Auth JWT issues.
-// The local stack (Supabase CLI ≥ 2.75) uses ES256 JWTs; the HS256 service-role
-// key from `supabase status` is rejected by the Auth admin API.
 function psql(sql: string): string {
-  // Write to a temp file to avoid shell quoting issues with complex SQL
   const { writeFileSync, unlinkSync } = require('node:fs')
   const tmpFile = `/tmp/fa-1.12-ui-walk-${Date.now()}.sql`
   writeFileSync(tmpFile, sql)
   try {
-    return execSync(`psql "${LOCAL_PG}" -f "${tmpFile}" -t -A`, {
-      encoding: 'utf8',
-    }).trim()
+    return execSync(`psql "${LOCAL_PG}" -f "${tmpFile}" -t -A`, { encoding: 'utf8' }).trim()
   } finally {
     try { unlinkSync(tmpFile) } catch {}
   }
@@ -128,18 +100,15 @@ function psql(sql: string): string {
 // ── One-time test setup ────────────────────────────────────────────────────────
 
 test.beforeAll(async () => {
-  // Create admin user + profile directly via psql (Auth admin API uses ES256
-  // JWTs but supabase status only provides HS256 keys, so HTTP admin API fails).
   const ADMIN_ID = '11111111-0003-4000-8000-000000fa1203'
 
   psql(`
-    -- Idempotent: delete existing test rows so re-runs start clean
     DELETE FROM inquiry_events WHERE inquiry_id = '${INQUIRY_ID}';
     DELETE FROM messages WHERE inquiry_id = '${INQUIRY_ID}';
+    DELETE FROM offer_options WHERE offer_id IN (SELECT id FROM offers WHERE inquiry_id = '${INQUIRY_ID}');
     DELETE FROM offers WHERE inquiry_id = '${INQUIRY_ID}';
     DELETE FROM inquiries WHERE id = '${INQUIRY_ID}';
 
-    -- Admin user in auth.users (bcrypt hash of '${ADMIN_PASSWORD}')
     INSERT INTO auth.users (
       id, instance_id, email, encrypted_password,
       email_confirmed_at, role, aud, created_at, updated_at,
@@ -165,7 +134,6 @@ test.beforeAll(async () => {
       email_change       = '',
       email_change_token_new = '';
 
-    -- Auth identity (required for password sign-in)
     INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, created_at, updated_at)
     VALUES (
       '${ADMIN_EMAIL}', '${ADMIN_ID}',
@@ -174,19 +142,16 @@ test.beforeAll(async () => {
     )
     ON CONFLICT (provider_id, provider) DO NOTHING;
 
-    -- Admin profile
     INSERT INTO public.profiles (id, role)
     VALUES ('${ADMIN_ID}', 'admin')
     ON CONFLICT (id) DO UPDATE SET role = 'admin';
 
-    -- Guide
     INSERT INTO public.guides (id, full_name, invite_email, status, country)
     VALUES ('${GUIDE_ID}', 'UI Walk Guide', '${GUIDE_EMAIL}', 'active', 'IS')
     ON CONFLICT (id) DO UPDATE SET
       full_name    = EXCLUDED.full_name,
       invite_email = EXCLUDED.invite_email;
 
-    -- Test inquiry
     INSERT INTO public.inquiries (
       id, angler_name, angler_email, angler_country,
       message, party_size, requested_dates, deposit_amount,
@@ -213,11 +178,67 @@ async function login(page: import('@playwright/test').Page): Promise<void> {
   await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 15_000 })
 }
 
+// ── Webhook signing helper (runs in page context) ─────────────────────────────
+
+async function signAndPost(
+  page: import('@playwright/test').Page,
+  url:  string,
+  body: string,
+  opts: { kind: 'stripe'; secret: string } | { kind: 'resend'; secret: string; msgId: string },
+): Promise<number> {
+  return page.evaluate(
+    async ({ url, body, opts }) => {
+      if (opts.kind === 'stripe') {
+        const t   = String(Math.floor(Date.now() / 1000))
+        const msg = `${t}.${body}`
+        const key = await crypto.subtle.importKey(
+          'raw', new TextEncoder().encode(opts.secret),
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+        )
+        const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(msg))
+        const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'stripe-signature': `t=${t},v1=${hex}` },
+          body,
+        })
+        return res.status
+      } else {
+        const ts     = String(Math.floor(Date.now() / 1000))
+        const toSign = `${opts.msgId}.${ts}.${body}`
+        const rawSec = opts.secret.replace(/^whsec_/, '')
+        const bin    = atob(rawSec)
+        const keyBuf = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) keyBuf[i] = bin.charCodeAt(i)
+        const key    = await crypto.subtle.importKey(
+          'raw', keyBuf.buffer,
+          { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+        )
+        const sig    = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(toSign))
+        const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+        const res    = await fetch(url, {
+          method:  'POST',
+          headers: {
+            'Content-Type':   'application/json',
+            'svix-id':        opts.msgId,
+            'svix-timestamp': ts,
+            'svix-signature': `v1,${sigB64}`,
+          },
+          body,
+        })
+        return res.status
+      }
+    },
+    { url, body, opts },
+  )
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // THE WALK
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test('FA-1.12 full admin path → handed_over', async ({ page }) => {
+  test.setTimeout(180_000)
 
   // ── 0. Login ────────────────────────────────────────────────────────────────
   await login(page)
@@ -230,25 +251,24 @@ test('FA-1.12 full admin path → handed_over', async ({ page }) => {
   await page.getByRole('button', { name: /^waiting guide$/i }).click()
   await page.waitForTimeout(2_000)
 
-  // ── 3. Send message to angler (MessageComposer) ───────────────────────────────
+  // ── 3. Send message to angler ────────────────────────────────────────────────
   await page.getByPlaceholder(/re: your inquiry/i).fill('Your Iceland inquiry')
   await page.getByPlaceholder(/Hi Jan/i).fill('Hello — we are looking into guides for your dates.')
   await page.getByRole('button', { name: /^send message →$/i }).click()
   await expect(page.getByText(/message sent to angler/i)).toBeVisible({ timeout: 10_000 })
 
-  // ── 4. Inbound email from guide (email-inbound webhook) ───────────────────────
-  // Resend inbound uses Svix signing:
-  //   toSign   = svixId + "." + timestamp + "." + rawBody
-  //   secretKey = base64decode(RESEND_INBOUND_SECRET.replace(/^whsec_/, ''))
-  //   sig       = "v1," + base64(HMAC-SHA256(secretKey, toSign))
-  //
-  // The route expects: { type: "email.received", data: { email_id, from, subject, text } }
-  // When RESEND_DEV_FAKE=1 the dev server skips the Resend body-fetch and uses
-  // data.text from the payload directly; matchInquiryByEmail finds the inquiry
-  // by the guide's email address.
-  // Simulate a reply FROM the angler (matchInquiryByEmail matches by angler_email).
-  // The guide reply path would need matchInquiryByGuideEmail (not yet implemented).
-  const inboundPayload = {
+  // Hard reload before guide step — clears flash and ensures page is stable
+  await page.reload()
+  await page.waitForSelector('text=UI Walk Angler', { timeout: 10_000 })
+
+  // ── 4. Send message to guide (guide tab) ─────────────────────────────────────
+  await page.getByRole('button', { name: /^guide$/i }).click()
+  await page.getByPlaceholder(/Hi Jan/i).fill('Hi — confirming your availability for Jul 10-12?')
+  await page.getByRole('button', { name: /^send message →$/i }).click()
+  await expect(page.getByText(/message sent to guide/i)).toBeVisible({ timeout: 10_000 })
+
+  // ── 5. Inbound email from angler (email-inbound webhook) ──────────────────────
+  const inboundPayload = JSON.stringify({
     type: 'email.received',
     data: {
       email_id: 'test-inbound-ui-walk-1',
@@ -256,58 +276,52 @@ test('FA-1.12 full admin path → handed_over', async ({ page }) => {
       subject:  'Re: fishing trip inquiry',
       text:     'Sounds great, I am available Jul 10-12.',
     },
-  }
-  const inboundStatus = await page.evaluate(
-    async ({ url, payload, secret }: { url: string; payload: unknown; secret: string }) => {
-      const msgId   = 'msg_ui_walk_inbound'
-      const ts      = String(Math.floor(Date.now() / 1000))
-      const body    = JSON.stringify(payload)
-      const toSign  = `${msgId}.${ts}.${body}`
-
-      // Decode the base64 secret (strip optional "whsec_" prefix)
-      const rawSec  = secret.replace(/^whsec_/, '')
-      // atob decodes base64 → binary string; convert to Uint8Array
-      const binStr  = atob(rawSec)
-      const keyBuf  = new Uint8Array(binStr.length)
-      for (let i = 0; i < binStr.length; i++) keyBuf[i] = binStr.charCodeAt(i)
-
-      const key     = await crypto.subtle.importKey(
-        'raw', keyBuf.buffer,
-        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
-      )
-      const sigBuf  = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(toSign))
-      const sigB64  = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
-
-      const res = await fetch(url, {
-        method:  'POST',
-        headers: {
-          'Content-Type':   'application/json',
-          'svix-id':        msgId,
-          'svix-timestamp': ts,
-          'svix-signature': `v1,${sigB64}`,
-        },
-        body,
-      })
-      return res.status
-    },
-    { url: 'http://localhost:3000/api/webhooks/email-inbound', payload: inboundPayload, secret: RESEND_SECRET },
+  })
+  const inboundStatus = await signAndPost(
+    page,
+    'http://localhost:3000/api/webhooks/email-inbound',
+    inboundPayload,
+    { kind: 'resend', secret: RESEND_SECRET, msgId: 'msg_ui_walk_inbound_1' },
   )
-  console.log('[step 4] email-inbound webhook status:', inboundStatus)
+  console.log('[step 5] email-inbound webhook status:', inboundStatus)
   expect(inboundStatus).toBe(200)
 
-  // ── 5. Status: waiting_guide → offer_presented ───────────────────────────────
-  // ⚠ NOTE A: markAsGuideOffer has no UI button — StatusChanger used directly.
+  // Hard reload — picks up latestInboundMsgId so "Mark as Guide Offer" appears
   await page.reload()
   await page.waitForSelector('text=UI Walk Angler', { timeout: 10_000 })
-  await page.getByRole('button', { name: /^offer presented$/i }).click()
-  await page.waitForTimeout(2_000)
 
-  // ── 6. Status: offer_presented → awaiting_payment ────────────────────────────
-  // ⚠ NOTE A: markClientAccepted has no UI button — StatusChanger used directly.
-  await page.getByRole('button', { name: /^awaiting payment$/i }).click()
-  await page.waitForTimeout(2_000)
+  // ── 6. Mark as Guide Offer ────────────────────────────────────────────────────
+  await page.getByRole('button', { name: /^mark as guide offer$/i }).click()
+  await page.getByPlaceholder(/e\.g\. Trout/i).fill(OFFER_LABEL)
+  await page.getByPlaceholder(/Price \(EUR\)/i).fill(OFFER_PRICE)
+  await page.getByRole('button', { name: /^create guide offer$/i }).click()
 
-  // ── 7. Stripe deposit webhook ─────────────────────────────────────────────────
+  // Wait for "Present Offer to Angler" to appear — router.refresh() brings new offer data
+  await expect(
+    page.getByRole('button', { name: /^present offer to angler$/i }),
+  ).toBeVisible({ timeout: 20_000 })
+
+  // ── 7. Present Offer to Angler ────────────────────────────────────────────────
+  await page.getByRole('button', { name: /^present offer to angler$/i }).click()
+
+  // Wait for "Client Accepted" button — router.refresh() updates offer.status to 'presented'
+  await expect(
+    page.getByRole('button', { name: /^client accepted/i }).first(),
+  ).toBeVisible({ timeout: 20_000 })
+
+  // ── 8. Client Accepted ────────────────────────────────────────────────────────
+  await page.getByRole('button', { name: /^client accepted/i }).first().click()
+
+  // Wait for "Create Deposit Link" button — router.refresh() updates offer.status to 'accepted'
+  await expect(
+    page.getByRole('button', { name: /create deposit link/i }),
+  ).toBeVisible({ timeout: 20_000 })
+
+  // ── 9. Create Deposit Link ────────────────────────────────────────────────────
+  await page.getByRole('button', { name: /create deposit link/i }).click()
+  await expect(page.getByText(/deposit link created/i)).toBeVisible({ timeout: 30_000 })
+
+  // ── 10. Stripe deposit webhook ────────────────────────────────────────────────
   const stripePayload = JSON.stringify({
     id:   'evt_ui_walk_1',
     type: 'checkout.session.completed',
@@ -322,57 +336,56 @@ test('FA-1.12 full admin path → handed_over', async ({ page }) => {
       },
     },
   })
-  const stripeStatus = await page.evaluate(
-    async ({ url, payload, secret }: { url: string; payload: string; secret: string }) => {
-      const t          = String(Math.floor(Date.now() / 1000))
-      const signedMsg  = `${t}.${payload}`
-      const key        = await crypto.subtle.importKey(
-        'raw', new TextEncoder().encode(secret),
-        { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
-      )
-      const sigBuf  = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedMsg))
-      const sigHex  = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2,'0')).join('')
-      const res = await fetch(url, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'stripe-signature': `t=${t},v1=${sigHex}` },
-        body:    payload,
-      })
-      return res.status
-    },
-    { url: 'http://localhost:3000/api/webhooks/stripe-deposit', payload: stripePayload, secret: STRIPE_WH_SEC },
+  const stripeStatus = await signAndPost(
+    page,
+    'http://localhost:3000/api/webhooks/stripe-deposit',
+    stripePayload,
+    { kind: 'stripe', secret: STRIPE_WH_SEC },
   )
-  console.log('[step 7] stripe-deposit webhook status:', stripeStatus)
-  await page.waitForTimeout(2_000)
+  console.log('[step 10] stripe-deposit webhook status:', stripeStatus)
+  expect(stripeStatus).toBe(200)
 
-  // ── 8. Status: paid → handed_over ─────────────────────────────────────────────
-  await page.reload()
-  await page.waitForSelector('text=UI Walk Angler', { timeout: 10_000 })
-  // Stripe webhook transitions inquiry to 'paid'; StatusChanger to handed_over.
-  await page.getByRole('button', { name: /^handed over$/i }).click()
-  await page.waitForTimeout(2_000)
-
-  // ── 9. Verify final badge ─────────────────────────────────────────────────────
+  // Hard reload — picks up inquiry.status='paid' so "Guide Notified Paid" appears
   await page.reload()
   await page.waitForSelector('text=UI Walk Angler', { timeout: 10_000 })
   await expect(
-    page.locator('span', { hasText: /handed.?over/i }).first(),
-  ).toBeVisible({ timeout: 5_000 })
+    page.getByRole('button', { name: /^guide notified paid$/i }),
+  ).toBeVisible({ timeout: 10_000 })
 
-  // ── 10. DB assertion ──────────────────────────────────────────────────────────
+  // ── 11. Guide Notified Paid ───────────────────────────────────────────────────
+  await page.getByRole('button', { name: /^guide notified paid$/i }).click()
+
+  // Wait for "Contacts Exchanged" button — router.refresh() sets guideNotifiedPaid=true
+  await expect(
+    page.getByRole('button', { name: /^contacts exchanged$/i }),
+  ).toBeVisible({ timeout: 20_000 })
+
+  // ── 12. Contacts Exchanged ────────────────────────────────────────────────────
+  await page.getByRole('button', { name: /^contacts exchanged$/i }).click()
+  // Panel header "Thread actions" disappears when isHandedOver=true (router.refresh)
+  // This proves the action completed and the inquiry transitioned to handed_over
+  await expect(page.getByText('Thread actions')).not.toBeVisible({ timeout: 20_000 })
+
+  // ── 13. Verify final badge ────────────────────────────────────────────────────
+  await page.reload()
+  await page.waitForSelector('text=UI Walk Angler', { timeout: 10_000 })
+  // STATUS_LABEL has no 'handed_over' entry → badge renders raw inquiry.status
+  await expect(
+    page.locator('span', { hasText: /handed.?over/i }).first(),
+  ).toBeVisible({ timeout: 10_000 })
+
+  // ── 14. DB assertion ──────────────────────────────────────────────────────────
   const eventsRaw = psql(
     `SELECT type || '|' || COALESCE(channel,'') || '|' || COALESCE(source,'') ` +
     `FROM inquiry_events WHERE inquiry_id = '${INQUIRY_ID}' ORDER BY occurred_at`
   )
-  const events    = eventsRaw.split('\n').filter(l => l.trim() !== '')
-  const finalSt   = psql(`SELECT status FROM inquiries WHERE id = '${INQUIRY_ID}'`)
+  const events  = eventsRaw.split('\n').filter(l => l.trim() !== '')
+  const finalSt = psql(`SELECT status FROM inquiries WHERE id = '${INQUIRY_ID}'`)
 
   console.log('\n── inquiry_events ─────────────────────────────────────────')
   events.forEach(e => console.log(' ', e))
   console.log(`\n total events: ${events.length}`)
-  console.log(` final status: ${finalSt}`)
-  console.log('\n NOTE: full ≥10 event count requires markAsGuideOffer / markOfferPresented /');
-  console.log('       markClientAccepted wired to UI (none exist yet). See NOTE A above.');
-  console.log('       For 18-event walk: scripts/proofs/fa-1.12-walk.mts\n');
+  console.log(` final status: ${finalSt}\n`)
 
   expect(events.length).toBeGreaterThanOrEqual(10)
   expect(finalSt).toBe('handed_over')
