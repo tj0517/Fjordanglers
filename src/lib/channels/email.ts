@@ -1,8 +1,5 @@
 /**
- * Email channel adapter — FA-1.12.
- *
- * Wraps the existing Resend integration (src/lib/email.ts sendEmail helper)
- * with the ChannelAdapter contract.
+ * Email channel adapter — FA-1.13.
  *
  * Thread key = Message-ID header on outbound emails.
  * In-Reply-To is set when a previous threadKey exists (same chain).
@@ -10,7 +7,7 @@
 
 import { randomUUID } from 'crypto'
 import { env } from '@/lib/env'
-import type { ChannelAdapter, SendParams, SendResult } from './types'
+import type { ChannelAdapter, InboundMessage, SendParams, SendResult } from './types'
 
 function newMessageId(): string {
   return `<${randomUUID()}@mail.fjordanglers.com>`
@@ -55,16 +52,15 @@ async function sendRaw({
 }
 
 export const emailAdapter: ChannelAdapter = {
-  canSendFreeform: true,
+  canSendFreeform(_lastInboundAt: Date | null): boolean {
+    return true
+  },
 
   async send(params: SendParams): Promise<SendResult> {
-    // Fake mode: skip Resend entirely; still returns a well-shaped result so
-    // the caller can store the message row and emit message.sent as normal.
     if (process.env.RESEND_DEV_FAKE === '1' || !process.env.RESEND_API_KEY) {
       const t = Date.now()
       return { externalId: `fake-${t}`, threadKey: `<fake-${t}@dev.fjordanglers.com>` }
     }
-
 
     const outboundMsgId = newMessageId()
 
@@ -86,10 +82,16 @@ export const emailAdapter: ChannelAdapter = {
     return { externalId: resendId || null, threadKey: outboundMsgId }
   },
 
-  parseThreadKey(raw: Record<string, unknown>): string | null {
-    // Resend inbound: Message-ID is in raw.data.headers or raw.data.message_id
+  parseInbound(raw: Record<string, unknown>): InboundMessage | null {
     const data = raw.data as Record<string, unknown> | undefined
-    if (typeof data?.email_id === 'string') return data.email_id
-    return null
+    if (typeof data?.email_id !== 'string') return null
+    return {
+      from:       typeof data.from === 'string' ? data.from : '',
+      body:       '',
+      externalId: data.email_id,
+      occurredAt: new Date(),
+      media:      null,
+      threadKey:  data.email_id,
+    }
   },
 }
