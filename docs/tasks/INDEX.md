@@ -44,8 +44,11 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-1.09 | Legacy edytor `experiences` poza nawigacją; gorące akcje na `experience_pages` | M | sonnet | todo | FA-1.06 |
 | FA-1.10 | Tymczasowy przegląd tygodniowy w obecnym `/admin` (8 liczb, do wyrzucenia w etapie 6) | M | sonnet | todo | FA-1.04 |
 | FA-1.11 | CI: `db diff` pusty + `gen types` + typecheck/lint/build | M | sonnet | todo | FA-1.01 |
+| FA-1.12 | `messages` — jeden wątek na zapytanie; e-mail w obie strony z karty; `offers` z opcjami; link Stripe z aplikacji | L | opus | done | FA-1.03 |
+| FA-1.13 | WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy | L | opus | in_progress | FA-1.12 |
+| FA-1.14 | Agent w wątku — propozycja odpowiedzi z bazy wiedzy; auto-wysyłka off | L | opus | todo | FA-1.12 |
 
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
-Only FA-0.01, FA-0.05 and FA-1.03 are fully written so far — use them as the pattern for the rest.
+Stage-1 files written: FA-1.01–1.04, 1.06, 1.09, 1.11–1.14. FA-1.05, 1.07, 1.08, 1.10 are written once FA-1.12 is in review (their content depends on `messages` and on what 1.12 removes).
