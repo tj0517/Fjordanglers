@@ -9,6 +9,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { MessageComposer } from './MessageComposer'
+import { ThreadActionsPanel } from './ThreadActionsPanel'
+import type { OfferForPanel } from './ThreadActionsPanel'
 import { StatusChanger } from './StatusChanger'
 import { InternalDealTracker } from './InternalDealTracker'
 import { NextActionEditor } from './NextActionEditor'
@@ -248,6 +250,64 @@ export default async function AdminInquiryDetailPage({
     if (tdData != null) tripDetails = tdData as unknown as TripDetails
   } catch {
     // Table not yet migrated — safe to ignore
+  }
+
+  // ── Fetch offer + options for ThreadActionsPanel ──────────────────────────
+  let panelOffer: OfferForPanel | null = null
+  let latestInboundMsgId:     string | null = null
+  let latestOutboundAnglerId: string | null = null
+  let latestOutboundGuideId:  string | null = null
+  let guideNotifiedPaid = false
+
+  try {
+    const { data: offerRow } = await svc
+      .from('offers')
+      .select('id, status, source_message_id')
+      .eq('inquiry_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (offerRow != null) {
+      const { data: opts } = await svc
+        .from('offer_options')
+        .select('id, label, price_cents, currency')
+        .eq('offer_id', offerRow.id)
+      panelOffer = {
+        id:                offerRow.id,
+        status:            offerRow.status,
+        source_message_id: offerRow.source_message_id,
+        options:           (opts ?? []).map(o => ({
+          id:          o.id,
+          label:       o.label,
+          price_cents: o.price_cents,
+          currency:    o.currency,
+        })),
+      }
+    }
+
+    // Latest inbound message (any counterpart)
+    const inbound = threadMessages.filter(m => m.direction === 'inbound')
+    latestInboundMsgId = inbound.length > 0 ? inbound[inbound.length - 1].id : null
+
+    // Latest outbound to angler
+    const outboundAngler = threadMessages.filter(m => m.direction === 'outbound' && m.counterpart === 'angler')
+    latestOutboundAnglerId = outboundAngler.length > 0 ? outboundAngler[outboundAngler.length - 1].id : null
+
+    // Latest outbound to guide
+    const outboundGuide = threadMessages.filter(m => m.direction === 'outbound' && m.counterpart === 'guide')
+    latestOutboundGuideId = outboundGuide.length > 0 ? outboundGuide[outboundGuide.length - 1].id : null
+
+    // Was guide.notified_paid already emitted?
+    const { data: notifyEvt } = await svc
+      .from('inquiry_events')
+      .select('id')
+      .eq('inquiry_id', id)
+      .eq('type', 'guide.notified_paid')
+      .maybeSingle()
+    guideNotifiedPaid = notifyEvt != null
+  } catch {
+    // Non-fatal — panel shows empty state
   }
 
   const st             = STATUS_STYLE[inquiry.status] ?? STATUS_STYLE.pending
@@ -515,14 +575,29 @@ export default async function AdminInquiryDetailPage({
 
       <AgentToggle inquiryId={inquiry.id} initialStatus={inquiry.agent_status} />
 
+      <ThreadActionsPanel
+        inquiryId={inquiry.id}
+        inquiryStatus={inquiry.status}
+        offer={panelOffer}
+        latestInboundMsgId={latestInboundMsgId}
+        latestOutboundAnglerId={latestOutboundAnglerId}
+        latestOutboundGuideId={latestOutboundGuideId}
+        guideId={inquiry.assigned_guide_id ?? null}
+        depositAmountEur={inquiry.deposit_amount ?? null}
+        guideNotifiedPaid={guideNotifiedPaid}
+      />
+
       <div className="rounded-[20px] overflow-hidden"
         style={{ background: 'rgba(10,46,77,0.75)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body" style={{ color: 'rgba(255,255,255,0.28)' }}>Anytime</p>
-          <p className="text-sm font-bold f-body mt-0.5" style={{ color: '#FFFFFF' }}>Send message to angler</p>
+          <p className="text-sm font-bold f-body mt-0.5" style={{ color: '#FFFFFF' }}>Send message</p>
         </div>
         <div className="px-5 py-4">
-          <MessageComposer inquiryId={inquiry.id} />
+          <MessageComposer
+            inquiryId={inquiry.id}
+            guideAssigned={inquiry.assigned_guide_id != null}
+          />
         </div>
       </div>
 
