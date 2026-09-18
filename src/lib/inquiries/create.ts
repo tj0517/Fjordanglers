@@ -12,49 +12,86 @@
  * of being invented at insert time.
  */
 
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEvent, type EventActor } from '@/lib/events/emit'
 import type { UtmParams } from '@/lib/utm'
 
 /**
- * Normalise a phone number for storage using the same 4-rule logic as the
- * 20260918135418 migration backfill.
+ * Maps FA destination country names to ISO 3166-1 alpha-2 codes.
+ * Used as a fallback when `anglerPhoneCountry` is not provided on the form.
+ */
+const TRIP_COUNTRY_ISO: Record<string, string> = {
+  'Iceland':          'IS',
+  'New Zealand':      'NZ',
+  'Norway':           'NO',
+  'Sweden':           'SE',
+  'Finland':          'FI',
+  'Denmark':          'DK',
+  'Faroe Islands':    'FO',
+  'UK':               'GB',
+  'United Kingdom':   'GB',
+  'Poland':           'PL',
+  'United States':    'US',
+  'Canada':           'CA',
+  'Australia':        'AU',
+  'Ireland':          'IE',
+  'Netherlands':      'NL',
+  'Germany':          'DE',
+  'France':           'FR',
+}
+
+/**
+ * Normalise a raw phone string to E.164 using libphonenumber-js.
  *
- * Rule 1: starts with '+' → already E.164 prefix, strip formatting chars.
- * Rule 2: starts with '00' → replace prefix with '+', strip formatting chars.
- * Rule 3: exactly 9 stripped digits → Polish local, prepend +48.
+ * Rule 1: starts with '+' → strip formatting then validate/normalise.
+ * Rule 2: starts with '00' → replace prefix with '+' then validate/normalise.
+ * Rule 3: defaultCountry provided → try country-aware parse.
  * Rule 4: everything else → return original unchanged (do not guess the country).
  *
+ * `defaultCountry` should be an ISO 3166-1 alpha-2 code (e.g. 'PL', 'US').
  * Returns null for empty/null input.
  */
-export function normalisePhoneForStorage(raw: string | null | undefined): string | null {
+export function normalisePhoneForStorage(
+  raw: string | null | undefined,
+  defaultCountry?: string,
+): string | null {
   if (!raw?.trim()) return null
   const s = raw.trim()
 
   if (s.startsWith('+')) {
-    return s.replace(/[^\d+]/g, '')
+    const stripped = s.replace(/[^\d+]/g, '')
+    const parsed = parsePhoneNumberFromString(stripped)
+    return parsed?.isValid() ? parsed.number : stripped
   }
+
   if (s.startsWith('00')) {
-    return '+' + s.slice(2).replace(/[^\d]/g, '')
+    const withPlus = '+' + s.slice(2).replace(/[^\d]/g, '')
+    const parsed = parsePhoneNumberFromString(withPlus)
+    return parsed?.isValid() ? parsed.number : raw
   }
-  const digitsOnly = s.replace(/[^\d]/g, '')
-  if (digitsOnly.length === 9) {
-    return '+48' + digitsOnly
+
+  if (defaultCountry) {
+    const parsed = parsePhoneNumberFromString(s, defaultCountry as CountryCode)
+    if (parsed?.isValid()) return parsed.number
   }
+
   return s
 }
 
 export type InquirySource = 'web_form' | 'manual' | 'email' | 'whatsapp'
 
 export interface CreateInquiryParams {
-  tripId?:            string | null
-  experiencePageId?:  string | null
-  guideId?:           string | null
+  tripId?:              string | null
+  experiencePageId?:    string | null
+  guideId?:             string | null
   /** Destination country, taken from `experience_pages.country` — never from the request body. */
-  tripCountry?:       string | null
-  anglerName:         string
-  anglerEmail:        string
-  anglerPhone?:       string | null
+  tripCountry?:         string | null
+  anglerName:           string
+  anglerEmail:          string
+  anglerPhone?:         string | null
+  /** ISO 3166-1 alpha-2 code for the angler's phone country (e.g. 'US', 'PL'). Sent by the form picker. */
+  anglerPhoneCountry?:  string | null
   requestedDates?:    string[]
   partySize:          number
   message?:           string | null
@@ -85,7 +122,12 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       trip_country:        params.tripCountry ?? null,
       angler_name:         params.anglerName,
       angler_email:        params.anglerEmail,
-      angler_phone:        normalisePhoneForStorage(params.anglerPhone ?? null),
+      angler_phone:        normalisePhoneForStorage(
+                             params.anglerPhone ?? null,
+                             params.anglerPhoneCountry
+                               ?? (params.tripCountry ? TRIP_COUNTRY_ISO[params.tripCountry] : undefined)
+                               ?? undefined,
+                           ),
       requested_dates:     params.requestedDates ?? [],
       party_size:          params.partySize,
       message:             params.message ?? null,

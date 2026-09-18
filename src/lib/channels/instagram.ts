@@ -7,10 +7,11 @@
  * Full implementation ships with Meta business verification (O-16).
  */
 
+import { env } from '@/lib/env'
 import type { ChannelAdapter, InboundMessage, SendParams, SendResult } from './types'
 
 function isInstagramConfigured(): boolean {
-  return Boolean(process.env.INSTAGRAM_ACCESS_TOKEN)
+  return Boolean(env.INSTAGRAM_ACCESS_TOKEN)
 }
 
 export const instagramAdapter: ChannelAdapter & { readonly enabled: boolean } = {

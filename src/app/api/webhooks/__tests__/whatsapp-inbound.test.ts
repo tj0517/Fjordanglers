@@ -30,9 +30,10 @@ const mockEnv: Record<string, string | undefined> = {
 }
 vi.mock('@/lib/env', () => ({ env: mockEnv }))
 
-// ─── DB insert tracker ────────────────────────────────────────────────────────
+// ─── DB insert / update trackers ─────────────────────────────────────────────
 
 const dbInserts: { table: string; row: Record<string, unknown> }[] = []
+const dbUpdates: { table: string; data: Record<string, unknown>; field: string; val: unknown }[] = []
 
 vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: vi.fn(() => ({
@@ -41,7 +42,12 @@ vi.mock('@/lib/supabase/server', () => ({
         dbInserts.push({ table, row })
         return { select: () => ({ single: async () => ({ data: { id: 'msg-inserted' }, error: null }) }) }
       },
-      update: () => ({ eq: () => ({ error: null }) }),
+      update: (data: Record<string, unknown>) => ({
+        eq: (field: string, val: unknown) => {
+          dbUpdates.push({ table, data, field, val })
+          return { error: null }
+        },
+      }),
     }),
   })),
 }))
@@ -116,6 +122,7 @@ function makeRequest(body: string, opts: { signature?: string; omitSig?: boolean
 beforeEach(() => {
   vi.clearAllMocks()
   dbInserts.length = 0
+  dbUpdates.length = 0
   mockEnv.WHATSAPP_APP_SECRET = undefined
 })
 
@@ -245,5 +252,73 @@ describe('Inbound routing — multi-match (2 open inquiries)', () => {
     const payload = unmatchedInsert?.row?.raw_payload as { candidates?: string[] } | undefined
     expect(payload?.candidates).toEqual(expect.arrayContaining(['inq-A', 'inq-B']))
     expect(dbInserts.find(i => i.table === 'messages')).toBeUndefined()
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Part C — Delivery status updates
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const STATUS_PAYLOAD = JSON.stringify({
+  object: 'whatsapp_business_account',
+  entry: [{
+    id: 'e1',
+    changes: [{
+      value: {
+        messaging_product: 'whatsapp',
+        metadata: { display_phone_number: '+48987654321', phone_number_id: 'ph-1' },
+        statuses: [
+          { id: 'wamid.sent-1',      status: 'sent',      timestamp: '1700000001', recipient_id: 'r1' },
+          { id: 'wamid.delivered-1', status: 'delivered', timestamp: '1700000002', recipient_id: 'r1' },
+          { id: 'wamid.read-1',      status: 'read',      timestamp: '1700000003', recipient_id: 'r1' },
+        ],
+      },
+      field: 'messages',
+    }],
+  }],
+})
+
+const UNKNOWN_STATUS_PAYLOAD = JSON.stringify({
+  object: 'whatsapp_business_account',
+  entry: [{
+    id: 'e1',
+    changes: [{
+      value: {
+        messaging_product: 'whatsapp',
+        metadata: { display_phone_number: '+48987654321', phone_number_id: 'ph-1' },
+        statuses: [
+          { id: 'wamid.x', status: 'unknown_status', timestamp: '1700000001', recipient_id: 'r1' },
+        ],
+      },
+      field: 'messages',
+    }],
+  }],
+})
+
+describe('Delivery status updates — sent/delivered/read', () => {
+  it('updates messages.status for each known status', async () => {
+    mockEnv.WHATSAPP_APP_SECRET = SECRET
+    const { POST } = await import('@/app/api/webhooks/whatsapp/route')
+    const res = await POST(makeRequest(STATUS_PAYLOAD, { signature: hmac(SECRET, STATUS_PAYLOAD) }))
+    expect(res.status).toBe(200)
+
+    const updates = dbUpdates.filter(u => u.table === 'messages')
+    expect(updates).toHaveLength(3)
+    expect(updates.map(u => u.data.status)).toEqual(
+      expect.arrayContaining(['sent', 'delivered', 'read']),
+    )
+    expect(updates.map(u => u.val)).toEqual(
+      expect.arrayContaining(['wamid.sent-1', 'wamid.delivered-1', 'wamid.read-1']),
+    )
+  })
+})
+
+describe('Delivery status updates — unknown status', () => {
+  it('does not update messages for an unknown status value', async () => {
+    mockEnv.WHATSAPP_APP_SECRET = SECRET
+    const { POST } = await import('@/app/api/webhooks/whatsapp/route')
+    const res = await POST(makeRequest(UNKNOWN_STATUS_PAYLOAD, { signature: hmac(SECRET, UNKNOWN_STATUS_PAYLOAD) }))
+    expect(res.status).toBe(200)
+    expect(dbUpdates.filter(u => u.table === 'messages')).toHaveLength(0)
   })
 })

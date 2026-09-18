@@ -72,3 +72,4 @@ where, why it matters, which task noticed it. Promote to `docs/tasks/` when sche
 
 
 | FA-1.13 | **40 pre-existing ESLint errors in FA-1.07/1.08 code** — `GuideAttachmentTab.tsx`, `InquiriesFilters.tsx`, `OfferBuilder.tsx`, `page.tsx` and others have react-hooks, no-unescaped-entities and Compiler errors. Not introduced by FA-1.13. | `src/app/admin/inquiries/` | FA-1.07/1.08 cleanup pass |
+| FA-1.13 | **Manual review of 47 non-E.164 angler_phone rows on prod** — all 47 have Iceland/New Zealand/Other trip_country (none NANP), so the migration backfill SKIPS them and emits RAISE NOTICE with their IDs. After running the migration, retrieve the IDs from Supabase logs and normalise manually (or re-run with the correct country codes). | `supabase/migrations/20260918135418_add_guides_phone_normalise_angler.sql` | after prod migration runs (STOP gate: tj confirms WHATSAPP_APP_SECRET in Vercel) |

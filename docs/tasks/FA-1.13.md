@@ -94,8 +94,9 @@ Szczegółowy raport w opisie PR. Poniżej podsumowanie.
   Wynik backfill local (empty dev DB): normalised=0, skipped=0, null=0.
   SELECT result (produkcja, live read 2026-09-18):
     null_phone=24, already_e164=28, to_normalise=47
-    Breakdown of 47: 28 × 11-digit (US/CA bez +), 19 × 10-digit (NANP local)
-    Z nową regułą: ALL 47 będą SKIPPED → RAISE NOTICE listuje ich ID dla tj.
+    Breakdown of 47: Iceland 43, New Zealand 3, Other 1 — żaden NANP.
+    Oczekiwany wynik: normalised=0, skipped=47, null=24
+    RAISE NOTICE wylistuje wszystkie 47 ID dla tj (manual review).
 - `inquiry-matcher.ts`: `matchInboundPhone` — dopasowanie angler phone + guide phone_e164
   (przypisany lub kontaktowany w otwartym zapytaniu); wielu kandydatów → unmatched.
 - `messages/send.ts`: obsługa `whatsapp`/`instagram`; fetch `lastInboundAt` z DB dla WA;
