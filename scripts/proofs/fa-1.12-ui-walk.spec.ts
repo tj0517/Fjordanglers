@@ -53,6 +53,8 @@
 
 import { test, expect }  from '@playwright/test'
 import { execSync }       from 'node:child_process'
+import { readFileSync }   from 'node:fs'
+import { resolve }        from 'node:path'
 
 // ── Local-stack constants (same for every `supabase start`) ───────────────────
 
@@ -62,10 +64,26 @@ const LOCAL_SB_URL   = 'http://127.0.0.1:54421'
 const LOCAL_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
 const LOCAL_PG       = 'postgresql://postgres:postgres@127.0.0.1:54422/postgres'
 
+// ── Read RESEND_INBOUND_SECRET from .env.local ─────────────────────────────────
+// The dev server loads .env.local at startup; the spec must use the same value
+// when computing the HMAC signature for the email-inbound webhook.
+function readEnvLocal(): Record<string, string> {
+  try {
+    const file = readFileSync(resolve(__dirname, '../../.env.local'), 'utf8')
+    return Object.fromEntries(
+      file.split('\n').flatMap(line => {
+        const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
+        return m ? [[m[1], m[2].replace(/^['"]|['"]$/g, '')]] : []
+      })
+    )
+  } catch { return {} }
+}
+const envLocal      = readEnvLocal()
+const RESEND_SECRET = envLocal['RESEND_INBOUND_SECRET'] ?? process.env.RESEND_INBOUND_SECRET ?? ''
+
 // Runtime env overrides (also honour variables passed by the run script)
-const SB_URL         = process.env.NEXT_PUBLIC_SUPABASE_URL    || LOCAL_SB_URL
-const STRIPE_WH_SEC  = process.env.STRIPE_WEBHOOK_SECRET       || 'whsec_test_local'
-const RESEND_SECRET  = process.env.RESEND_INBOUND_SECRET       || 'test-resend-secret'
+const SB_URL        = process.env.NEXT_PUBLIC_SUPABASE_URL    || LOCAL_SB_URL
+const STRIPE_WH_SEC = process.env.STRIPE_WEBHOOK_SECRET       || 'whsec_test_local'
 
 // ── Safety fuse ────────────────────────────────────────────────────────────────
 
@@ -219,36 +237,54 @@ test('FA-1.12 full admin path → handed_over', async ({ page }) => {
   await expect(page.getByText(/message sent to angler/i)).toBeVisible({ timeout: 10_000 })
 
   // ── 4. Inbound email from guide (email-inbound webhook) ───────────────────────
-  // The guide's reply is simulated via the webhook endpoint. The thread_key
-  // in the payload tries to match the inquiry; if no matching thread key exists
-  // yet the webhook returns 400/200 but doesn't emit an event — that is fine for
-  // the walk (the guide reply path needs a prior outbound email with a thread_key).
+  // Resend inbound uses Svix signing:
+  //   toSign   = svixId + "." + timestamp + "." + rawBody
+  //   secretKey = base64decode(RESEND_INBOUND_SECRET.replace(/^whsec_/, ''))
+  //   sig       = "v1," + base64(HMAC-SHA256(secretKey, toSign))
+  //
+  // The route expects: { type: "email.received", data: { email_id, from, subject, text } }
+  // When RESEND_DEV_FAKE=1 the dev server skips the Resend body-fetch and uses
+  // data.text from the payload directly; matchInquiryByEmail finds the inquiry
+  // by the guide's email address.
+  // Simulate a reply FROM the angler (matchInquiryByEmail matches by angler_email).
+  // The guide reply path would need matchInquiryByGuideEmail (not yet implemented).
   const inboundPayload = {
-    from:      { email: GUIDE_EMAIL, name: 'UI Walk Guide' },
-    to:        [{ email: 'inquiries@fjordanglers.com' }],
-    subject:   'Re: fishing trip inquiry',
-    html:      '<p>I can take 2 anglers Jul 10-12. Price: €1200 + license.</p>',
-    text:      'I can take 2 anglers Jul 10-12. Price: €1200 + license.',
-    messageId: '<guide-reply-ui-1@local.test>',
-    headers:   {},
+    type: 'email.received',
+    data: {
+      email_id: 'test-inbound-ui-walk-1',
+      from:     ANGLER_EMAIL,
+      subject:  'Re: fishing trip inquiry',
+      text:     'Sounds great, I am available Jul 10-12.',
+    },
   }
   const inboundStatus = await page.evaluate(
     async ({ url, payload, secret }: { url: string; payload: unknown; secret: string }) => {
-      const body = JSON.stringify(payload)
-      const key  = await crypto.subtle.importKey(
-        'raw', new TextEncoder().encode(secret),
+      const msgId   = 'msg_ui_walk_inbound'
+      const ts      = String(Math.floor(Date.now() / 1000))
+      const body    = JSON.stringify(payload)
+      const toSign  = `${msgId}.${ts}.${body}`
+
+      // Decode the base64 secret (strip optional "whsec_" prefix)
+      const rawSec  = secret.replace(/^whsec_/, '')
+      // atob decodes base64 → binary string; convert to Uint8Array
+      const binStr  = atob(rawSec)
+      const keyBuf  = new Uint8Array(binStr.length)
+      for (let i = 0; i < binStr.length; i++) keyBuf[i] = binStr.charCodeAt(i)
+
+      const key     = await crypto.subtle.importKey(
+        'raw', keyBuf.buffer,
         { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
       )
-      const sigBuf = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(body))
-      const sigHex = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2,'0')).join('')
-      const ts     = String(Math.floor(Date.now() / 1000))
-      const res    = await fetch(url, {
+      const sigBuf  = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(toSign))
+      const sigB64  = btoa(String.fromCharCode(...new Uint8Array(sigBuf)))
+
+      const res = await fetch(url, {
         method:  'POST',
         headers: {
           'Content-Type':   'application/json',
-          'svix-id':        'msg_ui_walk_inbound',
+          'svix-id':        msgId,
           'svix-timestamp': ts,
-          'svix-signature': `v1,${sigHex}`,
+          'svix-signature': `v1,${sigB64}`,
         },
         body,
       })
@@ -257,6 +293,7 @@ test('FA-1.12 full admin path → handed_over', async ({ page }) => {
     { url: 'http://localhost:3000/api/webhooks/email-inbound', payload: inboundPayload, secret: RESEND_SECRET },
   )
   console.log('[step 4] email-inbound webhook status:', inboundStatus)
+  expect(inboundStatus).toBe(200)
 
   // ── 5. Status: waiting_guide → offer_presented ───────────────────────────────
   // ⚠ NOTE A: markAsGuideOffer has no UI button — StatusChanger used directly.
@@ -337,6 +374,6 @@ test('FA-1.12 full admin path → handed_over', async ({ page }) => {
   console.log('       markClientAccepted wired to UI (none exist yet). See NOTE A above.');
   console.log('       For 18-event walk: scripts/proofs/fa-1.12-walk.mts\n');
 
-  expect(events.length).toBeGreaterThanOrEqual(5)
+  expect(events.length).toBeGreaterThanOrEqual(10)
   expect(finalSt).toBe('handed_over')
 })

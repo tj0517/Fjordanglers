@@ -21,11 +21,18 @@ LOCAL_URL="http://127.0.0.1:54421"
 LOCAL_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
 LOCAL_SRK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU"
 
-# The Stripe and Resend webhook secrets can be anything for local dev — the
-# same value must be used when signing in the spec and when verifying in the
-# dev server (they're passed as env here, so they match).
+# Stripe webhook secret — the same value is used when signing in the spec and
+# when verifying in the dev server.
 STRIPE_WH="whsec_test_local_fa112"
-RESEND_IN="test-resend-inbound-secret"
+
+# RESEND_INBOUND_SECRET is intentionally NOT set here.
+# The dev server picks it up from .env.local, and the spec also reads it from
+# .env.local (see readEnvLocal() in the spec).  This guarantees they match
+# without us needing to copy the secret into the run script.
+#
+# RESEND_DEV_FAKE=1 makes the emailAdapter skip the Resend API, so new
+# sendMessage calls (messages.ts / emailAdapter path) create DB rows and emit
+# message.sent without hitting the real Resend service.
 
 echo "==> Starting pnpm dev (local Supabase, port 3000) …"
 
@@ -34,7 +41,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY="$LOCAL_ANON" \
 SUPABASE_SERVICE_ROLE_KEY="$LOCAL_SRK" \
 STRIPE_WEBHOOK_SECRET="$STRIPE_WH" \
 STRIPE_WEBHOOK_SECRET_DEPOSIT="$STRIPE_WH" \
-RESEND_INBOUND_SECRET="$RESEND_IN" \
+RESEND_DEV_FAKE="1" \
   pnpm dev &
 
 DEV_PID=$!
@@ -55,5 +62,4 @@ echo "==> Running Playwright spec …"
 NEXT_PUBLIC_SUPABASE_URL="$LOCAL_URL" \
 SUPABASE_SERVICE_ROLE_KEY="$LOCAL_SRK" \
 STRIPE_WEBHOOK_SECRET="$STRIPE_WH" \
-RESEND_INBOUND_SECRET="$RESEND_IN" \
   npx playwright test scripts/proofs/fa-1.12-ui-walk.spec.ts "$@"

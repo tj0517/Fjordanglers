@@ -12,10 +12,12 @@
  */
 
 import crypto from 'crypto'
+import type { Json } from '@/lib/supabase/database.types'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByEmail } from '@/lib/inquiry-matcher'
 import { runAgentRound2 } from '@/lib/ai/inquiry-agent'
+import { emitEvent } from '@/lib/events/emit'
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
@@ -85,23 +87,29 @@ export async function POST(req: Request) {
     return new Response('OK', { status: 200 })
   }
 
-  // Fetch full email body via Resend Receiving API
+  // Fetch full email body via Resend Receiving API.
+  // In dev/fake mode (RESEND_DEV_FAKE=1) use data.text from the payload directly
+  // so the webhook can be exercised in integration tests without a real email_id.
   let bodyText = ''
-  try {
-    const res = await fetch(`https://api.resend.com/emails/receiving/${emailData.email_id}`, {
-      headers: {
-        Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      },
-      cache: 'no-store',
-    })
-    if (res.ok) {
-      const full = await res.json() as { text?: string; html?: string }
-      bodyText = full.text?.trim() ?? stripHtml(full.html ?? '').trim()
-    } else {
-      console.warn('[email-inbound] Resend fetch failed:', res.status)
+  if (process.env.RESEND_DEV_FAKE === '1' && typeof emailData.text === 'string') {
+    bodyText = emailData.text.trim()
+  } else {
+    try {
+      const res = await fetch(`https://api.resend.com/emails/receiving/${emailData.email_id}`, {
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const full = await res.json() as { text?: string; html?: string }
+        bodyText = full.text?.trim() ?? stripHtml(full.html ?? '').trim()
+      } else {
+        console.warn('[email-inbound] Resend fetch failed:', res.status)
+      }
+    } catch (err) {
+      console.error('[email-inbound] Resend API error:', err)
     }
-  } catch (err) {
-    console.error('[email-inbound] Resend API error:', err)
   }
 
   if (!bodyText) {
@@ -114,31 +122,40 @@ export async function POST(req: Request) {
   const content   = subject ? `**${subject}**\n\n${bodyText}` : bodyText
 
   if (inquiryId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('lead_messages').insert({
-      inquiry_id:   inquiryId,
-      direction:    'inbound',
-      channel:      'email',
-      contact_type: 'client',
-      contact_name: senderName || fromEmail,
-      content,
-      created_by:   'webhook',
-    })
+    const { data: newMsg, error } = await supabase.from('messages').insert({
+      inquiry_id:  inquiryId,
+      direction:   'inbound',
+      channel:     'email',
+      counterpart: 'angler',
+      body:        content,
+      subject:     subject || null,
+      external_id: emailData.email_id,
+      status:      'received',
+      drafted_by:  null,
+      occurred_at: new Date().toISOString(),
+    }).select('id').single()
 
     if (error) {
-      console.error('[email-inbound] lead_messages insert error:', error)
+      console.error('[email-inbound] messages insert error:', error)
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
+      await supabase
         .from('inquiries')
         .update({ last_contact_at: new Date().toISOString() })
         .eq('id', inquiryId)
 
+      await emitEvent(supabase, {
+        inquiryId,
+        type:      'message.received',
+        actor:     { kind: 'angler' },
+        source:    'webhook',
+        channel:   'email',
+        messageId: newMsg?.id ?? null,
+      })
+
       console.log(`[email-inbound] Email from ${fromEmail} → inquiry ${inquiryId}`)
 
       if (env.AI_AUTO_REPLY_ENABLED) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: inq } = await (supabase as any)
+        const { data: inq } = await supabase
           .from('inquiries')
           .select('agent_status')
           .eq('id', inquiryId)
@@ -150,13 +167,12 @@ export async function POST(req: Request) {
       }
     }
   } else {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from('unmatched_messages').insert({
+    const { error } = await supabase.from('unmatched_messages').insert({
       source:          'email',
       from_identifier: fromEmail,
       sender_name:     senderName,
       content,
-      raw_payload:     payload as unknown as Record<string, unknown>,
+      raw_payload:     payload as unknown as Json,
     })
 
     if (error) {
@@ -205,6 +221,7 @@ interface ResendEmailData {
   from:     string
   to?:      string[]
   subject?: string
+  text?:    string  // present in dev/fake mode payloads; skips Resend body-fetch
 }
 
 interface ResendInboundPayload {
