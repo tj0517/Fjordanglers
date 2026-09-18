@@ -321,50 +321,6 @@ export type Database = {
           },
         ]
       }
-      expedition_private: {
-        Row: {
-          access_notes: string | null
-          exact_address: string | null
-          exact_lat: number | null
-          exact_lng: number | null
-          expedition_id: string
-          lodge_contact: string | null
-          lodge_name: string | null
-          meeting_point: string | null
-          updated_at: string
-        }
-        Insert: {
-          access_notes?: string | null
-          exact_address?: string | null
-          exact_lat?: number | null
-          exact_lng?: number | null
-          expedition_id: string
-          lodge_contact?: string | null
-          lodge_name?: string | null
-          meeting_point?: string | null
-          updated_at?: string
-        }
-        Update: {
-          access_notes?: string | null
-          exact_address?: string | null
-          exact_lat?: number | null
-          exact_lng?: number | null
-          expedition_id?: string
-          lodge_contact?: string | null
-          lodge_name?: string | null
-          meeting_point?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "expedition_private_expedition_id_fkey"
-            columns: ["expedition_id"]
-            isOneToOne: true
-            referencedRelation: "expeditions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       expedition_waters: {
         Row: {
           confirmed_at: string | null
@@ -896,44 +852,6 @@ export type Database = {
         }
         Relationships: []
       }
-      guide_availability: {
-        Row: {
-          created_at: string
-          end_date: string
-          guide_id: string
-          id: string
-          note: string | null
-          start_date: string
-          state: string
-        }
-        Insert: {
-          created_at?: string
-          end_date: string
-          guide_id: string
-          id?: string
-          note?: string | null
-          start_date: string
-          state?: string
-        }
-        Update: {
-          created_at?: string
-          end_date?: string
-          guide_id?: string
-          id?: string
-          note?: string | null
-          start_date?: string
-          state?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guide_availability_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: false
-            referencedRelation: "guides"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       guide_images: {
         Row: {
           created_at: string
@@ -1033,65 +951,6 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "guide_intake_forms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guide_intake_submissions: {
-        Row: {
-          access_rights: string | null
-          additional_notes: string | null
-          created_at: string
-          external_media_link: string | null
-          fishing_technique: string | null
-          guide_id: string
-          id: string
-          photo_urls: string[]
-          reviewed_by_admin: boolean
-          submitted_at: string | null
-          token: string
-          updated_at: string
-          video_urls: string[]
-          what_you_do: string | null
-        }
-        Insert: {
-          access_rights?: string | null
-          additional_notes?: string | null
-          created_at?: string
-          external_media_link?: string | null
-          fishing_technique?: string | null
-          guide_id: string
-          id?: string
-          photo_urls?: string[]
-          reviewed_by_admin?: boolean
-          submitted_at?: string | null
-          token: string
-          updated_at?: string
-          video_urls?: string[]
-          what_you_do?: string | null
-        }
-        Update: {
-          access_rights?: string | null
-          additional_notes?: string | null
-          created_at?: string
-          external_media_link?: string | null
-          fishing_technique?: string | null
-          guide_id?: string
-          id?: string
-          photo_urls?: string[]
-          reviewed_by_admin?: boolean
-          submitted_at?: string | null
-          token?: string
-          updated_at?: string
-          video_urls?: string[]
-          what_you_do?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guide_intake_submissions_guide_id_fkey"
-            columns: ["guide_id"]
-            isOneToOne: true
-            referencedRelation: "guides"
             referencedColumns: ["id"]
           },
         ]
@@ -1700,78 +1559,65 @@ export type Database = {
           },
         ]
       }
-      inquiry_messages: {
+      inquiry_events: {
         Row: {
-          body: string
+          actor_id: string | null
+          actor_kind: string
+          channel: string | null
+          created_at: string
+          from_status: string | null
           id: string
           inquiry_id: string
-          sent_at: string | null
-          subject: string | null
+          message_id: string | null
+          occurred_at: string
+          payload: Json
+          source: string
+          to_status: string | null
+          type: string
         }
         Insert: {
-          body: string
+          actor_id?: string | null
+          actor_kind: string
+          channel?: string | null
+          created_at?: string
+          from_status?: string | null
           id?: string
           inquiry_id: string
-          sent_at?: string | null
-          subject?: string | null
+          message_id?: string | null
+          occurred_at?: string
+          payload?: Json
+          source: string
+          to_status?: string | null
+          type: string
         }
         Update: {
-          body?: string
+          actor_id?: string | null
+          actor_kind?: string
+          channel?: string | null
+          created_at?: string
+          from_status?: string | null
           id?: string
           inquiry_id?: string
-          sent_at?: string | null
-          subject?: string | null
+          message_id?: string | null
+          occurred_at?: string
+          payload?: Json
+          source?: string
+          to_status?: string | null
+          type?: string
         }
         Relationships: [
           {
-            foreignKeyName: "inquiry_messages_inquiry_id_fkey"
+            foreignKeyName: "inquiry_events_inquiry_id_fkey"
             columns: ["inquiry_id"]
             isOneToOne: false
             referencedRelation: "inquiries"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      inquiry_todos: {
-        Row: {
-          completed: boolean
-          completed_at: string | null
-          created_at: string | null
-          id: string
-          input_label: string | null
-          input_value: string | null
-          inquiry_id: string
-          sort_order: number
-          title: string
-        }
-        Insert: {
-          completed?: boolean
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          input_label?: string | null
-          input_value?: string | null
-          inquiry_id: string
-          sort_order?: number
-          title: string
-        }
-        Update: {
-          completed?: boolean
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          input_label?: string | null
-          input_value?: string | null
-          inquiry_id?: string
-          sort_order?: number
-          title?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "inquiry_todos_inquiry_id_fkey"
-            columns: ["inquiry_id"]
+            foreignKeyName: "inquiry_events_message_id_fkey"
+            columns: ["message_id"]
             isOneToOne: false
-            referencedRelation: "inquiries"
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -1826,50 +1672,6 @@ export type Database = {
           },
         ]
       }
-      lead_messages: {
-        Row: {
-          channel: string
-          contact_name: string
-          contact_type: string
-          content: string
-          created_at: string
-          created_by: string
-          direction: string
-          id: string
-          inquiry_id: string
-        }
-        Insert: {
-          channel: string
-          contact_name?: string
-          contact_type: string
-          content: string
-          created_at?: string
-          created_by?: string
-          direction: string
-          id?: string
-          inquiry_id: string
-        }
-        Update: {
-          channel?: string
-          contact_name?: string
-          contact_type?: string
-          content?: string
-          created_at?: string
-          created_by?: string
-          direction?: string
-          id?: string
-          inquiry_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lead_messages_inquiry_id_fkey"
-            columns: ["inquiry_id"]
-            isOneToOne: false
-            referencedRelation: "inquiries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       manual_cost_entries: {
         Row: {
           amount_pln: number
@@ -1900,197 +1702,166 @@ export type Database = {
         }
         Relationships: []
       }
-      media: {
+      messages: {
         Row: {
-          alt: string | null
-          caption: string | null
+          body: string
+          channel: string
+          counterpart: string
+          counterpart_id: string | null
           created_at: string
-          credit: string | null
-          focal_x: number | null
-          focal_y: number | null
-          height: number | null
+          direction: string
+          drafted_by: string | null
+          external_id: string | null
           id: string
-          lqip: string | null
-          public_url: string | null
-          storage_path: string
-          taken_at: string | null
-          width: number | null
+          inquiry_id: string
+          media: Json
+          occurred_at: string
+          sent_by: string | null
+          status: string
+          subject: string | null
+          thread_key: string | null
         }
         Insert: {
-          alt?: string | null
-          caption?: string | null
+          body: string
+          channel: string
+          counterpart: string
+          counterpart_id?: string | null
           created_at?: string
-          credit?: string | null
-          focal_x?: number | null
-          focal_y?: number | null
-          height?: number | null
+          direction: string
+          drafted_by?: string | null
+          external_id?: string | null
           id?: string
-          lqip?: string | null
-          public_url?: string | null
-          storage_path: string
-          taken_at?: string | null
-          width?: number | null
+          inquiry_id: string
+          media?: Json
+          occurred_at?: string
+          sent_by?: string | null
+          status: string
+          subject?: string | null
+          thread_key?: string | null
         }
         Update: {
-          alt?: string | null
-          caption?: string | null
+          body?: string
+          channel?: string
+          counterpart?: string
+          counterpart_id?: string | null
           created_at?: string
-          credit?: string | null
-          focal_x?: number | null
-          focal_y?: number | null
-          height?: number | null
+          direction?: string
+          drafted_by?: string | null
+          external_id?: string | null
           id?: string
-          lqip?: string | null
-          public_url?: string | null
-          storage_path?: string
-          taken_at?: string | null
-          width?: number | null
-        }
-        Relationships: []
-      }
-      media_links: {
-        Row: {
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["media_entity"]
-          id: string
-          media_id: string
-          role: Database["public"]["Enums"]["media_role"]
-          sort_order: number
-        }
-        Insert: {
-          entity_id: string
-          entity_type: Database["public"]["Enums"]["media_entity"]
-          id?: string
-          media_id: string
-          role?: Database["public"]["Enums"]["media_role"]
-          sort_order?: number
-        }
-        Update: {
-          entity_id?: string
-          entity_type?: Database["public"]["Enums"]["media_entity"]
-          id?: string
-          media_id?: string
-          role?: Database["public"]["Enums"]["media_role"]
-          sort_order?: number
+          inquiry_id?: string
+          media?: Json
+          occurred_at?: string
+          sent_by?: string | null
+          status?: string
+          subject?: string | null
+          thread_key?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "media_links_media_id_fkey"
-            columns: ["media_id"]
+            foreignKeyName: "messages_counterpart_id_fkey"
+            columns: ["counterpart_id"]
             isOneToOne: false
-            referencedRelation: "media"
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_inquiry_id_fkey"
+            columns: ["inquiry_id"]
+            isOneToOne: false
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_options: {
+        Row: {
+          created_at: string
+          currency: string
+          date_from: string | null
+          date_to: string | null
+          id: string
+          includes: Json
+          is_accepted: boolean
+          label: string
+          notes: string | null
+          offer_id: string
+          party_size: number | null
+          price_cents: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          date_from?: string | null
+          date_to?: string | null
+          id?: string
+          includes?: Json
+          is_accepted?: boolean
+          label: string
+          notes?: string | null
+          offer_id: string
+          party_size?: number | null
+          price_cents: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          date_from?: string | null
+          date_to?: string | null
+          id?: string
+          includes?: Json
+          is_accepted?: boolean
+          label?: string
+          notes?: string | null
+          offer_id?: string
+          party_size?: number | null
+          price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_options_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
             referencedColumns: ["id"]
           },
         ]
       }
       offers: {
         Row: {
-          accepted_at: string | null
-          anglers: number | null
-          cancellation_terms: string | null
-          commission_cents: number | null
-          content: Json
           created_at: string
-          currency: string
-          deposit_cents: number | null
-          deposit_paid_at: string | null
-          deposit_pct: number | null
-          end_date: string | null
-          expedition_id: string | null
-          expires_at: string | null
+          created_by: string | null
           guide_id: string | null
-          guide_payout_cents: number | null
           id: string
-          legacy_inquiry_id: string | null
-          location_released_at: string | null
+          inquiry_id: string
           notes: string | null
-          public_token: string | null
-          refund_reason: string | null
-          request_id: string
-          sent_at: string | null
-          start_date: string | null
-          status: Database["public"]["Enums"]["offer_state"]
-          stripe_session_id: string | null
-          terms: string | null
-          token_expires_at: string | null
-          total_cents: number | null
+          source_message_id: string | null
+          status: string
           updated_at: string
-          version: number
         }
         Insert: {
-          accepted_at?: string | null
-          anglers?: number | null
-          cancellation_terms?: string | null
-          commission_cents?: number | null
-          content?: Json
           created_at?: string
-          currency?: string
-          deposit_cents?: number | null
-          deposit_paid_at?: string | null
-          deposit_pct?: number | null
-          end_date?: string | null
-          expedition_id?: string | null
-          expires_at?: string | null
+          created_by?: string | null
           guide_id?: string | null
-          guide_payout_cents?: number | null
           id?: string
-          legacy_inquiry_id?: string | null
-          location_released_at?: string | null
+          inquiry_id: string
           notes?: string | null
-          public_token?: string | null
-          refund_reason?: string | null
-          request_id: string
-          sent_at?: string | null
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["offer_state"]
-          stripe_session_id?: string | null
-          terms?: string | null
-          token_expires_at?: string | null
-          total_cents?: number | null
+          source_message_id?: string | null
+          status?: string
           updated_at?: string
-          version?: number
         }
         Update: {
-          accepted_at?: string | null
-          anglers?: number | null
-          cancellation_terms?: string | null
-          commission_cents?: number | null
-          content?: Json
           created_at?: string
-          currency?: string
-          deposit_cents?: number | null
-          deposit_paid_at?: string | null
-          deposit_pct?: number | null
-          end_date?: string | null
-          expedition_id?: string | null
-          expires_at?: string | null
+          created_by?: string | null
           guide_id?: string | null
-          guide_payout_cents?: number | null
           id?: string
-          legacy_inquiry_id?: string | null
-          location_released_at?: string | null
+          inquiry_id?: string
           notes?: string | null
-          public_token?: string | null
-          refund_reason?: string | null
-          request_id?: string
-          sent_at?: string | null
-          start_date?: string | null
-          status?: Database["public"]["Enums"]["offer_state"]
-          stripe_session_id?: string | null
-          terms?: string | null
-          token_expires_at?: string | null
-          total_cents?: number | null
+          source_message_id?: string | null
+          status?: string
           updated_at?: string
-          version?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "offers_expedition_id_fkey"
-            columns: ["expedition_id"]
-            isOneToOne: false
-            referencedRelation: "expeditions"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "offers_guide_id_fkey"
             columns: ["guide_id"]
@@ -2099,10 +1870,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "offers_request_id_fkey"
-            columns: ["request_id"]
+            foreignKeyName: "offers_inquiry_id_fkey"
+            columns: ["inquiry_id"]
             isOneToOne: false
-            referencedRelation: "requests"
+            referencedRelation: "inquiries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -2860,6 +2638,16 @@ export type Database = {
           filled: number
           pct: number
         }[]
+      }
+      create_offer_with_options: {
+        Args: {
+          p_created_by: string
+          p_guide_id: string
+          p_inquiry_id: string
+          p_options: Json
+          p_source_message_id: string
+        }
+        Returns: string
       }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
@@ -3678,28 +3466,9 @@ export type Database = {
     }
     Enums: {
       assign_state: "pending" | "accepted" | "declined" | "withdrawn"
-      booking_status:
-        | "pending"
-        | "confirmed"
-        | "cancelled"
-        | "completed"
-        | "refunded"
-        | "accepted"
-        | "declined"
-        | "reviewing"
-        | "offer_sent"
-        | "offer_accepted"
       guide_status: "pending" | "verified" | "active" | "suspended"
       media_entity: "country" | "region" | "expedition" | "guide"
       media_role: "hero" | "card" | "gallery" | "portrait"
-      offer_state:
-        | "draft"
-        | "sent"
-        | "accepted"
-        | "declined"
-        | "expired"
-        | "cancelled"
-      payment_status: "pending" | "paid" | "failed" | "refunded"
       pricing_model: "flat_fee" | "commission"
       publish_state: "draft" | "published" | "archived"
       req_state:
@@ -3711,14 +3480,6 @@ export type Database = {
         | "confirmed"
         | "completed"
         | "lost"
-      trip_inquiry_status:
-        | "inquiry"
-        | "reviewing"
-        | "offer_sent"
-        | "offer_accepted"
-        | "confirmed"
-        | "completed"
-        | "cancelled"
     }
     CompositeTypes: {
       geometry_dump: {
@@ -3858,30 +3619,9 @@ export const Constants = {
   public: {
     Enums: {
       assign_state: ["pending", "accepted", "declined", "withdrawn"],
-      booking_status: [
-        "pending",
-        "confirmed",
-        "cancelled",
-        "completed",
-        "refunded",
-        "accepted",
-        "declined",
-        "reviewing",
-        "offer_sent",
-        "offer_accepted",
-      ],
       guide_status: ["pending", "verified", "active", "suspended"],
       media_entity: ["country", "region", "expedition", "guide"],
       media_role: ["hero", "card", "gallery", "portrait"],
-      offer_state: [
-        "draft",
-        "sent",
-        "accepted",
-        "declined",
-        "expired",
-        "cancelled",
-      ],
-      payment_status: ["pending", "paid", "failed", "refunded"],
       pricing_model: ["flat_fee", "commission"],
       publish_state: ["draft", "published", "archived"],
       req_state: [
@@ -3893,15 +3633,6 @@ export const Constants = {
         "confirmed",
         "completed",
         "lost",
-      ],
-      trip_inquiry_status: [
-        "inquiry",
-        "reviewing",
-        "offer_sent",
-        "offer_accepted",
-        "confirmed",
-        "completed",
-        "cancelled",
       ],
     },
   },

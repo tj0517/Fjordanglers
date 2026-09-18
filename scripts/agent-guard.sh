@@ -9,7 +9,6 @@ cmd="$(printf '%s' "$input" | python3 -c 'import sys,json; print(json.load(sys.s
 if [ "${FA_ALLOW_PROD:-0}" = "1" ]; then exit 0; fi
 patterns=(
   'supabase db push'
-  'supabase db reset'
   'supabase migration repair'
   'supabase migration squash'
   'db push --linked'

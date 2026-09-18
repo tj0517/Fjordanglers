@@ -34,22 +34,49 @@ insert path `src/lib/inquiries/create.ts`. Historical rows keep `source = NULL`.
 `guides.lead_id` is **not** in the baseline either (the audit listed it; production does not
 have it).
 
-### Archived in FA-1.01 (schema `archive`, no code references since FA-1.06)
-`booking_messages`, `bookings`, `experience_accommodations`,
-`experience_availability_config`, `experience_blocked_dates`, `experience_images`,
-`experiences`, `guide_accommodations`, `leads`, `payments`. Dropping them is FA-1.02.
-`inquiries.trip_id` still holds ids of `archive.experiences` rows; nothing resolves them
-any more (trip title / list price come back as "Your trip" / "—" until stage 4 maps
-`trip_id → experience_pages.trip_id`).
+### Dropped in FA-1.02 — schema `archive` (all 10 tables + schema)
+All 10 tables dropped by migration `20260917100000_drop_marketplace_leftovers.sql`.
+Tables with data were exported to `docs/archive/2026-09-17-archive/` before dropping:
+`experiences` (22 rows), `experience_images` (134), `experience_accommodations` (1),
+`guide_accommodations` (2). Empty tables (`booking_messages`, `bookings`, `payments`,
+`experience_availability_config`, `experience_blocked_dates`, `leads`) dropped without export.
+Side-effects of `DROP TABLE archive.experiences CASCADE`:
+  - FK `experience_pages_trip_id_fkey` removed (was `ON DELETE SET NULL`; CASCADE removes
+    the constraint itself, not the referencing rows — existing `trip_id` values in
+    `experience_pages` become orphaned UUIDs, all confirmed inert: 0 unmatched inquiries).
+  - Trigger `audit_experiences` auto-dropped with the table.
+`inquiries.trip_id` still holds orphaned UUIDs from the dropped `archive.experiences`;
+stage 4 will map `trip_id → experience_pages.trip_id` or drop the column.
 
-### Still in `public`, dead or near-dead in code (candidates for FA-1.02 / FA-1.07)
-`guide_images` (admin insert + guide profile read), `guide_submissions` (read-only
-archive), `inquiry_messages` (insert in try/catch), `audit_log`, `spatial_ref_sys`, and the
-`expedition_*` / `waters` / `regions` / `countries` / `species_windows` / `media*` /
-`requests` / `request_guides` / `offers` / `inquiry_todos` / `guide_availability` /
-`guide_private` / `guide_intake_submissions` tables that appear in the baseline but have
-no query in `src`. PostGIS functions `search_trips_near`, `get_licenses_for_point`,
-`import_license_zone` — no `.rpc()` calls anywhere.
+### Dropped in FA-1.02 — dead `public` tables (all 0 rows)
+`expedition_private`, `media`, `media_links`, `inquiry_todos`, `guide_availability`,
+`guide_intake_submissions`. Zero rows confirmed on prod; zero code references.
+Enums also dropped: `booking_status`, `payment_status`, `trip_inquiry_status`
+(no remaining columns use them after the table drops).
+
+### Dropped in FA-1.12 — legacy `offers` + enum `offer_state`
+14-row marketplace `offers` table (all `draft`/`sent`, 0 payments) exported to
+`docs/archive/2026-09-17-offers-legacy.json` (commit `fc5d8482`), then dropped.
+Enum `offer_state` dropped alongside (was used only by `offers.status`).
+New `offers` + `offer_options` tables replace them per §3b (FA-1.12 migration
+`20260917104506_add_offers.sql`). `inquiry_messages` replaced by `messages`
+(`20260917104503_add_messages.sql`); 75 rows migrated to `messages`.
+
+**RLS note (messages, offers, offer_options):** RLS is intentionally narrower than
+`inquiries`. No angler or guide policies — all access goes through server actions
+with `requireAdmin()` / `requireToken()` / `requireGuide()` which use service_role.
+`anon` is explicitly REVOKEd. Rationale: the thread contains messages to both
+counterparts; a counterpart-scoped policy would risk leaking mistagged messages.
+Decision: tj 2026-09-17. To revisit when building the client or guide portal.
+
+### Still in `public`, dead or near-dead (candidates for later tasks)
+`guide_images` (admin insert + guide profile read — FA-1.07/1.08),
+`guide_submissions` (read-only archive; writer component unrendered — FA-1.07),
+`audit_log` (written by `audit_trigger_fn` on `guides`, `guide_images` triggers;
+             no reader in `src` — investigate before dropping; stage 4),
+`expedition_waters` (3 rows), `regions` (16 rows), `guide_private` (18 rows) — have data, not in FA-1.02 scope.
+`spatial_ref_sys` and PostGIS functions `search_trips_near`, `get_licenses_for_point`,
+`import_license_zone` — etap 4.
 
 ### Removed from the product in FA-1.06
 The public guide-application funnel (`/guides/apply` → `leads`) — 0 rows, table

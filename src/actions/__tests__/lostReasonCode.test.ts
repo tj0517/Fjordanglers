@@ -1,9 +1,12 @@
 /**
- * FA-0.16 — updateInquiryStatus requires a structured lost_reason_code
- * whenever status='lost', and clears it on any other status.
+ * FA-0.16 — a status change to `lost` requires a structured lost_reason_code, and any
+ * other status clears it.
  *
- * Pure unit test: admin session and Supabase are mocked, so the assertions
- * are about the action's own validation and the shape of the update payload.
+ * Since FA-1.03 the rule lives in `transition()` and `updateInquiryStatus` is one of
+ * its callers, so this test drives the action and asserts on what reaches the database:
+ * the update payload and the events the transition writes.
+ *
+ * Pure unit test: admin session and Supabase are mocked.
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest'
@@ -48,8 +51,12 @@ vi.mock('next/cache', () => ({
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
-/** Captures whatever object the action passes to .update(). */
+/** Captures whatever object the action passes to .update() on `inquiries`. */
 let capturedUpdate: Record<string, unknown> | null = null
+/** Every row written to `inquiry_events` during the call. */
+let capturedEvents: Record<string, unknown>[] = []
+/** The status the mocked inquiry starts from. */
+let currentStatus = 'qualifying'
 
 function mockAdminSession() {
   vi.mocked(createClient).mockResolvedValue({
@@ -64,21 +71,52 @@ function mockAdminSession() {
   } as unknown as Awaited<ReturnType<typeof createClient>>)
 
   vi.mocked(createServiceClient).mockReturnValue({
-    from: () => ({
-      update: (payload: Record<string, unknown>) => {
-        capturedUpdate = payload
-        return { eq: async () => ({ error: null }) }
-      },
-      select: () => ({
-        eq: () => ({ single: async () => ({ data: { id: 'inq-1', status: 'pending' }, error: null }) }),
-      }),
-    }),
+    from: (table: string) => {
+      if (table === 'inquiry_events') {
+        return {
+          insert: (row: Record<string, unknown>) => {
+            capturedEvents.push(row)
+            return {
+              select: () => ({
+                single: async () => ({ data: { id: `ev-${capturedEvents.length}` }, error: null }),
+              }),
+            }
+          },
+        }
+      }
+
+      return {
+        update: (payload: Record<string, unknown>) => {
+          capturedUpdate = payload
+          const applied = async () => {
+            currentStatus = payload.status as string
+            return { data: { id: 'inq-1' }, error: null }
+          }
+          return {
+            eq: () => ({
+              // transition() does .eq(id).eq(status).select().maybeSingle()
+              eq: () => ({ select: () => ({ maybeSingle: applied }) }),
+              // plain .eq(id) awaited directly
+              then: (resolve: (v: unknown) => unknown) => applied().then(resolve),
+            }),
+          }
+        },
+        select: () => ({
+          eq: () => ({
+            single:     async () => ({ data: { id: 'inq-1', status: currentStatus }, error: null }),
+            maybeSingle: async () => ({ data: { id: 'inq-1', status: currentStatus }, error: null }),
+          }),
+        }),
+      }
+    },
   } as unknown as ReturnType<typeof createServiceClient>)
 }
 
 describe('FA-0.16 — updateInquiryStatus / lost_reason_code', () => {
   beforeEach(() => {
-    capturedUpdate = null
+    capturedUpdate  = null
+    capturedEvents  = []
+    currentStatus   = 'qualifying'
     vi.clearAllMocks()
     mockAdminSession()
   })
@@ -113,14 +151,35 @@ describe('FA-0.16 — updateInquiryStatus / lost_reason_code', () => {
     })
   })
 
+  it('records the loss as status.changed + inquiry.lost, with the code in the payload', async () => {
+    const { updateInquiryStatus } = await import('@/actions/inquiries')
+    await updateInquiryStatus('inq-1', 'lost', 'price', 'Too expensive')
+
+    expect(capturedEvents.map(e => e.type)).toEqual(['status.changed', 'inquiry.lost'])
+    expect(capturedEvents[0]).toMatchObject({
+      from_status: 'qualifying', to_status: 'lost', actor_kind: 'admin', actor_id: 'admin-1',
+    })
+    expect(capturedEvents[1]).toMatchObject({ payload: { lost_reason_code: 'price' } })
+  })
+
   it('clears lost_reason_code when moving to a non-lost status', async () => {
     const { updateInquiryStatus } = await import('@/actions/inquiries')
-    const result = await updateInquiryStatus('inq-1', 'offer_sent')
+    const result = await updateInquiryStatus('inq-1', 'offer_presented')
 
     expect(result.success).toBe(true)
     expect(capturedUpdate).toMatchObject({
-      status:           'offer_sent',
+      status:           'offer_presented',
       lost_reason_code: null,
     })
+    expect(capturedEvents.map(e => e.type)).toEqual(['status.changed'])
+  })
+
+  it('refuses a status the machine does not allow from here', async () => {
+    const { updateInquiryStatus } = await import('@/actions/inquiries')
+    const result = await updateInquiryStatus('inq-1', 'paid')
+
+    expect(result.success).toBe(false)
+    expect(capturedUpdate).toBeNull()
+    expect(capturedEvents).toHaveLength(0)
   })
 })

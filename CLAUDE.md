@@ -61,6 +61,10 @@ Target layout after stage 2: `apps/web`, `apps/admin`, `packages/{db,core,ui,con
 9. **Dead code is deleted in the PR that replaces it.** No "leave it for now".
 10. **Stay inside the task's scope.** Things you notice on the way go to
     `docs/deferred-tasks.md`, not into this PR.
+11. **The local machine has 8 GB of RAM and will not take a build next to a running
+    stack.** Start Supabase only with the `-x` list from
+    `docs/05-agent-operations.md` §9, stop it before `pnpm build`, and check that Docker
+    is alive before blaming the code. Read that section before touching the local stack.
 
 ## Where things live
 

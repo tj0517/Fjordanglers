@@ -13,9 +13,11 @@
  */
 
 import crypto from 'crypto'
+import type { Json } from '@/lib/supabase/database.types'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByPhone } from '@/lib/inquiry-matcher'
+import { emitEvent } from '@/lib/events/emit'
 
 // ─── GET — hub verification ───────────────────────────────────────────────────
 
@@ -89,39 +91,47 @@ export async function POST(req: Request) {
         const inquiryId = await matchInquiryByPhone(from)
 
         if (inquiryId) {
-          // Matched — insert directly into lead_messages
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { error } = await (supabase as any).from('lead_messages').insert({
-            inquiry_id:   inquiryId,
-            direction:    'inbound',
-            channel:      'whatsapp',
-            contact_type: 'client',
-            contact_name: senderName || from,
-            content,
-            created_by:   'webhook',
-          })
+          const { data: newMsg, error } = await supabase.from('messages').insert({
+            inquiry_id:  inquiryId,
+            direction:   'inbound',
+            channel:     'whatsapp',
+            counterpart: 'angler',
+            body:        content,
+            external_id: message.id,
+            status:      'received',
+            drafted_by:  null,
+            occurred_at: message.timestamp
+              ? new Date(Number(message.timestamp) * 1000).toISOString()
+              : new Date().toISOString(),
+          }).select('id').single()
 
           if (error) {
-            console.error('[whatsapp-webhook] lead_messages insert error:', error)
+            console.error('[whatsapp-webhook] messages insert error:', error)
           } else {
-            // Bump last_contact_at
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase as any)
+            await supabase
               .from('inquiries')
               .update({ last_contact_at: new Date().toISOString() })
               .eq('id', inquiryId)
+
+            await emitEvent(supabase, {
+              inquiryId,
+              type:      'message.received',
+              actor:     { kind: 'angler' },
+              source:    'webhook',
+              channel:   'whatsapp',
+              messageId: newMsg?.id ?? null,
+            })
 
             console.log(`[whatsapp-webhook] Message from ${from} → inquiry ${inquiryId}`)
           }
         } else {
           // No match — queue for manual linking
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { error } = await (supabase as any).from('unmatched_messages').insert({
+          const { error } = await supabase.from('unmatched_messages').insert({
             source:           'whatsapp',
             from_identifier:  from,
             sender_name:      senderName,
             content,
-            raw_payload:      rawPayload,
+            raw_payload:      rawPayload as unknown as Json,
           })
 
           if (error) {

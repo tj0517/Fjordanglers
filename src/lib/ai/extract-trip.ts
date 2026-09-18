@@ -1,7 +1,7 @@
 /**
  * AI-powered trip detail extraction.
  *
- * Reads the full lead_messages conversation and uses Claude to extract
+ * Reads the full messages conversation and uses Claude to extract
  * structured trip brief fields for the inquiry_trip_details table.
  *
  * Returns ExtractedTripDetails — caller decides whether to save.
@@ -29,11 +29,10 @@ export type ExtractionResult =
 // ─── Conversation assembler ───────────────────────────────────────────────────
 
 export interface ConversationMessage {
-  direction:    'inbound' | 'outbound'
-  channel:      string
-  contact_name: string
-  content:      string
-  created_at:   string
+  direction:   'inbound' | 'outbound'
+  channel:     string
+  body:        string
+  occurred_at: string
 }
 
 export function assembleConversation(
@@ -59,15 +58,15 @@ export function assembleConversation(
     lines.push('')
     lines.push('=== CONVERSATION HISTORY ===')
     for (const msg of messages) {
-      const dateStr = new Date(msg.created_at).toLocaleDateString('en-GB', {
+      const dateStr = new Date(msg.occurred_at).toLocaleDateString('en-GB', {
         day: 'numeric', month: 'short', year: 'numeric',
       })
       const who = msg.direction === 'inbound'
-        ? `[${dateStr}] ${msg.contact_name} (client):`
+        ? `[${dateStr}] Angler (inbound via ${msg.channel}):`
         : `[${dateStr}] FA (outbound via ${msg.channel}):`
       lines.push('')
       lines.push(who)
-      lines.push(msg.content.trim())
+      lines.push(msg.body.trim())
     }
   }
 

@@ -1,0 +1,239 @@
+# FjordAnglers CI — FA-1.11
+#
+# Trzy rzeczy, które przy paczce `stage-1` na jeden push są najgroźniejsze, i job,
+# który każdą z nich łapie:
+#
+#   1. migracja, która nie aplikuje się na czysto   -> job `db`   (`supabase db reset`)
+#   2. plik typów rozjechany ze schematem           -> job `db`   (`gen types --local` + diff)
+#   3. `stage-1`, do którego nie trafił hotfix      -> job `sync` (`merge-base --is-ancestor`)
+#
+# Plus `check`: typecheck / lint / test / build.
+#
+# ŻADEN SEKRET. Wszystkie wartości env pochodzą z commitowanego `.env.test`
+# (klucze lokalnego stacku Supabase są deterministyczne i identyczne u każdego,
+# Stripe/Resend to placeholdery). `secrets.*` nie występuje w tym pliku ani razu —
+# jedyny token to `GITHUB_TOKEN`, który Actions wstrzykuje samo i którego tu nie używamy.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main, stage-1]
+  push:
+    branches: [stage-1]
+
+# Jeden przebieg na PR — kolejny push anuluje poprzedni.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '10.30.3'
+  # Ta sama wersja, na której pracuje zespół lokalnie. Nie podnosić bez sprawdzenia
+  # `gen types` — zdalny i lokalny generator dają różny szkielet pliku (deferred FA-0.05).
+  SUPABASE_CLI_VERSION: '2.75.0'
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # check — typecheck, lint, test, build
+  # ───────────────────────────────────────────────────────────────────────────
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `next build` czyta `.env.local`. W CI nie ma sekretów, więc podstawiamy
+      # commitowany `.env.test` — build ma dostać komplet zmiennych wymaganych
+      # przez `src/lib/env.ts`, a nie prawdziwe klucze. Artefakt buildu nigdzie
+      # nie jedzie: deploy robi Vercel z własnym env.
+      - name: env for build (from committed .env.test — no secrets)
+        run: |
+          cp .env.test .env.local
+          # Nazwy, nigdy wartości — i do logu, i do summary, żeby lista dała się
+          # sprawdzić z przebiegu, a nie tylko z ekranu.
+          names=$(grep -oE '^[A-Z0-9_]+' .env.test | sort)
+          echo "zmienne z .env.test użyte w CI:"
+          echo "$names"
+          {
+            echo '### Zmienne env użyte w CI'
+            echo ''
+            echo 'Źródło: commitowany `.env.test`. Zero `secrets.*`.'
+            echo ''
+            echo '```'
+            echo "$names"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: typecheck
+        run: pnpm typecheck
+
+      # Lint NIE jest bramką, świadomie i tymczasowo: na `main` jest 40 błędów
+      # w plikach spoza jakiegokolwiek bieżącego zadania (`src/emails/*.tsx`,
+      # `whatsapp-bridge/poll-emails.mjs`) — patrz docs/deferred-tasks.md, wpis FA-1.03.
+      # Bramka postawiona dziś byłaby czerwona zawsze i niczego by nie chroniła.
+      # Po zamknięciu tamtego wpisu: usunąć `continue-on-error` i zwykły `run: pnpm lint`.
+      - name: lint (nie blokuje — deferred „lint czerwony na main")
+        id: lint
+        continue-on-error: true
+        run: pnpm lint 2>&1 | tee lint.out
+
+      - name: lint — wynik do summary
+        if: always()
+        run: |
+          {
+            echo '### Lint (nie jest bramką)'
+            echo ''
+            echo '```'
+            tail -n 5 lint.out 2>/dev/null || echo 'brak wyjścia'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: build
+        run: pnpm build
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # db — migracje aplikują się na czysto, typy bez dryfu, testy na świeżym stacku
+  #
+  # Tylko na PR: do `stage-1` i do `main` wchodzi się wyłącznie przez PR (ruleset),
+  # więc ten sam przebieg na pushu byłby powtórką tego samego drzewa.
+  # ───────────────────────────────────────────────────────────────────────────
+  db:
+    name: db
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      # Startujemy tylko to, czego dotykają testy: postgres + kong (API 54421) + postgrest.
+      # Reszta kontenerów to kilka minut pobierania obrazów za nic.
+      - name: supabase start
+        run: |
+          supabase start \
+            -x gotrue,realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      # ── FAIL 1: migracja, która nie aplikuje się na czysto ────────────────
+      - name: db reset — wszystkie migracje na pustej bazie
+        run: supabase db reset
+
+      # ── db diff: baza zgodna z katalogiem migracji ────────────────────────
+      # Uwaga na uczciwość zapisu: tuż po `db reset` to jest prawie tautologia —
+      # baza POWSTAŁA z tych migracji. Ten krok łapie realnie tylko migrację,
+      # która po zastosowaniu zostawia schemat inny niż opisuje (np. DDL zależny
+      # od czasu albo od stanu). Twardym dowodem na złą migrację jest krok wyżej.
+      - name: db diff --local musi być pusty
+        run: |
+          set -euo pipefail
+          supabase db diff --local > db-diff.out
+          if [ -s db-diff.out ]; then
+            echo "::error::supabase db diff --local nie jest pusty — schemat bazy odstaje od migracji"
+            cat db-diff.out
+            exit 1
+          fi
+          echo "db diff --local: pusty"
+
+      # ── FAIL 2: plik typów rozjechany ze schematem ────────────────────────
+      # Generator kanoniczny to `--local` (deferred FA-0.05: `--project-id` daje
+      # inny szkielet pliku przy identycznym schemacie). Do pliku tymczasowego,
+      # nigdy przekierowaniem na plik w repo — `>` obcina cel zanim komenda ruszy.
+      - name: typy bez dryfu
+        run: |
+          set -euo pipefail
+          supabase gen types typescript --local > "$RUNNER_TEMP/types.ts"
+          if ! diff -u "$RUNNER_TEMP/types.ts" src/lib/supabase/database.types.ts > types.diff; then
+            echo "::error::src/lib/supabase/database.types.ts odstaje od schematu — uruchom pnpm supabase:types:local"
+            cat types.diff
+            exit 1
+          fi
+          echo "typy zgodne ze schematem"
+
+      # ── testy przeciwko świeżemu stackowi ─────────────────────────────────
+      # Env bierze się z commitowanego `.env.test` — ładuje go `src/tests/setup.ts`,
+      # razem z bezpiecznikiem „tylko 127.0.0.1" z FA-0.21. Workflow nic tu nie wstrzykuje.
+      - name: pnpm test
+        run: pnpm test run
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # sync — FAIL 3: `main` wypada z gałęzi docelowej albo z gałęzi PR
+  #
+  # Dwa sprawdzenia, bo chronią przed dwiema różnymi rzeczami:
+  #   (a) po zmergowaniu tego PR `stage-1` **nadal** nie zawierałby `main` —
+  #       czyli hotfix z produkcji wypada z paczki etapu 1
+  #   (b) gałąź PR wycięta przed tym hotfixem — autor pracuje na starym drzewie
+  #
+  # (a) pyta o wynik merge'a, nie o stan bazy: inaczej check blokowałby dokładnie
+  # ten PR, który wciąga `main` do `stage-1` — a więc jedyną rzecz, która go naprawia
+  # (zdarzyło się na PR #48; decyzja tj, 17 IX). `actions/checkout` na zdarzeniu
+  # `pull_request` daje w HEAD merge commit: gałąź PR wmergowaną w bazę.
+  # ───────────────────────────────────────────────────────────────────────────
+  sync:
+    name: sync
+    if: github.event_name == 'pull_request' && github.base_ref == 'stage-1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: main musi być przodkiem stage-1 i gałęzi PR
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          git fetch --no-tags origin main "$BASE_REF"
+          fail=0
+
+          # (a) wynik merge'a — czym stanie się stage-1, gdy ten PR wejdzie
+          if git merge-base --is-ancestor origin/main HEAD; then
+            echo "ok: origin/main będzie przodkiem $BASE_REF po zmergowaniu tego PR"
+          else
+            fail=1
+            echo "::error::$BASE_REF nie zawiera main i ten PR tego nie naprawia; zmerguj main do $BASE_REF"
+            echo "  commity na main, których nie miałby $BASE_REF po tym merge'u:"
+            git log --oneline "HEAD..origin/main"
+          fi
+
+          if git merge-base --is-ancestor origin/main "$HEAD_SHA"; then
+            echo "ok: origin/main jest przodkiem gałęzi PR"
+          else
+            fail=1
+            echo "::error::gałąź PR została wycięta przed ostatnim main; zmerguj main (albo $BASE_REF) do gałęzi"
+            echo "  commity na main, których nie ma w gałęzi PR:"
+            git log --oneline "$HEAD_SHA..origin/main"
+          fi
+
+          exit "$fail"
