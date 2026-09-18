@@ -60,4 +60,4 @@ backups/
 # agent proof scripts (FA-1.03): a Next request scope faked outside `next dev` —
 # stubs for next/headers and next/cache plus the state-machine walk. Kept locally
 # because FA-1.12 needs the same harness; never part of the app.
-.fa-proofs/
+# .fa-proofs/ moved to scripts/proofs/ in FA-1.12

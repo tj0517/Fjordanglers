@@ -18,6 +18,7 @@ import type Stripe from 'stripe'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
+import { emitEvent } from '@/lib/events/emit'
 import { transition } from '@/lib/inquiries/state'
 import {
   sendDepositConfirmedAnglerEmail,
@@ -102,6 +103,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       deposit_stripe_session_id: session.id,
     })
     .eq('id', inquiryId)
+
+  try {
+    await emitEvent(svc, {
+      inquiryId,
+      type:    'payment.received',
+      actor:   { kind: 'system' },
+      source:  'webhook',
+      channel: 'stripe',
+      payload: {
+        stripe_session_id: session.id,
+        amount_cents:      session.amount_total ?? 0,
+        currency:          session.currency    ?? 'eur',
+      },
+    })
+  } catch (err) {
+    console.error('[stripe-deposit/webhook] emitEvent(payment.received) error:', err)
+  }
 
   try {
     await transition(svc, inquiryId, 'paid', {

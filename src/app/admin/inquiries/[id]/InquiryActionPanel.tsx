@@ -7,7 +7,7 @@
  *   1. Offer Builder   — FA sets total price (€) + deposit (€) + optional note.
  *                        Sends an offer email to the angler when saved.
  *   2. Send Message    — FA sends a free-form email to the angler at any time.
- *                        Stored in inquiry_messages for audit.
+ *                        Stored in messages for audit.
  *   3. Send Deposit    — Active only after an offer is set. Uses offer_deposit_eur.
  *                        Creates Stripe Checkout and sends link to angler.
  *

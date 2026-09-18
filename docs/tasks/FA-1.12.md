@@ -2,7 +2,7 @@
 id: FA-1.12
 title: messages — jeden wątek na zapytanie; e-mail w obie strony z karty; oznaczanie oferta/akceptacja/wpłata; link Stripe z aplikacji
 stage: 1
-status: todo
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -86,3 +86,40 @@ pnpm typecheck && pnpm lint && pnpm build
 ```
 
 ## Notatki z realizacji
+
+### Decyzje (STOP 1–1c, 2026-09-17)
+
+**Stara `public.offers` (14 wierszy):** eksport → `docs/archive/2026-09-17-offers-legacy.json`
+(commit `fc5d8482`) → DROP TABLE + DROP TYPE `offer_state`.
+
+**RLS messages / offers / offer_options:** opcja A — service_role pełny + authenticated
+admin-read. `anon` jawnie REVOKowany. Celowo węższe niż `inquiries` (brak polityk dla
+wędkarza i przewodnika) — ryzyko wycieku przy mistagged `counterpart`. Do rewizji przy
+portalu klienta/przewodnika. Decyzja: tj 2026-09-17.
+
+**FK `inquiry_events.message_id → messages.id`:** ON DELETE RESTRICT DEFERRABLE INITIALLY
+DEFERRED. SET NULL niemożliwe — trigger BEFORE UPDATE na `inquiry_events` blokowałby
+null-out. DEFERRED zapewnia, że kaskadowe usunięcie inquiry (events → messages w tej
+samej transakcji) nie wywoła fałszywego naruszenia RESTRICT.
+
+**Constraint ≥1 opcja na ofertę:** dwa osobne triggery DEFERRABLE INITIALLY DEFERRED
+(INSERT na `offers` + DELETE na `offer_options`). Trigger DELETE pomija sprawdzenie gdy
+parent `offers` już nie istnieje (kaskada z DELETE offers / DELETE inquiries).
+
+**`occurred_at` dla `matchUnmatchedMessage`:** = `unmatched_messages.created_at` (decyzja tj, 2026-09-17).
+
+**Stripe Payment Link:** użyto Payment Link API (nie Checkout Session) — bramka STOP nie wyzwolona (brak zmiany webhooka w tym PR). Webhook `stripe-deposit` obsługa sesji `payment_link` → do FA-1.08.
+
+**Przed-migracyjne liczby:** RAISE NOTICE z migracji nie zachowane. Po migracji: `messages=669`; `lead_messages`, `inquiry_messages` dropped (NULL z `to_regclass`). Unmatched matched: `admin|21`.
+
+**RPC `create_offer_with_options`:** migration 20260917140000 — funkcja wstawia offer + options w jednej transakcji. Bez tego DEFERRABLE INITIALLY DEFERRED trigger na offers fire po commit każdego osobnego PostgREST call → P0001. Zaktualizowano `markAsGuideOffer` do `svc.rpc(...)`.
+
+### Raport v2 (2026-09-17, sesja 2)
+
+Szczegółowy raport w opisie PR. Skrót:
+
+**Done (v1+v2):** wszystko z v1 plus: harness `scripts/proofs/` przeniesiony + 8 testów jednostkowych + walk proof (17 zdarzeń, status `handed_over`) + RPC fix `create_offer_with_options` + `markOfferPresented` wymaga `messageId` + typecheck 0 err + test 97/97 + build EXIT:0 + supabase db diff → No schema changes found.
+
+**Nie spełnione:** brak — wszystkie kryteria "Gotowe, gdy" spełnione.
+
+**RED guards:** duplikat `external_id` → `ERROR: duplicate key value violates unique constraint "messages_external_id_key"`. Oferta bez opcji → `ERROR: offer <uuid> must have at least one option`.

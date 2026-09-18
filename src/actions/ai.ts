@@ -4,7 +4,7 @@
  * AI-powered server actions for FjordAnglers admin.
  *
  * extractTripDetailsAI(inquiryId)
- *   Fetches the full inquiry conversation (original message + lead_messages)
+ *   Fetches the full inquiry conversation (original message + messages)
  *   and calls Claude to extract structured trip brief fields.
  *   Returns ExtractedTripDetails — does NOT save to DB (caller decides).
  */
@@ -83,15 +83,16 @@ export async function extractTripDetailsAI(
 
   const experienceTitle: string | null = null
 
-  // 2. Fetch lead_messages ordered by created_at ASC
-  const { data: messages, error: msgErr } = await svc
-    .from('lead_messages')
-    .select('direction, channel, contact_name, content, created_at')
+  // 2. Fetch messages ordered by occurred_at ASC
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: messages, error: msgErr } = await (svc as any)
+    .from('messages')
+    .select('direction, channel, body, occurred_at')
     .eq('inquiry_id', inquiryId)
-    .order('created_at', { ascending: true })
+    .order('occurred_at', { ascending: true })
 
   if (msgErr != null) {
-    console.error('[extractTripDetailsAI] lead_messages fetch error:', msgErr)
+    console.error('[extractTripDetailsAI] messages fetch error:', msgErr)
     return { success: false, error: 'Failed to fetch conversation' }
   }
 

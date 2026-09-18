@@ -21,9 +21,10 @@
  *
  * sendMessageToAngler(inquiryId, subject, body)
  *   FA sends a plain-text email to the angler from the admin.
- *   Message is stored in inquiry_messages for audit trail.
+ *   Message is stored in messages for audit trail.
  */
 
+import type { Json } from '@/lib/supabase/database.types'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
 import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
@@ -42,7 +43,6 @@ import {
   transition,
   TransitionError,
   isInquiryStatus,
-  type InquiryStatus,
 } from '@/lib/inquiries/state'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -253,8 +253,7 @@ export async function sendDepositLink(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rawInquiry } = await (svc as any)
+  const { data: rawInquiry } = await svc
     .from('inquiries')
     .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, message, offer_deposit_eur')
     .eq('id', inquiryId)
@@ -330,8 +329,7 @@ export async function sendDepositLink(
     return { success: false, error: 'Failed to create Stripe checkout session' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({
       deposit_amount:            depositCents / 100,
@@ -411,8 +409,7 @@ export async function saveRichOffer(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, status')
     .eq('id', inquiryId)
@@ -433,8 +430,7 @@ export async function saveRichOffer(
   const baseUrl  = env.NEXT_PUBLIC_APP_URL
   const offerUrl = `${baseUrl}/offers/${token}`
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({
       offer_total_eur:         totalPriceEur,
@@ -442,19 +438,19 @@ export async function saveRichOffer(
       offer_notes:             notes?.trim() || null,
       offer_trip_plan:         tripPlan?.trim() || null,
       offer_license_info:      licenseInfo?.trim() || null,
-      offer_inclusions:        inclusions,
-      offer_questions:         questions,
+      offer_inclusions:        inclusions        as unknown as Json,
+      offer_questions:         questions         as unknown as Json,
       offer_refund_reason:     refundReason?.trim() || null,
-      offer_photos:            photos,
+      offer_photos:            photos            as unknown as Json,
       offer_location:          location?.trim() || null,
-      offer_what_to_bring:     whatToBring,
-      offer_schedule:          schedule,
+      offer_what_to_bring:     whatToBring       as unknown as Json,
+      offer_schedule:          schedule          as unknown as Json,
       offer_license_heading:   licenseHeading?.trim() || null,
       offer_location_lat:      locationLat,
       offer_location_lng:      locationLng,
       offer_location_zoom:     locationZoom,
-      offer_location_geojson:  locationGeoJson,
-      offer_options:           params.options ?? null,
+      offer_location_geojson:  locationGeoJson   as unknown as Json,
+      offer_options:           (params.options ?? null) as unknown as Json,
       offer_token:             token,
       offer_token_expires_at:  expiresAt,
       offer_sent_at:           new Date().toISOString(),
@@ -516,8 +512,7 @@ export async function saveRichOffer(
 export async function getOfferByToken(token: string): Promise<OfferPageData | null> {
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('*, trip_id, guide_id')
     .eq('offer_token', token)
@@ -588,8 +583,7 @@ export async function submitOfferAnswers(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status, angler_email, angler_name, trip_id, party_size, offer_deposit_eur')
     .eq('id', inquiryId)
@@ -604,10 +598,9 @@ export async function submitOfferAnswers(
   }
 
   // Save answers
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
-    .update({ offer_answers: answers })
+    .update({ offer_answers: answers as unknown as Json })
     .eq('id', inquiry.id)
 
   const depositCents = Math.round(Number(inquiry.offer_deposit_eur ?? 0) * 100)
@@ -652,8 +645,7 @@ export async function submitOfferAnswers(
     return { success: false, error: 'Failed to create payment session. Please try again.' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({
       deposit_amount:            depositCents / 100,
@@ -783,8 +775,7 @@ export async function saveInternalDeal(
     updatePayload.external_offer_sent = true
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update(updatePayload)
     .eq('id', inquiryId)
@@ -800,7 +791,7 @@ export async function saveInternalDeal(
 
 /**
  * FA sends a plain-text message to the angler via email.
- * Stored in inquiry_messages for audit trail.
+ * Stored in messages for audit trail.
  */
 export async function sendMessageToAngler(
   inquiryId: string,
@@ -823,13 +814,17 @@ export async function sendMessageToAngler(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertError } = await (svc as any).from('inquiry_messages')
-    .insert({
-      inquiry_id: inquiryId,
-      subject:    subject.trim(),
-      body:       body.trim(),
-    })
+  const { error: insertError } = await svc.from('messages').insert({
+    inquiry_id:  inquiryId,
+    channel:     'email',
+    direction:   'outbound',
+    counterpart: 'angler',
+    subject:     subject.trim(),
+    body:        body.trim(),
+    status:      'sent',
+    drafted_by:  'admin',
+    occurred_at: new Date().toISOString(),
+  })
 
   if (insertError != null) {
     console.error('[sendMessageToAngler] DB error:', insertError)
@@ -888,25 +883,27 @@ export async function logLeadMessage(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any).from('lead_messages').insert({
-    inquiry_id:   inquiryId,
-    direction:    params.direction,
-    channel:      params.channel,
-    contact_type: params.contactType,
-    contact_name: params.contactName.trim(),
-    content:      params.content.trim(),
-    created_by:   params.createdBy ?? 'tymon',
-  })
+  // 'note' channel not supported in messages table — skip DB insert but still update last_contact_at
+  if (params.channel !== 'note') {
+    const { error } = await svc.from('messages').insert({
+      inquiry_id:  inquiryId,
+      direction:   params.direction,
+      channel:     params.channel as 'email' | 'whatsapp' | 'instagram',
+      counterpart: params.contactType === 'client' ? 'angler' : 'guide',
+      body:        params.content.trim(),
+      status:      params.direction === 'inbound' ? 'received' : 'sent',
+      drafted_by:  params.direction === 'inbound' ? null : 'admin',
+      occurred_at: new Date().toISOString(),
+    })
 
-  if (error != null) {
-    console.error('[logLeadMessage] DB error:', error)
-    return { success: false, error: error.message }
+    if (error != null) {
+      console.error('[logLeadMessage] DB error:', error)
+      return { success: false, error: error.message }
+    }
   }
 
   // Bump last_contact_at on the parent inquiry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ last_contact_at: new Date().toISOString() })
     .eq('id', inquiryId)
@@ -918,7 +915,7 @@ export async function logLeadMessage(
 // ─── bulkLogLeadMessages ──────────────────────────────────────────────────────
 
 /**
- * Bulk-insert multiple lead_messages in one transaction.
+ * Bulk-insert multiple messages in one transaction.
  * Used by the conversation importer (paste WhatsApp/email thread).
  * Each message may carry its own createdAt for historical imports.
  * Content is stored as Markdown for AI readability.
@@ -944,22 +941,25 @@ export async function bulkLogLeadMessages(
   const svc = createServiceClient()
 
   const now = new Date().toISOString()
-  const rows = messages.map(m => ({
-    inquiry_id:   inquiryId,
-    direction:    m.direction,
-    channel:      m.channel,
-    contact_type: m.contactType,
-    contact_name: m.contactName.trim() || 'Unknown',
-    content:      m.content.trim(),
-    created_by:   m.createdBy ?? 'tymon',
-    created_at:   m.createdAt ?? now,
+  // Filter out 'note' channel — not supported in messages table
+  const filteredMessages = messages.filter(m => m.channel !== 'note')
+  const rows = filteredMessages.map(m => ({
+    inquiry_id:  inquiryId,
+    direction:   m.direction,
+    channel:     m.channel as 'email' | 'whatsapp' | 'instagram',
+    counterpart: m.contactType === 'client' ? 'angler' : 'guide',
+    body:        m.content.trim(),
+    status:      m.direction === 'inbound' ? 'received' : 'sent',
+    drafted_by:  m.direction === 'inbound' ? null : 'admin',
+    occurred_at: m.createdAt ?? now,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any).from('lead_messages').insert(rows)
-  if (error != null) {
-    console.error('[bulkLogLeadMessages] DB error:', error)
-    return { success: false, error: error.message }
+  if (rows.length > 0) {
+    const { error } = await svc.from('messages').insert(rows)
+    if (error != null) {
+      console.error('[bulkLogLeadMessages] DB error:', error)
+      return { success: false, error: error.message }
+    }
   }
 
   // Bump last_contact_at to the most recent message
@@ -968,8 +968,7 @@ export async function bulkLogLeadMessages(
     .sort()
     .at(-1) ?? new Date().toISOString()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ last_contact_at: latestAt })
     .eq('id', inquiryId)
@@ -987,8 +986,7 @@ export async function bulkLogLeadMessages(
 export async function deleteInquiry(inquiryId: string): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .delete()
     .eq('id', inquiryId)
@@ -1010,8 +1008,7 @@ export async function updateRequestedDates(
       .map(d => d.trim().slice(0, 10))
       .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)),
   )].sort()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ requested_dates: clean })
     .eq('id', inquiryId)
@@ -1027,8 +1024,7 @@ export async function updateNextAction(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ next_action: nextAction?.trim() || null })
     .eq('id', inquiryId)
@@ -1082,8 +1078,7 @@ export async function assignGuideToInquiry(
   const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
 
   // Update inquiry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString(), ...countryPatch })
     .eq('id', inquiryId)
@@ -1112,8 +1107,7 @@ export async function assignGuideToInquiry(
   }
 
   // Fetch inquiry info for email
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('angler_name, angler_country, message, requested_dates, party_size')
     .eq('id', inquiryId)
@@ -1122,8 +1116,7 @@ export async function assignGuideToInquiry(
   // Fetch trip brief (graceful — table may not exist yet)
   let tripDetails: Record<string, unknown> | null = null
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: td } = await (svc as any)
+    const { data: td } = await svc
       .from('inquiry_trip_details')
       .select('confirmed_date, confirmed_party_size, price_range, date_flexibility, target_species, accommodation, guide_notes')
       .eq('inquiry_id', inquiryId)
@@ -1172,8 +1165,7 @@ export async function unassignGuide(inquiryId: string): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
       assigned_guide_id:    null,
@@ -1206,8 +1198,7 @@ export async function setExternalOffer(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ external_offer_sent: value })
     .eq('id', inquiryId)
@@ -1232,8 +1223,7 @@ export async function assignGuideSilently(
 
   const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
       assigned_guide_id: guideId,
@@ -1269,8 +1259,7 @@ export async function respondToAssignment(
   const svc = createServiceClient()
 
   // Verify the inquiry is assigned to this guide
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id')
     .eq('id', inquiryId)
@@ -1279,8 +1268,7 @@ export async function respondToAssignment(
 
   if (inquiry == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
       guide_acceptance:     accepted ? 'accepted' : 'declined',
@@ -1316,8 +1304,7 @@ export async function saveGuideOfferEta(
 
   // Verify ownership — like saveGuideOfferResponse; prevents silent "0 rows updated"
   // when the inquiry is assigned to a different guide.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: owned } = await (svc as any)
+  const { data: owned } = await svc
     .from('inquiries')
     .select('id')
     .eq('id', inquiryId)
@@ -1325,8 +1312,7 @@ export async function saveGuideOfferEta(
     .single()
   if (owned == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ guide_offer_eta: eta.trim() || null })
     .eq('id', inquiryId)
@@ -1351,11 +1337,10 @@ export async function saveTripDetails(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiry_trip_details')
     .upsert(
-      { inquiry_id: inquiryId, ...data, updated_at: new Date().toISOString() },
+      { inquiry_id: inquiryId, ...data, guide_options: (data.guide_options ?? null) as unknown as Json, updated_at: new Date().toISOString() },
       { onConflict: 'inquiry_id' },
     )
 
@@ -1387,8 +1372,7 @@ export async function saveGuideOfferResponse(
   const svc = createServiceClient()
 
   // Verify ownership
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id')
     .eq('id', inquiryId)
@@ -1396,11 +1380,10 @@ export async function saveGuideOfferResponse(
     .single()
   if (inquiry == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiry_trip_details')
     .upsert(
-      { inquiry_id: inquiryId, ...data, updated_at: new Date().toISOString() },
+      { inquiry_id: inquiryId, ...data, guide_options: data.guide_options as unknown as Json, updated_at: new Date().toISOString() },
       { onConflict: 'inquiry_id' },
     )
 
@@ -1447,8 +1430,7 @@ export async function saveOfferDraft(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status, offer_token')
     .eq('id', inquiryId)
@@ -1465,8 +1447,7 @@ export async function saveOfferDraft(
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
   const offerUrl  = `${env.NEXT_PUBLIC_APP_URL}/offers/${token}`
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({
       offer_total_eur:         totalPriceEur,
@@ -1474,19 +1455,19 @@ export async function saveOfferDraft(
       offer_notes:             notes?.trim() || null,
       offer_trip_plan:         tripPlan?.trim() || null,
       offer_license_info:      licenseInfo?.trim() || null,
-      offer_inclusions:        inclusions,
-      offer_questions:         questions,
+      offer_inclusions:        inclusions        as unknown as Json,
+      offer_questions:         questions         as unknown as Json,
       offer_refund_reason:     refundReason?.trim() || null,
-      offer_photos:            photos,
+      offer_photos:            photos            as unknown as Json,
       offer_location:          location?.trim() || null,
-      offer_what_to_bring:     whatToBring,
-      offer_schedule:          schedule,
+      offer_what_to_bring:     whatToBring       as unknown as Json,
+      offer_schedule:          schedule          as unknown as Json,
       offer_license_heading:   licenseHeading?.trim() || null,
       offer_location_lat:      locationLat,
       offer_location_lng:      locationLng,
       offer_location_zoom:     locationZoom,
-      offer_location_geojson:  locationGeoJson,
-      offer_options:           params.options ?? null,
+      offer_location_geojson:  locationGeoJson   as unknown as Json,
+      offer_options:           (params.options ?? null) as unknown as Json,
       offer_token:             token,
       offer_token_expires_at:  expiresAt,
       // NOTE: offer_sent_at is intentionally NOT set here
@@ -1514,8 +1495,7 @@ export async function sendOfferEmail(
   await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, offer_token, offer_total_eur, offer_deposit_eur, offer_notes, status')
     .eq('id', inquiryId)
@@ -1540,8 +1520,7 @@ export async function sendOfferEmail(
     inquiryId,
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ offer_sent_at: new Date().toISOString(), stage_reached: 'offer_sent' })
     .eq('id', inquiryId)
@@ -1566,8 +1545,7 @@ export async function acceptOffer(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status')
     .eq('id', inquiryId)
@@ -1579,11 +1557,10 @@ export async function acceptOffer(
     return { success: false, error: `Inquiry is already ${inquiry.status}` }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
-      offer_answers:       answers,
+      offer_answers:       answers as unknown as Json,
       selected_option_id:  selectedOptionId ?? null,
     })
     .eq('id', inquiry.id)
@@ -1632,8 +1609,7 @@ export async function declineOffer(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status')
     .eq('id', inquiryId)
@@ -1678,28 +1654,13 @@ export async function updateInquiryGuide(
   await requireAdmin()
   const svc = createServiceClient()
   const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ assigned_guide_id: guideId, ...countryPatch })
     .eq('id', inquiryId)
   if (error != null) return { success: false, error: error.message }
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[updateInquiryGuide] Inquiry ${inquiryId} → guide ${guideId ?? '(default)'}`)
-  return { success: true }
-}
-
-export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
-  await requireAdmin()
-  if (ids.length === 0) return { success: true }
-  const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
-    .from('unmatched_messages')
-    .delete()
-    .in('id', ids)
-  if (error != null) return { success: false, error: error.message }
-  revalidatePath('/admin/inquiries/unmatched')
   return { success: true }
 }
 
@@ -1722,8 +1683,7 @@ export type InquiryConfirmation = {
 export async function getInquiryConfirmation(id: string): Promise<InquiryConfirmation | null> {
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('angler_name, deposit_amount, deposit_paid_at, trip_id')
     .eq('id', id)
