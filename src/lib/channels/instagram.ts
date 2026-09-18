@@ -2,16 +2,19 @@
  * Instagram channel adapter — FA-1.13.
  *
  * Stub adapter that compiles and runs without INSTAGRAM_ACCESS_TOKEN.
- * enabled=false when the key is absent; send() throws a readable error.
+ * enabled is a getter (re-evaluated on every read, vi.stubEnv-mockable).
+ * send() throws a readable error even when enabled=false.
  * Full implementation ships with Meta business verification (O-16).
  */
 
 import type { ChannelAdapter, InboundMessage, SendParams, SendResult } from './types'
 
-const enabled = Boolean(process.env.INSTAGRAM_ACCESS_TOKEN)
+function isInstagramConfigured(): boolean {
+  return Boolean(process.env.INSTAGRAM_ACCESS_TOKEN)
+}
 
-export const instagramAdapter: ChannelAdapter & { enabled: boolean } = {
-  enabled,
+export const instagramAdapter: ChannelAdapter & { readonly enabled: boolean } = {
+  get enabled() { return isInstagramConfigured() },
 
   canSendFreeform(_lastInboundAt: Date | null): boolean {
     return false

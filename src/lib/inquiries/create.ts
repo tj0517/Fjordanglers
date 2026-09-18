@@ -14,8 +14,35 @@
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEvent, type EventActor } from '@/lib/events/emit'
-import { normalisePhone } from '@/lib/inquiry-matcher'
 import type { UtmParams } from '@/lib/utm'
+
+/**
+ * Normalise a phone number for storage using the same 4-rule logic as the
+ * 20260918135418 migration backfill.
+ *
+ * Rule 1: starts with '+' → already E.164 prefix, strip formatting chars.
+ * Rule 2: starts with '00' → replace prefix with '+', strip formatting chars.
+ * Rule 3: exactly 9 stripped digits → Polish local, prepend +48.
+ * Rule 4: everything else → return original unchanged (do not guess the country).
+ *
+ * Returns null for empty/null input.
+ */
+export function normalisePhoneForStorage(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null
+  const s = raw.trim()
+
+  if (s.startsWith('+')) {
+    return s.replace(/[^\d+]/g, '')
+  }
+  if (s.startsWith('00')) {
+    return '+' + s.slice(2).replace(/[^\d]/g, '')
+  }
+  const digitsOnly = s.replace(/[^\d]/g, '')
+  if (digitsOnly.length === 9) {
+    return '+48' + digitsOnly
+  }
+  return s
+}
 
 export type InquirySource = 'web_form' | 'manual' | 'email' | 'whatsapp'
 
@@ -58,9 +85,7 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       trip_country:        params.tripCountry ?? null,
       angler_name:         params.anglerName,
       angler_email:        params.anglerEmail,
-      angler_phone:        params.anglerPhone?.trim()
-                             ? normalisePhone(params.anglerPhone.trim())
-                             : null,
+      angler_phone:        normalisePhoneForStorage(params.anglerPhone ?? null),
       requested_dates:     params.requestedDates ?? [],
       party_size:          params.partySize,
       message:             params.message ?? null,

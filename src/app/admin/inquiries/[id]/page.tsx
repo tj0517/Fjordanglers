@@ -8,6 +8,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
+import { env } from '@/lib/env'
 import { MessageComposer } from './MessageComposer'
 import { ThreadActionsPanel } from './ThreadActionsPanel'
 import type { OfferForPanel } from './ThreadActionsPanel'
@@ -339,7 +340,7 @@ export default async function AdminInquiryDetailPage({
     // Non-fatal — WA composer will show email fallback
   }
 
-  const igEnabled = Boolean(process.env.INSTAGRAM_ACCESS_TOKEN)
+  const igEnabled = Boolean(env.INSTAGRAM_ACCESS_TOKEN)
 
   const st             = STATUS_STYLE[inquiry.status] ?? STATUS_STYLE.pending
   const requestedDates = inquiry.requested_dates as string[] | null
