@@ -50,6 +50,8 @@ next-env.d.ts
 docs/node_modules/
 
 .playwright-mcp/
+test-results/
+playwright-report/
 
 # supabase CLI local link state — not source of truth for which project is linked
 supabase/.temp/

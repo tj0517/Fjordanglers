@@ -87,23 +87,29 @@ export async function POST(req: Request) {
     return new Response('OK', { status: 200 })
   }
 
-  // Fetch full email body via Resend Receiving API
+  // Fetch full email body via Resend Receiving API.
+  // In dev/fake mode (RESEND_DEV_FAKE=1) use data.text from the payload directly
+  // so the webhook can be exercised in integration tests without a real email_id.
   let bodyText = ''
-  try {
-    const res = await fetch(`https://api.resend.com/emails/receiving/${emailData.email_id}`, {
-      headers: {
-        Authorization: `Bearer ${env.RESEND_API_KEY}`,
-      },
-      cache: 'no-store',
-    })
-    if (res.ok) {
-      const full = await res.json() as { text?: string; html?: string }
-      bodyText = full.text?.trim() ?? stripHtml(full.html ?? '').trim()
-    } else {
-      console.warn('[email-inbound] Resend fetch failed:', res.status)
+  if (process.env.RESEND_DEV_FAKE === '1' && typeof emailData.text === 'string') {
+    bodyText = emailData.text.trim()
+  } else {
+    try {
+      const res = await fetch(`https://api.resend.com/emails/receiving/${emailData.email_id}`, {
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        },
+        cache: 'no-store',
+      })
+      if (res.ok) {
+        const full = await res.json() as { text?: string; html?: string }
+        bodyText = full.text?.trim() ?? stripHtml(full.html ?? '').trim()
+      } else {
+        console.warn('[email-inbound] Resend fetch failed:', res.status)
+      }
+    } catch (err) {
+      console.error('[email-inbound] Resend API error:', err)
     }
-  } catch (err) {
-    console.error('[email-inbound] Resend API error:', err)
   }
 
   if (!bodyText) {
@@ -215,6 +221,7 @@ interface ResendEmailData {
   from:     string
   to?:      string[]
   subject?: string
+  text?:    string  // present in dev/fake mode payloads; skips Resend body-fetch
 }
 
 interface ResendInboundPayload {

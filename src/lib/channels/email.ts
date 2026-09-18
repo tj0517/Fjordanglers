@@ -58,6 +58,14 @@ export const emailAdapter: ChannelAdapter = {
   canSendFreeform: true,
 
   async send(params: SendParams): Promise<SendResult> {
+    // Fake mode: skip Resend entirely; still returns a well-shaped result so
+    // the caller can store the message row and emit message.sent as normal.
+    if (process.env.RESEND_DEV_FAKE === '1' || !process.env.RESEND_API_KEY) {
+      const t = Date.now()
+      return { externalId: `fake-${t}`, threadKey: `<fake-${t}@dev.fjordanglers.com>` }
+    }
+
+
     const outboundMsgId = newMessageId()
 
     const headers: Record<string, string> = {
