@@ -1188,6 +1188,7 @@ export type Database = {
           landscape_url: string | null
           languages: string[]
           payment_ready: boolean | null
+          phone_e164: string | null
           photo_marketing_consent: boolean
           pricing_model: Database["public"]["Enums"]["pricing_model"]
           slug: string | null
@@ -1246,6 +1247,7 @@ export type Database = {
           landscape_url?: string | null
           languages?: string[]
           payment_ready?: boolean | null
+          phone_e164?: string | null
           photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           slug?: string | null
@@ -1304,6 +1306,7 @@ export type Database = {
           landscape_url?: string | null
           languages?: string[]
           payment_ready?: boolean | null
+          phone_e164?: string | null
           photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           slug?: string | null
