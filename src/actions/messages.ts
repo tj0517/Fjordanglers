@@ -176,10 +176,13 @@ export async function bulkMatchUnmatchedMessages(
 // ─── sendMessageFromThread ────────────────────────────────────────────────────
 
 export interface SendMessageFromThreadParams {
-  channel:     'email'
-  counterpart: 'angler' | 'guide'
-  subject?:    string
-  body:        string
+  channel:      'email' | 'whatsapp' | 'instagram'
+  counterpart:  'angler' | 'guide'
+  subject?:     string
+  body:         string
+  /** WA only: pre-approved template name. If omitted the action selects the
+   *  default template for the counterpart when the 24-h window is closed. */
+  templateName?: string
 }
 
 export async function sendMessageFromThread(
@@ -187,14 +190,16 @@ export async function sendMessageFromThread(
   params:    SendMessageFromThreadParams,
 ): Promise<ActionResult> {
   const { userId } = await requireAdmin()
-  if (params.body.trim() === '') return { success: false, error: 'Body is required' }
+  const isWa = params.channel === 'whatsapp'
+  // body required for email/instagram; for WA it is optional (template path has no body)
+  if (!isWa && params.body.trim() === '') return { success: false, error: 'Body is required' }
 
   const svc = createServiceClient()
 
-  // Fetch the counterpart's email address
+  // Fetch inquiry — include angler_phone for WA sends
   const { data: inq } = await svc
     .from('inquiries')
-    .select('id, angler_name, angler_email, assigned_guide_id')
+    .select('id, angler_name, angler_email, angler_phone, assigned_guide_id')
     .eq('id', inquiryId)
     .single()
 
@@ -202,28 +207,49 @@ export async function sendMessageFromThread(
 
   let to: string
   let counterpartId: string | null = null
+  let templateName: string | undefined = params.templateName
 
   if (params.counterpart === 'angler') {
-    to = inq.angler_email as string
+    if (isWa) {
+      const phone = inq.angler_phone as string | null
+      if (!phone) return { success: false, error: 'Angler has no phone number' }
+      to = phone
+    } else {
+      to = inq.angler_email as string
+    }
   } else {
     if (inq.assigned_guide_id == null) return { success: false, error: 'No guide assigned' }
     counterpartId = inq.assigned_guide_id as string
     const { data: guide } = await svc
       .from('guides')
-      .select('invite_email, user_id')
+      .select('invite_email, user_id, phone_e164')
       .eq('id', counterpartId)
       .single()
     if (guide == null) return { success: false, error: 'Guide not found' }
-    let guideEmail: string | null = guide.invite_email ?? null
-    if ((guideEmail == null || guideEmail === '') && guide.user_id != null) {
-      const { data: authUser } = await svc.auth.admin.getUserById(guide.user_id)
-      guideEmail = authUser?.user?.email ?? null
+
+    if (isWa) {
+      const phone = (guide as unknown as { phone_e164: string | null }).phone_e164
+      if (!phone) return { success: false, error: 'Guide has no WhatsApp number (phone_e164)' }
+      to = phone
+    } else {
+      let guideEmail: string | null = (guide as unknown as { invite_email: string | null }).invite_email ?? null
+      if ((guideEmail == null || guideEmail === '') && (guide as unknown as { user_id: string | null }).user_id != null) {
+        const { data: authUser } = await svc.auth.admin.getUserById((guide as unknown as { user_id: string }).user_id)
+        guideEmail = authUser?.user?.email ?? null
+      }
+      if (guideEmail == null) return { success: false, error: 'Guide has no email address' }
+      to = guideEmail
     }
-    if (guideEmail == null) return { success: false, error: 'Guide has no email address' }
-    to = guideEmail
   }
 
-  // Get last outbound thread_key for In-Reply-To
+  // For WA without explicit templateName, the server will auto-select by counterpart
+  // when the 24-h window is closed (whatsappAdapter.send throws for closed window + no template).
+  // Resolve the default template here so the error is actionable.
+  if (isWa && !templateName) {
+    templateName = params.counterpart === 'guide' ? env.WHATSAPP_TEMPLATE_GUIDE : env.WHATSAPP_TEMPLATE_ANGLER
+  }
+
+  // Get last outbound thread_key for In-Reply-To (email) / last thread key (WA = phone)
   const { data: lastMsg } = await svc
     .from('messages')
     .select('thread_key')
@@ -247,6 +273,7 @@ export async function sendMessageFromThread(
       actor:        { kind: 'admin', id: userId },
       counterpartId,
       threadKey:    lastMsg?.thread_key ?? null,
+      templateName,
     })
   } catch (err) {
     console.error('[sendMessageFromThread] error:', err)

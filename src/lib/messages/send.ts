@@ -13,6 +13,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/database.types'
 import { emitEvent, type EventActor } from '@/lib/events/emit'
 import { emailAdapter } from '@/lib/channels/email'
+import { whatsappAdapter } from '@/lib/channels/whatsapp'
+import { instagramAdapter } from '@/lib/channels/instagram'
 import type { EventChannel } from '@/lib/events/types'
 
 type Client = SupabaseClient<Database>
@@ -31,6 +33,11 @@ export interface SendMessageParams {
   counterpartId?: string | null
   /** Existing thread key (Message-ID of last outbound) for In-Reply-To threading. */
   threadKey?:    string | null
+  /**
+   * WA only: pre-approved Meta template name. Required when canSendFreeform is false.
+   * If not provided and the 24-h window is closed, send() throws.
+   */
+  templateName?: string
 }
 
 export interface SendMessageResult {
@@ -80,13 +87,29 @@ export async function sendMessage(
   try {
     if (channel === 'email') {
       const result = await emailAdapter.send({ to, subject, body, threadKey })
-      externalId  = result.externalId
+      externalId   = result.externalId
       newThreadKey = result.threadKey
-    } else {
-      // WhatsApp / Instagram: adapters arrive in FA-1.13
-      // For now: mark as queued and fall through (no actual send)
-      sendError = `${channel} sending not yet implemented — queued`
-      console.warn(`[sendMessage] ${channel} adapter not available yet — message ${messageId} queued`)
+    } else if (channel === 'whatsapp') {
+      // Fetch last inbound WA message to determine if 24-h freeform window is open
+      const { data: lastInbound } = await client
+        .from('messages')
+        .select('occurred_at')
+        .eq('inquiry_id', inquiryId)
+        .eq('channel', 'whatsapp')
+        .eq('direction', 'inbound')
+        .order('occurred_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const lastInboundAt = lastInbound?.occurred_at ? new Date(lastInbound.occurred_at as string) : null
+      const result = await whatsappAdapter.send({
+        to, body, templateName: params.templateName, lastInboundAt,
+      })
+      externalId   = result.externalId
+      newThreadKey = result.threadKey
+    } else if (channel === 'instagram') {
+      const result = await instagramAdapter.send({ to, body })
+      externalId   = result.externalId
+      newThreadKey = result.threadKey
     }
   } catch (err) {
     sendError = err instanceof Error ? err.message : String(err)

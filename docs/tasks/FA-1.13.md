@@ -2,7 +2,7 @@
 id: FA-1.13
 title: WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy
 stage: 1
-status: todo
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -75,3 +75,82 @@ pnpm typecheck && pnpm lint && pnpm build
 ```
 
 ## Notatki z realizacji
+
+Szczegółowy raport w opisie PR. Poniżej podsumowanie.
+
+### §5 — raport z realizacji (2026-09-18)
+
+**Zrobione**
+
+- `ChannelAdapter` contract v2: `canSendFreeform(lastInboundAt: Date | null): boolean`,
+  `parseInbound` (wchłonął `parseThreadKey` — grep src/: 0 trafień przed zmianą).
+- `src/lib/channels/whatsapp.ts` — pełny adapter (freeform w oknie 24h, szablon poza oknem,
+  `parseInbound` normalizuje `from` do E.164).
+- `src/lib/channels/instagram.ts` — stub; `enabled=false` gdy brak `INSTAGRAM_ACCESS_TOKEN`;
+  `send()` rzuca czytelny błąd.
+- Migracja `20260918135418_add_guides_phone_normalise_angler.sql`:
+  `guides.phone_e164 TEXT`, indeks zwykły (nie UNIQUE — shared phones valid),
+  backfill + indeks na `inquiries.angler_phone`.
+  Wynik backfill local (empty dev DB): normalised=0, skipped=0, null=0.
+  SELECT result (produkcja, live read 2026-09-18):
+    null_phone=24, already_e164=28, to_normalise=47
+    Breakdown of 47: Iceland 43, New Zealand 3, Other 1 — żaden NANP.
+    Oczekiwany wynik: normalised=0, skipped=47, null=24
+    RAISE NOTICE wylistuje wszystkie 47 ID dla tj (manual review).
+- `inquiry-matcher.ts`: `matchInboundPhone` — dopasowanie angler phone + guide phone_e164
+  (przypisany lub kontaktowany w otwartym zapytaniu); wielu kandydatów → unmatched.
+- `messages/send.ts`: obsługa `whatsapp`/`instagram`; fetch `lastInboundAt` z DB dla WA;
+  `templateName` w `SendMessageParams`.
+- `inquiries/create.ts`: normalizacja `angler_phone` → E.164 przy zapisie.
+- `actions/messages.ts`: `channel: 'email' | 'whatsapp' | 'instagram'`; WA ścieżka dla
+  angler i guide (przez `phone_e164`); auto-wybór szablonu wg counterpart.
+- Webhook `route.ts`: HMAC Option B; delivery statuses; `matchInboundPhone` z routingiem
+  counterpart; `whatsappAdapter.parseInbound`.
+- `MessageComposer.tsx`: channel picker; WA okno-zamknięte banner + "Send Template";
+  IG disabled state.
+- `env.ts`: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_TEMPLATE_GUIDE/ANGLER` (z defaultami),
+  `INSTAGRAM_ACCESS_TOKEN`.
+- `docs/ops/whatsapp-templates.md`, `docs/ops/whatsapp-e2e-checklist.md`.
+- 116 testów zielonych; typecheck 0 błędów.
+
+**Nie zrobione / poza zakresem**
+
+- E2E z prawdziwym numerem Meta (punkt 1 acceptance criteria) — wymaga kluczy prod (robi tj).
+- Instagram pełny adapter — O-16, robi tj.
+- Media wychodzące — zdefiniowane jako poza zakresem.
+
+**Zauważone, odroczone**
+
+- `supabase db diff --local` nie działa z działającym primary DB na tym porcie
+  (port conflict przy tworzeniu shadow DB). Migracja zweryfikowana przez psql bezpośrednio.
+- Lint errorsy w 40 pre-existing plikach (FA-1.07/1.08 dead-code cleanup).
+
+**⛔ STOP GATE**
+
+**NIE MERGOWAĆ dopóki tj nie potwierdzi, że `WHATSAPP_APP_SECRET` jest ustawiony
+w środowisku produkcyjnym Vercel.** Brak sekretu = webhook odrzuca wszystkie żądania
+z 401 (HMAC Option B).
+
+### Blokada zewnętrzna (18 IX 2026)
+
+Integracja WhatsApp Cloud API jest zablokowana po stronie Meta, nie kodu. Konto tj ma
+ograniczenie dostępu do reklam obejmujące tworzenie portfolio firmowych (komunikat:
+„Nie możesz zamieszczać reklam, zarządzać zasobami reklamowymi ani tworzyć kont
+reklamowych i portfolio firmowych"). Kreator aplikacji Meta na kroku „Business" zwraca
+„No businesses available". Istniejące portfolio „fan page" (ID 1258409340996834,
+utworzone 4 VIII 2019) ma pustą nazwę firmy, brak adresu i telefonu, status
+„Nie zweryfikowano" — i tak nie jest oferowane w kreatorze.
+Zmienne `WHATSAPP_*` w `.env.local` to zaślepki (`your_...`, `from...`), nie sekrety —
+aplikacja Meta nigdy nie istniała. tj złożył odwołanie w Account Quality 18 IX 2026.
+
+Grep na wołających `/api/webhooks/whatsapp` (poza `route.ts` i testami): **0 trafień** —
+żaden kod klienta ani cron nie woła tego endpointu.
+Blokada mergu (WHATSAPP_APP_SECRET w Vercel) jest tym samym **zdjęta**: sekret nie
+istnieje i nie powstanie do czasu rozpatrzenia odwołania; webhook zwraca 401, ale nikt
+do niego nie puka.
+
+**Kryteria nieudowodnione do odblokowania konta:**
+- Kryterium 1: E2E z prawdziwym numerem Meta (WA do przewodnika → odpowiedź → w wątku).
+- Kryterium 5 (częściowo): build kompiluje się bez `INSTAGRAM_*`, ale pełna weryfikacja
+  z testowym numerem Meta musi poczekać.
+
