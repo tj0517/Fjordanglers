@@ -110,7 +110,7 @@ pnpm typecheck && pnpm lint && pnpm build
 
 ## Notatki z realizacji
 
-### Raport (19 IX 2026)
+### Raport runda 2 (19 IX 2026)
 
 **Model:** claude-sonnet-4-6 · **Effort:** medium-high
 
@@ -123,28 +123,40 @@ pnpm typecheck && pnpm lint && pnpm build
 - **`src/actions/inquiries.ts`** — `setInquiryQualified(inquiryId, value)` z `requireAdmin()`.
 - **`src/app/admin/inquiries/[id]/QualifiedChanger.tsx`** — trzy-stanowy komponent (yes / no / Reset to auto), `router.refresh()` po zmianie.
 - **`src/app/admin/inquiries/[id]/page.tsx`** — `QualifiedChanger` wstawiony po `AgentToggle` w sidePanel.
-- **Testy** — 11 testów w `qualified.test.ts` (zielone); mock Round 1 zaktualizowany do obsługi `insert().select().single()`.
+- **Testy admina lock** — 8 testów w `inquiry-agent-round1.test.ts` (4 nowe) i nowy `inquiry-agent-round2.test.ts` (4 testy). Każda z czterech ścieżek agenta objęta: Round 1 ready (455), Round 1 waiting (490), Round 2 ready (591), Round 2 waiting (632).
+- **Red proof** — usunięcie `&& qualified_set_by !== 'admin'` z czterech miejsc czerwieni cztery testy, po jednym na ścieżkę:
+  - `does not call setQualified when qualified_set_by is admin (Round 1 ready)` ✗
+  - `does not call setQualified when qualified_set_by is admin (Round 1 waiting)` ✗
+  - `does not call setQualified when qualified_set_by is admin (Round 2 ready)` ✗
+  - `does not call setQualified when qualified_set_by is admin (Round 2 waiting)` ✗
+  Po przywróceniu warunku: 153 passed, 0 nowych błędów.
 
-#### Weryfikacja DB (lokalny stack, 19 IX 2026)
+#### Weryfikacja (lokalny stack, 19 IX 2026)
 
 ```
-SELECT qualified, qualified_set_by, count(*) FROM inquiries GROUP BY 1,2;
-→ (0 rows) — stack siejący brak, ale kolumny istnieją
-
 INSERT (default) → qualified='unknown', qualified_set_by=NULL  ✓
 UPDATE SET qualified='maybe' → ERROR: violates check constraint "inquiries_qualified_check"  ✓ (na czerwono)
 supabase db diff → No schema changes found  ✓
 pnpm typecheck → 0 errors  ✓
-pnpm test → 148 passed (18 files)  ✓
+pnpm test → 153 passed (stack wyłączony; 1 pre-existing failure wymaga żywego DB)  ✓
 pnpm build → OK (stack zatrzymany)  ✓
+pnpm lint → 40 errors, 81 warnings — wszystkie pre-existing (FA-1.03: src/emails/*.tsx,
+  whatsapp-bridge/poll-emails.mjs); zero przecięcia z plikami FA-1.04. *
 ```
 
-#### Nie zrobione / odroczone
+(*) 40 błędów istnieje na `main` niezależnie od tego PR — wpis w deferred-tasks.md (FA-1.03).
+
+#### Kryterium 1 — niespełnione (lokalny stack bez seed danych)
+
+`SELECT qualified, count(*) FROM inquiries GROUP BY 1;` → `(0 rows)` — stack nie ma zasianych zapytań. Kolumny i constraint udowodnione osobno (INSERT + red proof). Do zamknięcia w FA-1.10, gdy seed.sql będzie naprawiony (wpis FA-1.04 w deferred-tasks.md).
+
+#### Nie zrobione / odroczone (zakres)
 
 - Brak backfillu historycznych wierszy — świadomie `unknown`, zgodnie z zakresem.
-- Test integracyjny w inquiry-agent nie sprawdza obu ścieżek Round 1 z logiką admin lock — zakres testów `qualified.test.ts` pokrywa `setQualified` jednostkowo; testy agenta sprawdzają kształt update payload.
+- Kryterium 4 (E2E klasyfikacja → `qualified='yes'` + `inquiry_events`) — deferred jak kryterium 1 (brak seed danych).
+- Deduplikacja zdarzeń (setQualified emituje przy każdej rundzie, nawet gdy wartość niezmieniona) — wpis w deferred-tasks.md.
 
 #### Zauważone poza zakresem
 
-- `src/lib/ai/inquiry-agent-round1.test.ts` — mock `update().eq()` zwracał `{ error: null }` bez `data`; emitEvent wymaga `.select().single()` na insert. Naprawione w tym PR jako wymagana zmiana do uruchomienia testów.
+- `inquiry-agent-round1.test.ts` — mock `insert()` zwracał plain object zamiast łańcucha; emitEvent wymaga `.select().single()`. Naprawione w tym PR.
 
