@@ -108,6 +108,23 @@ pnpm typecheck && pnpm lint && pnpm build
 # SELECT qualified, qualified_set_by, count(*) FROM inquiries GROUP BY 1,2;
 ```
 
+## Dowód na prod (19 IX 2026)
+
+`db push` wykonany przez tj, 19 IX 2026. SQL Editor, read-only, `uwxrstbplaoxfghrchcy`.
+
+```
+SELECT qualified, count(*) FROM inquiries GROUP BY 1;
+→ unknown | 99   (wszystkie istniejące wiersze)
+
+UPDATE inquiries SET qualified='maybe';
+→ ERROR: violates check constraint "inquiries_qualified_check"  (na czerwono ✓)
+
+SELECT count(*) FROM inquiry_events WHERE type='inquiry.qualified_set' AND source='app';
+→ 0  (brak duplikatów — backfill nie tworzył qualified_set)
+```
+
+Emiter `inquiry.qualified_set` zweryfikowany pośrednio przez FA-1.05 (`message.received/webhook = 1` — pierwsze żywe zdarzenie po wdrożeniu); ścieżka agenta przetestowana w testach jednostkowych (153 passed).
+
 ## Notatki z realizacji
 
 ### Raport runda 2 (19 IX 2026)

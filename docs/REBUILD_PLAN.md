@@ -519,6 +519,8 @@ Jedyny wyjątek, który warto rozważyć przed 30 IX, to **`/destinations` w pro
 produkcji zostaje etap 0. `stage-1` idzie na produkcję jako paczka, gdy FA-1.03, 1.12,
 1.13 są `done` i zespół przeszedł wdrożenie; FA-1.14 może dojechać w drugiej paczce.
 
+**Dopisek 19 IX.** Paczka 1 (FA-1.03 + FA-1.12, `db push` 16 IX) i paczka 2 (FA-1.04 + FA-1.05, `db push` 19 IX) weszły na produkcję. `inquiry_events` ma 785 wierszy (99 created + 684 messages + 1 offer + 1 webhook live); `qualified` ustawiony na `unknown` dla wszystkich 99 zapytań, emiter działa (pierwsze `message.received/webhook` po wdrożeniu). FA-1.04 i FA-1.05 nie są pominięte — są `done` i udowodnione na prod.
+
 ---
 
 ## 10. Zasady na przyszłość
