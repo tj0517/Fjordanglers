@@ -2,7 +2,7 @@
 id: FA-1.04
 title: inquiries.qualified — z klasyfikacji agenta, z korektą ręczną, unknown dla starych
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -109,3 +109,42 @@ pnpm typecheck && pnpm lint && pnpm build
 ```
 
 ## Notatki z realizacji
+
+### Raport (19 IX 2026)
+
+**Model:** claude-sonnet-4-6 · **Effort:** medium-high
+
+#### Zrobione
+
+- **Migracja** `20261002000000_inquiries_qualified.sql` — `qualified TEXT NOT NULL DEFAULT 'unknown' CHECK (IN ('yes','no','unknown'))`, `qualified_set_by TEXT NULL`, `qualified_set_at TIMESTAMPTZ NULL`; indeks częściowy `WHERE qualified <> 'unknown'`. Zastosowana lokalnie, brak dryfu (`supabase db diff` pusty).
+- **`src/lib/inquiries/qualified.ts`** — `computeQualified()` (reguła O-10 + D1), `setQualified()` (update + `emitEvent('inquiry.qualified_set')`), admin lock: `qualified_set_by = NULL` gdy admin ustawia `'unknown'`.
+- **`src/lib/supabase/database.types.ts`** — zregenerowane, zawierają trzy nowe kolumny.
+- **`src/lib/ai/inquiry-agent.ts`** — `qualified_set_by` dodany do obu SELECT (Round 1 i Round 2); `setQualified` wołany po każdym z czterech `.update({ ...classUpdate })` gdy wynik ≠ `'unknown'` i `qualified_set_by ≠ 'admin'`.
+- **`src/actions/inquiries.ts`** — `setInquiryQualified(inquiryId, value)` z `requireAdmin()`.
+- **`src/app/admin/inquiries/[id]/QualifiedChanger.tsx`** — trzy-stanowy komponent (yes / no / Reset to auto), `router.refresh()` po zmianie.
+- **`src/app/admin/inquiries/[id]/page.tsx`** — `QualifiedChanger` wstawiony po `AgentToggle` w sidePanel.
+- **Testy** — 11 testów w `qualified.test.ts` (zielone); mock Round 1 zaktualizowany do obsługi `insert().select().single()`.
+
+#### Weryfikacja DB (lokalny stack, 19 IX 2026)
+
+```
+SELECT qualified, qualified_set_by, count(*) FROM inquiries GROUP BY 1,2;
+→ (0 rows) — stack siejący brak, ale kolumny istnieją
+
+INSERT (default) → qualified='unknown', qualified_set_by=NULL  ✓
+UPDATE SET qualified='maybe' → ERROR: violates check constraint "inquiries_qualified_check"  ✓ (na czerwono)
+supabase db diff → No schema changes found  ✓
+pnpm typecheck → 0 errors  ✓
+pnpm test → 148 passed (18 files)  ✓
+pnpm build → OK (stack zatrzymany)  ✓
+```
+
+#### Nie zrobione / odroczone
+
+- Brak backfillu historycznych wierszy — świadomie `unknown`, zgodnie z zakresem.
+- Test integracyjny w inquiry-agent nie sprawdza obu ścieżek Round 1 z logiką admin lock — zakres testów `qualified.test.ts` pokrywa `setQualified` jednostkowo; testy agenta sprawdzają kształt update payload.
+
+#### Zauważone poza zakresem
+
+- `src/lib/ai/inquiry-agent-round1.test.ts` — mock `update().eq()` zwracał `{ error: null }` bez `data`; emitEvent wymaga `.select().single()` na insert. Naprawione w tym PR jako wymagana zmiana do uruchomienia testów.
+
