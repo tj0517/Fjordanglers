@@ -1,7 +1,8 @@
 /**
  * POST /api/inquiries — create a new FA inquiry.
  *
- * Saves to the `inquiries` table with status = 'pending'.
+ * Saves to the `inquiries` table with status = 'new' (set by createInquiry, which
+ * also emits `inquiry.created`).
  * Fires two emails:
  *   • FA: new inquiry notification (with dashboard link)
  *   • Angler: inquiry received confirmation
@@ -43,8 +44,9 @@ const InquirySchema = z.object({
   party_size:      z.number().int().min(1).max(20),
   message:         z.string().max(2000).optional().nullable(),
   selected_option: z.string().max(200).optional().nullable(),
-  angler_phone:    z.string().max(50).optional().nullable(),
-  trip_length:     z.enum(['1', '2-3', '4-7', '7+']).optional().nullable(),
+  angler_phone:         z.string().max(50).optional().nullable(),
+  angler_phone_country: z.string().min(2).max(2).optional().nullable(),
+  trip_length:          z.enum(['1', '2-3', '4-7', '7+']).optional().nullable(),
   gclid:           z.string().max(200).optional().nullable(),
   utm: z.object({
     utm_source:   z.string().max(200).optional(),
@@ -135,12 +137,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       partySize:         parsed.data.party_size,
       message:           parsed.data.message ?? null,
       selectedOption:    parsed.data.selected_option ?? null,
-      anglerPhone:       parsed.data.angler_phone ?? null,
-      tripLength:        parsed.data.trip_length ?? null,
+      anglerPhone:         parsed.data.angler_phone ?? null,
+      anglerPhoneCountry:  parsed.data.angler_phone_country?.toUpperCase() ?? null,
+      tripLength:          parsed.data.trip_length ?? null,
       gclid:             parsed.data.gclid ?? null,
       utm:               parsed.data.utm ?? null,
-      status:            'pending',
       source:            'web_form',
+      actor:             { kind: 'system' },
     })
   } catch (dbError) {
     console.error('[inquiries/POST] DB insert error:', dbError)

@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { MessageSquare, Mail, Link2, Trash2 } from 'lucide-react'
 import { UnmatchedLinker } from './UnmatchedLinker'
-import { deleteUnmatchedMessages } from '@/actions/inquiries'
+import { deleteUnmatchedMessages } from '@/actions/messages'
 
 type LinkerMode =
   | { kind: 'single'; msg: UnmatchedMessage }

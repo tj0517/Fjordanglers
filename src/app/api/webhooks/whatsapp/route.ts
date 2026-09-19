@@ -1,8 +1,14 @@
 /**
- * WhatsApp Cloud API webhook
+ * WhatsApp Cloud API webhook — FA-1.13
  *
  * GET  — Meta hub.challenge verification
- * POST — Incoming message events (text + media stubs)
+ * POST — Incoming message events + delivery status updates
+ *
+ * HMAC Option B: WHATSAPP_APP_SECRET is required. Absent secret → 401 immediately.
+ * Bad signature → 401. Correct signature → proceed.
+ *
+ * NIE MERGOWAĆ dopóki tj nie potwierdzi, że WHATSAPP_APP_SECRET jest ustawiony
+ * w środowisku produkcyjnym Vercel.
  *
  * Setup:
  *  1. developers.facebook.com → App → WhatsApp → Configuration → Webhook
@@ -13,9 +19,12 @@
  */
 
 import crypto from 'crypto'
+import type { Json } from '@/lib/supabase/database.types'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
-import { matchInquiryByPhone } from '@/lib/inquiry-matcher'
+import { matchInboundPhone } from '@/lib/inquiry-matcher'
+import { whatsappAdapter } from '@/lib/channels/whatsapp'
+import { emitEvent } from '@/lib/events/emit'
 
 // ─── GET — hub verification ───────────────────────────────────────────────────
 
@@ -34,23 +43,34 @@ export async function GET(req: Request) {
   return new Response('Forbidden', { status: 403 })
 }
 
-// ─── POST — incoming messages ─────────────────────────────────────────────────
+// ─── POST — incoming messages + delivery statuses ────────────────────────────
 
 export async function POST(req: Request) {
   const rawBody = await req.text()
 
-  // Verify HMAC-SHA256 signature from Meta
-  const signature = req.headers.get('x-hub-signature-256')
-  if (env.WHATSAPP_APP_SECRET && signature) {
-    const expected = 'sha256=' + crypto
-      .createHmac('sha256', env.WHATSAPP_APP_SECRET)
-      .update(rawBody)
-      .digest('hex')
+  // Option B: secret absent → 401 immediately (no key = not configured for prod)
+  const secret = env.WHATSAPP_APP_SECRET
+  if (!secret) {
+    console.warn('[whatsapp-webhook] WHATSAPP_APP_SECRET not configured — rejecting request')
+    return new Response('Webhook secret not configured', { status: 401 })
+  }
 
-    if (signature !== expected) {
-      console.warn('[whatsapp-webhook] Signature mismatch — rejected')
-      return new Response('Invalid signature', { status: 401 })
-    }
+  const signature = req.headers.get('x-hub-signature-256')
+  if (!signature) {
+    return new Response('Missing x-hub-signature-256 header', { status: 401 })
+  }
+
+  const expected = 'sha256=' + crypto
+    .createHmac('sha256', secret)
+    .update(rawBody)
+    .digest('hex')
+
+  // timingSafeEqual requires same-length buffers
+  const sigBuf = Buffer.from(signature)
+  const expBuf = Buffer.from(expected)
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    console.warn('[whatsapp-webhook] Signature mismatch — rejected')
+    return new Response('Invalid signature', { status: 401 })
   }
 
   let payload: MetaWebhookPayload
@@ -62,80 +82,117 @@ export async function POST(req: Request) {
 
   const supabase = createServiceClient()
 
-  // Iterate over entries → changes → messages
   for (const entry of payload.entry ?? []) {
     for (const change of entry.changes ?? []) {
       const value = change.value
-      if (!value?.messages?.length) continue
 
-      // Build a name lookup from contacts array
+      // ── Delivery status updates ───────────────────────────────────────────
+      for (const statusUpdate of value.statuses ?? []) {
+        const newStatus = STATUS_MAP[statusUpdate.status]
+        if (!newStatus) continue
+        await supabase
+          .from('messages')
+          .update({ status: newStatus })
+          .eq('external_id', statusUpdate.id)
+      }
+
+      // ── Inbound messages ──────────────────────────────────────────────────
+      if (!value.messages?.length) continue
+
+      // Build contact name lookup
       const nameMap: Record<string, string> = {}
       for (const contact of value.contacts ?? []) {
         nameMap[contact.wa_id] = contact.profile?.name ?? ''
       }
 
-      for (const message of value.messages) {
-        if (message.type !== 'text' && message.type !== 'image' && message.type !== 'audio' && message.type !== 'video' && message.type !== 'document') {
-          continue
-        }
+      for (const rawMsg of value.messages) {
+        const inbound = whatsappAdapter.parseInbound(rawMsg as unknown as Record<string, unknown>)
+        if (!inbound) continue
 
-        const from        = message.from  // e.g. "48123456789" (no leading +)
-        const senderName  = nameMap[from] ?? ''
-        const content     = message.type === 'text'
-          ? (message.text?.body ?? '')
-          : `[Media attachment received — type: ${message.type}]`
-        const rawPayload  = message as unknown as Record<string, unknown>
+        const from       = inbound.from   // E.164 e.g. "+48123456789"
+        const rawPhone   = rawMsg.from    // without +
+        const senderName = nameMap[rawPhone] ?? ''
 
-        const inquiryId = await matchInquiryByPhone(from)
+        const candidates = await matchInboundPhone(from)
 
-        if (inquiryId) {
-          // Matched — insert directly into lead_messages
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { error } = await (supabase as any).from('lead_messages').insert({
-            inquiry_id:   inquiryId,
-            direction:    'inbound',
-            channel:      'whatsapp',
-            contact_type: 'client',
-            contact_name: senderName || from,
-            content,
-            created_by:   'webhook',
-          })
+        if (candidates.length === 1) {
+          const { inquiryId, counterpart, counterpartId } = candidates[0]
+          const { data: newMsg, error } = await supabase
+            .from('messages')
+            .insert({
+              inquiry_id:     inquiryId,
+              direction:      'inbound',
+              channel:        'whatsapp',
+              counterpart,
+              counterpart_id: counterpartId ?? null,
+              body:           inbound.body,
+              external_id:    inbound.externalId,
+              status:         'received',
+              drafted_by:     null,
+              media:          inbound.media
+                ? (inbound.media as unknown as Json)
+                : null,
+              occurred_at:    inbound.occurredAt.toISOString(),
+            })
+            .select('id')
+            .single()
 
           if (error) {
-            console.error('[whatsapp-webhook] lead_messages insert error:', error)
+            console.error('[whatsapp-webhook] messages insert error:', error)
           } else {
-            // Bump last_contact_at
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            await (supabase as any)
+            await supabase
               .from('inquiries')
               .update({ last_contact_at: new Date().toISOString() })
               .eq('id', inquiryId)
 
-            console.log(`[whatsapp-webhook] Message from ${from} → inquiry ${inquiryId}`)
+            await emitEvent(supabase, {
+              inquiryId,
+              type:      'message.received',
+              actor:     { kind: counterpart === 'guide' ? 'guide' : 'angler' },
+              source:    'webhook',
+              channel:   'whatsapp',
+              messageId: newMsg?.id ?? null,
+            })
+
+            console.log(
+              `[whatsapp-webhook] ${counterpart} ${from} → inquiry ${inquiryId}`,
+            )
           }
         } else {
-          // No match — queue for manual linking
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { error } = await (supabase as any).from('unmatched_messages').insert({
-            source:           'whatsapp',
-            from_identifier:  from,
-            sender_name:      senderName,
-            content,
-            raw_payload:      rawPayload,
+          // No match or multiple candidates → unmatched queue
+          const { error } = await supabase.from('unmatched_messages').insert({
+            source:          'whatsapp',
+            from_identifier: rawPhone,
+            sender_name:     senderName,
+            content:         inbound.body,
+            raw_payload: {
+              message:    rawMsg,
+              candidates: candidates.map(c => c.inquiryId),
+            } as unknown as Json,
           })
 
           if (error) {
             console.error('[whatsapp-webhook] unmatched_messages insert error:', error)
           } else {
-            console.log(`[whatsapp-webhook] Unmatched message from ${from} queued`)
+            const reason = candidates.length === 0 ? 'no match' : `${candidates.length} candidates`
+            console.log(`[whatsapp-webhook] ${from} queued as unmatched (${reason})`)
           }
         }
       }
     }
   }
 
-  // Always return 200 — Meta retries on non-200 responses
+  // Always return 200 — Meta retries on non-200
   return new Response('OK', { status: 200 })
+}
+
+// ─── Delivery status map ──────────────────────────────────────────────────────
+
+const STATUS_MAP: Record<string, 'sent' | 'delivered' | 'read' | 'failed'> = {
+  sent:      'sent',
+  delivered: 'delivered',
+  read:      'read',
+  failed:    'failed',
 }
 
 // ─── Meta payload types ───────────────────────────────────────────────────────
@@ -150,6 +207,12 @@ interface MetaWebhookPayload {
         metadata: { display_phone_number: string; phone_number_id: string }
         contacts?: Array<{ wa_id: string; profile?: { name: string } }>
         messages?: WhatsAppMessage[]
+        statuses?: Array<{
+          id:           string
+          status:       string
+          timestamp:    string
+          recipient_id: string
+        }>
       }
       field: string
     }>
@@ -157,13 +220,13 @@ interface MetaWebhookPayload {
 }
 
 interface WhatsAppMessage {
-  from: string
-  id: string
-  timestamp: string
-  type: 'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'location' | 'contacts'
-  text?: { body: string }
-  image?: { id: string; mime_type: string; sha256: string; caption?: string }
-  audio?: { id: string; mime_type: string }
-  video?: { id: string; mime_type: string; caption?: string }
-  document?: { id: string; mime_type: string; filename?: string }
+  from:       string
+  id:         string
+  timestamp:  string
+  type:       'text' | 'image' | 'audio' | 'video' | 'document' | 'sticker' | 'location' | 'contacts'
+  text?:      { body: string }
+  image?:     { id: string; mime_type: string; sha256: string; caption?: string }
+  audio?:     { id: string; mime_type: string }
+  video?:     { id: string; mime_type: string; caption?: string }
+  document?:  { id: string; mime_type: string; filename?: string }
 }

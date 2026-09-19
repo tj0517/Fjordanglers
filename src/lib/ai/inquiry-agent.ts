@@ -428,14 +428,16 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
         to: anglerEmail, anglerName, question: CLOSING_MESSAGE, tripTitle, inquiryId,
         threadHeaders: { messageId: outboundMsgId },
       })
-      await supabase.from('lead_messages').insert({
-        inquiry_id:   inquiryId,
-        direction:    'outbound',
-        channel:      'email',
-        contact_type: 'client',
-        contact_name: anglerName,
-        content:      CLOSING_MESSAGE,
-        created_by:   'agent',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('messages').insert({
+        inquiry_id:  inquiryId,
+        direction:   'outbound',
+        channel:     'email',
+        counterpart: 'angler',
+        body:        CLOSING_MESSAGE,
+        status:      'sent',
+        drafted_by:  'agent',
+        occurred_at: new Date().toISOString(),
       })
       console.log(`[inquiry-agent] Round 1 → sent closing message to ${anglerEmail}`)
     }
@@ -455,14 +457,16 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
     threadHeaders: { messageId: outboundMsgId },
   })
 
-  await supabase.from('lead_messages').insert({
-    inquiry_id:   inquiryId,
-    direction:    'outbound',
-    channel:      'email',
-    contact_type: 'client',
-    contact_name: anglerName,
-    content:      result.question,
-    created_by:   'agent',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from('messages').insert({
+    inquiry_id:  inquiryId,
+    direction:   'outbound',
+    channel:     'email',
+    counterpart: 'angler',
+    body:        result.question,
+    status:      'sent',
+    drafted_by:  'agent',
+    occurred_at: new Date().toISOString(),
   })
 
   await supabase
@@ -490,11 +494,12 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     return
   }
 
-  const { data: messages } = await supabase
-    .from('lead_messages')
-    .select('direction, channel, contact_name, content, created_at')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: messages } = await (supabase as any)
+    .from('messages')
+    .select('direction, channel, body, occurred_at')
     .eq('inquiry_id', inquiryId)
-    .order('created_at', { ascending: true })
+    .order('occurred_at', { ascending: true })
 
   // Fetch trip title
   let tripTitle = 'your trip'
@@ -545,14 +550,16 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
       threadHeaders,
     })
 
-    await supabase.from('lead_messages').insert({
-      inquiry_id:   inquiryId,
-      direction:    'outbound',
-      channel:      'email',
-      contact_type: 'client',
-      contact_name: inquiry.angler_name,
-      content:      outbound,
-      created_by:   'agent',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from('messages').insert({
+      inquiry_id:  inquiryId,
+      direction:   'outbound',
+      channel:     'email',
+      counterpart: 'angler',
+      body:        outbound,
+      status:      'sent',
+      drafted_by:  'agent',
+      occurred_at: new Date().toISOString(),
     })
 
     await supabase
@@ -576,14 +583,16 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     threadHeaders,
   })
 
-  await supabase.from('lead_messages').insert({
-    inquiry_id:   inquiryId,
-    direction:    'outbound',
-    channel:      'email',
-    contact_type: 'client',
-    contact_name: inquiry.angler_name,
-    content:      result.question,
-    created_by:   'agent',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from('messages').insert({
+    inquiry_id:  inquiryId,
+    direction:   'outbound',
+    channel:     'email',
+    counterpart: 'angler',
+    body:        result.question,
+    status:      'sent',
+    drafted_by:  'agent',
+    occurred_at: new Date().toISOString(),
   })
 
   await supabase

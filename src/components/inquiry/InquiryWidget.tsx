@@ -252,6 +252,7 @@ function InquiryModal({
   const [tripLength,   setTripLength]   = useState<TripLength | ''>('')
   const [message,      setMessage]      = useState('')
   const [phone,        setPhone]        = useState('')
+  const [phoneCountry, setPhoneCountry] = useState('')
 
   const [submitState,  setSubmitState]  = useState<SubmitState>('idle')
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null)
@@ -338,7 +339,8 @@ function InquiryModal({
           trip_length:     tripLength || null,
           message:         message.trim() || null,
           selected_option: selectedOptionLabel ?? null,
-          angler_phone:    phone.trim() || null,
+          angler_phone:         phone.trim() || null,
+          angler_phone_country: phoneCountry || null,
           gclid:           gclid ?? null,
           utm:             utm ?? null,
         }),
@@ -360,7 +362,7 @@ function InquiryModal({
       )
       submittingRef.current = false
     }
-  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, selectedOptionLabel])
+  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, phoneCountry, selectedOptionLabel])
 
   return (
     /* Backdrop */
@@ -620,6 +622,30 @@ function InquiryModal({
                         className={inputCls}
                         style={inputStyle}
                         autoComplete="tel" />
+                      <select
+                        value={phoneCountry}
+                        onChange={e => setPhoneCountry(e.target.value)}
+                        className={`${inputCls} mt-1.5`}
+                        style={{ ...inputStyle, fontSize: '12px' }}
+                        aria-label="Phone number country"
+                      >
+                        <option value="">Country (optional)</option>
+                        <option value="AU">Australia</option>
+                        <option value="CA">Canada</option>
+                        <option value="DK">Denmark</option>
+                        <option value="FI">Finland</option>
+                        <option value="FR">France</option>
+                        <option value="DE">Germany</option>
+                        <option value="IS">Iceland</option>
+                        <option value="IE">Ireland</option>
+                        <option value="NL">Netherlands</option>
+                        <option value="NZ">New Zealand</option>
+                        <option value="NO">Norway</option>
+                        <option value="PL">Poland</option>
+                        <option value="SE">Sweden</option>
+                        <option value="GB">United Kingdom</option>
+                        <option value="US">United States</option>
+                      </select>
                     </div>
 
                     {/* Party size */}

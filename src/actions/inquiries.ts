@@ -21,9 +21,10 @@
  *
  * sendMessageToAngler(inquiryId, subject, body)
  *   FA sends a plain-text email to the angler from the admin.
- *   Message is stored in inquiry_messages for audit trail.
+ *   Message is stored in messages for audit trail.
  */
 
+import type { Json } from '@/lib/supabase/database.types'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
 import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
@@ -38,6 +39,11 @@ import {
 } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin, requireGuide, requireToken, UnauthorizedError } from '@/lib/auth/guards'
+import {
+  transition,
+  TransitionError,
+  isInquiryStatus,
+} from '@/lib/inquiries/state'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -156,9 +162,10 @@ export async function createManualInquiry(params: {
   requestedDates: string[]
   message:        string | null
   channel:        string | null
-  status:         string
+  /** Where the admin wants it to start: `new` (nobody replied yet) or `qualifying`. */
+  status:         'new' | 'qualifying'
 }): Promise<ActionResult & { inquiryId?: string }> {
-  await requireAdmin()
+  const { userId } = await requireAdmin()
   if (params.anglerName.trim() === '') return { success: false, error: 'Name is required' }
   if (params.anglerEmail.trim() === '') return { success: false, error: 'Email is required' }
   if (params.partySize < 1) return { success: false, error: 'Party size must be at least 1' }
@@ -185,7 +192,7 @@ export async function createManualInquiry(params: {
       anglerName:       params.anglerName.trim(),
       anglerEmail:      params.anglerEmail.trim().toLowerCase(),
       partySize:        params.partySize,
-      status:           params.status,
+      actor:            { kind: 'admin', id: userId },
       requestedDates:   params.requestedDates,
       // tripId here is experience_pages.id (the dropdown value from the admin form).
       // Store as experience_page_id — trip_id FK points to the non-existent experiences table.
@@ -198,6 +205,24 @@ export async function createManualInquiry(params: {
   } catch (error) {
     console.error('[createManualInquiry] DB error:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to create inquiry' }
+  }
+
+  // Every inquiry is born `new`; starting the admin's way through the process is a
+  // transition of its own, so it shows up on the timeline like any other.
+  if (params.status === 'qualifying') {
+    try {
+      await transition(createServiceClient(), inquiry.id, 'qualifying', {
+        actor:  { kind: 'admin', id: userId },
+        reason: 'Created manually — conversation already started',
+      })
+    } catch (error) {
+      console.error('[createManualInquiry] transition error:', error)
+      return {
+        success:   false,
+        error:     error instanceof TransitionError ? error.message : 'Failed to set the initial status',
+        inquiryId: inquiry.id,
+      }
+    }
   }
 
   console.log(`[createManualInquiry] Created inquiry ${inquiry.id} for ${params.anglerName} (channel: ${params.channel ?? 'unspecified'})`)
@@ -213,22 +238,22 @@ export async function createManualInquiry(params: {
  *   1. inquiry.offer_deposit_eur — if FA created an offer, always use that exact amount.
  *   2. depositPercent × trip price — legacy fallback.
  *
- * Allowed statuses: any active status or deposit_sent (resend).
- * Blocked statuses: deposit_paid, completed, cancelled.
+ * Allowed statuses: any status from which `awaiting_payment` is reachable, plus
+ * `awaiting_payment` itself (resend — the status does not move a second time).
+ * Blocked statuses: paid, completed, cancelled.
  */
 export async function sendDepositLink(
   inquiryId: string,
   depositPercent: number = 30,
 ): Promise<SendDepositLinkResult> {
-  await requireAdmin()
+  const { userId } = await requireAdmin()
   if (depositPercent < 1 || depositPercent > 100) {
     return { success: false, error: 'depositPercent must be 1–100' }
   }
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rawInquiry } = await (svc as any)
+  const { data: rawInquiry } = await svc
     .from('inquiries')
     .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, message, offer_deposit_eur')
     .eq('id', inquiryId)
@@ -238,7 +263,7 @@ export async function sendDepositLink(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  const blocked = ['deposit_paid', 'completed', 'cancelled']
+  const blocked = ['paid', 'completed', 'cancelled', 'handed_over', 'lost']
   if (blocked.includes(rawInquiry.status)) {
     return { success: false, error: `Cannot send deposit link — inquiry is ${rawInquiry.status}` }
   }
@@ -304,11 +329,9 @@ export async function sendDepositLink(
     return { success: false, error: 'Failed to create Stripe checkout session' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({
-      status:                    'deposit_sent',
       deposit_amount:            depositCents / 100,
       deposit_stripe_session_id: session.id,
     })
@@ -316,6 +339,25 @@ export async function sendDepositLink(
 
   if (updateError != null) {
     console.error('[sendDepositLink] DB update error:', updateError)
+  }
+
+  // Resending the link to an inquiry that is already awaiting payment is not a
+  // transition — the status is where it should be, so there is nothing to record.
+  if (rawInquiry.status !== 'awaiting_payment') {
+    try {
+      await transition(svc, inquiryId, 'awaiting_payment', {
+        actor:  { kind: 'admin', id: userId },
+        reason: 'Deposit link sent',
+      })
+    } catch (error) {
+      console.error('[sendDepositLink] transition error:', error)
+      return {
+        success: false,
+        error:   error instanceof TransitionError
+          ? error.message
+          : 'Deposit link created, but the status could not be updated',
+      }
+    }
   }
 
   sendDepositLinkAnglerEmail({
@@ -346,7 +388,7 @@ export async function saveRichOffer(
   inquiryId: string,
   params: RichOfferParams,
 ): Promise<ActionResult & { offerUrl?: string }> {
-  await requireAdmin()
+  const { userId } = await requireAdmin()
   const {
     totalPriceEur, depositEur, notes,
     tripPlan, licenseInfo, licenseHeading, inclusions,
@@ -367,8 +409,7 @@ export async function saveRichOffer(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, status')
     .eq('id', inquiryId)
@@ -378,7 +419,7 @@ export async function saveRichOffer(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
+  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
     return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
   }
 
@@ -389,8 +430,7 @@ export async function saveRichOffer(
   const baseUrl  = env.NEXT_PUBLIC_APP_URL
   const offerUrl = `${baseUrl}/offers/${token}`
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({
       offer_total_eur:         totalPriceEur,
@@ -398,19 +438,19 @@ export async function saveRichOffer(
       offer_notes:             notes?.trim() || null,
       offer_trip_plan:         tripPlan?.trim() || null,
       offer_license_info:      licenseInfo?.trim() || null,
-      offer_inclusions:        inclusions,
-      offer_questions:         questions,
+      offer_inclusions:        inclusions        as unknown as Json,
+      offer_questions:         questions         as unknown as Json,
       offer_refund_reason:     refundReason?.trim() || null,
-      offer_photos:            photos,
+      offer_photos:            photos            as unknown as Json,
       offer_location:          location?.trim() || null,
-      offer_what_to_bring:     whatToBring,
-      offer_schedule:          schedule,
+      offer_what_to_bring:     whatToBring       as unknown as Json,
+      offer_schedule:          schedule          as unknown as Json,
       offer_license_heading:   licenseHeading?.trim() || null,
       offer_location_lat:      locationLat,
       offer_location_lng:      locationLng,
       offer_location_zoom:     locationZoom,
-      offer_location_geojson:  locationGeoJson,
-      offer_options:           params.options ?? null,
+      offer_location_geojson:  locationGeoJson   as unknown as Json,
+      offer_options:           (params.options ?? null) as unknown as Json,
       offer_token:             token,
       offer_token_expires_at:  expiresAt,
       offer_sent_at:           new Date().toISOString(),
@@ -437,6 +477,27 @@ export async function saveRichOffer(
     inquiryId,
   })
 
+  // The angler now has a concrete offer in their inbox — that is what the status says.
+  // Re-saving an offer for an inquiry that is already there is not a new transition.
+  if (inquiry.status !== 'offer_presented') {
+    try {
+      await transition(svc, inquiryId, 'offer_presented', {
+        actor:   { kind: 'admin', id: userId },
+        reason:  'Offer sent to the angler',
+        channel: 'email',
+      })
+    } catch (error) {
+      console.error('[saveRichOffer] transition error:', error)
+      return {
+        success: false,
+        error:   error instanceof TransitionError
+          ? `Offer saved and sent, but the status could not be updated: ${error.message}`
+          : 'Offer saved and sent, but the status could not be updated',
+        offerUrl,
+      }
+    }
+  }
+
   console.log(`[saveRichOffer] Rich offer saved for inquiry ${inquiryId} — total €${totalPriceEur}, deposit €${depositEur} — token ${token}`)
 
   return { success: true, offerUrl }
@@ -451,8 +512,7 @@ export async function saveRichOffer(
 export async function getOfferByToken(token: string): Promise<OfferPageData | null> {
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('*, trip_id, guide_id')
     .eq('offer_token', token)
@@ -523,8 +583,7 @@ export async function submitOfferAnswers(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status, angler_email, angler_name, trip_id, party_size, offer_deposit_eur')
     .eq('id', inquiryId)
@@ -534,15 +593,14 @@ export async function submitOfferAnswers(
     return { success: false, error: 'Offer not found or link has expired' }
   }
 
-  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
+  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
     return { success: false, error: `Inquiry is already ${inquiry.status}` }
   }
 
   // Save answers
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
-    .update({ offer_answers: answers })
+    .update({ offer_answers: answers as unknown as Json })
     .eq('id', inquiry.id)
 
   const depositCents = Math.round(Number(inquiry.offer_deposit_eur ?? 0) * 100)
@@ -587,15 +645,32 @@ export async function submitOfferAnswers(
     return { success: false, error: 'Failed to create payment session. Please try again.' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({
-      status:                    'deposit_sent',
       deposit_amount:            depositCents / 100,
       deposit_stripe_session_id: session.id,
     })
     .eq('id', inquiry.id)
+
+  // The angler is on the payment page — we are waiting for their money, not for them
+  // to answer. The actor is the angler: they, not an admin, took this step.
+  if (inquiry.status !== 'awaiting_payment') {
+    try {
+      await transition(svc, inquiry.id, 'awaiting_payment', {
+        actor:  { kind: 'angler' },
+        reason: 'Angler submitted the offer answers and went to checkout',
+      })
+    } catch (error) {
+      console.error('[submitOfferAnswers] transition error:', error)
+      return {
+        success: false,
+        error:   error instanceof TransitionError
+          ? error.message
+          : 'Could not move the inquiry to awaiting payment',
+      }
+    }
+  }
 
   return { success: true, checkoutUrl: session.url! }
 }
@@ -634,12 +709,14 @@ export async function saveOffer(
 // ─── updateInquiryStatus ──────────────────────────────────────────────────────
 
 /**
- * Manually update an inquiry's status.
- * Used by FA from the admin panel — communication with angler happens via
- * external email, so the status must be manually kept in sync.
+ * The admin moves an inquiry by hand from the StatusChanger.
  *
- * When marking as 'lost', optionally supply a reason (stored in lost_reason).
- * All other status transitions clear lost_reason.
+ * This is one caller of `transition()` among several (webhooks and the angler's own
+ * actions are others); the machine, not this function, decides whether the move is
+ * allowed, and the event is written by the same call.
+ *
+ * When marking as `lost` a reason code is required (FA-0.16); any other status clears
+ * the previous loss reason.
  */
 export async function updateInquiryStatus(
   inquiryId: string,
@@ -647,33 +724,24 @@ export async function updateInquiryStatus(
   lostReasonCode?: string | null,
   lostReason?: string | null,
 ): Promise<ActionResult> {
-  await requireAdmin()
+  const { userId } = await requireAdmin()
 
-  if (status === 'lost' && !lostReasonCode) {
-    return { success: false, error: 'A loss reason is required when marking as lost.' }
+  if (!isInquiryStatus(status)) {
+    return { success: false, error: `Unknown status ${status}` }
   }
 
-  const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const update: Record<string, any> = { status }
-  if (status === 'lost') {
-    update.lost_reason_code = lostReasonCode
-    update.lost_reason      = lostReason?.trim() || null
-  } else {
-    update.lost_reason_code = null
-    update.lost_reason      = null
-  }
-  if (status === 'completed') {
-    update.stage_reached = 'completed'
+  try {
+    await transition(createServiceClient(), inquiryId, status, {
+      actor:          { kind: 'admin', id: userId },
+      lostReasonCode,
+      lostReason,
+    })
+  } catch (error) {
+    if (error instanceof TransitionError) return { success: false, error: error.message }
+    console.error('[updateInquiryStatus] error:', error)
+    return { success: false, error: 'Failed to update the status' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
-    .from('inquiries')
-    .update(update)
-    .eq('id', inquiryId)
-
-  if (error != null) return { success: false, error: error.message }
   console.log(`[updateInquiryStatus] Inquiry ${inquiryId} → ${status}`)
   return { success: true }
 }
@@ -707,8 +775,7 @@ export async function saveInternalDeal(
     updatePayload.external_offer_sent = true
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update(updatePayload)
     .eq('id', inquiryId)
@@ -724,7 +791,7 @@ export async function saveInternalDeal(
 
 /**
  * FA sends a plain-text message to the angler via email.
- * Stored in inquiry_messages for audit trail.
+ * Stored in messages for audit trail.
  */
 export async function sendMessageToAngler(
   inquiryId: string,
@@ -747,13 +814,17 @@ export async function sendMessageToAngler(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: insertError } = await (svc as any).from('inquiry_messages')
-    .insert({
-      inquiry_id: inquiryId,
-      subject:    subject.trim(),
-      body:       body.trim(),
-    })
+  const { error: insertError } = await svc.from('messages').insert({
+    inquiry_id:  inquiryId,
+    channel:     'email',
+    direction:   'outbound',
+    counterpart: 'angler',
+    subject:     subject.trim(),
+    body:        body.trim(),
+    status:      'sent',
+    drafted_by:  'admin',
+    occurred_at: new Date().toISOString(),
+  })
 
   if (insertError != null) {
     console.error('[sendMessageToAngler] DB error:', insertError)
@@ -812,25 +883,27 @@ export async function logLeadMessage(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any).from('lead_messages').insert({
-    inquiry_id:   inquiryId,
-    direction:    params.direction,
-    channel:      params.channel,
-    contact_type: params.contactType,
-    contact_name: params.contactName.trim(),
-    content:      params.content.trim(),
-    created_by:   params.createdBy ?? 'tymon',
-  })
+  // 'note' channel not supported in messages table — skip DB insert but still update last_contact_at
+  if (params.channel !== 'note') {
+    const { error } = await svc.from('messages').insert({
+      inquiry_id:  inquiryId,
+      direction:   params.direction,
+      channel:     params.channel as 'email' | 'whatsapp' | 'instagram',
+      counterpart: params.contactType === 'client' ? 'angler' : 'guide',
+      body:        params.content.trim(),
+      status:      params.direction === 'inbound' ? 'received' : 'sent',
+      drafted_by:  params.direction === 'inbound' ? null : 'admin',
+      occurred_at: new Date().toISOString(),
+    })
 
-  if (error != null) {
-    console.error('[logLeadMessage] DB error:', error)
-    return { success: false, error: error.message }
+    if (error != null) {
+      console.error('[logLeadMessage] DB error:', error)
+      return { success: false, error: error.message }
+    }
   }
 
   // Bump last_contact_at on the parent inquiry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ last_contact_at: new Date().toISOString() })
     .eq('id', inquiryId)
@@ -842,7 +915,7 @@ export async function logLeadMessage(
 // ─── bulkLogLeadMessages ──────────────────────────────────────────────────────
 
 /**
- * Bulk-insert multiple lead_messages in one transaction.
+ * Bulk-insert multiple messages in one transaction.
  * Used by the conversation importer (paste WhatsApp/email thread).
  * Each message may carry its own createdAt for historical imports.
  * Content is stored as Markdown for AI readability.
@@ -868,22 +941,25 @@ export async function bulkLogLeadMessages(
   const svc = createServiceClient()
 
   const now = new Date().toISOString()
-  const rows = messages.map(m => ({
-    inquiry_id:   inquiryId,
-    direction:    m.direction,
-    channel:      m.channel,
-    contact_type: m.contactType,
-    contact_name: m.contactName.trim() || 'Unknown',
-    content:      m.content.trim(),
-    created_by:   m.createdBy ?? 'tymon',
-    created_at:   m.createdAt ?? now,
+  // Filter out 'note' channel — not supported in messages table
+  const filteredMessages = messages.filter(m => m.channel !== 'note')
+  const rows = filteredMessages.map(m => ({
+    inquiry_id:  inquiryId,
+    direction:   m.direction,
+    channel:     m.channel as 'email' | 'whatsapp' | 'instagram',
+    counterpart: m.contactType === 'client' ? 'angler' : 'guide',
+    body:        m.content.trim(),
+    status:      m.direction === 'inbound' ? 'received' : 'sent',
+    drafted_by:  m.direction === 'inbound' ? null : 'admin',
+    occurred_at: m.createdAt ?? now,
   }))
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any).from('lead_messages').insert(rows)
-  if (error != null) {
-    console.error('[bulkLogLeadMessages] DB error:', error)
-    return { success: false, error: error.message }
+  if (rows.length > 0) {
+    const { error } = await svc.from('messages').insert(rows)
+    if (error != null) {
+      console.error('[bulkLogLeadMessages] DB error:', error)
+      return { success: false, error: error.message }
+    }
   }
 
   // Bump last_contact_at to the most recent message
@@ -892,8 +968,7 @@ export async function bulkLogLeadMessages(
     .sort()
     .at(-1) ?? new Date().toISOString()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ last_contact_at: latestAt })
     .eq('id', inquiryId)
@@ -911,8 +986,7 @@ export async function bulkLogLeadMessages(
 export async function deleteInquiry(inquiryId: string): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .delete()
     .eq('id', inquiryId)
@@ -934,8 +1008,7 @@ export async function updateRequestedDates(
       .map(d => d.trim().slice(0, 10))
       .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d)),
   )].sort()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ requested_dates: clean })
     .eq('id', inquiryId)
@@ -951,8 +1024,7 @@ export async function updateNextAction(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ next_action: nextAction?.trim() || null })
     .eq('id', inquiryId)
@@ -1006,8 +1078,7 @@ export async function assignGuideToInquiry(
   const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
 
   // Update inquiry
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({ assigned_guide_id: guideId, assigned_at: new Date().toISOString(), ...countryPatch })
     .eq('id', inquiryId)
@@ -1036,8 +1107,7 @@ export async function assignGuideToInquiry(
   }
 
   // Fetch inquiry info for email
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('angler_name, angler_country, message, requested_dates, party_size')
     .eq('id', inquiryId)
@@ -1046,8 +1116,7 @@ export async function assignGuideToInquiry(
   // Fetch trip brief (graceful — table may not exist yet)
   let tripDetails: Record<string, unknown> | null = null
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: td } = await (svc as any)
+    const { data: td } = await svc
       .from('inquiry_trip_details')
       .select('confirmed_date, confirmed_party_size, price_range, date_flexibility, target_species, accommodation, guide_notes')
       .eq('inquiry_id', inquiryId)
@@ -1096,8 +1165,7 @@ export async function unassignGuide(inquiryId: string): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
       assigned_guide_id:    null,
@@ -1130,8 +1198,7 @@ export async function setExternalOffer(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ external_offer_sent: value })
     .eq('id', inquiryId)
@@ -1156,8 +1223,7 @@ export async function assignGuideSilently(
 
   const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
       assigned_guide_id: guideId,
@@ -1193,8 +1259,7 @@ export async function respondToAssignment(
   const svc = createServiceClient()
 
   // Verify the inquiry is assigned to this guide
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id')
     .eq('id', inquiryId)
@@ -1203,8 +1268,7 @@ export async function respondToAssignment(
 
   if (inquiry == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
       guide_acceptance:     accepted ? 'accepted' : 'declined',
@@ -1240,8 +1304,7 @@ export async function saveGuideOfferEta(
 
   // Verify ownership — like saveGuideOfferResponse; prevents silent "0 rows updated"
   // when the inquiry is assigned to a different guide.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: owned } = await (svc as any)
+  const { data: owned } = await svc
     .from('inquiries')
     .select('id')
     .eq('id', inquiryId)
@@ -1249,8 +1312,7 @@ export async function saveGuideOfferEta(
     .single()
   if (owned == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ guide_offer_eta: eta.trim() || null })
     .eq('id', inquiryId)
@@ -1275,11 +1337,10 @@ export async function saveTripDetails(
 ): Promise<ActionResult> {
   await requireAdmin()
   const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiry_trip_details')
     .upsert(
-      { inquiry_id: inquiryId, ...data, updated_at: new Date().toISOString() },
+      { inquiry_id: inquiryId, ...data, guide_options: (data.guide_options ?? null) as unknown as Json, updated_at: new Date().toISOString() },
       { onConflict: 'inquiry_id' },
     )
 
@@ -1311,8 +1372,7 @@ export async function saveGuideOfferResponse(
   const svc = createServiceClient()
 
   // Verify ownership
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id')
     .eq('id', inquiryId)
@@ -1320,11 +1380,10 @@ export async function saveGuideOfferResponse(
     .single()
   if (inquiry == null) throw new UnauthorizedError('Inquiry not found or not assigned to you')
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiry_trip_details')
     .upsert(
-      { inquiry_id: inquiryId, ...data, updated_at: new Date().toISOString() },
+      { inquiry_id: inquiryId, ...data, guide_options: data.guide_options as unknown as Json, updated_at: new Date().toISOString() },
       { onConflict: 'inquiry_id' },
     )
 
@@ -1371,8 +1430,7 @@ export async function saveOfferDraft(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status, offer_token')
     .eq('id', inquiryId)
@@ -1380,7 +1438,7 @@ export async function saveOfferDraft(
 
   if (inquiry == null) return { success: false, error: 'Inquiry not found' }
 
-  if (['deposit_paid', 'completed', 'cancelled'].includes(inquiry.status)) {
+  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
     return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
   }
 
@@ -1389,8 +1447,7 @@ export async function saveOfferDraft(
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
   const offerUrl  = `${env.NEXT_PUBLIC_APP_URL}/offers/${token}`
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (svc as any)
+  const { error: updateError } = await svc
     .from('inquiries')
     .update({
       offer_total_eur:         totalPriceEur,
@@ -1398,19 +1455,19 @@ export async function saveOfferDraft(
       offer_notes:             notes?.trim() || null,
       offer_trip_plan:         tripPlan?.trim() || null,
       offer_license_info:      licenseInfo?.trim() || null,
-      offer_inclusions:        inclusions,
-      offer_questions:         questions,
+      offer_inclusions:        inclusions        as unknown as Json,
+      offer_questions:         questions         as unknown as Json,
       offer_refund_reason:     refundReason?.trim() || null,
-      offer_photos:            photos,
+      offer_photos:            photos            as unknown as Json,
       offer_location:          location?.trim() || null,
-      offer_what_to_bring:     whatToBring,
-      offer_schedule:          schedule,
+      offer_what_to_bring:     whatToBring       as unknown as Json,
+      offer_schedule:          schedule          as unknown as Json,
       offer_license_heading:   licenseHeading?.trim() || null,
       offer_location_lat:      locationLat,
       offer_location_lng:      locationLng,
       offer_location_zoom:     locationZoom,
-      offer_location_geojson:  locationGeoJson,
-      offer_options:           params.options ?? null,
+      offer_location_geojson:  locationGeoJson   as unknown as Json,
+      offer_options:           (params.options ?? null) as unknown as Json,
       offer_token:             token,
       offer_token_expires_at:  expiresAt,
       // NOTE: offer_sent_at is intentionally NOT set here
@@ -1438,8 +1495,7 @@ export async function sendOfferEmail(
   await requireAdmin()
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, offer_token, offer_total_eur, offer_deposit_eur, offer_notes, status')
     .eq('id', inquiryId)
@@ -1464,8 +1520,7 @@ export async function sendOfferEmail(
     inquiryId,
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (svc as any)
+  await svc
     .from('inquiries')
     .update({ offer_sent_at: new Date().toISOString(), stage_reached: 'offer_sent' })
     .eq('id', inquiryId)
@@ -1490,8 +1545,7 @@ export async function acceptOffer(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status')
     .eq('id', inquiryId)
@@ -1499,16 +1553,14 @@ export async function acceptOffer(
 
   if (inquiry == null) return { success: false, error: 'Offer not found or link has expired' }
 
-  if (['deposit_paid', 'completed', 'cancelled', 'lost'].includes(inquiry.status)) {
+  if (['paid', 'handed_over', 'completed', 'cancelled', 'lost'].includes(inquiry.status)) {
     return { success: false, error: `Inquiry is already ${inquiry.status}` }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({
-      offer_answers:       answers,
-      status:              'in_negotiation',
+      offer_answers:       answers as unknown as Json,
       selected_option_id:  selectedOptionId ?? null,
     })
     .eq('id', inquiry.id)
@@ -1516,6 +1568,27 @@ export async function acceptOffer(
   if (error != null) {
     console.error('[acceptOffer] DB error:', error)
     return { success: false, error: 'Failed to save acceptance' }
+  }
+
+  // An accepted offer means we are waiting for the deposit, not for another round of
+  // talking (that is why it is awaiting_payment and not qualifying).
+  if (inquiry.status !== 'awaiting_payment') {
+    try {
+      await transition(svc, inquiry.id, 'awaiting_payment', {
+        actor:   { kind: 'angler' },
+        reason:  selectedOptionId != null
+          ? `Angler accepted the offer (option ${selectedOptionId})`
+          : 'Angler accepted the offer',
+      })
+    } catch (error) {
+      console.error('[acceptOffer] transition error:', error)
+      return {
+        success: false,
+        error:   error instanceof TransitionError
+          ? error.message
+          : 'Acceptance saved, but the status could not be updated',
+      }
+    }
   }
 
   console.log(`[acceptOffer] Inquiry ${inquiry.id} accepted by angler${selectedOptionId != null ? ` (option ${selectedOptionId})` : ''}`)
@@ -1536,8 +1609,7 @@ export async function declineOffer(
 
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('id, status')
     .eq('id', inquiryId)
@@ -1545,23 +1617,23 @@ export async function declineOffer(
 
   if (inquiry == null) return { success: false, error: 'Offer not found' }
 
-  if (['deposit_paid', 'completed'].includes(inquiry.status)) {
+  if (['paid', 'handed_over', 'completed'].includes(inquiry.status)) {
     return { success: false, error: 'Cannot decline a confirmed booking' }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
-    .from('inquiries')
-    .update({
-      status:           'lost',
-      lost_reason_code: 'went_elsewhere',
-      lost_reason:      note?.trim() || 'Declined by angler',
+  try {
+    await transition(svc, inquiry.id, 'lost', {
+      actor:          { kind: 'angler' },
+      reason:         'Angler declined the offer',
+      lostReasonCode: 'went_elsewhere',
+      lostReason:     note?.trim() || 'Declined by angler',
     })
-    .eq('id', inquiry.id)
-
-  if (error != null) {
-    console.error('[declineOffer] DB error:', error)
-    return { success: false, error: 'Failed to save response' }
+  } catch (error) {
+    console.error('[declineOffer] transition error:', error)
+    return {
+      success: false,
+      error:   error instanceof TransitionError ? error.message : 'Failed to save response',
+    }
   }
 
   console.log(`[declineOffer] Inquiry ${inquiry.id} declined by angler`)
@@ -1582,28 +1654,13 @@ export async function updateInquiryGuide(
   await requireAdmin()
   const svc = createServiceClient()
   const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
+  const { error } = await svc
     .from('inquiries')
     .update({ assigned_guide_id: guideId, ...countryPatch })
     .eq('id', inquiryId)
   if (error != null) return { success: false, error: error.message }
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[updateInquiryGuide] Inquiry ${inquiryId} → guide ${guideId ?? '(default)'}`)
-  return { success: true }
-}
-
-export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
-  await requireAdmin()
-  if (ids.length === 0) return { success: true }
-  const svc = createServiceClient()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (svc as any)
-    .from('unmatched_messages')
-    .delete()
-    .in('id', ids)
-  if (error != null) return { success: false, error: error.message }
-  revalidatePath('/admin/inquiries/unmatched')
   return { success: true }
 }
 
@@ -1626,8 +1683,7 @@ export type InquiryConfirmation = {
 export async function getInquiryConfirmation(id: string): Promise<InquiryConfirmation | null> {
   const svc = createServiceClient()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inquiry } = await (svc as any)
+  const { data: inquiry } = await svc
     .from('inquiries')
     .select('angler_name, deposit_amount, deposit_paid_at, trip_id')
     .eq('id', id)

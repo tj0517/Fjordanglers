@@ -1,0 +1,1 @@
+-- FA-1.12 — drop przeniesiony do 20261001000000 (decyzja tj 2026-09-19: zero okna niezgodności)

@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "supabase:types": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > src/lib/supabase/database.types.ts",
+    "supabase:types": "supabase gen types typescript --project-id ${SUPABASE_PROJECT_ID:?SUPABASE_PROJECT_ID is not set} > \"${TMPDIR:-/tmp}/fa-types.ts\" && mv \"${TMPDIR:-/tmp}/fa-types.ts\" src/lib/supabase/database.types.ts",
+    "supabase:types:local": "supabase gen types typescript --local > \"${TMPDIR:-/tmp}/fa-types.ts\" && mv \"${TMPDIR:-/tmp}/fa-types.ts\" src/lib/supabase/database.types.ts",
     "supabase:push": "supabase db push"
   },
   "dependencies": {
@@ -28,6 +29,7 @@
     "google-ads-api": "^24.1.0",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
+    "libphonenumber-js": "^1.13.13",
     "lucide-react": "^1.7.0",
     "next": "16.1.6",
     "react": "19.2.3",

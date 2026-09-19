@@ -29,23 +29,28 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-0.20 | Martwy status `pending_fa_review` — default kolumny łamie własny constraint tabeli | S | sonnet | done | — |
 | FA-0.21 | Testy integracyjne piszą do produkcji — `.env.test` i bezpiecznik w `vitest.config.ts` | S | sonnet | done | — |
 
-## Stage 1 — schema tells the truth + event log
+## Stage 1 — one place for the conversation + schema tells the truth
+
+Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REBUILD_PLAN.md` §8 Etap 1.
 
 | id | title | diff | model | status | depends |
 |---|---|---|---|---|---|
 | FA-1.01 | Baseline: `db pull` produkcji, archiwizacja 61 migracji, pogodzenie historii (`migration repair`) | L | opus | done | FA-0.08 |
-| FA-1.02 | `drop_marketplace_leftovers` (tabele bez danych do przeniesienia) | M | opus | todo | FA-1.01 |
-| FA-1.03 | Rejestrator zdarzeń `inquiry_events` + `transition()` | L | opus | todo | FA-1.01 |
-| FA-1.04 | `inquiries.qualified` z agenta + korekta ręczna + `unknown` dla starych | M | sonnet | todo | FA-1.01 |
-| FA-1.05 | Backfill zdarzeń historycznych z `offer_sent_at` / `deposit_paid_at` | M | sonnet | todo | FA-1.03 |
+| FA-1.02 | `drop_marketplace_leftovers` — schemat `archive` + martwe tabele `public` bez danych | M | opus | done | FA-1.01 |
+| FA-1.03 | Maszyna stanów §4 + `inquiry_events` + `transition()` — statusy „na kogo czekamy" (przepisane 16 IX) | L | opus | done | FA-1.01 |
+| FA-1.04 | `inquiries.qualified` z agenta + korekta ręczna + `unknown` dla starych (emituje `inquiry.qualified_set`) | M | sonnet | todo | FA-1.03 |
+| FA-1.05 | Backfill zdarzeń historycznych z `offer_sent_at` / `deposit_paid_at` — *plik do napisania po FA-1.12* | M | sonnet | todo | FA-1.03 |
 | FA-1.06 | Typy mówią prawdę — regeneracja z baseline + usunięcie zapytań do tabel w `archive`. Raport rozbity na dwa PR-y: #11 (kod + raport) i `docs/fa-1.06-tail` (uzupełnienie D4, checklista po deployu, `FA-1.09.md`, reguła §8) — `fa-review` czyta oba | L | opus | done | FA-1.01 |
-| FA-1.07 | Wycięcie martwego kodu — paczka 1: actions + lib | M | sonnet | todo | FA-1.06 |
-| FA-1.08 | Wycięcie martwego kodu — paczka 2: komponenty i trasy | M | sonnet | todo | FA-1.07 |
+| FA-1.07 | Wycięcie martwego kodu — paczka 1: actions + lib — *plik do napisania po FA-1.12* | M | sonnet | todo | FA-1.06 |
+| FA-1.08 | Wycięcie martwego kodu — paczka 2: komponenty i trasy — *plik do napisania po FA-1.12* | M | sonnet | todo | FA-1.07 |
 | FA-1.09 | Legacy edytor `experiences` poza nawigacją; gorące akcje na `experience_pages` | M | sonnet | todo | FA-1.06 |
-| FA-1.10 | Tymczasowy przegląd tygodniowy w obecnym `/admin` (8 liczb, do wyrzucenia w etapie 6) | M | sonnet | todo | FA-1.04 |
-| FA-1.11 | CI: `db diff` pusty + `gen types` + typecheck/lint/build | M | sonnet | todo | FA-1.01 |
+| FA-1.10 | Tymczasowy przegląd tygodniowy w obecnym `/admin` (8 liczb, do wyrzucenia w etapie 6) — *plik do napisania po FA-1.12* | M | sonnet | todo | FA-1.04 |
+| FA-1.11 | CI: typecheck/lint/test/build, migracje na czysto, typy bez dryfu, `stage-1` zawiera `main` | M | sonnet | done | FA-1.01 |
+| FA-1.12 | `messages` — jeden wątek na zapytanie; e-mail w obie strony z karty; `offers` z opcjami; link Stripe z aplikacji | L | opus | done | FA-1.03 |
+| FA-1.13 | WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy | L | opus | review | FA-1.12 |
+| FA-1.14 | Agent w wątku — propozycja odpowiedzi z bazy wiedzy; auto-wysyłka off | L | opus | todo | FA-1.12 |
 
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
-Only FA-0.01, FA-0.05 and FA-1.03 are fully written so far — use them as the pattern for the rest.
+Stage-1 files written: FA-1.01–1.04, 1.06, 1.09, 1.11–1.14. FA-1.05, 1.07, 1.08, 1.10 are written once FA-1.12 is in review (their content depends on `messages` and on what 1.12 removes).
