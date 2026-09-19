@@ -1385,6 +1385,9 @@ export type Database = {
           offer_what_to_bring: Json
           party_size: number
           priority: string | null
+          qualified: string
+          qualified_set_at: string | null
+          qualified_set_by: string | null
           requested_dates: string[] | null
           selected_option: string | null
           selected_option_id: string | null
@@ -1455,6 +1458,9 @@ export type Database = {
           offer_what_to_bring?: Json
           party_size?: number
           priority?: string | null
+          qualified?: string
+          qualified_set_at?: string | null
+          qualified_set_by?: string | null
           requested_dates?: string[] | null
           selected_option?: string | null
           selected_option_id?: string | null
@@ -1525,6 +1531,9 @@ export type Database = {
           offer_what_to_bring?: Json
           party_size?: number
           priority?: string | null
+          qualified?: string
+          qualified_set_at?: string | null
+          qualified_set_by?: string | null
           requested_dates?: string[] | null
           selected_option?: string | null
           selected_option_id?: string | null
