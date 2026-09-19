@@ -2,7 +2,7 @@
 id: FA-1.05
 title: Backfill zdarzeń historycznych do `inquiry_events` — tylko z kolumn, które mówią prawdę
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -156,3 +156,115 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 ```
 
 ## Notatki z realizacji
+
+## Report — FA-1.05 Backfill zdarzeń historycznych do `inquiry_events`
+
+### Done
+
+- **Prod audit (2026-09-19)** — 3 read-only SELECTs on `uwxrstbplaoxfghrchcy`:
+  - `inquiries` aggregate: 99 rows, `offer_sent_at` = 1, `external_offer_sent` = 25, ext_without_date = 24, `deposit_paid_at` = 0, `status='lost'` = 63
+  - `messages` breakdown: 684 rows — direction=inbound/angler/email 314, inbound/angler/whatsapp 44, inbound/angler/instagram 12; direction=outbound/angler/* 314; 0 rows with counterpart='guide'
+  - `inquiry_events`: empty (0 rows, source=app/webhook not yet backfilled at audit time)
+
+- **Decisions from tj (D-A1–D-A5)** — recorded in task file Decyzje section and migration header comment:
+  - D-A1: `inquiry.lost` not backfilled (no reliable timestamp)
+  - D-A2: `drafted_by IS NULL` → `actor_kind='admin'`
+  - D-A3: rollback via `DELETE FROM inquiry_events WHERE source='backfill'` by DB owner
+  - D-A4: `payment.received` block kept (idempotent skeleton, 0 rows on prod)
+  - D-A5: messages with `occurred_at > '2026-09-19 12:00+02'` and no event → count=0 ✓
+
+- **Migration `20261003000000_backfill_inquiry_events.sql`** — 5 blocks:
+  `inquiry.created`, `message.sent`, `message.received`, `offer.presented`, `payment.received`;
+  idempotency via `WHERE NOT EXISTS`; `message.*` keyed on `message_id`;
+  `RAISE NOTICE 'backfill <type>: % rows'` per block
+
+- **`supabase/seed.sql` created** — 5 inquiries + 4 messages covering all edge cases:
+  `external_offer_sent=true + offer_sent_at NULL` (Alice), `offer_sent_at NOT NULL` (Bob, Carol),
+  `deposit_paid_at NOT NULL` (Carol), `status='lost'` (Dave), guide-counterpart outbound (Eve)
+
+- **Acceptance criteria (local stack, after seed + manual psql run):**
+
+  ```
+  type             | source   | count
+  -----------------+----------+-------
+  inquiry.created  | backfill |     5
+  message.received | backfill |     2
+  message.sent     | backfill |     2
+  offer.presented  | backfill |     2
+  payment.received | backfill |     1
+  ```
+
+  ```
+  messages_without_event = 0
+  paid_without_event     = 0
+  occurred_at_anomalies  = 0
+  ```
+
+- **Red proofs:**
+  - Alice (external_offer_sent=true, offer_sent_at NULL): `alice_offer_presented = 0` ✓
+  - Dave (status='lost'): `dave_inquiry_lost = 0` ✓
+  - Idempotency (second run): all types → `0 rows` ✓
+
+- **docs/01-architecture.md §4.1** — corrected "backfill (FA-1.05)" sentence; backfill is about events not legacy status values
+
+- **docs/REBUILD_PLAN.md Appendix C** — added backfill history note with sources and row counts
+
+- **docs/03-conventions.md** — added stage-1 sequential timestamp rule
+
+- **docs/deferred-tasks.md** — added 3 FA-1.05 audit findings; closed FA-1.12 seed entry
+
+- **CI checks:** `db diff --local` → "No schema changes found"; `pnpm typecheck` → 0 errors; 137 tests passed; `pnpm build` → clean; `pnpm lint` → 40 errors (same as `main` baseline, pre-existing in untouched files)
+
+### Not done
+
+- Running migration on production — enters with next `db push`, tj's decision separately (per task scope)
+
+### Noticed, not touched (→ docs/deferred-tasks.md)
+
+- `deposit_paid_at` NULL for all 99 prod rows despite 10 with `stage_reached='deposit_paid'` — recorded in deferred-tasks.md
+- 0 messages with `counterpart='guide'` — guide comms are outside system; `guide.contacted`/M10 start from zero — recorded
+- 24 rows `external_offer_sent=true` without `offer_sent_at` — offer history is incomplete for pre-builder period — recorded
+
+### Needs a decision
+
+- None remaining. All D-A1–D-A5 resolved by tj on 2026-09-19.
+
+### Verification
+
+```
+# db reset (migration applied on empty DB → 0 rows all types, seed runs)
+supabase db reset
+
+# First meaningful backfill (after seed)
+psql "$LOCAL_DB_URL" -f supabase/migrations/20261003000000_backfill_inquiry_events.sql
+# → inquiry.created: 5, message.sent: 2, message.received: 2, offer.presented: 2, payment.received: 1
+
+# Second run — idempotency
+psql "$LOCAL_DB_URL" -f supabase/migrations/20261003000000_backfill_inquiry_events.sql
+# → all types: 0 rows
+
+# Acceptance SELECTs
+SELECT type, source, count(*) FROM inquiry_events GROUP BY 1,2 ORDER BY 1,2;
+SELECT count(*) FROM messages m WHERE NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.message_id = m.id);
+# → 0
+SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.inquiry_id = id AND e.type = 'payment.received');
+# → 0
+SELECT count(*) FROM inquiry_events e JOIN inquiries i ON i.id=e.inquiry_id
+  WHERE e.source='backfill' AND (e.occurred_at > e.created_at OR e.occurred_at < i.created_at);
+# → 0
+
+# Red proofs
+SELECT count(*) FROM inquiry_events WHERE inquiry_id='a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a101' AND type='offer.presented';
+# → 0 (Alice: external_offer_sent=true, offer_sent_at NULL)
+SELECT count(*) FROM inquiry_events WHERE inquiry_id='a4a4a4a4-a4a4-4a4a-8a4a-a4a4a4a4a404' AND type='inquiry.lost';
+# → 0 (Dave: status='lost', no inquiry.lost block)
+
+# CI
+supabase db diff --local  # → No schema changes found
+pnpm typecheck             # → 0 errors
+pnpm test                  # → 17 files, 137 tests passed
+pnpm build                 # → clean
+pnpm lint                  # → 40 errors (same as main, pre-existing)
+```
+
