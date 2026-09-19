@@ -40,20 +40,26 @@ vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
 import { createServiceClient } from '@/lib/supabase/server'
 import { runAgentRound1 } from '@/lib/ai/inquiry-agent'
 
-let capturedUpdate: Record<string, unknown> | null = null
+let capturedUpdates: Record<string, unknown>[] = []
+/** First update is the classification update on inquiries; second is setQualified. */
+function capturedUpdate() { return capturedUpdates[0] ?? null }
 
-function mockDb(existing: { trip_country: string | null; trip_type: string | null; priority: string | null }) {
-  capturedUpdate = null
+function mockDb(existing: { trip_country: string | null; trip_type: string | null; priority: string | null; qualified_set_by?: string | null }) {
+  capturedUpdates = []
   vi.mocked(createServiceClient).mockReturnValue({
     from: (table: string) => ({
       select: () => ({
         eq: () => ({ single: async () => ({ data: table === 'inquiries' ? existing : null, error: null }) }),
       }),
       update: (payload: Record<string, unknown>) => {
-        capturedUpdate = payload
-        return { eq: async () => ({ error: null }) }
+        capturedUpdates.push(payload)
+        return { eq: () => ({ error: null, data: null }) }
       },
-      insert: async () => ({ error: null }),
+      insert: () => ({
+        select: () => ({
+          single: async () => ({ data: { id: 'evt-1' }, error: null }),
+        }),
+      }),
     }),
   } as unknown as ReturnType<typeof createServiceClient>)
 }
@@ -76,8 +82,8 @@ describe('FA-0.18 — runAgentRound1 / trip_country', () => {
 
     await runAgentRound1(round1Params)
 
-    expect(capturedUpdate).not.toBeNull()
-    expect(capturedUpdate).not.toHaveProperty('trip_country')
+    expect(capturedUpdate()).not.toBeNull()
+    expect(capturedUpdate()).not.toHaveProperty('trip_country')
   })
 
   it('fills the country when the inquiry has none (e-mail / WhatsApp path)', async () => {
@@ -85,7 +91,7 @@ describe('FA-0.18 — runAgentRound1 / trip_country', () => {
 
     await runAgentRound1(round1Params)
 
-    expect(capturedUpdate).toMatchObject({ trip_country: 'Iceland' })
+    expect(capturedUpdate()).toMatchObject({ trip_country: 'Iceland' })
   })
 
   it('still overwrites priority — later rounds have more context', async () => {
@@ -93,7 +99,7 @@ describe('FA-0.18 — runAgentRound1 / trip_country', () => {
 
     await runAgentRound1(round1Params)
 
-    expect(capturedUpdate).toMatchObject({ priority: 'high' })
-    expect(capturedUpdate).not.toHaveProperty('trip_type')
+    expect(capturedUpdate()).toMatchObject({ priority: 'high' })
+    expect(capturedUpdate()).not.toHaveProperty('trip_type')
   })
 })
