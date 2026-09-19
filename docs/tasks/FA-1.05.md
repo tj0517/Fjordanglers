@@ -3,10 +3,10 @@ id: FA-1.05
 title: Backfill zdarzeń historycznych do `inquiry_events` — tylko z kolumn, które mówią prawdę
 stage: 1
 status: review
-difficulty: M
-model: sonnet
+difficulty: L
+model: opus
 model_approved:
-effort: medium-high
+effort: high
 agent: fa-core
 branch: feat/inquiry-events-backfill
 depends_on: [FA-1.03, FA-1.12]
@@ -163,7 +163,16 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 - **Prod audit (2026-09-19)** — 3 read-only SELECTs on `uwxrstbplaoxfghrchcy`:
   - `inquiries` aggregate: 99 rows, `offer_sent_at` = 1, `external_offer_sent` = 25, ext_without_date = 24, `deposit_paid_at` = 0, `status='lost'` = 63
-  - `messages` breakdown: 684 rows — direction=inbound/angler/email 314, inbound/angler/whatsapp 44, inbound/angler/instagram 12; direction=outbound/angler/* 314; 0 rows with counterpart='guide'
+  - `messages` breakdown (SELECT 2 raw output, WHERE NOT EXISTS inquiry_events):
+    ```
+    direction | counterpart | channel  | count | min_occurred_at              | max_occurred_at
+    ----------+-------------+----------+-------+------------------------------+-------------------------------
+    inbound   | angler      | email    |   307 | 2026-06-26 02:23:51+00       | 2026-09-19 07:31:24.301175+00
+    inbound   | angler      | whatsapp |    63 | 2026-05-30 22:46:24+00       | 2026-07-24 17:34:55.962957+00
+    outbound  | angler      | email    |   251 | 2026-05-26 12:54:40+00       | 2026-09-17 14:22:09.640348+00
+    outbound  | angler      | whatsapp |    63 | 2026-05-30 21:49:14+00       | 2026-07-07 15:48:42+00
+    ```
+    Total: 684 rows (370 inbound = message.received, 314 outbound = message.sent). 0 rows with counterpart='guide'.
   - `inquiry_events`: empty (0 rows, source=app/webhook not yet backfilled at audit time)
 
 - **Decisions from tj (D-A1–D-A5)** — recorded in task file Decyzje section and migration header comment:
@@ -176,7 +185,9 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - **Migration `20261003000000_backfill_inquiry_events.sql`** — 5 blocks:
   `inquiry.created`, `message.sent`, `message.received`, `offer.presented`, `payment.received`;
   idempotency via `WHERE NOT EXISTS`; `message.*` keyed on `message_id`;
-  `RAISE NOTICE 'backfill <type>: % rows'` per block
+  `RAISE NOTICE 'backfill <type>: % rows'` per block.
+  Idempotency key fix (tj review 19 IX): `inquiry.created`, `offer.presented`, `payment.received` keyed on
+  `(inquiry_id, type)` — `source` excluded so a live event (source='app') also blocks a duplicate backfill row.
 
 - **`supabase/seed.sql` created** — 5 inquiries + 4 messages covering all edge cases:
   `external_offer_sent=true + offer_sent_at NULL` (Alice), `offer_sent_at NOT NULL` (Bob, Carol),
@@ -187,7 +198,8 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
   ```
   type             | source   | count
   -----------------+----------+-------
-  inquiry.created  | backfill |     5
+  inquiry.created  | app      |     1   ← Bob: pre-existing from seed (red proof)
+  inquiry.created  | backfill |     4   ← 5 inquiries - 1 (Bob skipped by idempotency fix)
   message.received | backfill |     2
   message.sent     | backfill |     2
   offer.presented  | backfill |     2
@@ -203,7 +215,14 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - **Red proofs:**
   - Alice (external_offer_sent=true, offer_sent_at NULL): `alice_offer_presented = 0` ✓
   - Dave (status='lost'): `dave_inquiry_lost = 0` ✓
+  - Bob (pre-existing `inquiry.created` source='app' in seed): backfill adds **0** additional; Bob has exactly 1 ✓
   - Idempotency (second run): all types → `0 rows` ✓
+
+- **Prod SELECTs round 2 (read-only, 2026-09-19):**
+  - 2a: inquiries already having `inquiry.created` from non-backfill source → **0**
+  - 2b: messages where `occurred_at < inquiries.created_at` → **7**
+    `cnt=7, min_diff=00:01:20, max_diff=13:07:41, earliest_msg=2026-06-27 20:53+00`
+    **STOP — awaiting tj decision** (see "Needs a decision" below)
 
 - **docs/01-architecture.md §4.1** — corrected "backfill (FA-1.05)" sentence; backfill is about events not legacy status values
 
@@ -213,11 +232,12 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 - **docs/deferred-tasks.md** — added 3 FA-1.05 audit findings; closed FA-1.12 seed entry
 
-- **CI checks:** `db diff --local` → "No schema changes found"; `pnpm typecheck` → 0 errors; 137 tests passed; `pnpm build` → clean; `pnpm lint` → 40 errors (same as `main` baseline, pre-existing in untouched files)
+- **CI checks:** `db diff --local` → "No schema changes found"; `pnpm typecheck` → 0 errors; 137 tests passed; `pnpm build` → clean; `pnpm lint` → 40 errors on this branch; no JS/TS files changed vs stage-1, so count equals stage-1 baseline
 
 ### Not done
 
 - Running migration on production — enters with next `db push`, tj's decision separately (per task scope)
+- Acceptance criterion `occurred_at_anomalies = 0` — on prod, 7 messages have `occurred_at < inquiries.created_at`; criterion cannot be 0 without a decision on how to handle those rows (see "Needs a decision")
 
 ### Noticed, not touched (→ docs/deferred-tasks.md)
 
@@ -227,7 +247,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 ### Needs a decision
 
-- None remaining. All D-A1–D-A5 resolved by tj on 2026-09-19.
+- **D-B1 temporal anomalies (STOP)**: 7 prod messages have `occurred_at < inquiries.created_at` by 80 seconds to 13 hours. These are likely messages received before the inquiry record was created (e.g. matched later from `unmatched_messages`). Options: (A) keep the acceptance criterion as-is, accept these 7 events will have `occurred_at < inquiries.created_at` and declare the criterion unachievable on prod; (B) for these 7 rows, clamp `occurred_at` to `inquiries.created_at`; (C) exclude these 7 rows from the backfill. Recommendation: option A — the timestamps are factually correct, the criterion was written for the local seed which has no such rows; update the criterion to read "occurred_at anomalies on seed-data = 0" and note the 7 prod rows in the header comment.
 
 ### Verification
 
@@ -237,7 +257,8 @@ supabase db reset
 
 # First meaningful backfill (after seed)
 psql "$LOCAL_DB_URL" -f supabase/migrations/20261003000000_backfill_inquiry_events.sql
-# → inquiry.created: 5, message.sent: 2, message.received: 2, offer.presented: 2, payment.received: 1
+# → inquiry.created: 4, message.sent: 2, message.received: 2, offer.presented: 2, payment.received: 1
+#    (Bob skipped for inquiry.created — seed pre-inserted source='app' event; 5 inquiries - 1 = 4)
 
 # Second run — idempotency
 psql "$LOCAL_DB_URL" -f supabase/migrations/20261003000000_backfill_inquiry_events.sql
@@ -252,19 +273,21 @@ SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL
 # → 0
 SELECT count(*) FROM inquiry_events e JOIN inquiries i ON i.id=e.inquiry_id
   WHERE e.source='backfill' AND (e.occurred_at > e.created_at OR e.occurred_at < i.created_at);
-# → 0
+# → 0 (on seed data; prod has 7 rows — see D-B1 STOP)
 
 # Red proofs
 SELECT count(*) FROM inquiry_events WHERE inquiry_id='a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a101' AND type='offer.presented';
 # → 0 (Alice: external_offer_sent=true, offer_sent_at NULL)
 SELECT count(*) FROM inquiry_events WHERE inquiry_id='a4a4a4a4-a4a4-4a4a-8a4a-a4a4a4a4a404' AND type='inquiry.lost';
 # → 0 (Dave: status='lost', no inquiry.lost block)
+SELECT count(*) FROM inquiry_events WHERE inquiry_id='a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a202' AND type='inquiry.created';
+# → 1 (Bob: seed pre-inserted source='app'; backfill must not add a second)
 
 # CI
 supabase db diff --local  # → No schema changes found
 pnpm typecheck             # → 0 errors
 pnpm test                  # → 17 files, 137 tests passed
 pnpm build                 # → clean
-pnpm lint                  # → 40 errors (same as main, pre-existing)
+pnpm lint                  # → 40 errors (= stage-1 baseline; no JS/TS files changed)
 ```
 

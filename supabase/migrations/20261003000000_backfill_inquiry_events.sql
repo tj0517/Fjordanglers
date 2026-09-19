@@ -12,7 +12,8 @@
 --   status.changed   — no transition history
 --
 -- Idempotency: message.* keyed on message_id (no type/source filter — covers live events too).
---              All other types: (inquiry_id, type, source='backfill').
+--              All other types: (inquiry_id, type) — source excluded so a live event (source='app')
+--              also prevents a duplicate backfill row. Deviation from D2 literal, approved tj 19 IX.
 -- Rollback:    DELETE FROM inquiry_events WHERE source = 'backfill';
 --              Safe: BEFORE UPDATE trigger only; REVOKE covers service_role, not DB owner.
 
@@ -39,7 +40,6 @@ BEGIN
     SELECT 1 FROM inquiry_events e
     WHERE e.inquiry_id = i.id
       AND e.type      = 'inquiry.created'
-      AND e.source    = 'backfill'
   );
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RAISE NOTICE 'backfill inquiry.created: % rows', v_count;
@@ -134,7 +134,6 @@ BEGIN
       SELECT 1 FROM inquiry_events e
       WHERE e.inquiry_id = i.id
         AND e.type      = 'offer.presented'
-        AND e.source    = 'backfill'
     );
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RAISE NOTICE 'backfill offer.presented: % rows', v_count;
@@ -170,7 +169,6 @@ BEGIN
       SELECT 1 FROM inquiry_events e
       WHERE e.inquiry_id = i.id
         AND e.type      = 'payment.received'
-        AND e.source    = 'backfill'
     );
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RAISE NOTICE 'backfill payment.received: % rows', v_count;

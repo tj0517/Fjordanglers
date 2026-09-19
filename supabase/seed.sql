@@ -44,6 +44,23 @@ VALUES
    '2026-08-01 10:00:00+00', '2026-08-01 10:00:00+00')
 ON CONFLICT (id) DO NOTHING;
 
+-- ─── Pre-existing app event (red proof: idempotency fix from tj review 19 IX) ─
+-- Bob already has inquiry.created from source='app' (simulates a post-stage-1 inquiry).
+-- After backfill, Bob must have exactly ONE inquiry.created, not two.
+
+INSERT INTO inquiry_events (id, inquiry_id, type, actor_kind, channel, source, occurred_at, created_at, payload)
+VALUES (
+  'c1c1c1c1-c1c1-4c1c-8c1c-c1c1c1c1c101',
+  'a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a202',
+  'inquiry.created',
+  'system',
+  'app',
+  'app',
+  '2026-07-01 10:00:00+00',
+  '2026-07-01 10:00:00+00',
+  '{"source": "app"}'
+) ON CONFLICT (id) DO NOTHING;
+
 -- ─── Messages ────────────────────────────────────────────────────────────────
 
 INSERT INTO messages (id, inquiry_id, channel, direction, counterpart, body, status, drafted_by, occurred_at, created_at)
