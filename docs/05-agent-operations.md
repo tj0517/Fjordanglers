@@ -23,6 +23,10 @@ session without being told to. The agent never pushes to `main` directly and nev
 merges a PR — merges are done by the founder (tj). Tasks are files in `docs/tasks/`; there is no other
 backlog. Notion holds the business plan, not the engineering tasks.
 
+**Sync rule:** Po każdym merge stage-1 → main natychmiast PR zwrotny main → stage-1
+(bramka `sync` w CI wymaga, żeby stage-1 zawierał HEAD main — bez tego check jest
+czerwony dla każdej gałęzi opartej na stage-1).
+
 ## 2. Models and effort
 
 Default model is set in `.claude/settings.json`. Subagents override in their frontmatter.
