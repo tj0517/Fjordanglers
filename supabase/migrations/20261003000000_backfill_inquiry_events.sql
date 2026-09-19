@@ -11,6 +11,10 @@
 --   inquiry.lost     — no timestamp column; updated_at rejected by tj as proxy (D-A1)
 --   status.changed   — no transition history
 --
+-- Timestamps: 7 prod messages have occurred_at < inquiries.created_at (80 s – 13 h) because the
+--              inquiry record was created manually after the first email arrived. Timestamps are
+--              factually correct and kept as-is (D-B1, tj 19 IX). The occurred_at >= created_at
+--              criterion excludes message.* from the lower-bound check.
 -- Idempotency: message.* keyed on message_id (no type/source filter — covers live events too).
 --              All other types: (inquiry_id, type) — source excluded so a live event (source='app')
 --              also prevents a duplicate backfill row. Deviation from D2 literal, approved tj 19 IX.

@@ -125,8 +125,9 @@ source='backfill'` (append-only trigger blokuje UPDATE, nie DELETE dla ownera �
 - [ ] `SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL AND NOT EXISTS (… type='payment.received')` → **0**.
 - [ ] **Na czerwono:** wiersz `external_offer_sent=true, offer_sent_at=NULL` — `SELECT … type='offer.presented'` → 0 wierszy (test lub SELECT w raporcie).
 - [ ] **Na czerwono:** drugie uruchomienie migracji → `RAISE NOTICE … 0 rows` dla każdego typu.
-- [ ] Żadne zdarzenie z `source='backfill'` nie ma `occurred_at > created_at` ani `occurred_at < inquiries.created_at` (SELECT → 0).
-- [ ] `supabase db diff --local` pusty; `pnpm typecheck && pnpm test && pnpm build` zielone; `pnpm lint` nie gorzej niż `main`.
+- [ ] Żadne zdarzenie z `source='backfill'` nie ma `occurred_at > created_at` (SELECT → 0). Dla typów innych niż `message.*` występuje `occurred_at ≥ inquiries.created_at` (SELECT → 0). Dla `message.*` wiadomość może poprzedzać rekord zapytania (prod: 7 wierszy, 80 s – 13 h) — to prawdziwy czas, nie anomalia.
+      Zmienione 19 IX po audycie prod, decyzja tj (D-B1).
+- [ ] `supabase db diff --local` pusty; `pnpm typecheck && pnpm test && pnpm build` zielone; `pnpm lint` nie gorzej niż `stage-1`.
 
 ## Poza zakresem
 - Backfill `qualified` — FA-1.04, świadomie nie.
@@ -222,7 +223,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
   - 2a: inquiries already having `inquiry.created` from non-backfill source → **0**
   - 2b: messages where `occurred_at < inquiries.created_at` → **7**
     `cnt=7, min_diff=00:01:20, max_diff=13:07:41, earliest_msg=2026-06-27 20:53+00`
-    **STOP — awaiting tj decision** (see "Needs a decision" below)
+    D-B1 rozstrzygnięte: opcja A, tj 19 IX — prawdziwe znaczniki czasu zachowane.
 
 - **docs/01-architecture.md §4.1** — corrected "backfill (FA-1.05)" sentence; backfill is about events not legacy status values
 
@@ -230,14 +231,13 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 - **docs/03-conventions.md** — added stage-1 sequential timestamp rule
 
-- **docs/deferred-tasks.md** — added 3 FA-1.05 audit findings; closed FA-1.12 seed entry
+- **docs/deferred-tasks.md** — added 4 FA-1.05 audit findings (3 round 1 + D-B1 temporal anomaly); closed FA-1.12 seed entry
 
 - **CI checks:** `db diff --local` → "No schema changes found"; `pnpm typecheck` → 0 errors; 137 tests passed; `pnpm build` → clean; `pnpm lint` → 40 errors on this branch; no JS/TS files changed vs stage-1, so count equals stage-1 baseline
 
 ### Not done
 
 - Running migration on production — enters with next `db push`, tj's decision separately (per task scope)
-- Acceptance criterion `occurred_at_anomalies = 0` — on prod, 7 messages have `occurred_at < inquiries.created_at`; criterion cannot be 0 without a decision on how to handle those rows (see "Needs a decision")
 
 ### Noticed, not touched (→ docs/deferred-tasks.md)
 
@@ -247,7 +247,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 ### Needs a decision
 
-- **D-B1 temporal anomalies (STOP)**: 7 prod messages have `occurred_at < inquiries.created_at` by 80 seconds to 13 hours. These are likely messages received before the inquiry record was created (e.g. matched later from `unmatched_messages`). Options: (A) keep the acceptance criterion as-is, accept these 7 events will have `occurred_at < inquiries.created_at` and declare the criterion unachievable on prod; (B) for these 7 rows, clamp `occurred_at` to `inquiries.created_at`; (C) exclude these 7 rows from the backfill. Recommendation: option A — the timestamps are factually correct, the criterion was written for the local seed which has no such rows; update the criterion to read "occurred_at anomalies on seed-data = 0" and note the 7 prod rows in the header comment.
+- **D-B1 rozstrzygnięte — opcja A, tj, 19 IX.** Prawdziwe `occurred_at` zachowane. Kryterium przepisane: `occurred_at > created_at` = 0 dla wszystkich typów; `occurred_at < inquiries.created_at` = 0 tylko dla nie-`message.*`. 7 wierszy zapisane w deferred-tasks.md.
 
 ### Verification
 
@@ -271,9 +271,14 @@ SELECT count(*) FROM messages m WHERE NOT EXISTS (SELECT 1 FROM inquiry_events e
 SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.inquiry_id = id AND e.type = 'payment.received');
 # → 0
+-- occurred_at must never exceed created_at (all types)
+SELECT count(*) FROM inquiry_events WHERE source='backfill' AND occurred_at > created_at;
+# → 0
+
+-- occurred_at must be >= inquiries.created_at for non-message.* types (D-B1)
 SELECT count(*) FROM inquiry_events e JOIN inquiries i ON i.id=e.inquiry_id
-  WHERE e.source='backfill' AND (e.occurred_at > e.created_at OR e.occurred_at < i.created_at);
-# → 0 (on seed data; prod has 7 rows — see D-B1 STOP)
+  WHERE e.source='backfill' AND e.type NOT LIKE 'message.%' AND e.occurred_at < i.created_at;
+# → 0
 
 # Red proofs
 SELECT count(*) FROM inquiry_events WHERE inquiry_id='a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a101' AND type='offer.presented';
