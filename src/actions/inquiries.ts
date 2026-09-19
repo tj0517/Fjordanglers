@@ -44,6 +44,7 @@ import {
   TransitionError,
   isInquiryStatus,
 } from '@/lib/inquiries/state'
+import { setQualified, QualifiedError, type QualifiedValue } from '@/lib/inquiries/qualified'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -743,6 +744,26 @@ export async function updateInquiryStatus(
   }
 
   console.log(`[updateInquiryStatus] Inquiry ${inquiryId} → ${status}`)
+  return { success: true }
+}
+
+// ─── setInquiryQualified ──────────────────────────────────────────────────────
+
+export async function setInquiryQualified(
+  inquiryId: string,
+  value: QualifiedValue,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+
+  try {
+    await setQualified(createServiceClient(), inquiryId, value, { kind: 'admin', id: userId })
+  } catch (error) {
+    if (error instanceof QualifiedError) return { success: false, error: error.message }
+    console.error('[setInquiryQualified] error:', error)
+    return { success: false, error: 'Failed to update qualified flag' }
+  }
+
+  console.log(`[setInquiryQualified] Inquiry ${inquiryId} → ${value}`)
   return { success: true }
 }
 

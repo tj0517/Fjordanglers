@@ -30,6 +30,7 @@ justification, it goes in an ADR and this file links to it.
 - Migrations: `supabase migration new <slug>` → file in `supabase/migrations/`
   (later `packages/db/supabase/migrations/`). Name says what it does:
   `20260901_add_inquiry_events`, not `20260901_update`.
+  Stage-1 migrations after `20261001000000` use sequential timestamps (`20261002…`, `20261003…`) rather than the real date, so `db push` does not require `--include-all`.
 - Every new table: RLS enabled + at least one policy in the **same** migration + a
   comment on the table saying what it is for.
 - Every migration is reversible in intent: if it drops, the task has a `pg_dump` step

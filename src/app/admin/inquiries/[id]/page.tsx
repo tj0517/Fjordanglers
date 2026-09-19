@@ -21,6 +21,8 @@ import { TripSetupTab } from './TripSetupTab'
 import { ProposalTab } from './ProposalTab'
 import { ReviewLinkGenerator } from './ReviewLinkGenerator'
 import { AgentToggle } from './AgentToggle'
+import { QualifiedChanger } from './QualifiedChanger'
+import type { QualifiedValue } from '@/lib/inquiries/qualified'
 import { RequestedDatesEditor } from './RequestedDatesEditor'
 import { DeleteInquiryButton } from './DeleteInquiryButton'
 import type { TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
@@ -606,6 +608,12 @@ export default async function AdminInquiryDetailPage({
       <StatusChanger inquiryId={inquiry.id} currentStatus={inquiry.status} />
 
       <AgentToggle inquiryId={inquiry.id} initialStatus={inquiry.agent_status} />
+
+      <QualifiedChanger
+        inquiryId={inquiry.id}
+        currentValue={(inquiry as unknown as { qualified: QualifiedValue }).qualified ?? 'unknown'}
+        setBy={(inquiry as unknown as { qualified_set_by: string | null }).qualified_set_by ?? null}
+      />
 
       <ThreadActionsPanel
         inquiryId={inquiry.id}

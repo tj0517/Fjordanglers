@@ -636,6 +636,8 @@ Usunięte z katalogu (brak odpowiednika w rzeczywistym procesie): `offer.created
 `offer.updated`, `offer.sent` (builder ofert i `sendOfferEmail` nie są używane),
 `deposit.link_sent`/`deposit.paid` (zastąpione `payment.*`).
 
+Historia przed 2026-09-16 (backfill FA-1.05, źródła potwierdzone audytem prod): `inquiry.created` z `inquiries.created_at` (99 wierszy), `message.sent`/`message.received` z `messages` (684 wiersze). `offer.presented` — 1 wiersz z `inquiries.offer_sent_at`. `payment.received`, `guide.contacted` i `inquiry.lost` nie mają historii sprzed stage-1 — brak wiarygodnego timestampu lub brak wierszy źródłowych.
+
 **Ręczne dotknięcie** = zdarzenie `actor_kind='admin'` typu `message.sent`,
 `status.changed`, `payment.link_sent`, `contacts.exchanged`. M11 = liczba takich zdarzeń
 na zapytanie zakończone wpłatą.

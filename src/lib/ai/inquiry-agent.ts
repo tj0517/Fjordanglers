@@ -30,6 +30,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { sendInquiryAgentEmail } from '@/lib/email'
 import { assembleConversation, type ConversationMessage } from '@/lib/ai/extract-trip'
 import { env } from '@/lib/env'
+import { computeQualified, setQualified } from '@/lib/inquiries/qualified'
 
 function newMessageId(): string {
   return `<${randomUUID()}@mail.fjordanglers.com>`
@@ -413,7 +414,7 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
   // it fills gaps only, exactly like rounds 2–3.
   const { data: existing } = await supabase
     .from('inquiries')
-    .select('trip_country, trip_type, priority')
+    .select('trip_country, trip_type, priority, qualified_set_by')
     .eq('id', inquiryId)
     .single()
 
@@ -447,6 +448,14 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
       .update({ agent_status: 'ready', email_thread_message_id: outboundMsgId, ...classUpdate })
       .eq('id', inquiryId)
 
+    const qualifiedR1a = computeQualified({
+      priority:    (classUpdate.priority    ?? existing?.priority)    ?? null,
+      tripCountry: (classUpdate.trip_country ?? existing?.trip_country) ?? null,
+    })
+    if (qualifiedR1a !== 'unknown' && existing?.qualified_set_by !== 'admin') {
+      await setQualified(supabase, inquiryId, qualifiedR1a, { kind: 'agent' })
+    }
+
     console.log(`[inquiry-agent] Round 1 → ready for ${inquiryId}`)
     return
   }
@@ -474,6 +483,14 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
     .update({ agent_status: 'waiting', agent_round: 1, email_thread_message_id: outboundMsgId, ...classUpdate })
     .eq('id', inquiryId)
 
+  const qualifiedR1b = computeQualified({
+    priority:    (classUpdate.priority    ?? existing?.priority)    ?? null,
+    tripCountry: (classUpdate.trip_country ?? existing?.trip_country) ?? null,
+  })
+  if (qualifiedR1b !== 'unknown' && existing?.qualified_set_by !== 'admin') {
+    await setQualified(supabase, inquiryId, qualifiedR1b, { kind: 'agent' })
+  }
+
   console.log(`[inquiry-agent] Round 1 → sent questions to ${anglerEmail} for inquiry ${inquiryId}`)
 }
 
@@ -485,7 +502,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
   // Fetch inquiry + existing classification so we don't overwrite known values
   const { data: inquiry } = await supabase
     .from('inquiries')
-    .select('angler_name, angler_email, message, requested_dates, party_size, agent_round, trip_id, experience_page_id, trip_country, trip_type, priority, email_thread_message_id')
+    .select('angler_name, angler_email, message, requested_dates, party_size, agent_round, trip_id, experience_page_id, trip_country, trip_type, priority, qualified_set_by, email_thread_message_id')
     .eq('id', inquiryId)
     .single()
 
@@ -567,6 +584,14 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
       .update({ agent_status: 'ready', email_thread_message_id: outboundMsgId2, ...classUpdate })
       .eq('id', inquiryId)
 
+    const qualifiedR2a = computeQualified({
+      priority:    (classUpdate.priority    ?? inquiry.priority)    ?? null,
+      tripCountry: (classUpdate.trip_country ?? inquiry.trip_country) ?? null,
+    })
+    if (qualifiedR2a !== 'unknown' && inquiry.qualified_set_by !== 'admin') {
+      await setQualified(supabase, inquiryId, qualifiedR2a, { kind: 'agent' })
+    }
+
     console.log(
       `[inquiry-agent] Round ${currentRound + 1} → ready for ${inquiryId} (enough=${result.enough})`,
     )
@@ -599,6 +624,14 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     .from('inquiries')
     .update({ agent_status: 'waiting', agent_round: currentRound + 1, email_thread_message_id: outboundMsgId2, ...classUpdate })
     .eq('id', inquiryId)
+
+  const qualifiedR2b = computeQualified({
+    priority:    (classUpdate.priority    ?? inquiry.priority)    ?? null,
+    tripCountry: (classUpdate.trip_country ?? inquiry.trip_country) ?? null,
+  })
+  if (qualifiedR2b !== 'unknown' && inquiry.qualified_set_by !== 'admin') {
+    await setQualified(supabase, inquiryId, qualifiedR2b, { kind: 'agent' })
+  }
 
   console.log(
     `[inquiry-agent] Round ${currentRound + 1} → sent questions to ${inquiry.angler_email} for ${inquiryId}`,
