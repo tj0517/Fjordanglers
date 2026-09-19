@@ -2,7 +2,7 @@
 id: FA-1.05
 title: Backfill zdarzeń historycznych do `inquiry_events` — tylko z kolumn, które mówią prawdę
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -118,16 +118,16 @@ source='backfill'` (append-only trigger blokuje UPDATE, nie DELETE dla ownera �
       jakiego źródła (jedna linia pod tabelą).
 
 ## Gotowe, gdy
-- [ ] Audyt z punktu 1 wklejony do raportu, z decyzją tj per źródło (cytat lub data).
-- [ ] Po migracji na lokalnym stacku: `SELECT type, source, count(*) FROM inquiry_events GROUP BY 1,2`
+- [x] Audyt z punktu 1 wklejony do raportu, z decyzją tj per źródło (cytat lub data).
+- [x] Po migracji na lokalnym stacku: `SELECT type, source, count(*) FROM inquiry_events GROUP BY 1,2`
       — w raporcie; dla każdego typu z `source='backfill'` liczba ≤ liczby wierszy źródłowych z audytu.
-- [ ] `SELECT count(*) FROM messages m WHERE NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.message_id = m.id)` → **0**.
-- [ ] `SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL AND NOT EXISTS (… type='payment.received')` → **0**.
-- [ ] **Na czerwono:** wiersz `external_offer_sent=true, offer_sent_at=NULL` — `SELECT … type='offer.presented'` → 0 wierszy (test lub SELECT w raporcie).
-- [ ] **Na czerwono:** drugie uruchomienie migracji → `RAISE NOTICE … 0 rows` dla każdego typu.
-- [ ] Żadne zdarzenie z `source='backfill'` nie ma `occurred_at > created_at` (SELECT → 0). Dla typów innych niż `message.*` występuje `occurred_at ≥ inquiries.created_at` (SELECT → 0). Dla `message.*` wiadomość może poprzedzać rekord zapytania (prod: 7 wierszy, 80 s – 13 h) — to prawdziwy czas, nie anomalia.
+- [x] `SELECT count(*) FROM messages m WHERE NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.message_id = m.id)` → **0**.
+- [x] `SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL AND NOT EXISTS (… type='payment.received')` → **0**.
+- [x] **Na czerwono:** wiersz `external_offer_sent=true, offer_sent_at=NULL` — `SELECT … type='offer.presented'` → 0 wierszy (test lub SELECT w raporcie).
+- [x] **Na czerwono:** drugie uruchomienie migracji → `RAISE NOTICE … 0 rows` dla każdego typu.
+- [x] Żadne zdarzenie z `source='backfill'` nie ma `occurred_at > created_at` (SELECT → 0). Dla typów innych niż `message.*` występuje `occurred_at ≥ inquiries.created_at` (SELECT → 0). Dla `message.*` wiadomość może poprzedzać rekord zapytania (prod: 7 wierszy, 80 s – 13 h) — to prawdziwy czas, nie anomalia.
       Zmienione 19 IX po audycie prod, decyzja tj (D-B1).
-- [ ] `supabase db diff --local` pusty; `pnpm typecheck && pnpm test && pnpm build` zielone; `pnpm lint` nie gorzej niż `stage-1`.
+- [x] `supabase db diff --local` pusty; `pnpm typecheck && pnpm test && pnpm build` zielone; `pnpm lint` nie gorzej niż `stage-1`.
 
 ## Poza zakresem
 - Backfill `qualified` — FA-1.04, świadomie nie.
@@ -294,5 +294,27 @@ pnpm typecheck             # → 0 errors
 pnpm test                  # → 17 files, 137 tests passed
 pnpm build                 # → clean
 pnpm lint                  # → 40 errors (= stage-1 baseline; no JS/TS files changed)
+```
+
+### Checklista przy db push (prod)
+
+Wykonać po wdrożeniu paczki FA-1.04 + FA-1.05 na `uwxrstbplaoxfghrchcy`.
+Bez tych wyników PR nie jest „udowodniony na prod".
+
+```sql
+-- 1. Rozkład zdarzeń — oczekiwane: backfill created≈99 / sent≈314 / received≈370 /
+--    offer.presented≈1 / payment.received≈0; plus ewentualne source='app' z okresu po 19 IX
+SELECT type, source, count(*) FROM inquiry_events GROUP BY 1,2 ORDER BY 1,2;
+
+-- 2. Wiadomości bez zdarzenia — oczekiwane: 0
+SELECT count(*) FROM messages m
+WHERE NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.message_id = m.id);
+
+-- 3. Zdarzenia backfill inne niż message.* z occurred_at < inquiries.created_at — oczekiwane: 0
+SELECT count(*) FROM inquiry_events e
+JOIN inquiries i ON i.id = e.inquiry_id
+WHERE e.source='backfill'
+  AND e.type NOT LIKE 'message.%'
+  AND e.occurred_at < i.created_at;
 ```
 
