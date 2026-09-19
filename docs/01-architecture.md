@@ -158,8 +158,8 @@ click — no silent status changes from messaging.
 | `completed` | `completed` |
 | `lost`, `cancelled` | unchanged |
 
-Legacy values are kept in the enum as deprecated until the backfill (FA-1.05) has run and
-no row uses them; then dropped in stage 4.
+Legacy values are kept in the CHECK as deprecated until stage 4 drops them; this is
+independent of FA-1.05, which backfills *events* into `inquiry_events`, not status values.
 
 ## 5. Money
 
