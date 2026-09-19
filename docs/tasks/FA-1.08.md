@@ -1,0 +1,135 @@
+---
+id: FA-1.08
+title: Wycięcie martwego kodu — paczka 2: komponenty i trasy, lint do zera, `knip` i `lint` blokują w CI
+stage: 1
+status: todo
+difficulty: M
+model: sonnet
+model_approved:
+effort: medium-high
+agent: fa-core
+branch: chore/dead-code-2-components-routes
+depends_on: [FA-1.07]
+blocked_by_questions: []
+touches_db: false
+touches_prod: false
+estimate_h: 6
+owner: tj
+---
+
+# FA-1.08 — Martwy kod, paczka 2: komponenty, trasy, lint
+
+## Kontekst — przeczytaj przed startem
+- `docs/tasks/FA-1.07.md` — raport, `docs/proofs/FA-1.07-knip-after.txt` (wejście: lista
+  pozycji `.tsx` / `src/components` zostawionych dla tej paczki), konfiguracja `knip.json`
+- `docs/tasks/FA-1.06.md` — tabela c-* (m.in. c6 `onboarding-wizard.tsx`), „Zauważone poza
+  zakresem" (`experience-location-map.tsx`)
+- `docs/tasks/FA-1.12.md` — „buildera ofert z nawigacji": `ProposalTab` / `OfferBuilder` /
+  `OfferBuilderModal` / `LocationPicker` na karcie zapytania vs nowe `offers` z opcjami; ustal
+  grepem i odczytem `page.tsx` (~723), czy stary builder nadal jest renderowany
+- `docs/deferred-tasks.md` — wiersze: FA-1.03 „`pnpm lint` jest czerwony na `main`" (40 błędów:
+  `src/emails/*.tsx` `react/no-unescaped-entities`, `image-crop.tsx` ref-during-render,
+  `whatsapp-bridge/poll-emails.mjs` parse error, nieużywane `eslint-disable`), FA-1.13 „40
+  pre-existing ESLint errors in FA-1.07/1.08 code" (`GuideAttachmentTab`, `InquiriesFilters`,
+  `OfferBuilder`, `page.tsx`), FA-0.13 `ExperiencePageWithOptions.tsx`, FA-0.14 `ExpCard`
+  skopiowany zamiast wyekstrahowany
+- `docs/tasks/FA-1.09.md` — `tripMap`/`slugMap`/`countryMap` w `InquiriesClient` /
+  `InquiriesCalendar` **należą do 1.09** (zasilenie z helpera), nie do tej paczki — nie wycinaj
+- `docs/adr/0001-agency-model-not-marketplace.md` — dashboard przewodnika bez Stripe i IBAN-ów
+  (etap 7, §8 REBUILD_PLAN) — tu tylko komponenty osierocone przez FA-1.07 (D2 tamtego zadania)
+- `.github/workflows/ci.yml` — joby `lint` (`continue-on-error: true`, komentarz ~91) i `knip`
+
+Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
+
+## Cel
+Po tej paczce `pnpm knip` i `pnpm lint` zwracają zero i **blokują** PR — od tej pory martwy
+kod i czerwony lint nie mają jak wrócić na `stage-1` ani `main`. Karta zapytania nie
+renderuje dwóch równoległych mechanizmów ofert (stary builder + `offers` z FA-1.12), a
+dashboard przewodnika nie importuje nieistniejących akcji Connect.
+
+## Decyzje tj (19 IX 2026)
+
+### D1 — lint do zera tutaj, potem blokuje
+40 błędów wiszących od FA-1.03 domykamy w tej paczce: część znika z martwym kodem, resztę
+naprawiamy ręcznie (apostrofy w mailach → `&apos;` lub `{"'"}`, `image-crop.tsx` ref w
+renderze → `useRef` + efekt, `poll-emails.mjs` → naprawa składni albo wyłączenie katalogu
+`whatsapp-bridge/` z lintu z uzasadnieniem, nieużywane `eslint-disable` → usunięcie).
+Naprawa **nie zmienia zachowania**: maile renderują ten sam tekst (test snapshot lub `diff`
+HTML przed/po dla jednego szablonu w raporcie). Po zerze: `continue-on-error` z jobu `lint`
+i `knip` usunięte.
+
+### D2 — stary builder ofert
+Jeśli `ProposalTab`/`OfferBuilder*` nadal renderują się na karcie (odczyt `page.tsx`), a
+FA-1.12 dostarczyło `offers` + `sendMessageFromThread` z oznaczeniem „przedstawia ofertę" —
+stary builder wylatuje z nawigacji **i** z kodu w tej paczce (`ProposalTab.tsx`,
+`OfferBuilder.tsx`, `OfferBuilderModal.tsx`, `LocationPicker.tsx`, `src/actions/offer-photos.ts`
+jeśli osierocony, `/offers/[token]` zostaje — czyta `offers`?). **STOP przed usunięciem**: pokaż
+tj, co dokładnie karta traci (zrzut ekranu lub lista sekcji), bo część pól buildera
+(`offer_trip_plan`, `offer_what_to_bring`, `offer_schedule`, mapa) może nie mieć odpowiednika
+w `offers` — wtedy builder zostaje do etapu 4 i wpis w `deferred-tasks.md`.
+
+### D3 — nie ruszamy
+`InquiriesClient`/`InquiriesCalendar` mapy (FA-1.09); `ExpCard` ekstrakcja (FA-0.14, zadanie S,
+zrób tylko jeśli knip wymusza); dashboard przewodnika poza odcięciem od usuniętych akcji.
+
+## Zakres
+- [ ] **Inwentarz (do raportu):** `pnpm knip` na wejściu → `docs/proofs/FA-1.08-knip-before.txt`;
+      `pnpm lint 2>&1 | tee docs/proofs/FA-1.08-lint-before.txt`; liczby w raporcie z podziałem
+      „znika z martwym kodem / naprawa ręczna".
+- [ ] Pliki z 0 importerami: `src/components/trips/experience-location-map.tsx`,
+      `ExperiencePageWithOptions.tsx` (+ typ w `TripOptionsAccordion.tsx`), c6
+      `onboarding-wizard.tsx` (jeśli FA-1.06 zostawiło), pozostałe z listy knip — usunięcie.
+- [ ] Stary builder ofert — D2 (po STOP).
+- [ ] `src/app/dashboard/account/*`: `StripeConnectButton`, `StripeSyncButton`,
+      `BankAccountForm` — usunięcie komponentów i ich miejsca na stronie konta (strona zostaje,
+      bez sekcji Stripe/IBAN). Formularz IBAN nie ma już zapisu (akcja usunięta w 1.07) —
+      nie zostawiaj formularza, który nic nie robi.
+- [ ] Trasy: strony w `src/app/**` bez linku z nawigacji, bez wpisu w `sitemap`, bez
+      przekierowania i bez ruchu (jeśli GA4/Vercel Analytics dostępne — liczba odsłon 30 dni w
+      raporcie; jeśli nie, lista i **STOP**). Dla każdej: usunięcie + `redirects` w
+      `next.config` na najbliższą żywą trasę (301), wpis w `robots.ts` usunięty (wiersz audytu
+      31 VIII o ghost routes `/account/`, `/book/`, `/invite/` — domknąć).
+- [ ] Lint do zera — D1; `whatsapp-bridge/` decyzja w raporcie.
+- [ ] `ci.yml`: `continue-on-error` usunięte z `lint` i `knip`; komentarz ~91 zaktualizowany.
+- [ ] `docs/deferred-tasks.md`: wiersze FA-1.03 (lint), FA-1.13 (40 errors), FA-0.13
+      (`ExperiencePageWithOptions`), FA-1.06 (martwy kod), audyt 31 VIII (`robots.ts`) — zamknięte.
+- [ ] `docs/tasks/INDEX.md` — status; `docs/05-agent-operations.md` — jedna linia: „`pnpm knip`
+      i `pnpm lint` blokują PR od FA-1.08".
+
+## Gotowe, gdy
+- [ ] `pnpm knip` → **0** pozycji (files, exports, types, dependencies). `-after.txt` w `docs/proofs/`.
+- [ ] `pnpm lint` → **0 błędów** (ostrzeżenia: liczba w raporcie, nie gorzej niż przed).
+- [ ] **Na czerwono:** PR testowy (lub commit na gałęzi) z jednym nieużywanym eksportem i jednym
+      surowym apostrofem w JSX → oba joby CI czerwone; zrzut z Actions w raporcie; commit
+      wycofany.
+- [ ] Karta zapytania: jeden mechanizm ofert (zrzut ekranu w raporcie); `grep -rn "ProposalTab\|OfferBuilder" src` → 0 **albo** decyzja tj z D2 zacytowana w raporcie.
+- [ ] `grep -rn "StripeConnect\|StripeSync\|BankAccountForm" src` → 0.
+- [ ] Każda usunięta strona ma 301 w `next.config` — `curl -sI` lokalnie → `308/301` + `Location`, lista w raporcie.
+- [ ] Jeden szablon maila: HTML wyrenderowany przed/po naprawie apostrofów identyczny (`diff` pusty) — w raporcie.
+- [ ] `pnpm typecheck && pnpm test && pnpm build` zielone; `git diff --shortstat main` z przewagą usunięć.
+
+## Poza zakresem
+- `InquiriesClient`/`InquiriesCalendar` puste mapy — FA-1.09.
+- Odchudzenie dashboardu przewodnika do czterech ekranów — etap 7.
+- Usunięcie kolumn `offer_*` / `guides.iban` z bazy — etap 4.
+- Obsługa `payment_link` w webhooku `stripe-deposit` — osobne zadanie (patrz FA-1.07).
+- Rozbicie `experiences/[slug]` (1617 linii) — etap 7.
+Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
+
+## Bramki STOP
+- D2 — przed usunięciem buildera ofert: lista tego, co karta traci, decyzja tj.
+- Strona bez linku, ale z ruchem albo z nieustalonym ruchem — STOP, nie usuwaj.
+- Jeśli naprawa lintu wymaga zmiany zachowania (nie tylko składni) — STOP, pokaż.
+- Zero zmian w `supabase/`. Zero zapisów na produkcji.
+
+## Weryfikacja
+```
+pnpm knip
+pnpm lint
+grep -rn "ProposalTab\|OfferBuilder\|StripeConnect\|StripeSync\|BankAccountForm\|experience-location-map\|ExperiencePageWithOptions" src
+pnpm typecheck && pnpm test && pnpm build
+git diff --shortstat main
+# CI: joby lint i knip bez continue-on-error, czerwone na commicie-dowodzie
+```
+
+## Notatki z realizacji
