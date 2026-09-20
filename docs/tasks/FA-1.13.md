@@ -11,7 +11,6 @@ effort: high
 agent: fa-core
 branch: feat/whatsapp-instagram
 depends_on: [FA-1.12]
-blocked_by_questions: []
 touches_db: true
 touches_prod: false
 estimate_h: 12

@@ -49,9 +49,9 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.10 | Tymczasowy przegląd tygodniowy `/admin/weekly` (8 liczb, do wyrzucenia w etapie 6); domyka kryteria 1 i 4 FA-1.04 | M | sonnet | done | FA-1.04, FA-1.05 |
 | FA-1.11 | CI: typecheck/lint/test/build, migracje na czysto, typy bez dryfu, `stage-1` zawiera `main` | M | sonnet | done | FA-1.01 |
 | FA-1.12 | `messages` — jeden wątek na zapytanie; e-mail w obie strony z karty; `offers` z opcjami; link Stripe z aplikacji | L | opus | done | FA-1.03 |
-| FA-1.13 | WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy | L | opus | review | FA-1.12 |
+| FA-1.13 | WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy | L | opus | blocked | FA-1.12 |
 | FA-1.14 | Agent w wątku — propozycja odpowiedzi z bazy wiedzy; auto-wysyłka off | L | opus | todo | FA-1.12 |
-| FA-1.15 | Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly` | L | opus | todo | FA-1.10, FA-1.12, FA-1.13, FA-1.14 |
+| FA-1.15 | Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly` | L | opus | todo | FA-1.10, FA-1.12, FA-1.13 (kod w stage-1; kryterium E2E czeka na O-16), FA-1.14 |
 | FA-1.16 | Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja | M | sonnet | todo | FA-1.12 |
 ## Stages 2–8
 
