@@ -8,6 +8,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { env } from '@/lib/env'
 import { MessageComposer } from './MessageComposer'
 import { ThreadActionsPanel } from './ThreadActionsPanel'
@@ -179,10 +180,14 @@ export default async function AdminInquiryDetailPage({
     // Table not yet migrated — graceful fallback
   }
 
-  // `inquiries.trip_id` points at the archived legacy `experiences` table (FA-1.06):
-  // no trip title, list price, or trip country can be resolved from it any more.
-  const tripTitle: string | null = null
-  const tripLocationCountry: string | null = null
+  // Trip title and country come from the inquiry's experience_pages row
+  // (experience_page_id first, then trip_id). Null when it cannot be resolved.
+  const experience = await getInquiryExperience({
+    experience_page_id: inquiry.experience_page_id,
+    trip_id:            inquiry.trip_id,
+  })
+  const tripTitle: string | null = experience?.name ?? null
+  const tripLocationCountry: string | null = experience?.country ?? null
 
   // ── Fetch assigned guide (name + contact) ─────────────────────────────────
   const { data: guide } = inquiry.assigned_guide_id != null
