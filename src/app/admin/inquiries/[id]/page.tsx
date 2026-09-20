@@ -155,7 +155,6 @@ export default async function AdminInquiryDetailPage({
     agent_round:             number | null
   }
 
-  // (AssignGuidePanel removed — guide assignment is now in the Guide Attachment tab)
 
   // ── Fetch messages thread ──────────────────────────────────────────────────
   type MessageRow = {

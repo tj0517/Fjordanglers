@@ -3,49 +3,11 @@
 /**
  * image-crop.tsx
  *
- * ImageCropModal  — drag + zoom crop modal with live card-shaped preview
- * CropPreview     — small static thumbnail of a saved crop
+ * ImageCropModal — drag + zoom crop modal with live card-shaped preview
  */
 
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { MapPin, LayoutGrid, X, ZoomOut, ZoomIn } from 'lucide-react'
-
-// ─── CropPreview (static) ─────────────────────────────────────────────────────
-
-export function CropPreview({
-  url,
-  aspect = 16 / 9,
-  size   = 120,
-  label,
-}: {
-  url:     string
-  aspect?: number
-  size?:   number
-  label?:  string
-}) {
-  const w = size
-  const h = Math.round(size / aspect)
-  return (
-    <div>
-      {label != null && (
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
-          style={{ color: 'rgba(10,46,77,0.4)' }}>
-          {label}
-        </p>
-      )}
-      <div className="overflow-hidden flex-shrink-0" style={{
-        width: w, height: h,
-        borderRadius: aspect === 1 ? '50%' : '10px',
-        background: 'rgba(10,46,77,0.06)',
-        border: '1px solid rgba(10,46,77,0.1)',
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="Crop preview"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-      </div>
-    </div>
-  )
-}
 
 // ─── Shared preview helpers ───────────────────────────────────────────────────
 

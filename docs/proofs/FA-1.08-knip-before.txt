@@ -1,0 +1,27 @@
+# FA-1.08 — knip, stan PRZED zmianami (wejście paczki 2)
+# commit bazowy: 6fba20e9 (origin/stage-1) · polecenie: pnpm knip · knip 6.37.0 · 2026-09-20T15:47Z
+# identyczne z docs/proofs/FA-1.07-knip-after.txt (punkt stały po paczce 1)
+
+
+Unused files (1)
+src/app/admin/inquiries/[id]/OfferBuilderModal.tsx
+Unused exports (10)
+NoGuideContactCard    function  src/components/inquiry/InquiryWidget.tsx:1021:17    
+TripOptionsAccordion  function  src/components/trips/TripOptionsAccordion.tsx:394:17
+CropPreview           function  src/components/ui/image-crop.tsx:15:17              
+body                            src/emails/_shared.tsx:56:14                        
+header                          src/emails/_shared.tsx:63:14                        
+container                       src/emails/_shared.tsx:68:14                        
+summaryRow                      src/emails/_shared.tsx:121:14                       
+summaryRowLast                  src/emails/_shared.tsx:125:14                       
+footerSmall                     src/emails/_shared.tsx:177:14                       
+default               function  src/emails/inquiry-agent-email.tsx:33:16            
+Unused exported types (5)
+TripDetails        type       src/app/admin/inquiries/[id]/TripSetupTab.tsx:8:15
+GuideFormDefaults  type       src/components/admin/create-guide-form.tsx:126:13 
+GuideEditData      type       src/components/admin/edit-guide-form.tsx:143:13   
+OptionTabConfig    interface  src/components/trips/ExperienceTabLayout.tsx:23:18
+HelpItem           type       src/components/ui/help-widget.tsx:6:13            
+Duplicate exports (1)
+InquiryAgentEmail|default  src/emails/inquiry-agent-email.tsx
+exit code: 1

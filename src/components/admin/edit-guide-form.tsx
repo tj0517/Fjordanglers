@@ -140,7 +140,7 @@ function SectionDivider({ title }: { title: string }) {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type GuideEditData = {
+type GuideEditData = {
   id: string
   slug?: string | null
   full_name: string

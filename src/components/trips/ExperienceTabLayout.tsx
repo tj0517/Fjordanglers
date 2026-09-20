@@ -20,7 +20,7 @@ const STICKY_TOP = 112 // matches lg:top-28 = 7rem = 112px
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export interface OptionTabConfig {
+interface OptionTabConfig {
   tabLabel?:      string
   introText?:     string
   priceOverride?: string

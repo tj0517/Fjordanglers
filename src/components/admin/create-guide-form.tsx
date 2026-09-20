@@ -123,7 +123,7 @@ function SectionDivider({ title }: { title: string }) {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Pre-filled values when creating a listing from a lead application. */
-export type GuideFormDefaults = {
+type GuideFormDefaults = {
   full_name?: string
   country?: string
   city?: string
