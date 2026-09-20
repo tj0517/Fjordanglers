@@ -3,6 +3,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { getAppUrl } from '@/lib/app-url'
 import { requireAdmin, requireToken } from '@/lib/auth/guards'
+import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,11 +84,17 @@ export async function getReviewByToken(token: string): Promise<ReviewPageData | 
   const typedSvc = createServiceClient()
   const { data: inquiry } = await typedSvc
     .from('inquiries')
-    .select('angler_name')
+    .select('angler_name, trip_id, experience_page_id')
     .eq('id', review.inquiry_id)
     .single()
 
-  const tripTitle: string | null = null
+  const exp = inquiry
+    ? await getInquiryExperience({
+        experience_page_id: inquiry.experience_page_id,
+        trip_id:            inquiry.trip_id,
+      })
+    : null
+  const tripTitle: string | null = exp?.name ?? null
 
   return {
     id: review.id,
