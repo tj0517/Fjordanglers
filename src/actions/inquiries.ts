@@ -28,6 +28,7 @@ import type { Json } from '@/lib/supabase/database.types'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
 import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
+import { computeFallbackDepositCents } from '@/lib/inquiries/deposit-fallback'
 import {
   getInquiryExperience,
   tripTitleOf,
@@ -243,7 +244,8 @@ export async function createManualInquiry(params: {
  *
  * Deposit amount priority:
  *   1. inquiry.offer_deposit_eur — if FA created an offer, always use that exact amount.
- *   2. depositPercent × trip price — legacy fallback.
+ *   2. Otherwise depositPercent × the experience's list price (per person or flat, EUR only) —
+ *      see computeFallbackDepositCents. A price on request or in another currency is refused.
  *
  * Allowed statuses: any status from which `awaiting_payment` is reachable, plus
  * `awaiting_payment` itself (resend — the status does not move a second time).
@@ -262,7 +264,7 @@ export async function sendDepositLink(
 
   const { data: rawInquiry } = await svc
     .from('inquiries')
-    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, message, offer_deposit_eur')
+    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, experience_page_id, message, offer_deposit_eur')
     .eq('id', inquiryId)
     .single()
 
@@ -277,15 +279,24 @@ export async function sendDepositLink(
 
   const offerDepositEur = rawInquiry.offer_deposit_eur as number | null
 
-  // The legacy `experiences` list price is gone (table archived, FA-1.06); the
-  // deposit can only come from the saved offer.
-  if (offerDepositEur == null || offerDepositEur <= 0) {
-    return { success: false, error: 'No offer deposit set — save an offer first' }
+  const exp = await getInquiryExperience(rawInquiry)
+
+  // The saved offer deposit always wins. Only when there is none do we fall back to the
+  // experience's list price × party size × deposit % (see deposit-fallback.ts) — and that
+  // refuses a price on request or a non-EUR price instead of guessing an amount.
+  let depositCents: number
+  if (offerDepositEur != null && offerDepositEur > 0) {
+    depositCents = Math.round(offerDepositEur * 100)
+  } else {
+    const fallback = computeFallbackDepositCents(exp, rawInquiry.party_size ?? 1, depositPercent)
+    if (!fallback.ok) {
+      return { success: false, error: fallback.error }
+    }
+    depositCents = fallback.cents
   }
 
-  const depositCents   = Math.round(offerDepositEur * 100)
   const depositPctUsed = depositPercent
-  const tripTitle      = 'Your trip'
+  const tripTitle      = tripTitleOf(exp)
 
   if (depositCents < 50) {
     return { success: false, error: 'Deposit amount is below Stripe minimum (€0.50)' }
