@@ -16,3 +16,8 @@ export function availabilityWindow(daysAhead = 366): { from: string; to: string 
     to:   new Date(now + daysAhead * 86_400_000).toISOString().slice(0, 10),
   }
 }
+
+/** FA-1.08 red proof — deliberately unused export, must turn the `knip` job red. */
+export function redProofUnusedExport(): string {
+  return 'this export has no importer'
+}
