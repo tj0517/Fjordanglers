@@ -152,7 +152,7 @@ git diff --shortstat main
 
 **Merge:** w trakcie pracy `origin/stage-1` przesunął się o FA-1.10 (PR #69, `71bddf9`); zmergowałem go do gałęzi (jedyny konflikt: `docs/deferred-tasks.md`, oba końce dopisywały wiersze — zostawiłem oba). Po merge'u: knip **identyczny** z `-after.txt` (kod FA-1.10 nie wniósł żadnej pozycji), typecheck 0, lint 35 błędów, testy i build zielone.
 
-**Wynik w jednej linii:** knip 126 → 26 pozycji, zależności 9 → 0, `git diff --shortstat origin/stage-1`: **74 files changed, +1283 / −9357** (z tego `src`: +26 / −8568; lockfile + config + CI: +727 / −782; reszta to dokumenty i dowody). W `src/lib`, `src/app/api`, `src/types` **0 nieużywanych plików i 0 nieużywanych eksportów**. W `src/actions` zostaje 3 eksporty + 2 typy (kryterium dosłowne **niespełnione**, powody w „Not done").
+**Wynik w jednej linii:** knip 126 → 26 pozycji, zależności 9 → 0, `git diff --shortstat origin/stage-1` (stan na `0e1f317`, przed dopisaniem tej sekcji CI): **74 files changed, +1285 / −9357** (z tego `src`: **+26 / −8568**; lockfile + config + CI: +727 / −782; reszta to dokumenty i dowody). W `src/lib`, `src/app/api`, `src/types` **0 nieużywanych plików i 0 nieużywanych eksportów**. W `src/actions` zostaje 3 eksporty + 2 typy (kryterium dosłowne **niespełnione**, powody w „Not done").
 
 ### Done
 
@@ -228,7 +228,7 @@ Poza zakresem 1.07, ale w inwentarzu (`.tsx`): patrz punkt 4 (usunięte) i „No
 
 **15. Na czerwono.** Przywrócone `TERMINAL_STATUSES` + `isTerminal` w `state.ts` (niezacommitowane) → `pnpm knip` exit 1, „Unused exports (13)" → **(15)**, oba symbole wymienione z `state.ts:72:14` i `:74:17`; krok summary z `ci.yml` odpalony lokalnie na tym wyjściu: „Pozycji łącznie: 28" (zielony stan: 26). Po `git checkout` pliku: 0 trafień `state.ts`, licznik wrócił do 26. — `docs/proofs/FA-1.07-knip-red.txt`. **Czerwony przebieg w samym CI:** patrz sekcja CI niżej.
 
-**16. Lint.** `pnpm lint`: **40 → 35 błędów** (117 → 111 problemów; baseline `origin/main` zmierzony: 40 błędów / 117 problemów, `stage-1` + FA-1.10: to samo). Pięć błędów było w usuniętych plikach (`InquiriesFilters.tsx`, `trips/filters-modal.tsx` — `setState` w efekcie; `emails/email-verification.tsx`, `emails/guide-welcome.tsx` ×2 — `no-unescaped-entities`). **Pliki dotknięte PR-em** (16, wszystkie `.ts`): `actions/{ads,guide-photos,inquiries,messages,submissions}.ts`, `app/api/stripe/webhook/route.ts`, `lib/{countries,email,fish,gtag,image,inquiry-matcher}.ts`, `lib/inquiries/{create,state}.ts`, `lib/supabase/queries.ts`, `types/index.ts` → `eslint` **0 błędów, 0 ostrzeżeń**. (W trakcie wyszły 4 ostrzeżenia o osieroconych importach i stałych po moich usunięciach — `listActiveCampaignDefs`, `sendInquiryMessageAnglerEmail`, `COUNTRY_CODE`, `REGION_GROUPS` — naprawione w tym PR-ze.) Sufit ≤ 40 spełniony z zapasem; nowa liczba: **35**.
+**16. Lint.** `pnpm lint`: **40 → 35 błędów** (117 → 111 problemów; baseline `origin/main` zmierzony: 40 błędów / 117 problemów, `stage-1` + FA-1.10: to samo). Pięć błędów było w usuniętych plikach (`InquiriesFilters.tsx`, `trips/filters-modal.tsx` — `setState` w efekcie; `emails/email-verification.tsx`, `emails/guide-welcome.tsx` ×2 — `no-unescaped-entities`). **Pliki dotknięte PR-em** (16, wszystkie `.ts`): `actions/{ads,guide-photos,inquiries,messages,submissions}.ts`, `app/api/stripe/webhook/route.ts`, `lib/{countries,email,fish,gtag,image,inquiry-matcher}.ts`, `lib/inquiries/{create,state}.ts`, `lib/supabase/queries.ts`, `types/index.ts` → `eslint` **0 błędów, 0 ostrzeżeń**. (W trakcie wyszły 4 ostrzeżenia o osieroconych importach i stałych po moich usunięciach — `listActiveCampaignDefs`, `sendInquiryMessageAnglerEmail`, `COUNTRY_CODE`, `REGION_GROUPS` — naprawione w tym PR-ze.) Sufit ≤ 40 spełniony z zapasem; nowa liczba: **35** (zmierzona ponownie po merge'u stage-1: bez zmiany).
 
 **17. `pnpm typecheck && pnpm test run && pnpm build`.**
 - `typecheck`: czysto (0 błędów).
@@ -241,7 +241,6 @@ Poza zakresem 1.07, ale w inwentarzu (`.tsx`): patrz punkt 4 (usunięte) i „No
 - **Kryterium „0 w `src/actions`" dosłownie — niespełnione.** Zostaje 3 eksporty + 2 typy: `deleteAccount` (decyzja tj), `createGuideProfile`+`CreateGuideProfileData`, `createGuideSubmission`+`SubmissionPayload`. Dwa ostatnie zestawy mają jedynego importera w martwym `.tsx`, który regułą dowodową zatrzymałem (niżej). `src/lib`, `src/app/api`, `src/types`: **0 plików, 0 eksportów, 0 typów**.
 - **Pięć plików `.tsx` z 0 importerów zostaje.** Reguła: `grep` po nazwie komponentu ma dać 0 poza plikiem — a w czterech przypadkach jedyne trafienia to **komentarze w żywych `.tsx`**, których nie wolno mi edytować: `AssignGuidePanel.tsx` (komentarz `admin/inquiries/[id]/page.tsx:157`), `dashboard/guide-onboarding.tsx` (`dashboard/layout.tsx:13`), `guide/GuideSubmissionForm.tsx` (`admin/submissions/page.tsx:8`), `trips/ExperiencePageWithOptions.tsx` (`TripOptionsAccordion.tsx:15`). Piąty, `OfferBuilderModal.tsx`, zostaje świadomie.
 - **Residuum knipa w `.tsx`** (do FA-1.08, każda pozycja z powodem): `NoGuideContactCard`, `TripOptionsAccordion`, `CropPreview`, typy `TripDetails`, `GuideFormDefaults`, `GuideEditData`, `OptionTabConfig`, `HelpItem` — **żywe pliki, nieużywany `export`; usunięcie = edycja żywego `.tsx`**; `emails/_shared.tsx` `body`, `header`, `container`, `summaryRow`, `summaryRowLast`, `footerSmall` oraz `emails/inquiry-agent-email.tsx` duplikat named+`default` — j.w.
-- **CI: czerwony i zielony przebieg jobu `knip` w Actions** — opisane niżej po uruchomieniu.
 - Nie usuwałem żadnej trasy `api/`, nic w `supabase/`, nic w konfiguracji Stripe/Vercel/sekretach.
 
 ### Noticed, not touched (→ `docs/deferred-tasks.md`, 7 nowych wierszy `FA-1.07`)
@@ -294,7 +293,8 @@ Poza zakresem 1.07, ale w inwentarzu (`.tsx`): patrz punkt 4 (usunięte) i „No
 ```
 
 ### CI (Actions)
-_W toku — uzupełnię po przebiegach: job `knip` zielony + licznik w summary, `check`, `db`; przebieg na czerwono (commit-dowód z przywróconym eksportem, potem wycofany)._
+- **Zielony:** commit `14a88c6`, run [35508107857](https://github.com/tj0517/Fjordanglers/actions/runs/35508107857) — `check` pass (2m17s), `db` pass (4m17s), `knip (informacyjny)` pass (27s; sam krok `knip` kończy się exit 1 i jest wyłapany przez `continue-on-error`), `sync` pass. Blok summary z licznikiem odczytany z logu jobu (krok drukuje go `tee`-em także do logu): „**Pozycji łącznie: 26**" + cztery kategorie (5 / 13 / 7 / 1).
+- **Czerwony:** commit-dowód `1a7835e` (przywrócone `TERMINAL_STATUSES` + `isTerminal`), run [35508337351](https://github.com/tj0517/Fjordanglers/actions/runs/35508337351) — log jobu `knip` wymienia `state.ts:72:14` i `state.ts:74:17`, „Unused exports (15)", „**Pozycji łącznie: 28**"; job nadal `success` (informacyjny z założenia, blokujący dopiero w FA-1.08). Commit wycofany `0e1f317`: `git diff --quiet 14a88c6 HEAD -- src` → identyczne. Dwa dodatkowe commity (dowód + revert) zostają w historii PR-a.
 
 ### Verification
 ```
