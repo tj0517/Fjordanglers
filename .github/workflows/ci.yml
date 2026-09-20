@@ -149,7 +149,7 @@ jobs:
             echo '```'
             grep -E '^[A-Za-z ]+ \([0-9]+\)$' knip.out 2>/dev/null || echo 'brak pozycji'
             echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
 
   # ───────────────────────────────────────────────────────────────────────────
   # db — migracje aplikują się na czysto, typy bez dryfu, testy na świeżym stacku

@@ -1,0 +1,35 @@
+# FA-1.07 — knip, stan PO zmianach kodu (punkt stały)
+# commit: b366b6e · polecenie: pnpm knip · knip 6.37.0 · 2026-09-20T11:21Z
+
+$ knip
+Unused files (5)
+src/app/admin/inquiries/[id]/AssignGuidePanel.tsx 
+src/app/admin/inquiries/[id]/OfferBuilderModal.tsx
+src/components/dashboard/guide-onboarding.tsx     
+src/components/guide/GuideSubmissionForm.tsx      
+src/components/trips/ExperiencePageWithOptions.tsx
+Unused exports (13)
+deleteAccount          function  src/actions/auth.ts:134:23                          
+createGuideProfile     function  src/actions/dashboard.ts:86:23                      
+createGuideSubmission  function  src/actions/submissions.ts:36:23                    
+NoGuideContactCard     function  src/components/inquiry/InquiryWidget.tsx:1021:17    
+TripOptionsAccordion   function  src/components/trips/TripOptionsAccordion.tsx:394:17
+CropPreview            function  src/components/ui/image-crop.tsx:15:17              
+body                             src/emails/_shared.tsx:56:14                        
+header                           src/emails/_shared.tsx:63:14                        
+container                        src/emails/_shared.tsx:68:14                        
+summaryRow                       src/emails/_shared.tsx:121:14                       
+summaryRowLast                   src/emails/_shared.tsx:125:14                       
+footerSmall                      src/emails/_shared.tsx:177:14                       
+default                function  src/emails/inquiry-agent-email.tsx:33:16            
+Unused exported types (7)
+CreateGuideProfileData  type       src/actions/dashboard.ts:23:13                    
+SubmissionPayload       interface  src/actions/submissions.ts:15:18                  
+TripDetails             type       src/app/admin/inquiries/[id]/TripSetupTab.tsx:8:15
+GuideFormDefaults       type       src/components/admin/create-guide-form.tsx:126:13 
+GuideEditData           type       src/components/admin/edit-guide-form.tsx:143:13   
+OptionTabConfig         interface  src/components/trips/ExperienceTabLayout.tsx:23:18
+HelpItem                type       src/components/ui/help-widget.tsx:6:13            
+Duplicate exports (1)
+InquiryAgentEmail|default  src/emails/inquiry-agent-email.tsx
+[ELIFECYCLE] Command failed with exit code 1.

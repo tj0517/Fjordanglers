@@ -1,0 +1,73 @@
+# FA-1.07 — dowód: dowód zerowego użycia dla każdego usuniętego / zatrzymanego pliku .tsx (i .ts z wątpliwym grepem)
+# Skrypt: 3 sprawdzenia na plik — (1) każdy eksportowany identyfikator: grep -rnw <Nazwa> src scripts next.config.ts poza samym plikiem,
+#         (2) specifier: grep -rnE "['\"/]<basename>(.tsx?)?['\"]" (łapie next/dynamic i importy po stringu), (3) nie jest wejściem Next.
+# OK = wszystkie zera. REFUSE = plik zostaje. Runda = kolejne przejście knipa do punktu stałego.
+
+## runda 1 — pliki dashboard/account (Stripe Connect / payout UI)
+OK  src/app/dashboard/account/PayoutSettingsCard.tsx | names: PayoutSettingsCard=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/dashboard/account/StripeSyncButton.tsx | names: StripeSyncButton=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/dashboard/account/BankAccountForm.tsx | names: BankAccountForm=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/dashboard/account/HideListingToggle.tsx | names: HideListingToggle=0  | specifier-grep: 0 | next-entry: no
+
+## runda 2 — StripeConnectButton (jedyny importer PayoutSettingsCard usunięty w rundzie 1)
+OK  src/app/dashboard/account/StripeConnectButton.tsx | names: StripeConnectButton=0  | specifier-grep: 0 | next-entry: no
+
+## runda 3 — 29 plików z knipa po rundzie 1
+REFUSE  src/app/admin/ads/campaigns.ts | names: Platform=58  | specifier-grep: 2 | next-entry: no
+REFUSE  src/app/admin/inquiries/[id]/AssignGuidePanel.tsx | names: AssignGuidePanel=1  | specifier-grep: 0 | next-entry: no
+OK  src/app/admin/inquiries/[id]/OfferBuilderModal.tsx | names: OfferBuilderModal=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/admin/inquiries/[id]/SendDepositButton.tsx | names: SendDepositButton=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/admin/inquiries/InquiriesFilters.tsx | names: InquiriesFilters=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/trips/filters-modal.tsx | names: FiltersModal=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/trips/filters.tsx | names: ExperienceFilters=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/trips/search-bar.tsx | names: SearchBar=0  | specifier-grep: 0 | next-entry: no
+OK  src/app/trips/sort-select.tsx | names: SortSelect=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/analytics/fb-event.tsx | names: FbEvent=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/analytics/ga-event.tsx | names: GaEvent=0  | specifier-grep: 0 | next-entry: no
+REFUSE  src/components/dashboard/guide-onboarding.tsx | names: GuideOnboarding=2  | specifier-grep: 0 | next-entry: no
+REFUSE  src/components/guide/GuideSubmissionForm.tsx | names: GuideSubmissionForm=1  | specifier-grep: 0 | next-entry: no
+OK  src/components/home/hero-search-bar.tsx | names: HeroSearchBar=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/home/hero-search.tsx | names: HeroSearch=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/home/hero-video-cta.tsx | names: HeroVideoCta=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/home/home-faq.tsx | names: HomeFaq=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/home/parallax-layer.tsx | names: ParallaxLayer=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/home/search-widget.tsx | names: HomeSearchWidget=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/trips/accommodation-gallery.tsx | names: AccommodationGallery=0  | specifier-grep: 0 | next-entry: no
+OK  src/components/trips/experience-location-map-client.tsx | names: none | specifier-grep: 0 | next-entry: no
+REFUSE  src/components/trips/experience-location-map.tsx | names: ExperienceLocationMap=3  | specifier-grep: 1 | next-entry: no
+REFUSE  src/components/trips/ExperiencePageWithOptions.tsx | names: ExperiencePageWithOptions=1  | specifier-grep: 0 | next-entry: no
+OK  src/components/trips/species-card.tsx | names: FishVariant=0 SpeciesCard=0 SpeciesInfo=0  | specifier-grep: 0 | next-entry: no
+OK  src/lib/experience-helpers.ts | names: PackageDurationOption=0 packagesToDurationOptions=0 pkgDurationStr=0 pkgFirstDays=0 pkgFirstHours=0 pkgMaxGroup=0 pkgMinPrice=0 pkgPrimaryLevel=0  | specifier-grep: 0 | next-entry: no
+REFUSE  src/lib/fbq.ts | names: fbqEvent=2 trackFbInitiateCheckout=0 trackFbLead=0 trackFbPurchase=0  | specifier-grep: 2 | next-entry: no
+OK  src/lib/field-encryption.ts | names: decryptField=0 encryptField=0 isEncrypted=0  | specifier-grep: 0 | next-entry: no
+REFUSE  src/lib/periods.ts | names: Period=3 decodePeriodsParam=0 encodePeriodsParam=0 periodTotalDays=0  | specifier-grep: 0 | next-entry: no
+OK  src/lib/utils.ts | names: cn=0 formatDuration=0 getInitials=0  | specifier-grep: 0 | next-entry: no
+# .ts files judged by precise import grep (rule for .tsx does not apply):
+OK  src/app/admin/ads/campaigns.ts | grep 'admin/ads/campaigns|./campaigns' src → 0 (evidence-script hits are @/lib/ads/campaigns, another module)
+OK  src/lib/periods.ts | grep 'lib/periods|./periods' src → 0 (Period hits are comment words in PipelineClient/ads page)
+KEPT  src/app/admin/inquiries/[id]/OfferBuilderModal.tsx | 0 importers, but tj: do not delete (offer-builder path is an open product question)
+
+## runda 4 — pozostałe po rundzie 3
+REFUSE  src/app/admin/inquiries/[id]/AssignGuidePanel.tsx | names: AssignGuidePanel=1  | specifier-grep: 0 | next-entry: no
+OK  src/app/admin/inquiries/[id]/OfferBuilderModal.tsx | names: OfferBuilderModal=0  | specifier-grep: 0 | next-entry: no
+REFUSE  src/components/dashboard/guide-onboarding.tsx | names: GuideOnboarding=2  | specifier-grep: 0 | next-entry: no
+REFUSE  src/components/guide/GuideSubmissionForm.tsx | names: GuideSubmissionForm=1  | specifier-grep: 0 | next-entry: no
+OK  src/components/trips/experience-location-map.tsx | names: ExperienceLocationMap=0  | specifier-grep: 0 | next-entry: no
+REFUSE  src/components/trips/ExperiencePageWithOptions.tsx | names: ExperiencePageWithOptions=1  | specifier-grep: 0 | next-entry: no
+REFUSE  src/lib/fbq.ts | names: fbqEvent=0 trackFbInitiateCheckout=0 trackFbLead=0 trackFbPurchase=0  | specifier-grep: 1 | next-entry: no
+OK  src/lib/fbq.ts (.ts) | importers: fb-event.tsx deleted in round 3; 'fbq' hit in src/types/gtag.d.ts is the Window['fbq'] type, not an import
+
+## runda 5 — szablony maili osierocone po usunięciu 9 funkcji send*Email (nic ich nie renderuje: render( występuje tylko w sendEmail w lib/email.ts)
+OK  src/emails/booking-confirmed-angler.tsx | names: BookingConfirmedAnglerEmail=0 BookingConfirmedAnglerEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/booking-declined-angler.tsx | names: BookingDeclinedAnglerEmail=0 BookingDeclinedAnglerEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/email-verification.tsx | names: EmailVerificationEmail=0 EmailVerificationProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/guide-welcome.tsx | names: GuideWelcomeEmail=0 GuideWelcomeEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/inquiry-offer-angler.tsx | names: InquiryOfferAnglerEmail=0 InquiryOfferAnglerEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/inquiry-request-angler.tsx | names: InquiryRequestAnglerEmail=0 InquiryRequestAnglerEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/inquiry-request-guide.tsx | names: InquiryRequestGuideEmail=0 InquiryRequestGuideEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/offer-accepted-guide.tsx | names: OfferAcceptedGuideEmail=0 OfferAcceptedGuideEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/offer-declined-guide.tsx | names: OfferDeclinedGuideEmail=0 OfferDeclinedGuideEmailProps=0  | specifier-grep: 0 | next-entry: no
+OK  src/emails/offer-sent-angler.tsx | names: OfferSentAnglerEmail=0 OfferSentAnglerEmailProps=0  | specifier-grep: 0 | next-entry: no
+
+## runda 6 — szablon inquiry-message-angler (ostatni wołający: sendMessageToAngler)
+OK  src/emails/inquiry-message-angler.tsx | names: InquiryMessageAnglerEmail=0 InquiryMessageAnglerEmailProps=0  | specifier-grep: 0 | next-entry: no
