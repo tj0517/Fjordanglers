@@ -10,6 +10,7 @@ import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { env } from '@/lib/env'
+import { getGuidePhone } from '@/lib/guide-contacts'
 import { MessageComposer } from './MessageComposer'
 import { ThreadActionsPanel } from './ThreadActionsPanel'
 import type { OfferForPanel } from './ThreadActionsPanel'
@@ -199,7 +200,7 @@ export default async function AdminInquiryDetailPage({
   let countryGuides: GuideWithCalendar[] = []
   try {
     const today     = new Date().toISOString().slice(0, 10)
-    const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
+    const yearAhead = new Date(new Date().getTime() + 366 * 86_400_000).toISOString().slice(0, 10)
 
     const { data: guideRows } = await svc
       .from('guides')
@@ -327,14 +328,7 @@ export default async function AdminInquiryDetailPage({
 
   try {
     if (inquiry.assigned_guide_id != null) {
-      const { data: guidePhoneRow } = await svc
-        .from('guides')
-        .select('phone_e164')
-        .eq('id', inquiry.assigned_guide_id)
-        .single()
-      guideHasPhone = Boolean(
-        (guidePhoneRow as unknown as { phone_e164: string | null } | null)?.phone_e164,
-      )
+      guideHasPhone = Boolean(await getGuidePhone(inquiry.assigned_guide_id))
     }
 
     const waInbounds = threadMessages.filter(
