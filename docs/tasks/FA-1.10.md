@@ -2,7 +2,7 @@
 id: FA-1.10
 title: Tymczasowy przegląd tygodniowy w obecnym `/admin` — 8 liczb z dzisiejszych tabel, do wyrzucenia w etapie 6
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -154,3 +154,105 @@ supabase db reset && pnpm dev   # /admin/weekly vs 8 SELECT-ów
 ```
 
 ## Notatki z realizacji
+
+## Report — FA-1.10 Tymczasowy przegląd tygodniowy `/admin/weekly`
+
+**Model:** Sonnet 5 (`claude-sonnet-5`), effort medium-high, difficulty M. Biblioteka `src/lib/metrics/` napisana przez subagenta `fa-core` (Sonnet), zweryfikowana ponownie przeze mnie (testy, `tsc`, red proofy odtworzone ręcznie).
+**Gałąź:** `feat/admin-weekly-review` odcięta od **`origin/stage-1`** (`0b8f8d7`), nie od `main`: plik zadania i FA-1.09 są tylko na `stage-1`. PR celuje w `stage-1`.
+**Dowody:** wszystko w `docs/proof/FA-1.10/` (zrzuty `.png`, zrzuty tekstu `.txt`, `selects.sql/.out`, `fa-1.04-crit{1,4}.sql/.out`). Zebrane 20 IX 2026 ok. 11:30 czasu warszawskiego; seed jest liczony względem `now()`, więc konkretne tygodnie i miesiące w wynikach zależą od dnia uruchomienia.
+
+### Done
+- **Odczyt stanu (pierwszy punkt zakresu).** `ad_campaigns.spend` = `numeric(10,2)`; kod syncu zapisuje `costMicros/1e6` w walucie konta (nazwa `spendEur` myląca, `AdsClient.tsx:409` renderuje to przez `fmtPln`) — decyzja T1: PLN, bez przeliczania. Klucze `finance_settings`: `eur_pln_rate`, `usd_eur_rate` (`finances/page.tsx:134-135`, domyślne 4.25 / 0.92). Odczyt produkcji **nie** wykonany — patrz „Not done".
+- **T2 — dev nie idzie na produkcję.** `.env.development.local` (URL + `ANON_KEY` + `SERVICE_ROLE_KEY` z `supabase status`, `ANTHROPIC_API_KEY` przepisany z `.env.local` bez wypisywania) + dwa zdania w README. `.gitignore` **nie wymagał zmiany**: `.env*` (linia 34) już go pokrywa — `git check-ignore -v .env.development.local` → `.gitignore:34:.env*`. Dowód przed pierwszym uruchomieniem, ładowarką Next (`@next/env`), tryb dev vs kontrola:
+  ```
+  next dev         -> supabase host: 127.0.0.1:54421 | is prod ref: false | RESEND_DEV_FAKE: 1
+  next build/start -> supabase host: uwxrstbplaoxfghrchcy.supabase.co | is prod ref: true | RESEND_DEV_FAKE: (unset)
+  ```
+  Dowód na poziomie aplikacji (po starcie): log Nexta `Environments: .env.development.local, .env.local`, a `/admin/inquiries` renderuje wiersze istniejące tylko w lokalnym seedzie (`Frida Weekly`, `Gunnar Weekly`, `Nora Weekly` — `seeded-admin-inquiries.png`).
+  W sesji nie były wyeksportowane żadne zmienne Supabase (sprawdzone `test -n`), więc nic nie przesłaniało pliku.
+- **Seed** (`supabase/seed.sql`, dopisane po wierszach FA-1.05, które zostały nietknięte): 9 zapytań w 3 tygodniach (W0/W-1/W-2, względem `now()` w Europe/Warsaw), 2 z `deposit_paid_at` (EUR i USD), 4 `lost` (`price`, `no_guide`, `went_elsewhere` + 1 bez kodu), 2 z `gclid` + 1 z `utm_medium=cpc`, `qualified` yes/no/unknown, 5 wierszy `ad_campaigns` w dwóch tygodniach, kursy w `finance_settings`. Zastosowany przez `db reset --local` na czystych migracjach. UUID v4 (punkt z FA-1.12 był już zamknięty).
+- **`src/lib/metrics/`** — `weeks.ts`, `commission.ts`, `weekly.ts` + 3 pliki testów, **60 testów**; zero zapytań do bazy, zero `as any`/`!`. Pełny zestaw: `vitest run` → 25 plików, **251 testów zielone** (na lokalnym stacku).
+- **`/admin/weekly`** — `src/app/admin/weekly/page.tsx` + odczyty w `src/actions/weekly.ts` (`requireAdmin()` przed klientem serwisowym; reguła 3 zabrania `.from()` w stronie, więc zapytania siedzą w warstwie danych, nie w pliku strony). Sidenav: „Weekly" pierwszy.
+- **`finances/page.tsx` przepięte na `commissionPln`/`parseFxRates`/`rowCommissionEur`**, wybór wierszy nietknięty.
+
+**Kryteria „Gotowe, gdy":**
+
+1. **8 liczb na lokalnym seedzie = 8 ręcznych SELECT-ów.** Zrzut: `seeded-admin-weekly.png`. SELECT-y (`selects.sql`, wynik `selects.out`) niezależne od TypeScriptu (SQL liczy tygodnie własnym `date_trunc` w Europe/Warsaw):
+
+   | # | Strona | SELECT |
+   |---|---|---|
+   | 1 | 2838 zł, 3 wpłacone depozyty | `2838.00`, `3` |
+   | 2 | 2 w 2026-09, 0 w 2026-08 | `2026-09 → 2` (sierpnia brak wiersza = 0; lipiec: 1) |
+   | 3 | W38..W34: 2 / 3 / 4 / 0 / 0 | 2 / 3 / 4 / 0 / 0 |
+   | 4 | yes/no/unknown: W38 1/0/1, W37 2/1/0, W36 1/1/2 | identycznie |
+   | 5 | 0 / 300,00 / 210,00 / 0 / 0; ostatni sync 2026-09-09 | 0 / 300.00 / 210.00 / 0 / 0; `2026-09-09` |
+   | 6 | W37: paid 1 zapytanie, 300 zł/zap., 300 zł/qual.; all 100 / 150; W36: all 52,50 / 210 | identycznie (wszystkie pola tabeli) |
+   | 7 | 21.4% (3 z 14) | `3 / 14 / 21.4` |
+   | 8 | `no_guide` 1, `price` 1, `went_elsewhere` 1, `no code` 1 | identycznie |
+
+2. **Prowizja weekly vs finances — spełnione częściowo, decyzja tj (opcja A).** Ta sama formuła i te same wiersze wejściowe przez wspólny helper; **wybór wierszy się różni** (patrz „Needs a decision" / deferred): na seedzie z realistycznymi statusami `/admin/finances` = **1548 zł (€360,00)**, `/admin/weekly` = **2838 zł**; różnica 1290 zł = jedno zapytanie `paid` (300 € × 4,30), które filtr `status IN ('deposit_paid','completed')` pomija. Po tymczasowym ustawieniu tego zapytania na `completed` (lokalnie, cofnięte) obie strony pokazują **2838 zł** (`aligned-admin-finances.txt` → `2838 zł / €660.00`, `aligned-admin-weekly.txt` → `2838 zł of 80 000 zł`).
+   **Przepięcie finances bez zmiany liczby:** `diff before-admin-finances.txt after-admin-finances.txt` → `IDENTICAL` (cała strona, także tabela miesięczna), zrzuty `before-/after-admin-finances.png`. Bramka STOP nie zadziałała.
+3. **Liczby 5 i 6 w PLN wprost z kolumny** (T1), bez przeliczania; adnotacja „last sync (newest ad_campaigns row)" pokazuje `2026-09-09`, a przy pustej tabeli `no data`. Skala `spend` na produkcji **niezweryfikowana**.
+4. **Na czerwono — USD** (odtworzone ręcznie: linia `return amt` zamiast konwersji w `rowCommissionEur`):
+   ```
+   × converts USD rows with usdEur and leaves other currencies alone
+   × sums rows with different filled fields plus one USD row      AssertionError: expected 380 to be 280
+   × reproduces the /admin/finances inline formula to the last bit AssertionError: expected 955.2724999999999 to be 920.8577
+   × counts only paid rows on or after `since`, USD converted
+   ```
+   Po przywróceniu: 60/60 zielone.
+5. **Na czerwono — tydzień 53/1.** **Poprawka założenia:** 2026-12-31 (czw) **i** 2027-01-01 (pt) należą do tego samego ISO tygodnia **2026-W53** (pon 28 XII – niedz 3 I); W01 2027 zaczyna się 4 I. Test zatem sprawdza: oba dni → `2026-W53`, 2027-01-04 → `2027-W01`, plus krawędzie stref (`2026-09-20T22:30:00Z` → poniedziałek W39 w Warszawie, `2026-12-27T23:30:00Z` → W53). Klucz po roku kalendarzowym (odtworzone ręcznie):
+   ```
+   × puts 2026-12-31 and 2027-01-01 both in ISO 2026-W53      expected '2027-W53' to be '2026-W53'
+   × starts 2027-W01 on Monday 2027-01-04, zero-padded
+   × buckets a plain date without timezone shifting
+   Tests  3 failed | 57 passed (60)
+   ```
+6. **Pusta baza → zera, nie 500:** po `TRUNCATE inquiries, ad_campaigns, finance_settings CASCADE` (lokalnie) `/admin/weekly` → **HTTP 200**, wszystkie liczby `0`, ostatni sync `no data`, kursy domyślne 4.25 / 0.92, brak `NaN`/`Infinity` (`empty-admin-weekly.png/.txt`, `grep` po `NaN|Infinity|undefined|Application error` → pusty).
+7. **FA-1.04 kryteria 1 i 4.**
+   - Kryterium 1 (`fa-1.04-crit1.out`, zasiany stack, 14 zapytań): `qualified`: `no 2 / unknown 8 / yes 4`; `priority`: `(null) 7 / high 3 / medium 2 / not_viable 2`; `trip_country`: `(null) 8 / Iceland 3 / New Zealand 1 / Norway 1 / Spain 1`; zgodność z O-10: 4 wiersze `yes` = 4 wiersze spełniające O-10, 2 wiersze `no` = 2 × `not_viable`, 0 rozjazdów.
+   - Kryterium 4 (`fa-1.04-crit4.out`): `POST /api/inquiries` → agent Round 1 (prawdziwe wywołanie Anthropic: `country: Iceland, priority: low`) → `qualified='yes'`, `qualified_set_by='agent'`, **dokładnie jeden** `inquiry.qualified_set` z `actor_kind='agent'`, payload `{"rule":"O-10","value":"yes"}`.
+   - Wiersze FA-1.04 w `deferred-tasks.md` zamknięte (skreślony „Kryteria 1 i 4", wiersz o duplikatach zdarzeń uzupełniony), `INDEX.md` bez dopisku „kryteria odroczone", komentarz w frontmatterze `FA-1.04.md` usunięty.
+8. **`typecheck` / `test` / `build` zielone; lint nie gorzej:**
+   - `tsc --noEmit` → rc 0; `vitest run` → 251/251; `next build` (stack zatrzymany, sprawdzone `docker ps --filter label=…fjordanglers` → 0) → `Compiled successfully`, `/admin/weekly` na liście tras.
+   - `eslint`: **przed** (baza `origin/stage-1`, przed zmianami): **117 problemów (40 błędów, 77 ostrzeżeń)**; **po**: **117 (40 / 77)**; pliki dotknięte tym zadaniem: 0 problemów. `git status` przed pomiarem czysty.
+   - Uwaga: `pnpm` przerywa się na `ERR_PNPM_IGNORED_BUILDS` (wiersz FA-1.09 w deferred), więc użyte `./node_modules/.bin/{tsc,vitest,eslint,next,supabase}` — te same polecenia co skrypty z `package.json`.
+9. **`docs/REBUILD_PLAN.md` §9** — dopisek „zrobione w FA-1.10, `/admin/weekly`, do usunięcia w etapie 6" (akapit „Dopisek 20 IX").
+
+### Not done
+- **Odczyt produkcji (skala `ad_campaigns.spend`, bramka STOP T1)** — MCP Supabase: „no permission", w sesji brak hasła bazy. T1 opiera się na kodzie i decyzji tj, nie na odczycie. Wiersz w `deferred-tasks.md`.
+- **Kryterium 2 w brzmieniu dosłownym** (dwie strony pokazują to samo na uczciwym seedzie) — świadomie, opcja A; patrz wyżej i „Needs a decision".
+- **Przebieg agenta bez stubu poczty** — `src/lib/email.ts` nie ma trybu dev-fake, a `runAgentRound1` wysyła mail **przed** zapisem klasyfikacji: pierwsza próba z fałszywym kluczem Resend (`401 API key is invalid`) przerwała rundę (`qualified='unknown'`, `agent_round=0`); tę próbę usunąłem. Udany przebieg (dowód kryterium 4) poszedł z preloadem `NODE_OPTIONS=--require`, który odpowiada `200` tylko na `fetch` do `api.resend.com` (3 wywołania przechwycone, żadne nie wyszło); Anthropic i Supabase prawdziwe/lokalne. Kod repo nietknięty.
+- Liczba zapytań na stronie: **4 zamiast „jedno–trzy"** — czwarte (`ORDER BY date DESC LIMIT 1`) daje datę ostatniego syncu także wtedy, gdy okno 5 tygodni jest puste.
+- Zrzuty ekranu są plikami `.png` w repo (`docs/proof/FA-1.10/`, ~1,1 MB łącznie), nie wklejone do treści PR.
+
+### Noticed, not touched (→ `docs/deferred-tasks.md`, wiersze „FA-1.10")
+- `/admin/finances` pomija status `paid` i `handed_over` (filtr sprzed FA-1.03) + drugi rozjazd (miesiąc UTC z fallbackiem na `updated_at` vs Warszawa) — `finances/page.tsx:99`.
+- `spendEur`/`avgCpcEur` to PLN (T1) — `fetch-campaigns.ts:61`.
+- `email.ts` bez dev-fake + wysyłka poprzedza zapis klasyfikacji w `runAgentRound1`.
+- Agent wstawia wiadomość wychodzącą bez `message.sent` (reguły 5 i 8) — zapytanie testowe ma tylko `inquiry.created` i `inquiry.qualified_set`.
+- `dev.sh` eksportuje produkcyjne `.env.local` do powłoki; zmienne procesu wygrywają z każdym `.env*` (README opisuje zasadę).
+- `commissionPln` na float-euro = świadomy wyjątek od reguły 6 (etap 4).
+- Skala `spend` na produkcji nieodczytana.
+
+### Needs a decision
+- **Filtr wierszy w `/admin/finances`.** Rozstrzygnięte przez tj w tej sesji: **opcja A** — zostaje, gap zaraportowany, poprawka jako zadanie S. Do decyzji na później: kiedy zrobić to zadanie S (zmieni wyświetlaną liczbę na produkcji), skoro na prod `deposit_paid_at` jest dziś puste dla wszystkich 99 zapytań i do pierwszej wpłaty po stage-1 oba ekrany pokażą ~0.
+- **Dodatek do T2 poza wymienioną listą:** `.env.development.local` zawiera też `RESEND_API_KEY` (atrapa), `RESEND_DEV_FAKE=1`, `AI_AUTO_REPLY_ENABLED=true`, `NEXT_PUBLIC_APP_URL=http://localhost:3000` — bo `.env.local` niesie produkcyjny klucz Resend, a `/api/inquiries` wysyła pocztę bez dev-fake. Jeśli nie chcesz tych czterech linii, usuń je z pliku (lokalny, gitignorowany).
+- **Zrzuty w repo:** zostawić `docs/proof/FA-1.10/*.png` w PR czy usunąć przed merge (rekomendacja: zostawić do review, usunąć przy merge do `main`).
+
+### Verification
+```
+git status                                  → czysty przed pomiarem lint
+eslint (przed, base stage-1)                → ✖ 117 problems (40 errors, 77 warnings)
+supabase start -x studio,imgproxy,mailpit,logflare,vector,edge-runtime,realtime,storage-api,postgres-meta
+supabase db reset --local                   → migracje + seed OK
+vitest run src/lib/metrics                  → 60 passed
+vitest run                                  → 25 files, 251 passed
+tsc --noEmit                                → rc 0
+eslint (po)                                 → ✖ 117 problems (40 errors, 77 warnings); pliki FA-1.10: 0
+supabase stop → docker ps --filter label=…  → 0 kontenerów FA
+next build                                  → ✓ Compiled successfully; ƒ /admin/weekly
+red (a) USD usunięte z helpera              → 4 testy padają (wyżej), po przywróceniu 60/60
+red (b) tydzień po roku kalendarzowym       → 3 testy padają (wyżej), po przywróceniu 60/60
+```
+Uwaga środowiskowa: zrzuty zrobiono Playwrightem z Chromium z cache; brakujące biblioteki systemowe (`libnss3`, `libnspr4`, `libasound2`) pobrane przez `apt-get download` + `dpkg -x` do katalogu tymczasowego sesji — bez `sudo` i bez zmian w systemie.

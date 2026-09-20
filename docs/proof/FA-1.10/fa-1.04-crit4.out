@@ -1,0 +1,24 @@
+=== FA-1.04 criterion 4: agent classification of a test inquiry
+                  id                  | status | priority | trip_country | qualified | qualified_set_by | agent_status | agent_round 
+--------------------------------------+--------+----------+--------------+-----------+------------------+--------------+-------------
+ 9f9581be-4acb-4d78-af92-fa88abe0a618 | new    | low      | Iceland      | yes       | agent            | waiting      |           1
+(1 row)
+
+=== inquiry.qualified_set events for it (expect exactly 1, actor_kind=agent)
+         type          | actor_kind | source |             payload              
+-----------------------+------------+--------+----------------------------------
+ inquiry.qualified_set | agent      | app    | {"rule": "O-10", "value": "yes"}
+(1 row)
+
+ qualified_set_events 
+----------------------
+                    1
+(1 row)
+
+=== all events for it, in order
+         type          | actor_kind | source 
+-----------------------+------------+--------
+ inquiry.created       | system     | app
+ inquiry.qualified_set | agent      | app
+(2 rows)
+
