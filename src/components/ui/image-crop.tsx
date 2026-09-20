@@ -199,6 +199,9 @@ export function ImageCropModal({ src, aspect, onConfirm, onCancel }: ImageCropMo
 
   const [blobUrl,   setBlobUrl]  = useState('')
   const [loaded,    setLoaded]   = useState(false)
+  /** naturalWidth of the loaded image — kept in state, not read off the ref during
+   *  render (react-hooks/refs). Set in handleLoad together with `loaded`. */
+  const [naturalW,  setNaturalW] = useState(0)
   const [scale,     setScale]    = useState(1)
   const [tx,        setTx]       = useState(0)
   const [ty,        setTy]       = useState(0)
@@ -260,6 +263,7 @@ export function ImageCropModal({ src, aspect, onConfirm, onCancel }: ImageCropMo
     )
     setFitScale(fit)
     setMin(fit * 0.3)   // allow zooming out to ~30% of fill — shows full image
+    setNaturalW(img.naturalWidth)
     setScale(fit); setTx(cx); setTy(cy); setLoaded(true)
   }, [CROP_W, CROP_H, clampPos])
 
@@ -331,8 +335,8 @@ export function ImageCropModal({ src, aspect, onConfirm, onCancel }: ImageCropMo
     }, 'image/jpeg', 0.94)
   }
 
-  const imgDispW = loaded && imgRef.current != null ? imgRef.current.naturalWidth * scale : 0
-  const natW     = imgRef.current?.naturalWidth ?? 0
+  const imgDispW = loaded ? naturalW * scale : 0
+  const natW     = naturalW
 
   return (
     <div
