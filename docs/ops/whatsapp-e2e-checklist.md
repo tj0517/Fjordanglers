@@ -41,7 +41,12 @@ ORDER BY occurred_at;
 4. Sprawdź w bazie: `status='sent'`, w Meta delivery log
 
 ### 5. Wiadomość od przewodnika
-1. Ustaw `guides.phone_e164 = '+48XXX'` dla przewodnika przypisanego do zapytania
+1. Zapisz numer przewodnika przypisanego do zapytania w `guide_contacts` (tabela tylko dla `service_role` —
+   numer nie może leżeć w `guides`, bo tę tabelę czyta klucz publikowalny):
+   ```sql
+   INSERT INTO guide_contacts (guide_id, phone_e164) VALUES ('<guide_id>', '+48XXX')
+   ON CONFLICT (guide_id) DO UPDATE SET phone_e164 = EXCLUDED.phone_e164;
+   ```
 2. Wyślij WA z numeru przewodnika
 3. Sprawdź: `counterpart='guide'`, `counterpart_id=<guide_id>` w messages
 
