@@ -68,11 +68,13 @@ export async function matchInboundPhone(phone: string): Promise<InboundPhoneMatc
   const guideIds = await findGuideIdsByPhone(normalised)
 
   for (const guideId of guideIds) {
-    // Inquiries where guide is assigned
+    // Inquiries where the guide is assigned (assigned_guide_id — what the admin sets) or
+    // is the owner of the experience page it came from (guide_id — written by createInquiry).
+    // guideId is a uuid read from the database, so it is safe inside the .or() string.
     const { data: assigned } = await supabase
       .from('inquiries')
       .select('id')
-      .eq('guide_id', guideId)
+      .or(`guide_id.eq.${guideId},assigned_guide_id.eq.${guideId}`)
       .not('status', 'in', '("cancelled","refunded")')
 
     for (const inq of (assigned ?? []) as Array<{ id: string }>) {

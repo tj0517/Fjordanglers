@@ -229,7 +229,13 @@ export async function sendMessageFromThread(
     if (guide == null) return { success: false, error: 'Guide not found' }
 
     if (isWa) {
-      const phone = await getGuidePhone(counterpartId)
+      let phone: string | null
+      try {
+        phone = await getGuidePhone(counterpartId)
+      } catch {
+        // Already logged by getGuidePhone — a read failure is not "no number on file".
+        return { success: false, error: 'Could not read the guide contact — try again' }
+      }
       if (!phone) return { success: false, error: 'Guide has no WhatsApp number (phone_e164)' }
       to = phone
     } else {
