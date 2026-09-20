@@ -2,7 +2,7 @@
 id: FA-1.08
 title: Wycięcie martwego kodu — paczka 2: komponenty i trasy, lint do zera, `knip` i `lint` blokują w CI
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved: opus by tj 2026-09-20
@@ -212,3 +212,18 @@ Odrzucone świadomie: jednolite `#tab-N` (psuje istniejące `#day-trip`), slugi 
 Dowody: `docs/proofs/FA-1.08-knip-before.txt`, `-knip-after.txt`,
 `-lint-before.txt`, `-lint-after.txt`, `-email-render-diff.txt`, `-ci-red.txt`,
 `-tabs-red.txt`.
+
+### Zamknięcie — 20 IX 2026
+
+Ręczny przebieg UI wykonany **przez tj** 20 IX 2026 — pięć ścieżek, w tym zakładki na
+wyprawie z pięcioma opcjami po naprawie regresji opisanej wyżej: `#option-4` wpisane
+w pasek adresu trafia we właściwą zakładkę, a `#day-trip` na wyprawie dwuopcyjnej działa
+jak przed paczką. To było jedyne niepokryte kryterium (agent nie mógł go wykonać:
+`pnpm dev` wymagałby `.env.local` z produkcyjnym kluczem Resend, MCP `playwright` w tej
+sesji nie wstał, a repo nie ma `jsdom` ani `@testing-library`).
+
+**Wszystkie kryteria „Gotowe, gdy" udowodnione.** Status `review` → `done`; to samo
+w `docs/tasks/INDEX.md`.
+
+Dowody: `docs/proofs/FA-1.08-knip-before.txt`, `-knip-after.txt`, `-lint-before.txt`,
+`-lint-after.txt`, `-email-render-diff.txt`, `-ci-red.txt`, `-tabs-red.txt`.
