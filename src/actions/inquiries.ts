@@ -28,6 +28,13 @@ import type { Json } from '@/lib/supabase/database.types'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
 import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
+import { computeFallbackDepositCents } from '@/lib/inquiries/deposit-fallback'
+import {
+  getInquiryExperience,
+  tripTitleOf,
+  GUIDE_NAME_FALLBACK,
+  type InquiryExperience,
+} from '@/lib/inquiries/experience-lookup'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
@@ -237,7 +244,8 @@ export async function createManualInquiry(params: {
  *
  * Deposit amount priority:
  *   1. inquiry.offer_deposit_eur — if FA created an offer, always use that exact amount.
- *   2. depositPercent × trip price — legacy fallback.
+ *   2. Otherwise depositPercent × the experience's list price (per person or flat, EUR only) —
+ *      see computeFallbackDepositCents. A price on request or in another currency is refused.
  *
  * Allowed statuses: any status from which `awaiting_payment` is reachable, plus
  * `awaiting_payment` itself (resend — the status does not move a second time).
@@ -256,7 +264,7 @@ export async function sendDepositLink(
 
   const { data: rawInquiry } = await svc
     .from('inquiries')
-    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, message, offer_deposit_eur')
+    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, experience_page_id, message, offer_deposit_eur')
     .eq('id', inquiryId)
     .single()
 
@@ -271,15 +279,24 @@ export async function sendDepositLink(
 
   const offerDepositEur = rawInquiry.offer_deposit_eur as number | null
 
-  // The legacy `experiences` list price is gone (table archived, FA-1.06); the
-  // deposit can only come from the saved offer.
-  if (offerDepositEur == null || offerDepositEur <= 0) {
-    return { success: false, error: 'No offer deposit set — save an offer first' }
+  const exp = await getInquiryExperience(rawInquiry)
+
+  // The saved offer deposit always wins. Only when there is none do we fall back to the
+  // experience's list price × party size × deposit % (see deposit-fallback.ts) — and that
+  // refuses a price on request or a non-EUR price instead of guessing an amount.
+  let depositCents: number
+  if (offerDepositEur != null && offerDepositEur > 0) {
+    depositCents = Math.round(offerDepositEur * 100)
+  } else {
+    const fallback = computeFallbackDepositCents(exp, rawInquiry.party_size ?? 1, depositPercent)
+    if (!fallback.ok) {
+      return { success: false, error: fallback.error }
+    }
+    depositCents = fallback.cents
   }
 
-  const depositCents   = Math.round(offerDepositEur * 100)
   const depositPctUsed = depositPercent
-  const tripTitle      = 'Your trip'
+  const tripTitle      = tripTitleOf(exp)
 
   if (depositCents < 50) {
     return { success: false, error: 'Deposit amount is below Stripe minimum (€0.50)' }
@@ -412,7 +429,7 @@ export async function saveRichOffer(
 
   const { data: inquiry } = await svc
     .from('inquiries')
-    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, status')
+    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, experience_page_id, assigned_guide_id, status')
     .eq('id', inquiryId)
     .single()
 
@@ -464,11 +481,14 @@ export async function saveRichOffer(
     return { success: false, error: 'Failed to save offer' }
   }
 
+  const exp = await getInquiryExperience(inquiry)
+  const offerGuide = await resolveOfferGuide(inquiry.assigned_guide_id, exp)
+
   await sendRichOfferAnglerEmail({
     to:              inquiry.angler_email,
     anglerName:      inquiry.angler_name,
-    tripTitle:       'Your trip',
-    guideName:       'Your guide',
+    tripTitle:       tripTitleOf(exp),
+    guideName:       offerGuide?.full_name ?? GUIDE_NAME_FALLBACK,
     requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
     partySize:       inquiry.party_size ?? 1,
     offerTotalEur:   totalPriceEur,
@@ -504,6 +524,31 @@ export async function saveRichOffer(
   return { success: true, offerUrl }
 }
 
+/**
+ * Guide row shown on an offer: the assigned guide first, else the guide who owns the
+ * inquiry's experience page. Null when neither resolves (callers fall back to
+ * GUIDE_NAME_FALLBACK). Not exported — this file is 'use server', so every export
+ * would become a client-callable action.
+ */
+async function resolveOfferGuide(
+  assignedGuideId: string | null,
+  exp: InquiryExperience | null,
+): Promise<{ full_name: string | null; bio: string | null; avatar_url: string | null } | null> {
+  const svc = createServiceClient()
+  const candidates = [assignedGuideId, exp?.guideId ?? null]
+
+  for (const guideId of candidates) {
+    if (guideId == null) continue
+    const { data } = await svc
+      .from('guides')
+      .select('full_name, bio, avatar_url')
+      .eq('id', guideId)
+      .maybeSingle()
+    if (data != null) return data
+  }
+  return null
+}
+
 // ─── getOfferByToken ──────────────────────────────────────────────────────────
 
 /**
@@ -527,21 +572,15 @@ export async function getOfferByToken(token: string): Promise<OfferPageData | nu
     if (expires < new Date()) return null
   }
 
-  const guideId = (inquiry.assigned_guide_id as string | null) ?? null
-  const { data: guide } = guideId
-    ? await svc
-        .from('guides')
-        .select('full_name, bio, avatar_url')
-        .eq('id', guideId)
-        .single()
-    : { data: null }
+  const exp   = await getInquiryExperience(inquiry)
+  const guide = await resolveOfferGuide(inquiry.assigned_guide_id, exp)
 
   return {
     inquiryId:        inquiry.id,
     anglerName:       inquiry.angler_name,
     anglerCountry:    (inquiry.angler_country as string | null) ?? '',
-    tripTitle:        'Your trip',
-    guideName:        guide?.full_name ?? 'Your guide',
+    tripTitle:        tripTitleOf(exp),
+    guideName:        guide?.full_name ?? GUIDE_NAME_FALLBACK,
     guidePhotoUrl:    guide?.avatar_url ?? null,
     guideBio:         guide?.bio ?? null,
     requestedDates:   (inquiry.requested_dates as string[] | null) ?? [],
@@ -586,7 +625,7 @@ export async function submitOfferAnswers(
 
   const { data: inquiry } = await svc
     .from('inquiries')
-    .select('id, status, angler_email, angler_name, trip_id, party_size, offer_deposit_eur')
+    .select('id, status, angler_email, angler_name, trip_id, experience_page_id, party_size, offer_deposit_eur')
     .eq('id', inquiryId)
     .single()
 
@@ -610,6 +649,7 @@ export async function submitOfferAnswers(
   }
 
   const baseUrl = env.NEXT_PUBLIC_APP_URL
+  const exp     = await getInquiryExperience(inquiry)
 
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
   try {
@@ -622,7 +662,7 @@ export async function submitOfferAnswers(
             currency: 'eur',
             unit_amount: depositCents,
             product_data: {
-              name: 'Refundable Deposit — Your Trip',
+              name: `Refundable Deposit — ${tripTitleOf(exp)}`,
               description: `Secures your spot. The deposit is refundable — ${inquiry.party_size} person(s).`,
             },
           },
@@ -827,7 +867,7 @@ export async function sendMessageToAngler(
 
   const { data: inquiry } = await svc
     .from('inquiries')
-    .select('id, angler_name, angler_email, trip_id')
+    .select('id, angler_name, angler_email, trip_id, experience_page_id')
     .eq('id', inquiryId)
     .single()
 
@@ -856,7 +896,7 @@ export async function sendMessageToAngler(
     anglerName:  inquiry.angler_name,
     subject:     subject.trim(),
     body:        body.trim(),
-    tripTitle:   'Your trip',
+    tripTitle:   tripTitleOf(await getInquiryExperience(inquiry)),
     inquiryId,
   })
 
@@ -1518,7 +1558,7 @@ export async function sendOfferEmail(
 
   const { data: inquiry } = await svc
     .from('inquiries')
-    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, offer_token, offer_total_eur, offer_deposit_eur, offer_notes, status')
+    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, experience_page_id, assigned_guide_id, offer_token, offer_total_eur, offer_deposit_eur, offer_notes, status')
     .eq('id', inquiryId)
     .single()
 
@@ -1527,11 +1567,14 @@ export async function sendOfferEmail(
 
   const offerUrl = `${env.NEXT_PUBLIC_APP_URL}/offers/${inquiry.offer_token}`
 
+  const exp = await getInquiryExperience(inquiry)
+  const offerGuide = await resolveOfferGuide(inquiry.assigned_guide_id, exp)
+
   await sendRichOfferAnglerEmail({
     to:              inquiry.angler_email,
     anglerName:      inquiry.angler_name,
-    tripTitle:       'Your trip',
-    guideName:       'Your guide',
+    tripTitle:       tripTitleOf(exp),
+    guideName:       offerGuide?.full_name ?? GUIDE_NAME_FALLBACK,
     requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
     partySize:       inquiry.party_size ?? 1,
     offerTotalEur:   Number(inquiry.offer_total_eur ?? 0),
@@ -1706,14 +1749,14 @@ export async function getInquiryConfirmation(id: string): Promise<InquiryConfirm
 
   const { data: inquiry } = await svc
     .from('inquiries')
-    .select('angler_name, deposit_amount, deposit_paid_at, trip_id')
+    .select('angler_name, deposit_amount, deposit_paid_at, trip_id, experience_page_id')
     .eq('id', id)
     .single()
 
   if (inquiry == null) return null
 
   return {
-    tripTitle:         'Your trip',
+    tripTitle:         tripTitleOf(await getInquiryExperience(inquiry)),
     anglerName:        inquiry.angler_name,
     depositAmountEur:  Number(inquiry.deposit_amount ?? 0),
     depositPaidAt:     inquiry.deposit_paid_at ?? null,
