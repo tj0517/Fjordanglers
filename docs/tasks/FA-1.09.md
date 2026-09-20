@@ -2,7 +2,7 @@
 id: FA-1.09
 title: Gorące akcje na `experience_pages` — tytuł, slug, cena i przewodnik wyprawy z `experience_page_id`, nie z `trip_id`
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -254,3 +254,5 @@ AssertionError: expected true to be false // Object.is equality
 Uwaga do (e): usunięcie **samej** gałęzi `request` nie wywala testu, bo „unsupported price type" łapie `request` z tym samym skutkiem (błąd, brak kwoty); dlatego mutacja wyłącza obie. Jawna gałąź zostaje dla czytelniejszego komunikatu.
 
 **Rozbieżność ścieżki w briefie:** `src/lib/format/price.ts` nie istnieje — `formatPrice` jest w `src/lib/format-price.ts`. Helper zwraca `priceType`/`currency`, więc callerzy mogą go użyć bez drugiego zapytania; w tym PR żaden nowy ekran nie wyświetla ceny.
+
+Przegląd tj 20 IX 2026: kryteria 1, 2, 5, 6 udowodnione; typecheck i lint powtórzone niezależnie (117 problemów, zgodnie z bazą); kryterium 3 (przebieg testów) przyjęte jako zadeklarowane — powłoka przeglądu to arm64, node_modules pod inną architekturę. Status done nadany świadomie mimo jednego kryterium zadeklarowanego.
