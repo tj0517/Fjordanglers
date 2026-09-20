@@ -446,6 +446,9 @@ czasie: tylko z `main`, cherry-pick do `stage-1` w tym samym dniu.
 7. `inquiries.qualified` (FA-1.04), backfill zdarzeń (FA-1.05), typy (FA-1.06 done),
    martwy kod (FA-1.07/1.08), legacy edytor (FA-1.09), przegląd tygodniowy (FA-1.10),
    CI (FA-1.11).
+8. **UI panelu admina** (FA-1.15, dopisane 20 IX 2026) — design system na shadcn/ui w barwach
+   FA, lista zapytań, karta zapytania wg etapów flow (stepper ze statusem + pięć zakładek),
+   `/admin/weekly`. Tylko powierzchnia; ekrany analityczne z §6 nadal w etapie 6.
 
 Tag `v1-clean` po pushu.
 
