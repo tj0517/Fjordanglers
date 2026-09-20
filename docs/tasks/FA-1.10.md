@@ -2,7 +2,7 @@
 id: FA-1.10
 title: Tymczasowy przegląd tygodniowy w obecnym `/admin` — 8 liczb z dzisiejszych tabel, do wyrzucenia w etapie 6
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
