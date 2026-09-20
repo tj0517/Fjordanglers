@@ -43,6 +43,7 @@ justification, it goes in an ADR and this file links to it.
   using it, rename the local migration file to match the version from `list_migrations`,
   in the same PR. Default path to production is `supabase db push` done by tj — agents
   use `apply_migration` only when explicitly instructed and after a STOP-gate approval.
+  Before every `db push`: `docs/ops/db-push-checklist.md` (list the pending migrations first).
 - Column naming: `snake_case`, `*_at` for timestamps, `*_cents` for money, `*_id` for FKs,
   booleans as adjectives (`qualified`, `is_hidden` is legacy).
 - Money: `INTEGER` cents + `currency CHAR(3)`. Never `NUMERIC` euros in new columns.

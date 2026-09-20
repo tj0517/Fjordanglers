@@ -50,6 +50,7 @@ import { emitEvent } from '@/lib/events/emit'
 import { transition, TransitionError } from '@/lib/inquiries/state'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
+import { getGuidePhone } from '@/lib/guide-contacts'
 
 // ─── matchUnmatchedMessage ────────────────────────────────────────────────────
 
@@ -222,13 +223,19 @@ export async function sendMessageFromThread(
     counterpartId = inq.assigned_guide_id as string
     const { data: guide } = await svc
       .from('guides')
-      .select('invite_email, user_id, phone_e164')
+      .select('invite_email, user_id')
       .eq('id', counterpartId)
       .single()
     if (guide == null) return { success: false, error: 'Guide not found' }
 
     if (isWa) {
-      const phone = (guide as unknown as { phone_e164: string | null }).phone_e164
+      let phone: string | null
+      try {
+        phone = await getGuidePhone(counterpartId)
+      } catch {
+        // Already logged by getGuidePhone — a read failure is not "no number on file".
+        return { success: false, error: 'Could not read the guide contact — try again' }
+      }
       if (!phone) return { success: false, error: 'Guide has no WhatsApp number (phone_e164)' }
       to = phone
     } else {
