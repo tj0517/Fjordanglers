@@ -1,0 +1,74 @@
+Output format is aligned.
+=== 1. Commission to date (M1) — PLN
+ commission_pln | paid_deposits 
+----------------+---------------
+        2838.00 |             3
+(1 row)
+
+=== 2. Bookings in the month (M2) — this and previous Warsaw month
+  month  | count 
+---------+-------
+ 2026-09 |     2
+ 2026-07 |     1
+(2 rows)
+
+=== 3. Inquiries per ISO week, last 5 (Warsaw)
+   week   |   start    | inquiries 
+----------+------------+-----------
+ 2026-W38 | 2026-09-14 |         2
+ 2026-W37 | 2026-09-07 |         3
+ 2026-W36 | 2026-08-31 |         4
+ 2026-W35 | 2026-08-24 |         0
+ 2026-W34 | 2026-08-17 |         0
+(5 rows)
+
+=== 4. Qualified per ISO week (yes / no / unknown)
+   week   | yes | no | unknown | total 
+----------+-----+----+---------+-------
+ 2026-W38 |   1 |  0 |       1 |     2
+ 2026-W37 |   2 |  1 |       0 |     3
+ 2026-W36 |   1 |  1 |       2 |     4
+ 2026-W35 |   0 |  0 |       0 |     0
+ 2026-W34 |   0 |  0 |       0 |     0
+(5 rows)
+
+=== 5. Ad spend per ISO week — PLN straight from ad_campaigns.spend
+   week   | spend_pln 
+----------+-----------
+ 2026-W38 |         0
+ 2026-W37 |    300.00
+ 2026-W36 |    210.00
+ 2026-W35 |         0
+ 2026-W34 |         0
+(5 rows)
+
+ last_ad_date 
+--------------
+ 2026-09-09
+(1 row)
+
+=== 6. Cost per inquiry / per qualified — paid-attributed (gclid or utm_medium cpc/paid) and all
+   week   | spend  | paid_inq | paid_qual | paid_per_inq | paid_per_qual | all_inq | all_qual | all_per_inq | all_per_qual 
+----------+--------+----------+-----------+--------------+---------------+---------+----------+-------------+--------------
+ 2026-W38 |      0 |        2 |         1 |         0.00 |          0.00 |       2 |        1 |        0.00 |         0.00
+ 2026-W37 | 300.00 |        1 |         1 |       300.00 |        300.00 |       3 |        2 |      100.00 |       150.00
+ 2026-W36 | 210.00 |        0 |         0 |              |               |       4 |        1 |       52.50 |       210.00
+ 2026-W35 |      0 |        0 |         0 |              |               |       0 |        0 |             |             
+ 2026-W34 |      0 |        0 |         0 |              |               |       0 |        0 |             |             
+(5 rows)
+
+=== 7. Cumulative conversion (M7 approx.)
+ booked | inquiries | pct  
+--------+-----------+------
+      3 |        14 | 21.4
+(1 row)
+
+=== 8. Lost reasons, last 90 days (updated_at proxy)
+     reason     | count 
+----------------+-------
+ no_guide       |     1
+ price          |     1
+ went_elsewhere |     1
+ no code        |     1
+(4 rows)
+

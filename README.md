@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Local development against a local database
+
+`.env.local` points at **production**, so a bare `pnpm dev` reads and writes production data. Put the local stack's URL and keys (from `supabase status`) in `.env.development.local` — gitignored, and Next.js loads it before `.env.local` in dev mode — and start the stack with the `-x` list from `docs/05-agent-operations.md` §9. Don't start the dev server from a shell that exported `.env.local` (`dev.sh` does): variables already in the process environment beat every `.env*` file.
+
 ## Getting Started
 
 First, run the development server:
