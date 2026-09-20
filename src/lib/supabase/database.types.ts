@@ -852,6 +852,35 @@ export type Database = {
         }
         Relationships: []
       }
+      guide_contacts: {
+        Row: {
+          created_at: string
+          guide_id: string
+          phone_e164: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          guide_id: string
+          phone_e164?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          guide_id?: string
+          phone_e164?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_contacts_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: true
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guide_images: {
         Row: {
           created_at: string
@@ -1188,7 +1217,6 @@ export type Database = {
           landscape_url: string | null
           languages: string[]
           payment_ready: boolean | null
-          phone_e164: string | null
           photo_marketing_consent: boolean
           pricing_model: Database["public"]["Enums"]["pricing_model"]
           slug: string | null
@@ -1247,7 +1275,6 @@ export type Database = {
           landscape_url?: string | null
           languages?: string[]
           payment_ready?: boolean | null
-          phone_e164?: string | null
           photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           slug?: string | null
@@ -1306,7 +1333,6 @@ export type Database = {
           landscape_url?: string | null
           languages?: string[]
           payment_ready?: boolean | null
-          phone_e164?: string | null
           photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
           slug?: string | null
