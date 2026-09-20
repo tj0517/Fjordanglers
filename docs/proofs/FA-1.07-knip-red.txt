@@ -1,0 +1,49 @@
+# FA-1.07 — dowód na czerwono, powtórzony na FINALNYM drzewie (po usunięciu deleteAccount i czterech .tsx)
+# Przywrócony usunięty eksport: deleteAccount w src/actions/auth.ts (blok z 3177890~1). Stan zielony: 17 pozycji.
+
+## A. Lokalnie (niezacommitowane)
+$ pnpm knip   (exit 1)
+Unused files (1)
+src/app/admin/inquiries/[id]/OfferBuilderModal.tsx
+Unused exports (11)
+deleteAccount         function  src/actions/auth.ts:134:23                          
+NoGuideContactCard    function  src/components/inquiry/InquiryWidget.tsx:1021:17    
+TripOptionsAccordion  function  src/components/trips/TripOptionsAccordion.tsx:394:17
+CropPreview           function  src/components/ui/image-crop.tsx:15:17              
+body                            src/emails/_shared.tsx:56:14                        
+header                          src/emails/_shared.tsx:63:14                        
+container                       src/emails/_shared.tsx:68:14                        
+summaryRow                      src/emails/_shared.tsx:121:14                       
+summaryRowLast                  src/emails/_shared.tsx:125:14                       
+footerSmall                     src/emails/_shared.tsx:177:14                       
+default               function  src/emails/inquiry-agent-email.tsx:33:16            
+Unused exported types (5)
+TripDetails        type       src/app/admin/inquiries/[id]/TripSetupTab.tsx:8:15
+GuideFormDefaults  type       src/components/admin/create-guide-form.tsx:126:13 
+GuideEditData      type       src/components/admin/edit-guide-form.tsx:143:13   
+OptionTabConfig    interface  src/components/trips/ExperienceTabLayout.tsx:23:18
+HelpItem           type       src/components/ui/help-widget.tsx:6:13            
+Duplicate exports (1)
+InquiryAgentEmail|default  src/emails/inquiry-agent-email.tsx
+
+# Krok summary z ci.yml odpalony lokalnie na tym wyjściu: Pozycji łącznie: 18   (zielony: 17; +1 = deleteAccount)
+
+## B. W CI — commit-dowód 7d2afd8, Actions run 35514676838
+# job 'knip (informacyjny)': success (informacyjny z założenia); sam krok knip: 'Process completed with exit code 1' (continue-on-error). Log jobu:
+2026-09-20T13:50:52.7163394Z Unused files (1)
+2026-09-20T13:50:52.7206083Z Unused exports (11)
+2026-09-20T13:50:52.7207096Z deleteAccount         function  src/actions/auth.ts:134:23                          
+2026-09-20T13:50:52.7220269Z Unused exported types (5)
+2026-09-20T13:50:52.7226225Z Duplicate exports (1)
+2026-09-20T13:50:52.8193934Z ##[group]Run # Nagłówki kategorii mają postać "Unused exports (45)" — liczba w nawiasie to licznik.
+2026-09-20T13:50:52.8194951Z [36;1m# Nagłówki kategorii mają postać "Unused exports (45)" — liczba w nawiasie to licznik.[0m
+2026-09-20T13:50:52.8197648Z [36;1m  echo "**Pozycji łącznie: ${total:-0}**"[0m
+2026-09-20T13:50:52.8508261Z **Pozycji łącznie: 18**
+2026-09-20T13:50:52.8510313Z Unused files (1)
+2026-09-20T13:50:52.8511033Z Unused exports (11)
+2026-09-20T13:50:52.8512228Z Unused exported types (5)
+2026-09-20T13:50:52.8512880Z Duplicate exports (1)
+
+## C. Zielony punkt odniesienia — commit 6cd76bd, Actions run 35514407748: 'Pozycji łącznie: 17' (Unused files 1 / exports 10 / exported types 5 / Duplicate exports 1)
+
+## D. Wycofanie — commit 7ed68aa (git revert); git diff --quiet 6cd76bd HEAD -- src → identyczne

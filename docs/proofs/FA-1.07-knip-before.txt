@@ -1,0 +1,138 @@
+# FA-1.07 — knip, stan PRZED zmianami kodu
+# commit bazowy: 0b8f8d7 (origin/stage-1) + knip.json + package.json
+# polecenie: pnpm knip   (knip 6.37.0, 2026-09-20T10:51Z)
+
+$ knip
+Unused files (38)
+src/actions/stripe-connect.ts                          
+src/app/admin/ads/campaigns.ts                         
+src/app/admin/inquiries/[id]/AssignGuidePanel.tsx      
+src/app/admin/inquiries/[id]/InquiryActionPanel.tsx    
+src/app/admin/inquiries/[id]/OfferBuilderModal.tsx     
+src/app/admin/inquiries/[id]/SendDepositButton.tsx     
+src/app/admin/inquiries/InquiriesFilters.tsx           
+src/app/dashboard/account/BankAccountForm.tsx          
+src/app/dashboard/account/HideListingToggle.tsx        
+src/app/dashboard/account/PayoutSettingsCard.tsx       
+src/app/dashboard/account/StripeConnectButton.tsx      
+src/app/dashboard/account/StripeSyncButton.tsx         
+src/app/trips/filters-modal.tsx                        
+src/app/trips/filters.tsx                              
+src/app/trips/search-bar.tsx                           
+src/app/trips/sort-select.tsx                          
+src/components/analytics/fb-event.tsx                  
+src/components/analytics/ga-event.tsx                  
+src/components/dashboard/guide-onboarding.tsx          
+src/components/guide/GuideSubmissionForm.tsx           
+src/components/home/hero-search-bar.tsx                
+src/components/home/hero-search.tsx                    
+src/components/home/hero-video-cta.tsx                 
+src/components/home/home-faq.tsx                       
+src/components/home/parallax-layer.tsx                 
+src/components/home/search-widget.tsx                  
+src/components/trips/accommodation-gallery.tsx         
+src/components/trips/experience-location-map-client.tsx
+src/components/trips/experience-location-map.tsx       
+src/components/trips/ExperiencePageWithOptions.tsx     
+src/components/trips/species-card.tsx                  
+src/lib/experience-helpers.ts                          
+src/lib/fbq.ts                                         
+src/lib/field-encryption.ts                            
+src/lib/periods.ts                                     
+src/lib/stripe/connect.ts                              
+src/lib/stripe/webhooks.ts                             
+src/lib/utils.ts                                       
+Unused dependencies (8)
+@hookform/resolvers       package.json:20:6
+@stripe/stripe-js         package.json:23:6
+class-variance-authority  package.json:27:6
+clsx                      package.json:28:6
+cmdk                      package.json:29:6
+react-hook-form           package.json:38:6
+resend                    package.json:41:6
+tailwind-merge            package.json:44:6
+Unused devDependencies (1)
+@vitejs/plugin-react  package.json:56:6
+Unused exports (45)
+getCampaignDefs              function  src/actions/ads.ts:71:23                            
+deleteAccount                function  src/actions/auth.ts:134:23                          
+createGuideProfile           function  src/actions/dashboard.ts:86:23                      
+getGuidePhotos               function  src/actions/guide-photos.ts:43:23                   
+saveRichOffer                function  src/actions/inquiries.ts:405:23                     
+saveOffer                    function  src/actions/inquiries.ts:725:23                     
+sendMessageToAngler          function  src/actions/inquiries.ts:857:23                     
+logLeadMessage               function  src/actions/inquiries.ts:937:23                     
+bulkLogLeadMessages          function  src/actions/inquiries.ts:995:23                     
+createGuideSubmission        function  src/actions/submissions.ts:36:23                    
+NoGuideContactCard           function  src/components/inquiry/InquiryWidget.tsx:1021:17    
+TripOptionsAccordion         function  src/components/trips/TripOptionsAccordion.tsx:394:17
+CropPreview                  function  src/components/ui/image-crop.tsx:15:17              
+body                                   src/emails/_shared.tsx:56:14                        
+header                                 src/emails/_shared.tsx:63:14                        
+container                              src/emails/_shared.tsx:68:14                        
+summaryRow                             src/emails/_shared.tsx:121:14                       
+summaryRowLast                         src/emails/_shared.tsx:125:14                       
+footerSmall                            src/emails/_shared.tsx:177:14                       
+default                      function  src/emails/inquiry-agent-email.tsx:33:16            
+COUNTRY_CODE                           src/lib/countries.ts:18:14                          
+REGION_GROUPS                          src/lib/countries.ts:30:14                          
+COUNTRY_FLAG                           src/lib/countries.ts:80:14                          
+COUNTRY_OPTIONS                        src/lib/countries.ts:92:14                          
+getCountryFlag               function  src/lib/countries.ts:99:17                          
+sendGuideWelcomeEmail        function  src/lib/email.ts:123:23                             
+sendEmailVerificationEmail   function  src/lib/email.ts:138:23                             
+sendBookingConfirmedEmail    function  src/lib/email.ts:170:23                             
+sendInquiryRequestEmails     function  src/lib/email.ts:204:23                             
+sendBookingDeclinedEmail     function  src/lib/email.ts:255:23                             
+sendOfferSentEmail           function  src/lib/email.ts:272:23                             
+sendOfferAcceptedEmail       function  src/lib/email.ts:287:23                             
+sendOfferDeclinedEmail       function  src/lib/email.ts:302:23                             
+sendInquiryOfferAnglerEmail  function  src/lib/email.ts:428:23                             
+FISH_FILTER                            src/lib/fish.ts:40:14                               
+FISH_IMG_BY_PAGE_SLUG                  src/lib/fish.ts:106:14                              
+gtagEvent                    function  src/lib/gtag.ts:15:17                               
+trackQualifyLead             function  src/lib/gtag.ts:27:17                               
+trackPurchase                function  src/lib/gtag.ts:44:17                               
+getImageUrl                  function  src/lib/image.ts:17:17                              
+TERMINAL_STATUSES                      src/lib/inquiries/state.ts:72:14                    
+isTerminal                   function  src/lib/inquiries/state.ts:74:17                    
+normalisePhone               function  src/lib/inquiry-matcher.ts:19:17                    
+matchInquiryByPhone          function  src/lib/inquiry-matcher.ts:31:23                    
+INQUIRY_PRESET_FIELDS                  src/types/index.ts:61:14                            
+Unused exported types (33)
+CreateGuideProfileData     type       src/actions/dashboard.ts:23:13                    
+GuidePhotoRow              type       src/actions/guide-photos.ts:27:13                 
+LeadMessage                type       src/actions/inquiries.ts:916:13                   
+LogLeadMessageParams       interface  src/actions/inquiries.ts:928:18                   
+BulkLeadMessage            interface  src/actions/inquiries.ts:985:18                   
+OfferOptionInput           interface  src/actions/messages.ts:289:18                    
+SubmissionPayload          interface  src/actions/submissions.ts:15:18                  
+SubmissionResult           type       src/actions/submissions.ts:30:13                  
+TripDetails                type       src/app/admin/inquiries/[id]/TripSetupTab.tsx:8:15
+GuideFormDefaults          type       src/components/admin/create-guide-form.tsx:126:13 
+GuideEditData              type       src/components/admin/edit-guide-form.tsx:143:13   
+OptionTabConfig            interface  src/components/trips/ExperienceTabLayout.tsx:23:18
+HelpItem                   type       src/components/ui/help-widget.tsx:6:13            
+InquiryRequestEmailParams  type       src/lib/email.ts:183:13                           
+FishSpecies                type       src/lib/fish.ts:37:13                             
+InquirySource              type       src/lib/inquiries/create.ts:82:13                 
+Database                   type       src/lib/supabase/index.ts:14:15                   
+TablesInsert               type       src/lib/supabase/index.ts:14:33                   
+TablesUpdate               type       src/lib/supabase/index.ts:14:47                   
+LocationEntry              type       src/lib/supabase/queries.ts:171:13                
+GuideImageRow              type       src/lib/supabase/queries.ts:183:13                
+Profile                    type       src/types/index.ts:13:13                          
+Guide                      type       src/types/index.ts:14:13                          
+GuideStatus                type       src/types/index.ts:18:13                          
+PricingModel               type       src/types/index.ts:19:13                          
+UserRole                   type       src/types/index.ts:21:13                          
+Difficulty                 type       src/types/index.ts:34:13                          
+PaymentMethod              type       src/types/index.ts:37:13                          
+InquiryFieldStatus         type       src/types/index.ts:48:13                          
+InquiryPresetFieldDef      type       src/types/index.ts:51:13                          
+IcelandicFormConfig        type       src/types/index.ts:114:13                         
+InquiryCustomField         type       src/types/index.ts:120:13                         
+ActionResult               type       src/types/index.ts:132:13                         
+Duplicate exports (1)
+InquiryAgentEmail|default  src/emails/inquiry-agent-email.tsx
+[ELIFECYCLE] Command failed with exit code 1.

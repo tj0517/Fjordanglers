@@ -14,7 +14,7 @@
  * next/image resizes and converts to WebP automatically based on the
  * `sizes` attribute and the requesting device's viewport.
  */
-export function getImageUrl(
+function getImageUrl(
   rawUrl: string | null | undefined,
 ): string | null {
   if (rawUrl == null || rawUrl === '') return null

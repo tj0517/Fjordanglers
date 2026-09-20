@@ -34,34 +34,6 @@ export const FISH_ALL = [
   'Norway Redfish',
 ] as const
 
-export type FishSpecies = (typeof FISH_ALL)[number]
-
-/** Subset shown in search filters and filter bars */
-export const FISH_FILTER = [
-  'Salmon',
-  'Sea Trout',
-  'Brown Trout',
-  'Lake Trout',
-  'Arctic Char',
-  'Grayling',
-  'Whitefish',
-  'Pike',
-  'Perch',
-  'Zander',
-  'Burbot',
-  'Cod',
-  'Pollock',
-  'Brosme',
-  'Halibut',
-  'Wolffish',
-  'Sea Bass',
-  'Mackerel',
-  'Garfish',
-  'Norway Redfish',
-  'Flounder',
-  'Spiny Dogfish',
-] as const satisfies string[]
-
 /**
  * Maps any fish name (as stored in DB or used in UI) to its catalog image.
  * Fallback to closest visual match when a dedicated image doesn't exist yet.
@@ -100,35 +72,6 @@ export const FISH_IMG: Record<string, string> = {
   'Sea Bass':         '/fish_catalog/sea-bass.png',
   'Mackerel':         '/fish_catalog/mackrel.png',
   'Garfish':          '/fish_catalog/gar-fish.png',
-}
-
-/** Lookup image by page slug (used in /species/[slug]) */
-export const FISH_IMG_BY_PAGE_SLUG: Record<string, string> = {
-  salmon:         '/fish_catalog/salmon.png',
-  sea_trout:      '/fish_catalog/sea_trout.png',
-  brown_trout:    '/fish_catalog/brown_trout.png',
-  rainbow_trout:  '/fish_catalog/rainbow_trout.png',
-  lake_trout:     '/fish_catalog/lake-trout.png',
-  trout:          '/fish_catalog/trout.png',
-  arctic_char:    '/fish_catalog/char.png',
-  grayling:       '/fish_catalog/grayling.png',
-  whitefish:      '/fish_catalog/whitefish.png',
-  pike:           '/fish_catalog/pike.png',
-  perch:          '/fish_catalog/perch.png',
-  zander:         '/fish_catalog/zander.png',
-  cod:            '/fish_catalog/cod.png',
-  pollock:        '/fish_catalog/pollock.png',
-  haddock:        '/fish_catalog/cod.png',
-  ling:           '/fish_catalog/ling.png',
-  brosme:         '/fish_catalog/brossma.png',
-  halibut:        '/fish_catalog/halibut.png',
-  flounder:       '/fish_catalog/flounder.png',
-  wolffish:       '/fish_catalog/wolffish.png',
-  norway_redfish: '/fish_catalog/karmazyn.png',
-  spiny_dogfish:  '/fish_catalog/spine-dogfish.png',
-  sea_bass:       '/fish_catalog/sea-bass.png',
-  mackerel:       '/fish_catalog/mackrel.png',
-  garfish:        '/fish_catalog/gar-fish.png',
 }
 
 /** Species shown on the homepage slider */
