@@ -133,3 +133,30 @@ git diff --shortstat main
 ```
 
 ## Notatki z realizacji
+
+### Wykonanie — 20 IX 2026, PR #73 (gałąź `chore/dead-code-2-components-routes`)
+
+**Pełny raport jest w opisie PR-a: https://github.com/tj0517/Fjordanglers/pull/73**
+
+Skrót:
+- `pnpm knip` → **0** · `pnpm lint` → **0 błędów / 66 ostrzeżeń** (wejście 35 / 75) ·
+  `typecheck`, `test` (260/260), `build` zielone.
+- Bramki: `continue-on-error` zdjęte z kroków `lint` i `knip`; dowód na czerwono —
+  zielony [run 35522580463] → czerwony [run 35522844531] (`knip` + `check`) →
+  zielony po wycofaniu [run 35523248174].
+- **D2 rozstrzygnięte przez tj 20 IX: builder ofert usunięty mimo braku odpowiedników
+  w `offers`.** Skutek: `inquiries.offer_*` nie ma już pisarza, `/offers/[token]`
+  zostaje, ale nowych linków nie da się wygenerować do etapu 4 — wpis w
+  `deferred-tasks.md`.
+- **D1 rozszerzone:** zero obejmuje wszystkie 22 błędy `react-hooks` (nie 21 — taki
+  jest faktyczny odczyt). Bez degradacji reguł, bez nowych `eslint-disable`;
+  istniejący `disable` przy `Date.now()` też zniknął, bo `src/lib/availability-window.ts`
+  przeniósł odczyt zegara do warstwy danych (wiersz 113 `deferred-tasks.md` zamknięty).
+- Trasy: **nic nie usunięte.** Ghost routes z audytu 31 VIII już nie istniały;
+  czterej kandydaci bez linku z nawigacji (`guide-intake`, `inquiry/[id]/confirmed`,
+  `offers/[token]`, `reviews/[token]`) mają żywych producentów linków — tabela w PR.
+- **Nie wykonane:** ręczny przebieg UI czterech ścieżek — wymaga `pnpm dev`, a
+  `.env.local` trzyma produkcyjny klucz Resend. Lista kroków do przeklikania jest w PR.
+
+Dowody: `docs/proofs/FA-1.08-knip-before.txt`, `-knip-after.txt`,
+`-lint-before.txt`, `-lint-after.txt`, `-email-render-diff.txt`, `-ci-red.txt`.

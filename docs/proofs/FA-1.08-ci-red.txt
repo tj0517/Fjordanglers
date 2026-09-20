@@ -30,5 +30,14 @@ check  |  lint (bramka od FA-1.08)  |  2026-09-20T16:30:02.5120746Z ##[error]  1
 check  |  lint (bramka od FA-1.08)  |  2026-09-20T16:30:02.5232900Z ✖ 67 problems (1 error, 66 warnings)
 check  |  lint (bramka od FA-1.08)  |  2026-09-20T16:30:02.6502204Z ##[error]Process completed with exit code 1.
 
-## 4. Commit-dowód wycofany — patrz następny commit na gałęzi (revert).
-   Po wycofaniu oba joby wracają na zielono — run podany w raporcie PR.
+## 4. Commit-dowód wycofany (revert 41768f48)
+run 35523248174 — https://github.com/tj0517/Fjordanglers/actions/runs/35523248174
+wynik: success
+  check	success
+  sync	success
+  knip	success
+  db	success
+
+Czyli: ten sam workflow jest zielony na stanie paczki, czerwony na commicie z jedną
+nieużywaną rzeczą i jednym apostrofem, i znów zielony po wycofaniu. Bramka działa
+w obie strony, nie tylko "nie psuje".
