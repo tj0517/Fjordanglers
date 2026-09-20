@@ -409,18 +409,6 @@ describe('messages.ts', () => {
   })
 })
 
-// ─── offer-photos.ts ──────────────────────────────────────────────────────────
-
-describe('offer-photos.ts', () => {
-  describe('uploadOfferPhoto', () => {
-    it('throws UnauthorizedError when there is no session', async () => {
-      mockNoSession()
-      const { uploadOfferPhoto } = await import('@/actions/offer-photos')
-      await expect(uploadOfferPhoto(new FormData())).rejects.toBeInstanceOf(UnauthorizedError)
-    })
-  })
-})
-
 // ─── review-media.ts ──────────────────────────────────────────────────────────
 
 describe('review-media.ts', () => {
