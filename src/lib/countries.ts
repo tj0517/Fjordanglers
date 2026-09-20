@@ -14,21 +14,8 @@ export const COUNTRIES = [
 
 export type Country = (typeof COUNTRIES)[number]
 
-/** ISO 3166-1 alpha-2 codes — used for flag image URLs */
-const COUNTRY_CODE: Record<Country, string> = {
-  Norway:      'no',
-  Sweden:      'se',
-  Finland:     'fi',
-  Iceland:     'is',
-  Denmark:     'dk',
-  Argentina:   'ar',
-  Chile:       'cl',
-  'New Zealand': 'nz',
-}
-
 /** Region group used for footer tagline context and same-region cross-sell fallback. */
-const REGION_GROUPS = ['Nordic', 'Patagonia', 'New Zealand'] as const
-export type RegionGroup = (typeof REGION_GROUPS)[number]
+export type RegionGroup = 'Nordic' | 'Patagonia' | 'New Zealand'
 
 export const COUNTRY_REGION: Record<Country, RegionGroup> = {
   Norway:      'Nordic',

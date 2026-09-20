@@ -31,7 +31,6 @@ import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
 import {
   sendDepositLinkAnglerEmail,
-  sendInquiryMessageAnglerEmail,
   sendRichOfferAnglerEmail,
   sendGuideAssignedEmail,
 } from '@/lib/email'

@@ -4,7 +4,6 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth/guards'
 import {
-  listActiveCampaignDefs,
   upsertAdCampaignRows as libUpsertAdCampaignRows,
   type AdCampaignInsert,
   type CampaignDefRow,

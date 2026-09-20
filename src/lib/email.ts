@@ -20,7 +20,6 @@ import { DepositLinkAnglerEmail } from '@/emails/deposit-link-angler'
 import { DepositConfirmedAnglerEmail } from '@/emails/deposit-confirmed-angler'
 import { DepositConfirmedFaEmail } from '@/emails/deposit-confirmed-fa'
 import { BookingConfirmedGuideEmail } from '@/emails/booking-confirmed-guide'
-import { InquiryMessageAnglerEmail } from '@/emails/inquiry-message-angler'
 import { InquiryRichOfferAnglerEmail } from '@/emails/inquiry-rich-offer-angler'
 import { GuideAssignedEmail } from '@/emails/guide-assigned'
 import { InquiryAgentEmail } from '@/emails/inquiry-agent-email'
@@ -31,7 +30,6 @@ import type { DepositLinkAnglerEmailProps } from '@/emails/deposit-link-angler'
 import type { DepositConfirmedAnglerEmailProps } from '@/emails/deposit-confirmed-angler'
 import type { DepositConfirmedFaEmailProps } from '@/emails/deposit-confirmed-fa'
 import type { BookingConfirmedGuideEmailProps } from '@/emails/booking-confirmed-guide'
-import type { InquiryMessageAnglerEmailProps } from '@/emails/inquiry-message-angler'
 import type { InquiryRichOfferAnglerEmailProps } from '@/emails/inquiry-rich-offer-angler'
 import type { GuideAssignedEmailProps } from '@/emails/guide-assigned'
 import type { InquiryAgentEmailProps } from '@/emails/inquiry-agent-email'
@@ -204,22 +202,7 @@ export async function sendBookingConfirmedGuideEmail(
   })
 }
 
-// ─── FA → Angler direct messaging ────────────────────────────────────────────
-
-/**
- * Sent to the angler when FA sends them a direct message from the admin.
- * Subject is set by FA. Non-blocking: callers should fire-and-forget with .catch().
- */
-export async function sendInquiryMessageAnglerEmail(
-  props: { to: string } & InquiryMessageAnglerEmailProps,
-): Promise<void> {
-  const { to, ...templateProps } = props
-  await sendEmail({
-    to,
-    subject: templateProps.subject,
-    react:   createElement(InquiryMessageAnglerEmail, templateProps),
-  })
-}
+// ─── Guide assignment / offer / agent emails ─────────────────────────────────
 
 /**
  * Sent to the guide when FA assigns them to an inquiry.
