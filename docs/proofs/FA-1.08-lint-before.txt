@@ -1,0 +1,633 @@
+# FA-1.08 — pnpm lint, stan PRZED zmianami
+# commit bazowy: 6fba20e9 (origin/stage-1) · polecenie: pnpm lint (eslint 9, flat config) · 2026-09-20T15:47Z
+# 35 błędów, 75 ostrzeżeń. Poniżej pełny output, a na końcu skrót samych błędów.
+
+
+> fjordanglers@0.1.0 lint /Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers
+> eslint
+
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/scripts/proofs/fa-1.12-ui-walk.spec.ts
+  43:7   warning  'LOCAL_ANON_KEY' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  90:41  error    A `require()` style import is forbidden              @typescript-eslint/no-require-imports
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/scripts/proofs/stubs/next-cache.mts
+  1:32  warning  '_path' is defined but never used  @typescript-eslint/no-unused-vars
+  1:47  warning  '_type' is defined but never used  @typescript-eslint/no-unused-vars
+  2:31  warning  '_tag' is defined but never used   @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/scripts/proofs/stubs/next-headers.mts
+  19:3  warning  Unused eslint-disable directive (no problems were reported from 'no-var')
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/actions/__tests__/messages-thread.test.ts
+   48:23  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+  181:18  warning  '_data' is defined but never used           @typescript-eslint/no-unused-vars
+  185:18  warning  '_cols' is defined but never used           @typescript-eslint/no-unused-vars
+  185:33  warning  '_opts' is defined but never used           @typescript-eslint/no-unused-vars
+  243:18  warning  '_data' is defined but never used           @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/(public)/blog/page.tsx
+  14:7  warning  'CATEGORY_COLORS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/(public)/guides/[id]/page.tsx
+  7:10  warning  'heroFull' is defined but never used   @typescript-eslint/no-unused-vars
+  7:31  warning  'cardThumb' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/about/page.tsx
+  98:17   error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  98:167  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/ads/AdsCharts.tsx
+  27:10  warning  'plnFormatter' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/finances/FinancesClient.tsx
+  15:10  warning  'toMonthlyPln' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/forms/[id]/page.tsx
+  3:21  warning  'Copy' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/guides/[id]/page.tsx
+   22:10   warning  'SectionCard' is defined but never used                          @typescript-eslint/no-unused-vars
+  195:92   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  195:108  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/inquiries/[id]/GuideAttachmentTab.tsx
+  204:22  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/inquiries/[id]/GuideAttachmentTab.tsx:204:22
+  202 |   // Reset local "done" flag if parent un-assigns this guide
+  203 |   useEffect(() => {
+> 204 |     if (!isAssigned) setDone(false)
+      |                      ^^^^^^^ Avoid calling setState() directly within an effect
+  205 |   }, [isAssigned])
+  206 |
+  207 |   const blockedSet   = useMemo(() => new Set(guide.blockedDates), [guide.blockedDates])  react-hooks/set-state-in-effect
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/inquiries/[id]/OfferBuilder.tsx
+  141:43  warning  'tripTitle' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/inquiries/[id]/page.tsx
+  65:10  warning  'fmtDate' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/inquiries/unmatched/UnmatchedPageClient.tsx
+  61:7  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/api/webhooks/__tests__/email-inbound-unmatched.test.ts
+  48:18  warning  '_row' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/api/webhooks/__tests__/stripe-deposit.test.ts
+  171:14  warning  'table' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/dashboard/calendar/page.tsx
+  24:30  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/dashboard/calendar/page.tsx:24:30
+  22 |   // Fetch blocked dates for this guide (up to 1 year ahead)
+  23 |   const today     = new Date().toISOString().slice(0, 10)
+> 24 |   const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
+     |                              ^^^^^^^^^^ Cannot call impure function
+  25 |
+  26 |   const { data: rows } = await supabase
+  27 |     .from('guide_unavailable_dates')  react-hooks/purity
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/experiences/[slug]/page.tsx
+  132:32  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/experiences/[slug]/page.tsx:132:32
+  130 |   if (page.trip_id && page.guide_id) {
+  131 |     const today     = new Date().toISOString().slice(0, 10)
+> 132 |     const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
+      |                                ^^^^^^^^^^ Cannot call impure function
+  133 |
+  134 |     const { data: availRows } = await svc
+  135 |       .from('guide_unavailable_dates')  react-hooks/purity
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/forgot-password/page.tsx
+  117:40  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/guide-intake/[token]/IntakeFormClient.tsx
+  176:3  warning  'idx' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/cookie-policy/page.tsx
+   3:8   warning  'Image' is defined but never used       @typescript-eslint/no-unused-vars
+  51:10  warning  'BulletList' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/legal-notice/page.tsx
+  2:8  warning  'Link' is defined but never used   @typescript-eslint/no-unused-vars
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/privacy-policy/page.tsx
+  2:8  warning  'Link' is defined but never used   @typescript-eslint/no-unused-vars
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/terms-of-service/page.tsx
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/page.tsx
+  408:93  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/trips/exp-page-map-section.tsx
+  165:3  warning  'hovered' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/trips/exp-page-map-view.tsx
+  300:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/create-guide-form.tsx
+  619:91  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/edit-guide-form.tsx
+  689:91  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/image-upload.tsx
+  220:34  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `cfg.maxMB`, but the source dependencies were [currentUrl, onUpload]. Inferred different dependency than source.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/image-upload.tsx:220:34
+  218 |
+  219 |   // ── Core upload logic ──────────────────────────────────────────────────────
+> 220 |   const uploadFile = useCallback(async (file: File) => {
+      |                                  ^^^^^^^^^^^^^^^^^^^^^^^
+> 221 |     setError(null)
+      | ^^^^^^^^^^^^^^^^^^
+> 222 |
+      …
+      | ^^^^^^^^^^^^^^^^^^
+> 296 |     }
+      | ^^^^^^^^^^^^^^^^^^
+> 297 |   }, [currentUrl, onUpload])
+      | ^^^^ Could not preserve existing manual memoization
+  298 |
+  299 |   // ── Event handlers ─────────────────────────────────────────────────────────
+  300 |   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {     react-hooks/preserve-manual-memoization
+  220:34  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `cfg.compress`, but the source dependencies were [currentUrl, onUpload]. Inferred different dependency than source.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/image-upload.tsx:220:34
+  218 |
+  219 |   // ── Core upload logic ──────────────────────────────────────────────────────
+> 220 |   const uploadFile = useCallback(async (file: File) => {
+      |                                  ^^^^^^^^^^^^^^^^^^^^^^^
+> 221 |     setError(null)
+      | ^^^^^^^^^^^^^^^^^^
+> 222 |
+      …
+      | ^^^^^^^^^^^^^^^^^^
+> 296 |     }
+      | ^^^^^^^^^^^^^^^^^^
+> 297 |   }, [currentUrl, onUpload])
+      | ^^^^ Could not preserve existing manual memoization
+  298 |
+  299 |   // ── Event handlers ─────────────────────────────────────────────────────────
+  300 |   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {  react-hooks/preserve-manual-memoization
+  220:34  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `cfg.maxDim`, but the source dependencies were [currentUrl, onUpload]. Inferred different dependency than source.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/image-upload.tsx:220:34
+  218 |
+  219 |   // ── Core upload logic ──────────────────────────────────────────────────────
+> 220 |   const uploadFile = useCallback(async (file: File) => {
+      |                                  ^^^^^^^^^^^^^^^^^^^^^^^
+> 221 |     setError(null)
+      | ^^^^^^^^^^^^^^^^^^
+> 222 |
+      …
+      | ^^^^^^^^^^^^^^^^^^
+> 296 |     }
+      | ^^^^^^^^^^^^^^^^^^
+> 297 |   }, [currentUrl, onUpload])
+      | ^^^^ Could not preserve existing manual memoization
+  298 |
+  299 |   // ── Event handlers ─────────────────────────────────────────────────────────
+  300 |   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {    react-hooks/preserve-manual-memoization
+  220:34  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `cfg.quality`, but the source dependencies were [currentUrl, onUpload]. Inferred different dependency than source.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/image-upload.tsx:220:34
+  218 |
+  219 |   // ── Core upload logic ──────────────────────────────────────────────────────
+> 220 |   const uploadFile = useCallback(async (file: File) => {
+      |                                  ^^^^^^^^^^^^^^^^^^^^^^^
+> 221 |     setError(null)
+      | ^^^^^^^^^^^^^^^^^^
+> 222 |
+      …
+      | ^^^^^^^^^^^^^^^^^^
+> 296 |     }
+      | ^^^^^^^^^^^^^^^^^^
+> 297 |   }, [currentUrl, onUpload])
+      | ^^^^ Could not preserve existing manual memoization
+  298 |
+  299 |   // ── Event handlers ─────────────────────────────────────────────────────────
+  300 |   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {   react-hooks/preserve-manual-memoization
+  220:34  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `guideId`, but the source dependencies were [currentUrl, onUpload]. Inferred different dependency than source.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/image-upload.tsx:220:34
+  218 |
+  219 |   // ── Core upload logic ──────────────────────────────────────────────────────
+> 220 |   const uploadFile = useCallback(async (file: File) => {
+      |                                  ^^^^^^^^^^^^^^^^^^^^^^^
+> 221 |     setError(null)
+      | ^^^^^^^^^^^^^^^^^^
+> 222 |
+      …
+      | ^^^^^^^^^^^^^^^^^^
+> 296 |     }
+      | ^^^^^^^^^^^^^^^^^^
+> 297 |   }, [currentUrl, onUpload])
+      | ^^^^ Could not preserve existing manual memoization
+  298 |
+  299 |   // ── Event handlers ─────────────────────────────────────────────────────────
+  300 |   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {       react-hooks/preserve-manual-memoization
+  297:6   warning  React Hook useCallback has missing dependencies: 'cfg.compress', 'cfg.maxDim', 'cfg.maxMB', 'cfg.quality', and 'guideId'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-hooks/exhaustive-deps
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/link-guide-button.tsx
+  21:52  warning  'inviteEmail' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/TripBriefCard.tsx
+  39:33  warning  'anglerName' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/availability-calendar.tsx
+  49:25  error    Error: Expected the first argument to be an inline function expression
+
+Expected the first argument to be an inline function expression.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/availability-calendar.tsx:49:25
+  47 |
+  48 | export function AvailabilityCalendar({ initialDates }: Props) {
+> 49 |   const today = useMemo(todayISO, [])
+     |                         ^^^^^^^^ Expected the first argument to be an inline function expression
+  50 |   const now   = new Date()
+  51 |
+  52 |   // Calendar state  react-hooks/use-memo
+  85:9   warning  Expected an assignment or function call and instead saw an expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-expressions
+  93:5   warning  Expected an assignment or function call and instead saw an expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-unused-expressions
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/profile-edit-form.tsx
+  200:29  warning  'setGoogleUrl' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  201:29  warning  'setGoogleRating' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  202:29  warning  'setGoogleReviewCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/sidenav.tsx
+  29:7  warning  'contentItems' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/terms-gate.tsx
+  16:44  warning  'initialMarketingConsent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/home/bg-video.tsx
+  16:5  warning  Unused eslint-disable directive (no problems were reported from 'jsx-a11y/media-has-caption')
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/home/species-slider.tsx
+   86:10  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/home/species-slider.tsx:86:10
+  84 |       {/* ─── MOBILE: infinite scroll slider ────────────────────────── */}
+  85 |       <div className="md:hidden flex items-center gap-3">
+> 86 |         <ArrowBtn dir="left" />
+     |          ^^^^^^^^ This component is created during render
+  87 |         <div
+  88 |           ref={onMount}
+  89 |           onScroll={onScroll}
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/home/species-slider.tsx:36:20
+  34 |   }, [species.length])
+  35 |
+> 36 |   const ArrowBtn = ({ dir }: { dir: 'left' | 'right' }) => (
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     <button
+     | ^^^^^^^^^^^
+> 38 |       onClick={() => scroll(dir)}
+     …
+     | ^^^^^^^^^^^
+> 47 |     </button>
+     | ^^^^^^^^^^^
+> 48 |   )
+     | ^^^^ The component is created during render here
+  49 |
+  50 |   const Card = ({ s, i }: { s: SpeciesItem; i: number }) => (
+  51 |     <Link  react-hooks/static-components
+  119:10  error  Error: Cannot create components during render
+
+Components created during render will reset their state each time they are created. Declare components outside of render.
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/home/species-slider.tsx:119:10
+  117 |           ))}
+  118 |         </div>
+> 119 |         <ArrowBtn dir="right" />
+      |          ^^^^^^^^ This component is created during render
+  120 |       </div>
+  121 |     </>
+  122 |   )
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/home/species-slider.tsx:36:20
+  34 |   }, [species.length])
+  35 |
+> 36 |   const ArrowBtn = ({ dir }: { dir: 'left' | 'right' }) => (
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 37 |     <button
+     | ^^^^^^^^^^^
+> 38 |       onClick={() => scroll(dir)}
+     …
+     | ^^^^^^^^^^^
+> 47 |     </button>
+     | ^^^^^^^^^^^
+> 48 |   )
+     | ^^^^ The component is created during render here
+  49 |
+  50 |   const Card = ({ s, i }: { s: SpeciesItem; i: number }) => (
+  51 |     <Link                                                                                                                                            react-hooks/static-components
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/inquiry/InquiryWidget.tsx
+    83:10  warning  'buildBlockedSet' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-unused-vars
+    87:11  error    'cur' is never reassigned. Use 'const' instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             prefer-const
+   365:6   warning  React Hook useCallback has missing dependencies: 'country' and 'tripTitle'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             react-hooks/exhaustive-deps
+   398:17  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react/no-unescaped-entities
+   791:21  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/inquiry/InquiryWidget.tsx:791:21
+  789 |
+  790 |   // Needed for createPortal (SSR-safe)
+> 791 |   useEffect(() => { setMounted(true) }, [])
+      |                     ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  792 |
+  793 |   // Listen for 'open-inquiry-modal' dispatched by MobileInquiryBar or SeasonCalendarGrid
+  794 |   useEffect(() => {  react-hooks/set-state-in-effect
+   962:10  warning  'StaticMonthCalendar' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  1130:44  warning  '_tripId' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/layout/nav.tsx
+  173:3  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/layout/nav.tsx:173:3
+  171 |   const lastScrollY      = useRef(0)
+  172 |   const isExperienceRef  = useRef(isExperiencePage)
+> 173 |   isExperienceRef.current = isExperiencePage
+      |   ^^^^^^^^^^^^^^^^^^^^^^^ Cannot update ref during render
+  174 |
+  175 |   // Reset when leaving experience pages
+  176 |   useEffect(() => {  react-hooks/refs
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/trips/ExperienceTabLayout.tsx
+  123:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/trips/experience-gallery.tsx
+  266:12  warning  Unused eslint-disable directive (no problems were reported from 'jsx-a11y/click-events-have-key-events' or 'jsx-a11y/no-static-element-interactions')
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/trips/location-picker-map.tsx
+  133:6  warning  React Hook useEffect has missing dependencies: 'existingArea', 'map', and 'onAreaChange'. Either include them or remove the dependency array. If 'onAreaChange' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/cookie-banner.tsx
+  22:39  warning  '_gtmId' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  29:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/cookie-banner.tsx:29:7
+  27 |     const stored = localStorage.getItem(CONSENT_KEY)
+  28 |     if (stored === 'accepted') {
+> 29 |       setConsent('accepted')
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  30 |       grantConsent() // returning visitor — update immediately
+  31 |     } else if (stored === 'declined') {
+  32 |       setConsent('declined')  react-hooks/set-state-in-effect
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx
+  372:20  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:372:20
+  370 |   }
+  371 |
+> 372 |   const imgDispW = loaded && imgRef.current != null ? imgRef.current.naturalWidth * scale : 0
+      |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  373 |   const natW     = imgRef.current?.naturalWidth ?? 0
+  374 |
+  375 |   return (                                                                                                                                                                                                                                                                                                                               react-hooks/refs
+  372:30  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:372:30
+  370 |   }
+  371 |
+> 372 |   const imgDispW = loaded && imgRef.current != null ? imgRef.current.naturalWidth * scale : 0
+      |                              ^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  373 |   const natW     = imgRef.current?.naturalWidth ?? 0
+  374 |
+  375 |   return (                                                                                                                                                                                                                                                                                                                               react-hooks/refs
+  372:55  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:372:55
+  370 |   }
+  371 |
+> 372 |   const imgDispW = loaded && imgRef.current != null ? imgRef.current.naturalWidth * scale : 0
+      |                                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  373 |   const natW     = imgRef.current?.naturalWidth ?? 0
+  374 |
+  375 |   return (                                                                                                                                                                                                                                                                                                 react-hooks/refs
+  373:20  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:373:20
+  371 |
+  372 |   const imgDispW = loaded && imgRef.current != null ? imgRef.current.naturalWidth * scale : 0
+> 373 |   const natW     = imgRef.current?.naturalWidth ?? 0
+      |                    ^^^^^^^^^^^^^^ Cannot access ref value during render
+  374 |
+  375 |   return (
+  376 |     <div                                                                                                                                                                                                                                                                                                                                            react-hooks/refs
+  373:20  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:373:20
+  371 |
+  372 |   const imgDispW = loaded && imgRef.current != null ? imgRef.current.naturalWidth * scale : 0
+> 373 |   const natW     = imgRef.current?.naturalWidth ?? 0
+      |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Cannot access ref value during render
+  374 |
+  375 |   return (
+  376 |     <div                                                                                                                                                                                                                                                                                                                              react-hooks/refs
+  535:95  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:535:95
+  533 |
+  534 |             {previewMode === 'hero'
+> 535 |               ? <LiveHeroPreview    blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />
+      |                                                                                               ^^^^ Cannot access ref value during render
+  536 |               : previewMode === 'card'
+  537 |               ? <LiveCardPreview    blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />
+  538 |               : <LiveGalleryPreview blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />  react-hooks/refs
+  537:95  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:537:95
+  535 |               ? <LiveHeroPreview    blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />
+  536 |               : previewMode === 'card'
+> 537 |               ? <LiveCardPreview    blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />
+      |                                                                                               ^^^^ Cannot access ref value during render
+  538 |               : <LiveGalleryPreview blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />
+  539 |             }
+  540 |           </div>       react-hooks/refs
+  538:95  error  Error: Cannot access refs during render
+
+React refs are values that are not needed for rendering. Refs should only be accessed outside of render, such as in event handlers or effects. Accessing a ref value (the `current` property) during render can cause your component not to update as expected (https://react.dev/reference/react/useRef).
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/image-crop.tsx:538:95
+  536 |               : previewMode === 'card'
+  537 |               ? <LiveCardPreview    blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />
+> 538 |               : <LiveGalleryPreview blobUrl={blobUrl} tx={tx} ty={ty} scale={scale} naturalW={natW} aspect={aspect} />
+      |                                                                                               ^^^^ Cannot access ref value during render
+  539 |             }
+  540 |           </div>
+  541 |         )}                                                                                                                   react-hooks/refs
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/booking-confirmed-guide.tsx
+  2:56  warning  'labelCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:94  warning  'successBox' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/deposit-confirmed-angler.tsx
+  2:56  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/deposit-confirmed-fa.tsx
+  2:56  warning  'labelCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:94  warning  'successBox' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/deposit-link-angler.tsx
+  2:76  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:87  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/inquiry-received-angler.tsx
+  2:56  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/inquiry-received-fa.tsx
+  2:76  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:87  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/password-reset.tsx
+  55:72  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/channels/email.ts
+  55:19  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/channels/instagram.ts
+  20:19  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+  24:14  warning  '_params' is defined but never used         @typescript-eslint/no-unused-vars
+  31:16  warning  '_raw' is defined but never used            @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/events/emit.test.ts
+  9:10  warning  '_table' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/inquiries/qualified.test.ts
+  1:10  warning  'vi' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/inquiries/state.test.ts
+  55:16  warning  '_col' is defined but never used    @typescript-eslint/no-unused-vars
+  55:30  warning  '_val' is defined but never used    @typescript-eslint/no-unused-vars
+  60:16  warning  '_idCol' is defined but never used  @typescript-eslint/no-unused-vars
+  60:32  warning  '_id' is defined but never used     @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/whatsapp-bridge/poll-emails.mjs
+  8:65  error  Parsing error: Expression expected
+
+✖ 110 problems (35 errors, 75 warnings)
+  1 error and 4 warnings potentially fixable with the `--fix` option.
+
+ ELIFECYCLE  Command failed with exit code 1.
+
+================ SKRÓT: same błędy (severity=2) ================
+scripts/proofs/fa-1.12-ui-walk.spec.ts
+   90:41  @typescript-eslint/no-require-imports  A `require()` style import is forbidden.
+src/app/about/page.tsx
+   98:17  react/no-unescaped-entities  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.
+   98:167  react/no-unescaped-entities  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.
+src/app/admin/guides/[id]/page.tsx
+   195:92  react/no-unescaped-entities  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.
+   195:108  react/no-unescaped-entities  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`.
+src/app/admin/inquiries/[id]/GuideAttachmentTab.tsx
+   204:22  react-hooks/set-state-in-effect  Error: Calling setState synchronously within an effect can trigger cascading renders
+src/app/dashboard/calendar/page.tsx
+   24:30  react-hooks/purity  Error: Cannot call impure function during render
+src/app/experiences/[slug]/page.tsx
+   132:32  react-hooks/purity  Error: Cannot call impure function during render
+src/app/forgot-password/page.tsx
+   117:40  react/no-unescaped-entities  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+src/app/page.tsx
+   408:93  react/no-unescaped-entities  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+src/components/admin/create-guide-form.tsx
+   619:91  react/no-unescaped-entities  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+src/components/admin/edit-guide-form.tsx
+   689:91  react/no-unescaped-entities  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+src/components/admin/image-upload.tsx
+   220:34  react-hooks/preserve-manual-memoization  Compilation Skipped: Existing memoization could not be preserved
+   220:34  react-hooks/preserve-manual-memoization  Compilation Skipped: Existing memoization could not be preserved
+   220:34  react-hooks/preserve-manual-memoization  Compilation Skipped: Existing memoization could not be preserved
+   220:34  react-hooks/preserve-manual-memoization  Compilation Skipped: Existing memoization could not be preserved
+   220:34  react-hooks/preserve-manual-memoization  Compilation Skipped: Existing memoization could not be preserved
+src/components/dashboard/availability-calendar.tsx
+   49:25  react-hooks/use-memo  Error: Expected the first argument to be an inline function expression
+src/components/home/species-slider.tsx
+   86:10  react-hooks/static-components  Error: Cannot create components during render
+   119:10  react-hooks/static-components  Error: Cannot create components during render
+src/components/inquiry/InquiryWidget.tsx
+   87:11  prefer-const  'cur' is never reassigned. Use 'const' instead.
+   398:17  react/no-unescaped-entities  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+   791:21  react-hooks/set-state-in-effect  Error: Calling setState synchronously within an effect can trigger cascading renders
+src/components/layout/nav.tsx
+   173:3  react-hooks/refs  Error: Cannot access refs during render
+src/components/ui/cookie-banner.tsx
+   29:7  react-hooks/set-state-in-effect  Error: Calling setState synchronously within an effect can trigger cascading renders
+src/components/ui/image-crop.tsx
+   372:20  react-hooks/refs  Error: Cannot access refs during render
+   372:30  react-hooks/refs  Error: Cannot access refs during render
+   372:55  react-hooks/refs  Error: Cannot access refs during render
+   373:20  react-hooks/refs  Error: Cannot access refs during render
+   373:20  react-hooks/refs  Error: Cannot access refs during render
+   535:95  react-hooks/refs  Error: Cannot access refs during render
+   537:95  react-hooks/refs  Error: Cannot access refs during render
+   538:95  react-hooks/refs  Error: Cannot access refs during render
+src/emails/password-reset.tsx
+   55:72  react/no-unescaped-entities  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`.
+whatsapp-bridge/poll-emails.mjs
+   8:65  PARSE  Parsing error: Expression expected.
+TOTAL ERRORS 35

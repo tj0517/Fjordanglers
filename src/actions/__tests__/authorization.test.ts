@@ -41,7 +41,6 @@ vi.mock('@/lib/env', () => ({
 vi.mock('@/lib/email', () => ({
   sendDepositLinkAnglerEmail: vi.fn(),
   sendInquiryMessageAnglerEmail: vi.fn(),
-  sendRichOfferAnglerEmail: vi.fn(),
   sendGuideAssignedEmail: vi.fn(),
 }))
 
@@ -405,18 +404,6 @@ describe('messages.ts', () => {
       mockNoSession()
       const { matchUnmatchedMessage } = await import('@/actions/messages')
       await expect(matchUnmatchedMessage('msg-1', 'inq-1')).rejects.toBeInstanceOf(UnauthorizedError)
-    })
-  })
-})
-
-// ─── offer-photos.ts ──────────────────────────────────────────────────────────
-
-describe('offer-photos.ts', () => {
-  describe('uploadOfferPhoto', () => {
-    it('throws UnauthorizedError when there is no session', async () => {
-      mockNoSession()
-      const { uploadOfferPhoto } = await import('@/actions/offer-photos')
-      await expect(uploadOfferPhoto(new FormData())).rejects.toBeInstanceOf(UnauthorizedError)
     })
   })
 })

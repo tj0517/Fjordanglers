@@ -44,7 +44,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.05 | Backfill zdarzeń historycznych do `inquiry_events` — tylko ze źródeł, które audyt prod pokaże jako wiarygodne (`messages`, `deposit_paid_at`, `created_at`; `offer_sent_at` warunkowo) | L | opus | done | FA-1.03, FA-1.12 |
 | FA-1.06 | Typy mówią prawdę — regeneracja z baseline + usunięcie zapytań do tabel w `archive`. Raport rozbity na dwa PR-y: #11 (kod + raport) i `docs/fa-1.06-tail` (uzupełnienie D4, checklista po deployu, `FA-1.09.md`, reguła §8) — `fa-review` czyta oba | L | opus | done | FA-1.01 |
 | FA-1.07 | Wycięcie martwego kodu — paczka 1: `knip` w repo, actions + lib + webhooki, resztki Stripe Connect | M | sonnet | done | FA-1.06, FA-1.12 |
-| FA-1.08 | Wycięcie martwego kodu — paczka 2: komponenty i trasy, lint do zera, `knip`+`lint` blokują w CI | M | sonnet | todo | FA-1.07 |
+| FA-1.08 | Wycięcie martwego kodu — paczka 2: komponenty i trasy, lint do zera, `knip`+`lint` blokują w CI (trudność podniesiona do L po decyzji o pełnym zerze lintu; model Opus zatwierdzony przez tj 20 IX) | L | opus | done | FA-1.07 |
 | FA-1.09 | Gorące akcje na `experience_pages` — tytuł, slug, kraj, cena i przewodnik wyprawy z `experience_page_id`, fallback `trip_id` (zawężone 5 IX: legacy edytor usunięty w FA-1.06); fallback depozytu `sendDepositLink` tylko EUR | M | sonnet | done | FA-1.06 |
 | FA-1.10 | Tymczasowy przegląd tygodniowy `/admin/weekly` (8 liczb, do wyrzucenia w etapie 6); domyka kryteria 1 i 4 FA-1.04 | M | sonnet | done | FA-1.04, FA-1.05 |
 | FA-1.11 | CI: typecheck/lint/test/build, migracje na czysto, typy bez dryfu, `stage-1` zawiera `main` | M | sonnet | done | FA-1.01 |

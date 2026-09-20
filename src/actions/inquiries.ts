@@ -31,7 +31,6 @@ import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
 import {
   sendDepositLinkAnglerEmail,
-  sendRichOfferAnglerEmail,
   sendGuideAssignedEmail,
 } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
@@ -82,28 +81,6 @@ export interface OfferOptionInput {
   inclusions:   string[]
   schedule:     ScheduleEntry[]
   notes:        string | null
-}
-
-export interface RichOfferParams {
-  totalPriceEur: number
-  depositEur: number
-  notes: string | null
-  tripPlan: string | null
-  licenseInfo: string | null
-  licenseHeading: string | null
-  inclusions: string[]
-  questions: OfferQuestion[]
-  refundReason: string | null
-  photos: string[]
-  location: string | null
-  whatToBring: string[]
-  schedule: ScheduleEntry[]
-  locationLat: number | null
-  locationLng: number | null
-  locationZoom: number
-  locationGeoJson: object | null
-  /** Multi-option proposal. When provided, takes precedence over flat fields for display. */
-  options?: OfferOptionInput[]
 }
 
 export interface OfferPageData {
@@ -1099,142 +1076,6 @@ export async function saveGuideOfferResponse(
   return { success: true }
 }
 
-// ─── saveOfferDraft ───────────────────────────────────────────────────────────
-
-/**
- * Save a rich offer draft WITHOUT sending the email to the angler.
- * Used by FA to build + preview the offer before sending.
- * Does NOT set offer_sent_at — call sendOfferEmail() to send.
- */
-export async function saveOfferDraft(
-  inquiryId: string,
-  params: RichOfferParams,
-): Promise<ActionResult & { offerUrl?: string }> {
-  await requireAdmin()
-  const {
-    totalPriceEur, depositEur, notes,
-    tripPlan, licenseInfo, licenseHeading, inclusions,
-    questions, refundReason,
-    photos, location, whatToBring,
-    schedule, locationLat, locationLng, locationZoom, locationGeoJson,
-  } = params
-
-  if (!Number.isFinite(totalPriceEur) || totalPriceEur <= 0) {
-    return { success: false, error: 'Total price must be greater than €0' }
-  }
-  if (!Number.isFinite(depositEur) || depositEur < 0.5) {
-    return { success: false, error: 'Deposit must be at least €0.50' }
-  }
-  if (depositEur > totalPriceEur) {
-    return { success: false, error: 'Deposit cannot exceed the total trip price' }
-  }
-
-  const svc = createServiceClient()
-
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('id, status, offer_token')
-    .eq('id', inquiryId)
-    .single()
-
-  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
-
-  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
-    return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
-  }
-
-  // Reuse existing token if available, otherwise generate a new one
-  const token     = (inquiry.offer_token as string | null) ?? crypto.randomUUID().replace(/-/g, '')
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-  const offerUrl  = `${env.NEXT_PUBLIC_APP_URL}/offers/${token}`
-
-  const { error: updateError } = await svc
-    .from('inquiries')
-    .update({
-      offer_total_eur:         totalPriceEur,
-      offer_deposit_eur:       depositEur,
-      offer_notes:             notes?.trim() || null,
-      offer_trip_plan:         tripPlan?.trim() || null,
-      offer_license_info:      licenseInfo?.trim() || null,
-      offer_inclusions:        inclusions        as unknown as Json,
-      offer_questions:         questions         as unknown as Json,
-      offer_refund_reason:     refundReason?.trim() || null,
-      offer_photos:            photos            as unknown as Json,
-      offer_location:          location?.trim() || null,
-      offer_what_to_bring:     whatToBring       as unknown as Json,
-      offer_schedule:          schedule          as unknown as Json,
-      offer_license_heading:   licenseHeading?.trim() || null,
-      offer_location_lat:      locationLat,
-      offer_location_lng:      locationLng,
-      offer_location_zoom:     locationZoom,
-      offer_location_geojson:  locationGeoJson   as unknown as Json,
-      offer_options:           (params.options ?? null) as unknown as Json,
-      offer_token:             token,
-      offer_token_expires_at:  expiresAt,
-      // NOTE: offer_sent_at is intentionally NOT set here
-    })
-    .eq('id', inquiryId)
-
-  if (updateError != null) {
-    console.error('[saveOfferDraft] DB error:', updateError)
-    return { success: false, error: 'Failed to save offer draft' }
-  }
-
-  console.log(`[saveOfferDraft] Draft saved for inquiry ${inquiryId} — token ${token}`)
-  return { success: true, offerUrl }
-}
-
-// ─── sendOfferEmail ───────────────────────────────────────────────────────────
-
-/**
- * Send the offer email to the angler for an already-saved draft.
- * Sets offer_sent_at to now.
- */
-// TODO FA-1.08 — jedyny wołający: OfferBuilder.tsx (żywy); patrz deferred-tasks.md
-export async function sendOfferEmail(
-  inquiryId: string,
-): Promise<ActionResult & { offerUrl?: string }> {
-  await requireAdmin()
-  const svc = createServiceClient()
-
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, experience_page_id, assigned_guide_id, offer_token, offer_total_eur, offer_deposit_eur, offer_notes, status')
-    .eq('id', inquiryId)
-    .single()
-
-  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
-  if (inquiry.offer_token == null) return { success: false, error: 'No offer draft — save a draft first' }
-
-  const offerUrl = `${env.NEXT_PUBLIC_APP_URL}/offers/${inquiry.offer_token}`
-
-  const exp = await getInquiryExperience(inquiry)
-  const offerGuide = await resolveOfferGuide(inquiry.assigned_guide_id, exp)
-
-  await sendRichOfferAnglerEmail({
-    to:              inquiry.angler_email,
-    anglerName:      inquiry.angler_name,
-    tripTitle:       tripTitleOf(exp),
-    guideName:       offerGuide?.full_name ?? GUIDE_NAME_FALLBACK,
-    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
-    partySize:       inquiry.party_size ?? 1,
-    offerTotalEur:   Number(inquiry.offer_total_eur ?? 0),
-    offerDepositEur: Number(inquiry.offer_deposit_eur ?? 0),
-    notes:           inquiry.offer_notes ?? null,
-    offerUrl,
-    inquiryId,
-  })
-
-  await svc
-    .from('inquiries')
-    .update({ offer_sent_at: new Date().toISOString(), stage_reached: 'offer_sent' })
-    .eq('id', inquiryId)
-
-  console.log(`[sendOfferEmail] Offer email sent for inquiry ${inquiryId}`)
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  return { success: true, offerUrl }
-}
-
 // ─── acceptOffer ──────────────────────────────────────────────────────────────
 
 /**
@@ -1342,30 +1183,6 @@ export async function declineOffer(
   }
 
   console.log(`[declineOffer] Inquiry ${inquiry.id} declined by angler`)
-  return { success: true }
-}
-
-// ─── updateInquiryGuide ───────────────────────────────────────────────────────
-
-/**
- * FA overrides which guide is shown on the offer page.
- * Silently sets assigned_guide_id without sending any notification.
- * Pass null to revert to the trip's default guide.
- */
-export async function updateInquiryGuide(
-  inquiryId: string,
-  guideId: string | null,
-): Promise<ActionResult> {
-  await requireAdmin()
-  const svc = createServiceClient()
-  const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
-  const { error } = await svc
-    .from('inquiries')
-    .update({ assigned_guide_id: guideId, ...countryPatch })
-    .eq('id', inquiryId)
-  if (error != null) return { success: false, error: error.message }
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[updateInquiryGuide] Inquiry ${inquiryId} → guide ${guideId ?? '(default)'}`)
   return { success: true }
 }
 

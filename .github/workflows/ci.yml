@@ -84,21 +84,19 @@ jobs:
       - name: typecheck
         run: pnpm typecheck
 
-      # Lint NIE jest bramką, świadomie i tymczasowo: na `main` jest 40 błędów
-      # w plikach spoza jakiegokolwiek bieżącego zadania (`src/emails/*.tsx`,
-      # `whatsapp-bridge/poll-emails.mjs`) — patrz docs/deferred-tasks.md, wpis FA-1.03.
-      # Bramka postawiona dziś byłaby czerwona zawsze i niczego by nie chroniła.
-      # Po zamknięciu tamtego wpisu: usunąć `continue-on-error` i zwykły `run: pnpm lint`.
-      - name: lint (nie blokuje — deferred „lint czerwony na main")
+      # Lint JEST bramką od FA-1.08: paczka domknęła 35 błędów, które wisiały od
+      # FA-1.03 (`src/emails/*.tsx`, `whatsapp-bridge/poll-emails.mjs`, react-hooks),
+      # więc `pnpm lint` kończy zerem i nowy błąd nie ma jak wjechać na `stage-1`.
+      # Ostrzeżenia nie blokują — `eslint` kończy zerem, dopóki nie ma błędów.
+      - name: lint (bramka od FA-1.08)
         id: lint
-        continue-on-error: true
-        run: pnpm lint 2>&1 | tee lint.out
+        run: pnpm lint 2>&1 | tee lint.out; exit "${PIPESTATUS[0]}"
 
       - name: lint — wynik do summary
         if: always()
         run: |
           {
-            echo '### Lint (nie jest bramką)'
+            echo '### Lint (bramka od FA-1.08)'
             echo ''
             echo '```'
             tail -n 5 lint.out 2>/dev/null || echo 'brak wyjścia'
@@ -109,12 +107,12 @@ jobs:
         run: pnpm build
 
   # ───────────────────────────────────────────────────────────────────────────
-  # knip — martwy kod (FA-1.07). INFORMACYJNY: krok ma `continue-on-error`, więc job
-  # jest zielony nawet przy niezerowym wyniku; licznik ląduje w summary.
-  # Blokujący stanie się w FA-1.08, gdy licznik dojdzie do zera.
+  # knip — martwy kod. BRAMKA od FA-1.08: licznik doszedł do zera, więc krok nie ma
+  # już `continue-on-error` i każda nowa nieużywana pozycja czerwieni joba.
+  # Licznik nadal ląduje w summary.
   # ───────────────────────────────────────────────────────────────────────────
   knip:
-    name: knip (informacyjny)
+    name: knip
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -131,9 +129,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: knip (nie blokuje)
+      - name: knip (bramka od FA-1.08)
         id: knip
-        continue-on-error: true
         run: pnpm knip 2>&1 | tee knip.out; exit "${PIPESTATUS[0]}"
 
       - name: knip — licznik do summary
@@ -142,7 +139,7 @@ jobs:
           # Nagłówki kategorii mają postać "Unused exports (45)" — liczba w nawiasie to licznik.
           total=$(grep -oE '^[A-Za-z ]+ \([0-9]+\)$' knip.out 2>/dev/null | grep -oE '[0-9]+' | paste -sd+ - | bc || echo 0)
           {
-            echo '### knip — martwy kod (informacyjny)'
+            echo '### knip — martwy kod (bramka od FA-1.08)'
             echo ''
             echo "**Pozycji łącznie: ${total:-0}**"
             echo ''

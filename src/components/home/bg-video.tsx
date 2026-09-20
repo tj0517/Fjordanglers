@@ -13,7 +13,6 @@ export function BgVideo({ src, className }: { src: string; className?: string })
   }, [])
 
   return (
-    // eslint-disable-next-line jsx-a11y/media-has-caption
     <video
       ref={ref}
       autoPlay

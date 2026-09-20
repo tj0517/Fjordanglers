@@ -52,7 +52,7 @@ export function PasswordResetEmail({ resetUrl }: PasswordResetEmailProps) {
           {/* Security note */}
           <Section style={noteBox}>
             <Text style={noteText}>
-              This link expires in <strong>1 hour</strong>. If you didn't request a password
+              This link expires in <strong>1 hour</strong>. If you didn&apos;t request a password
               reset, you can safely ignore this email — your password will remain unchanged.
             </Text>
           </Section>

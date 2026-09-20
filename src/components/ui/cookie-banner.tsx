@@ -1,12 +1,54 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import Script from 'next/script'
 import Link from 'next/link'
 
 const CONSENT_KEY   = 'fa_cookie_consent'
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
 const CLARITY_ID    = process.env.NEXT_PUBLIC_CLARITY_ID
+
+/**
+ * Stored consent, read as an external store rather than copied into state by an
+ * effect (react-hooks/set-state-in-effect). 'unknown' is the server snapshot, so
+ * the banner is never part of the SSR HTML — exactly as before, when `visible`
+ * started false and an effect flipped it.
+ */
+type ConsentSnapshot = 'accepted' | 'declined' | 'none' | 'unknown'
+
+const CONSENT_CHANGED = 'fa:cookie-consent-changed'
+
+function subscribeConsent(onChange: () => void): () => void {
+  window.addEventListener('storage', onChange)
+  window.addEventListener(CONSENT_CHANGED, onChange)
+  return () => {
+    window.removeEventListener('storage', onChange)
+    window.removeEventListener(CONSENT_CHANGED, onChange)
+  }
+}
+
+function readConsent(): ConsentSnapshot {
+  try {
+    const stored = localStorage.getItem(CONSENT_KEY)
+    return stored === 'accepted' || stored === 'declined' ? stored : 'none'
+  } catch {
+    // Private mode / storage blocked — behave like a first-time visitor.
+    return 'none'
+  }
+}
+
+function serverConsent(): ConsentSnapshot {
+  return 'unknown'
+}
+
+function storeConsent(value: 'accepted' | 'declined') {
+  try {
+    localStorage.setItem(CONSENT_KEY, value)
+  } catch {
+    // Nothing persisted — the banner reappears on the next visit.
+  }
+  window.dispatchEvent(new Event(CONSENT_CHANGED))
+}
 
 function grantConsent() {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
@@ -20,33 +62,17 @@ function grantConsent() {
 }
 
 export function CookieBanner({ gtmId: _gtmId }: { gtmId: string }) {
-  const [consent, setConsent] = useState<'accepted' | 'declined' | null>(null)
-  const [visible, setVisible] = useState(false)
+  const consent = useSyncExternalStore(subscribeConsent, readConsent, serverConsent)
+  const visible = consent === 'none'
 
+  // Push the current consent to gtag — updating an external system, which is
+  // what an effect is for.
   useEffect(() => {
-    const stored = localStorage.getItem(CONSENT_KEY)
-    if (stored === 'accepted') {
-      setConsent('accepted')
-      grantConsent() // returning visitor — update immediately
-    } else if (stored === 'declined') {
-      setConsent('declined')
-    } else {
-      setVisible(true)
-    }
-  }, [])
+    if (consent === 'accepted') grantConsent()
+  }, [consent])
 
-  function accept() {
-    localStorage.setItem(CONSENT_KEY, 'accepted')
-    setConsent('accepted')
-    setVisible(false)
-    grantConsent()
-  }
-
-  function decline() {
-    localStorage.setItem(CONSENT_KEY, 'declined')
-    setConsent('declined')
-    setVisible(false)
-  }
+  function accept()  { storeConsent('accepted') }
+  function decline() { storeConsent('declined') }
 
   return (
     <>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useMemo, useEffect } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { assignGuideToInquiry, assignGuideSilently, setExternalOffer, unassignGuide } from '@/actions/inquiries'
@@ -196,13 +196,7 @@ function GuideCard({
   const [pending,         start]              = useTransition()
   const [unassignPending, startUnassign]      = useTransition()
   const [lastMode,        setLastMode]        = useState<'notify' | 'silent' | null>(null)
-  const [done,            setDone]            = useState(false)
   const [err,             setErr]             = useState<string | null>(null)
-
-  // Reset local "done" flag if parent un-assigns this guide
-  useEffect(() => {
-    if (!isAssigned) setDone(false)
-  }, [isAssigned])
 
   const blockedSet   = useMemo(() => new Set(guide.blockedDates), [guide.blockedDates])
   const conflicts    = requestedDates.filter(d => blockedSet.has(d))
@@ -225,7 +219,6 @@ function GuideCard({
       if (!res.success) {
         setErr(res.error ?? 'Failed to assign')
       } else {
-        setDone(true)
         onAssigned(guide.id)
       }
     })
@@ -354,11 +347,6 @@ function GuideCard({
                 {unassignPending ? '…' : 'Unassign'}
               </button>
             </>
-          ) : done ? (
-            <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl"
-              style={{ background: 'rgba(16,185,129,0.12)', color: '#065F46', border: '1px solid rgba(16,185,129,0.25)' }}>
-              ✓ {lastMode === 'silent' ? 'Linked' : 'Assigned'}
-            </span>
           ) : (
             <>
               <button

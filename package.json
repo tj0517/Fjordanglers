@@ -6,7 +6,7 @@
     "dev": "NODE_OPTIONS='--max-old-space-size=2048' next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --report-unused-disable-directives",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
     "test": "vitest",

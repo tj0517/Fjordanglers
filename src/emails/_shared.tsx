@@ -2,7 +2,8 @@
  * _shared.tsx — shared layout, styles, and helpers for all booking emails.
  *
  * Import EmailLayout as a wrapper component.
- * Import individual style constants as needed.
+ * Import individual style constants as needed — the ones only EmailLayout and
+ * DetailRows use stay module-private.
  */
 
 import {
@@ -53,19 +54,19 @@ export function EmailLayout({
 
 // ─── Shared styles ────────────────────────────────────────────────────────────
 
-export const body = {
+const body = {
   backgroundColor: '#F8FAFB',
   margin: 0,
   padding: 0,
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif',
 }
 
-export const header = {
+const header = {
   backgroundColor: '#0A2E4D',
   padding: '28px 40px',
 }
 
-export const container = {
+const container = {
   backgroundColor: '#FFFFFF',
   margin: '0 auto',
   maxWidth: '600px',
@@ -118,11 +119,11 @@ export const summaryBox = {
   margin: '24px 0',
 }
 
-export const summaryRow = {
+const summaryRow = {
   borderBottom: '1px solid #E5E7EB',
 }
 
-export const summaryRowLast = {}
+const summaryRowLast = {}
 
 export const labelCell = {
   color: '#6B7280',
@@ -174,7 +175,7 @@ export const hr = {
   margin: '32px 0 24px',
 }
 
-export const footerSmall = {
+const footerSmall = {
   color: '#9CA3AF',
   fontSize: '13px',
   textAlign: 'center' as const,

@@ -10,8 +10,8 @@ import { DashboardSidenav } from '@/components/dashboard/sidenav'
  *   1. Auth check — redirect to /login if unauthenticated.
  *   2. Admin accounts → redirect to /admin.
  *   3. If NO guides row yet → auto-create a minimal row (first dashboard visit after
- *      registration).  This replaces the old blocking GuideOnboarding wizard: guides
- *      now land directly in the dashboard and complete their profile via in-page banners.
+ *      registration).  There is no blocking onboarding step: guides land directly in
+ *      the dashboard and complete their profile via in-page banners.
  *   4. Render normal sidebar + page content.
  */
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

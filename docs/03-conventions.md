@@ -82,23 +82,25 @@ justification, it goes in an ADR and this file links to it.
 ## CI
 
 `.github/workflows/ci.yml` runs on every PR to `main` and to `stage-1`, and on push to
-`stage-1`. Three gating jobs — the exact names to require in branch protection are `check`,
-`db` and `sync` — plus an informational `knip` job (never required). No secrets: every value comes from the committed `.env.test` (local Supabase
+`stage-1`. Four gating jobs — the exact names to require in branch protection are `check`,
+`db`, `knip` and `sync`. `knip` became a gate in FA-1.08, when the dead-code count reached
+zero. No secrets: every value comes from the committed `.env.test` (local Supabase
 keys are deterministic, Stripe/Resend are placeholders), and `secrets.*` appears nowhere
 in the workflow.
 
 | job | when | what it proves | how to fix a red run |
 |---|---|---|---|
-| `check` | every PR + push to `stage-1` | `pnpm typecheck`, `pnpm build` pass; `pnpm test` runs in `db` | run the same command locally |
+| `check` | every PR + push to `stage-1` | `pnpm typecheck`, `pnpm lint` and `pnpm build` pass; `pnpm test` runs in `db` | run the same command locally |
 | `db` | PRs only | migrations apply to an empty database; `database.types.ts` matches the schema; tests pass against a fresh stack | see the three cases below |
-| `knip` | every PR + push to `stage-1` | informational: `pnpm knip` counts unused files, exports, types and dependencies; the count goes to the job summary (FA-1.07). Becomes a gate in FA-1.08, when it reaches zero | `pnpm knip` locally; fix the config, not with `// knip-ignore` |
+| `knip` | every PR + push to `stage-1` | `pnpm knip` reports zero unused files, exports, types, dependencies and duplicates. A gate since FA-1.08; the count still goes to the job summary | `pnpm knip` locally and delete what it names; fix the config, not with `// knip-ignore` |
 | `sync` | PRs to `stage-1` only | merging this PR leaves `main` an ancestor of `stage-1`, and the PR branch already contains `main` | `git merge origin/main` into whichever the error names |
 
-**Lint is deliberately not a gate** — `continue-on-error: true`, result in the job summary.
-`main` carries 40 errors in files no current task touches (`src/emails/*.tsx`,
-`whatsapp-bridge/poll-emails.mjs`); a gate today would be red forever and protect nothing.
-When the `docs/deferred-tasks.md` entry for it is closed, drop `continue-on-error` from the
-`lint` step. Until then the task criterion is "no worse than `main`", not "green".
+**Lint is a gate since FA-1.08.** The 35 errors that had been sitting on `main` since
+FA-1.03 are gone, so `pnpm lint` exits zero and the `lint` step in `check` no longer carries
+`continue-on-error`. The task criterion is "green", not "no worse than `main`". Warnings do
+not fail the build (66 remain, mostly `_`-prefixed unused parameters), but an unused
+`eslint-disable` does: the `lint` script runs with `--report-unused-disable-directives`, so
+a directive that stops being needed has to be deleted rather than left behind.
 
 Three ways `db` goes red, and the fix for each:
 

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AvailabilityCalendar } from '@/components/dashboard/availability-calendar'
+import { availabilityWindow } from '@/lib/availability-window'
 
 export const revalidate = 0
 
@@ -20,8 +21,7 @@ export default async function CalendarPage() {
   if (guide == null) redirect('/dashboard')
 
   // Fetch blocked dates for this guide (up to 1 year ahead)
-  const today     = new Date().toISOString().slice(0, 10)
-  const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
+  const { from: today, to: yearAhead } = availabilityWindow()
 
   const { data: rows } = await supabase
     .from('guide_unavailable_dates')

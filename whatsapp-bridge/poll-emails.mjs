@@ -1,16 +1,19 @@
-/**
- * FjordAnglers — Email Poller
- *
- * Runs import-emails.mjs on a schedule via PM2 cron.
- * Checks Zoho Mail every 5 minutes for new messages.
- *
- * Start with PM2:
- *   pm2 start poll-emails.mjs --name email-poller --cron "*/5 * * * *" --no-autorestart
- *   pm2 save
- *
- * The --no-autorestart flag is important: PM2 will restart it on the cron
- * schedule, not immediately after it exits.
- */
+// FjordAnglers — Email Poller
+//
+// Runs import-emails.mjs on a schedule via PM2 cron.
+// Checks Zoho Mail every 5 minutes for new messages.
+//
+// Start with PM2:
+//   pm2 start poll-emails.mjs --name email-poller --cron "*/5 * * * *" --no-autorestart
+//   pm2 save
+//
+// The --no-autorestart flag is important: PM2 will restart it on the cron
+// schedule, not immediately after it exits.
+//
+// The header is line comments, not a /* … */ block, on purpose: the cron
+// expression contains the block-comment terminator, which ended the comment
+// early and made the whole file a syntax error — `node --check` failed, so the
+// poller could never have started under PM2.
 
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
