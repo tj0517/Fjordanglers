@@ -19,7 +19,7 @@
  * CTA: "Send Inquiry" — NEVER "Book Now", "Reserve", or "Pay".
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, X, Minus, Plus, Loader2, Check, Mail } from 'lucide-react'
 import { trackFormStart, trackSubmitLeadForm } from '@/lib/gtag'
@@ -78,23 +78,6 @@ function fmtDateShort(iso: string): string {
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
     day: 'numeric', month: 'short',
   })
-}
-
-function buildBlockedSet(ranges: Array<{ date_start: string; date_end: string }>): Set<string> {
-  const set = new Set<string>()
-  for (const r of ranges) {
-    const end = new Date(r.date_end   + 'T12:00:00')
-    const cur = new Date(r.date_start + 'T12:00:00')
-    let safety = 0
-    while (cur <= end && safety < 365) {
-      set.add(
-        `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}-${String(cur.getDate()).padStart(2, '0')}`
-      )
-      cur.setDate(cur.getDate() + 1)
-      safety++
-    }
-  }
-  return set
 }
 
 // ─── InlineMultiCalendar ──────────────────────────────────────────────────────
@@ -771,6 +754,15 @@ function InquiryModal({
 
 // ─── InquiryWidget (compact card) ─────────────────────────────────────────────
 
+/**
+ * `false` on the server, `true` once the client has rendered — the SSR guard
+ * `createPortal` needs. A store with nothing to subscribe to says this without
+ * an effect that calls setState (react-hooks/set-state-in-effect).
+ */
+const subscribeNothing = () => () => {}
+const clientMounted    = () => true
+const serverMounted    = () => false
+
 export function InquiryWidget({
   tripId,
   experiencePageId,
@@ -784,11 +776,10 @@ export function InquiryWidget({
   country,
 }: InquiryWidgetProps) {
   const [isOpen,      setIsOpen]      = useState(false)
-  const [mounted,     setMounted]     = useState(false)
   const [initialMonth, setInitialMonth] = useState<{ year: number; month0: number } | null>(null)
 
   // Needed for createPortal (SSR-safe)
-  useEffect(() => { setMounted(true) }, [])
+  const mounted = useSyncExternalStore(subscribeNothing, clientMounted, serverMounted)
 
   // Listen for 'open-inquiry-modal' dispatched by MobileInquiryBar or SeasonCalendarGrid
   useEffect(() => {
@@ -954,65 +945,6 @@ export function InquiryWidget({
         document.body,
       )}
     </>
-  )
-}
-
-// ─── StaticMonthCalendar ──────────────────────────────────────────────────────
-
-function StaticMonthCalendar() {
-  const now         = new Date()
-  const year        = now.getFullYear()
-  const month       = now.getMonth()
-  const monthLabel  = now.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-  const firstDay    = new Date(year, month, 1).getDay()
-  const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const offset      = (firstDay + 6) % 7
-  const today       = now.getDate()
-
-  const cells: Array<number | null> = [
-    ...Array<null>(offset).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ]
-
-  return (
-    <div className="select-none px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-3 f-body"
-        style={{ color: 'rgba(255,255,255,0.3)' }}>
-        Availability
-      </p>
-      <p className="text-xs font-semibold f-body mb-2 text-center" style={{ color: 'rgba(255,255,255,0.35)' }}>
-        {monthLabel}
-      </p>
-      {/* Day headers */}
-      <div className="grid grid-cols-7 mb-1">
-        {['M','T','W','T','F','S','S'].map((d, i) => (
-          <div key={i} className="text-center f-body py-0.5"
-            style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.2)' }}>{d}</div>
-        ))}
-      </div>
-      {/* Days */}
-      <div className="grid grid-cols-7 gap-0.5">
-        {cells.map((day, i) => {
-          if (day == null) return <div key={`e-${i}`} />
-          const isToday = day === today
-          return (
-            <div key={day}
-              className="aspect-square flex items-center justify-center rounded-lg f-body"
-              style={{
-                fontSize:   '10px',
-                color:      isToday ? '#E67E50' : 'rgba(255,255,255,0.3)',
-                fontWeight: isToday ? '700' : '400',
-                background: isToday ? 'rgba(230,126,80,0.15)' : 'transparent',
-              }}>
-              {day}
-            </div>
-          )
-        })}
-      </div>
-      <p className="text-[10px] f-body mt-3 text-center" style={{ color: 'rgba(255,255,255,0.22)' }}>
-        Contact us to check availability
-      </p>
-    </div>
   )
 }
 

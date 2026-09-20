@@ -26,7 +26,8 @@ import { QualifiedChanger } from './QualifiedChanger'
 import type { QualifiedValue } from '@/lib/inquiries/qualified'
 import { RequestedDatesEditor } from './RequestedDatesEditor'
 import { DeleteInquiryButton } from './DeleteInquiryButton'
-import type { TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
+import type { TripDetails } from '@/actions/inquiries'
+import { availabilityWindow } from '@/lib/availability-window'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -59,12 +60,6 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtDate(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
-}
 
 function fmtDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-GB', {
@@ -196,10 +191,7 @@ export default async function AdminInquiryDetailPage({
 
   let countryGuides: GuideWithCalendar[] = []
   try {
-    const today     = new Date().toISOString().slice(0, 10)
-    // impure by design, patrz FA-1.15 — async Server Component, wartość liczona raz na żądanie
-    // eslint-disable-next-line react-hooks/purity
-    const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
+    const { from: today, to: yearAhead } = availabilityWindow()
 
     const { data: guideRows } = await svc
       .from('guides')
