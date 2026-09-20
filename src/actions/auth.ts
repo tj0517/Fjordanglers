@@ -129,6 +129,34 @@ export async function updatePassword(newPassword: string): Promise<{ error?: str
   }
 }
 
+// ─── Delete account ───────────────────────────────────────────────────────────
+
+export async function deleteAccount(): Promise<{ error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Not signed in.' }
+
+    const service = createServiceClient()
+
+    // Remove profile row (profiles.id has no ON DELETE CASCADE in our schema)
+    await service
+      .from('profiles')
+      .delete()
+      .eq('id', user.id)
+
+    const { error } = await service.auth.admin.deleteUser(user.id)
+    if (error) return { error: error.message }
+  } catch (err) {
+    console.error('[auth/deleteAccount] Unexpected error:', err)
+    return { error: 'An unexpected error occurred. Please try again.' }
+  }
+
+  // redirect() outside try/catch — in Next.js it throws a non-Error object
+  // ({ digest: 'NEXT_REDIRECT;...' }) that would be swallowed by a catch block.
+  redirect('/')
+}
+
 // ─── Reset password ───────────────────────────────────────────────────────────
 
 export async function resetPassword(email: string): Promise<AuthResult> {
