@@ -2,7 +2,7 @@
 id: FA-1.09
 title: Gorące akcje na `experience_pages` — tytuł, slug, cena i przewodnik wyprawy z `experience_page_id`, nie z `trip_id`
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
