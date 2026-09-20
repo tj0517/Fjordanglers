@@ -71,3 +71,44 @@ OK  src/emails/offer-sent-angler.tsx | names: OfferSentAnglerEmail=0 OfferSentAn
 
 ## runda 6 — szablon inquiry-message-angler (ostatni wołający: sendMessageToAngler)
 OK  src/emails/inquiry-message-angler.tsx | names: InquiryMessageAnglerEmail=0 InquiryMessageAnglerEmailProps=0  | specifier-grep: 0 | next-entry: no
+
+## runda 7 — cztery pliki .tsx zatrzymane w rundzie 3, zgoda tj 20 IX (drugie przejście): trafienia grepa cytowane DOSŁOWNIE
+# Powód zatrzymania: jedyne trafienia poza plikiem to komentarze w żywych .tsx. Poniżej pełne wyjście, żeby było widać, że to komentarze.
+# Polecenie: /usr/bin/grep -rn '<Nazwa>' src scripts next.config.ts     (stan przed usunięciem, commit 7c4019c)
+
+$ grep -rn "AssignGuidePanel" src scripts next.config.ts
+src/app/admin/inquiries/[id]/AssignGuidePanel.tsx:14:export function AssignGuidePanel({ inquiryId, currentAssignedGuideId, guides }: Props) {
+src/app/admin/inquiries/[id]/page.tsx:157:  // (AssignGuidePanel removed — guide assignment is now in the Guide Attachment tab)
+
+$ grep -rn "GuideOnboarding\|guide-onboarding" src scripts next.config.ts
+src/actions/dashboard.ts:6: * createGuideProfile → called from GuideOnboarding wizard (first login after registration)
+src/components/dashboard/guide-onboarding.tsx:4: * GuideOnboarding — shown in dashboard/layout when no guides row exists.
+src/components/dashboard/guide-onboarding.tsx:92:export default function GuideOnboarding({ defaultFullName }: { defaultFullName: string }) {
+src/app/dashboard/layout.tsx:13: *      registration).  This replaces the old blocking GuideOnboarding wizard: guides
+
+$ grep -rn "GuideSubmissionForm" src scripts next.config.ts
+src/components/guide/GuideSubmissionForm.tsx:4: * GuideSubmissionForm — simplified trip info intake for guides.
+src/components/guide/GuideSubmissionForm.tsx:97:// ─── GuideSubmissionForm ──────────────────────────────────────────────────────
+src/components/guide/GuideSubmissionForm.tsx:99:export default function GuideSubmissionForm() {
+src/app/admin/submissions/page.tsx:8: * Guides fill GuideSubmissionForm → creates guide_submissions row.
+
+$ grep -rn "ExperiencePageWithOptions" src scripts next.config.ts
+src/components/trips/ExperiencePageWithOptions.tsx:4: * ExperiencePageWithOptions
+src/components/trips/ExperiencePageWithOptions.tsx:19: *   <ExperiencePageWithOptions
+src/components/trips/ExperiencePageWithOptions.tsx:28: *   </ExperiencePageWithOptions>
+src/components/trips/ExperiencePageWithOptions.tsx:37:interface ExperiencePageWithOptionsProps {
+src/components/trips/ExperiencePageWithOptions.tsx:54:export function ExperiencePageWithOptions({
+src/components/trips/ExperiencePageWithOptions.tsx:69:}: ExperiencePageWithOptionsProps) {
+src/components/trips/TripOptionsAccordion.tsx:15: * - onSelect callback notifies parent (ExperiencePageWithOptions) of the
+
+# Werdykt: w każdym pliku trafienia poza nim samym to komentarze (page.tsx:157 '// (AssignGuidePanel removed …)', dashboard.ts:6 nagłówek JSDoc, dashboard/layout.tsx:13 komentarz,
+# admin/submissions/page.tsx:8 komentarz, TripOptionsAccordion.tsx:15 komentarz). Zero importów, zero next/dynamic, zero specifierów po stringu. Pliki nie są wejściami Next.
+
+## deleteAccount — decyzja tj 20 IX: usuwam. Dowód braku wołających (całe repo poza node_modules/.next/.git, ts/tsx/mts/mjs/js/json/sh):
+$ grep -rn "deleteAccount" . --include=*.ts --include=*.tsx --include=*.mts --include=*.mjs --include=*.js --include=*.json --include=*.sh --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=.git
+./src/actions/auth.ts:134:export async function deleteAccount(): Promise<{ error?: string }> {
+./src/actions/auth.ts:151:    console.error('[auth/deleteAccount] Unexpected error:', err)
+# = definicja + jej własny console.error. Brak trasy, testu i skryptu, które by ją wołały. docs/tasks/FA-0.06.md (zapis historyczny) nie edytowany.
+
+## campaigns.ts — dlaczego grep po basename był nieprzydatny (przyjęte przez tj 20 IX)
+OK  src/app/admin/ads/campaigns.ts | skrypt dowodowy trafiał w 2 miejsca: 'specifier-grep: 2' to importy '@/lib/ads/campaigns' w src/actions/ads.ts:11 (wtedy) i src/app/api/cron/sync-google-ads/route.ts:9 — INNY moduł o tej samej nazwie pliku (kolizja basename 'campaigns'), a 'Platform=58' to pospolite słowo w komentarzach i typach. Zastąpiłem precyzyjnym grepem ścieżki importu: grep -rn "admin/ads/campaigns\|from './campaigns'" src → 0 (w src/app/admin/ads/ żaden plik nie importuje './campaigns').

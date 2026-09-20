@@ -1186,11 +1186,11 @@ export async function saveOfferDraft(
 
 // ─── sendOfferEmail ───────────────────────────────────────────────────────────
 
-// TODO FA-1.08 — jedyny wołający: OfferBuilder.tsx (żywy)
 /**
  * Send the offer email to the angler for an already-saved draft.
  * Sets offer_sent_at to now.
  */
+// TODO FA-1.08 — jedyny wołający: OfferBuilder.tsx (żywy); patrz deferred-tasks.md
 export async function sendOfferEmail(
   inquiryId: string,
 ): Promise<ActionResult & { offerUrl?: string }> {
