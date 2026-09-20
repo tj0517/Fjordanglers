@@ -7,7 +7,7 @@
 #   2. plik typów rozjechany ze schematem           -> job `db`   (`gen types --local` + diff)
 #   3. `stage-1`, do którego nie trafił hotfix      -> job `sync` (`merge-base --is-ancestor`)
 #
-# Plus `check`: typecheck / lint / test / build.
+# Plus `check`: typecheck / lint / test / build, oraz `knip` (informacyjny, FA-1.07).
 #
 # ŻADEN SEKRET. Wszystkie wartości env pochodzą z commitowanego `.env.test`
 # (klucze lokalnego stacku Supabase są deterministyczne i identyczne u każdego,
@@ -107,6 +107,49 @@ jobs:
 
       - name: build
         run: pnpm build
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # knip — martwy kod (FA-1.07). INFORMACYJNY: krok ma `continue-on-error`, więc job
+  # jest zielony nawet przy niezerowym wyniku; licznik ląduje w summary.
+  # Blokujący stanie się w FA-1.08, gdy licznik dojdzie do zera.
+  # ───────────────────────────────────────────────────────────────────────────
+  knip:
+    name: knip (informacyjny)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: knip (nie blokuje)
+        id: knip
+        continue-on-error: true
+        run: pnpm knip 2>&1 | tee knip.out; exit "${PIPESTATUS[0]}"
+
+      - name: knip — licznik do summary
+        if: always()
+        run: |
+          # Nagłówki kategorii mają postać "Unused exports (45)" — liczba w nawiasie to licznik.
+          total=$(grep -oE '^[A-Za-z ]+ \([0-9]+\)$' knip.out 2>/dev/null | grep -oE '[0-9]+' | paste -sd+ - | bc || echo 0)
+          {
+            echo '### knip — martwy kod (informacyjny)'
+            echo ''
+            echo "**Pozycji łącznie: ${total:-0}**"
+            echo ''
+            echo '```'
+            grep -E '^[A-Za-z ]+ \([0-9]+\)$' knip.out 2>/dev/null || echo 'brak pozycji'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ───────────────────────────────────────────────────────────────────────────
   # db — migracje aplikują się na czysto, typy bez dryfu, testy na świeżym stacku
