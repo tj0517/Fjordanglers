@@ -405,7 +405,7 @@ export default async function HomePage() {
                   People you&apos;ll fish with.
                 </h2>
                 <p className="f-body mt-3 max-w-[400px]" style={{ fontSize: '15px', color: 'rgba(10,46,77,0.48)', lineHeight: 1.7 }}>
-                  We reached out cold or they found us. We list only the ones whose trips we'd actually book.
+                  We reached out cold or they found us. We list only the ones whose trips we&apos;d actually book.
                 </p>
               </div>
               <Link href="/guides" className="hidden md:block text-sm font-medium f-body hover:text-[#E67E50] transition-colors" style={{ color: 'rgba(10,46,77,0.38)' }}>

@@ -1,0 +1,21 @@
+# FA-1.08 — dowód: naprawa apostrofu w szablonie maila nie zmienia wyrenderowanego HTML
+# szablon: src/emails/password-reset.tsx (jedyny mail z błędem react/no-unescaped-entities na wejściu)
+# zmiana: "didn't" → "didn&apos;t" (linia 55)
+# metoda: @react-email/components render() przez vitest, ten sam props (resetUrl=…token=PROOF),
+#         raz przed zmianą, raz po; plik testowy usunięty po wykonaniu.
+# 2026-09-20T15:55Z
+
+$ diff password-reset-BEFORE.html password-reset-AFTER.html
+(brak wyjścia — pliki identyczne, exit 0)
+
+$ wc -c password-reset-BEFORE.html password-reset-AFTER.html
+    5588 password-reset-BEFORE.html
+    5588 password-reset-AFTER.html
+   11176 total
+
+$ shasum -a 256 …
+f9bc28a7bc459f6d867bb0037430c4f95b8e16e0f23c795a059da8d9d0074971  password-reset-BEFORE.html
+f9bc28a7bc459f6d867bb0037430c4f95b8e16e0f23c795a059da8d9d0074971  password-reset-AFTER.html
+
+# fragment wyrenderowany z naprawionej linii:
+This link expires in <strong>1 hour</strong>. If you didn&#x27;t request a password reset, you can safely ignore this email — your password 

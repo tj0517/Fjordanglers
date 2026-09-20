@@ -686,7 +686,7 @@ export default function EditGuideForm({ guide }: Props) {
         }}
       >
         <h3 className="text-[#0A2E4D] text-base font-bold f-display mb-1">Social Links</h3>
-        <p className="text-[#0A2E4D]/40 text-xs f-body mb-5">Optional — shown on the guide's public profile</p>
+        <p className="text-[#0A2E4D]/40 text-xs f-body mb-5">Optional — shown on the guide&apos;s public profile</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>

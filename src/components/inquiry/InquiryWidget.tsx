@@ -84,7 +84,7 @@ function buildBlockedSet(ranges: Array<{ date_start: string; date_end: string }>
   const set = new Set<string>()
   for (const r of ranges) {
     const end = new Date(r.date_end   + 'T12:00:00')
-    let   cur = new Date(r.date_start + 'T12:00:00')
+    const cur = new Date(r.date_start + 'T12:00:00')
     let safety = 0
     while (cur <= end && safety < 365) {
       set.add(
@@ -395,7 +395,7 @@ function InquiryModal({
               Message sent!
             </p>
             <p className="text-sm f-body leading-relaxed mb-6" style={{ color: 'rgba(10,46,77,0.55)' }}>
-              We've received your message.
+              We&apos;ve received your message.
               We&apos;ll be in touch within 24 hours.
             </p>
             <button

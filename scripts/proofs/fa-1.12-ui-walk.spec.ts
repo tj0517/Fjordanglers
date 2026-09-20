@@ -34,7 +34,7 @@
 
 import { test, expect }  from '@playwright/test'
 import { execSync }       from 'node:child_process'
-import { readFileSync }   from 'node:fs'
+import { readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { resolve }        from 'node:path'
 
 // ── Local-stack constants ──────────────────────────────────────────────────────
@@ -87,7 +87,6 @@ const OFFER_PRICE    = '3600'   // EUR
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function psql(sql: string): string {
-  const { writeFileSync, unlinkSync } = require('node:fs')
   const tmpFile = `/tmp/fa-1.12-ui-walk-${Date.now()}.sql`
   writeFileSync(tmpFile, sql)
   try {
