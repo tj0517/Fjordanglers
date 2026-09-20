@@ -150,6 +150,8 @@ git diff --shortstat main
 
 **Gałąź:** `chore/dead-code-1-actions-lib` (z `origin/stage-1` `0b8f8d7`; lokalny `stage-1` był nieaktualny) · **PR:** `--base stage-1` (decyzja tj 20 IX) · Sonnet 5, effort medium-high, M.
 
+**Merge:** w trakcie pracy `origin/stage-1` przesunął się o FA-1.10 (PR #69, `71bddf9`); zmergowałem go do gałęzi (jedyny konflikt: `docs/deferred-tasks.md`, oba końce dopisywały wiersze — zostawiłem oba). Po merge'u: knip **identyczny** z `-after.txt` (kod FA-1.10 nie wniósł żadnej pozycji), typecheck 0, lint 35 błędów, testy i build zielone.
+
 **Wynik w jednej linii:** knip 126 → 26 pozycji, zależności 9 → 0, `git diff --shortstat origin/stage-1`: **74 files changed, +1283 / −9357** (z tego `src`: +26 / −8568; lockfile + config + CI: +727 / −782; reszta to dokumenty i dowody). W `src/lib`, `src/app/api`, `src/types` **0 nieużywanych plików i 0 nieużywanych eksportów**. W `src/actions` zostaje 3 eksporty + 2 typy (kryterium dosłowne **niespełnione**, powody w „Not done").
 
 ### Done
@@ -230,8 +232,8 @@ Poza zakresem 1.07, ale w inwentarzu (`.tsx`): patrz punkt 4 (usunięte) i „No
 
 **17. `pnpm typecheck && pnpm test run && pnpm build`.**
 - `typecheck`: czysto (0 błędów).
-- `test run`: **22 pliki, 191 testów, wszystkie zielone**, przeciw odchudzonemu stackowi z §9 (`db`, `kong`, `rest`, `auth`; CLI `npx supabase@2.75.0`, bo lokalny `node_modules/supabase/bin` nie istnieje — patrz deferred). Stack zatrzymany i sprawdzony (`docker ps --filter label=…project=fjordanglers` → 0) **przed** buildem.
-- `build`: lokalnie z env z commitowanego `.env.test` (jak CI, bez sekretów), stack zatrzymany; wyjście zakończyło się tabelą tras (Next drukuje ją tylko po udanym buildzie). Kod wyjścia nie był przechwycony — **potwierdzeniem jest job `check` w CI** (patrz niżej).
+- `test run`: **25 plików, 251 testów, wszystkie zielone** (po merge'u `origin/stage-1` z FA-1.10; przed nim: 22 / 191), przeciw odchudzonemu stackowi z §9 (`db`, `kong`, `rest`, `auth`; CLI `npx supabase@2.75.0`, bo lokalny `node_modules/supabase/bin` nie istnieje — patrz deferred). Stack zatrzymany i sprawdzony (`docker ps --filter label=…project=fjordanglers` → 0) **przed** buildem.
+- `build`: lokalnie z env z commitowanego `.env.test` (jak CI, bez sekretów), stack zatrzymany, po merge'u: `next build` **exit 0**, `✓ Compiled successfully in 38.3s`. Job `check` w CI to drugie potwierdzenie (patrz niżej).
 
 **18. `git diff --shortstat origin/stage-1`:** w `src`: 61 plików, **+26 / −8568**; `package.json` + `pnpm-lock.yaml` + `knip.json` + `.github`: +727 / −782 (poddrzewo knipa vs poddrzewo 9 usuniętych zależności); razem z dokumentami i dowodami: patrz `Verification`.
 
@@ -301,8 +303,8 @@ $ grep -rn "stripe-connect\|handleAccountUpdated\|booking_fee" src | wc -l → 0
 $ grep -rn "field-encryption" src | wc -l                                   → 0
 $ grep -rn "sendOfferEmail" src   → inquiries.ts:1187 (nagłówek), :1194 (definicja + TODO FA-1.08), OfferBuilder.tsx:24,338
 $ pnpm typecheck                                                            → czysto
-$ pnpm test run                       → Test Files 22 passed (22) · Tests 191 passed (191)
-$ pnpm build                          → tabela tras (patrz pkt 17), CI `check` jako potwierdzenie
+$ pnpm test run                       → Test Files 25 passed (25) · Tests 251 passed (251)   [po merge'u stage-1]
+$ next build (env z .env.test)        → exit 0, ✓ Compiled successfully in 38.3s
 $ pnpm lint                           → 111 problems (35 errors, 76 warnings)   [przed: 117 / 40 / 77]
 $ pnpm exec eslint <16 dotkniętych plików>                                  → 0 errors, 0 warnings
 $ pnpm knip                           → Unused files (5) · exports (13) · exported types (7) · Duplicate exports (1)   [przed: 38 / 45 / 33 / 1, deps 9]
