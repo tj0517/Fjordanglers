@@ -286,7 +286,7 @@ export async function sendMessageFromThread(
 
 // ─── markAsGuideOffer ─────────────────────────────────────────────────────────
 
-export interface OfferOptionInput {
+interface OfferOptionInput {
   label:      string
   priceCents: number
   currency:   string

@@ -69,12 +69,6 @@ export const STATUS_MEANINGS: Record<InquiryStatus, string> = {
   cancelled:        'Terminal — called off',
 }
 
-export const TERMINAL_STATUSES: readonly InquiryStatus[] = ['completed', 'lost', 'cancelled']
-
-export function isTerminal(status: InquiryStatus): boolean {
-  return TERMINAL_STATUSES.includes(status)
-}
-
 // ─── Allowed transitions ──────────────────────────────────────────────────────
 
 /**

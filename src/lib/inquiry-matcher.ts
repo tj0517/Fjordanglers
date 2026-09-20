@@ -16,42 +16,12 @@ import { createServiceClient } from '@/lib/supabase/server'
  *   "48123456789"     → "+48123456789"  (Meta sends without +)
  *   "+48 123-456-789" → "+48123456789"
  */
-export function normalisePhone(raw: string): string {
+function normalisePhone(raw: string): string {
   // Remove all non-digit characters except leading +
   const stripped = raw.replace(/[^\d+]/g, '')
   // Ensure leading +
   if (stripped.startsWith('+')) return stripped
   return '+' + stripped
-}
-
-/**
- * Find the most recent non-cancelled inquiry matching the given phone number.
- * Returns the inquiry id or null if no match.
- */
-export async function matchInquiryByPhone(phone: string): Promise<string | null> {
-  const normalised = normalisePhone(phone)
-  const supabase = createServiceClient()
-
-  // Query with normalised phone — strip non-digits from DB value via replace
-  // We fetch recent inquiries and compare normalised values in JS to avoid
-  // DB-side function overhead.
-  const { data, error } = await supabase
-    .from('inquiries')
-    .select('id, angler_phone')
-    .not('status', 'in', '("cancelled","refunded")')
-    .not('angler_phone', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(500)
-
-  if (error || !data) return null
-
-  for (const row of data as Array<{ id: string; angler_phone: string | null }>) {
-    if (!row.angler_phone) continue
-    const normalised_db = normalisePhone(row.angler_phone)
-    if (normalised_db === normalised) return row.id
-  }
-
-  return null
 }
 
 // ─── matchInboundPhone ────────────────────────────────────────────────────────

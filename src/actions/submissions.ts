@@ -27,7 +27,7 @@ export interface SubmissionPayload {
   personal_note:    string | null
 }
 
-export type SubmissionResult =
+type SubmissionResult =
   | { success: true;  id: string }
   | { success: false; error: string }
 

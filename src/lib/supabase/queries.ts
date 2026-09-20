@@ -166,10 +166,6 @@ export async function getSpeciesCounts(): Promise<Record<string, number>> {
   )()
 }
 
-// ─── Locations ────────────────────────────────────────────────────────────────
-
-export type LocationEntry = { city: string; country: string }
-
 // ─── Guides ───────────────────────────────────────────────────────────────────
 
 export type GuideRow = Database['public']['Tables']['guides']['Row']
@@ -180,7 +176,7 @@ export type FeaturedGuide = Pick<
   'average_rating' | 'years_experience' | 'fish_expertise' | 'languages' | 'tagline'
 >
 
-export type GuideImageRow = Database['public']['Tables']['guide_images']['Row']
+type GuideImageRow = Database['public']['Tables']['guide_images']['Row']
 
 /** GuideRow extended with embedded gallery images (from guide_images table). */
 export type GuideWithImages = GuideRow & { images: GuideImageRow[] }

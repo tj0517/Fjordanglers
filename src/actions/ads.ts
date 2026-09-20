@@ -68,11 +68,6 @@ export async function getAdCampaignRows(
 
 // ─── Campaign Definition Actions ──────────────────────────────────────────────
 
-export async function getCampaignDefs(): Promise<CampaignDefRow[]> {
-  await requireAdmin()
-  return listActiveCampaignDefs()
-}
-
 export async function addCampaignDef(data: {
   key: string
   name: string
