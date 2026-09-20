@@ -2,7 +2,7 @@
 id: FA-1.10
 title: Tymczasowy przegląd tygodniowy w obecnym `/admin` — 8 liczb z dzisiejszych tabel, do wyrzucenia w etapie 6
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -256,3 +256,5 @@ red (a) USD usunięte z helpera              → 4 testy padają (wyżej), po pr
 red (b) tydzień po roku kalendarzowym       → 3 testy padają (wyżej), po przywróceniu 60/60
 ```
 Uwaga środowiskowa: zrzuty zrobiono Playwrightem z Chromium z cache; brakujące biblioteki systemowe (`libnss3`, `libnspr4`, `libasound2`) pobrane przez `apt-get download` + `dpkg -x` do katalogu tymczasowego sesji — bez `sudo` i bez zmian w systemie.
+
+**Werdykt tj (20 IX 2026): przyjęte, `done`.** Kryterium 2 zamknięte świadomie jako spełnione częściowo — wspólny helper i identyczna formuła: tak; równość liczb na obu ekranach: nie, bo `/admin/finances` filtruje wiersze po `status`, a `/admin/weekly` po `deposit_paid_at`. To jest decyzja tj (opcja A z 20 IX), nie brak agenta; poprawka zostaje wierszem w `docs/deferred-tasks.md`, bez osobnego pliku zadania — na produkcji `deposit_paid_at` jest dziś puste dla wszystkich 99 zapytań, więc oba ekrany pokażą ~0 do pierwszej wpłaty po stage-1. Kryterium 3 przyjęte z przesłanką nieodczytaną z produkcji (skala `ad_campaigns.spend`) — wiersz deferred. Kryterium 5 przyjęte w brzmieniu poprawionym przez agenta: 2026-12-31 i 2027-01-01 należą do tego samego ISO tygodnia 2026-W53, więc pierwotne brzmienie kryterium było błędne; przeliczenie potwierdzone w przeglądzie.
