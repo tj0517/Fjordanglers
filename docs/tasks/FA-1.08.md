@@ -157,6 +157,17 @@ Skrót:
   `offers/[token]`, `reviews/[token]`) mają żywych producentów linków — tabela w PR.
 - **Nie wykonane:** ręczny przebieg UI czterech ścieżek — wymaga `pnpm dev`, a
   `.env.local` trzyma produkcyjny klucz Resend. Lista kroków do przeklikania jest w PR.
+- **Jawna zmiana zachowania (jedyna w tej paczce, która kasuje widoczny element UI):**
+  w `GuideAttachmentTab.tsx` razem ze stanem `done` zniknęła plakietka
+  „✓ Assigned" / „✓ Linked", pokazywana na karcie przewodnika w oknie między sukcesem
+  akcji przypisania a odświeżeniem karty przez rodzica. Usunięta, bo jej gałąź renderuje
+  się wyłącznie przy `!isAssigned`, a `setDone(true)` i `onAssigned()` (czyli
+  `setAssignedGuideId`) trafiają do tego samego batcha Reacta — okno nigdy się nie
+  otwierało. `lastMode` **został**, bo napędza napisy przycisków („Assign & notify" /
+  „Link silently" i ich stany `…`) oraz plakietkę w gałęzi `isAssigned`.
+  Decyzja tj (20 IX): plakietki **nie przywracamy w tym PR** — wraca najwcześniej przy
+  przebudowie karty zapytania (etap 7), jeśli w ogóle.
+- **Status `review` do czasu przebiegu UI przez tj — jedyne niepokryte kryterium.**
 
 Dowody: `docs/proofs/FA-1.08-knip-before.txt`, `-knip-after.txt`,
 `-lint-before.txt`, `-lint-after.txt`, `-email-render-diff.txt`, `-ci-red.txt`.
