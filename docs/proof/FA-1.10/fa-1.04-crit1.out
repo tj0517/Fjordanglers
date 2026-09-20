@@ -1,0 +1,35 @@
+=== FA-1.04 criterion 1: qualified distribution
+ qualified | count 
+-----------+-------
+ no        |     2
+ unknown   |     8
+ yes       |     4
+(3 rows)
+
+=== priority distribution (NULL shown as (null))
+  priority  | count 
+------------+-------
+ (null)     |     7
+ high       |     3
+ medium     |     2
+ not_viable |     2
+(4 rows)
+
+=== trip_country distribution
+ trip_country | count 
+--------------+-------
+ (null)       |     8
+ Iceland      |     3
+ New Zealand  |     1
+ Norway       |     1
+ Spain        |     1
+(5 rows)
+
+=== rows satisfying O-10 (priority set, != not_viable, trip_country in COUNTRIES) vs qualified stored
+ qualified | rows | o10_says_yes | o10_says_no_not_viable 
+-----------+------+--------------+------------------------
+ no        |    2 |            0 |                      2
+ unknown   |    8 |            0 |                      0
+ yes       |    4 |            4 |                      0
+(3 rows)
+

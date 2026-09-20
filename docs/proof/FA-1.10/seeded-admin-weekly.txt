@@ -1,0 +1,55 @@
+FJORDANGLERS ADMIN · TEMPORARY SCREEN
+Weekly review
+Weeks are Monday–Sunday, Europe/Warsaw. Current week: 2026-W38 (2026-09-14 → 2026-09-20). Rates: 1 EUR = 4.3 PLN, 1 USD = 0.9 EUR (finance_settings).
+1. COMMISSION TO DATE · M1
+2838 zł of 80 000 zł · 3 paid deposits
+Sum of the deposit (offer_deposit_eur ?? deposit_amount ?? internal_commission_eur, USD converted) of inquiries with deposit_paid_at set, since 1 Jan 2026. Same formula as /admin/finances, but that page selects rows by status and can differ. Finances →
+2. BOOKINGS IN THE MONTH · M2
+2 in 2026-09 · 0 in 2026-08
+Inquiries whose deposit was paid (deposit_paid_at) in the calendar month. Finances →
+3. INQUIRIES PER WEEK · M5 NUMERATOR
+2 this week
+Week	From	Inquiries
+2026-W38	2026-09-14	2
+2026-W37	2026-09-07	3
+2026-W36	2026-08-31	4
+2026-W35	2026-08-24	0
+2026-W34	2026-08-17	0
+Inquiries created in the ISO week (created_at). Inquiries →
+4. QUALIFIED PER WEEK · M5
+1 qualified this week · 1 unknown
+Week	Yes	No	Unknown	Total
+2026-W38	1	0	1	2
+2026-W37	2	1	0	3
+2026-W36	1	1	2	4
+2026-W35	0	0	0	0
+2026-W34	0	0	0	0
+Inquiries with qualified = 'yes' (column, not events); 'unknown' shows how many are not yet assessed. Inquiries →
+5. AD SPEND · M6 NUMERATOR
+0,00 zł this week
+last sync (newest ad_campaigns row): 2026-09-09
+Week	From	Spend
+2026-W38	2026-09-14	0,00 zł
+2026-W37	2026-09-07	300,00 zł
+2026-W36	2026-08-31	210,00 zł
+2026-W35	2026-08-24	0,00 zł
+2026-W34	2026-08-17	0,00 zł
+Sum of ad_campaigns.spend per week. The column is already PLN (Google Ads account currency) — no conversion. Ads →
+6. COST PER INQUIRY / PER QUALIFIED · M6
+Week	Spend	Paid inq.	Paid qual.	Paid zł/inq.	Paid zł/qual.	All inq.	All qual.	All zł/inq.	All zł/qual.
+2026-W38	0,00 zł	2	1	0,00 zł	0,00 zł	2	1	0,00 zł	0,00 zł
+2026-W37	300,00 zł	1	1	300,00 zł	300,00 zł	3	2	100,00 zł	150,00 zł
+2026-W36	210,00 zł	0	0	—	—	4	1	52,50 zł	210,00 zł
+2026-W35	0,00 zł	0	0	—	—	0	0	—	—
+2026-W34	0,00 zł	0	0	—	—	0	0	—	—
+Ad spend of the week ÷ inquiries (÷ qualified) of the week. 'Paid' counts only inquiries with a gclid or utm_medium cpc/paid; 'all' counts every inquiry. Never taken from the Google Ads conversions column. Ads →
+7. CUMULATIVE CONVERSION · M7 APPROXIMATION
+21.4% 3 of 14
+Inquiries created since 1 Jan 2026 with a paid deposit ÷ all such inquiries. WARNING: this is a period ratio and understates conversion — winning inquiries have 60+ days of lead time. The correct cohort view arrives in stage 5 (M7). Inquiries →
+8. LOST REASONS · LAST 90 DAYS
+Reason	Count
+no_guide	1
+price	1
+went_elsewhere	1
+no code	1
+Inquiries with status 'lost' by lost_reason_code, last 90 days. There is no lost_at column, so updated_at stands in for the date it was lost. Inquiries →
