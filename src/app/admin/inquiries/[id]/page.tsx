@@ -200,7 +200,9 @@ export default async function AdminInquiryDetailPage({
   let countryGuides: GuideWithCalendar[] = []
   try {
     const today     = new Date().toISOString().slice(0, 10)
-    const yearAhead = new Date(new Date().getTime() + 366 * 86_400_000).toISOString().slice(0, 10)
+    // impure by design, patrz FA-1.15 — async Server Component, wartość liczona raz na żądanie
+    // eslint-disable-next-line react-hooks/purity
+    const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
     const { data: guideRows } = await svc
       .from('guides')
