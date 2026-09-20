@@ -1,0 +1,46 @@
+# FA-1.08 — dowód NA CZERWONO: test regresji zakładek pada na mapowaniu sprzed naprawy
+# regresja wprowadzona w tym PR-ze (commit 7bdd8739 → 493fab19), znaleziona przez tj przy przebiegu UI
+# 2026-09-20T18:24Z
+
+## Na czym polegał błąd
+ExperienceTabLayout przeszedł z `activeTab` w stanie na wartość wyliczaną z hasha URL-a.
+`switchTab` bierze hash z dwuelementowej tablicy TAB_HASHES = ['day-trip','multi-day'],
+więc dla idx >= 3 hash jest `undefined` → replaceState czyści hash → tabFromHash('')
+zwraca 0 → widok wraca na Overview i klik wygląda na martwy.
+Wyprawy z 1–2 opcjami działały dalej, dlatego ani CI, ani szybkie kliknięcie tego nie złapało.
+
+## Mapowanie sprzed naprawy, wierny port z ExperienceTabLayout.tsx @ 670d93f7
+const TAB_HASHES = ['day-trip', 'multi-day']
+hashForTab(idx)  = idx > 0 ? TAB_HASHES[idx - 1] ?? null : null
+tabFromHash(h,n) = h === 'day-trip'  && n > 0 ? 1
+                 : h === 'multi-day' && n > 1 ? 2
+                 : 0
+
+## $ pnpm test run src/lib/__tests__/experienceTabs.test.ts  (przeciw mapowaniu sprzed naprawy)
+   ✓ gives Overview no hash
+   ✓ keeps the historical names for tabs 1 and 2
+   × addresses every further tab as option-N
+   ✓ has no hash for a nonsensical index
+   ✓ every tab of an experience with 1 option(s) maps back to itself
+   ✓ every tab of an experience with 2 option(s) maps back to itself
+   × every tab of an experience with 3 option(s) maps back to itself
+   × every tab of an experience with 5 option(s) maps back to itself
+   ✓ rejects a tab the experience does not have
+   ✓ keeps multi-day off an experience with a single option
+   ✓ never answers with a tab beyond the option count
+   ✓ falls back to Overview
+   ✓ does not accept option-1 / option-2 — tabs 1 and 2 have their own names
+
+⎯⎯⎯ Failed Tests 3 ⎯⎯⎯
+AssertionError: expected null to be 'option-3' // Object.is equality
+AssertionError: expected null not to be null
+
+ Test Files  1 failed (1)
+      Tests  3 failed | 10 passed (13)
+
+Trzy padające testy to dokładnie granica błędu: 1 i 2 opcje przechodzą, 3 i 5 nie.
+
+## Po naprawie (src/lib/experience-tabs.ts w tym commicie)
+$ pnpm test run src/lib/__tests__/experienceTabs.test.ts
+ Test Files  1 passed (1)
+      Tests  13 passed (13)

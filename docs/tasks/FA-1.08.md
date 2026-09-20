@@ -169,5 +169,46 @@ Skrót:
   przebudowie karty zapytania (etap 7), jeśli w ogóle.
 - **Status `review` do czasu przebiegu UI przez tj — jedyne niepokryte kryterium.**
 
+### Regresja złapana przy przebiegu UI (tj, 20 IX 2026)
+
+**Co było zepsute.** Przeniesienie `activeTab` ze stanu na wartość liczoną z hasha URL-a
+(naprawa `react-hooks/set-state-in-effect` w `ExperienceTabLayout.tsx`) wprowadziło
+regresję: `switchTab` brał hash z dwuelementowej tablicy `TAB_HASHES =
+['day-trip','multi-day']`, więc dla `idx >= 3` hash wychodził `undefined`,
+`replaceState` czyścił hash, `tabFromHash('')` zwracał 0 i widok wracał na Overview —
+klik w trzecią i dalszą zakładkę wyglądał na martwy. Przed tą paczką `switchTab` wołał
+`setActiveTab(idx)` niezależnie od hasha, a dwuelementowy słownik ograniczał wyłącznie
+adres URL.
+
+**Kogo dotyczyło.** Wypraw z **trzema i więcej** opcjami. Z 1–2 opcjami działało dalej.
+tj ma w obrocie oferty z pięcioma opcjami, więc to nie był przypadek teoretyczny.
+
+**Dlaczego CI tego nie złapał.** Mapowanie zakładka ↔ hash siedziało w środku komponentu
+klienckiego, a repo nie ma renderu w testach (brak `jsdom`/`@testing-library`, patrz punkt
+o nieprzeprowadzonym przebiegu UI wyżej). `typecheck`, `lint`, `knip` i `build` są na to
+ślepe: kod jest poprawny typologicznie i kompiluje się bez zastrzeżeń. Złapał to dopiero
+człowiek klikający po stronie z pięcioma opcjami.
+
+**Co zrobiliśmy** (decyzja tj: rozszerzyć słownik hashy, nie cofać pliku):
+- `src/lib/experience-tabs.ts` — `hashForTab(idx)` i `tabFromHash(hash, optionCount)`
+  jako czyste funkcje bez importów Reacta. Zakładki 1 i 2 **zachowują** historyczne
+  `day-trip` i `multi-day` (adresy mogły trafić do maili i do indeksu), każda dalsza
+  dostaje `option-N`. `tabFromHash` kontroluje zakres: wynik nigdy nie przekracza
+  `optionCount`, a nieznany, pusty albo zniekształcony hash (`option-0`, `option-abc`,
+  `option-03`, `option-99` przy pięciu opcjach) daje 0.
+- `ExperienceTabLayout.tsx` — lokalne `TAB_HASHES` i lokalne `tabFromHash` usunięte,
+  `switchTab` liczy hash przez `hashForTab`. Reszta pliku (`useSyncExternalStore`,
+  `TAB_HASH_CHANGED`, reset przewijania) bez zmian — mechanizm był dobry, zły był słownik.
+- `src/lib/__tests__/experienceTabs.test.ts` — 13 testów bez renderu: round-trip dla 1, 2,
+  3 i 5 opcji, zakres, śmieci. **Dowód na czerwono:** ten sam test puszczony przeciw
+  mapowaniu sprzed naprawy pada na trzech przypadkach (`option-N`, round-trip dla 3 i dla
+  5 opcji) i przechodzi dla 1 i 2 opcji — czyli dokładnie na granicy błędu.
+  Pełny wynik: `docs/proofs/FA-1.08-tabs-red.txt`.
+
+Odrzucone świadomie: jednolite `#tab-N` (psuje istniejące `#day-trip`), slugi z etykiet
+(etykieta się zmienia, adres gnije, możliwe kolizje), cofnięcie pliku do stanu ze
+`stage-1` (wraca błąd lintu).
+
 Dowody: `docs/proofs/FA-1.08-knip-before.txt`, `-knip-after.txt`,
-`-lint-before.txt`, `-lint-after.txt`, `-email-render-diff.txt`, `-ci-red.txt`.
+`-lint-before.txt`, `-lint-after.txt`, `-email-render-diff.txt`, `-ci-red.txt`,
+`-tabs-red.txt`.

@@ -15,6 +15,7 @@ import { InquiryWidget } from '@/components/inquiry/InquiryWidget'
 import { OptionPanel } from '@/components/trips/TripOptionsAccordion'
 import type { TripOption } from '@/components/trips/TripOptionsAccordion'
 import type { FaqItem, SpeciesDetailItem } from '@/actions/experience-pages'
+import { hashForTab, tabFromHash } from '@/lib/experience-tabs'
 
 const STICKY_TOP = 112 // matches lg:top-28 = 7rem = 112px
 
@@ -42,8 +43,6 @@ interface ExperienceTabLayoutProps {
   country:           string
   children?:         React.ReactNode
 }
-
-const TAB_HASHES = ['day-trip', 'multi-day']
 
 /**
  * The active tab lives in the URL hash, so it is read as an external store
@@ -74,12 +73,6 @@ function readTabHash(): string {
 
 function serverTabHash(): string {
   return ''
-}
-
-function tabFromHash(hash: string, optionCount: number): number {
-  if (hash === 'day-trip'  && optionCount > 0) return 1
-  if (hash === 'multi-day' && optionCount > 1) return 2
-  return 0
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -149,7 +142,7 @@ export function ExperienceTabLayout({
   }, [activeTab])
 
   function switchTab(idx: number): void {
-    const hash = idx > 0 ? TAB_HASHES[idx - 1] : undefined
+    const hash = hashForTab(idx)
     window.history.replaceState(
       null, '',
       hash != null
