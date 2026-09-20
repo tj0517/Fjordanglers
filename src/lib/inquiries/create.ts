@@ -79,7 +79,7 @@ export function normalisePhoneForStorage(
   return s
 }
 
-export type InquirySource = 'web_form' | 'manual' | 'email' | 'whatsapp'
+type InquirySource = 'web_form' | 'manual' | 'email' | 'whatsapp'
 
 export interface CreateInquiryParams {
   tripId?:              string | null

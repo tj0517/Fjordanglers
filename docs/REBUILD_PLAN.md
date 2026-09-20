@@ -524,6 +524,8 @@ produkcji zostaje etap 0. `stage-1` idzie na produkcję jako paczka, gdy FA-1.03
 
 **Dopisek 19 IX.** Etap 1 wszedł na produkcję 19 IX 2026 (merge #60, SHA `9868956d`). Wdrożone zadania: FA-1.01, 1.02, 1.03, 1.06, 1.11, 1.12, 1.13. FA-1.13 jest wdrożone kodowo, ale nieaktywne do czasu odblokowania konta Meta (odwołanie złożone 18 IX 2026 w Account Quality). Wieczorem tego samego dnia paczka 2 (FA-1.04 + FA-1.05, PR #63, `db push` bez incydentu) — `inquiry_events` ma 785 wierszy (99 created + 684 messages + 1 offer + 1 webhook live), `qualified = unknown` dla 99 zapytań. Do następnego push zostają FA-1.07, 1.08, 1.09, 1.10, 1.14.
 
+**Dopisek 20 IX.** Ekran „przegląd tygodniowy” z tego punktu: zrobione w FA-1.10, `/admin/weekly`, do usunięcia w etapie 6.
+
 ---
 
 ## 10. Zasady na przyszłość

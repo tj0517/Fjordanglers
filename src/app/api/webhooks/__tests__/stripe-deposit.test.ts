@@ -47,8 +47,15 @@ vi.mock('@/lib/events/emit', () => ({
   EventError: class EventError extends Error {},
 }))
 
+vi.mock('@/lib/inquiries/experience-lookup', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/inquiries/experience-lookup')>()),
+  getInquiryExperience: vi.fn(),
+}))
+
 import { createServiceClient } from '@/lib/supabase/server'
 import { stripe } from '@/lib/stripe/client'
+import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
+import { sendDepositConfirmedAnglerEmail, sendDepositConfirmedFaEmail } from '@/lib/email'
 import { emitEvent } from '@/lib/events/emit'
 import { transition } from '@/lib/inquiries/state'
 
@@ -224,5 +231,84 @@ describe('stripe-deposit webhook — double call same session', () => {
     )
     expect(paymentReceivedCalls).toHaveLength(1)
     expect(vi.mocked(transition)).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('stripe-deposit webhook — trip title in the confirmation emails (FA-1.09)', () => {
+  async function runWebhook(sessionId: string) {
+    vi.mocked(createServiceClient).mockReturnValue({
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: async () => ({
+              data: {
+                id:                 'inq-title',
+                deposit_paid_at:    null,
+                angler_email:       'test@fjordanglers.com',
+                angler_name:        'Test',
+                angler_country:     'NO',
+                requested_dates:    [],
+                party_size:         1,
+                deposit_amount:     360,
+                trip_id:            null,
+                experience_page_id: 'page-1',
+                guide_id:           null,
+              },
+              error: null,
+            }),
+          }),
+        }),
+        update: () => ({ eq: () => ({ error: null }) }),
+        insert: () => ({ error: null }),
+      }),
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const session: Partial<Stripe.Checkout.Session> = {
+      id:             sessionId,
+      object:         'checkout.session',
+      payment_status: 'paid',
+      metadata:       { payment_type: 'inquiry_deposit', inquiry_id: 'inq-title' },
+    }
+    vi.mocked(stripe.webhooks.constructEvent).mockReturnValue({
+      id:   `evt_${sessionId}`,
+      type: 'checkout.session.completed',
+      data: { object: session },
+    } as unknown as Stripe.Event)
+
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    return POST(new NextRequest('http://localhost/api/webhooks/stripe-deposit', {
+      method:  'POST',
+      headers: { 'content-type': 'application/json', 'stripe-signature': 'test-sig' },
+      body:    JSON.stringify({ type: 'checkout.session.completed', data: { object: session } }),
+    }))
+  }
+
+  it('puts the resolved experience name into the angler and FA emails', async () => {
+    vi.mocked(getInquiryExperience).mockResolvedValue({
+      id: 'page-1', name: 'Salmon on the Laxá', slug: 's', country: 'Iceland',
+      guideId: null, priceFrom: 200, priceType: 'per_person', currency: 'EUR',
+    })
+
+    const res = await runWebhook('cs_test_title')
+
+    expect(res.status).toBe(200)
+    expect(getInquiryExperience).toHaveBeenCalledWith({ experience_page_id: 'page-1', trip_id: null })
+    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ tripTitle: 'Salmon on the Laxá' }),
+    )
+    expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ tripTitle: 'Salmon on the Laxá' }),
+    )
+  })
+
+  it('still returns 200 and sends the emails with the generic title when nothing resolves', async () => {
+    vi.mocked(getInquiryExperience).mockResolvedValue(null)
+
+    const res = await runWebhook('cs_test_title_null')
+
+    expect(res.status).toBe(200)
+    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ tripTitle: 'Your trip' }),
+    )
   })
 })

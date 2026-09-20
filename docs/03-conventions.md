@@ -43,6 +43,7 @@ justification, it goes in an ADR and this file links to it.
   using it, rename the local migration file to match the version from `list_migrations`,
   in the same PR. Default path to production is `supabase db push` done by tj — agents
   use `apply_migration` only when explicitly instructed and after a STOP-gate approval.
+  Before every `db push`: `docs/ops/db-push-checklist.md` (list the pending migrations first).
 - Column naming: `snake_case`, `*_at` for timestamps, `*_cents` for money, `*_id` for FKs,
   booleans as adjectives (`qualified`, `is_hidden` is legacy).
 - Money: `INTEGER` cents + `currency CHAR(3)`. Never `NUMERIC` euros in new columns.
@@ -81,8 +82,8 @@ justification, it goes in an ADR and this file links to it.
 ## CI
 
 `.github/workflows/ci.yml` runs on every PR to `main` and to `stage-1`, and on push to
-`stage-1`. Three jobs; the exact names to require in branch protection are `check`, `db`
-and `sync`. No secrets: every value comes from the committed `.env.test` (local Supabase
+`stage-1`. Three gating jobs — the exact names to require in branch protection are `check`,
+`db` and `sync` — plus an informational `knip` job (never required). No secrets: every value comes from the committed `.env.test` (local Supabase
 keys are deterministic, Stripe/Resend are placeholders), and `secrets.*` appears nowhere
 in the workflow.
 
@@ -90,6 +91,7 @@ in the workflow.
 |---|---|---|---|
 | `check` | every PR + push to `stage-1` | `pnpm typecheck`, `pnpm build` pass; `pnpm test` runs in `db` | run the same command locally |
 | `db` | PRs only | migrations apply to an empty database; `database.types.ts` matches the schema; tests pass against a fresh stack | see the three cases below |
+| `knip` | every PR + push to `stage-1` | informational: `pnpm knip` counts unused files, exports, types and dependencies; the count goes to the job summary (FA-1.07). Becomes a gate in FA-1.08, when it reaches zero | `pnpm knip` locally; fix the config, not with `// knip-ignore` |
 | `sync` | PRs to `stage-1` only | merging this PR leaves `main` an ancestor of `stage-1`, and the PR branch already contains `main` | `git merge origin/main` into whichever the error names |
 
 **Lint is deliberately not a gate** — `continue-on-error: true`, result in the job summary.

@@ -8,7 +8,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { env } from '@/lib/env'
+import { getGuidePhone } from '@/lib/guide-contacts'
 import { MessageComposer } from './MessageComposer'
 import { ThreadActionsPanel } from './ThreadActionsPanel'
 import type { OfferForPanel } from './ThreadActionsPanel'
@@ -179,10 +181,14 @@ export default async function AdminInquiryDetailPage({
     // Table not yet migrated — graceful fallback
   }
 
-  // `inquiries.trip_id` points at the archived legacy `experiences` table (FA-1.06):
-  // no trip title, list price, or trip country can be resolved from it any more.
-  const tripTitle: string | null = null
-  const tripLocationCountry: string | null = null
+  // Trip title and country come from the inquiry's experience_pages row
+  // (experience_page_id first, then trip_id). Null when it cannot be resolved.
+  const experience = await getInquiryExperience({
+    experience_page_id: inquiry.experience_page_id,
+    trip_id:            inquiry.trip_id,
+  })
+  const tripTitle: string | null = experience?.name ?? null
+  const tripLocationCountry: string | null = experience?.country ?? null
 
   // ── Fetch assigned guide (name + contact) ─────────────────────────────────
   const { data: guide } = inquiry.assigned_guide_id != null
@@ -194,6 +200,8 @@ export default async function AdminInquiryDetailPage({
   let countryGuides: GuideWithCalendar[] = []
   try {
     const today     = new Date().toISOString().slice(0, 10)
+    // impure by design, patrz FA-1.15 — async Server Component, wartość liczona raz na żądanie
+    // eslint-disable-next-line react-hooks/purity
     const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
 
     const { data: guideRows } = await svc
@@ -322,14 +330,7 @@ export default async function AdminInquiryDetailPage({
 
   try {
     if (inquiry.assigned_guide_id != null) {
-      const { data: guidePhoneRow } = await svc
-        .from('guides')
-        .select('phone_e164')
-        .eq('id', inquiry.assigned_guide_id)
-        .single()
-      guideHasPhone = Boolean(
-        (guidePhoneRow as unknown as { phone_e164: string | null } | null)?.phone_e164,
-      )
+      guideHasPhone = Boolean(await getGuidePhone(inquiry.assigned_guide_id))
     }
 
     const waInbounds = threadMessages.filter(

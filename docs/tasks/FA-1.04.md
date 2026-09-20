@@ -2,7 +2,7 @@
 id: FA-1.04
 title: inquiries.qualified — z klasyfikacji agenta, z korektą ręczną, unknown dla starych
 stage: 1
-status: done  # kryteria 1 i 4 ("Gotowe, gdy") odroczone do FA-1.10 — lokalny stack bez seed danych; patrz deferred-tasks.md
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -178,3 +178,4 @@ pnpm lint → 40 errors, 81 warnings — wszystkie pre-existing (FA-1.03: src/em
 - `inquiry-agent-round1.test.ts` — mock `insert()` zwracał plain object zamiast łańcucha; emitEvent wymaga `.select().single()`. Naprawione w tym PR.
 - Pre-existing failing test: `src/actions/__tests__/inquiryStatusDefault.test.ts` — „INSERT without status uses the default and returns new" — odpytuje żywy Supabase przez SDK i pada gdy stack jest wyłączony (ECONNREFUSED 127.0.0.1:54421); niesprawiony w FA-1.04, istnieje co najmniej od FA-1.03.
 
+**Kryteria 1 i 4 domknięte w FA-1.10** (lokalny stack + seed, SELECT-y w `docs/proof/FA-1.10/fa-1.04-crit1.out` i `fa-1.04-crit4.out`, raport w `docs/tasks/FA-1.10.md`).

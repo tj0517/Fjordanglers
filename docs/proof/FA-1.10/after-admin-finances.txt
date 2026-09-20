@@ -1,0 +1,55 @@
+FJORDANGLERS ADMIN
+Finances
+Monthly P&L · Ad spend from DB · Revenue from closed deals · Fixed costs
+EUR/PLN 4,30
+USD/EUR 0,90
+USD/PLN 3,87
+TOTAL REVENUE
+1548 zł
+€360.00
+TOTAL COSTS
+510 zł
+ads + fixed + manual
+NET P&L
++1038 zł
+revenue − all costs
+PIPELINE
+0 zł
+€0.00 · 0 open deals
+FIXED / MONTH
+0,00 zł
+0 active lines
+Monthly P&L
+Pipeline
+Fixed Costs
+EUR RATE
+1 EUR =
+PLN
+Apply
+Revenue converted at this rate · saved automatically
+MONTH	DEALS	REVENUEPLN	≈ EUR	POTENTIALPLN	AD SPENDPLN	FIXEDPLN	MANUALPLN	TOTAL COSTSPLN	NET P&LPLN
+Sep 2026
+	1	1548,00 zł	€360.00	—	360,00 zł	0,00 zł	
+—
+	360,00 zł	+1188,00 zł
+Aug 2026
+	—	—	—	—	150,00 zł	0,00 zł	
+—
+	150,00 zł	-150,00 zł
+Jul 2026
+	—	—	—	—	—	0,00 zł	
+—
+	0,00 zł	+0,00 zł
+Jun 2026
+	—	—	—	—	—	0,00 zł	
+—
+	0,00 zł	+0,00 zł
+May 2026
+	—	—	—	—	—	0,00 zł	
+—
+	0,00 zł	+0,00 zł
+Apr 2026
+	—	—	—	—	—	0,00 zł	
+—
+	0,00 zł	+0,00 zł
+Total	1	1548,00 zł	€360.00	—	510,00 zł	0,00 zł	0,00 zł	510,00 zł	+1038,00 zł

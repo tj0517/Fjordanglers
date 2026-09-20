@@ -20,6 +20,7 @@ import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEvent } from '@/lib/events/emit'
 import { transition } from '@/lib/inquiries/state'
+import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 import {
   sendDepositConfirmedAnglerEmail,
   sendDepositConfirmedFaEmail,
@@ -80,7 +81,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   // Idempotency: skip if already processed
   const { data: existing } = await svc
     .from('inquiries')
-    .select('id, deposit_paid_at, angler_email, angler_name, angler_country, requested_dates, party_size, deposit_amount, trip_id, guide_id')
+    .select('id, deposit_paid_at, angler_email, angler_name, angler_country, requested_dates, party_size, deposit_amount, trip_id, experience_page_id, guide_id')
     .eq('id', inquiryId)
     .single()
 
@@ -141,7 +142,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     ? await svc.from('guides').select('full_name, invite_email').eq('id', existing.guide_id).single()
     : { data: null }
 
-  const tripTitle        = 'Your trip'
+  // Runs after the payment is recorded; the lookup never throws, so a missing title
+  // can only fall back to the generic one, never fail the webhook.
+  const tripTitle        = tripTitleOf(await getInquiryExperience({
+    experience_page_id: existing.experience_page_id,
+    trip_id:            existing.trip_id,
+  }))
   const guideName        = guide?.full_name     ?? 'the guide'
   const guideEmail       = guide?.invite_email  ?? null
   const depositAmountEur = existing.deposit_amount ?? 0
