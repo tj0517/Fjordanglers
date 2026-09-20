@@ -2,7 +2,8 @@
 id: FA-1.13
 title: WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy
 stage: 1
-status: review
+status: blocked
+blocked_by_questions: [O-16]
 difficulty: L
 model: opus
 model_approved:
