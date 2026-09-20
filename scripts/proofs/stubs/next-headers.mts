@@ -16,7 +16,6 @@ export async function cookies() {
  * variable would then be set on one and read from the other.
  */
 declare global {
-  // eslint-disable-next-line no-var
   var __FA_PROOF_HEADERS__: Record<string, string> | undefined
 }
 

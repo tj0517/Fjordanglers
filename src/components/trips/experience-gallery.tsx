@@ -263,7 +263,6 @@ export function ExperienceGallery({ images, title, topMobile = false, square = f
             </button>
           )}
 
-          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
           <div onClick={e => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img

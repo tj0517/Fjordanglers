@@ -1,0 +1,7 @@
+# FA-1.08 — knip, stan PO zmianach (punkt stały)
+# commit kodu: 7bdd8739+ (working tree) · polecenie: pnpm knip · knip 6.37.0 · 2026-09-20T16:21Z
+
+$ pnpm knip
+
+(brak wyjścia — zero pozycji we wszystkich kategoriach: files, exports, types, dependencies, duplicates)
+exit code: 0

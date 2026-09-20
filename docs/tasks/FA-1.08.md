@@ -2,11 +2,11 @@
 id: FA-1.08
 title: Wycięcie martwego kodu — paczka 2: komponenty i trasy, lint do zera, `knip` i `lint` blokują w CI
 stage: 1
-status: todo
-difficulty: M
-model: sonnet
-model_approved:
-effort: medium-high
+status: review
+difficulty: L
+model: opus
+model_approved: opus by tj 2026-09-20
+effort: high
 agent: fa-core
 branch: chore/dead-code-2-components-routes
 depends_on: [FA-1.07]

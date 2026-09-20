@@ -9,7 +9,7 @@
  *   - Switching tabs resets inner scroll to top
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { InquiryWidget } from '@/components/inquiry/InquiryWidget'
 import { OptionPanel } from '@/components/trips/TripOptionsAccordion'
@@ -45,6 +45,43 @@ interface ExperienceTabLayoutProps {
 
 const TAB_HASHES = ['day-trip', 'multi-day']
 
+/**
+ * The active tab lives in the URL hash, so it is read as an external store
+ * rather than copied into state by an effect (react-hooks/set-state-in-effect).
+ * The server snapshot is empty, so SSR still renders the Overview tab and the
+ * real tab appears on the first client render — same as before, when an effect
+ * did it after hydration.
+ *
+ * `switchTab` uses `history.replaceState`, which fires neither `popstate` nor
+ * `hashchange`, so it announces the change itself on TAB_HASH_CHANGED.
+ */
+const TAB_HASH_CHANGED = 'fa:experience-tab-hash-changed'
+
+function subscribeTabHash(onChange: () => void): () => void {
+  window.addEventListener('popstate',        onChange)
+  window.addEventListener('hashchange',      onChange)
+  window.addEventListener(TAB_HASH_CHANGED,  onChange)
+  return () => {
+    window.removeEventListener('popstate',       onChange)
+    window.removeEventListener('hashchange',     onChange)
+    window.removeEventListener(TAB_HASH_CHANGED, onChange)
+  }
+}
+
+function readTabHash(): string {
+  return window.location.hash.slice(1)
+}
+
+function serverTabHash(): string {
+  return ''
+}
+
+function tabFromHash(hash: string, optionCount: number): number {
+  if (hash === 'day-trip'  && optionCount > 0) return 1
+  if (hash === 'multi-day' && optionCount > 1) return 2
+  return 0
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ExperienceTabLayout({
@@ -63,7 +100,8 @@ export function ExperienceTabLayout({
   country,
   children,
 }: ExperienceTabLayoutProps) {
-  const [activeTab,      setActiveTab]      = useState(0)
+  const tabHash   = useSyncExternalStore(subscribeTabHash, readTabHash, serverTabHash)
+  const activeTab = tabFromHash(tabHash, options.length)
   const [showScrollHint, setShowScrollHint] = useState(true)
   const contentRef = useRef<HTMLDivElement>(null)
   const cardRef    = useRef<HTMLDivElement>(null)
@@ -105,26 +143,12 @@ export function ExperienceTabLayout({
     }
   }, [])
 
+  // Changing tab — by click or by Back/Forward — resets the inner scroll.
   useEffect(() => {
-    function readHash(): number {
-      const hash = window.location.hash.slice(1)
-      if (hash === 'day-trip'  && options.length > 0) return 1
-      if (hash === 'multi-day' && options.length > 1) return 2
-      return 0
-    }
-    setActiveTab(readHash())
-
-    function onPopState() {
-      setActiveTab(readHash())
-      if (contentRef.current) contentRef.current.scrollTop = 0
-    }
-    window.addEventListener('popstate', onPopState)
-    return () => window.removeEventListener('popstate', onPopState)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.length])
+    if (contentRef.current) contentRef.current.scrollTop = 0
+  }, [activeTab])
 
   function switchTab(idx: number): void {
-    setActiveTab(idx)
     const hash = idx > 0 ? TAB_HASHES[idx - 1] : undefined
     window.history.replaceState(
       null, '',
@@ -132,7 +156,7 @@ export function ExperienceTabLayout({
         ? `${window.location.pathname}#${hash}`
         : window.location.pathname,
     )
-    if (contentRef.current) contentRef.current.scrollTop = 0
+    window.dispatchEvent(new Event(TAB_HASH_CHANGED))
     setShowScrollHint(true)
   }
 

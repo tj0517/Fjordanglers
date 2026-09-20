@@ -27,6 +27,11 @@ backlog. Notion holds the business plan, not the engineering tasks.
 (bramka `sync` w CI wymaga, żeby stage-1 zawierał HEAD main — bez tego check jest
 czerwony dla każdej gałęzi opartej na stage-1).
 
+**Bramka martwego kodu i lintu:** `pnpm knip` i `pnpm lint` blokują PR od FA-1.08 —
+oba kroki w `ci.yml` straciły `continue-on-error`, bo oba zeszły do zera. Nowy
+nieużywany eksport, nowy błąd lintu i nieużywana dyrektywa `eslint-disable`
+(skrypt `lint` ma `--report-unused-disable-directives`) czerwienią CI.
+
 ## 2. Models and effort
 
 Default model is set in `.claude/settings.json`. Subagents override in their frontmatter.
