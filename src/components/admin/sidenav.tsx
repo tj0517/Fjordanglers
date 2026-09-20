@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import {
-  LayoutDashboard, Users, Map, MessageSquare,
+  LayoutDashboard, Users, Map, MessageSquare, CalendarDays,
   Menu, X, ShieldCheck, BarChart2, Wallet, LogOut, TrendingUp, ClipboardList,
 } from 'lucide-react'
 import { signOut } from '@/actions/auth'
@@ -20,6 +20,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { label: 'Weekly',       href: '/admin/weekly',      icon: <CalendarDays size={16} strokeWidth={1.6} /> },
   { label: 'Overview',     href: '/admin',             icon: <LayoutDashboard size={16} strokeWidth={1.6} />, exact: true },
   { label: 'Guides',       href: '/admin/guides',      icon: <Users size={16} strokeWidth={1.6} /> },
   { label: 'Experiences',  href: '/admin/experiences', icon: <Map size={16} strokeWidth={1.6} /> },
