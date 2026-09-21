@@ -110,6 +110,16 @@ Szczegóły w opisie PR. Poniżej skrót.
 - 2 wpisy w `docs/deferred-tasks.md`
 - Demo lokalne — pełny lifecycle tsx proof; SQL i zdarzenie potwierdzone
 
+### Done (runda 3 — FA-1.14 review)
+- Promotion guard: UPDATE z pełnym WHERE `id AND inquiry_id AND channel AND counterpart AND status='draft'` + `.select('id')`; 0 wierszy → `DraftNotFoundError`; `send.ts` eksportuje klasę
+- Testy r3-1 (stale draftId) i r3-2 (mismatch channel/counterpart) RED→GREEN; łącznie 35 testów
+- `MessageComposer.tsx` czyści `draftId` przy zmianie `channel` lub `counterpart`
+- Reguła RESEND_DEV_FAKE: §10 w `docs/05-agent-operations.md`; guard w `demo-draft-lifecycle.mts`
+- Przyznanie rundy 2: wysyłka przez prawdziwe Resend na piotr@example.invalid (brak flagi)
+
+### Not done (runda 3)
+- Kryterium 2 przez UI (pkt 4): STOP — Playwright MCP CONNECTION_CLOSED, brak zrzutu ekranu
+
 ### Not done
 - Nic z zakresu.
 

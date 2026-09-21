@@ -231,3 +231,33 @@ docker ps --filter label=com.supabase.cli.project=fjordanglers -q | wc -l    # m
 Uwaga przy takich sprawdzeniach: `grep` w powłoce agenta bywa funkcją opakowującą
 narzędzie, które **pomija pliki ignorowane przez git**, więc „brak trafień" potrafi być
 fałszywy. Do audytu używaj `/usr/bin/grep`.
+
+## 10. Lokalne dema i dowody działania (.fa-proofs/)
+
+**Dema nigdy przez prawdziwego dostawcę. Decyzja tj (21 IX).**
+
+Każdy skrypt w `.fa-proofs/` musi:
+1. Przerywać na starcie, gdy wymagana flaga fake nie jest ustawiona.
+2. Uruchamiać się wyłącznie z odpowiednią flagą fake w env procesu.
+
+**Reguły per kanał:**
+
+| Kanał   | Wymagana flaga         | Co sprawdza adapter               |
+|---------|------------------------|-----------------------------------|
+| Email   | `RESEND_DEV_FAKE=1`    | `channels/email.ts` — zwraca fake `externalId`, bez API call do Resend |
+| WhatsApp | `WA_DEV_FAKE=1`       | (gdy zostanie dodany adapter WA)  |
+
+Skrypty startują z guardem:
+```typescript
+if (process.env.RESEND_DEV_FAKE !== '1') {
+  console.error('STOP: set RESEND_DEV_FAKE=1 before running this proof script')
+  process.exit(1)
+}
+```
+
+**Dlaczego:** Klucz `re_…` w `.env.local` to prawdziwy klucz Resend. Bez flagi każdy
+skrypt dowodowy wysyła do prawdziwego API — tak stało się w rundzie 2 FA-1.14, gdzie
+wiadomość trafiła na `piotr@example.invalid` przez prawdziwe konto Resend.
+
+Bramka STOP dla agenta: **jakakolwiek wysyłka z `.fa-proofs/` bez odpowiedniej flagi fake
+→ STOP** (tak samo jak zapis na prod).

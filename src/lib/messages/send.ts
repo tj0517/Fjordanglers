@@ -19,6 +19,14 @@ import type { EventChannel } from '@/lib/events/types'
 
 type Client = SupabaseClient<Database>
 
+/** Thrown when sendMessage cannot promote a draft — row not found or already sent. */
+export class DraftNotFoundError extends Error {
+  constructor(draftId: string) {
+    super(`[sendMessage] draft row not found or already promoted (id=${draftId}). The draft may have been sent already or the channel/counterpart changed.`)
+    this.name = 'DraftNotFoundError'
+  }
+}
+
 export interface SendMessageParams {
   inquiryId:     string
   channel:       'email' | 'whatsapp' | 'instagram'
@@ -60,7 +68,9 @@ export async function sendMessage(
   let messageId: string
 
   if (draftId != null) {
-    const { error: updateErr } = await client
+    // Guard: only promote if the row is still a draft for this exact inquiry/channel/counterpart.
+    // 0 rows → stale id (already sent) or channel/counterpart mismatch.
+    const { data: promoted, error: updateErr } = await client
       .from('messages')
       .update({
         body,
@@ -70,9 +80,17 @@ export async function sendMessage(
         occurred_at: new Date().toISOString(),
       })
       .eq('id', draftId)
+      .eq('inquiry_id', inquiryId)
+      .eq('channel', channel)
+      .eq('counterpart', counterpart)
+      .eq('status', 'draft')
+      .select('id')
 
     if (updateErr != null) {
       throw new Error(`[sendMessage] draft update failed: ${updateErr.message}`)
+    }
+    if (promoted == null || promoted.length === 0) {
+      throw new DraftNotFoundError(draftId)
     }
     messageId = draftId
   } else {

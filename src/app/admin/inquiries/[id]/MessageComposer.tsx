@@ -125,7 +125,7 @@ export function MessageComposer({
             type="button"
             disabled={ch.disabled}
             title={ch.disabled ? ch.reason : undefined}
-            onClick={() => { if (!ch.disabled) setChannel(ch.id) }}
+            onClick={() => { if (!ch.disabled) { setChannel(ch.id); setDraftId(null) } }}
             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold f-body"
             style={{
               background: channel === ch.id ? '#E67E50'              : 'rgba(255,255,255,0.07)',
@@ -147,7 +147,7 @@ export function MessageComposer({
             <button
               key={cp}
               type="button"
-              onClick={() => setCounterpart(cp)}
+              onClick={() => { setCounterpart(cp); setDraftId(null) }}
               className="flex-1 py-1.5 rounded-lg text-xs font-semibold f-body capitalize"
               style={{
                 background: counterpart === cp ? '#0A2E4D'             : 'rgba(255,255,255,0.07)',
