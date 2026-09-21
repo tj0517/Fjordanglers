@@ -694,7 +694,7 @@ export async function createPaymentLink(
 // ─── proposeDraft — FA-1.14 ───────────────────────────────────────────────────
 
 export type ProposeDraftResult =
-  | { success: true;  draftId: string; text: string; usedFiles: string[] }
+  | { success: true;  draftId: string; text: string; subject: string | null; usedFiles: string[] }
   | { success: false; error: string }
 
 /**

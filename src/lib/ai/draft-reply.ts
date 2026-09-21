@@ -30,6 +30,8 @@ export interface DraftReplyParams {
 export interface DraftReplyResult {
   draftId:   string
   text:      string
+  /** Suggested email subject (email channel only; null for other channels). */
+  subject:   string | null
   usedFiles: string[]
 }
 
@@ -126,6 +128,11 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
 
   const draftText = block.text.trim()
 
+  // Suggest a subject line for email channel (stub — FA-1.17 may improve this)
+  const subject: string | null = channel === 'email'
+    ? `Re: Your ${inquiry.trip_country ?? 'fishing'} inquiry — ${inquiry.angler_name}`
+    : null
+
   // Upsert draft — overwrite existing draft for this inquiry/counterpart/channel if present
   const { data: existingDraft } = await supabase
     .from('messages')
@@ -141,7 +148,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   if (existingDraft != null) {
     const { error: updateErr } = await supabase
       .from('messages')
-      .update({ body: draftText, status: 'draft', occurred_at: new Date().toISOString() })
+      .update({ body: draftText, subject, status: 'draft', occurred_at: new Date().toISOString() })
       .eq('id', existingDraft.id)
 
     if (updateErr != null) {
@@ -156,6 +163,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
         channel,
         direction:   'outbound',
         counterpart,
+        subject,
         body:        draftText,
         status:      'draft',
         drafted_by:  'agent',
@@ -173,6 +181,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   return {
     draftId,
     text:      draftText,
+    subject,
     usedFiles: knowledge.map(f => f.path),
   }
 }

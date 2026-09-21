@@ -57,6 +57,7 @@ export function MessageComposer({
       if (res.success) {
         setBody(res.text)
         setDraftId(res.draftId)
+        if (res.subject != null) setSubject(res.subject)
         router.refresh()
       } else {
         setDraftError(res.error)
