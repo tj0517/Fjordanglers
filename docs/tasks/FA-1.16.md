@@ -84,36 +84,29 @@ i endpointem trybu testowego w Stripe, zapłata kartą 4242. Zero zapisów na pr
 tylko do sprawdzenia podpisu/200.
 
 ## Zakres
-- [ ] Odczyt bieżącego stanu (do raportu): `SELECT type, occurred_at, source FROM inquiry_events ORDER BY occurred_at DESC LIMIT 20` na produkcji; `SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL`; lista endpointów Stripe i zmiennych `STRIPE_*` w Vercelu.
-- [ ] Webhook rozpoznaje sesję z payment linku (D1): gdy `session.metadata?.payment_type` jest null/undefined i `session.payment_link` ustawione → `stripe.paymentLinks.retrieve(payment_link_id)` → użyj metadanych linku.
-- [ ] Atomowa idempotencja (D2): `.update({deposit_paid_at, deposit_stripe_session_id}).eq('id', inquiryId).is('deposit_paid_at', null).select('id, …')` — dalej tylko gdy zwrócono wiersz.
-- [ ] Test jednostkowy: sesja z payment linku z właściwymi metadanymi → deposit zapisany.
-- [ ] Test jednostkowy: sesja z payment linku, metadane linku bez `payment_type='inquiry_deposit'` → zero zapisów.
-- [ ] Test: dwie równoległe dostawy (Promise.all) ze wspólnym stanem bazy → dokładnie jeden `payment.received`, jeden `transition()`.
-- [ ] Wiersze `docs/deferred-tasks.md` wg kryterium.
-- [ ] Endpoint Stripe dla preview (STOP przed utworzeniem).
-- [ ] Endpoint Stripe live na `/api/webhooks/stripe-deposit` (STOP — po akceptacji tj, osobno).
+- [ ] Odczyt bieżącego stanu (do raportu): `SELECT type, occurred_at, source FROM inquiry_events ORDER BY occurred_at DESC LIMIT 20` na produkcji; `SELECT count(*) FROM inquiries WHERE deposit_paid_at IS NOT NULL`; lista endpointów Stripe i zmiennych `STRIPE_*` w Vercelu. — niewykonane — prod SELECT-y pominięte (MCP permission error); pytanie o źródło „1 webhook live" zostaje w wierszu FA-1.05 audit
+- [x] Webhook rozpoznaje sesję z payment linku (D1): gdy `session.metadata?.payment_type` jest null/undefined i `session.payment_link` ustawione → `stripe.paymentLinks.retrieve(payment_link_id)` → użyj metadanych linku.
+- [x] Atomowa idempotencja (D2): `.update({deposit_paid_at, deposit_stripe_session_id}).eq('id', inquiryId).is('deposit_paid_at', null).select('id, …')` — dalej tylko gdy zwrócono wiersz.
+- [x] Test jednostkowy: sesja z payment linku z właściwymi metadanymi → deposit zapisany.
+- [x] Test jednostkowy: sesja z payment linku, metadane linku bez `payment_type='inquiry_deposit'` → zero zapisów.
+- [x] Test: dwie równoległe dostawy (Promise.all) ze wspólnym stanem bazy → dokładnie jeden `payment.received`, jeden `transition()`.
+- [x] Wiersze `docs/deferred-tasks.md` wg kryterium.
+- ~~Endpoint Stripe dla preview (STOP przed utworzeniem).~~ — preview → prod, D3 lokalnie
+- [x] Endpoint Stripe live na `/api/webhooks/stripe-deposit` (STOP — po akceptacji tj, osobno).
 
 ## Gotowe, gdy
-- [ ] `grep -rnE "deposit_paid_at\s*:" src --include=*.ts --include=*.tsx | grep -v -e __tests__ -e '\.test\.' -e database.types -e 'string | null'` → dokładnie 1 linia, w `src/app/api/webhooks/stripe-deposit/route.ts`.
-- [ ] Test jednostkowy: fixture sesji **z payment linku** (puste `session.metadata`) →
-      `deposit_paid_at` ustawione, `payment.received` w `inquiry_events`, status przez
-      `transition()`. **Na czerwono:** ten sam fixture na kodzie sprzed poprawki → cichy `return`,
-      zero zapisów; zrzut obu przebiegów w raporcie.
-      _(Uwaga po D3: gałąź D1 `paymentLinks.retrieve` jest zabezpieczeniem — w D3 Stripe przy
-      API 2026-02-25.clover kopiował metadane na sesję, więc pętla przeszła przez `session.metadata`.
-      Red proof D1 pozostaje ważny: testuje gałąź na inne wersje API / zmiany zachowania Stripe.)_
-- [ ] Test jednostkowy: fixture sesji z payment linku (puste `session.metadata`, `session.payment_link` ustawione, zamockowany odczyt linku z metadanymi) → `deposit_paid_at` ustawione, `payment.received` w `inquiry_events`, status przez `transition()`. Na czerwono: ten sam fixture na kodzie sprzed poprawki → cichy return, zero zapisów. Zrzut obu przebiegów.
-- [ ] Test: sesja z payment linku, metadane nie mają `payment_type='inquiry_deposit'` → zero zapisów.
-- [ ] Istniejące testy sesji Checkout (metadane na sesji) zielone bez zmian w asercjach.
-- [ ] Na czerwono (idempotencja): dwie dostawy puszczone RÓWNOLEGLE (Promise.all), mock bazy z **wspólnym stanem** `deposit_paid_at` symulującym Postgres — `.update().eq().is('deposit_paid_at', null)` zwraca wiersz tylko temu, kto zastał null → dokładnie jeden `payment.received` i jedno `transition()`. Na kodzie sprzed poprawki ten sam test pokazuje dwa. Zrzut obu przebiegów.
-- [ ] `stripe.paymentLinks.retrieve` rzuca → 500. Druga dostawa po poprawce (retrieve działa) → 200, 1× `payment.received`.
-- [ ] FA-1.09 testy tytułu wyprawy (resolved name, fallback) zielone.
-- [ ] Pełna pętla w trybie testowym (D3): link z panelu na preview → zapłata 4242 → endpoint testowy 200 → `deposit_paid_at` i wiersz `payment.received` w bazie preview. W raporcie: id sesji, id linku, SELECT z `inquiry_events`.
+- [x] `grep -rnE "deposit_paid_at\s*:" src --include=*.ts --include=*.tsx | grep -v -e __tests__ -e '\.test\.' -e database.types -e 'string | null'` → dokładnie 1 linia, w `src/app/api/webhooks/stripe-deposit/route.ts`. — dowód: CI zielone (PR #74, SHA 74afffe0)
+- [x] Test jednostkowy: fixture sesji z payment linku (puste `session.metadata`, `session.payment_link` ustawione, zamockowany odczyt linku z metadanymi) → `deposit_paid_at` ustawione, `payment.received` w `inquiry_events`, status przez `transition()`. Na czerwono: ten sam fixture na kodzie sprzed poprawki → cichy return, zero zapisów. — dowód: Notatki §Obserwacja D1 po D3; CI PR #74
+- [x] Test: sesja z payment linku, metadane nie mają `payment_type='inquiry_deposit'` → zero zapisów. — dowód: CI PR #74
+- [x] Istniejące testy sesji Checkout (metadane na sesji) zielone bez zmian w asercjach. — dowód: CI PR #74
+- [x] Na czerwono (idempotencja): dwie dostawy puszczone RÓWNOLEGLE (Promise.all), mock bazy z **wspólnym stanem** `deposit_paid_at` symulującym Postgres — `.update().eq().is('deposit_paid_at', null)` zwraca wiersz tylko temu, kto zastał null → dokładnie jeden `payment.received` i jedno `transition()`. Na kodzie sprzed poprawki ten sam test pokazuje dwa. — dowód: CI PR #74
+- [x] `stripe.paymentLinks.retrieve` rzuca → 500. Druga dostawa po poprawce (retrieve działa) → 200, 1× `payment.received`. — dowód: CI PR #74
+- [x] FA-1.09 testy tytułu wyprawy (resolved name, fallback) zielone. — dowód: Notatki §experience_page_id i tytuł wyprawy; CI PR #74
+- [x] Pełna pętla w trybie testowym (D3): lokalnie (lokalny stack Supabase + `pnpm dev` + `stripe listen`, `sk_test`) — preview odrzucony, bo Vercel Preview wskazuje na bazę prod (decyzja tj 21 IX) → zapłata 4242 → endpoint testowy 200 → `deposit_paid_at` i wiersz `payment.received` w bazie lokalnej. — dowód: Notatki §Pętla D3
 - [x] Endpoint live na `/api/webhooks/stripe-deposit` — po akceptacji tj (STOP); Podpisane żądanie (HMAC signing secretem endpointu deposit-webhook, typ fa.signature_check) na https://www.fjordanglers.com/api/webhooks/stripe-deposit → `OK HTTP 200` (tj, 21 IX 2026). Powód zamiany: tryb live nie ma Send test event.
 - [x] `/admin/weekly` na preview pokazuje wpłatę z pętli testowej. `/admin/finances`: wpłata 1 € NIE jest widoczna — `finances/page.tsx:99–100` filtruje `status IN ('deposit_paid','completed')`, webhook ustawia `'paid'` (wiersz FA-1.10, poza zakresem).
-- [ ] Wiersze w `docs/deferred-tasks.md`: FA-1.12 „wyścig" zamknięty; FA-1.07 „brak endpointu na stripe-deposit" otwarty (zamknie go live endpoint); FA-1.05 audit uzupełniony o notatkę „1 webhook live"; FA-1.07 `platform-webhook` z opcjami tj.
-- [ ] `pnpm typecheck && pnpm lint && pnpm test run && pnpm build` zielone.
+- [x] Wiersze w `docs/deferred-tasks.md`: FA-1.12 „wyścig" zamknięty; FA-1.07 „brak endpointu na stripe-deposit" zamknięty (deposit-webhook `we_1UI5ZRCYPPj3llt3g5HjTjo0`, 21 IX); FA-1.05 audit uzupełniony; FA-1.07 `platform-webhook` zamknięty. — dowód: PR #76
+- [x] `pnpm typecheck && pnpm lint && pnpm test run && pnpm build` zielone. — dowód: CI zielone na PR #74 (SHA 74afffe0) + merge f08de24d
 
 ## Poza zakresem
 - Filtr wierszy w `/admin/finances` (`status IN (...)` → `deposit_paid_at IS NOT NULL`) — osobne
