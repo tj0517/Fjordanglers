@@ -138,6 +138,7 @@ export async function sendMessage(
     source:    'app',
     channel:   channel as EventChannel,
     messageId,
+    payload:   { drafted_by: draftedBy },
   })
 
   // 5. If first outbound to guide, emit guide.contacted

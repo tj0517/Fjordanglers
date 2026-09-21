@@ -677,6 +677,33 @@ export async function createPaymentLink(
   return { success: true, url: paymentLink.url }
 }
 
+// ─── proposeDraft — FA-1.14 ───────────────────────────────────────────────────
+
+export type ProposeDraftResult =
+  | { success: true;  draftId: string; text: string; usedFiles: string[] }
+  | { success: false; error: string }
+
+/**
+ * Admin clicks "zaproponuj": calls the draft-reply agent and returns the text.
+ * Saves a status='draft' row in messages. Does not send.
+ */
+export async function proposeDraft(
+  inquiryId:   string,
+  counterpart: 'angler' | 'guide',
+  channel:     'email' | 'whatsapp' | 'instagram',
+): Promise<ProposeDraftResult> {
+  await requireAdmin()
+  const { draftReply } = await import('@/lib/ai/draft-reply')
+  try {
+    const result = await draftReply({ inquiryId, counterpart, channel })
+    revalidatePath('/admin/inquiries/' + inquiryId)
+    return { success: true, ...result }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: msg }
+  }
+}
+
 // ─── deleteUnmatchedMessages (kept from old messages.ts) ─────────────────────
 
 export async function deleteUnmatchedMessages(ids: string[]): Promise<ActionResult> {
