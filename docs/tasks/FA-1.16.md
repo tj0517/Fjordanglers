@@ -2,7 +2,7 @@
 id: FA-1.16
 title: Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
