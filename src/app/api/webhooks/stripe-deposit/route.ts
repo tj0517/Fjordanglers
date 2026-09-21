@@ -4,13 +4,22 @@
  * Listens for: checkout.session.completed
  * Identifies inquiry deposit sessions by metadata.payment_type === 'inquiry_deposit'
  *
+ * Two metadata paths (D1 — FA-1.16):
+ *   • Checkout Session (sendDepositLink): metadata on the session itself
+ *   • Payment Link (createPaymentLink): session.metadata is empty;
+ *     metadata is fetched from the payment link via stripe.paymentLinks.retrieve()
+ *
  * On success:
- *   • inquiries.status  → 'paid', through transition() (source 'webhook')
- *   • inquiries.deposit_paid_at → now
+ *   • inquiries.deposit_paid_at, deposit_stripe_session_id — set atomically (D2 — FA-1.16)
+ *   • inquiries.status → 'paid', through transition() (source 'webhook')
  *   • Sends emails: angler (confirmation), FA (deposit received), guide (booking confirmed)
  *
- * Idempotent: if deposit_paid_at is already set, returns 200 immediately.
- * Always returns 200 to prevent Stripe retries on non-fatal errors.
+ * Idempotent: UPDATE … WHERE deposit_paid_at IS NULL RETURNING id — only the first
+ * writer gets a row back; a second delivery sees 0 rows and returns without emitting.
+ *
+ * Error handling:
+ *   • stripe.paymentLinks.retrieve failure → 500 (Stripe retries; safe due to D2)
+ *   • All other errors → 200 (logged; no retry needed)
  */
 
 import { headers } from 'next/headers'
@@ -29,6 +38,9 @@ import {
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+// Thrown when a transient Stripe API failure means Stripe should retry the delivery.
+class RetriableError extends Error {}
 
 export async function POST(req: Request): Promise<Response> {
   const rawBody  = await req.text()
@@ -56,8 +68,10 @@ export async function POST(req: Request): Promise<Response> {
       await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
     }
   } catch (err) {
-    // Log but always return 200 to prevent retries
     console.error('[stripe-deposit/webhook] Handler error:', err)
+    if (err instanceof RetriableError) {
+      return new Response('Service Unavailable', { status: 500 })
+    }
   }
 
   return new Response('OK', { status: 200 })
@@ -66,44 +80,65 @@ export async function POST(req: Request): Promise<Response> {
 // ─── checkout.session.completed ───────────────────────────────────────────────
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-  // Only handle inquiry deposit sessions
-  if (session.metadata?.payment_type !== 'inquiry_deposit') return
   if (session.payment_status !== 'paid') return
 
-  const inquiryId = session.metadata?.inquiry_id
+  // Resolve metadata: directly from session (Checkout Session path),
+  // or from the payment link when session.metadata is empty (Payment Link path — D1).
+  //
+  // Note (D3 pętla, 21 IX 2026, API 2026-02-25.clover): Stripe copies payment link
+  // metadata onto the session, so session.metadata was populated in the live test.
+  // The paymentLinks.retrieve branch below is a fallback for older API versions or
+  // future Stripe behaviour changes — the logic is correct regardless of which path
+  // delivers the metadata.
+  let metadata: Stripe.Metadata | null = session.metadata
+
+  if (metadata?.payment_type == null) {
+    const paymentLinkId = typeof session.payment_link === 'string' ? session.payment_link : null
+    if (paymentLinkId == null) {
+      // Neither metadata path: not our session.
+      return
+    }
+    try {
+      const link = await stripe.paymentLinks.retrieve(paymentLinkId)
+      metadata = link.metadata
+    } catch (err) {
+      console.error('[stripe-deposit/webhook] Could not retrieve payment link metadata:', session.id, err)
+      throw new RetriableError(`Payment link metadata unavailable: ${paymentLinkId}`)
+    }
+  }
+
+  // Filter: must be an inquiry deposit (applies to both metadata paths).
+  if (metadata?.payment_type !== 'inquiry_deposit') return
+
+  const inquiryId = metadata?.inquiry_id
   if (inquiryId == null) {
-    console.warn('[stripe-deposit/webhook] No inquiry_id in session metadata:', session.id)
+    console.warn('[stripe-deposit/webhook] No inquiry_id in metadata:', session.id)
     return
   }
 
   const svc = createServiceClient()
 
-  // Idempotency: skip if already processed
-  const { data: existing } = await svc
-    .from('inquiries')
-    .select('id, deposit_paid_at, angler_email, angler_name, angler_country, requested_dates, party_size, deposit_amount, trip_id, experience_page_id, guide_id')
-    .eq('id', inquiryId)
-    .single()
-
-  if (existing == null) {
-    console.warn('[stripe-deposit/webhook] Inquiry not found:', inquiryId)
-    return
-  }
-
-  if (existing.deposit_paid_at != null) {
-    console.log('[stripe-deposit/webhook] Already processed inquiry:', inquiryId)
-    return
-  }
-
-  // Mark as paid. The money columns first, then the status through the machine, so
-  // the booking (= paid deposit) leaves a status.changed with source 'webhook'.
-  await svc
+  // Atomic conditional update (D2): sets deposit_paid_at only when currently NULL.
+  // If two deliveries race, exactly one writer gets a row back; the other sees empty.
+  const { data: updated } = await svc
     .from('inquiries')
     .update({
       deposit_paid_at:           new Date().toISOString(),
       deposit_stripe_session_id: session.id,
     })
     .eq('id', inquiryId)
+    .is('deposit_paid_at', null)
+    .select('id, angler_email, angler_name, angler_country, requested_dates, party_size, deposit_amount, trip_id, experience_page_id, guide_id')
+
+  if (!updated || updated.length === 0) {
+    // Idempotency guard: already processed, or inquiry_id not found.
+    console.log('[stripe-deposit/webhook] Skipped — already processed or not found:', inquiryId)
+    return
+  }
+
+  const existing = updated[0]
+
+  console.log(`[stripe-deposit/webhook] Deposit paid for inquiry ${inquiryId} — session ${session.id}`)
 
   try {
     await emitEvent(svc, {
@@ -134,8 +169,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     // but not fatal — the webhook still returns 200 and the admin can move it by hand.
     console.error('[stripe-deposit/webhook] transition error:', err)
   }
-
-  console.log(`[stripe-deposit/webhook] Deposit paid for inquiry ${inquiryId} — session ${session.id}`)
 
   // Fetch guide details for emails
   const { data: guide } = existing.guide_id != null
