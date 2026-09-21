@@ -1,85 +1,82 @@
 'use client'
 
-import { useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { defaultTabForStatus, type TabId } from '@/lib/ui/defaultTabForStatus'
+import type { InquiryStatus } from '@/lib/inquiries/state'
 
 interface Props {
-  defaultTab?: string
-  // Contact tab: 2-column
-  contactContent:   React.ReactNode
-  sidePanel:        React.ReactNode
-  // Guide tab: full-width
-  guideContent:     React.ReactNode
-  // Trip setup tab: full-width
-  tripSetupContent: React.ReactNode
+  status:              InquiryStatus
+  overviewContent:     React.ReactNode
+  conversationContent: React.ReactNode
+  briefContent:        React.ReactNode
+  guideContent:        React.ReactNode
+  offerContent:        React.ReactNode
 }
 
-const TABS = [
-  { id: 'contact',   label: 'Contact' },
-  { id: 'guide',     label: 'Guide Attachment' },
-  { id: 'tripsetup', label: 'Trip Setup' },
+const TABS: { id: TabId; label: string }[] = [
+  { id: 'overview',      label: 'Overview' },
+  { id: 'conversation',  label: 'Conversation' },
+  { id: 'brief',         label: 'Brief' },
+  { id: 'guide',         label: 'Guide' },
+  { id: 'offer',         label: 'Offer & payment' },
 ]
 
 export function InquiryDetailTabs({
-  defaultTab = 'contact',
-  contactContent,
-  sidePanel,
+  status,
+  overviewContent,
+  conversationContent,
+  briefContent,
   guideContent,
-  tripSetupContent,
+  offerContent,
 }: Props) {
-  const [active, setActive] = useState(defaultTab)
+  const searchParams = useSearchParams()
+  const router       = useRouter()
+
+  const tabParam = searchParams.get('tab') as TabId | null
+  const validTab = TABS.some(t => t.id === tabParam)
+  const activeTab: TabId = validTab && tabParam != null ? tabParam : defaultTabForStatus[status]
+
+  function handleTabChange(value: unknown) {
+    const id = value as TabId
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', id)
+    router.replace(`?${params.toString()}`, { scroll: false })
+  }
 
   return (
-    <div>
-      {/* ── Tab nav ──────────────────────────────────────────────────────── */}
-      <div
-        className="inline-flex gap-1 p-1 rounded-2xl mb-6"
-        style={{ background: 'rgba(10,46,77,0.07)' }}
-      >
+    <Tabs value={activeTab} onValueChange={handleTabChange}>
+      <TabsList className="mb-6 h-auto flex-wrap gap-1 bg-muted/70 p-1">
         {TABS.map(tab => (
-          <button
+          <TabsTrigger
             key={tab.id}
-            type="button"
-            onClick={() => setActive(tab.id)}
-            className="px-5 py-2 rounded-xl text-sm font-bold f-body whitespace-nowrap transition-all duration-150"
-            style={{
-              background:    active === tab.id ? '#0A2E4D' : 'transparent',
-              color:         active === tab.id ? '#fff'    : 'rgba(10,46,77,0.5)',
-              boxShadow:     active === tab.id ? '0 2px 10px rgba(10,46,77,0.22)' : 'none',
-              border:        'none',
-              cursor:        'pointer',
-              letterSpacing: '0.01em',
-            }}
+            value={tab.id}
+            className="px-4 py-2 text-sm font-semibold rounded-lg data-active:bg-primary data-active:text-primary-foreground"
           >
             {tab.label}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
-      {/* ── Contact tab — 2-column ────────────────────────────────────────── */}
-      {active === 'contact' && (
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
-          <div className="flex flex-col gap-4 min-w-0">
-            {contactContent}
-          </div>
-          <div className="lg:sticky lg:top-6 space-y-3">
-            {sidePanel}
-          </div>
-        </div>
-      )}
+      <TabsContent value="overview">
+        {overviewContent}
+      </TabsContent>
 
-      {/* ── Guide tab — full-width ────────────────────────────────────────── */}
-      {active === 'guide' && (
-        <div>
-          {guideContent}
-        </div>
-      )}
+      <TabsContent value="conversation">
+        {conversationContent}
+      </TabsContent>
 
-      {/* ── Trip setup tab — full-width ───────────────────────────────────── */}
-      {active === 'tripsetup' && (
-        <div>
-          {tripSetupContent}
-        </div>
-      )}
-    </div>
+      <TabsContent value="brief">
+        {briefContent}
+      </TabsContent>
+
+      <TabsContent value="guide">
+        {guideContent}
+      </TabsContent>
+
+      <TabsContent value="offer">
+        {offerContent}
+      </TabsContent>
+    </Tabs>
   )
 }

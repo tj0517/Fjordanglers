@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { assignGuideToInquiry, assignGuideSilently, setExternalOffer, unassignGuide } from '@/actions/inquiries'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,30 +71,22 @@ function MiniCalendar({
   const hasConflicts = requestedDates.some(d => blockedSet.has(d))
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden mt-4"
-      style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.08)' }}
-    >
+    <div className="rounded-2xl overflow-hidden mt-4 bg-[#FDFAF7] border border-primary/[8%]">
       {/* Month nav */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{ borderBottom: '1px solid rgba(10,46,77,0.07)' }}
-      >
+      <div className="flex items-center justify-between px-4 py-3 border-b border-primary/7">
         <button
           type="button"
           onClick={prevMonth}
-          className="w-6 h-6 flex items-center justify-center rounded-lg"
-          style={{ color: 'rgba(10,46,77,0.4)', background: 'rgba(10,46,77,0.05)' }}
+          className="w-6 h-6 flex items-center justify-center rounded-lg text-primary/40 bg-primary/5"
           aria-label="Previous month"
         >
           <ChevronLeft size={13} />
         </button>
-        <span className="text-xs font-bold f-body" style={{ color: '#0A2E4D' }}>{monthName}</span>
+        <span className="text-xs font-bold f-body text-primary">{monthName}</span>
         <button
           type="button"
           onClick={nextMonth}
-          className="w-6 h-6 flex items-center justify-center rounded-lg"
-          style={{ color: 'rgba(10,46,77,0.4)', background: 'rgba(10,46,77,0.05)' }}
+          className="w-6 h-6 flex items-center justify-center rounded-lg text-primary/40 bg-primary/5"
           aria-label="Next month"
         >
           <ChevronRight size={13} />
@@ -103,8 +96,7 @@ function MiniCalendar({
       {/* DOW headers */}
       <div className="grid grid-cols-7 px-3 pt-2 pb-1">
         {['M','T','W','T','F','S','S'].map((d, i) => (
-          <div key={i} className="text-center text-[9px] font-bold f-body"
-            style={{ color: 'rgba(10,46,77,0.28)' }}>{d}</div>
+          <div key={i} className="text-center text-[9px] font-bold f-body text-primary/[28%]">{d}</div>
         ))}
       </div>
 
@@ -118,26 +110,17 @@ function MiniCalendar({
           const isConflict  = isBlocked && isRequested
           const isPast      = iso < today
 
+          const state = isConflict ? 'conflict'
+            : isRequested          ? 'requested'
+            : isBlocked            ? 'blocked'
+            : isPast               ? 'past'
+            : undefined
+
           return (
             <div
               key={iso}
-              className="h-7 flex items-center justify-center rounded-lg text-[11px] f-body"
-              style={{
-                background: isConflict  ? 'rgba(239,68,68,0.15)'
-                  : isRequested         ? 'rgba(230,126,80,0.15)'
-                  : isBlocked           ? 'rgba(10,46,77,0.06)'
-                  : 'transparent',
-                color: isConflict       ? '#DC2626'
-                  : isRequested         ? '#C05C28'
-                  : isBlocked           ? 'rgba(10,46,77,0.28)'
-                  : isPast              ? 'rgba(10,46,77,0.18)'
-                  : 'rgba(10,46,77,0.65)',
-                textDecoration: isBlocked && !isRequested ? 'line-through' : 'none',
-                fontWeight:     isRequested || isConflict ? 700 : 400,
-                border:         isRequested
-                  ? `1.5px solid ${isConflict ? 'rgba(239,68,68,0.4)' : 'rgba(230,126,80,0.4)'}`
-                  : '1.5px solid transparent',
-              }}
+              data-state={state}
+              className="cal-day h-7 flex items-center justify-center rounded-lg text-[11px] f-body border border-transparent"
             >
               {day}
             </div>
@@ -146,24 +129,21 @@ function MiniCalendar({
       </div>
 
       {/* Legend */}
-      <div
-        className="px-3 pb-3 flex flex-wrap gap-3"
-        style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}
-      >
+      <div className="px-3 pb-3 flex flex-wrap gap-3 border-t border-primary/[6%]">
         {requestedDates.length > 0 && (
           <div className="flex items-center gap-1 pt-2">
-            <div className="w-2 h-2 rounded-sm" style={{ background: 'rgba(230,126,80,0.15)', border: '1px solid rgba(230,126,80,0.4)' }} />
-            <span className="text-[9px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Requested date</span>
+            <div className="w-2 h-2 rounded-sm bg-accent/15 border border-accent/40" />
+            <span className="text-[9px] f-body text-primary/45">Requested date</span>
           </div>
         )}
         <div className="flex items-center gap-1 pt-2">
-          <div className="w-2 h-2 rounded-sm" style={{ background: 'rgba(10,46,77,0.06)' }} />
-          <span className="text-[9px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>Guide blocked</span>
+          <div className="w-2 h-2 rounded-sm bg-primary/[6%]" />
+          <span className="text-[9px] f-body text-primary/45">Guide blocked</span>
         </div>
         {hasConflicts && (
           <div className="flex items-center gap-1 pt-2">
-            <div className="w-2 h-2 rounded-sm" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)' }} />
-            <span className="text-[9px] f-body font-semibold" style={{ color: '#DC2626' }}>Conflict</span>
+            <div className="w-2 h-2 rounded-sm bg-red-500/15 border border-red-500/40" />
+            <span className="text-[9px] f-body font-semibold text-red-600">Conflict</span>
           </div>
         )}
       </div>
@@ -237,85 +217,62 @@ function GuideCard({
   }
 
   return (
-    <div
-      className="rounded-[22px] overflow-hidden transition-all"
-      style={{
-        background: isAssigned ? 'rgba(16,185,129,0.04)' : '#FDFAF7',
-        border: isAssigned
-          ? '1.5px solid rgba(16,185,129,0.3)'
-          : '1px solid rgba(10,46,77,0.08)',
-        boxShadow: '0 2px 12px rgba(10,46,77,0.04)',
-      }}
-    >
+    <div className={cn(
+      'rounded-[22px] overflow-hidden transition-all shadow-[0_2px_12px_rgba(10,46,77,0.04)]',
+      isAssigned
+        ? 'bg-emerald-500/[4%] border-[1.5px] border-emerald-500/30'
+        : 'bg-[#FDFAF7] border border-primary/[8%]',
+    )}>
       {/* ── Card header ── */}
       <div className="px-5 py-4 flex items-center gap-4">
 
         {/* Avatar */}
-        <div
-          className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden"
-          style={{ background: 'rgba(10,46,77,0.1)' }}
-        >
+        <div className="w-11 h-11 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden bg-primary/10">
           {guide.avatar_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={guide.avatar_url} alt={guide.full_name} className="w-full h-full object-cover" />
           ) : (
-            <span className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>{initials}</span>
+            <span className="text-sm font-bold f-body text-primary">{initials}</span>
           )}
         </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-bold f-body" style={{ color: '#0A2E4D' }}>
-              {guide.full_name}
-            </p>
+            <p className="text-sm font-bold f-body text-primary">{guide.full_name}</p>
             {isAssigned && (
-              <span
-                className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body"
-                style={{ background: 'rgba(16,185,129,0.15)', color: '#065F46', border: '1px solid rgba(16,185,129,0.3)' }}
-              >
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body bg-emerald-500/15 text-emerald-900 border border-emerald-500/30">
                 Assigned
               </span>
             )}
             {hasConflicts && (
-              <span
-                className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body"
-                style={{ background: 'rgba(239,68,68,0.1)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.25)' }}
-              >
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body bg-red-500/10 text-red-600 border border-red-500/25">
                 ⚠ {conflicts.length} conflict{conflicts.length > 1 ? 's' : ''}
               </span>
             )}
             {!hasConflicts && requestedDates.length > 0 && guide.blockedDates.length >= 0 && (
-              <span
-                className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body"
-                style={{ background: 'rgba(16,185,129,0.1)', color: '#065F46', border: '1px solid rgba(16,185,129,0.2)' }}
-              >
+              <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body bg-emerald-500/10 text-emerald-900 border border-emerald-500/20">
                 ✓ Available
               </span>
             )}
           </div>
           {guide.country && (
-            <p className="text-[11px] f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
-              {guide.country}
-            </p>
+            <p className="text-[11px] f-body mt-0.5 text-primary/45">{guide.country}</p>
           )}
           {isAssigned && (
             <div className="mt-1">
               {guideAcceptance === 'accepted' && (
-                <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block"
-                  style={{ background: 'rgba(16,185,129,0.12)', color: '#065F46', border: '1px solid rgba(16,185,129,0.25)' }}>
+                <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block bg-emerald-500/12 text-emerald-800 border border-emerald-500/25">
                   ✓ Accepted
                 </span>
               )}
               {guideAcceptance === 'declined' && (
-                <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block"
-                  style={{ background: 'rgba(239,68,68,0.1)', color: '#991B1B', border: '1px solid rgba(239,68,68,0.22)' }}>
+                <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block bg-red-500/10 text-red-800 border border-red-500/22">
                   ✗ Declined{guideDeclineReason ? ` — ${guideDeclineReason}` : ''}
                 </span>
               )}
               {(guideAcceptance == null) && (
-                <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block"
-                  style={{ background: 'rgba(251,191,36,0.15)', color: '#92400E', border: '1px solid rgba(251,191,36,0.35)' }}>
+                <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body inline-block bg-yellow-300/15 text-yellow-900 border border-yellow-400/35">
                   ⏳ Awaiting response
                 </span>
               )}
@@ -327,22 +284,14 @@ function GuideCard({
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
           {isAssigned ? (
             <>
-              <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl"
-                style={{ background: 'rgba(16,185,129,0.12)', color: '#065F46', border: '1px solid rgba(16,185,129,0.25)' }}>
+              <span className="text-[10px] font-bold f-body px-3 py-1.5 rounded-xl bg-emerald-500/12 text-emerald-800 border border-emerald-500/25">
                 ✓ {lastMode === 'silent' ? 'Linked' : 'Assigned'}
               </span>
               <button
                 type="button"
                 onClick={handleUnassign}
                 disabled={unassignPending}
-                className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap"
-                style={{
-                  background: 'rgba(239,68,68,0.07)',
-                  color: '#991B1B',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  cursor: unassignPending ? 'default' : 'pointer',
-                  opacity: unassignPending ? 0.6 : 1,
-                }}
+                className="px-3 py-1 rounded-xl text-[10px] font-semibold f-body transition-all whitespace-nowrap bg-red-500/7 text-red-800 border border-red-500/20 disabled:opacity-60 disabled:cursor-default"
               >
                 {unassignPending ? '…' : 'Unassign'}
               </button>
@@ -353,14 +302,10 @@ function GuideCard({
                 type="button"
                 onClick={() => handleAssign(false)}
                 disabled={pending}
-                className="px-4 py-1.5 rounded-xl text-xs font-bold f-body transition-all whitespace-nowrap"
-                style={{
-                  background: '#0A2E4D',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  cursor: pending ? 'default' : 'pointer',
-                  opacity: pending && lastMode === 'notify' ? 0.6 : 1,
-                }}
+                className={cn(
+                  'px-4 py-1.5 rounded-xl text-xs font-bold f-body transition-all whitespace-nowrap bg-primary text-white disabled:cursor-default',
+                  pending && lastMode === 'notify' && 'opacity-60',
+                )}
               >
                 {pending && lastMode === 'notify' ? '…' : 'Assign & notify'}
               </button>
@@ -368,14 +313,10 @@ function GuideCard({
                 type="button"
                 onClick={() => handleAssign(true)}
                 disabled={pending}
-                className="px-4 py-1.5 rounded-xl text-xs font-semibold f-body transition-all whitespace-nowrap"
-                style={{
-                  background: 'rgba(10,46,77,0.06)',
-                  color: 'rgba(10,46,77,0.5)',
-                  border: '1px solid rgba(10,46,77,0.1)',
-                  cursor: pending ? 'default' : 'pointer',
-                  opacity: pending && lastMode === 'silent' ? 0.6 : 1,
-                }}
+                className={cn(
+                  'px-4 py-1.5 rounded-xl text-xs font-semibold f-body transition-all whitespace-nowrap bg-primary/[6%] text-primary/50 border border-primary/10 disabled:cursor-default',
+                  pending && lastMode === 'silent' && 'opacity-60',
+                )}
               >
                 {pending && lastMode === 'silent' ? '…' : 'Link silently'}
               </button>
@@ -387,29 +328,24 @@ function GuideCard({
       {/* ── Error ── */}
       {err && (
         <div className="px-5 pb-3">
-          <p className="text-xs f-body" style={{ color: '#DC2626' }}>{err}</p>
+          <p className="text-xs f-body text-red-600">{err}</p>
         </div>
       )}
 
       {/* ── Calendar toggle ── */}
-      <div style={{ borderTop: '1px solid rgba(10,46,77,0.06)' }}>
+      <div className="border-t border-primary/[6%]">
         <button
           type="button"
           onClick={() => setShowCalendar(v => !v)}
-          className="w-full flex items-center justify-between px-5 py-3 transition-all"
-          style={{ background: 'transparent', cursor: 'pointer' }}
+          className="w-full flex items-center justify-between px-5 py-3 transition-all cursor-pointer"
         >
-          <span className="text-[11px] font-semibold f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>
+          <span className="text-[11px] font-semibold f-body text-primary/50">
             Check availability
           </span>
           <ChevronDown
             size={13}
             strokeWidth={2}
-            className="transition-transform"
-            style={{
-              color: 'rgba(10,46,77,0.35)',
-              transform: showCalendar ? 'rotate(180deg)' : 'rotate(0)',
-            }}
+            className={cn('transition-transform text-primary/35', showCalendar && 'rotate-180')}
           />
         </button>
 
@@ -479,10 +415,8 @@ export function GuideAttachmentTab({
     <div>
       {/* Header */}
       <div className="mb-5">
-        <p className="text-sm font-bold f-display" style={{ color: '#0A2E4D' }}>
-          Guide Attachment
-        </p>
-        <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.45)' }}>
+        <p className="text-sm font-bold f-display text-primary">Guide Attachment</p>
+        <p className="text-xs f-body mt-0.5 text-primary/45">
           {tripCountry
             ? `Showing active guides in ${tripCountry}.`
             : 'Showing all active guides.'}
@@ -495,32 +429,26 @@ export function GuideAttachmentTab({
         type="button"
         onClick={toggleExternalOffer}
         disabled={extPending}
-        className="mb-5 flex items-center gap-2.5 px-4 py-2.5 rounded-[14px] text-sm font-semibold f-body transition-all"
-        style={{
-          background: extOffer ? 'rgba(16,185,129,0.1)'        : 'rgba(10,46,77,0.05)',
-          color:      extOffer ? '#065F46'                      : 'rgba(10,46,77,0.5)',
-          border:     extOffer ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(10,46,77,0.1)',
-          cursor:     extPending ? 'default' : 'pointer',
-          opacity:    extPending ? 0.6 : 1,
-        }}
+        className={cn(
+          'mb-5 flex items-center gap-2.5 px-4 py-2.5 rounded-[14px] text-sm font-semibold f-body transition-all border',
+          extOffer
+            ? 'bg-emerald-500/10 text-emerald-800 border-emerald-500/30 cursor-pointer'
+            : 'bg-primary/5 text-primary/50 border-primary/10 cursor-pointer',
+          extPending && 'opacity-60 cursor-default',
+        )}
       >
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: 16, height: 16, borderRadius: 4,
-          background: extOffer ? '#10B981' : 'rgba(10,46,77,0.12)',
-          color: '#fff', fontSize: 10, fontWeight: 700, flexShrink: 0,
-        }}>
+        <span className={cn(
+          'inline-flex items-center justify-center w-4 h-4 rounded-[4px] text-white text-[10px] font-bold flex-shrink-0',
+          extOffer ? 'bg-emerald-500' : 'bg-primary/[12%]',
+        )}>
           {extOffer ? '✓' : ''}
         </span>
         {extOffer ? 'Offer sent externally (click to undo)' : 'Offer done outside system'}
       </button>
 
       {guides.length === 0 ? (
-        <div
-          className="px-6 py-10 rounded-[22px] text-center"
-          style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
-        >
-          <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+        <div className="px-6 py-10 rounded-[22px] text-center bg-[#FDFAF7] border border-primary/7">
+          <p className="text-sm f-body text-primary/40">
             No active guides found{tripCountry ? ` in ${tripCountry}` : ''}.
           </p>
         </div>

@@ -3,10 +3,29 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { Search, X, CalendarDays, ChevronDown, List, Calendar } from 'lucide-react'
+import { Search, X, CalendarDays, List, Calendar } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { ExternalOfferToggle } from './ExternalOfferToggle'
 import { InquiriesCalendar } from './InquiriesCalendar'
-import { STATUS_LABELS } from '@/lib/inquiries/state'
+import { STATUS_LABELS, type InquiryStatus } from '@/lib/inquiries/state'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +50,9 @@ export interface InquiryRow {
   guide_decline_reason:    string | null
   external_offer_sent:     boolean
   offer_sent_at:           string | null
+  source:                  string | null
+  qualified:               string
+  trip_country:            string | null
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -42,29 +64,6 @@ const STALE_DAYS = 7
 const ACTIVE_STATUSES = new Set([
   'new', 'qualifying', 'waiting_guide', 'offer_presented', 'awaiting_payment',
 ])
-
-const STATUS_STYLE: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  new:              { label: STATUS_LABELS.new,              color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'   },
-  qualifying:       { label: STATUS_LABELS.qualifying,       color: '#5B21B6', bg: 'rgba(139,92,246,0.15)',  border: '1px solid rgba(139,92,246,0.35)'  },
-  waiting_guide:    { label: STATUS_LABELS.waiting_guide,    color: '#C2410C', bg: 'rgba(234,88,12,0.12)',   border: '1px solid rgba(234,88,12,0.35)'   },
-  offer_presented:  { label: STATUS_LABELS.offer_presented,  color: '#0E7490', bg: 'rgba(6,182,212,0.12)',   border: '1px solid rgba(6,182,212,0.35)'   },
-  awaiting_payment: { label: STATUS_LABELS.awaiting_payment, color: '#3730A3', bg: 'rgba(99,102,241,0.12)',  border: '1px solid rgba(99,102,241,0.35)'  },
-  paid:             { label: STATUS_LABELS.paid,             color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'   },
-  handed_over:      { label: STATUS_LABELS.handed_over,      color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'   },
-  completed:        { label: STATUS_LABELS.completed,        color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)'  },
-  lost:             { label: STATUS_LABELS.lost,             color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
-  cancelled:        { label: STATUS_LABELS.cancelled,        color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
-}
-
-type GuideStage = 'no_guide' | 'awaiting_response' | 'declined' | 'needs_offer' | 'offer_sent'
-
-const GUIDE_STAGE_STYLE: Record<GuideStage, { label: string; color: string; bg: string; border: string }> = {
-  no_guide:          { label: 'No guide',      color: 'rgba(10,46,77,0.4)',  bg: 'rgba(10,46,77,0.05)',    border: '1px solid rgba(10,46,77,0.1)'    },
-  awaiting_response: { label: '⏳ Awaiting',   color: '#92400E',             bg: 'rgba(251,191,36,0.12)',  border: '1px solid rgba(251,191,36,0.35)' },
-  declined:          { label: '✗ Declined',    color: '#991B1B',             bg: 'rgba(239,68,68,0.08)',   border: '1px solid rgba(239,68,68,0.2)'   },
-  needs_offer:       { label: 'Needs offer',   color: '#1E40AF',             bg: 'rgba(59,130,246,0.1)',   border: '1px solid rgba(59,130,246,0.25)' },
-  offer_sent:        { label: '✓ Offer sent',  color: '#065F46',             bg: 'rgba(16,185,129,0.1)',   border: '1px solid rgba(16,185,129,0.25)' },
-}
 
 // ─── Main filter groups ───────────────────────────────────────────────────────
 
@@ -82,13 +81,6 @@ export const MAIN_LABELS: Record<MainFilter, string> = {
   guide:     'Guide',
   confirmed: 'Confirmed',
   lost:      'Lost',
-}
-
-export const MAIN_COLORS: Record<MainFilter, { active: string; text: string; bg: string; border: string }> = {
-  lead:      { active: '#0A2E4D', text: '#fff', bg: 'rgba(10,46,77,0.06)',    border: '1px solid rgba(10,46,77,0.12)'    },
-  guide:     { active: '#5B21B6', text: '#fff', bg: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)' },
-  confirmed: { active: '#065F46', text: '#fff', bg: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)'  },
-  lost:      { active: '#991B1B', text: '#fff', bg: 'rgba(239,68,68,0.08)',  border: '1px solid rgba(239,68,68,0.2)'   },
 }
 
 export interface SubOption { key: string; label: string; special?: boolean }
@@ -157,27 +149,17 @@ function isNewUnresponded(row: InquiryRow): boolean {
   return (Date.now() - new Date(row.created_at).getTime()) < 86_400_000
 }
 
-function guideStage(row: InquiryRow, hasOffer: boolean): GuideStage {
-  if (row.assigned_guide_id == null) return 'no_guide'
-  if (row.guide_acceptance === 'declined') return 'declined'
-  if (row.guide_acceptance == null) return 'awaiting_response'
-  return (hasOffer || row.external_offer_sent) ? 'offer_sent' : 'needs_offer'
-}
-
 // ─── SlaBadge ─────────────────────────────────────────────────────────────────
 
 function SlaBadge({ row }: { row: InquiryRow }) {
   const hours = noOfferSinceHours(row)
   if (hours == null || hours < 24) return null
-
-  const isRed    = hours > 48
-  const bg     = isRed ? 'rgba(239,68,68,0.12)'  : 'rgba(234,88,12,0.1)'
-  const color  = isRed ? '#DC2626'               : '#EA580C'
-  const border = isRed ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(234,88,12,0.28)'
-
+  const state = hours > 48 ? 'red' : 'orange'
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-      style={{ background: bg, color, border }}>
+    <span
+      data-state={state}
+      className="sla-badge inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+    >
       {Math.floor(hours)}h no offer
     </span>
   )
@@ -187,41 +169,33 @@ function SlaBadge({ row }: { row: InquiryRow }) {
 
 function SilenceBadge({ row }: { row: InquiryRow }) {
   if (!ACTIVE_STATUSES.has(row.status)) return null
-
   const days    = silenceDays(row)
   const isNever = row.last_contact_at == null
 
   if (isNewUnresponded(row)) {
     return (
       <span
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-        style={{ background: 'rgba(230,126,80,0.15)', color: '#E67E50', border: '1px solid rgba(230,126,80,0.35)' }}
+        data-state="new"
+        className="silence-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
       >
-        <span
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: '#E67E50', animation: 'ping 1.5s cubic-bezier(0,0,0.2,1) infinite' }}
-        />
+        <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 animate-ping" />
         New
       </span>
     )
   }
 
-  let bg: string, color: string, border: string, label: string
-  if (isNever) {
-    bg = 'rgba(239,68,68,0.1)'; color = '#DC2626'; border = '1px solid rgba(239,68,68,0.25)'; label = 'No contact'
-  } else if (days >= STALE_DAYS) {
-    bg = 'rgba(239,68,68,0.1)'; color = '#DC2626'; border = '1px solid rgba(239,68,68,0.25)'; label = `${days}d silent`
-  } else if (days >= COLD_DAYS) {
-    bg = 'rgba(234,88,12,0.1)'; color = '#EA580C'; border = '1px solid rgba(234,88,12,0.25)'; label = `${days}d silent`
-  } else if (days >= WARM_DAYS) {
-    bg = 'rgba(202,138,4,0.1)'; color = '#A16207'; border = '1px solid rgba(202,138,4,0.25)'; label = `${days}d silent`
-  } else {
-    bg = 'rgba(16,185,129,0.08)'; color = '#059669'; border = '1px solid rgba(16,185,129,0.2)'; label = days === 0 ? 'Today' : '1d ago'
-  }
+  let state: string, label: string
+  if (isNever)                { state = 'never'; label = 'No contact'      }
+  else if (days >= STALE_DAYS){ state = 'stale'; label = `${days}d silent` }
+  else if (days >= COLD_DAYS) { state = 'cold';  label = `${days}d silent` }
+  else if (days >= WARM_DAYS) { state = 'warm';  label = `${days}d silent` }
+  else                        { state = 'ok';    label = days === 0 ? 'Today' : '1d ago' }
 
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-      style={{ background: bg, color, border }}>
+    <span
+      data-state={state}
+      className="silence-badge inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+    >
       {label}
     </span>
   )
@@ -231,7 +205,6 @@ function SilenceBadge({ row }: { row: InquiryRow }) {
 
 interface Props {
   allRows:      InquiryRow[]
-  /** tripMap / slugMap / countryMap are keyed by INQUIRY id (resolved via experience-lookup). */
   tripMap:      Record<string, string>
   slugMap:      Record<string, string>
   countryMap:   Record<string, string>
@@ -250,48 +223,67 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     searchParams.get('mode') === 'calendar' ? 'calendar' : 'list'
   )
 
-  // Initialise from URL so back-navigation restores filters
   const [mainFilter, setMainFilter] = useState<MainFilter>(() => {
     const t = searchParams.get('tab')
     return (t === 'lead' || t === 'guide' || t === 'confirmed' || t === 'lost') ? t : 'lead'
   })
   const [subFilter,  setSubFilter ] = useState<string | null>(() => searchParams.get('sub'))
   const [openPopup,  setOpenPopup ] = useState<MainFilter | null>(null)
-  const [view,       setView      ] = useState<'angler' | 'guide'>(() =>
-    searchParams.get('view') === 'guide' ? 'guide' : 'angler'
-  )
+
   const [q,       setQ      ] = useState(() => searchParams.get('q')    ?? '')
   const [localQ,  setLocalQ ] = useState(() => searchParams.get('q')    ?? '')
   const [from,    setFrom   ] = useState(() => searchParams.get('from') ?? '')
   const [to,      setTo     ] = useState(() => searchParams.get('to')   ?? '')
-  const [sortSla, setSortSla] = useState(false)
 
-  // Sync filter state → URL (replace, not push, so back-button skips filter changes)
+  const [countryFilter,   setCountryFilter  ] = useState(() => searchParams.get('country')    ?? '')
+  const [guideIdFilter,   setGuideIdFilter  ] = useState(() => searchParams.get('guide_id')   ?? '')
+  const [guideRespFilter, setGuideRespFilter] = useState(() => searchParams.get('guide_resp') ?? '')
+  const [sourceFilter,    setSourceFilter   ] = useState(() => searchParams.get('source')     ?? '')
+  const [qualifiedFilter, setQualifiedFilter] = useState(() => searchParams.get('qualified')  ?? '')
+  const [slaFilter,       setSlaFilter      ] = useState(() => searchParams.get('sla') === '1')
+
   const mounted = useRef(false)
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return }
     const p = new URLSearchParams()
     if (displayMode !== 'list') p.set('mode', displayMode)
-    if (mainFilter !== 'lead') p.set('tab',  mainFilter)
-    if (subFilter  != null)    p.set('sub',  subFilter)
-    if (view       !== 'angler') p.set('view', view)
-    if (q)    p.set('q',    q)
-    if (from) p.set('from', from)
-    if (to)   p.set('to',   to)
+    if (mainFilter !== 'lead')  p.set('tab',       mainFilter)
+    if (subFilter != null)      p.set('sub',       subFilter)
+    if (q)             p.set('q',          q)
+    if (from)          p.set('from',       from)
+    if (to)            p.set('to',         to)
+    if (countryFilter)   p.set('country',    countryFilter)
+    if (guideIdFilter)   p.set('guide_id',   guideIdFilter)
+    if (guideRespFilter) p.set('guide_resp', guideRespFilter)
+    if (sourceFilter)    p.set('source',     sourceFilter)
+    if (qualifiedFilter) p.set('qualified',  qualifiedFilter)
+    if (slaFilter)       p.set('sla',        '1')
     const qs = p.toString()
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
-  }, [displayMode, mainFilter, subFilter, view, q, from, to]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayMode, mainFilter, subFilter, q, from, to, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const offerSentSet = useMemo(() => new Set(offerSentIds), [offerSentIds])
+  // ── Dropdown options ───────────────────────────────────────────────────────
+  const countries = useMemo(() =>
+    [...new Set(allRows.map(r => r.trip_country ?? countryMap[r.id]).filter(Boolean) as string[])].sort(),
+    [allRows, countryMap]
+  )
+  const guideOptions = useMemo(() =>
+    Object.entries(guideMap).map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name)),
+    [guideMap]
+  )
+  const sources = useMemo(() =>
+    [...new Set(allRows.map(r => r.source).filter(Boolean) as string[])].sort(),
+    [allRows]
+  )
 
-  // ── Per-status counts (for popups) ─────────────────────────────────────────
+  // ── Per-status counts ──────────────────────────────────────────────────────
   const statusCounts = useMemo(() => {
     const c: Record<string, number> = {}
     for (const r of allRows) c[r.status] = (c[r.status] ?? 0) + 1
     return c
   }, [allRows])
 
-  // ── Group counts (for main tabs) ────────────────────────────────────────────
+  // ── Group counts ───────────────────────────────────────────────────────────
   const groupCounts = useMemo(() => ({
     lead:      allRows.filter(r => STATUS_GROUPS.lead.includes(r.status)).length,
     guide:     allRows.filter(r => STATUS_GROUPS.guide.includes(r.status)).length,
@@ -299,7 +291,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     lost:      allRows.filter(r => STATUS_GROUPS.lost.includes(r.status)).length,
   }), [allRows])
 
-  // ── Filtered rows ───────────────────────────────────────────────────────────
+  // ── Filtered rows ──────────────────────────────────────────────────────────
   const rows = useMemo(() => {
     const group = STATUS_GROUPS[mainFilter]
     let result: InquiryRow[]
@@ -317,20 +309,45 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
       const lq = q.toLowerCase()
       result = result.filter(r =>
         (r.angler_name  ?? '').toLowerCase().includes(lq) ||
-        (r.angler_email ?? '').toLowerCase().includes(lq)
+        (r.angler_email ?? '').toLowerCase().includes(lq) ||
+        (tripMap[r.id]  ?? '').toLowerCase().includes(lq)
       )
     }
     if (from) result = result.filter(r => r.created_at >= from)
     if (to)   result = result.filter(r => r.created_at.slice(0, 10) <= to)
 
-    if (sortSla) {
-      result = [...result].sort((a, b) => (noOfferSinceHours(b) ?? 0) - (noOfferSinceHours(a) ?? 0))
-    }
+    if (countryFilter)
+      result = result.filter(r => (r.trip_country ?? countryMap[r.id]) === countryFilter)
+
+    if (guideIdFilter)
+      result = result.filter(r => r.assigned_guide_id === guideIdFilter)
+
+    if (guideRespFilter === 'none')
+      result = result.filter(r => r.assigned_guide_id === null)
+    else if (guideRespFilter === 'pending')
+      result = result.filter(r => r.assigned_guide_id !== null && r.guide_acceptance === null)
+    else if (guideRespFilter === 'accepted')
+      result = result.filter(r => r.guide_acceptance === 'accepted')
+    else if (guideRespFilter === 'declined')
+      result = result.filter(r => r.guide_acceptance === 'declined')
+
+    if (sourceFilter)
+      result = result.filter(r => r.source === sourceFilter)
+
+    if (qualifiedFilter === 'yes')
+      result = result.filter(r => r.qualified === 'yes')
+    else if (qualifiedFilter === 'no')
+      result = result.filter(r => r.qualified === 'no')
+    else if (qualifiedFilter === 'unknown')
+      result = result.filter(r => r.qualified !== 'yes' && r.qualified !== 'no')
+
+    if (slaFilter)
+      result = result.filter(r => needsAttention(r) || noOfferSinceHours(r) !== null)
 
     return result
-  }, [allRows, mainFilter, subFilter, q, from, to, sortSla])
+  }, [allRows, mainFilter, subFilter, q, from, to, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, tripMap, countryMap])
 
-  // ── Stats (always from full data) ───────────────────────────────────────────
+  // ── Stats ──────────────────────────────────────────────────────────────────
   const { totalCommission, hasMixedCurrency, convPct } = useMemo(() => {
     const USD_EUR_RATE = 0.92
     const mixed = allRows.some(r => r.deal_currency === 'USD' && r.internal_commission_eur != null)
@@ -345,9 +362,17 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     return { totalCommission: total, hasMixedCurrency: mixed, convPct: pct }
   }, [allRows, statusCounts])
 
-  const hasActiveFilters = q !== '' || from !== '' || to !== ''
+  const hasActiveFilters = q !== '' || from !== '' || to !== '' ||
+    countryFilter !== '' || guideIdFilter !== '' || guideRespFilter !== '' ||
+    sourceFilter !== '' || qualifiedFilter !== '' || slaFilter
 
   function commitSearch(value: string) { setQ(value.trim()) }
+
+  function clearAllFilters() {
+    setQ(''); setLocalQ(''); setFrom(''); setTo('')
+    setCountryFilter(''); setGuideIdFilter(''); setGuideRespFilter('')
+    setSourceFilter(''); setQualifiedFilter(''); setSlaFilter(false)
+  }
 
   function switchMain(key: MainFilter) {
     setMainFilter(key)
@@ -355,7 +380,6 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     setOpenPopup(null)
   }
 
-  // Active sub-filter label (for tab display)
   const activeSubLabel = subFilter != null
     ? SUB_OPTIONS[mainFilter].find(o => o.key === subFilter)?.label ?? null
     : null
@@ -363,314 +387,193 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
   return (
     <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1100px]">
 
-      {/* ─── Header ───────────────────────────────────────────────────── */}
+      {/* ─── Header ─────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body"
-            style={{ color: 'rgba(10,46,77,0.38)' }}>Admin</p>
-          <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
-            Inquiry <span style={{ fontStyle: 'italic' }}>Management</span>
+          <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body text-primary/38">Admin</p>
+          <h1 className="text-primary text-3xl font-bold f-display">
+            Inquiry <span className="italic">Management</span>
           </h1>
-          <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
+          <p className="text-primary/45 text-sm mt-1 f-body">
             {allRows.length} total inquiries · review, negotiate, and close deals.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* List / Calendar toggle */}
-          <div
-            className="flex items-center rounded-[12px] overflow-hidden p-0.5 gap-0.5"
-            style={{ background: 'rgba(10,46,77,0.06)', border: '1px solid rgba(10,46,77,0.1)' }}
-          >
+          <div className="flex items-center rounded-[12px] overflow-hidden p-0.5 gap-0.5 bg-primary/[6%] border border-primary/10">
             {([
               { mode: 'list' as const,     icon: <List     size={14} />, title: 'List view'     },
               { mode: 'calendar' as const, icon: <Calendar size={14} />, title: 'Calendar view' },
             ]).map(({ mode, icon, title }) => (
-              <button
+              <Button
                 key={mode}
                 onClick={() => setDisplayMode(mode)}
                 title={title}
-                className="flex items-center justify-center w-8 h-8 rounded-[9px] transition-all"
-                style={{
-                  background: displayMode === mode ? '#0A2E4D' : 'transparent',
-                  color:      displayMode === mode ? '#fff'    : 'rgba(10,46,77,0.45)',
-                }}
+                variant={displayMode === mode ? 'default' : 'ghost'}
+                size="icon"
+                className={cn(
+                  'w-8 h-8 rounded-[9px]',
+                  displayMode !== mode && 'text-primary/45',
+                )}
               >
                 {icon}
-              </button>
+              </Button>
             ))}
           </div>
-
           <Link
             href="/admin/inquiries/new"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-[14px] text-sm font-bold f-body flex-shrink-0 transition-all hover:opacity-90"
-            style={{ background: '#0A2E4D', color: '#FFFFFF', boxShadow: '0 4px 16px rgba(10,46,77,0.2)' }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[14px] text-sm font-bold f-body flex-shrink-0 transition-all hover:opacity-90 bg-primary text-white shadow-[0_4px_16px_rgba(10,46,77,0.2)]"
           >
-            <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+            <span className="text-base leading-none">+</span>
             New inquiry
           </Link>
         </div>
       </div>
 
-      {/* ─── Stats row ────────────────────────────────────────────────── */}
+      {/* ─── Stats row ──────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {([
-          { label: 'Lead',      value: groupCounts.lead,      color: '#0A2E4D' },
-          { label: 'Guide',     value: groupCounts.guide,     color: '#5B21B6' },
-          { label: 'Confirmed', value: groupCounts.confirmed, color: '#065F46' },
-          { label: 'Lost',      value: groupCounts.lost,      color: '#991B1B' },
+          { label: 'Lead',      value: groupCounts.lead,      textClass: 'text-primary'     },
+          { label: 'Guide',     value: groupCounts.guide,     textClass: 'text-purple-800'  },
+          { label: 'Confirmed', value: groupCounts.confirmed, textClass: 'text-emerald-800' },
+          { label: 'Lost',      value: groupCounts.lost,      textClass: 'text-red-800'     },
         ] as const).map(s => (
-          <div key={s.label}
-            className="px-4 py-3 rounded-[16px]"
-            style={{
-              background: 'highlight' in s && s.highlight ? 'rgba(239,68,68,0.05)' : '#FDFAF7',
-              border:     'highlight' in s && s.highlight ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(10,46,77,0.07)',
-              boxShadow:  '0 2px 10px rgba(10,46,77,0.04)',
-            }}>
-            <p className="text-[10px] uppercase tracking-[0.16em] f-body mb-1"
-              style={{ color: 'rgba(10,46,77,0.4)' }}>{s.label}</p>
-            <p className="text-2xl font-bold f-display" style={{ color: s.color }}>{s.value}</p>
+          <div
+            key={s.label}
+            className="px-4 py-3 rounded-[16px] bg-card border border-primary/7 shadow-[0_2px_10px_rgba(10,46,77,0.04)]"
+          >
+            <p className="text-[10px] uppercase tracking-[0.16em] f-body mb-1 text-primary/40">{s.label}</p>
+            <p className={cn('text-2xl font-bold f-display', s.textClass)}>{s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* ─── Commission + win rate ────────────────────────────────────── */}
+      {/* ─── Commission + win rate ──────────────────────────────── */}
       {(totalCommission > 0 || convPct != null) && (
         <div className="flex flex-wrap gap-3 mb-6">
           {totalCommission > 0 && (
-            <div className="px-4 py-3 rounded-[16px] flex items-center gap-3"
-              style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.2)' }}>
+            <div className="px-4 py-3 rounded-[16px] flex items-center gap-3 bg-accent/[8%] border border-accent/20">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.16em] f-body"
-                  style={{ color: 'rgba(10,46,77,0.45)' }}>Commission tracked</p>
-                <p className="text-xl font-bold f-display" style={{ color: '#E67E50' }}>
+                <p className="text-[10px] uppercase tracking-[0.16em] f-body text-primary/45">Commission tracked</p>
+                <p className="text-xl font-bold f-display text-accent">
                   €{totalCommission.toFixed(0)}
                   {hasMixedCurrency && (
-                    <span className="text-sm font-normal ml-1" style={{ color: 'rgba(10,46,77,0.45)' }}>≈ EUR</span>
+                    <span className="text-sm font-normal ml-1 text-primary/45">≈ EUR</span>
                   )}
                 </p>
               </div>
             </div>
           )}
           {convPct != null && (
-            <div className="px-4 py-3 rounded-[16px]"
-              style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-              <p className="text-[10px] uppercase tracking-[0.16em] f-body"
-                style={{ color: 'rgba(10,46,77,0.4)' }}>Win rate</p>
-              <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>{convPct}%</p>
+            <div className="px-4 py-3 rounded-[16px] bg-card border border-primary/7">
+              <p className="text-[10px] uppercase tracking-[0.16em] f-body text-primary/40">Win rate</p>
+              <p className="text-xl font-bold f-display text-primary">{convPct}%</p>
             </div>
           )}
         </div>
       )}
 
-      {/* ─── Calendar view ───────────────────────────────────────────── */}
+      {/* ─── Calendar view ──────────────────────────────────────── */}
       {displayMode === 'calendar' && (
         <InquiriesCalendar allRows={allRows} tripMap={tripMap} slugMap={slugMap} countryMap={countryMap} />
       )}
 
-      {/* ─── List view ───────────────────────────────────────────────── */}
+      {/* ─── List view ──────────────────────────────────────────── */}
       {displayMode === 'list' && (<>
 
-      {/* ─── Search + date filters ────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 items-center mb-5">
-        <div
-          className="flex items-center gap-2 px-3 py-2 rounded-[14px] flex-1"
-          style={{
-            background: '#FDFAF7',
-            border: `1px solid ${q ? 'rgba(10,46,77,0.25)' : 'rgba(10,46,77,0.1)'}`,
-            minWidth: '200px', maxWidth: '320px',
-          }}
-        >
-          <Search size={13} style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }} />
-          <input
-            type="text"
-            value={localQ}
-            onChange={e => setLocalQ(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') commitSearch(localQ)
-              if (e.key === 'Escape') { setLocalQ(''); setQ('') }
-            }}
-            onBlur={() => commitSearch(localQ)}
-            placeholder="Search name or email…"
-            className="flex-1 bg-transparent outline-none text-sm f-body placeholder:opacity-40"
-            style={{ color: '#0A2E4D', minWidth: 0 }}
-          />
-          {localQ && (
-            <button type="button" onClick={() => { setLocalQ(''); setQ('') }}
-              className="flex-shrink-0 p-0.5 rounded-full transition-opacity hover:opacity-70">
-              <X size={11} style={{ color: 'rgba(10,46,77,0.45)' }} />
-            </button>
-          )}
-        </div>
-
-        <label className="flex items-center gap-2 px-3 py-2 rounded-[14px] cursor-pointer"
-          style={{ background: '#FDFAF7', border: `1px solid ${from ? 'rgba(10,46,77,0.25)' : 'rgba(10,46,77,0.1)'}` }}>
-          <CalendarDays size={13} style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }} />
-          <span className="text-[10px] font-bold f-body uppercase tracking-[0.1em]"
-            style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }}>From</span>
-          <input type="date" value={from} onChange={e => setFrom(e.target.value)}
-            className="bg-transparent outline-none text-sm f-body"
-            style={{ color: from ? '#0A2E4D' : 'rgba(10,46,77,0.35)' }} />
-          {from && (
-            <button type="button" onClick={e => { e.preventDefault(); setFrom('') }} className="flex-shrink-0">
-              <X size={11} style={{ color: 'rgba(10,46,77,0.45)' }} />
-            </button>
-          )}
-        </label>
-
-        <label className="flex items-center gap-2 px-3 py-2 rounded-[14px] cursor-pointer"
-          style={{ background: '#FDFAF7', border: `1px solid ${to ? 'rgba(10,46,77,0.25)' : 'rgba(10,46,77,0.1)'}` }}>
-          <CalendarDays size={13} style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }} />
-          <span className="text-[10px] font-bold f-body uppercase tracking-[0.1em]"
-            style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }}>To</span>
-          <input type="date" value={to} onChange={e => setTo(e.target.value)}
-            className="bg-transparent outline-none text-sm f-body"
-            style={{ color: to ? '#0A2E4D' : 'rgba(10,46,77,0.35)' }} />
-          {to && (
-            <button type="button" onClick={e => { e.preventDefault(); setTo('') }} className="flex-shrink-0">
-              <X size={11} style={{ color: 'rgba(10,46,77,0.45)' }} />
-            </button>
-          )}
-        </label>
-
-        {hasActiveFilters && (
-          <button type="button"
-            onClick={() => { setQ(''); setLocalQ(''); setFrom(''); setTo('') }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[14px] text-xs font-semibold f-body transition-all hover:opacity-80"
-            style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.2)' }}>
-            <X size={11} />
-            Clear
-          </button>
-        )}
-      </div>
-
-      {/* ─── Main filter tabs + sub-filter popups ────────────────────── */}
-
-      {/* Backdrop — closes popup when clicking outside */}
+      {/* ─── Status group chips ─────────────────────────────────── */}
       {openPopup != null && (
         <div className="fixed inset-0 z-40" onClick={() => setOpenPopup(null)} />
       )}
 
-      <div className="flex items-center gap-2 flex-wrap mb-5">
+      <div className="flex items-center gap-2 flex-wrap mb-4">
         {(['lead', 'guide', 'confirmed', 'lost'] as const).map(key => {
-          const active     = mainFilter === key
-          const count      = groupCounts[key]
-          const colors     = MAIN_COLORS[key]
-          const popupOpen  = openPopup === key
-          const subLabel   = active ? activeSubLabel : null
+          const active    = mainFilter === key
+          const count     = groupCounts[key]
+          const popupOpen = openPopup === key
+          const subLabel  = active ? activeSubLabel : null
 
           return (
-            <div key={key} className="relative" style={{ zIndex: popupOpen ? 50 : 'auto' }}>
-
-              {/* Tab pill */}
-              <div
-                className="flex items-center rounded-full text-sm font-semibold f-body overflow-hidden"
-                style={{
-                  background: active ? colors.active : 'rgba(10,46,77,0.06)',
-                  color:      active ? colors.text   : 'rgba(10,46,77,0.6)',
-                  border:     active ? 'none'        : '1px solid rgba(10,46,77,0.1)',
-                }}
-              >
-                {/* Label + count — click to switch */}
-                <button
+            <div key={key} className={cn('relative', popupOpen && 'z-50')}>
+              <div className="flex items-center overflow-hidden rounded-full border border-primary/15">
+                <Button
+                  variant={active ? 'default' : 'ghost'}
+                  size="sm"
                   onClick={() => switchMain(key)}
-                  className="flex items-center gap-2 pl-4 py-2 pr-2.5"
-                >
-                  <span>{MAIN_LABELS[key]}</span>
-                  {subLabel != null && (
-                    <span className="text-[11px] font-normal opacity-70">· {subLabel}</span>
+                  className={cn(
+                    'rounded-none rounded-l-full pl-4 pr-2 h-8 border-0',
+                    !active && 'text-primary/60',
                   )}
-                  <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{
-                      background: active ? 'rgba(255,255,255,0.18)' : 'rgba(10,46,77,0.1)',
-                      color:      active ? 'rgba(255,255,255,0.9)'  : 'rgba(10,46,77,0.5)',
-                    }}
-                  >
+                >
+                  {MAIN_LABELS[key]}
+                  {subLabel != null && (
+                    <span className="ml-1 text-[11px] font-normal opacity-70">· {subLabel}</span>
+                  )}
+                  <span className={cn(
+                    'ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                    active ? 'bg-white/20 text-white' : 'bg-primary/[8%] text-primary/50',
+                  )}>
                     {count}
                   </span>
-                </button>
-
-                {/* Chevron — click to open popup */}
-                <button
+                </Button>
+                <Button
+                  variant={active ? 'default' : 'ghost'}
+                  size="sm"
                   onClick={e => {
                     e.stopPropagation()
                     if (!active) switchMain(key)
                     setOpenPopup(popupOpen ? null : key)
                   }}
-                  className="flex items-center px-2.5 py-2 transition-opacity hover:opacity-80"
-                  style={{
-                    borderLeft: active
-                      ? '1px solid rgba(255,255,255,0.15)'
-                      : '1px solid rgba(10,46,77,0.1)',
-                  }}
+                  className={cn(
+                    'rounded-none rounded-r-full px-2 h-8 border-0 border-l border-primary/10',
+                    !active && 'text-primary/45',
+                  )}
                 >
-                  <ChevronDown
-                    size={13}
-                    style={{
-                      transition: 'transform 0.15s',
-                      transform: popupOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }}
-                  />
-                </button>
+                  <span className={cn('text-xs transition-transform inline-block', popupOpen && 'rotate-180')}>▾</span>
+                </Button>
               </div>
 
-              {/* Popup */}
               {popupOpen && (
-                <div
-                  className="absolute top-full left-0 mt-1.5 rounded-[16px] p-1.5 min-w-[200px]"
-                  style={{
-                    background: '#fff',
-                    border:     '1px solid rgba(10,46,77,0.1)',
-                    boxShadow:  '0 8px 32px rgba(10,46,77,0.13)',
-                    zIndex: 50,
-                  }}
-                >
-                  {/* "All" option */}
-                  <button
+                <div className="absolute top-full left-0 mt-1.5 rounded-[16px] p-1.5 min-w-[200px] bg-popover border border-primary/10 shadow-[0_8px_32px_rgba(10,46,77,0.13)] z-50">
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => { setSubFilter(null); setOpenPopup(null) }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body font-semibold transition-colors hover:bg-black/[0.03]"
-                    style={{
-                      background: subFilter == null ? 'rgba(10,46,77,0.06)' : 'transparent',
-                      color: '#0A2E4D',
-                    }}
+                    className={cn(
+                      'w-full justify-between font-semibold text-primary',
+                      subFilter == null && 'bg-primary/[6%]',
+                    )}
                   >
                     <span>All {MAIN_LABELS[key]}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/[8%] text-primary/50">
                       {count}
                     </span>
-                  </button>
-
-                  <div className="my-1 mx-2" style={{ height: 1, background: 'rgba(10,46,77,0.07)' }} />
-
-                  {/* Sub-filter options */}
+                  </Button>
+                  <div className="my-1 mx-2 h-px bg-primary/7" />
                   {SUB_OPTIONS[key].map(opt => {
                     const optCount  = statusCounts[opt.key] ?? 0
                     const optActive = subFilter === opt.key
                     return (
-                      <button
+                      <Button
                         key={opt.key}
+                        variant="ghost"
+                        size="sm"
                         onClick={() => { setSubFilter(opt.key); setOpenPopup(null) }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body transition-colors hover:bg-black/[0.03]"
-                        style={{
-                          background: optActive ? 'rgba(10,46,77,0.06)' : 'transparent',
-                          color:      opt.special ? '#DC2626' : '#0A2E4D',
-                          fontWeight: optActive ? 600 : 400,
-                        }}
+                        className={cn(
+                          'w-full justify-between',
+                          opt.special ? 'text-destructive' : 'text-primary',
+                          optActive && 'bg-primary/[6%] font-semibold',
+                        )}
                       >
                         <span>{opt.label}</span>
                         {optCount > 0 && (
-                          <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{
-                              background: opt.special ? 'rgba(239,68,68,0.1)' : 'rgba(10,46,77,0.08)',
-                              color:      opt.special ? '#DC2626'              : 'rgba(10,46,77,0.5)',
-                            }}
-                          >
+                          <span className={cn(
+                            'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                            opt.special ? 'bg-destructive/10 text-destructive' : 'bg-primary/[8%] text-primary/50',
+                          )}>
                             {optCount}
                           </span>
                         )}
-                      </button>
+                      </Button>
                     )
                   })}
                 </div>
@@ -679,255 +582,316 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
           )
         })}
 
-        {/* Active sub-filter clear */}
         {subFilter != null && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setSubFilter(null)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs f-body transition-opacity hover:opacity-70"
-            style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.1)' }}
+            className="text-primary/50 border border-primary/10"
           >
-            <X size={10} />
+            <X size={10} className="mr-1" />
             {activeSubLabel}
-          </button>
+          </Button>
         )}
       </div>
 
-      {/* ─── View toggle + SLA sort ──────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
-        {(['angler', 'guide'] as const).map(v => (
-          <button
-            key={v}
-            onClick={() => setView(v)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
-            style={{
-              background: view === v ? '#0A2E4D' : 'rgba(10,46,77,0.06)',
-              color:      view === v ? '#fff'    : 'rgba(10,46,77,0.55)',
-              border:     view === v ? 'none'    : '1px solid rgba(10,46,77,0.1)',
+      {/* ─── Detailed filters ───────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 items-center mb-5">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            value={localQ}
+            onChange={e => setLocalQ(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commitSearch(localQ)
+              if (e.key === 'Escape') { setLocalQ(''); setQ('') }
             }}
-          >
-            {v === 'angler' ? '👤 Angler view' : '🎣 Guide view'}
-          </button>
-        ))}
+            onBlur={() => commitSearch(localQ)}
+            placeholder="Name, email or trip…"
+            className="pl-8 h-8 text-sm"
+          />
+          {localQ && (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => { setLocalQ(''); setQ('') }}
+              className="absolute right-1 top-1/2 -translate-y-1/2"
+            >
+              <X size={11} />
+            </Button>
+          )}
+        </div>
 
-        <button
-          onClick={() => setSortSla(s => !s)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
-          style={{
-            background: sortSla ? 'rgba(239,68,68,0.1)'  : 'rgba(10,46,77,0.06)',
-            color:      sortSla ? '#DC2626'               : 'rgba(10,46,77,0.55)',
-            border:     sortSla ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(10,46,77,0.1)',
-          }}
-          title="Sort: inquiries without offer, oldest first"
+        {/* From date */}
+        <div className={cn(
+          'flex items-center gap-1.5 px-2.5 rounded-lg bg-background border h-8',
+          from ? 'border-primary/25' : 'border-input',
+        )}>
+          <CalendarDays size={13} className="text-muted-foreground flex-shrink-0" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex-shrink-0">From</span>
+          <Input
+            type="date" value={from} onChange={e => setFrom(e.target.value)}
+            className={cn('border-0 shadow-none bg-transparent p-0 h-auto text-sm ring-0 focus-visible:ring-0', from ? 'text-foreground' : 'text-muted-foreground')}
+          />
+          {from && (
+            <Button variant="ghost" size="icon-xs" onClick={() => setFrom('')} className="flex-shrink-0 -mr-1">
+              <X size={11} />
+            </Button>
+          )}
+        </div>
+
+        {/* To date */}
+        <div className={cn(
+          'flex items-center gap-1.5 px-2.5 rounded-lg bg-background border h-8',
+          to ? 'border-primary/25' : 'border-input',
+        )}>
+          <CalendarDays size={13} className="text-muted-foreground flex-shrink-0" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex-shrink-0">To</span>
+          <Input
+            type="date" value={to} onChange={e => setTo(e.target.value)}
+            className={cn('border-0 shadow-none bg-transparent p-0 h-auto text-sm ring-0 focus-visible:ring-0', to ? 'text-foreground' : 'text-muted-foreground')}
+          />
+          {to && (
+            <Button variant="ghost" size="icon-xs" onClick={() => setTo('')} className="flex-shrink-0 -mr-1">
+              <X size={11} />
+            </Button>
+          )}
+        </div>
+
+        {/* Country */}
+        {countries.length > 0 && (
+          <Select value={countryFilter || null} onValueChange={(v) => setCountryFilter(v ?? '')}>
+            <SelectTrigger size="sm" className="min-w-[110px]">
+              <SelectValue placeholder="Country" />
+            </SelectTrigger>
+            <SelectContent>
+              {countries.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Guide */}
+        {guideOptions.length > 0 && (
+          <Select value={guideIdFilter || null} onValueChange={(v) => setGuideIdFilter(v ?? '')}>
+            <SelectTrigger size="sm" className="min-w-[110px]">
+              <SelectValue placeholder="Guide" />
+            </SelectTrigger>
+            <SelectContent>
+              {guideOptions.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Guide response */}
+        <Select value={guideRespFilter || null} onValueChange={(v) => setGuideRespFilter(v ?? '')}>
+          <SelectTrigger size="sm" className="min-w-[120px]">
+            <SelectValue placeholder="Guide resp." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="accepted">✓ Accepted</SelectItem>
+            <SelectItem value="declined">✗ Declined</SelectItem>
+            <SelectItem value="pending">⏳ Awaiting</SelectItem>
+            <SelectItem value="none">No guide</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Source */}
+        {sources.length > 0 && (
+          <Select value={sourceFilter || null} onValueChange={(v) => setSourceFilter(v ?? '')}>
+            <SelectTrigger size="sm" className="min-w-[100px]">
+              <SelectValue placeholder="Source" />
+            </SelectTrigger>
+            <SelectContent>
+              {sources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* Qualified */}
+        <Select value={qualifiedFilter || null} onValueChange={(v) => setQualifiedFilter(v ?? '')}>
+          <SelectTrigger size="sm" className="min-w-[120px]">
+            <SelectValue placeholder="Qualified" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="yes">Qualified ✓</SelectItem>
+            <SelectItem value="no">Not qualified</SelectItem>
+            <SelectItem value="unknown">Unknown</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* SLA */}
+        <Button
+          variant={slaFilter ? 'destructive' : 'outline'}
+          size="sm"
+          onClick={() => setSlaFilter(s => !s)}
+          title="Show only inquiries needing attention (silence ≥3d or no offer 24h+)"
         >
-          ⏱ Bez oferty od
-        </button>
+          ⏱ SLA
+        </Button>
+
+        {/* Clear */}
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-destructive">
+            <X className="mr-1 size-3" /> Clear
+          </Button>
+        )}
       </div>
 
-      {/* ─── Results count ───────────────────────────────────────────── */}
+      {/* ─── Results count ──────────────────────────────────────── */}
       {(hasActiveFilters || subFilter != null) && (
-        <p className="text-xs f-body mb-4" style={{ color: 'rgba(10,46,77,0.4)' }}>
+        <p className="text-xs f-body mb-4 text-primary/40">
           {rows.length === 0 ? 'No results' : `${rows.length} result${rows.length !== 1 ? 's' : ''}`}
-          {hasActiveFilters && <span style={{ color: 'rgba(10,46,77,0.3)' }}> (filtered)</span>}
+          {hasActiveFilters && <span className="text-primary/30"> (filtered)</span>}
         </p>
       )}
 
-      {/* ─── List ────────────────────────────────────────────────────── */}
-      {rows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 rounded-[24px] text-center"
-          style={{ background: '#FDFAF7', border: '2px dashed rgba(10,46,77,0.12)' }}>
-          <p className="text-[#0A2E4D]/40 text-base f-display mb-1">
-            {hasActiveFilters ? 'No matches' : 'No inquiries here'}
-          </p>
-          <p className="text-[#0A2E4D]/30 text-sm f-body">
-            {hasActiveFilters
-              ? 'Try adjusting your search or date range.'
-              : `No ${MAIN_LABELS[mainFilter].toLowerCase()} inquiries yet.`}
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-2.5">
-          {rows.map(row => {
-            const st        = STATUS_STYLE[row.status] ?? STATUS_STYLE.pending
-            const tripTitle = tripMap[row.id] ?? '—'
-            const dates     = row.requested_dates
-            const dateLabel = dates != null && dates.length > 0
-              ? fmtDate(dates[0]) + (dates.length > 1 ? ` +${dates.length - 1}` : '')
-              : '—'
-            const isAttention = needsAttention(row)
-            const isNew       = isNewUnresponded(row)
-
-            // ── Guide view row ──────────────────────────────────────────────
-            if (view === 'guide') {
-              const hasOffer  = offerSentSet.has(row.id)
-              const stage     = guideStage(row, hasOffer)
-              const stageSt   = GUIDE_STAGE_STYLE[stage]
-              const guideName = row.assigned_guide_id != null
-                ? (guideMap[row.assigned_guide_id] ?? 'Unknown guide')
+      {/* ─── Table ──────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[190px]">Angler</TableHead>
+              <TableHead className="hidden sm:table-cell">Contact</TableHead>
+              <TableHead>Trip</TableHead>
+              <TableHead className="hidden sm:table-cell whitespace-nowrap">Dates</TableHead>
+              <TableHead className="hidden sm:table-cell text-center w-12">Pax</TableHead>
+              <TableHead>Guide</TableHead>
+              <TableHead className="hidden md:table-cell text-right whitespace-nowrap">€</TableHead>
+              <TableHead className="hidden sm:table-cell whitespace-nowrap">Last contact</TableHead>
+              <TableHead className="hidden lg:table-cell">Next action</TableHead>
+              <TableHead>SLA</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
+                  {hasActiveFilters
+                    ? 'No matches — try adjusting filters.'
+                    : `No ${MAIN_LABELS[mainFilter].toLowerCase()} inquiries yet.`}
+                </TableCell>
+              </TableRow>
+            ) : rows.map(row => {
+              const tripTitle = tripMap[row.id] ?? '—'
+              const country   = row.trip_country ?? countryMap[row.id] ?? null
+              const dates     = row.requested_dates
+              const dateLabel = dates?.length
+                ? fmtDate(dates[0]) + (dates.length > 1 ? ` +${dates.length - 1}` : '')
+                : '—'
+              const guideName = row.assigned_guide_id
+                ? (guideMap[row.assigned_guide_id] ?? 'Unknown')
                 : null
+              const showToggle = row.assigned_guide_id != null &&
+                row.guide_acceptance === 'accepted' &&
+                STATUS_GROUPS.guide.includes(row.status)
 
               return (
-                <Link key={row.id} href={`/admin/inquiries/${row.id}`} className="block group" style={{ textDecoration: 'none' }}>
-                  <div
-                    className="flex gap-4 px-5 py-4 rounded-[20px] transition-all group-hover:shadow-md"
-                    style={{
-                      background: stage === 'awaiting_response' ? 'rgba(251,191,36,0.04)' : '#FDFAF7',
-                      border: stage === 'awaiting_response'
-                        ? '1px solid rgba(251,191,36,0.25)'
-                        : stage === 'declined'
-                          ? '1px solid rgba(239,68,68,0.15)'
-                          : '1px solid rgba(10,46,77,0.07)',
-                      boxShadow: '0 1px 6px rgba(10,46,77,0.04)',
-                    }}
-                  >
-                    <div className="flex-shrink-0 flex flex-col items-center pt-1">
-                      <div className="w-2.5 h-2.5 rounded-full mt-0.5"
-                        style={{ background: stageSt.color, boxShadow: `0 0 0 3px ${stageSt.bg}` }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <span className="text-sm font-bold f-body text-[#0A2E4D] truncate">{row.angler_name}</span>
-                        {row.party_size > 1 && (
-                          <span className="text-[10px] f-body flex-shrink-0 px-1.5 py-0.5 rounded-full"
-                            style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.5)' }}>
-                            {row.party_size} pax
-                          </span>
-                        )}
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-                          style={{ background: st.bg, color: st.color, border: st.border }}>
-                          {st.label}
-                        </span>
-                      </div>
-                      <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                        {tripTitle} · {dateLabel}
-                      </p>
-                    </div>
-                    <div className="hidden sm:flex flex-col items-end gap-1.5 flex-shrink-0 min-w-[160px]">
-                      <span className="text-xs font-bold f-body text-right" style={{ color: '#0A2E4D' }}>
-                        {guideName ?? <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>Unassigned</span>}
-                      </span>
-                      {row.assigned_guide_id != null && (
-                        <span className="text-[10px] f-body font-semibold">
-                          {row.guide_acceptance === 'accepted' && <span style={{ color: '#059669' }}>✓ Accepted</span>}
-                          {row.guide_acceptance === 'declined' && <span style={{ color: '#DC2626' }}>✗ Declined</span>}
-                          {row.guide_acceptance == null        && <span style={{ color: '#A16207' }}>⏳ No response</span>}
-                        </span>
-                      )}
-                      {row.guide_decline_reason != null && row.guide_decline_reason.trim() !== '' && (
-                        <p className="text-[10px] f-body max-w-[150px] text-right truncate"
-                          style={{ color: 'rgba(153,27,27,0.65)' }}>
-                          {row.guide_decline_reason}
-                        </p>
-                      )}
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-                        style={{ background: stageSt.bg, color: stageSt.color, border: stageSt.border }}>
-                        {stageSt.label}
-                      </span>
-                      {row.assigned_guide_id != null && row.guide_acceptance !== 'declined' && (
-                        <ExternalOfferToggle inquiryId={row.id} initial={row.external_offer_sent} />
-                      )}
-                    </div>
-                    <div className="flex items-center flex-shrink-0 pl-1">
-                      <span className="text-sm font-semibold transition-transform group-hover:translate-x-0.5"
-                        style={{ color: '#E67E50' }}>→</span>
-                    </div>
-                  </div>
-                </Link>
-              )
-            }
-
-            // ── Angler view row ─────────────────────────────────────────────
-            return (
-              <Link key={row.id} href={`/admin/inquiries/${row.id}`} className="block group" style={{ textDecoration: 'none' }}>
-                <div
-                  className="flex gap-4 px-5 py-4 rounded-[20px] transition-all group-hover:shadow-md"
-                  style={{
-                    background: isNew
-                      ? 'rgba(230,126,80,0.04)'
-                      : isAttention ? 'rgba(239,68,68,0.025)' : '#FDFAF7',
-                    border: isNew
-                      ? '1px solid rgba(230,126,80,0.2)'
-                      : isAttention
-                        ? '1px solid rgba(239,68,68,0.15)'
-                        : '1px solid rgba(10,46,77,0.07)',
-                    boxShadow: '0 1px 6px rgba(10,46,77,0.04)',
-                  }}
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/admin/inquiries/${row.id}`)}
                 >
-                  <div className="flex-shrink-0 flex flex-col items-center pt-1 gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full mt-0.5"
-                      style={{ background: st.color, boxShadow: `0 0 0 3px ${st.bg}` }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-sm font-bold f-body text-[#0A2E4D] truncate">{row.angler_name}</span>
-                      {row.party_size > 1 && (
-                        <span className="text-[10px] f-body flex-shrink-0 px-1.5 py-0.5 rounded-full"
-                          style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.5)' }}>
-                          {row.party_size} pax
-                        </span>
-                      )}
-                      <SilenceBadge row={row} />
+                  <TableCell className="py-3">
+                    <div className="flex flex-col gap-1">
+                      <Link
+                        href={`/admin/inquiries/${row.id}`}
+                        className="font-semibold text-foreground hover:text-primary hover:underline text-sm leading-tight"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {row.angler_name}
+                      </Link>
+                      <Badge data-status={row.status} className="status-badge w-fit text-[10px] h-auto py-0.5">
+                        {STATUS_LABELS[row.status as InquiryStatus] ?? row.status}
+                      </Badge>
                     </div>
-                    <p className="text-xs f-body truncate mb-0.5" style={{ color: 'rgba(10,46,77,0.55)' }}>
-                      {tripTitle} · {dateLabel}
-                    </p>
-                    <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                      {row.angler_email}
-                      {row.angler_phone != null && row.angler_phone.trim() !== '' && (
-                        <span style={{ marginLeft: 6 }}>· {row.angler_phone}</span>
-                      )}
-                    </p>
-                    {row.next_action != null && row.next_action.trim() !== '' && (
-                      <div className="mt-1.5 flex items-center gap-1.5">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] f-body px-1.5 py-0.5 rounded"
-                          style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50', border: '1px solid rgba(230,126,80,0.2)' }}>
-                          next
-                        </span>
-                        <span className="text-[11px] f-body font-medium truncate" style={{ color: '#0A2E4D' }}>
-                          {row.next_action}
-                        </span>
+                  </TableCell>
+
+                  <TableCell className="hidden sm:table-cell text-xs text-muted-foreground py-3">
+                    <div className="truncate max-w-[180px]">{row.angler_email}</div>
+                    {row.angler_phone && <div className="mt-0.5">{row.angler_phone}</div>}
+                  </TableCell>
+
+                  <TableCell className="py-3">
+                    <div className="font-medium text-foreground text-sm truncate max-w-[150px]" title={tripTitle}>
+                      {tripTitle}
+                    </div>
+                    {country && <div className="text-xs text-muted-foreground mt-0.5">{country}</div>}
+                  </TableCell>
+
+                  <TableCell className="hidden sm:table-cell text-xs text-muted-foreground whitespace-nowrap py-3">
+                    {dateLabel}
+                  </TableCell>
+
+                  <TableCell className="hidden sm:table-cell text-center text-sm text-muted-foreground py-3">
+                    {row.party_size}
+                  </TableCell>
+
+                  <TableCell className="text-xs py-3">
+                    {guideName ? (
+                      <div>
+                        <span className="font-medium text-foreground text-sm">{guideName}</span>
+                        <div className="mt-0.5">
+                          {row.guide_acceptance === 'accepted' && (
+                            <span className="text-emerald-600 text-[10px]">✓ Accepted</span>
+                          )}
+                          {row.guide_acceptance === 'declined' && (
+                            <span
+                              className="text-red-600 text-[10px] block max-w-[120px]"
+                              title={row.guide_decline_reason ?? 'Declined'}
+                            >
+                              ✗ {row.guide_decline_reason
+                                ? `"${row.guide_decline_reason.slice(0, 30)}${row.guide_decline_reason.length > 30 ? '…' : ''}"`
+                                : 'Declined'}
+                            </span>
+                          )}
+                          {row.guide_acceptance == null && (
+                            <span className="text-yellow-700 text-[10px]">⏳ Awaiting</span>
+                          )}
+                        </div>
+                        {showToggle && (
+                          <div className="mt-1" onClick={e => e.stopPropagation()}>
+                            <ExternalOfferToggle inquiryId={row.id} initial={row.external_offer_sent} />
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
                     )}
-                  </div>
-                  <div className="hidden sm:flex flex-col items-end gap-1.5 flex-shrink-0 min-w-[120px]">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold f-body"
-                      style={{ background: st.bg, color: st.color, border: st.border }}>
-                      {st.label}
-                    </span>
-                    <SlaBadge row={row} />
-                    {row.internal_commission_eur != null && (
-                      <span className="text-xs font-bold f-body" style={{ color: '#E67E50' }}>
-                        +{row.deal_currency === 'USD' ? '$' : '€'}{Number(row.internal_commission_eur).toFixed(0)}
+                  </TableCell>
+
+                  <TableCell className="hidden md:table-cell text-right text-xs font-semibold text-accent whitespace-nowrap py-3">
+                    {row.internal_commission_eur != null
+                      ? `${row.deal_currency === 'USD' ? '$' : '€'}${Number(row.internal_commission_eur).toFixed(0)}`
+                      : <span className="text-muted-foreground font-normal">—</span>}
+                  </TableCell>
+
+                  <TableCell className="hidden sm:table-cell text-xs text-muted-foreground whitespace-nowrap py-3">
+                    {row.last_contact_at ? relativeTime(row.last_contact_at) : '—'}
+                  </TableCell>
+
+                  <TableCell className="hidden lg:table-cell text-xs text-muted-foreground max-w-[160px] py-3">
+                    {row.next_action ? (
+                      <span className="truncate block" title={row.next_action}>
+                        {row.next_action.slice(0, 50)}{row.next_action.length > 50 ? '…' : ''}
                       </span>
-                    )}
-                    {row.status === 'lost' && row.lost_reason != null && row.lost_reason.trim() !== '' && (
-                      <p className="text-[10px] f-body max-w-[140px] text-right truncate"
-                        style={{ color: 'rgba(153,27,27,0.6)' }}>
-                        {row.lost_reason}
-                      </p>
-                    )}
-                    {row.last_contact_at != null && (
-                      <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
-                        contact {relativeTime(row.last_contact_at)}
-                      </p>
-                    )}
-                    <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.28)' }}>
-                      {relativeTime(row.created_at)}
-                    </p>
-                  </div>
-                  <div className="flex items-center flex-shrink-0 pl-1">
-                    <span className="text-sm font-semibold transition-transform group-hover:translate-x-0.5"
-                      style={{ color: '#E67E50' }}>→</span>
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      )}
+                    ) : '—'}
+                  </TableCell>
+
+                  <TableCell className="py-3">
+                    <div className="flex flex-col gap-1 items-start">
+                      <SilenceBadge row={row} />
+                      <SlaBadge row={row} />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
 
       </>)}
-
     </div>
   )
 }

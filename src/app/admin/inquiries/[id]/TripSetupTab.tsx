@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { cn } from '@/lib/utils'
 import { saveTripDetails } from '@/actions/inquiries'
 import { extractTripDetailsAI } from '@/actions/ai'
 import type { TripDetails } from '@/actions/inquiries'
@@ -24,44 +25,13 @@ function fmtDate(iso: string): string {
   })
 }
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: 'rgba(10,46,77,0.03)',
-  border: '1px solid rgba(10,46,77,0.1)',
-  borderRadius: 10,
-  padding: '8px 12px',
-  fontSize: 13,
-  color: '#0A2E4D',
-  outline: 'none',
-  fontFamily: 'inherit',
-}
-
-// AI-suggested field highlight style
-const aiInputStyle: React.CSSProperties = {
-  ...inputStyle,
-  background: 'rgba(230,126,80,0.08)',
-  border: '1px solid #E67E50',
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 10,
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.13em',
-  color: 'rgba(10,46,77,0.4)',
-  marginBottom: 6,
-}
-
 // ─── Shared card wrapper ──────────────────────────────────────────────────────
 
 function Card({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-[22px] overflow-hidden"
-      style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-      <div className="px-5 py-3.5 flex items-center justify-between"
-        style={{ borderBottom: '1px solid rgba(10,46,77,0.07)', background: 'rgba(230,126,80,0.03)' }}>
-        <h3 className="text-sm font-bold f-display text-[#0A2E4D]">{title}</h3>
+    <div className="rounded-[22px] overflow-hidden bg-[#FDFAF7] border border-primary/7">
+      <div className="px-5 py-3.5 flex items-center justify-between border-b border-primary/7 bg-accent/[3%]">
+        <h3 className="text-sm font-bold f-display text-primary">{title}</h3>
         {action}
       </div>
       <div className="px-5 py-4">
@@ -76,11 +46,9 @@ function Card({ title, action, children }: { title: string; action?: React.React
 function BriefReadRow({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null
   return (
-    <div className="flex items-start justify-between gap-4 py-2.5"
-      style={{ borderBottom: '1px solid rgba(10,46,77,0.05)' }}>
-      <span className="text-[10px] font-bold uppercase tracking-[0.13em] f-body flex-shrink-0"
-        style={{ color: 'rgba(10,46,77,0.35)', minWidth: 110 }}>{label}</span>
-      <span className="text-sm f-body text-right leading-relaxed" style={{ color: '#0A2E4D' }}>{value}</span>
+    <div className="flex items-start justify-between gap-4 py-2.5 border-b border-primary/5">
+      <span className="trip-label mb-0 flex-shrink-0 min-w-[110px]">{label}</span>
+      <span className="text-sm f-body text-right leading-relaxed text-primary">{value}</span>
     </div>
   )
 }
@@ -226,34 +194,33 @@ export function TripSetupTab({
       <div className="flex flex-col gap-4">
 
         {/* Read-only inquiry summary */}
-        <div className="rounded-[18px] px-5 py-4 flex flex-wrap gap-x-8 gap-y-3"
-          style={{ background: 'rgba(10,46,77,0.04)', border: '1px solid rgba(10,46,77,0.08)' }}>
+        <div className="rounded-[18px] px-5 py-4 flex flex-wrap gap-x-8 gap-y-3 bg-primary/[4%] border border-primary/[8%]">
           <div>
-            <p style={labelStyle}>Angler</p>
-            <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{anglerName}</p>
+            <p className="trip-label">Angler</p>
+            <p className="text-sm font-semibold f-body text-primary">{anglerName}</p>
           </div>
           <div>
-            <p style={labelStyle}>Dates</p>
-            <p className="text-sm f-body" style={{ color: '#0A2E4D' }}>
+            <p className="trip-label">Dates</p>
+            <p className="text-sm f-body text-primary">
               {requestedDates.length > 0 ? requestedDates.map(fmtDate).join(', ') : 'TBD'}
             </p>
           </div>
           <div>
-            <p style={labelStyle}>Group size</p>
-            <p className="text-sm f-body" style={{ color: '#0A2E4D' }}>
+            <p className="trip-label">Group size</p>
+            <p className="text-sm f-body text-primary">
               {partySize} {partySize === 1 ? 'person' : 'people'}
             </p>
           </div>
           {experienceTitle != null && (
             <div>
-              <p style={labelStyle}>Experience</p>
-              <p className="text-sm f-body" style={{ color: '#0A2E4D' }}>{experienceTitle}</p>
+              <p className="trip-label">Experience</p>
+              <p className="text-sm f-body text-primary">{experienceTitle}</p>
             </div>
           )}
           {anglerMessage != null && anglerMessage.trim() !== '' && (
             <div className="w-full">
-              <p style={labelStyle}>Angler&apos;s message</p>
-              <p className="text-sm f-body italic leading-relaxed" style={{ color: '#374151' }}>
+              <p className="trip-label">Angler&apos;s message</p>
+              <p className="text-sm f-body italic leading-relaxed text-gray-700">
                 &ldquo;{anglerMessage}&rdquo;
               </p>
             </div>
@@ -271,13 +238,11 @@ export function TripSetupTab({
                   type="button"
                   onClick={handleExtractAI}
                   disabled={aiLoading}
-                  className="flex items-center gap-1.5 text-xs font-bold f-body px-3 py-1.5 rounded-lg transition-all"
-                  style={{
-                    color: aiLoading ? 'rgba(230,126,80,0.5)' : '#E67E50',
-                    background: 'rgba(230,126,80,0.08)',
-                    border: '1px solid rgba(230,126,80,0.25)',
-                    cursor: aiLoading ? 'not-allowed' : 'pointer',
-                  }}>
+                  className={cn(
+                    'flex items-center gap-1.5 text-xs font-bold f-body px-3 py-1.5 rounded-lg transition-all bg-accent/[8%] border border-accent/25',
+                    aiLoading ? 'text-accent/50 cursor-not-allowed' : 'text-accent cursor-pointer',
+                  )}
+                >
                   {aiLoading ? (
                     <>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="animate-spin">
@@ -299,8 +264,7 @@ export function TripSetupTab({
               {/* Edit / Cancel toggle */}
               {!isEditing ? (
                 <button type="button" onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-1.5 text-xs font-bold f-body px-3 py-1.5 rounded-lg transition-all"
-                  style={{ color: '#0A2E4D', background: 'rgba(10,46,77,0.06)', border: 'none', cursor: 'pointer' }}>
+                  className="flex items-center gap-1.5 text-xs font-bold f-body px-3 py-1.5 rounded-lg transition-all text-primary bg-primary/[6%] cursor-pointer">
                   <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                     <path d="M8.5 1.5L10.5 3.5L4 10H2V8L8.5 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
                   </svg>
@@ -308,8 +272,7 @@ export function TripSetupTab({
                 </button>
               ) : (
                 <button type="button" onClick={() => { setIsEditing(false); setAiError(null); setAiSummary(null) }}
-                  className="text-xs font-bold f-body px-3 py-1.5 rounded-lg"
-                  style={{ color: 'rgba(10,46,77,0.45)', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                  className="text-xs font-bold f-body px-3 py-1.5 rounded-lg text-primary/45 cursor-pointer">
                   Cancel
                 </button>
               )}
@@ -327,7 +290,7 @@ export function TripSetupTab({
               <BriefReadRow label="Accommodation"  value={accommodation  || null} />
               <BriefReadRow label="Note for guide" value={guideNotes     || null} />
               {!confirmedDate && !priceRange && !dateFlex && !targetSpecies && !accommodation && !guideNotes && (
-                <p className="text-xs f-body italic" style={{ color: 'rgba(10,46,77,0.35)' }}>
+                <p className="text-xs f-body italic text-primary/35">
                   No brief filled in yet. Click Edit to add details.
                 </p>
               )}
@@ -337,26 +300,24 @@ export function TripSetupTab({
             <div>
               {/* AI error banner */}
               {aiError != null && (
-                <div className="mb-4 px-3 py-2.5 rounded-xl text-xs f-body"
-                  style={{ background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', color: '#DC2626' }}>
+                <div className="mb-4 px-3 py-2.5 rounded-xl text-xs f-body bg-red-500/[7%] border border-red-500/20 text-red-600">
                   AI extraction failed: {aiError}
                 </div>
               )}
 
               {/* AI summary */}
               {aiSummary != null && (
-                <div className="mb-4 px-4 py-3 rounded-xl"
-                  style={{ background: 'rgba(230,126,80,0.06)', border: '1px solid rgba(230,126,80,0.2)' }}>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] f-body mb-1.5"
-                    style={{ color: '#E67E50' }}>AI Summary</p>
-                  <p className="text-sm f-body leading-relaxed" style={{ color: '#0A2E4D' }}>{aiSummary}</p>
+                <div className="mb-4 px-4 py-3 rounded-xl bg-accent/[6%] border border-accent/20">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] f-body mb-1.5 text-accent">
+                    AI Summary
+                  </p>
+                  <p className="text-sm f-body leading-relaxed text-primary">{aiSummary}</p>
                 </div>
               )}
 
               {/* AI hint banner */}
               {aiSuggestedFields.size > 0 && (
-                <div className="mb-4 px-3 py-2.5 rounded-xl text-xs f-body flex items-center gap-2"
-                  style={{ background: 'rgba(230,126,80,0.07)', border: '1px solid rgba(230,126,80,0.25)', color: '#E67E50' }}>
+                <div className="mb-4 px-3 py-2.5 rounded-xl text-xs f-body flex items-center gap-2 bg-accent/[7%] border border-accent/25 text-accent">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
                     <path d="M12 2L9 9H2L7.5 13.5L5.5 21L12 17L18.5 21L16.5 13.5L22 9H15L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
                   </svg>
@@ -365,34 +326,34 @@ export function TripSetupTab({
               )}
 
               <div className="flex gap-3 mb-5">
-                <div style={{ flex: '1 1 0' }}>
-                  <label style={labelStyle}>Date</label>
+                <div className="flex-1">
+                  <label className="trip-label">Date</label>
                   <input type="text" value={confirmedDate}
                     onChange={e => { setConfirmedDate(e.target.value); markUserEdit('confirmedDate') }}
                     placeholder="e.g. 23 Aug 2026"
-                    style={aiSuggestedFields.has('confirmedDate') ? aiInputStyle : inputStyle} />
+                    className={cn('trip-input', aiSuggestedFields.has('confirmedDate') && 'trip-input-ai')} />
                 </div>
-                <div style={{ flex: '0 0 110px' }}>
-                  <label style={labelStyle}>Group size</label>
+                <div className="flex-none w-[110px]">
+                  <label className="trip-label">Group size</label>
                   <input type="number" min={1} max={20} value={confirmedParty}
                     onChange={e => { setConfirmedParty(e.target.value); markUserEdit('confirmedParty') }}
-                    style={aiSuggestedFields.has('confirmedParty') ? aiInputStyle : inputStyle} />
+                    className={cn('trip-input', aiSuggestedFields.has('confirmedParty') && 'trip-input-ai')} />
                 </div>
               </div>
 
               <div className="mb-5">
-                <label style={labelStyle}>Price range</label>
+                <label className="trip-label">Price range</label>
                 <input type="text" value={priceRange}
                   onChange={e => { setPriceRange(e.target.value); markUserEdit('priceRange') }}
                   placeholder="e.g. €500/day · €1,200–€1,500 total"
-                  style={aiSuggestedFields.has('priceRange') ? aiInputStyle : inputStyle} />
+                  className={cn('trip-input', aiSuggestedFields.has('priceRange') && 'trip-input-ai')} />
               </div>
 
               <div className="mb-5">
-                <label style={labelStyle}>Date flexibility</label>
+                <label className="trip-label">Date flexibility</label>
                 <select value={dateFlex}
                   onChange={e => { setDateFlex(e.target.value); markUserEdit('dateFlex') }}
-                  style={{ ...(aiSuggestedFields.has('dateFlex') ? aiInputStyle : inputStyle), cursor: 'pointer' }}>
+                  className={cn('trip-input cursor-pointer', aiSuggestedFields.has('dateFlex') && 'trip-input-ai')}>
                   {DATE_FLEX_OPTIONS.map(opt => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
@@ -400,40 +361,36 @@ export function TripSetupTab({
               </div>
 
               <div className="mb-5">
-                <label style={labelStyle}>Species the angler wants to catch</label>
+                <label className="trip-label">Species the angler wants to catch</label>
                 <input type="text" value={targetSpecies}
                   onChange={e => { setTargetSpecies(e.target.value); markUserEdit('targetSpecies') }}
                   placeholder="e.g. Atlantic salmon · Brown trout · Pike"
-                  style={aiSuggestedFields.has('targetSpecies') ? aiInputStyle : inputStyle} />
+                  className={cn('trip-input', aiSuggestedFields.has('targetSpecies') && 'trip-input-ai')} />
               </div>
 
               <div className="mb-5">
-                <label style={labelStyle}>Accommodation</label>
+                <label className="trip-label">Accommodation</label>
                 <input type="text" value={accommodation}
                   onChange={e => { setAccommodation(e.target.value); markUserEdit('accommodation') }}
                   placeholder="e.g. Included in price · Self-arranged · Camping"
-                  style={aiSuggestedFields.has('accommodation') ? aiInputStyle : inputStyle} />
+                  className={cn('trip-input', aiSuggestedFields.has('accommodation') && 'trip-input-ai')} />
               </div>
 
               <div className="mb-5">
-                <label style={labelStyle}>Note for guide</label>
+                <label className="trip-label">Note for guide</label>
                 <textarea rows={3} value={guideNotes}
                   onChange={e => { setGuideNotes(e.target.value); markUserEdit('guideNotes') }}
                   placeholder="Any other info the guide needs to know…"
-                  style={{ ...(aiSuggestedFields.has('guideNotes') ? aiInputStyle : inputStyle), resize: 'vertical' }} />
+                  className={cn('trip-input resize-y', aiSuggestedFields.has('guideNotes') && 'trip-input-ai')} />
               </div>
 
               <div className="flex items-center gap-3">
                 <button type="button" onClick={handleSave} disabled={saving}
-                  className="px-5 py-2 rounded-xl text-sm font-bold f-body transition-all"
-                  style={{
-                    background: '#0A2E4D', color: '#fff', border: 'none',
-                    cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
-                  }}>
+                  className="px-5 py-2 rounded-xl text-sm font-bold f-body transition-all bg-primary text-white disabled:opacity-70 disabled:cursor-not-allowed">
                   {saving ? 'Saving…' : 'Save & lock'}
                 </button>
                 {saveErr != null && (
-                  <p className="text-xs f-body" style={{ color: '#DC2626' }}>{saveErr}</p>
+                  <p className="text-xs f-body text-red-600">{saveErr}</p>
                 )}
               </div>
             </div>
@@ -447,40 +404,39 @@ export function TripSetupTab({
         {/* Guide's offer response (read-only) */}
         <Card title="Guide's Response">
           {(initialDetails?.guide_options ?? []).length === 0 ? (
-            <p className="text-xs f-body italic" style={{ color: 'rgba(10,46,77,0.38)' }}>
+            <p className="text-xs f-body italic text-primary/[38%]">
               Waiting for the guide to fill in their offer details.
             </p>
           ) : (
             <div className="flex flex-col gap-3">
               {initialDetails!.guide_final_dates != null && initialDetails!.guide_final_dates.trim() !== '' && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                  style={{ background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] f-body flex-shrink-0"
-                    style={{ color: 'rgba(10,46,77,0.4)' }}>Dates</span>
-                  <span className="text-xs font-semibold f-body" style={{ color: '#0A2E4D' }}>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/[7%] border border-emerald-500/20">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] f-body flex-shrink-0 text-primary/40">
+                    Dates
+                  </span>
+                  <span className="text-xs font-semibold f-body text-primary">
                     {initialDetails!.guide_final_dates}
                   </span>
                 </div>
               )}
               {initialDetails!.guide_options.map((opt, i) => (
-                <div key={i} className="rounded-xl px-3 py-3"
-                  style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.07)' }}>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] f-body mb-1.5"
-                    style={{ color: 'rgba(10,46,77,0.4)' }}>Option {i + 1}</p>
-                  <p className="text-sm font-semibold f-body" style={{ color: '#0A2E4D' }}>{opt.spot}</p>
+                <div key={i} className="rounded-xl px-3 py-3 bg-primary/3 border border-primary/7">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.13em] f-body mb-1.5 text-primary/40">
+                    Option {i + 1}
+                  </p>
+                  <p className="text-sm font-semibold f-body text-primary">{opt.spot}</p>
                   {Array.isArray(opt.species) && opt.species.length > 0 && (
-                    <p className="text-xs f-body mt-0.5" style={{ color: 'rgba(10,46,77,0.55)' }}>{opt.species.join(', ')}</p>
+                    <p className="text-xs f-body mt-0.5 text-primary/55">{opt.species.join(', ')}</p>
                   )}
                   {(opt.license_price != null || opt.guide_price != null) && (
-                    <p className="text-xs font-bold f-body mt-1" style={{ color: '#E67E50' }}>
+                    <p className="text-xs font-bold f-body mt-1 text-accent">
                       {opt.currency ?? 'EUR'}
                       {opt.license_price != null && ` · License: ${Number(opt.license_price).toLocaleString()}`}
                       {opt.guide_price   != null && ` · Guide: ${Number(opt.guide_price).toLocaleString()}`}
                     </p>
                   )}
                   {opt.description != null && opt.description !== '' && (
-                    <p className="text-xs f-body mt-2 leading-relaxed"
-                      style={{ color: '#374151', whiteSpace: 'pre-wrap' }}>
+                    <p className="text-xs f-body mt-2 leading-relaxed text-gray-700 whitespace-pre-wrap">
                       {opt.description}
                     </p>
                   )}
@@ -489,8 +445,7 @@ export function TripSetupTab({
                       {opt.photos.map((url, pi) => (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img key={pi} src={url} alt=""
-                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-                          style={{ border: '1px solid rgba(10,46,77,0.08)' }} />
+                          className="w-14 h-14 rounded-lg object-cover flex-shrink-0 border border-primary/[8%]" />
                       ))}
                     </div>
                   )}
