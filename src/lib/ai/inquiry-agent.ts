@@ -27,7 +27,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { randomUUID } from 'crypto'
 import { createServiceClient } from '@/lib/supabase/server'
-import { sendInquiryAgentEmail } from '@/lib/email'
 import { assembleConversation, type ConversationMessage } from '@/lib/ai/extract-trip'
 import { env } from '@/lib/env'
 import { computeQualified, setQualified } from '@/lib/inquiries/qualified'
@@ -289,10 +288,14 @@ Return ONLY valid JSON — no extra text, no markdown, no code fences:
 "trip_type"    = null only if genuinely impossible to determine from context.
 "priority"     = null in Round 1 only if no budget or urgency signal exists at all.`
 
-// ─── Closing messages ─────────────────────────────────────────────────────────
+// ─── Closing messages — FA-1.17 ───────────────────────────────────────────────
+// These messages were sent by the auto-reply rounds. Sending removed in FA-1.14;
+// FA-1.17 decides whether to keep, reuse, or replace them in the new prompt/graph.
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const CLOSING_MESSAGE = `Thanks for the details — that's everything we need to put together an offer for your trip. We'll reach out to the guide, sort any licence requirements, and send you a full offer in the coming days.`
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const WRAPPING_UP_MESSAGE = `Thanks for the answers — we have enough to get started. We'll review everything, reach out to the guide, and send you an offer in the coming days.`
 
 // ─── AI call ──────────────────────────────────────────────────────────────────
@@ -390,7 +393,8 @@ export interface Round1Params {
 }
 
 export async function runAgentRound1(params: Round1Params): Promise<void> {
-  const { inquiryId, anglerName, anglerEmail, tripTitle, message, requestedDates, partySize } = params
+  // FA-1.17: anglerEmail kept in Round1Params for callers; no longer used here (sends removed)
+  const { inquiryId, anglerName, tripTitle, message, requestedDates, partySize } = params
 
   const conversation = assembleConversation(
     anglerName,
@@ -421,29 +425,11 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
 
   const classUpdate: Record<string, string | null> = classificationUpdate(result, existing ?? {})
 
-  // Generate a Message-ID for this outbound email so the angler's reply lands in the same thread
-  const outboundMsgId = newMessageId()
+  // FA-1.17: round-logic (message generation + send) removed from here.
+  // Classification and qualified updates run unconditionally.
+  const outboundMsgId = newMessageId() // FA-1.17: retained for email_thread_message_id until FA-1.17 redesigns the flow
 
   if (result.enough || !result.question) {
-    if (result.enough) {
-      await sendInquiryAgentEmail({
-        to: anglerEmail, anglerName, question: CLOSING_MESSAGE, tripTitle, inquiryId,
-        threadHeaders: { messageId: outboundMsgId },
-      })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('messages').insert({
-        inquiry_id:  inquiryId,
-        direction:   'outbound',
-        channel:     'email',
-        counterpart: 'angler',
-        body:        CLOSING_MESSAGE,
-        status:      'sent',
-        drafted_by:  'agent',
-        occurred_at: new Date().toISOString(),
-      })
-      console.log(`[inquiry-agent] Round 1 → sent closing message to ${anglerEmail}`)
-    }
-
     await supabase
       .from('inquiries')
       .update({ agent_status: 'ready', email_thread_message_id: outboundMsgId, ...classUpdate })
@@ -461,24 +447,7 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
     return
   }
 
-  // Send qualifying questions
-  await sendInquiryAgentEmail({
-    to: anglerEmail, anglerName, question: result.question, tripTitle, inquiryId,
-    threadHeaders: { messageId: outboundMsgId },
-  })
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('messages').insert({
-    inquiry_id:  inquiryId,
-    direction:   'outbound',
-    channel:     'email',
-    counterpart: 'angler',
-    body:        result.question,
-    status:      'sent',
-    drafted_by:  'agent',
-    occurred_at: new Date().toISOString(),
-  })
-
+  // FA-1.17: qualifying questions were sent here; now only update state + classification
   await supabase
     .from('inquiries')
     .update({ agent_status: 'waiting', agent_round: 1, email_thread_message_id: outboundMsgId, ...classUpdate })
@@ -492,7 +461,7 @@ export async function runAgentRound1(params: Round1Params): Promise<void> {
     await setQualified(supabase, inquiryId, qualifiedR1b, { kind: 'agent' })
   }
 
-  console.log(`[inquiry-agent] Round 1 → sent questions to ${anglerEmail} for inquiry ${inquiryId}`)
+  console.log(`[inquiry-agent] Round 1 → classified for inquiry ${inquiryId}`)
 }
 
 // ─── Round 2/3 — called when the angler replies ───────────────────────────────
@@ -552,31 +521,11 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
 
   const MAX_ROUNDS = 3
 
-  // Build thread headers — reply into the same thread the angler is in
-  const existingMsgId  = (inquiry.email_thread_message_id as string | null) ?? undefined
-  const outboundMsgId2 = newMessageId()
-  const threadHeaders  = { messageId: outboundMsgId2, inReplyTo: existingMsgId }
+  // FA-1.17: round-logic (message generation + send) removed from here.
+  // Classification and qualified updates run unconditionally.
+  const outboundMsgId2 = newMessageId() // FA-1.17: retained for email_thread_message_id
 
   if (result.enough || !result.question || currentRound >= MAX_ROUNDS) {
-    const outbound = result.enough ? CLOSING_MESSAGE : WRAPPING_UP_MESSAGE
-
-    await sendInquiryAgentEmail({
-      to: inquiry.angler_email, anglerName: inquiry.angler_name, question: outbound, tripTitle, inquiryId,
-      threadHeaders,
-    })
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase as any).from('messages').insert({
-      inquiry_id:  inquiryId,
-      direction:   'outbound',
-      channel:     'email',
-      counterpart: 'angler',
-      body:        outbound,
-      status:      'sent',
-      drafted_by:  'agent',
-      occurred_at: new Date().toISOString(),
-    })
-
     await supabase
       .from('inquiries')
       .update({ agent_status: 'ready', email_thread_message_id: outboundMsgId2, ...classUpdate })
@@ -596,28 +545,7 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     return
   }
 
-  // Send follow-up questions
-  await sendInquiryAgentEmail({
-    to:         inquiry.angler_email,
-    anglerName: inquiry.angler_name,
-    question:   result.question,
-    tripTitle,
-    inquiryId,
-    threadHeaders,
-  })
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('messages').insert({
-    inquiry_id:  inquiryId,
-    direction:   'outbound',
-    channel:     'email',
-    counterpart: 'angler',
-    body:        result.question,
-    status:      'sent',
-    drafted_by:  'agent',
-    occurred_at: new Date().toISOString(),
-  })
-
+  // FA-1.17: follow-up questions were sent here; now only update state + classification
   await supabase
     .from('inquiries')
     .update({ agent_status: 'waiting', agent_round: currentRound + 1, email_thread_message_id: outboundMsgId2, ...classUpdate })
@@ -632,6 +560,6 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
   }
 
   console.log(
-    `[inquiry-agent] Round ${currentRound + 1} → sent questions to ${inquiry.angler_email} for ${inquiryId}`,
+    `[inquiry-agent] Round ${currentRound + 1} → classified for ${inquiryId}`,
   )
 }

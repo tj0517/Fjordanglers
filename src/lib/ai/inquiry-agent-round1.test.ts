@@ -38,6 +38,8 @@ vi.mock('@/lib/env', () => ({
 
 vi.mock('@/lib/email', () => ({ sendInquiryAgentEmail: vi.fn() }))
 
+import { sendInquiryAgentEmail } from '@/lib/email'
+
 vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
 
 import { createServiceClient } from '@/lib/supabase/server'
@@ -153,6 +155,32 @@ describe('FA-1.04 — admin lock / Round 1 ready path', () => {
     expect(qUpdates).toHaveLength(1)
     expect(qUpdates[0]).toMatchObject({ qualified: 'yes', qualified_set_by: 'agent' })
     expect(inquiryEventsInserted).toBe(1)
+  })
+})
+
+// ─── FA-1.14 — old agent must not call sendInquiryAgentEmail ─────────────────
+
+describe('FA-1.14 — sendInquiryAgentEmail not called', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    Object.assign(aiResult, DEFAULT_AI)
+  })
+
+  it('does not call sendInquiryAgentEmail on the ready path (Round 1)', async () => {
+    mockDb({ trip_country: null, trip_type: null, priority: null })
+
+    await runAgentRound1(round1Params)
+
+    expect(vi.mocked(sendInquiryAgentEmail)).not.toHaveBeenCalled()
+  })
+
+  it('does not call sendInquiryAgentEmail on the waiting path (Round 1)', async () => {
+    Object.assign(aiResult, { ...DEFAULT_AI, enough: false, question: 'What dates?' })
+    mockDb({ trip_country: null, trip_type: null, priority: null })
+
+    await runAgentRound1(round1Params)
+
+    expect(vi.mocked(sendInquiryAgentEmail)).not.toHaveBeenCalled()
   })
 })
 

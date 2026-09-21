@@ -19,6 +19,14 @@ import type { EventChannel } from '@/lib/events/types'
 
 type Client = SupabaseClient<Database>
 
+/** Thrown when sendMessage cannot promote a draft — row not found or already sent. */
+export class DraftNotFoundError extends Error {
+  constructor(draftId: string) {
+    super(`[sendMessage] draft row not found or already promoted (id=${draftId}). The draft may have been sent already or the channel/counterpart changed.`)
+    this.name = 'DraftNotFoundError'
+  }
+}
+
 export interface SendMessageParams {
   inquiryId:     string
   channel:       'email' | 'whatsapp' | 'instagram'
@@ -28,6 +36,8 @@ export interface SendMessageParams {
   subject?:      string
   body:          string
   draftedBy:     'admin' | 'agent'
+  /** When provided, UPDATE this existing draft row instead of inserting a new one. */
+  draftId?:      string
   actor:         EventActor
   /** guides.id — only when counterpart='guide'. */
   counterpartId?: string | null
@@ -51,33 +61,62 @@ export async function sendMessage(
 ): Promise<SendMessageResult> {
   const {
     inquiryId, channel, counterpart, to, subject, body,
-    draftedBy, actor, counterpartId, threadKey,
+    draftedBy, draftId, actor, counterpartId, threadKey,
   } = params
 
-  // 1. Insert row with status 'queued'
-  const { data: inserted, error: insertErr } = await client
-    .from('messages')
-    .insert({
-      inquiry_id:     inquiryId,
-      channel,
-      direction:      'outbound',
-      counterpart,
-      counterpart_id: counterpartId ?? null,
-      subject:        subject ?? null,
-      body,
-      status:         'queued',
-      drafted_by:     draftedBy,
-      thread_key:     threadKey ?? null,
-      occurred_at:    new Date().toISOString(),
-    })
-    .select('id')
-    .single()
+  // 1. Acquire message row — update existing draft if draftId given, else insert new
+  let messageId: string
 
-  if (insertErr != null || inserted == null) {
-    throw new Error(`[sendMessage] insert failed: ${insertErr?.message ?? 'no row returned'}`)
+  if (draftId != null) {
+    // Guard: only promote if the row is still a draft for this exact inquiry/channel/counterpart.
+    // 0 rows → stale id (already sent) or channel/counterpart mismatch.
+    const { data: promoted, error: updateErr } = await client
+      .from('messages')
+      .update({
+        body,
+        subject:     subject ?? null,
+        status:      'queued',
+        drafted_by:  draftedBy,
+        occurred_at: new Date().toISOString(),
+      })
+      .eq('id', draftId)
+      .eq('inquiry_id', inquiryId)
+      .eq('channel', channel)
+      .eq('counterpart', counterpart)
+      .eq('status', 'draft')
+      .select('id')
+
+    if (updateErr != null) {
+      throw new Error(`[sendMessage] draft update failed: ${updateErr.message}`)
+    }
+    if (promoted == null || promoted.length === 0) {
+      throw new DraftNotFoundError(draftId)
+    }
+    messageId = draftId
+  } else {
+    const { data: inserted, error: insertErr } = await client
+      .from('messages')
+      .insert({
+        inquiry_id:     inquiryId,
+        channel,
+        direction:      'outbound',
+        counterpart,
+        counterpart_id: counterpartId ?? null,
+        subject:        subject ?? null,
+        body,
+        status:         'queued',
+        drafted_by:     draftedBy,
+        thread_key:     threadKey ?? null,
+        occurred_at:    new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+
+    if (insertErr != null || inserted == null) {
+      throw new Error(`[sendMessage] insert failed: ${insertErr?.message ?? 'no row returned'}`)
+    }
+    messageId = inserted.id
   }
-
-  const messageId: string = inserted.id
 
   // 2. Send via adapter
   let externalId: string | null = null
@@ -138,6 +177,7 @@ export async function sendMessage(
     source:    'app',
     channel:   channel as EventChannel,
     messageId,
+    payload:   { drafted_by: draftedBy },
   })
 
   // 5. If first outbound to guide, emit guide.contacted

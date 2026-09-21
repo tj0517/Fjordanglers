@@ -167,6 +167,7 @@ export default async function AdminInquiryDetailPage({
       .from('messages')
       .select('id, direction, channel, counterpart, body, subject, status, drafted_by, occurred_at')
       .eq('inquiry_id', id)
+      .neq('status', 'draft')
       .order('occurred_at', { ascending: true })
     if (!error && data != null) threadMessages = data as MessageRow[]
   } catch {
