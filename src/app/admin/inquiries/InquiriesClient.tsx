@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Search, X, CalendarDays, ChevronDown, List, Calendar } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { ExternalOfferToggle } from './ExternalOfferToggle'
 import { InquiriesCalendar } from './InquiriesCalendar'
 import { STATUS_LABELS } from '@/lib/inquiries/state'
@@ -84,12 +85,6 @@ export const MAIN_LABELS: Record<MainFilter, string> = {
   lost:      'Lost',
 }
 
-export const MAIN_COLORS: Record<MainFilter, { active: string; text: string; bg: string; border: string }> = {
-  lead:      { active: '#0A2E4D', text: '#fff', bg: 'rgba(10,46,77,0.06)',    border: '1px solid rgba(10,46,77,0.12)'    },
-  guide:     { active: '#5B21B6', text: '#fff', bg: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.18)' },
-  confirmed: { active: '#065F46', text: '#fff', bg: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)'  },
-  lost:      { active: '#991B1B', text: '#fff', bg: 'rgba(239,68,68,0.08)',  border: '1px solid rgba(239,68,68,0.2)'   },
-}
 
 export interface SubOption { key: string; label: string; special?: boolean }
 
@@ -170,14 +165,13 @@ function SlaBadge({ row }: { row: InquiryRow }) {
   const hours = noOfferSinceHours(row)
   if (hours == null || hours < 24) return null
 
-  const isRed    = hours > 48
-  const bg     = isRed ? 'rgba(239,68,68,0.12)'  : 'rgba(234,88,12,0.1)'
-  const color  = isRed ? '#DC2626'               : '#EA580C'
-  const border = isRed ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(234,88,12,0.28)'
+  const state = hours > 48 ? 'red' : 'orange'
 
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-      style={{ background: bg, color, border }}>
+    <span
+      data-state={state}
+      className="sla-badge inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+    >
       {Math.floor(hours)}h no offer
     </span>
   )
@@ -194,34 +188,27 @@ function SilenceBadge({ row }: { row: InquiryRow }) {
   if (isNewUnresponded(row)) {
     return (
       <span
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-        style={{ background: 'rgba(230,126,80,0.15)', color: '#E67E50', border: '1px solid rgba(230,126,80,0.35)' }}
+        data-state="new"
+        className="silence-badge inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
       >
-        <span
-          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: '#E67E50', animation: 'ping 1.5s cubic-bezier(0,0,0.2,1) infinite' }}
-        />
+        <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 animate-ping" />
         New
       </span>
     )
   }
 
-  let bg: string, color: string, border: string, label: string
-  if (isNever) {
-    bg = 'rgba(239,68,68,0.1)'; color = '#DC2626'; border = '1px solid rgba(239,68,68,0.25)'; label = 'No contact'
-  } else if (days >= STALE_DAYS) {
-    bg = 'rgba(239,68,68,0.1)'; color = '#DC2626'; border = '1px solid rgba(239,68,68,0.25)'; label = `${days}d silent`
-  } else if (days >= COLD_DAYS) {
-    bg = 'rgba(234,88,12,0.1)'; color = '#EA580C'; border = '1px solid rgba(234,88,12,0.25)'; label = `${days}d silent`
-  } else if (days >= WARM_DAYS) {
-    bg = 'rgba(202,138,4,0.1)'; color = '#A16207'; border = '1px solid rgba(202,138,4,0.25)'; label = `${days}d silent`
-  } else {
-    bg = 'rgba(16,185,129,0.08)'; color = '#059669'; border = '1px solid rgba(16,185,129,0.2)'; label = days === 0 ? 'Today' : '1d ago'
-  }
+  let state: string, label: string
+  if (isNever)              { state = 'never'; label = 'No contact'      }
+  else if (days >= STALE_DAYS) { state = 'stale'; label = `${days}d silent` }
+  else if (days >= COLD_DAYS)  { state = 'cold';  label = `${days}d silent` }
+  else if (days >= WARM_DAYS)  { state = 'warm';  label = `${days}d silent` }
+  else                         { state = 'ok';    label = days === 0 ? 'Today' : '1d ago' }
 
   return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-      style={{ background: bg, color, border }}>
+    <span
+      data-state={state}
+      className="silence-badge inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+    >
       {label}
     </span>
   )
@@ -366,21 +353,17 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
       {/* ─── Header ───────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body"
-            style={{ color: 'rgba(10,46,77,0.38)' }}>Admin</p>
-          <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">
-            Inquiry <span style={{ fontStyle: 'italic' }}>Management</span>
+          <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body text-primary/38">Admin</p>
+          <h1 className="text-primary text-3xl font-bold f-display">
+            Inquiry <span className="italic">Management</span>
           </h1>
-          <p className="text-[#0A2E4D]/45 text-sm mt-1 f-body">
+          <p className="text-primary/45 text-sm mt-1 f-body">
             {allRows.length} total inquiries · review, negotiate, and close deals.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* List / Calendar toggle */}
-          <div
-            className="flex items-center rounded-[12px] overflow-hidden p-0.5 gap-0.5"
-            style={{ background: 'rgba(10,46,77,0.06)', border: '1px solid rgba(10,46,77,0.1)' }}
-          >
+          <div className="flex items-center rounded-[12px] overflow-hidden p-0.5 gap-0.5 bg-primary/[6%] border border-primary/10">
             {([
               { mode: 'list' as const,     icon: <List     size={14} />, title: 'List view'     },
               { mode: 'calendar' as const, icon: <Calendar size={14} />, title: 'Calendar view' },
@@ -389,11 +372,10 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                 key={mode}
                 onClick={() => setDisplayMode(mode)}
                 title={title}
-                className="flex items-center justify-center w-8 h-8 rounded-[9px] transition-all"
-                style={{
-                  background: displayMode === mode ? '#0A2E4D' : 'transparent',
-                  color:      displayMode === mode ? '#fff'    : 'rgba(10,46,77,0.45)',
-                }}
+                className={cn(
+                  'flex items-center justify-center w-8 h-8 rounded-[9px] transition-all',
+                  displayMode === mode ? 'bg-primary text-white' : 'bg-transparent text-primary/45',
+                )}
               >
                 {icon}
               </button>
@@ -402,10 +384,9 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
 
           <Link
             href="/admin/inquiries/new"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-[14px] text-sm font-bold f-body flex-shrink-0 transition-all hover:opacity-90"
-            style={{ background: '#0A2E4D', color: '#FFFFFF', boxShadow: '0 4px 16px rgba(10,46,77,0.2)' }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[14px] text-sm font-bold f-body flex-shrink-0 transition-all hover:opacity-90 bg-primary text-white shadow-[0_4px_16px_rgba(10,46,77,0.2)]"
           >
-            <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span>
+            <span className="text-base leading-none">+</span>
             New inquiry
           </Link>
         </div>
@@ -414,21 +395,17 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
       {/* ─── Stats row ────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {([
-          { label: 'Lead',      value: groupCounts.lead,      color: '#0A2E4D' },
-          { label: 'Guide',     value: groupCounts.guide,     color: '#5B21B6' },
-          { label: 'Confirmed', value: groupCounts.confirmed, color: '#065F46' },
-          { label: 'Lost',      value: groupCounts.lost,      color: '#991B1B' },
+          { label: 'Lead',      value: groupCounts.lead,      textClass: 'text-primary'       },
+          { label: 'Guide',     value: groupCounts.guide,     textClass: 'text-[#5B21B6]'    },
+          { label: 'Confirmed', value: groupCounts.confirmed, textClass: 'text-[#065F46]'    },
+          { label: 'Lost',      value: groupCounts.lost,      textClass: 'text-[#991B1B]'    },
         ] as const).map(s => (
-          <div key={s.label}
-            className="px-4 py-3 rounded-[16px]"
-            style={{
-              background: 'highlight' in s && s.highlight ? 'rgba(239,68,68,0.05)' : '#FDFAF7',
-              border:     'highlight' in s && s.highlight ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(10,46,77,0.07)',
-              boxShadow:  '0 2px 10px rgba(10,46,77,0.04)',
-            }}>
-            <p className="text-[10px] uppercase tracking-[0.16em] f-body mb-1"
-              style={{ color: 'rgba(10,46,77,0.4)' }}>{s.label}</p>
-            <p className="text-2xl font-bold f-display" style={{ color: s.color }}>{s.value}</p>
+          <div
+            key={s.label}
+            className="px-4 py-3 rounded-[16px] bg-[#FDFAF7] border border-primary/7 shadow-[0_2px_10px_rgba(10,46,77,0.04)]"
+          >
+            <p className="text-[10px] uppercase tracking-[0.16em] f-body mb-1 text-primary/40">{s.label}</p>
+            <p className={cn('text-2xl font-bold f-display', s.textClass)}>{s.value}</p>
           </div>
         ))}
       </div>
@@ -437,26 +414,22 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
       {(totalCommission > 0 || convPct != null) && (
         <div className="flex flex-wrap gap-3 mb-6">
           {totalCommission > 0 && (
-            <div className="px-4 py-3 rounded-[16px] flex items-center gap-3"
-              style={{ background: 'rgba(230,126,80,0.08)', border: '1px solid rgba(230,126,80,0.2)' }}>
+            <div className="px-4 py-3 rounded-[16px] flex items-center gap-3 bg-accent/[8%] border border-accent/20">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.16em] f-body"
-                  style={{ color: 'rgba(10,46,77,0.45)' }}>Commission tracked</p>
-                <p className="text-xl font-bold f-display" style={{ color: '#E67E50' }}>
+                <p className="text-[10px] uppercase tracking-[0.16em] f-body text-primary/45">Commission tracked</p>
+                <p className="text-xl font-bold f-display text-accent">
                   €{totalCommission.toFixed(0)}
                   {hasMixedCurrency && (
-                    <span className="text-sm font-normal ml-1" style={{ color: 'rgba(10,46,77,0.45)' }}>≈ EUR</span>
+                    <span className="text-sm font-normal ml-1 text-primary/45">≈ EUR</span>
                   )}
                 </p>
               </div>
             </div>
           )}
           {convPct != null && (
-            <div className="px-4 py-3 rounded-[16px]"
-              style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}>
-              <p className="text-[10px] uppercase tracking-[0.16em] f-body"
-                style={{ color: 'rgba(10,46,77,0.4)' }}>Win rate</p>
-              <p className="text-xl font-bold f-display" style={{ color: '#0A2E4D' }}>{convPct}%</p>
+            <div className="px-4 py-3 rounded-[16px] bg-[#FDFAF7] border border-primary/7">
+              <p className="text-[10px] uppercase tracking-[0.16em] f-body text-primary/40">Win rate</p>
+              <p className="text-xl font-bold f-display text-primary">{convPct}%</p>
             </div>
           )}
         </div>
@@ -473,14 +446,12 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
       {/* ─── Search + date filters ────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center mb-5">
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-[14px] flex-1"
-          style={{
-            background: '#FDFAF7',
-            border: `1px solid ${q ? 'rgba(10,46,77,0.25)' : 'rgba(10,46,77,0.1)'}`,
-            minWidth: '200px', maxWidth: '320px',
-          }}
+          className={cn(
+            'flex items-center gap-2 px-3 py-2 rounded-[14px] flex-1 min-w-[200px] max-w-xs bg-[#FDFAF7] border',
+            q ? 'border-primary/25' : 'border-primary/10',
+          )}
         >
-          <Search size={13} style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }} />
+          <Search size={13} className="text-primary/35 flex-shrink-0" />
           <input
             type="text"
             value={localQ}
@@ -491,43 +462,56 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
             }}
             onBlur={() => commitSearch(localQ)}
             placeholder="Search name or email…"
-            className="flex-1 bg-transparent outline-none text-sm f-body placeholder:opacity-40"
-            style={{ color: '#0A2E4D', minWidth: 0 }}
+            className="flex-1 bg-transparent outline-none text-sm f-body text-primary min-w-0 placeholder:opacity-40"
           />
           {localQ && (
             <button type="button" onClick={() => { setLocalQ(''); setQ('') }}
               className="flex-shrink-0 p-0.5 rounded-full transition-opacity hover:opacity-70">
-              <X size={11} style={{ color: 'rgba(10,46,77,0.45)' }} />
+              <X size={11} className="text-primary/45" />
             </button>
           )}
         </div>
 
-        <label className="flex items-center gap-2 px-3 py-2 rounded-[14px] cursor-pointer"
-          style={{ background: '#FDFAF7', border: `1px solid ${from ? 'rgba(10,46,77,0.25)' : 'rgba(10,46,77,0.1)'}` }}>
-          <CalendarDays size={13} style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }} />
-          <span className="text-[10px] font-bold f-body uppercase tracking-[0.1em]"
-            style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }}>From</span>
-          <input type="date" value={from} onChange={e => setFrom(e.target.value)}
-            className="bg-transparent outline-none text-sm f-body"
-            style={{ color: from ? '#0A2E4D' : 'rgba(10,46,77,0.35)' }} />
+        <label
+          className={cn(
+            'flex items-center gap-2 px-3 py-2 rounded-[14px] cursor-pointer bg-[#FDFAF7] border',
+            from ? 'border-primary/25' : 'border-primary/10',
+          )}
+        >
+          <CalendarDays size={13} className="text-primary/35 flex-shrink-0" />
+          <span className="text-[10px] font-bold f-body uppercase tracking-[0.1em] text-primary/35 flex-shrink-0">From</span>
+          <input
+            type="date" value={from} onChange={e => setFrom(e.target.value)}
+            className={cn(
+              'bg-transparent outline-none text-sm f-body',
+              from ? 'text-primary' : 'text-primary/35',
+            )}
+          />
           {from && (
             <button type="button" onClick={e => { e.preventDefault(); setFrom('') }} className="flex-shrink-0">
-              <X size={11} style={{ color: 'rgba(10,46,77,0.45)' }} />
+              <X size={11} className="text-primary/45" />
             </button>
           )}
         </label>
 
-        <label className="flex items-center gap-2 px-3 py-2 rounded-[14px] cursor-pointer"
-          style={{ background: '#FDFAF7', border: `1px solid ${to ? 'rgba(10,46,77,0.25)' : 'rgba(10,46,77,0.1)'}` }}>
-          <CalendarDays size={13} style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }} />
-          <span className="text-[10px] font-bold f-body uppercase tracking-[0.1em]"
-            style={{ color: 'rgba(10,46,77,0.35)', flexShrink: 0 }}>To</span>
-          <input type="date" value={to} onChange={e => setTo(e.target.value)}
-            className="bg-transparent outline-none text-sm f-body"
-            style={{ color: to ? '#0A2E4D' : 'rgba(10,46,77,0.35)' }} />
+        <label
+          className={cn(
+            'flex items-center gap-2 px-3 py-2 rounded-[14px] cursor-pointer bg-[#FDFAF7] border',
+            to ? 'border-primary/25' : 'border-primary/10',
+          )}
+        >
+          <CalendarDays size={13} className="text-primary/35 flex-shrink-0" />
+          <span className="text-[10px] font-bold f-body uppercase tracking-[0.1em] text-primary/35 flex-shrink-0">To</span>
+          <input
+            type="date" value={to} onChange={e => setTo(e.target.value)}
+            className={cn(
+              'bg-transparent outline-none text-sm f-body',
+              to ? 'text-primary' : 'text-primary/35',
+            )}
+          />
           {to && (
             <button type="button" onClick={e => { e.preventDefault(); setTo('') }} className="flex-shrink-0">
-              <X size={11} style={{ color: 'rgba(10,46,77,0.45)' }} />
+              <X size={11} className="text-primary/45" />
             </button>
           )}
         </label>
@@ -535,8 +519,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
         {hasActiveFilters && (
           <button type="button"
             onClick={() => { setQ(''); setLocalQ(''); setFrom(''); setTo('') }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[14px] text-xs font-semibold f-body transition-all hover:opacity-80"
-            style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.2)' }}>
+            className="flex items-center gap-1.5 px-3 py-2 rounded-[14px] text-xs font-semibold f-body transition-all hover:opacity-80 bg-red-500/[8%] text-red-600 border border-red-500/20">
             <X size={11} />
             Clear
           </button>
@@ -554,21 +537,17 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
         {(['lead', 'guide', 'confirmed', 'lost'] as const).map(key => {
           const active     = mainFilter === key
           const count      = groupCounts[key]
-          const colors     = MAIN_COLORS[key]
           const popupOpen  = openPopup === key
           const subLabel   = active ? activeSubLabel : null
 
           return (
-            <div key={key} className="relative" style={{ zIndex: popupOpen ? 50 : 'auto' }}>
+            <div key={key} className={cn('relative', popupOpen && 'z-50')}>
 
               {/* Tab pill */}
               <div
-                className="flex items-center rounded-full text-sm font-semibold f-body overflow-hidden"
-                style={{
-                  background: active ? colors.active : 'rgba(10,46,77,0.06)',
-                  color:      active ? colors.text   : 'rgba(10,46,77,0.6)',
-                  border:     active ? 'none'        : '1px solid rgba(10,46,77,0.1)',
-                }}
+                data-key={key}
+                data-active={String(active)}
+                className="filter-tab flex items-center rounded-full text-sm font-semibold f-body overflow-hidden"
               >
                 {/* Label + count — click to switch */}
                 <button
@@ -580,11 +559,8 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                     <span className="text-[11px] font-normal opacity-70">· {subLabel}</span>
                   )}
                   <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{
-                      background: active ? 'rgba(255,255,255,0.18)' : 'rgba(10,46,77,0.1)',
-                      color:      active ? 'rgba(255,255,255,0.9)'  : 'rgba(10,46,77,0.5)',
-                    }}
+                    data-active={String(active)}
+                    className="filter-count text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   >
                     {count}
                   </span>
@@ -597,51 +573,34 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                     if (!active) switchMain(key)
                     setOpenPopup(popupOpen ? null : key)
                   }}
-                  className="flex items-center px-2.5 py-2 transition-opacity hover:opacity-80"
-                  style={{
-                    borderLeft: active
-                      ? '1px solid rgba(255,255,255,0.15)'
-                      : '1px solid rgba(10,46,77,0.1)',
-                  }}
+                  data-active={String(active)}
+                  className="filter-chevron flex items-center px-2.5 py-2 transition-opacity hover:opacity-80"
                 >
                   <ChevronDown
                     size={13}
-                    style={{
-                      transition: 'transform 0.15s',
-                      transform: popupOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                    }}
+                    className={cn('transition-transform', popupOpen && 'rotate-180')}
                   />
                 </button>
               </div>
 
               {/* Popup */}
               {popupOpen && (
-                <div
-                  className="absolute top-full left-0 mt-1.5 rounded-[16px] p-1.5 min-w-[200px]"
-                  style={{
-                    background: '#fff',
-                    border:     '1px solid rgba(10,46,77,0.1)',
-                    boxShadow:  '0 8px 32px rgba(10,46,77,0.13)',
-                    zIndex: 50,
-                  }}
-                >
+                <div className="absolute top-full left-0 mt-1.5 rounded-[16px] p-1.5 min-w-[200px] bg-white border border-primary/10 shadow-[0_8px_32px_rgba(10,46,77,0.13)] z-50">
                   {/* "All" option */}
                   <button
                     onClick={() => { setSubFilter(null); setOpenPopup(null) }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body font-semibold transition-colors hover:bg-black/[0.03]"
-                    style={{
-                      background: subFilter == null ? 'rgba(10,46,77,0.06)' : 'transparent',
-                      color: '#0A2E4D',
-                    }}
+                    className={cn(
+                      'w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body font-semibold text-primary transition-colors hover:bg-black/[0.03]',
+                      subFilter == null && 'bg-primary/[6%]',
+                    )}
                   >
                     <span>All {MAIN_LABELS[key]}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/[8%] text-primary/50">
                       {count}
                     </span>
                   </button>
 
-                  <div className="my-1 mx-2" style={{ height: 1, background: 'rgba(10,46,77,0.07)' }} />
+                  <div className="my-1 mx-2 h-px bg-primary/7" />
 
                   {/* Sub-filter options */}
                   {SUB_OPTIONS[key].map(opt => {
@@ -651,22 +610,20 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                       <button
                         key={opt.key}
                         onClick={() => { setSubFilter(opt.key); setOpenPopup(null) }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body transition-colors hover:bg-black/[0.03]"
-                        style={{
-                          background: optActive ? 'rgba(10,46,77,0.06)' : 'transparent',
-                          color:      opt.special ? '#DC2626' : '#0A2E4D',
-                          fontWeight: optActive ? 600 : 400,
-                        }}
+                        className={cn(
+                          'w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body transition-colors hover:bg-black/[0.03]',
+                          opt.special ? 'text-red-600' : 'text-primary',
+                          optActive ? 'bg-primary/[6%] font-semibold' : 'font-normal',
+                        )}
                       >
                         <span>{opt.label}</span>
                         {optCount > 0 && (
-                          <span
-                            className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{
-                              background: opt.special ? 'rgba(239,68,68,0.1)' : 'rgba(10,46,77,0.08)',
-                              color:      opt.special ? '#DC2626'              : 'rgba(10,46,77,0.5)',
-                            }}
-                          >
+                          <span className={cn(
+                            'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                            opt.special
+                              ? 'bg-red-500/10 text-red-600'
+                              : 'bg-primary/[8%] text-primary/50',
+                          )}>
                             {optCount}
                           </span>
                         )}
@@ -684,8 +641,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
           <button
             type="button"
             onClick={() => setSubFilter(null)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs f-body transition-opacity hover:opacity-70"
-            style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.1)' }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs f-body transition-opacity hover:opacity-70 bg-primary/[6%] text-primary/50 border border-primary/10"
           >
             <X size={10} />
             {activeSubLabel}
@@ -699,12 +655,12 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
           <button
             key={v}
             onClick={() => setView(v)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
-            style={{
-              background: view === v ? '#0A2E4D' : 'rgba(10,46,77,0.06)',
-              color:      view === v ? '#fff'    : 'rgba(10,46,77,0.55)',
-              border:     view === v ? 'none'    : '1px solid rgba(10,46,77,0.1)',
-            }}
+            className={cn(
+              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all',
+              view === v
+                ? 'bg-primary text-white'
+                : 'bg-primary/[6%] text-primary/55 border border-primary/10',
+            )}
           >
             {v === 'angler' ? '👤 Angler view' : '🎣 Guide view'}
           </button>
@@ -712,12 +668,12 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
 
         <button
           onClick={() => setSortSla(s => !s)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
-          style={{
-            background: sortSla ? 'rgba(239,68,68,0.1)'  : 'rgba(10,46,77,0.06)',
-            color:      sortSla ? '#DC2626'               : 'rgba(10,46,77,0.55)',
-            border:     sortSla ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(10,46,77,0.1)',
-          }}
+          className={cn(
+            'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold f-body transition-all',
+            sortSla
+              ? 'bg-red-500/10 text-red-600 border border-red-500/25'
+              : 'bg-primary/[6%] text-primary/55 border border-primary/10',
+          )}
           title="Sort: inquiries without offer, oldest first"
         >
           ⏱ Bez oferty od
@@ -726,20 +682,19 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
 
       {/* ─── Results count ───────────────────────────────────────────── */}
       {(hasActiveFilters || subFilter != null) && (
-        <p className="text-xs f-body mb-4" style={{ color: 'rgba(10,46,77,0.4)' }}>
+        <p className="text-xs f-body mb-4 text-primary/40">
           {rows.length === 0 ? 'No results' : `${rows.length} result${rows.length !== 1 ? 's' : ''}`}
-          {hasActiveFilters && <span style={{ color: 'rgba(10,46,77,0.3)' }}> (filtered)</span>}
+          {hasActiveFilters && <span className="text-primary/30"> (filtered)</span>}
         </p>
       )}
 
       {/* ─── List ────────────────────────────────────────────────────── */}
       {rows.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 rounded-[24px] text-center"
-          style={{ background: '#FDFAF7', border: '2px dashed rgba(10,46,77,0.12)' }}>
-          <p className="text-[#0A2E4D]/40 text-base f-display mb-1">
+        <div className="flex flex-col items-center justify-center py-20 rounded-[24px] text-center bg-[#FDFAF7] border-2 border-dashed border-primary/[12%]">
+          <p className="text-primary/40 text-base f-display mb-1">
             {hasActiveFilters ? 'No matches' : 'No inquiries here'}
           </p>
-          <p className="text-[#0A2E4D]/30 text-sm f-body">
+          <p className="text-primary/30 text-sm f-body">
             {hasActiveFilters
               ? 'Try adjusting your search or date range.'
               : `No ${MAIN_LABELS[mainFilter].toLowerCase()} inquiries yet.`}
@@ -748,7 +703,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
       ) : (
         <div className="flex flex-col gap-2.5">
           {rows.map(row => {
-            const st        = STATUS_STYLE[row.status] ?? STATUS_STYLE.pending
+            const st        = STATUS_STYLE[row.status] ?? STATUS_STYLE.new
             const tripTitle = tripMap[row.id] ?? '—'
             const dates     = row.requested_dates
             const dateLabel = dates != null && dates.length > 0
@@ -767,60 +722,59 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                 : null
 
               return (
-                <Link key={row.id} href={`/admin/inquiries/${row.id}`} className="block group" style={{ textDecoration: 'none' }}>
+                <Link key={row.id} href={`/admin/inquiries/${row.id}`} className="block group no-underline">
                   <div
-                    className="flex gap-4 px-5 py-4 rounded-[20px] transition-all group-hover:shadow-md"
-                    style={{
-                      background: stage === 'awaiting_response' ? 'rgba(251,191,36,0.04)' : '#FDFAF7',
-                      border: stage === 'awaiting_response'
-                        ? '1px solid rgba(251,191,36,0.25)'
-                        : stage === 'declined'
-                          ? '1px solid rgba(239,68,68,0.15)'
-                          : '1px solid rgba(10,46,77,0.07)',
-                      boxShadow: '0 1px 6px rgba(10,46,77,0.04)',
-                    }}
+                    data-state={
+                      stage === 'awaiting_response' ? 'guide-await' :
+                      stage === 'declined'          ? 'guide-dec'   : undefined
+                    }
+                    className="inquiry-row flex gap-4 px-5 py-4 rounded-[20px] transition-all group-hover:shadow-md shadow-[0_1px_6px_rgba(10,46,77,0.04)]"
                   >
                     <div className="flex-shrink-0 flex flex-col items-center pt-1">
-                      <div className="w-2.5 h-2.5 rounded-full mt-0.5"
-                        style={{ background: stageSt.color, boxShadow: `0 0 0 3px ${stageSt.bg}` }} />
+                      <div
+                        data-stage={stage}
+                        className="guide-stage-dot w-2.5 h-2.5 rounded-full mt-0.5"
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                        <span className="text-sm font-bold f-body text-[#0A2E4D] truncate">{row.angler_name}</span>
+                        <span className="text-sm font-bold f-body text-primary truncate">{row.angler_name}</span>
                         {row.party_size > 1 && (
-                          <span className="text-[10px] f-body flex-shrink-0 px-1.5 py-0.5 rounded-full"
-                            style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.5)' }}>
+                          <span className="text-[10px] f-body flex-shrink-0 px-1.5 py-0.5 rounded-full bg-primary/7 text-primary/50">
                             {row.party_size} pax
                           </span>
                         )}
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-                          style={{ background: st.bg, color: st.color, border: st.border }}>
+                        <span
+                          data-status={row.status}
+                          className="status-badge px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+                        >
                           {st.label}
                         </span>
                       </div>
-                      <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                      <p className="text-xs f-body truncate text-primary/55">
                         {tripTitle} · {dateLabel}
                       </p>
                     </div>
                     <div className="hidden sm:flex flex-col items-end gap-1.5 flex-shrink-0 min-w-[160px]">
-                      <span className="text-xs font-bold f-body text-right" style={{ color: '#0A2E4D' }}>
-                        {guideName ?? <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>Unassigned</span>}
+                      <span className="text-xs font-bold f-body text-right text-primary">
+                        {guideName ?? <span className="text-primary/30 font-normal">Unassigned</span>}
                       </span>
                       {row.assigned_guide_id != null && (
                         <span className="text-[10px] f-body font-semibold">
-                          {row.guide_acceptance === 'accepted' && <span style={{ color: '#059669' }}>✓ Accepted</span>}
-                          {row.guide_acceptance === 'declined' && <span style={{ color: '#DC2626' }}>✗ Declined</span>}
-                          {row.guide_acceptance == null        && <span style={{ color: '#A16207' }}>⏳ No response</span>}
+                          {row.guide_acceptance === 'accepted' && <span className="text-emerald-600">✓ Accepted</span>}
+                          {row.guide_acceptance === 'declined' && <span className="text-red-600">✗ Declined</span>}
+                          {row.guide_acceptance == null        && <span className="text-yellow-700">⏳ No response</span>}
                         </span>
                       )}
                       {row.guide_decline_reason != null && row.guide_decline_reason.trim() !== '' && (
-                        <p className="text-[10px] f-body max-w-[150px] text-right truncate"
-                          style={{ color: 'rgba(153,27,27,0.65)' }}>
+                        <p className="text-[10px] f-body max-w-[150px] text-right truncate text-[#991B1B]/65">
                           {row.guide_decline_reason}
                         </p>
                       )}
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-                        style={{ background: stageSt.bg, color: stageSt.color, border: stageSt.border }}>
+                      <span
+                        data-stage={stage}
+                        className="guide-stage-badge px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
+                      >
                         {stageSt.label}
                       </span>
                       {row.assigned_guide_id != null && row.guide_acceptance !== 'declined' && (
@@ -828,8 +782,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
                       )}
                     </div>
                     <div className="flex items-center flex-shrink-0 pl-1">
-                      <span className="text-sm font-semibold transition-transform group-hover:translate-x-0.5"
-                        style={{ color: '#E67E50' }}>→</span>
+                      <span className="text-sm font-semibold transition-transform group-hover:translate-x-0.5 text-accent">→</span>
                     </div>
                   </div>
                 </Link>
@@ -838,86 +791,76 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
 
             // ── Angler view row ─────────────────────────────────────────────
             return (
-              <Link key={row.id} href={`/admin/inquiries/${row.id}`} className="block group" style={{ textDecoration: 'none' }}>
+              <Link key={row.id} href={`/admin/inquiries/${row.id}`} className="block group no-underline">
                 <div
-                  className="flex gap-4 px-5 py-4 rounded-[20px] transition-all group-hover:shadow-md"
-                  style={{
-                    background: isNew
-                      ? 'rgba(230,126,80,0.04)'
-                      : isAttention ? 'rgba(239,68,68,0.025)' : '#FDFAF7',
-                    border: isNew
-                      ? '1px solid rgba(230,126,80,0.2)'
-                      : isAttention
-                        ? '1px solid rgba(239,68,68,0.15)'
-                        : '1px solid rgba(10,46,77,0.07)',
-                    boxShadow: '0 1px 6px rgba(10,46,77,0.04)',
-                  }}
+                  data-state={isNew ? 'new' : isAttention ? 'attention' : undefined}
+                  className="inquiry-row flex gap-4 px-5 py-4 rounded-[20px] transition-all group-hover:shadow-md shadow-[0_1px_6px_rgba(10,46,77,0.04)]"
                 >
                   <div className="flex-shrink-0 flex flex-col items-center pt-1 gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full mt-0.5"
-                      style={{ background: st.color, boxShadow: `0 0 0 3px ${st.bg}` }} />
+                    <div
+                      data-status={row.status}
+                      className="status-dot w-2.5 h-2.5 rounded-full mt-0.5"
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-sm font-bold f-body text-[#0A2E4D] truncate">{row.angler_name}</span>
+                      <span className="text-sm font-bold f-body text-primary truncate">{row.angler_name}</span>
                       {row.party_size > 1 && (
-                        <span className="text-[10px] f-body flex-shrink-0 px-1.5 py-0.5 rounded-full"
-                          style={{ background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.5)' }}>
+                        <span className="text-[10px] f-body flex-shrink-0 px-1.5 py-0.5 rounded-full bg-primary/7 text-primary/50">
                           {row.party_size} pax
                         </span>
                       )}
                       <SilenceBadge row={row} />
                     </div>
-                    <p className="text-xs f-body truncate mb-0.5" style={{ color: 'rgba(10,46,77,0.55)' }}>
+                    <p className="text-xs f-body truncate mb-0.5 text-primary/55">
                       {tripTitle} · {dateLabel}
                     </p>
-                    <p className="text-[11px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                    <p className="text-[11px] f-body text-primary/38">
                       {row.angler_email}
                       {row.angler_phone != null && row.angler_phone.trim() !== '' && (
-                        <span style={{ marginLeft: 6 }}>· {row.angler_phone}</span>
+                        <span className="ml-1.5">· {row.angler_phone}</span>
                       )}
                     </p>
                     {row.next_action != null && row.next_action.trim() !== '' && (
                       <div className="mt-1.5 flex items-center gap-1.5">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] f-body px-1.5 py-0.5 rounded"
-                          style={{ background: 'rgba(230,126,80,0.12)', color: '#E67E50', border: '1px solid rgba(230,126,80,0.2)' }}>
+                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] f-body px-1.5 py-0.5 rounded bg-accent/12 text-accent border border-accent/20">
                           next
                         </span>
-                        <span className="text-[11px] f-body font-medium truncate" style={{ color: '#0A2E4D' }}>
+                        <span className="text-[11px] f-body font-medium truncate text-primary">
                           {row.next_action}
                         </span>
                       </div>
                     )}
                   </div>
                   <div className="hidden sm:flex flex-col items-end gap-1.5 flex-shrink-0 min-w-[120px]">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold f-body"
-                      style={{ background: st.bg, color: st.color, border: st.border }}>
+                    <span
+                      data-status={row.status}
+                      className="status-badge px-2.5 py-0.5 rounded-full text-[10px] font-bold f-body"
+                    >
                       {st.label}
                     </span>
                     <SlaBadge row={row} />
                     {row.internal_commission_eur != null && (
-                      <span className="text-xs font-bold f-body" style={{ color: '#E67E50' }}>
+                      <span className="text-xs font-bold f-body text-accent">
                         +{row.deal_currency === 'USD' ? '$' : '€'}{Number(row.internal_commission_eur).toFixed(0)}
                       </span>
                     )}
                     {row.status === 'lost' && row.lost_reason != null && row.lost_reason.trim() !== '' && (
-                      <p className="text-[10px] f-body max-w-[140px] text-right truncate"
-                        style={{ color: 'rgba(153,27,27,0.6)' }}>
+                      <p className="text-[10px] f-body max-w-[140px] text-right truncate text-[#991B1B]/60">
                         {row.lost_reason}
                       </p>
                     )}
                     {row.last_contact_at != null && (
-                      <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+                      <p className="text-[10px] f-body text-primary/38">
                         contact {relativeTime(row.last_contact_at)}
                       </p>
                     )}
-                    <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.28)' }}>
+                    <p className="text-[10px] f-body text-primary/28">
                       {relativeTime(row.created_at)}
                     </p>
                   </div>
                   <div className="flex items-center flex-shrink-0 pl-1">
-                    <span className="text-sm font-semibold transition-transform group-hover:translate-x-0.5"
-                      style={{ color: '#E67E50' }}>→</span>
+                    <span className="text-sm font-semibold transition-transform group-hover:translate-x-0.5 text-accent">→</span>
                   </div>
                 </div>
               </Link>

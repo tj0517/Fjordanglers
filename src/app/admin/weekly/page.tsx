@@ -17,6 +17,15 @@ import {
   qualifiedPerWeek,
   type CostBlock,
 } from '@/lib/metrics/weekly'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
+import {
+  Table as ShadTable,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/components/ui/table'
 
 export const metadata = {
   title: 'Weekly review — FjordAnglers Admin',
@@ -52,27 +61,28 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section
-      className="p-5 rounded-[18px] mb-4"
-      style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
-    >
-      <p className="text-[10px] uppercase tracking-[0.18em] f-body mb-2" style={{ color: 'rgba(10,46,77,0.4)' }}>
-        {n}. {title} · {metric}
-      </p>
-      {children}
-      <p className="text-xs f-body mt-3" style={{ color: 'rgba(10,46,77,0.5)' }}>
-        {definition}{' '}
-        <Link href={href} className="underline">
-          {hrefLabel}
-        </Link>
-      </p>
-    </section>
+    <Card className="mb-4">
+      <CardHeader className="pb-2 pt-4 px-5">
+        <p className="text-[10px] uppercase tracking-[0.18em] f-body text-muted-foreground">
+          {n}. {title} · {metric}
+        </p>
+      </CardHeader>
+      <CardContent className="px-5 pb-5">
+        {children}
+        <p className="text-xs f-body mt-3 text-muted-foreground">
+          {definition}{' '}
+          <Link href={href} className="underline">
+            {hrefLabel}
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
 function Big({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-2xl font-bold f-display leading-none mb-2" style={{ color: '#0A2E4D' }}>
+    <p className="text-2xl font-bold f-display leading-none mb-2 text-foreground">
       {children}
     </p>
   )
@@ -80,28 +90,28 @@ function Big({ children }: { children: React.ReactNode }) {
 
 function Table({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
   return (
-    <table className="text-xs f-body tabular-nums" style={{ color: '#0A2E4D' }}>
-      <thead>
-        <tr>
+    <ShadTable className="text-xs f-body tabular-nums text-foreground">
+      <TableHeader>
+        <TableRow>
           {head.map(h => (
-            <th key={h} className="text-left pr-6 pb-1 font-semibold">
+            <TableHead key={h} className="text-left pr-4 pb-1 font-semibold h-auto py-1 text-foreground/70 text-[11px]">
               {h}
-            </th>
+            </TableHead>
           ))}
-        </tr>
-      </thead>
-      <tbody>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
         {rows.map(r => (
-          <tr key={String(r[0])}>
+          <TableRow key={String(r[0])}>
             {r.map((cell, i) => (
-              <td key={i} className="pr-6 py-0.5">
+              <TableCell key={i} className="pr-4 py-0.5 text-xs">
                 {cell}
-              </td>
+              </TableCell>
             ))}
-          </tr>
+          </TableRow>
         ))}
-      </tbody>
-    </table>
+      </TableBody>
+    </ShadTable>
   )
 }
 
@@ -128,11 +138,11 @@ export default async function WeeklyPage() {
   return (
     <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1000px]">
       <div className="mb-8">
-        <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body" style={{ color: 'rgba(10,46,77,0.38)' }}>
+        <p className="text-[11px] uppercase tracking-[0.22em] mb-1 f-body text-muted-foreground">
           FjordAnglers Admin · temporary screen
         </p>
-        <h1 className="text-[#0A2E4D] text-3xl font-bold f-display">Weekly review</h1>
-        <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
+        <h1 className="text-foreground text-3xl font-bold f-display">Weekly review</h1>
+        <p className="text-sm f-body mt-1 text-muted-foreground">
           Weeks are Monday–Sunday, Europe/Warsaw. Current week: {weeks[0]?.key} ({weeks[0]?.start} → {weeks[0]?.end}).
           Rates: 1 EUR = {rates.eurPln} PLN, 1 USD = {rates.usdEur} EUR (finance_settings).
         </p>
@@ -202,7 +212,7 @@ export default async function WeeklyPage() {
         hrefLabel="Ads →"
       >
         <Big>{pln2(currentSpend)} <span className="text-sm font-normal">this week</span></Big>
-        <p className="text-xs f-body mb-2" style={{ color: 'rgba(10,46,77,0.5)' }}>
+        <p className="text-xs f-body mb-2 text-muted-foreground">
           last sync (newest ad_campaigns row): {lastAdDate ?? 'no data'}
         </p>
         <Table head={['Week', 'From', 'Spend']} rows={spend.map(w => [w.key, w.start, pln2(w.spendPln)])} />

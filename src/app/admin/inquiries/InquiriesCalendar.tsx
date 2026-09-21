@@ -3,12 +3,13 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, X, ExternalLink } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { STATUS_LABELS } from '@/lib/inquiries/state'
 import type { InquiryRow } from './InquiriesClient'
 import {
   type MainFilter,
   STATUS_GROUPS,
   MAIN_LABELS,
-  MAIN_COLORS,
   SUB_OPTIONS,
 } from './InquiriesClient'
 
@@ -25,32 +26,6 @@ interface Props {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-const STATUS_STYLE: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pending:                 { label: 'Pending',         color: '#92400E', bg: 'rgba(251,191,36,0.15)',  border: '1px solid rgba(251,191,36,0.4)'   },
-  in_negotiation:          { label: 'Negotiating',     color: '#5B21B6', bg: 'rgba(139,92,246,0.15)',  border: '1px solid rgba(139,92,246,0.35)'  },
-  waiting_for_guide_offer: { label: 'Waiting Guide',   color: '#C2410C', bg: 'rgba(234,88,12,0.12)',   border: '1px solid rgba(234,88,12,0.35)'   },
-  offer_sent:              { label: 'Offer Sent',      color: '#0E7490', bg: 'rgba(6,182,212,0.12)',   border: '1px solid rgba(6,182,212,0.35)'   },
-  waiting_for_deposit:     { label: 'Waiting Deposit', color: '#3730A3', bg: 'rgba(99,102,241,0.12)',  border: '1px solid rgba(99,102,241,0.35)'  },
-  deposit_sent:            { label: 'Deposit Sent',    color: '#1E40AF', bg: 'rgba(59,130,246,0.12)',  border: '1px solid rgba(59,130,246,0.3)'   },
-  deposit_paid:            { label: 'Confirmed',       color: '#065F46', bg: 'rgba(16,185,129,0.12)',  border: '1px solid rgba(16,185,129,0.3)'   },
-  completed:               { label: 'Completed',       color: '#374151', bg: 'rgba(107,114,128,0.10)', border: '1px solid rgba(107,114,128,0.2)'  },
-  lost:                    { label: 'Lost',            color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
-  cancelled:               { label: 'Cancelled',       color: '#991B1B', bg: 'rgba(239,68,68,0.10)',   border: '1px solid rgba(239,68,68,0.25)'   },
-}
-
-const STATUS_DOT: Record<string, string> = {
-  pending:                 '#FBBF24',
-  in_negotiation:          '#8B5CF6',
-  waiting_for_guide_offer: '#EA580C',
-  offer_sent:              '#06B6D4',
-  waiting_for_deposit:     '#6366F1',
-  deposit_sent:            '#3B82F6',
-  deposit_paid:            '#10B981',
-  completed:               '#9CA3AF',
-  lost:                    '#EF4444',
-  cancelled:               '#EF4444',
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -198,12 +173,12 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
         <div className="flex items-center gap-1.5 flex-wrap mb-4">
           <button
             onClick={() => { setCountry(null); setSelected(null) }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
-            style={{
-              background: country === null ? '#0A2E4D' : 'rgba(10,46,77,0.06)',
-              color:      country === null ? '#fff'    : 'rgba(10,46,77,0.55)',
-              border:     country === null ? 'none'    : '1px solid rgba(10,46,77,0.1)',
-            }}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold f-body transition-all',
+              country === null
+                ? 'bg-primary text-white'
+                : 'bg-primary/[6%] text-primary/55 border border-primary/10',
+            )}
           >
             All countries
           </button>
@@ -211,12 +186,12 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
             <button
               key={c}
               onClick={() => { setCountry(country === c ? null : c); setSelected(null) }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
-              style={{
-                background: country === c ? '#0A2E4D' : 'rgba(10,46,77,0.06)',
-                color:      country === c ? '#fff'    : 'rgba(10,46,77,0.55)',
-                border:     country === c ? 'none'    : '1px solid rgba(10,46,77,0.1)',
-              }}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold f-body transition-all',
+                country === c
+                  ? 'bg-primary text-white'
+                  : 'bg-primary/[6%] text-primary/55 border border-primary/10',
+              )}
             >
               <span>{COUNTRY_FLAG[c] ?? '🌍'}</span>
               {c}
@@ -233,21 +208,17 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
         {(['lead', 'guide', 'confirmed', 'lost'] as const).map(key => {
           const active    = mainFilter === key
           const count     = groupCounts[key]
-          const colors    = MAIN_COLORS[key]
           const popupOpen = openPopup === key
           const subLabel  = active && subFilter != null
             ? SUB_OPTIONS[key].find(o => o.key === subFilter)?.label ?? null
             : null
 
           return (
-            <div key={key} className="relative" style={{ zIndex: popupOpen ? 50 : 'auto' }}>
+            <div key={key} className={cn('relative', popupOpen && 'z-50')}>
               <div
-                className="flex items-center rounded-full text-sm font-semibold f-body overflow-hidden"
-                style={{
-                  background: active ? colors.active : 'rgba(10,46,77,0.06)',
-                  color:      active ? colors.text   : 'rgba(10,46,77,0.6)',
-                  border:     active ? 'none'        : '1px solid rgba(10,46,77,0.1)',
-                }}
+                data-key={key}
+                data-active={String(active)}
+                className="filter-tab flex items-center rounded-full text-sm font-semibold f-body overflow-hidden"
               >
                 {/* Label + count */}
                 <button
@@ -264,11 +235,8 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                     <span className="text-[11px] font-normal opacity-70">· {subLabel}</span>
                   )}
                   <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{
-                      background: active ? 'rgba(255,255,255,0.18)' : 'rgba(10,46,77,0.1)',
-                      color:      active ? 'rgba(255,255,255,0.9)'  : 'rgba(10,46,77,0.5)',
-                    }}
+                    data-active={String(active)}
+                    className="filter-count text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                   >
                     {count}
                   </span>
@@ -281,15 +249,13 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                     if (!active) { setMainFilter(key); setSubFilter(null); setSelected(null) }
                     setOpenPopup(popupOpen ? null : key)
                   }}
-                  className="flex items-center px-2.5 py-2 transition-opacity hover:opacity-80"
-                  style={{
-                    borderLeft: active
-                      ? '1px solid rgba(255,255,255,0.15)'
-                      : '1px solid rgba(10,46,77,0.1)',
-                  }}
+                  data-active={String(active)}
+                  className="filter-chevron flex items-center px-2.5 py-2 transition-opacity hover:opacity-80"
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                    style={{ transition: 'transform 0.15s', transform: popupOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                  <svg
+                    width="13" height="13" viewBox="0 0 24 24" fill="none"
+                    className={cn('transition-transform', popupOpen && 'rotate-180')}
+                  >
                     <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
@@ -297,31 +263,21 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
 
               {/* Sub-filter popup */}
               {popupOpen && (
-                <div
-                  className="absolute top-full left-0 mt-1.5 rounded-[16px] p-1.5 min-w-[200px]"
-                  style={{
-                    background: '#fff',
-                    border:     '1px solid rgba(10,46,77,0.1)',
-                    boxShadow:  '0 8px 32px rgba(10,46,77,0.13)',
-                    zIndex: 50,
-                  }}
-                >
+                <div className="absolute top-full left-0 mt-1.5 rounded-[16px] p-1.5 min-w-[200px] bg-white border border-primary/10 shadow-[0_8px_32px_rgba(10,46,77,0.13)] z-50">
                   <button
                     onClick={() => { setSubFilter(null); setOpenPopup(null); setSelected(null) }}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body font-semibold transition-colors hover:bg-black/[0.03]"
-                    style={{
-                      background: subFilter == null ? 'rgba(10,46,77,0.06)' : 'transparent',
-                      color: '#0A2E4D',
-                    }}
+                    className={cn(
+                      'w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body font-semibold text-primary transition-colors hover:bg-black/[0.03]',
+                      subFilter == null && 'bg-primary/[6%]',
+                    )}
                   >
                     <span>All {MAIN_LABELS[key]}</span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                      style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/[8%] text-primary/50">
                       {count}
                     </span>
                   </button>
 
-                  <div className="my-1 mx-2" style={{ height: 1, background: 'rgba(10,46,77,0.07)' }} />
+                  <div className="my-1 mx-2 h-px bg-primary/7" />
 
                   {SUB_OPTIONS[key].map(opt => {
                     const optCount  = statusCounts[opt.key] ?? 0
@@ -330,17 +286,14 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                       <button
                         key={opt.key}
                         onClick={() => { setSubFilter(opt.key); setOpenPopup(null); setSelected(null) }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body transition-colors hover:bg-black/[0.03]"
-                        style={{
-                          background: optActive ? 'rgba(10,46,77,0.06)' : 'transparent',
-                          color:      '#0A2E4D',
-                          fontWeight: optActive ? 600 : 400,
-                        }}
+                        className={cn(
+                          'w-full flex items-center justify-between px-3 py-2 rounded-[10px] text-sm f-body text-primary transition-colors hover:bg-black/[0.03]',
+                          optActive ? 'bg-primary/[6%] font-semibold' : 'font-normal',
+                        )}
                       >
                         <span>{opt.label}</span>
                         {optCount > 0 && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={{ background: 'rgba(10,46,77,0.08)', color: 'rgba(10,46,77,0.5)' }}>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/[8%] text-primary/50">
                             {optCount}
                           </span>
                         )}
@@ -357,8 +310,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
         {mainFilter != null && (
           <button
             onClick={() => { setMainFilter(null); setSubFilter(null); setSelected(null) }}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs f-body transition-opacity hover:opacity-70"
-            style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)', border: '1px solid rgba(10,46,77,0.1)' }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs f-body transition-opacity hover:opacity-70 bg-primary/[6%] text-primary/50 border border-primary/10"
           >
             <X size={10} />
             {MAIN_LABELS[mainFilter]}{subFilter != null ? ` · ${SUB_OPTIONS[mainFilter].find(o => o.key === subFilter)?.label}` : ''}
@@ -370,37 +322,34 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={prevMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-black/[0.05]"
-          style={{ border: '1px solid rgba(10,46,77,0.12)' }}
+          className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-black/[0.05] border border-primary/[12%]"
         >
-          <ChevronLeft size={15} style={{ color: 'rgba(10,46,77,0.6)' }} />
+          <ChevronLeft size={15} className="text-primary/60" />
         </button>
 
-        <span className="text-base font-bold f-display text-[#0A2E4D] min-w-[160px] text-center">
+        <span className="text-base font-bold f-display text-primary min-w-[160px] text-center">
           {monthLabel}
         </span>
 
         <button
           onClick={nextMonth}
-          className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-black/[0.05]"
-          style={{ border: '1px solid rgba(10,46,77,0.12)' }}
+          className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-black/[0.05] border border-primary/[12%]"
         >
-          <ChevronRight size={15} style={{ color: 'rgba(10,46,77,0.6)' }} />
+          <ChevronRight size={15} className="text-primary/60" />
         </button>
 
         <div className="flex-1" />
 
         {/* Legend */}
-        <div className="hidden sm:flex items-center gap-3 text-[10px] f-body"
-          style={{ color: 'rgba(10,46,77,0.45)' }}>
+        <div className="hidden sm:flex items-center gap-3 text-[10px] f-body text-primary/45">
           {[
-            { label: 'Active', color: '#FBBF24' },
-            { label: 'Offer',  color: '#06B6D4' },
-            { label: 'Paid',   color: '#10B981' },
-            { label: 'Lost',   color: '#EF4444' },
+            { label: 'Active', twClass: 'bg-yellow-400' },
+            { label: 'Offer',  twClass: 'bg-cyan-400'   },
+            { label: 'Paid',   twClass: 'bg-emerald-500' },
+            { label: 'Lost',   twClass: 'bg-red-500'    },
           ].map(l => (
             <span key={l.label} className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full" style={{ background: l.color }} />
+              <span className={cn('w-2 h-2 rounded-full', l.twClass)} />
               {l.label}
             </span>
           ))}
@@ -412,8 +361,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
         {DOW.map(d => (
           <div
             key={d}
-            className="text-center text-[9px] font-bold f-body uppercase tracking-[0.14em] py-1.5"
-            style={{ color: 'rgba(10,46,77,0.3)' }}
+            className="text-center text-[9px] font-bold f-body uppercase tracking-[0.14em] py-1.5 text-primary/30"
           >
             {d}
           </div>
@@ -436,38 +384,17 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
             <button
               key={day}
               onClick={() => setSelected(isSelected ? null : day)}
-              className="flex flex-col items-center pt-2 pb-1.5 px-0.5 rounded-[14px] transition-all min-h-[64px]"
-              style={{
-                background: isSelected
-                  ? '#0A2E4D'
-                  : isSibling
-                    ? 'rgba(230,126,80,0.08)'
-                    : hasInquiries
-                      ? 'rgba(10,46,77,0.035)'
-                      : 'transparent',
-                border: isSelected
-                  ? '1.5px solid #0A2E4D'
-                  : isSibling
-                    ? '1.5px solid rgba(230,126,80,0.4)'
-                    : isToday
-                      ? '1.5px solid rgba(230,126,80,0.55)'
-                      : hasInquiries
-                        ? '1px solid rgba(10,46,77,0.1)'
-                        : '1px solid transparent',
-                cursor: hasInquiries ? 'pointer' : 'default',
-              }}
+              data-selected={isSelected ? 'true' : undefined}
+              data-sibling={isSibling ? 'true' : undefined}
+              data-today={isToday ? 'true' : undefined}
+              data-has-inquiries={hasInquiries ? 'true' : undefined}
+              className="cal-day-cell flex flex-col items-center pt-2 pb-1.5 px-0.5 rounded-[14px] transition-all min-h-[64px]"
             >
               <span
-                className="text-sm font-semibold f-body leading-none mb-1.5"
-                style={{
-                  color: isSelected
-                    ? '#fff'
-                    : isSibling
-                      ? '#C2410C'
-                      : isToday
-                        ? '#E67E50'
-                        : 'rgba(10,46,77,0.75)',
-                }}
+                data-selected={isSelected ? 'true' : undefined}
+                data-sibling={isSibling ? 'true' : undefined}
+                data-today={isToday ? 'true' : undefined}
+                className="cal-day-num text-sm font-semibold f-body leading-none mb-1.5"
               >
                 {dayNum}
               </span>
@@ -478,20 +405,17 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                   {inquiries.slice(0, 4).map((inq, idx) => (
                     <span
                       key={idx}
-                      className="w-[6px] h-[6px] rounded-full flex-shrink-0"
-                      style={{
-                        background: isSelected
-                          ? 'rgba(255,255,255,0.75)'
-                          : (STATUS_DOT[inq.status] ?? '#9CA3AF'),
-                      }}
+                      data-status={inq.status}
+                      data-selected={isSelected ? 'true' : undefined}
+                      className="cal-status-dot w-[6px] h-[6px] rounded-full flex-shrink-0"
                     />
                   ))}
                   {inquiries.length > 4 && (
                     <span
-                      className="text-[8px] font-bold f-body leading-none self-center"
-                      style={{
-                        color: isSelected ? 'rgba(255,255,255,0.7)' : 'rgba(10,46,77,0.4)',
-                      }}
+                      className={cn(
+                        'text-[8px] font-bold f-body leading-none self-center',
+                        isSelected ? 'text-white/70' : 'text-primary/40',
+                      )}
                     >
                       +{inquiries.length - 4}
                     </span>
@@ -508,39 +432,24 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
-            style={{ background: 'rgba(10,46,77,0.18)', backdropFilter: 'blur(2px)' }}
+            className="fixed inset-0 z-40 bg-primary/[18%] backdrop-blur-sm"
             onClick={() => setSelected(null)}
           />
 
           {/* Panel */}
-          <div
-            className="fixed right-0 top-0 h-full z-50 flex flex-col overflow-hidden"
-            style={{
-              width: 'min(420px, 100vw)',
-              background: '#FDFAF7',
-              borderLeft: '1px solid rgba(10,46,77,0.1)',
-              boxShadow: '-8px 0 40px rgba(10,46,77,0.12)',
-            }}
-          >
+          <div className="fixed right-0 top-0 h-full z-50 flex flex-col overflow-hidden w-[min(420px,100vw)] bg-[#FDFAF7] border-l border-primary/10 shadow-[-8px_0_40px_rgba(10,46,77,0.12)]">
             {/* Drawer header */}
-            <div
-              className="flex items-start justify-between gap-3 px-6 py-5 flex-shrink-0"
-              style={{ borderBottom: '1px solid rgba(10,46,77,0.08)' }}
-            >
+            <div className="flex items-start justify-between gap-3 px-6 py-5 flex-shrink-0 border-b border-primary/[8%]">
               <div>
-                <p
-                  className="text-[9px] uppercase tracking-[0.2em] f-body mb-1"
-                  style={{ color: 'rgba(10,46,77,0.38)' }}
-                >
+                <p className="text-[9px] uppercase tracking-[0.2em] f-body mb-1 text-primary/38">
                   Trip date
                 </p>
-                <h2 className="text-xl font-bold f-display text-[#0A2E4D] leading-tight">
+                <h2 className="text-xl font-bold f-display text-primary leading-tight">
                   {new Date(selected + 'T00:00:00').toLocaleDateString('en-GB', {
                     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                   })}
                 </h2>
-                <p className="text-sm f-body mt-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                <p className="text-sm f-body mt-1 text-primary/45">
                   {selectedInquiries.length === 0
                     ? 'No inquiries'
                     : `${selectedInquiries.length} inquir${selectedInquiries.length === 1 ? 'y' : 'ies'}`}
@@ -549,26 +458,22 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
 
               <button
                 onClick={() => setSelected(null)}
-                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-black/[0.06] mt-0.5"
-                style={{ border: '1px solid rgba(10,46,77,0.1)' }}
+                className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-black/[0.06] mt-0.5 border border-primary/10"
               >
-                <X size={14} style={{ color: 'rgba(10,46,77,0.5)' }} />
+                <X size={14} className="text-primary/50" />
               </button>
             </div>
 
             {/* Drawer cards */}
             <div className="flex-1 overflow-y-auto px-4 py-4">
               {selectedInquiries.length === 0 ? (
-                <div
-                  className="flex flex-col items-center justify-center py-16 rounded-[20px] text-center"
-                  style={{ background: 'rgba(10,46,77,0.02)', border: '2px dashed rgba(10,46,77,0.1)' }}
-                >
-                  <p className="text-[#0A2E4D]/40 text-sm f-display">No inquiries on this date</p>
+                <div className="flex flex-col items-center justify-center py-16 rounded-[20px] text-center bg-primary/[2%] border-2 border-dashed border-primary/10">
+                  <p className="text-primary/40 text-sm f-display">No inquiries on this date</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2.5">
                   {selectedInquiries.map(row => {
-                    const st          = STATUS_STYLE[row.status] ?? STATUS_STYLE.pending
+                    const statusLabel = (STATUS_LABELS as Record<string, string>)[row.status] ?? row.status
                     const tripTitle  = tripMap[row.id] ?? '—'
                     const tripSlug   = slugMap[row.id] ?? null
                     const tripHref   = tripSlug != null
@@ -581,32 +486,24 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                       <Link
                         key={row.id}
                         href={`/admin/inquiries/${row.id}`}
-                        className="block group"
-                        style={{ textDecoration: 'none' }}
+                        className="block group no-underline"
                         onClick={() => setSelected(null)}
                       >
-                        <div
-                          className="px-4 py-3.5 rounded-[18px] transition-all group-hover:shadow-md"
-                          style={{
-                            background: '#fff',
-                            border: '1px solid rgba(10,46,77,0.08)',
-                            boxShadow: '0 1px 4px rgba(10,46,77,0.05)',
-                          }}
-                        >
+                        <div className="px-4 py-3.5 rounded-[18px] transition-all group-hover:shadow-md bg-white border border-primary/[8%] shadow-[0_1px_4px_rgba(10,46,77,0.05)]">
                           <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <span className="text-sm font-bold f-body text-[#0A2E4D] leading-snug">
+                            <span className="text-sm font-bold f-body text-primary leading-snug">
                               {row.angler_name}
                             </span>
                             <span
-                              className="px-2 py-0.5 rounded-full text-[10px] font-bold f-body flex-shrink-0"
-                              style={{ background: st.bg, color: st.color, border: st.border }}
+                              data-status={row.status}
+                              className="status-badge px-2 py-0.5 rounded-full text-[10px] font-bold f-body flex-shrink-0"
                             >
-                              {st.label}
+                              {statusLabel}
                             </span>
                           </div>
 
                           <div className="flex items-center gap-1.5 mb-2 min-w-0">
-                            <p className="text-xs f-body truncate" style={{ color: 'rgba(10,46,77,0.5)' }}>
+                            <p className="text-xs f-body truncate text-primary/50">
                               {tripTitle}
                             </p>
                             {tripHref != null && (
@@ -618,7 +515,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                                 className="flex-shrink-0 flex items-center justify-center w-4 h-4 rounded transition-colors hover:bg-black/[0.07]"
                                 title="Open experience page"
                               >
-                                <ExternalLink size={10} style={{ color: 'rgba(10,46,77,0.4)' }} />
+                                <ExternalLink size={10} className="text-primary/40" />
                               </a>
                             )}
                           </div>
@@ -628,13 +525,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                             <div className="flex flex-wrap gap-1 mb-1.5">
                               {/* Selected date — highlighted */}
                               {selected != null && allDates.includes(selected) && (
-                                <span
-                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body"
-                                  style={{
-                                    background: '#0A2E4D',
-                                    color: '#fff',
-                                  }}
-                                >
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold f-body bg-primary text-white">
                                   {new Date(selected + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                                 </span>
                               )}
@@ -642,12 +533,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                               {otherDates.map(d => (
                                 <span
                                   key={d}
-                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] f-body"
-                                  style={{
-                                    background: 'rgba(230,126,80,0.08)',
-                                    color: '#C2410C',
-                                    border: '1px solid rgba(230,126,80,0.2)',
-                                  }}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] f-body bg-accent/[8%] text-orange-700 border border-accent/20"
                                 >
                                   {new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                                 </span>
@@ -657,15 +543,12 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
 
                           <div className="flex items-center gap-3 flex-wrap">
                             {row.party_size > 1 && (
-                              <span
-                                className="text-[11px] f-body px-1.5 py-0.5 rounded-full"
-                                style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)' }}
-                              >
+                              <span className="text-[11px] f-body px-1.5 py-0.5 rounded-full bg-primary/[6%] text-primary/50">
                                 {row.party_size} pax
                               </span>
                             )}
                             {row.internal_commission_eur != null && (
-                              <span className="text-[11px] font-bold f-body" style={{ color: '#E67E50' }}>
+                              <span className="text-[11px] font-bold f-body text-accent">
                                 +{row.deal_currency === 'USD' ? '$' : '€'}{Number(row.internal_commission_eur).toFixed(0)}
                               </span>
                             )}

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { X, Plus, Check, Pencil } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { updateRequestedDates } from '@/actions/inquiries'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,30 +64,19 @@ export function RequestedDatesEditor({ inquiryId, initialDates }: Props) {
   // ── Read-only view ─────────────────────────────────────────────────────────
   if (!editing) {
     return (
-      <div
-        className="flex items-start justify-between gap-4 py-3"
-        style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}
-      >
-        <span
-          className="text-[10px] font-bold uppercase tracking-[0.14em] f-body flex-shrink-0"
-          style={{ color: 'rgba(10,46,77,0.38)', minWidth: '110px' }}
-        >
+      <div className="flex items-start justify-between gap-4 py-3 border-b border-primary/[6%]">
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body flex-shrink-0 text-primary/[38%] min-w-[110px]">
           Req. dates
         </span>
 
         <div className="flex-1 flex flex-wrap items-center gap-1.5 justify-end">
           {dates.length === 0 ? (
-            <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>—</span>
+            <span className="text-sm f-body text-primary/35">—</span>
           ) : (
             dates.map(d => (
               <span
                 key={d}
-                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs f-body font-medium"
-                style={{
-                  background: 'rgba(10,46,77,0.07)',
-                  color: '#0A2E4D',
-                  border: '1px solid rgba(10,46,77,0.1)',
-                }}
+                className="inline-flex items-center px-2 py-0.5 rounded-full text-xs f-body font-medium bg-primary/7 text-primary border border-primary/10"
               >
                 {fmtDate(d)}
               </span>
@@ -95,11 +85,10 @@ export function RequestedDatesEditor({ inquiryId, initialDates }: Props) {
 
           <button
             onClick={() => setEditing(true)}
-            className="flex items-center justify-center w-5 h-5 rounded-full transition-all hover:bg-black/[0.07] flex-shrink-0"
-            style={{ border: '1px solid rgba(10,46,77,0.15)' }}
+            className="flex items-center justify-center w-5 h-5 rounded-full transition-all hover:bg-black/7 flex-shrink-0 border border-primary/15"
             title="Edit dates"
           >
-            <Pencil size={9} style={{ color: 'rgba(10,46,77,0.45)' }} />
+            <Pencil size={9} className="text-primary/45" />
           </button>
         </div>
       </div>
@@ -108,38 +97,27 @@ export function RequestedDatesEditor({ inquiryId, initialDates }: Props) {
 
   // ── Edit view ──────────────────────────────────────────────────────────────
   return (
-    <div
-      className="py-3"
-      style={{ borderBottom: '1px solid rgba(10,46,77,0.06)' }}
-    >
-      <span
-        className="text-[10px] font-bold uppercase tracking-[0.14em] f-body block mb-2.5"
-        style={{ color: 'rgba(10,46,77,0.38)' }}
-      >
+    <div className="py-3 border-b border-primary/[6%]">
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] f-body block mb-2.5 text-primary/[38%]">
         Req. dates
       </span>
 
       {/* Date chips */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {dates.length === 0 ? (
-          <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.35)' }}>No dates yet</span>
+          <span className="text-xs f-body text-primary/35">No dates yet</span>
         ) : (
           dates.map(d => (
             <span
               key={d}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs f-body font-medium"
-              style={{
-                background: 'rgba(10,46,77,0.07)',
-                color: '#0A2E4D',
-                border: '1px solid rgba(10,46,77,0.12)',
-              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs f-body font-medium bg-primary/7 text-primary border border-primary/[12%]"
             >
               {fmtDate(d)}
               <button
                 onClick={() => removeDate(d)}
                 className="flex items-center justify-center w-3.5 h-3.5 rounded-full transition-colors hover:bg-red-100 flex-shrink-0"
               >
-                <X size={8} style={{ color: '#DC2626' }} />
+                <X size={8} className="text-red-600" />
               </button>
             </span>
           ))
@@ -153,23 +131,17 @@ export function RequestedDatesEditor({ inquiryId, initialDates }: Props) {
           value={newDate}
           onChange={e => setNewDate(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addDate()}
-          className="text-sm f-body px-2.5 py-1.5 rounded-[10px] outline-none"
-          style={{
-            background: 'rgba(10,46,77,0.04)',
-            border: '1px solid rgba(10,46,77,0.12)',
-            color: '#0A2E4D',
-          }}
+          className="text-sm f-body px-2.5 py-1.5 rounded-[10px] outline-none bg-primary/[4%] border border-primary/[12%] text-primary"
         />
         <button
           onClick={addDate}
           disabled={!newDate}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-[10px] text-xs font-bold f-body transition-all"
-          style={{
-            background: newDate ? 'rgba(10,46,77,0.08)' : 'rgba(10,46,77,0.03)',
-            color: newDate ? '#0A2E4D' : 'rgba(10,46,77,0.3)',
-            border: '1px solid rgba(10,46,77,0.1)',
-            cursor: newDate ? 'pointer' : 'default',
-          }}
+          className={cn(
+            'flex items-center gap-1 px-3 py-1.5 rounded-[10px] text-xs font-bold f-body transition-all border border-primary/10',
+            newDate
+              ? 'bg-primary/[8%] text-primary cursor-pointer'
+              : 'bg-primary/3 text-primary/30 cursor-default',
+          )}
         >
           <Plus size={11} />
           Add
@@ -178,7 +150,7 @@ export function RequestedDatesEditor({ inquiryId, initialDates }: Props) {
 
       {/* Error */}
       {error != null && (
-        <p className="text-xs f-body mb-2" style={{ color: '#DC2626' }}>{error}</p>
+        <p className="text-xs f-body mb-2 text-red-600">{error}</p>
       )}
 
       {/* Actions */}
@@ -186,21 +158,14 @@ export function RequestedDatesEditor({ inquiryId, initialDates }: Props) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold f-body transition-all"
-          style={{
-            background: '#0A2E4D',
-            color: '#fff',
-            cursor: saving ? 'not-allowed' : 'pointer',
-            opacity: saving ? 0.7 : 1,
-          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] text-xs font-bold f-body transition-all bg-primary text-primary-foreground disabled:opacity-70 disabled:cursor-not-allowed"
         >
           <Check size={11} />
           {saving ? 'Saving…' : 'Save'}
         </button>
         <button
           onClick={handleCancel}
-          className="px-3 py-1.5 rounded-[10px] text-xs f-body transition-all hover:bg-black/[0.04]"
-          style={{ color: 'rgba(10,46,77,0.5)' }}
+          className="px-3 py-1.5 rounded-[10px] text-xs f-body transition-all hover:bg-black/[4%] text-primary/50"
         >
           Cancel
         </button>

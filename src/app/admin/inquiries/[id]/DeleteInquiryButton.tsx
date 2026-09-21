@@ -33,8 +33,7 @@ export function DeleteInquiryButton({ inquiryId, anglerName }: Props) {
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[12px] text-xs font-semibold f-body transition-all hover:opacity-90"
-        style={{ background: 'rgba(239,68,68,0.07)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.18)' }}
+        className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[12px] text-xs font-semibold f-body transition-all hover:opacity-90 bg-red-500/[7%] text-red-600 border border-red-500/[18%]"
       >
         <Trash2 size={12} />
         Delete inquiry
@@ -43,40 +42,30 @@ export function DeleteInquiryButton({ inquiryId, anglerName }: Props) {
   }
 
   return (
-    <div
-      className="rounded-[16px] p-4"
-      style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)' }}
-    >
-      <p className="text-xs font-bold f-body mb-1" style={{ color: '#DC2626' }}>
+    <div className="rounded-[16px] p-4 bg-red-500/[6%] border border-red-500/20">
+      <p className="text-xs font-bold f-body mb-1 text-red-600">
         Permanently delete?
       </p>
-      <p className="text-[11px] f-body mb-3 leading-relaxed" style={{ color: 'rgba(153,27,27,0.7)' }}>
+      <p className="text-[11px] f-body mb-3 leading-relaxed text-red-800/70">
         <strong>{anglerName}</strong> and all associated messages, notes, and data will be gone forever.
       </p>
 
       {error != null && (
-        <p className="text-[11px] f-body mb-2" style={{ color: '#DC2626' }}>{error}</p>
+        <p className="text-[11px] f-body mb-2 text-red-600">{error}</p>
       )}
 
       <div className="flex gap-2">
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="flex-1 py-1.5 rounded-[10px] text-xs font-bold f-body transition-all"
-          style={{
-            background: '#DC2626',
-            color: '#fff',
-            opacity: deleting ? 0.65 : 1,
-            cursor: deleting ? 'not-allowed' : 'pointer',
-          }}
+          className="flex-1 py-1.5 rounded-[10px] text-xs font-bold f-body transition-all bg-red-600 text-white disabled:opacity-65 disabled:cursor-not-allowed"
         >
           {deleting ? 'Deleting…' : 'Yes, delete forever'}
         </button>
         <button
           onClick={() => { setConfirming(false); setError(null) }}
           disabled={deleting}
-          className="px-3 py-1.5 rounded-[10px] text-xs f-body transition-all hover:bg-black/[0.05]"
-          style={{ color: 'rgba(10,46,77,0.5)' }}
+          className="px-3 py-1.5 rounded-[10px] text-xs f-body transition-all hover:bg-black/5 text-primary/50"
         >
           Cancel
         </button>

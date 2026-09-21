@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { updateInquiryStatus } from '@/actions/inquiries'
 import {
   STATUSES as MACHINE_STATUSES,
@@ -13,26 +14,11 @@ import {
   type InquiryStatus,
 } from '@/lib/inquiries/state'
 
-// Colours only — the list, the labels and what may follow what come from the state
-// machine (src/lib/inquiries/state.ts), so this panel cannot drift from it.
-const STATUS_COLORS: Record<InquiryStatus, { color: string; bg: string; border: string }> = {
-  new:              { color: '#92400E', bg: 'rgba(251,191,36,0.2)',   border: 'rgba(251,191,36,0.45)'  },
-  qualifying:       { color: '#5B21B6', bg: 'rgba(139,92,246,0.18)',  border: 'rgba(139,92,246,0.4)'   },
-  waiting_guide:    { color: '#C2410C', bg: 'rgba(234,88,12,0.18)',   border: 'rgba(234,88,12,0.4)'    },
-  offer_presented:  { color: '#0E7490', bg: 'rgba(6,182,212,0.18)',   border: 'rgba(6,182,212,0.4)'    },
-  awaiting_payment: { color: '#3730A3', bg: 'rgba(99,102,241,0.18)',  border: 'rgba(99,102,241,0.4)'   },
-  paid:             { color: '#065F46', bg: 'rgba(16,185,129,0.18)',  border: 'rgba(16,185,129,0.35)'  },
-  handed_over:      { color: '#1E40AF', bg: 'rgba(59,130,246,0.18)',  border: 'rgba(59,130,246,0.35)'  },
-  completed:        { color: '#D1D5DB', bg: 'rgba(107,114,128,0.18)', border: 'rgba(107,114,128,0.35)' },
-  lost:             { color: '#FCA5A5', bg: 'rgba(239,68,68,0.18)',   border: 'rgba(239,68,68,0.35)'   },
-  cancelled:        { color: '#FCA5A5', bg: 'rgba(239,68,68,0.12)',   border: 'rgba(239,68,68,0.25)'   },
-}
-
+// List is driven by the state machine — only STATUS_LABELS / STATUS_MEANINGS are local.
 const STATUSES = MACHINE_STATUSES.map(key => ({
   key,
   label:   STATUS_LABELS[key],
   meaning: STATUS_MEANINGS[key],
-  ...STATUS_COLORS[key],
 }))
 
 const LOST_REASON_CODES: { key: string; label: string }[] = [
@@ -106,14 +92,12 @@ export function StatusChanger({
   }
 
   return (
-    <div
-      className="rounded-[20px] overflow-hidden"
-      style={{ background: 'rgba(10,46,77,0.55)', border: '1px solid rgba(255,255,255,0.07)' }}
-    >
-      <div className="px-5 py-3.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
-          style={{ color: 'rgba(255,255,255,0.28)' }}>Deal status</p>
-        <p className="text-sm font-bold f-body mt-0.5" style={{ color: '#FFFFFF' }}>Set status</p>
+    <div className="rounded-[20px] overflow-hidden bg-primary/55 border border-white/[7%]">
+      <div className="px-5 py-3.5 border-b border-white/[6%]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-white/[28%]">
+          Deal status
+        </p>
+        <p className="text-sm font-bold f-body mt-0.5 text-white">Set status</p>
       </div>
 
       <div className="px-5 py-4 space-y-3">
@@ -135,18 +119,20 @@ export function StatusChanger({
                   ? s.meaning
                   : `${s.meaning} — not reachable from ${currentStatus}`}
                 onClick={() => handleClick(s.key)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold f-body transition-all"
-                style={{
-                  background: isActive ? s.bg : 'rgba(255,255,255,0.05)',
-                  color:      isActive ? s.color : 'rgba(255,255,255,0.4)',
-                  border:     isActive ? `1px solid ${s.border}` : '1px solid rgba(255,255,255,0.08)',
-                  cursor:     isActive || disabled ? 'default' : 'pointer',
-                  opacity:    isActive || isLoading ? 1 : (isAllowed ? (pending ? 0.5 : 1) : 0.25),
-                }}
+                // Active → use .status-badge data-attribute colours (light-bg palette).
+                // Inactive → white/translucent on the dark navy panel.
+                data-status={isActive ? s.key : undefined}
+                className={cn(
+                  'status-badge flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold f-body transition-all',
+                  !isActive && 'bg-white/5 text-white/40 border border-white/[8%]',
+                  !isActive && !isAllowed && 'opacity-25',
+                  !isActive && isAllowed && pending && 'opacity-50',
+                  (isActive || disabled) ? 'cursor-default' : 'cursor-pointer',
+                )}
               >
                 {isLoading
                   ? <Loader2 size={9} className="animate-spin" />
-                  : isActive && <span style={{ fontSize: '7px' }}>●</span>
+                  : isActive && <span className="text-[7px]">●</span>
                 }
                 {s.label}
               </button>
@@ -155,7 +141,7 @@ export function StatusChanger({
         </div>
 
         {!isInquiryStatus(currentStatus) && (
-          <p className="text-[10px] f-body" style={{ color: '#FCA5A5' }}>
+          <p className="text-[10px] f-body text-red-300">
             This inquiry holds the retired status <strong>{currentStatus}</strong>, which has no
             allowed moves. Tell tj — it should have been migrated.
           </p>
@@ -168,16 +154,16 @@ export function StatusChanger({
             <select
               value={lostReasonCode}
               onChange={e => setLostReasonCode(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border:     `1px solid ${lostReasonCode ? 'rgba(239,68,68,0.5)' : 'rgba(239,68,68,0.3)'}`,
-                color:      lostReasonCode ? '#FFFFFF' : 'rgba(255,255,255,0.4)',
-              }}
+              className={cn(
+                'w-full px-3 py-2 rounded-xl text-xs f-body outline-none bg-white/[7%] text-white border',
+                lostReasonCode
+                  ? 'border-red-500/50 text-white'
+                  : 'border-red-500/30 text-white/40',
+              )}
             >
               <option value="" disabled>Select reason (required)</option>
               {LOST_REASON_CODES.map(r => (
-                <option key={r.key} value={r.key} style={{ background: '#0A2E4D', color: '#FFFFFF' }}>
+                <option key={r.key} value={r.key} className="bg-primary text-white">
                   {r.label}
                 </option>
               ))}
@@ -189,24 +175,14 @@ export function StatusChanger({
               value={lostComment}
               onChange={e => setLostComment(e.target.value)}
               placeholder="Comment (optional)"
-              className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:opacity-30"
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border:     '1px solid rgba(239,68,68,0.2)',
-                color:      '#FFFFFF',
-              }}
+              className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:opacity-30 bg-white/[7%] border border-red-500/20 text-white"
             />
 
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => { setShowLostInput(false); setLostReasonCode(''); setLostComment('') }}
-                className="flex-1 py-2 rounded-xl text-[10px] font-semibold f-body"
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  color:      'rgba(255,255,255,0.4)',
-                  border:     '1px solid rgba(255,255,255,0.08)',
-                }}
+                className="flex-1 py-2 rounded-xl text-[10px] font-semibold f-body bg-white/5 text-white/40 border border-white/[8%]"
               >
                 Cancel
               </button>
@@ -214,13 +190,12 @@ export function StatusChanger({
                 type="button"
                 disabled={pending || !lostReasonCode}
                 onClick={handleConfirmLost}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold f-body"
-                style={{
-                  background: lostReasonCode ? 'rgba(239,68,68,0.22)' : 'rgba(255,255,255,0.05)',
-                  color:      lostReasonCode ? '#FCA5A5' : 'rgba(255,255,255,0.3)',
-                  border:     lostReasonCode ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(255,255,255,0.08)',
-                  cursor:     lostReasonCode ? 'pointer' : 'not-allowed',
-                }}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold f-body border',
+                  lostReasonCode
+                    ? 'bg-red-500/22 text-red-300 border-red-500/35 cursor-pointer'
+                    : 'bg-white/5 text-white/30 border-white/[8%] cursor-not-allowed',
+                )}
               >
                 {changingTo === 'lost' && <Loader2 size={9} className="animate-spin" />}
                 Mark as Lost
@@ -230,7 +205,7 @@ export function StatusChanger({
         )}
 
         {error != null && (
-          <p className="text-[10px] f-body" style={{ color: '#FCA5A5' }}>{error}</p>
+          <p className="text-[10px] f-body text-red-300">{error}</p>
         )}
       </div>
     </div>
