@@ -80,7 +80,10 @@ const DEFAULT_KNOWLEDGE_DIR = path.resolve(process.cwd(), 'docs/knowledge')
 function readDir(dir: string): string[] {
   try {
     return fs.readdirSync(dir).filter(f => f.endsWith('.md'))
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      console.warn(`[knowledge] directory not found: ${dir}`)
+    }
     return []
   }
 }

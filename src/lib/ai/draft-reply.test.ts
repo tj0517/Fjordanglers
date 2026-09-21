@@ -14,13 +14,13 @@ import path from 'path'
 
 const FIXTURE_DIR = path.resolve(__dirname, '__fixtures__/knowledge')
 
+const anthropicCreate = vi.fn().mockResolvedValue({
+  content: [{ type: 'text', text: 'Draft reply text from stub.' }],
+})
+
 vi.mock('@anthropic-ai/sdk', () => ({
   default: class {
-    messages = {
-      create: async () => ({
-        content: [{ type: 'text', text: 'Draft reply text from stub.' }],
-      }),
-    }
+    messages = { create: anthropicCreate }
   },
 }))
 
@@ -46,47 +46,75 @@ import { draftReply, DraftReplyError } from './draft-reply'
 type InsertedRow = Record<string, unknown>
 
 let insertedMessages: InsertedRow[] = []
-let insertedEvents: InsertedRow[] = []
+let insertedEvents:   InsertedRow[] = []
+let updatedMessages:  InsertedRow[] = []
 
-function mockDb(messages: unknown[] = []) {
+const INQUIRY_DATA = {
+  angler_name:        'Jan Kowalski',
+  message:            'I want to fish for salmon',
+  requested_dates:    ['2026-07-15'],
+  party_size:         2,
+  trip_country:       'Iceland',
+  assigned_guide_id:  null,
+  trip_id:            null,
+  experience_page_id: null,
+}
+
+/**
+ * @param messages - thread messages returned by the DB
+ * @param existingDraft - if non-null, the messages table returns this as an existing draft
+ *                        (simulates a second "zaproponuj" call)
+ */
+interface MockBuilder {
+  eq(k: string, v: unknown): MockBuilder
+  neq(k: string, v: unknown): MockBuilder
+  order(): Promise<{ data: unknown[]; error: null }>
+  single(): Promise<{ data: unknown; error: null }>
+  maybeSingle(): Promise<{ data: unknown; error: null }>
+}
+
+function mockDb(messages: unknown[] = [], existingDraft: { id: string } | null = null) {
   insertedMessages = []
   insertedEvents   = []
+  updatedMessages  = []
 
   vi.mocked(createServiceClient).mockReturnValue({
     from: (table: string) => ({
-      select: (cols?: string) => {
-        if (table === 'inquiries') {
-          return {
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  angler_name:        'Jan Kowalski',
-                  message:            'I want to fish for salmon',
-                  requested_dates:    ['2026-07-15'],
-                  party_size:         2,
-                  trip_country:       'Iceland',
-                  assigned_guide_id:  null,
-                  trip_id:            null,
-                  experience_page_id: null,
-                },
-                error: null,
-              }),
-            }),
-          }
+      select: () => {
+        // Fluent builder — accumulates eq/neq filters, resolves on terminal call
+        const eqs:  [string, unknown][] = []
+        const neqs: [string, unknown][] = []
+
+        const builder: MockBuilder = {
+          eq(k: string, v: unknown): MockBuilder  { eqs.push([k, v]);  return builder },
+          neq(k: string, v: unknown): MockBuilder { neqs.push([k, v]); return builder },
+          order(): Promise<{ data: unknown[]; error: null }> {
+            // Thread query: apply neq filters (e.g. status != 'draft')
+            const filtered = (messages as Array<Record<string, unknown>>).filter(row =>
+              !neqs.some(([k, v]) => row[k] === v),
+            )
+            return Promise.resolve({ data: filtered, error: null })
+          },
+          async single() {
+            if (table === 'inquiries') return { data: INQUIRY_DATA, error: null }
+            return { data: null, error: null }
+          },
+          async maybeSingle() {
+            if (table === 'messages') {
+              const isDraftQuery = eqs.some(([k, v]) => k === 'status' && v === 'draft')
+              if (isDraftQuery && existingDraft != null) return { data: existingDraft, error: null }
+            }
+            return { data: null, error: null }
+          },
         }
-        if (table === 'messages') {
-          return {
-            eq: () => ({
-              order: () => Promise.resolve({ data: messages, error: null }),
-            }),
-          }
-        }
-        // Unused but satisfies type
-        void cols
-        return { eq: () => ({ single: async () => ({ data: null, error: null }) }) }
+        return builder
+      },
+      update: (payload: Record<string, unknown>) => {
+        if (table === 'messages') updatedMessages.push(payload)
+        return { eq: () => ({ error: null }) }
       },
       insert: (row: Record<string, unknown>) => {
-        if (table === 'messages')   insertedMessages.push(row)
+        if (table === 'messages')       insertedMessages.push(row)
         if (table === 'inquiry_events') insertedEvents.push(row)
         return {
           select: () => ({
@@ -173,5 +201,63 @@ describe('draftReply', () => {
         knowledgeDir: FIXTURE_DIR,
       }),
     ).rejects.toThrow('conversation thread is empty')
+  })
+})
+
+// ─── FA-1.14 round 2 — draft lifecycle ───────────────────────────────────────
+
+describe('draftReply — draft lifecycle (FA-1.14 round 2)', () => {
+  beforeEach(() => {
+    anthropicCreate.mockClear()
+    anthropicCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Draft reply text from stub.' }],
+    })
+  })
+
+  it('(b) second call with existing draft updates the row — no duplicate insert', async () => {
+    // Simulate existing draft row already saved for this inquiry/counterpart/channel
+    mockDb(
+      [
+        { direction: 'inbound', channel: 'email', body: 'Hello', status: 'sent', occurred_at: '2026-07-01T10:00:00Z' },
+        { direction: 'inbound', channel: 'email', body: 'Follow-up', status: 'sent', occurred_at: '2026-07-01T11:00:00Z' },
+        { direction: 'inbound', channel: 'email', body: 'More details', status: 'sent', occurred_at: '2026-07-01T12:00:00Z' },
+        { direction: 'inbound', channel: 'email', body: 'Last message', status: 'sent', occurred_at: '2026-07-01T13:00:00Z' },
+      ],
+      { id: 'existing-draft-id' }, // ← existing draft already in DB
+    )
+
+    const result = await draftReply({
+      inquiryId:    'inquiry-1',
+      counterpart:  'angler',
+      channel:      'email',
+      knowledgeDir: FIXTURE_DIR,
+    })
+
+    // Must reuse the existing row, not insert a new one
+    expect(result.draftId).toBe('existing-draft-id')
+    expect(insertedMessages).toHaveLength(0)
+    expect(updatedMessages).toHaveLength(1)
+    expect(updatedMessages[0]).toMatchObject({ body: 'Draft reply text from stub.', status: 'draft' })
+  })
+
+  it('(c) draft messages are excluded from the conversation context sent to AI', async () => {
+    // Mix of sent + draft messages — only sent ones must reach the AI
+    mockDb([
+      { direction: 'inbound',  channel: 'email', body: 'Real message 1', status: 'sent',  occurred_at: '2026-07-01T10:00:00Z' },
+      { direction: 'inbound',  channel: 'email', body: 'Real message 2', status: 'sent',  occurred_at: '2026-07-01T11:00:00Z' },
+      { direction: 'inbound',  channel: 'email', body: 'Real message 3', status: 'sent',  occurred_at: '2026-07-01T12:00:00Z' },
+      { direction: 'outbound', channel: 'email', body: 'THIS IS A DRAFT — must not leak', status: 'draft', occurred_at: '2026-07-01T13:00:00Z' },
+    ])
+
+    await draftReply({
+      inquiryId:    'inquiry-1',
+      counterpart:  'angler',
+      channel:      'email',
+      knowledgeDir: FIXTURE_DIR,
+    })
+
+    expect(anthropicCreate).toHaveBeenCalledOnce()
+    const prompt = (anthropicCreate.mock.calls[0][0] as { messages: { content: string }[] }).messages[0].content
+    expect(prompt).not.toContain('THIS IS A DRAFT')
   })
 })

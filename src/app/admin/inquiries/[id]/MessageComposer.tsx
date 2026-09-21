@@ -41,6 +41,7 @@ export function MessageComposer({
   const [sent,          setSent]          = useState(false)
   const [draftPending,  startDraft]       = useTransition()
   const [draftError,    setDraftError]    = useState<string | null>(null)
+  const [draftId,       setDraftId]       = useState<string | null>(null)
 
   const waOpen = isWaWindowOpen(waLastInboundAt ?? null)
 
@@ -55,6 +56,7 @@ export function MessageComposer({
       const res = await proposeDraft(inquiryId, counterpart, channel)
       if (res.success) {
         setBody(res.text)
+        setDraftId(res.draftId)
         router.refresh()
       } else {
         setDraftError(res.error)
@@ -70,10 +72,12 @@ export function MessageComposer({
         counterpart,
         subject: subject.trim() || undefined,
         body:    body.trim(),
+        draftId: draftId ?? undefined,
       })
       if (res.success) {
         setSubject('')
         setBody('')
+        setDraftId(null)
         setSent(true)
         setTimeout(() => setSent(false), 4000)
         router.refresh()

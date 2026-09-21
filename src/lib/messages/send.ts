@@ -28,6 +28,8 @@ export interface SendMessageParams {
   subject?:      string
   body:          string
   draftedBy:     'admin' | 'agent'
+  /** When provided, UPDATE this existing draft row instead of inserting a new one. */
+  draftId?:      string
   actor:         EventActor
   /** guides.id — only when counterpart='guide'. */
   counterpartId?: string | null
@@ -51,33 +53,52 @@ export async function sendMessage(
 ): Promise<SendMessageResult> {
   const {
     inquiryId, channel, counterpart, to, subject, body,
-    draftedBy, actor, counterpartId, threadKey,
+    draftedBy, draftId, actor, counterpartId, threadKey,
   } = params
 
-  // 1. Insert row with status 'queued'
-  const { data: inserted, error: insertErr } = await client
-    .from('messages')
-    .insert({
-      inquiry_id:     inquiryId,
-      channel,
-      direction:      'outbound',
-      counterpart,
-      counterpart_id: counterpartId ?? null,
-      subject:        subject ?? null,
-      body,
-      status:         'queued',
-      drafted_by:     draftedBy,
-      thread_key:     threadKey ?? null,
-      occurred_at:    new Date().toISOString(),
-    })
-    .select('id')
-    .single()
+  // 1. Acquire message row — update existing draft if draftId given, else insert new
+  let messageId: string
 
-  if (insertErr != null || inserted == null) {
-    throw new Error(`[sendMessage] insert failed: ${insertErr?.message ?? 'no row returned'}`)
+  if (draftId != null) {
+    const { error: updateErr } = await client
+      .from('messages')
+      .update({
+        body,
+        subject:     subject ?? null,
+        status:      'queued',
+        drafted_by:  draftedBy,
+        occurred_at: new Date().toISOString(),
+      })
+      .eq('id', draftId)
+
+    if (updateErr != null) {
+      throw new Error(`[sendMessage] draft update failed: ${updateErr.message}`)
+    }
+    messageId = draftId
+  } else {
+    const { data: inserted, error: insertErr } = await client
+      .from('messages')
+      .insert({
+        inquiry_id:     inquiryId,
+        channel,
+        direction:      'outbound',
+        counterpart,
+        counterpart_id: counterpartId ?? null,
+        subject:        subject ?? null,
+        body,
+        status:         'queued',
+        drafted_by:     draftedBy,
+        thread_key:     threadKey ?? null,
+        occurred_at:    new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+
+    if (insertErr != null || inserted == null) {
+      throw new Error(`[sendMessage] insert failed: ${insertErr?.message ?? 'no row returned'}`)
+    }
+    messageId = inserted.id
   }
-
-  const messageId: string = inserted.id
 
   // 2. Send via adapter
   let externalId: string | null = null

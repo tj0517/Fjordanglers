@@ -59,12 +59,12 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     throw new DraftReplyError(`Inquiry ${inquiryId} not found`)
   }
 
-  // Fetch message thread
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: messages } = await (supabase as any)
+  // Fetch message thread — exclude drafts so they don't pollute the AI context
+  const { data: messages } = await supabase
     .from('messages')
     .select('direction, channel, body, occurred_at')
     .eq('inquiry_id', inquiryId)
+    .neq('status', 'draft')
     .order('occurred_at', { ascending: true })
 
   const thread = (messages ?? []) as ConversationMessage[]
@@ -76,8 +76,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   // Resolve guide name for knowledge lookup
   let guideName: string | null = null
   if (inquiry.assigned_guide_id) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: guide } = await (supabase as any)
+    const { data: guide } = await supabase
       .from('guides')
       .select('full_name')
       .eq('id', inquiry.assigned_guide_id)
@@ -127,29 +126,52 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
 
   const draftText = block.text.trim()
 
-  // Save draft — does NOT emit an event
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inserted, error: insertErr } = await (supabase as any)
+  // Upsert draft — overwrite existing draft for this inquiry/counterpart/channel if present
+  const { data: existingDraft } = await supabase
     .from('messages')
-    .insert({
-      inquiry_id:  inquiryId,
-      channel,
-      direction:   'outbound',
-      counterpart,
-      body:        draftText,
-      status:      'draft',
-      drafted_by:  'agent',
-      occurred_at: new Date().toISOString(),
-    })
     .select('id')
-    .single()
+    .eq('inquiry_id', inquiryId)
+    .eq('counterpart', counterpart)
+    .eq('channel', channel)
+    .eq('status', 'draft')
+    .maybeSingle()
 
-  if (insertErr != null || inserted == null) {
-    throw new DraftReplyError(`Failed to save draft: ${insertErr?.message ?? 'no row returned'}`)
+  let draftId: string
+
+  if (existingDraft != null) {
+    const { error: updateErr } = await supabase
+      .from('messages')
+      .update({ body: draftText, status: 'draft', occurred_at: new Date().toISOString() })
+      .eq('id', existingDraft.id)
+
+    if (updateErr != null) {
+      throw new DraftReplyError(`Failed to update draft: ${updateErr.message}`)
+    }
+    draftId = existingDraft.id
+  } else {
+    const { data: inserted, error: insertErr } = await supabase
+      .from('messages')
+      .insert({
+        inquiry_id:  inquiryId,
+        channel,
+        direction:   'outbound',
+        counterpart,
+        body:        draftText,
+        status:      'draft',
+        drafted_by:  'agent',
+        occurred_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+
+    if (insertErr != null || inserted == null) {
+      throw new DraftReplyError(`Failed to save draft: ${insertErr?.message ?? 'no row returned'}`)
+    }
+    draftId = inserted.id
   }
 
   return {
-    draftId:   inserted.id as string,
+    draftId,
     text:      draftText,
     usedFiles: knowledge.map(f => f.path),
   }
