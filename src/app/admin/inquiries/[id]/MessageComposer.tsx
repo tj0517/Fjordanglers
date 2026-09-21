@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Check, MessageSquare, Mail } from 'lucide-react'
-import { sendMessageFromThread } from '@/actions/messages'
+import { Loader2, Check, MessageSquare, Mail, Sparkles } from 'lucide-react'
+import { sendMessageFromThread, proposeDraft } from '@/actions/messages'
 
 type Channel = 'email' | 'whatsapp' | 'instagram'
 
@@ -27,16 +27,21 @@ export function MessageComposer({
   /** ISO timestamp of last inbound WA message on this inquiry — determines 24-h window. */
   waLastInboundAt?: string | null
   igEnabled?:      boolean
+  /** WA character limit for display (160 for template, 4096 for freeform). */
+  _waCharLimit?:   number
 }) {
   const router = useRouter()
 
-  const [channel,      setChannel]      = useState<Channel>('email')
-  const [counterpart,  setCounterpart]  = useState<'angler' | 'guide'>('angler')
-  const [subject,      setSubject]      = useState('')
-  const [body,         setBody]         = useState('')
-  const [isPending,    startTransition] = useTransition()
-  const [error,        setError]        = useState<string | null>(null)
-  const [sent,         setSent]         = useState(false)
+  const [channel,       setChannel]       = useState<Channel>('email')
+  const [counterpart,   setCounterpart]   = useState<'angler' | 'guide'>('angler')
+  const [subject,       setSubject]       = useState('')
+  const [body,          setBody]          = useState('')
+  const [isPending,     startTransition]  = useTransition()
+  const [error,         setError]         = useState<string | null>(null)
+  const [sent,          setSent]          = useState(false)
+  const [draftPending,  startDraft]       = useTransition()
+  const [draftError,    setDraftError]    = useState<string | null>(null)
+  const [draftId,       setDraftId]       = useState<string | null>(null)
 
   const waOpen = isWaWindowOpen(waLastInboundAt ?? null)
 
@@ -44,6 +49,21 @@ export function MessageComposer({
   const waAvailable = channel === 'whatsapp'
     ? (counterpart === 'angler' ? anglerHasPhone : guideHasPhone)
     : true
+
+  function handlePropose() {
+    setDraftError(null)
+    startDraft(async () => {
+      const res = await proposeDraft(inquiryId, counterpart, channel)
+      if (res.success) {
+        setBody(res.text)
+        setDraftId(res.draftId)
+        if (res.subject != null) setSubject(res.subject)
+        router.refresh()
+      } else {
+        setDraftError(res.error)
+      }
+    })
+  }
 
   function handleSend() {
     setError(null)
@@ -53,10 +73,12 @@ export function MessageComposer({
         counterpart,
         subject: subject.trim() || undefined,
         body:    body.trim(),
+        draftId: draftId ?? undefined,
       })
       if (res.success) {
         setSubject('')
         setBody('')
+        setDraftId(null)
         setSent(true)
         setTimeout(() => setSent(false), 4000)
         router.refresh()
@@ -104,7 +126,7 @@ export function MessageComposer({
             type="button"
             disabled={ch.disabled}
             title={ch.disabled ? ch.reason : undefined}
-            onClick={() => { if (!ch.disabled) setChannel(ch.id) }}
+            onClick={() => { if (!ch.disabled) { setChannel(ch.id); setDraftId(null) } }}
             className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold f-body"
             style={{
               background: channel === ch.id ? '#E67E50'              : 'rgba(255,255,255,0.07)',
@@ -126,7 +148,7 @@ export function MessageComposer({
             <button
               key={cp}
               type="button"
-              onClick={() => setCounterpart(cp)}
+              onClick={() => { setCounterpart(cp); setDraftId(null) }}
               className="flex-1 py-1.5 rounded-lg text-xs font-semibold f-body capitalize"
               style={{
                 background: counterpart === cp ? '#0A2E4D'             : 'rgba(255,255,255,0.07)',
@@ -180,6 +202,30 @@ export function MessageComposer({
         </div>
       )}
 
+      {/* Propose draft */}
+      {!isTemplatePath && (
+        <div>
+          <button
+            type="button"
+            onClick={handlePropose}
+            disabled={draftPending}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold f-body"
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              color:      'rgba(255,255,255,0.55)',
+              border:     '1px solid rgba(255,255,255,0.1)',
+              cursor:     draftPending ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {draftPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+            {draftPending ? 'Drafting…' : 'Zaproponuj'}
+          </button>
+          {draftError != null && (
+            <p className="text-[11px] f-body mt-1" style={{ color: '#FCA5A5' }}>{draftError}</p>
+          )}
+        </div>
+      )}
+
       {/* Message body — hidden for WA template path */}
       {!isTemplatePath && (
         <div>
@@ -197,6 +243,12 @@ export function MessageComposer({
               color: '#FFFFFF',
             }}
           />
+          {channel === 'whatsapp' && (
+            <p className="text-[10px] f-body mt-1 text-right"
+              style={{ color: body.length > 4096 ? '#FCA5A5' : 'rgba(255,255,255,0.3)' }}>
+              {body.length}/4096
+            </p>
+          )}
         </div>
       )}
 

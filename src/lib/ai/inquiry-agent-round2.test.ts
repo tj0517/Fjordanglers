@@ -34,6 +34,8 @@ vi.mock('@/lib/env', () => ({
 
 vi.mock('@/lib/email', () => ({ sendInquiryAgentEmail: vi.fn() }))
 
+import { sendInquiryAgentEmail } from '@/lib/email'
+
 vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
 
 import { createServiceClient } from '@/lib/supabase/server'
@@ -92,6 +94,32 @@ function mockRound2Db(inquiry: typeof baseInquiry) {
 }
 
 const DEFAULT_AI2 = { enough: true, question: null, trip_country: 'Iceland', trip_type: 'multi_day', priority: 'high' } as const
+
+// ─── FA-1.14 — old agent must not call sendInquiryAgentEmail ─────────────────
+
+describe('FA-1.14 — sendInquiryAgentEmail not called (Round 2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    Object.assign(aiResult2, DEFAULT_AI2)
+  })
+
+  it('does not call sendInquiryAgentEmail on the ready path (Round 2)', async () => {
+    mockRound2Db({ ...baseInquiry, qualified_set_by: null })
+
+    await runAgentRound2('inq-2')
+
+    expect(vi.mocked(sendInquiryAgentEmail)).not.toHaveBeenCalled()
+  })
+
+  it('does not call sendInquiryAgentEmail on the waiting path (Round 2)', async () => {
+    Object.assign(aiResult2, { ...DEFAULT_AI2, enough: false, question: 'What dates?' })
+    mockRound2Db({ ...baseInquiry, qualified_set_by: null })
+
+    await runAgentRound2('inq-2')
+
+    expect(vi.mocked(sendInquiryAgentEmail)).not.toHaveBeenCalled()
+  })
+})
 
 // ─── Round 2 ready path (line 591) ───────────────────────────────────────────
 

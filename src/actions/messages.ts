@@ -184,6 +184,8 @@ export interface SendMessageFromThreadParams {
   /** WA only: pre-approved template name. If omitted the action selects the
    *  default template for the counterpart when the 24-h window is closed. */
   templateName?: string
+  /** When set: promote this existing draft row instead of inserting a new one. */
+  draftId?:     string
 }
 
 export async function sendMessageFromThread(
@@ -267,6 +269,17 @@ export async function sendMessageFromThread(
     .limit(1)
     .maybeSingle()
 
+  // When promoting a draft, preserve its drafted_by attribution
+  let draftedBy: 'admin' | 'agent' = 'admin'
+  if (params.draftId != null) {
+    const { data: draftRow } = await svc
+      .from('messages')
+      .select('drafted_by')
+      .eq('id', params.draftId)
+      .single()
+    if (draftRow?.drafted_by === 'agent') draftedBy = 'agent'
+  }
+
   const { sendMessage } = await import('@/lib/messages/send')
   try {
     await sendMessage(svc, {
@@ -276,7 +289,8 @@ export async function sendMessageFromThread(
       to,
       subject:      params.subject?.trim() || undefined,
       body:         params.body.trim(),
-      draftedBy:    'admin',
+      draftedBy,
+      draftId:      params.draftId,
       actor:        { kind: 'admin', id: userId },
       counterpartId,
       threadKey:    lastMsg?.thread_key ?? null,
@@ -675,6 +689,33 @@ export async function createPaymentLink(
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true, url: paymentLink.url }
+}
+
+// ─── proposeDraft — FA-1.14 ───────────────────────────────────────────────────
+
+export type ProposeDraftResult =
+  | { success: true;  draftId: string; text: string; subject: string | null; usedFiles: string[] }
+  | { success: false; error: string }
+
+/**
+ * Admin clicks "zaproponuj": calls the draft-reply agent and returns the text.
+ * Saves a status='draft' row in messages. Does not send.
+ */
+export async function proposeDraft(
+  inquiryId:   string,
+  counterpart: 'angler' | 'guide',
+  channel:     'email' | 'whatsapp' | 'instagram',
+): Promise<ProposeDraftResult> {
+  await requireAdmin()
+  const { draftReply } = await import('@/lib/ai/draft-reply')
+  try {
+    const result = await draftReply({ inquiryId, counterpart, channel })
+    revalidatePath('/admin/inquiries/' + inquiryId)
+    return { success: true, ...result }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: msg }
+  }
 }
 
 // ─── deleteUnmatchedMessages (kept from old messages.ts) ─────────────────────
