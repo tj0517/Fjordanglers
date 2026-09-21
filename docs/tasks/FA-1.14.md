@@ -2,7 +2,7 @@
 id: FA-1.14
 title: Agent w wątku — instalacja — propozycja odpowiedzi w kompozytorze, loader wiedzy, auto-wysyłka wyłączona (treść i logika agenta → FA-1.17)
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -119,10 +119,20 @@ Szczegóły w opisie PR. Poniżej skrót.
 
 ### Done (runda 4 — uzupełnienia)
 - Testy r3-1/r3-2 wzmocnione: `capturedUpdateFilters` rejestruje każde `.eq(col, val)` na UPDATE chainie; asercje weryfikują wszystkie 5 warunków WHERE + spy nie wywołany; RED proofs dla usunięcia `status='draft'` i `channel`
-- `buildDraftSubject(inquiry, channel)` wyeksportowana z `draft-reply-prompt.ts` (obok `STUB_PROMPT`); `draft-reply.ts` tylko ją woła; testy: email → niepusty, whatsapp/instagram → null; łącznie 308 testów (32 pliki)
-- Pole `subject` wypełniane dla kanału email: `Re: Your {country} inquiry — {name}`; zapisywane w draft i promoted; `MessageComposer` wywołuje `setSubject`
-- UI demo krok (d): Zaproponuj (angler/email) → guard utrzymał draft jako 'draft'; nowy wiersz sent z `drafted_by='admin'` potwierdzony SQL
-- `guides.invite_email = 'erik@fjordanglers.local'` ustawione dla lokalnego seed guide (demo)
+- `buildDraftSubject(inquiry, channel)` wyeksportowana z `draft-reply-prompt.ts` (obok `STUB_PROMPT`); `draft-reply.ts` tylko ją woła; 4 testy: email → niepusty z country+name, whatsapp → null, instagram → null, null country → fallback; łącznie 308 testów (32 pliki)
+- Pole `subject` wypełniane dla kanału email: `Re: Your {country} inquiry — {name}`; zapisywane w draft i promoted; `MessageComposer` wywołuje `setSubject`; oba zmiany na prośbę tj w rundzie 4
+- UI demo krok (d): Zaproponuj (angler/email) → guard utrzymał draft `status='draft'`; nowy wiersz `status='sent'`, `drafted_by='admin'` potwierdzony SQL 21 IX
+
+SQL krok (d) — stack lokalny 21 IX (inquiry `33333333-3333-4333-8333-333333333333`):
+```
+ id                                   | status | direction | channel | counterpart | drafted_by
+--------------------------------------+--------+-----------+---------+-------------+------------
+ 33f05ae1-87c0-4693-8bdf-b2ef7bda618e | draft  | outbound  | email   | angler      | agent
+ e448dd32-3cbf-45ed-b691-14f83844b035 | sent   | outbound  | email   | angler      | admin
+```
+Draft row nienaruszony; nowy wiersz `drafted_by='admin'` (draftId=null po zmianie counterpart → guard pominięty, bezpośredni INSERT).
+
+- `guides.invite_email = 'erik@fjordanglers.local'` ustawione dla lokalnego seed guide (demo, nie wchodzi do kodu)
 
 ### Not done
 - Nic z zakresu.
@@ -136,61 +146,32 @@ Szczegóły w opisie PR. Poniżej skrót.
 ### Verification
 
 ```
-# Testy FA-1.14 (30 testów, 5 plików) — GREEN
-npx vitest run \
-  src/lib/ai/inquiry-agent-round1.test.ts \
-  src/lib/ai/inquiry-agent-round2.test.ts \
-  src/lib/ai/draft-reply.test.ts \
-  src/lib/ai/knowledge.test.ts \
-  src/lib/messages/send.test.ts
-→ Test Files  5 passed (5)  |  Tests  30 passed (30)
+# Pełny suite — GREEN (runda 4, 21 IX 2026)
+npx vitest run
+→ Test Files  32 passed (32)
+→      Tests  308 passed (308)
 
-# RED proof — inquiry-agent-round1 z tymczasowo przywróconym sendInquiryAgentEmail
-# (gotowy import + jedno wywołanie w ready-path)
-# wynik: Test Files  5 failed | 27 passed (32)  |  Tests  2 failed | 287 passed (299)
-# wiersz 174: expect(vi.mocked(sendInquiryAgentEmail)).not.toHaveBeenCalled()
-# → ^ (czerwony)
-# Po usunięciu tymczasowego kodu → 5 passed (5), 30 passed (30)
+# RED proof r3-1 — tymczasowo usunięte .eq('status', 'draft') z send.ts:
+→ × (r3-1) brak { col: 'status', val: 'draft' } w capturedUpdateFilters
+→ × (r3-2) brak { col: 'status', val: 'draft' } w capturedUpdateFilters
+→ Tests  2 failed | 306 passed
+
+# RED proof r3-2 — tymczasowo usunięte .eq('channel', channel):
+→ × (r3-1) brak { col: 'channel', val: 'email' }
+→ × (r3-2) brak { col: 'channel', val: 'whatsapp' }
+→ Tests  2 failed | 306 passed
+
+# RED proof inquiry-agent — tymczasowo przywrócone sendInquiryAgentEmail:
+→ expect(vi.mocked(sendInquiryAgentEmail)).not.toHaveBeenCalled() → FAIL
+→ Tests  2 failed
 
 # grep (produkcja, bez plików testowych) → 0
 grep -rn "@/lib/email\|sendInquiryAgentEmail\|sendMessage(\|resend" src/lib/ai/ --exclude="*.test.ts"
 → (brak wyników)
 
-# typecheck / lint / knip — GREEN
+# typecheck / lint / knip / build — GREEN
 pnpm typecheck  → 0 błędów
-pnpm lint       → 0 błędów (tylko pre-existing warnings)
+pnpm lint       → 0 błędów (78 pre-existing warnings)
 pnpm knip       → czysto
-
-# build (stack zatrzymany) — GREEN
-pnpm build → ✓ Compiled successfully in 29.9s
-
-# AI_AUTO_REPLY_ENABLED w Vercel (vercel env ls):
-# → Encrypted, obecne na Production i Preview; wartość zaszyfrowana (bez pull nieczytelna)
-# Stary agent nie woła providerów po FA-1.14 niezależnie od tej flagi.
-
-# Demo lokalne — draftReply na seedowanym zapytaniu (local stack 127.0.0.1:54421)
-# Seed: guides id=00000000-... full_name='Josh Hart' country='Iceland'
-#       inquiries id=11111111-... angler='Erik Thorvaldsen' trip_country='Iceland'
-#       4 messages (2× inbound, 1× outbound, 1× inbound)
-# Wywołanie:
-#   eval "$(supabase status -o env | grep -E '^(API_URL|SERVICE_ROLE_KEY)=')"
-#   NEXT_PUBLIC_SUPABASE_URL=$API_URL SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY \
-#   pnpm dlx tsx --tsconfig tsconfig.json --env-file=.env.local .fa-proofs/demo-draft.mts
-# Wynik:
-#   draftId  : cc563276-bb5c-44db-a801-e19a763501e2
-#   usedFiles: []   ← brak plików wiedzy (katalogi puste; FA-1.17 je wypełni; testy na fixture działają)
-#   text     : What wonderful news that you'd like to bring your son along — introducing
-#              the next generation to fly fishing is something we absolutely love to be
-#              part of...
-
-# SQL potwierdzające draft w messages:
-SELECT id, direction, channel, status, drafted_by, left(body,80) body_preview
-FROM messages
-WHERE inquiry_id = '11111111-1111-1111-1111-111111111111'
-ORDER BY occurred_at;
--- cc563276...  outbound  email  draft  agent  "What wonderful news that you'd like..."
-
-# SQL potwierdzające brak inquiry_events:
-SELECT count(*) FROM inquiry_events WHERE inquiry_id = '11111111-1111-1111-1111-111111111111';
--- 0
+pnpm build      → ✓ Compiled successfully
 ```
