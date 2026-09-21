@@ -87,9 +87,9 @@ const INQUIRY_ROW = {
   requested_dates:    [] as string[],
   party_size:         1,
   deposit_amount:     360,
-  trip_id:            null,
-  experience_page_id: null,
-  guide_id:           null,
+  trip_id:            null as string | null,
+  experience_page_id: null as string | null,
+  guide_id:           null as string | null,
 }
 
 /** Build a mock supabase client for the happy path (D2 atomic UPDATE returns row). */
