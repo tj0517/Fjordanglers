@@ -102,11 +102,19 @@ Szczegóły w opisie PR. Poniżej skrót.
 - `src/lib/messages/send.ts` — `payload.drafted_by` w `message.sent`
 - `src/lib/ai/inquiry-agent.ts` — usunięte wywołania `sendInquiryAgentEmail` (×4), oznaczone `// FA-1.17`; klasyfikacja działa
 
+### Done (runda 2 — FA-1.14 review)
+- Draft lifecycle: `sendMessage(draftId=…)` UPDATE zamiast INSERT; `draftReply` upsertuje; wątek i AI context pomijają `status='draft'`; `MessageComposer` zapamiętuje i przekazuje `draftId`
+- Testy (a)–(c) RED→GREEN; łącznie 33 testów
+- `outputFileTracingIncludes` w `next.config.ts`; `console.warn` na brakującym katalogu
+- 3 `as any` usunięte z `draft-reply.ts`
+- 2 wpisy w `docs/deferred-tasks.md`
+- Demo lokalne — pełny lifecycle tsx proof; SQL i zdarzenie potwierdzone
+
 ### Not done
 - Nic z zakresu.
 
 ### Noticed, not touched (→ docs/deferred-tasks.md)
-- `knowledgeDir` w `env.ts` nie ma (wstrzyknięcie przez parametr zamiast env var) — wystarczy na FA-1.17
+- `knowledgeDir` w `env.ts` nie ma (wstrzyknięcie przez parametr zamiast env var) — dopisane do deferred-tasks.md w rundzie 2
 
 ### Needs a decision
 - Brak.
