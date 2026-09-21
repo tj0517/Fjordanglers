@@ -164,7 +164,7 @@ export function isPaidAttributed(row: Pick<WeeklyInquiryRow, 'gclid' | 'utm'>): 
   return normalised === 'cpc' || normalised === 'paid'
 }
 
-export type CostBlock = {
+type CostBlock = {
   inquiries: number
   qualified: number
   perInquiry: number | null

@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Loader2, Check, MessageSquare, Mail, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { sendMessageFromThread, proposeDraft } from '@/actions/messages'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 type Channel = 'email' | 'whatsapp' | 'instagram'
 
@@ -121,14 +124,14 @@ export function MessageComposer({
       {/* Channel selector */}
       <div className="flex gap-1.5">
         {CHANNELS.map(ch => (
-          <button
+          <Button
             key={ch.id}
             type="button"
             disabled={ch.disabled}
             title={ch.disabled ? ch.reason : undefined}
             onClick={() => { if (!ch.disabled) { setChannel(ch.id); setDraftId(null) } }}
             className={cn(
-              'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold f-body border',
+              'flex-1 flex items-center justify-center gap-1.5 py-1.5 h-auto rounded-lg text-xs font-semibold f-body border',
               channel === ch.id
                 ? 'bg-accent text-white border-transparent'
                 : ch.disabled
@@ -138,7 +141,7 @@ export function MessageComposer({
           >
             {ch.icon}
             {ch.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -146,19 +149,19 @@ export function MessageComposer({
       {guideAssigned && (
         <div className="flex gap-1.5">
           {(['angler', 'guide'] as const).map(cp => (
-            <button
+            <Button
               key={cp}
               type="button"
               onClick={() => { setCounterpart(cp); setDraftId(null) }}
               className={cn(
-                'flex-1 py-1.5 rounded-lg text-xs font-semibold f-body capitalize border',
+                'flex-1 h-auto py-1.5 rounded-lg text-xs font-semibold f-body capitalize border',
                 counterpart === cp
                   ? 'bg-primary text-white border-white/20'
                   : 'bg-white/7 text-white/45 border-white/10',
               )}
             >
               {cp}
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -188,12 +191,12 @@ export function MessageComposer({
           <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-white/[38%]">
             Subject
           </label>
-          <input
+          <Input
             type="text"
             value={subject}
             onChange={e => setSubject(e.target.value)}
             placeholder="Re: your inquiry…"
-            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none placeholder:opacity-30 bg-white/7 border border-white/[12%] text-white"
+            className="bg-white/7 border-white/[12%] text-white placeholder:text-white/30 focus-visible:border-white/40"
           />
         </div>
       )}
@@ -201,15 +204,15 @@ export function MessageComposer({
       {/* Propose draft */}
       {!isTemplatePath && (
         <div>
-          <button
+          <Button
             type="button"
             onClick={handlePropose}
             disabled={draftPending}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold f-body bg-white/[6%] text-white/55 border border-white/10 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-1.5 h-auto py-2 rounded-xl text-xs font-semibold f-body bg-white/[6%] text-white/55 border border-white/10 disabled:cursor-not-allowed"
           >
             {draftPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
             {draftPending ? 'Drafting…' : 'Zaproponuj'}
-          </button>
+          </Button>
           {draftError != null && (
             <p className="text-[11px] f-body mt-1 text-red-300">{draftError}</p>
           )}
@@ -222,12 +225,11 @@ export function MessageComposer({
           <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-white/[38%]">
             Message
           </label>
-          <textarea
+          <Textarea
             value={body}
             onChange={e => setBody(e.target.value)}
             placeholder={'Hi Jan,\n\nThanks for your inquiry…'}
-            rows={4}
-            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none resize-none placeholder:opacity-30 bg-white/7 border border-white/[12%] text-white"
+            className="min-h-[300px] resize-y bg-white/7 border-white/[12%] text-white placeholder:text-white/30 focus-visible:border-white/40"
           />
           {channel === 'whatsapp' && (
             <p className={cn(
@@ -244,11 +246,11 @@ export function MessageComposer({
         <p className="text-xs f-body text-red-300">{error}</p>
       )}
 
-      <button
+      <Button
         type="button"
         onClick={handleSend}
         disabled={isPending || !canSend}
-        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body bg-white/10 text-white border border-white/[12%] disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 h-auto py-2.5 rounded-xl text-xs font-bold f-body bg-white/10 text-white border border-white/[12%] disabled:cursor-not-allowed disabled:opacity-40"
       >
         {isPending && <Loader2 size={12} className="animate-spin" />}
         {isPending
@@ -256,7 +258,7 @@ export function MessageComposer({
           : isTemplatePath
             ? 'Send Template →'
             : 'Send Message →'}
-      </button>
+      </Button>
     </div>
   )
 }

@@ -32,17 +32,13 @@ import { ExternalOfferToggle } from '../ExternalOfferToggle'
 import { StatusStepper } from '@/components/admin/inquiry/StatusStepper'
 import { EventTimeline } from '@/components/admin/inquiry/EventTimeline'
 import { STATUS_LABELS, isInquiryStatus, type InquiryStatus } from '@/lib/inquiries/state'
+import { ThreadView } from './ThreadView'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
 
 function Row({ label, value }: { label: string; value: string | null | undefined }) {
   if (value == null) return null
@@ -482,112 +478,20 @@ export default async function AdminInquiryDetailPage({
 
   // ── Tab: Conversation ─────────────────────────────────────────────────────
   const conversationContent = (
-    <div className="flex flex-col gap-4 max-w-2xl">
-      {/* Correspondence thread */}
+    <div className="flex flex-col gap-4">
+      {/* Correspondence thread — full width, client component handles expand/collapse */}
       {thread.length > 0 && (
         <div className="rounded-xl overflow-hidden border border-border bg-card">
           <div className="px-5 py-3 border-b border-border bg-muted/30">
             <h2 className="text-sm font-bold f-display text-foreground">Correspondence</h2>
           </div>
-          <div className="px-5 py-4 space-y-4">
-            {thread.map((item, i) => {
-
-              if (item.kind === 'angler_inquiry') return (
-                <div key={i} className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold f-body bg-primary/10 text-primary">
-                    {inquiry.angler_name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className="text-xs font-bold f-body text-foreground">{inquiry.angler_name}</span>
-                      <span className="text-[10px] f-body text-muted-foreground">{fmtDateTime(item.sentAt)}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded f-body bg-muted text-muted-foreground">Inquiry</span>
-                    </div>
-                    <div className="px-3 py-2.5 rounded-xl text-sm f-body leading-relaxed italic bg-muted/40 border border-border/50 text-foreground/80">
-                      &ldquo;{item.body}&rdquo;
-                    </div>
-                  </div>
-                </div>
-              )
-
-              if (item.kind === 'offer_sent') return (
-                <div key={i} className="flex gap-3">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[11px] bg-accent text-white">FA</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <span className="text-xs font-bold f-body text-foreground">FjordAnglers</span>
-                      <span className="text-[10px] f-body text-muted-foreground">{fmtDateTime(item.sentAt)}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded f-body bg-accent/10 text-accent border border-accent/25">
-                        Offer sent</span>
-                    </div>
-                    <div className="px-4 py-3 rounded-xl bg-accent/7 border border-accent/18">
-                      <div className="flex flex-wrap gap-x-6 gap-y-1 mb-1">
-                        <span className="text-xs f-body text-foreground">Total: <strong>€{item.totalEur.toFixed(2)}</strong></span>
-                        <span className="text-xs f-body text-foreground">Deposit: <strong>€{item.depositEur.toFixed(2)}</strong></span>
-                        <span className="text-xs f-body text-foreground">Balance to guide: <strong>€{(item.totalEur - item.depositEur).toFixed(2)}</strong></span>
-                      </div>
-                      {item.notes != null && item.notes.trim() !== '' && (
-                        <p className="text-xs f-body italic mt-1.5 text-muted-foreground">&ldquo;{item.notes}&rdquo;</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-
-              if (item.kind === 'message') {
-                const isInbound = item.direction === 'inbound'
-                const channelLabel = item.channel.charAt(0).toUpperCase() + item.channel.slice(1)
-                const senderLabel = isInbound
-                  ? (item.counterpart === 'guide' ? 'Guide' : inquiry.angler_name)
-                  : (item.draftedBy === 'agent' ? 'AI Agent' : 'FjordAnglers')
-                const avatarBg = isInbound ? 'bg-primary/10 text-primary' : (item.draftedBy === 'agent' ? 'bg-[#6366F1] text-white' : 'bg-primary text-primary-foreground')
-                return (
-                  <div key={item.id} className="flex gap-3">
-                    <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold f-body ${avatarBg}`}>
-                      {isInbound ? senderLabel.charAt(0).toUpperCase() : 'FA'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="text-xs font-bold f-body text-foreground">{senderLabel}</span>
-                        <span className="text-[10px] f-body text-muted-foreground">{fmtDateTime(item.sentAt)}</span>
-                        <span className="text-[9px] font-bold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded f-body bg-muted text-muted-foreground">
-                          {channelLabel} · {item.direction}
-                        </span>
-                      </div>
-                      <div className={`px-3 py-2.5 rounded-xl border border-border/50 ${isInbound ? 'bg-muted/30' : 'bg-muted/50'}`}>
-                        {item.subject != null && item.subject.trim() !== '' && (
-                          <p className="text-xs font-bold f-body mb-1 text-foreground">{item.subject}</p>
-                        )}
-                        <p className="text-sm f-body leading-relaxed text-foreground/85 whitespace-pre-wrap">{item.body}</p>
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              if (item.kind === 'deposit_sent') return (
-                <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-200">
-                  <span className="text-[11px] f-body text-blue-700">
-                    Deposit link sent — €{item.depositEur.toFixed(2)} — awaiting payment
-                  </span>
-                </div>
-              )
-
-              if (item.kind === 'deposit_paid') return (
-                <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-green-50 border border-green-200">
-                  <span className="text-[11px] f-body font-semibold text-green-800">
-                    Deposit paid — €{item.depositEur.toFixed(2)} — {fmtDateTime(item.paidAt)}
-                  </span>
-                </div>
-              )
-
-              return null
-            })}
+          <div className="px-5 py-4">
+            <ThreadView thread={thread} anglerName={inquiry.angler_name} />
           </div>
         </div>
       )}
 
-      {/* Message composer */}
+      {/* Message composer — full width */}
       <div className="rounded-xl overflow-hidden border border-primary/20 bg-primary/80">
         <div className="px-5 py-3 border-b border-white/10">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-white/40">Anytime</p>
@@ -606,6 +510,7 @@ export default async function AdminInquiryDetailPage({
       </div>
     </div>
   )
+
 
   // ── Tab: Brief ────────────────────────────────────────────────────────────
   const briefContent = (
@@ -674,10 +579,10 @@ export default async function AdminInquiryDetailPage({
   )
 
   return (
-    <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1100px]">
+    <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1200px]">
 
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 flex-wrap">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
         <Link href="/admin" className="text-xs f-body text-muted-foreground hover:text-foreground transition-colors">Admin</Link>
         <span className="text-muted-foreground/50">›</span>
         <Link href="/admin/inquiries" className="text-xs f-body text-muted-foreground hover:text-foreground transition-colors">Inquiries</Link>
@@ -685,21 +590,50 @@ export default async function AdminInquiryDetailPage({
         <span className="text-xs f-body font-semibold text-accent">{inquiry.angler_name}</span>
       </div>
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold f-display text-foreground">{inquiry.angler_name}</h1>
-          <p className="text-sm f-body mt-0.5 text-muted-foreground">
-            {tripTitle ?? inquiry.trip_id}
-          </p>
-        </div>
-        <span
-          className="status-badge px-3 py-1.5 rounded-full text-sm font-semibold f-body flex-shrink-0"
-          data-status={safeStatus}
-        >
-          {STATUS_LABELS[safeStatus]}
-        </span>
-      </div>
+      {/* Key facts card */}
+      <Card className="mb-4">
+        <CardContent className="py-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg f-display flex-shrink-0">
+                {inquiry.angler_name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h1 className="text-xl font-bold f-display text-foreground leading-tight">{inquiry.angler_name}</h1>
+                <p className="text-sm f-body text-muted-foreground mt-0.5">
+                  {inquiry.angler_email}
+                  {(inquiry as typeof inquiry & { angler_phone?: string | null }).angler_phone && (
+                    <> · {(inquiry as typeof inquiry & { angler_phone?: string | null }).angler_phone}</>
+                  )}
+                </p>
+              </div>
+            </div>
+            <Badge data-status={safeStatus} className="status-badge text-sm px-3 py-1 flex-shrink-0" variant="outline">
+              {STATUS_LABELS[safeStatus]}
+            </Badge>
+          </div>
+
+          <div className="mt-3 pt-3 border-t border-border/40 flex flex-wrap gap-x-6 gap-y-1 text-sm f-body text-muted-foreground">
+            {tripTitle && <span>🎣 {tripTitle}</span>}
+            {tripLocationCountry && <span>📍 {tripLocationCountry}</span>}
+            {inquiry.party_size > 0 && (
+              <span>👥 {inquiry.party_size} {inquiry.party_size === 1 ? 'person' : 'people'}</span>
+            )}
+            {requestedDates != null && requestedDates.length > 0 && (
+              <span>
+                📅 {new Date(requestedDates[0] + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                {requestedDates.length > 1 ? ` +${requestedDates.length - 1}` : ''}
+              </span>
+            )}
+            {guide?.full_name && <span>🗺 {guide.full_name}</span>}
+            {inquiry.internal_commission_eur != null && (
+              <span className="text-accent font-semibold">
+                💰 {inquiry.deal_currency === 'USD' ? '$' : '€'}{Number(inquiry.internal_commission_eur).toFixed(0)}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Status stepper */}
       <StatusStepper current={safeStatus} />

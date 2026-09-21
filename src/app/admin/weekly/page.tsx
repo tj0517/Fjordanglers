@@ -1,8 +1,6 @@
 // TEMPORARY — replaced by stage 6 Przegląd (REBUILD_PLAN §6). Delete, don't refactor.
 //
 // Weekly review: eight numbers from today's tables (FA-1.10, REBUILD_PLAN §9).
-// Deliberately plain: no charts, no date filters. Every number has its definition
-// underneath and a link to where the rows can be inspected.
 import Link from 'next/link'
 import { getWeeklyReviewData } from '@/actions/weekly'
 import { lastWeeks } from '@/lib/metrics/weeks'
@@ -15,17 +13,9 @@ import {
   inquiriesPerWeek,
   lostReasons,
   qualifiedPerWeek,
-  type CostBlock,
 } from '@/lib/metrics/weekly'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
-import {
-  Table as ShadTable,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table'
+import { Card, CardContent } from '@/components/ui/card'
+import { WeeklyCharts } from './WeeklyCharts'
 
 export const metadata = {
   title: 'Weekly review — FjordAnglers Admin',
@@ -40,82 +30,63 @@ const WEEKS_SHOWN = 5
 const pln0 = (n: number) =>
   `${n.toLocaleString('pl', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} zł`
 const pln2 = (n: number | null) =>
-  n === null ? '—' : `${n.toLocaleString('pl', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`
+  n === null ? '—' : `${n.toLocaleString('pl', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} zł`
 const pct = (n: number | null) => (n === null ? '—' : `${(n * 100).toFixed(1)}%`)
 
-function Section({
-  n,
-  title,
-  metric,
-  definition,
+function delta(curr: number | null, prev: number | null, lowerIsBetter = false): {
+  sign: string; color: string; diff: string
+} | null {
+  if (curr == null || prev == null || prev === 0) return null
+  const d = curr - prev
+  if (d === 0) return null
+  const isGood = lowerIsBetter ? d < 0 : d > 0
+  return {
+    sign:  d > 0 ? '↑' : '↓',
+    color: isGood ? 'text-emerald-600' : 'text-red-500',
+    diff:  Math.abs(d).toString(),
+  }
+}
+
+function Tile({
+  label,
+  value,
+  sub,
+  deltaEl,
   href,
-  hrefLabel,
-  children,
 }: {
-  n: number
-  title: string
-  metric: string
-  definition: string
-  href: string
-  hrefLabel: string
-  children: React.ReactNode
+  label:    string
+  value:    string
+  sub?:     string
+  deltaEl?: React.ReactNode
+  href?:    string
 }) {
   return (
-    <Card className="mb-4">
-      <CardHeader className="pb-2 pt-4 px-5">
-        <p className="text-[10px] uppercase tracking-[0.18em] f-body text-muted-foreground">
-          {n}. {title} · {metric}
-        </p>
-      </CardHeader>
-      <CardContent className="px-5 pb-5">
-        {children}
-        <p className="text-xs f-body mt-3 text-muted-foreground">
-          {definition}{' '}
-          <Link href={href} className="underline">
-            {hrefLabel}
+    <Card>
+      <CardContent className="pt-4 pb-4 px-5">
+        <p className="text-[10px] uppercase tracking-[0.18em] f-body text-muted-foreground mb-1">{label}</p>
+        <p className="text-2xl font-bold f-display leading-none text-foreground">{value}</p>
+        {sub != null && (
+          <p className="text-xs f-body mt-1 text-muted-foreground">{sub}</p>
+        )}
+        {deltaEl != null && <div className="mt-1">{deltaEl}</div>}
+        {href != null && (
+          <Link href={href} className="text-[10px] f-body mt-2 block text-muted-foreground/60 hover:text-foreground underline underline-offset-2">
+            See details →
           </Link>
-        </p>
+        )}
       </CardContent>
     </Card>
   )
 }
 
-function Big({ children }: { children: React.ReactNode }) {
+function Delta({ d }: { d: ReturnType<typeof delta> }) {
+  if (d == null) return null
   return (
-    <p className="text-2xl font-bold f-display leading-none mb-2 text-foreground">
-      {children}
-    </p>
+    <span className={`text-xs font-semibold f-body ${d.color}`}>
+      {d.sign}{d.diff} vs prev
+    </span>
   )
 }
-
-function Table({ head, rows }: { head: string[]; rows: (string | number)[][] }) {
-  return (
-    <ShadTable className="text-xs f-body tabular-nums text-foreground">
-      <TableHeader>
-        <TableRow>
-          {head.map(h => (
-            <TableHead key={h} className="text-left pr-4 pb-1 font-semibold h-auto py-1 text-foreground/70 text-[11px]">
-              {h}
-            </TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map(r => (
-          <TableRow key={String(r[0])}>
-            {r.map((cell, i) => (
-              <TableCell key={i} className="pr-4 py-0.5 text-xs">
-                {cell}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </ShadTable>
-  )
-}
-
-const costCells = (b: CostBlock) => [b.inquiries, b.qualified, pln2(b.perInquiry), pln2(b.perQualified)]
 
 export default async function WeeklyPage() {
   const now = new Date()
@@ -125,15 +96,18 @@ export default async function WeeklyPage() {
   const { inquiries, adRows, lastAdDate, rates } = await getWeeklyReviewData(YEAR_START, oldestStart)
 
   const commission = commissionToDate(inquiries, rates, YEAR_START)
-  const bookings = bookingsInMonth(inquiries, now)
-  const perWeek = inquiriesPerWeek(inquiries, weeks)
-  const qualified = qualifiedPerWeek(inquiries, weeks)
-  const spend = adSpendPerWeek(adRows, weeks)
-  const cost = costPerWeek(inquiries, adRows, weeks)
+  const bookings   = bookingsInMonth(inquiries, now)
+  const perWeek    = inquiriesPerWeek(inquiries, weeks)
+  const qualified  = qualifiedPerWeek(inquiries, weeks)
+  const spend      = adSpendPerWeek(adRows, weeks)
+  const cost       = costPerWeek(inquiries, adRows, weeks)
   const conversion = cumulativeConversion(inquiries, YEAR_START)
-  const lost = lostReasons(inquiries, now)
+  const lost       = lostReasons(inquiries, now)
 
-  const currentSpend = spend[0]?.spendPln ?? 0
+  const currentSpend   = spend[0]?.spendPln ?? 0
+  const prevSpend      = spend[1]?.spendPln ?? null
+  const currentCostInq = cost[0]?.all.perInquiry ?? null
+  const prevCostInq    = cost[1]?.all.perInquiry ?? null
 
   return (
     <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1000px]">
@@ -145,124 +119,75 @@ export default async function WeeklyPage() {
         <p className="text-sm f-body mt-1 text-muted-foreground">
           Weeks are Monday–Sunday, Europe/Warsaw. Current week: {weeks[0]?.key} ({weeks[0]?.start} → {weeks[0]?.end}).
           Rates: 1 EUR = {rates.eurPln} PLN, 1 USD = {rates.usdEur} EUR (finance_settings).
+          {lastAdDate != null && <> · last ad sync: {lastAdDate}</>}
         </p>
       </div>
 
-      <Section
-        n={1}
-        title="Commission to date"
-        metric="M1"
-        definition="Sum of the deposit (offer_deposit_eur ?? deposit_amount ?? internal_commission_eur, USD converted) of inquiries with deposit_paid_at set, since 1 Jan 2026. Same formula as /admin/finances, but that page selects rows by status and can differ."
-        href="/admin/finances"
-        hrefLabel="Finances →"
-      >
-        <Big>
-          {pln0(commission.pln)} <span className="text-sm font-normal">of {pln0(commission.targetPln)} · {commission.deals} paid deposit{commission.deals === 1 ? '' : 's'}</span>
-        </Big>
-      </Section>
-
-      <Section
-        n={2}
-        title="Bookings in the month"
-        metric="M2"
-        definition="Inquiries whose deposit was paid (deposit_paid_at) in the calendar month."
-        href="/admin/finances"
-        hrefLabel="Finances →"
-      >
-        <Big>
-          {bookings.current} <span className="text-sm font-normal">in {bookings.currentKey} · {bookings.previous} in {bookings.previousKey}</span>
-        </Big>
-      </Section>
-
-      <Section
-        n={3}
-        title="Inquiries per week"
-        metric="M5 numerator"
-        definition="Inquiries created in the ISO week (created_at)."
-        href="/admin/inquiries"
-        hrefLabel="Inquiries →"
-      >
-        <Big>{perWeek[0]?.count ?? 0} <span className="text-sm font-normal">this week</span></Big>
-        <Table head={['Week', 'From', 'Inquiries']} rows={perWeek.map(w => [w.key, w.start, w.count])} />
-      </Section>
-
-      <Section
-        n={4}
-        title="Qualified per week"
-        metric="M5"
-        definition="Inquiries with qualified = 'yes' (column, not events); 'unknown' shows how many are not yet assessed."
-        href="/admin/inquiries"
-        hrefLabel="Inquiries →"
-      >
-        <Big>
-          {qualified[0]?.yes ?? 0} <span className="text-sm font-normal">qualified this week · {qualified[0]?.unknown ?? 0} unknown</span>
-        </Big>
-        <Table
-          head={['Week', 'Yes', 'No', 'Unknown', 'Total']}
-          rows={qualified.map(w => [w.key, w.yes, w.no, w.unknown, w.total])}
+      {/* KPI tiles — 4 cols on md+, 2 on mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <Tile
+          label="Commission to date"
+          value={pln0(commission.pln)}
+          sub={`of ${pln0(commission.targetPln)} · ${commission.deals} paid`}
+          href="/admin/finances"
         />
-      </Section>
-
-      <Section
-        n={5}
-        title="Ad spend"
-        metric="M6 numerator"
-        definition="Sum of ad_campaigns.spend per week. The column is already PLN (Google Ads account currency) — no conversion."
-        href="/admin/ads"
-        hrefLabel="Ads →"
-      >
-        <Big>{pln2(currentSpend)} <span className="text-sm font-normal">this week</span></Big>
-        <p className="text-xs f-body mb-2 text-muted-foreground">
-          last sync (newest ad_campaigns row): {lastAdDate ?? 'no data'}
-        </p>
-        <Table head={['Week', 'From', 'Spend']} rows={spend.map(w => [w.key, w.start, pln2(w.spendPln)])} />
-      </Section>
-
-      <Section
-        n={6}
-        title="Cost per inquiry / per qualified"
-        metric="M6"
-        definition="Ad spend of the week ÷ inquiries (÷ qualified) of the week. 'Paid' counts only inquiries with a gclid or utm_medium cpc/paid; 'all' counts every inquiry. Never taken from the Google Ads conversions column."
-        href="/admin/ads"
-        hrefLabel="Ads →"
-      >
-        <Table
-          head={[
-            'Week', 'Spend',
-            'Paid inq.', 'Paid qual.', 'Paid zł/inq.', 'Paid zł/qual.',
-            'All inq.', 'All qual.', 'All zł/inq.', 'All zł/qual.',
-          ]}
-          rows={cost.map(w => [w.key, pln2(w.spendPln), ...costCells(w.attributed), ...costCells(w.all)])}
+        <Tile
+          label="Bookings this month"
+          value={String(bookings.current)}
+          sub={`${bookings.previous} in ${bookings.previousKey}`}
+          deltaEl={<Delta d={delta(bookings.current, bookings.previous)} />}
+          href="/admin/inquiries"
         />
-      </Section>
+        <Tile
+          label="Inquiries / week"
+          value={String(perWeek[0]?.count ?? 0)}
+          sub={`${perWeek[1]?.count ?? '—'} last week`}
+          deltaEl={<Delta d={delta(perWeek[0]?.count ?? null, perWeek[1]?.count ?? null)} />}
+          href="/admin/inquiries"
+        />
+        <Tile
+          label="Qualified / week"
+          value={String(qualified[0]?.yes ?? 0)}
+          sub={`${qualified[1]?.yes ?? '—'} last week`}
+          deltaEl={<Delta d={delta(qualified[0]?.yes ?? null, qualified[1]?.yes ?? null)} />}
+          href="/admin/inquiries"
+        />
+        <Tile
+          label="Ad spend this week"
+          value={pln2(currentSpend)}
+          sub={`${pln2(prevSpend)} last week`}
+          deltaEl={<Delta d={delta(currentSpend, prevSpend, true)} />}
+          href="/admin/ads"
+        />
+        <Tile
+          label="Cost / inquiry"
+          value={pln2(currentCostInq)}
+          sub={`${pln2(prevCostInq)} last week`}
+          deltaEl={<Delta d={delta(currentCostInq, prevCostInq, true)} />}
+          href="/admin/ads"
+        />
+        <Tile
+          label="Conversion (YTD)"
+          value={pct(conversion.rate)}
+          sub={`${conversion.booked} of ${conversion.inquiries}`}
+          href="/admin/inquiries"
+        />
+        <Tile
+          label="Lost (90d)"
+          value={String(lost.reduce((s, l) => s + l.count, 0))}
+          sub={`${lost.length} reason${lost.length === 1 ? '' : 's'}`}
+          href="/admin/inquiries"
+        />
+      </div>
 
-      <Section
-        n={7}
-        title="Cumulative conversion"
-        metric="M7 approximation"
-        definition="Inquiries created since 1 Jan 2026 with a paid deposit ÷ all such inquiries. WARNING: this is a period ratio and understates conversion — winning inquiries have 60+ days of lead time. The correct cohort view arrives in stage 5 (M7)."
-        href="/admin/inquiries"
-        hrefLabel="Inquiries →"
-      >
-        <Big>
-          {pct(conversion.rate)} <span className="text-sm font-normal">{conversion.booked} of {conversion.inquiries}</span>
-        </Big>
-      </Section>
-
-      <Section
-        n={8}
-        title="Lost reasons"
-        metric="last 90 days"
-        definition="Inquiries with status 'lost' by lost_reason_code, last 90 days. There is no lost_at column, so updated_at stands in for the date it was lost."
-        href="/admin/inquiries"
-        hrefLabel="Inquiries →"
-      >
-        {lost.length === 0 ? (
-          <Big>0</Big>
-        ) : (
-          <Table head={['Reason', 'Count']} rows={lost.map(l => [l.code ?? 'no code', l.count])} />
-        )}
-      </Section>
+      {/* Charts + collapsible detail tables */}
+      <WeeklyCharts
+        perWeek={perWeek}
+        qualified={qualified}
+        spend={spend}
+        cost={cost}
+        lost={lost}
+      />
     </div>
   )
 }
