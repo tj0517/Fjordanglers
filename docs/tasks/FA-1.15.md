@@ -2,7 +2,7 @@
 id: FA-1.15
 title: Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly`
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
