@@ -3,6 +3,12 @@ import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.1.62'],
+  // Bundle docs/knowledge files into Vercel serverless functions so draftReply
+  // can read them at runtime (outputFileTracing excludes non-JS by default).
+  outputFileTracingIncludes: {
+    '/admin/inquiries/[id]': ['./docs/knowledge/**'],
+    '/api/**':               ['./docs/knowledge/**'],
+  },
   async redirects() {
     return [
       { source: '/terms',        destination: '/legal/terms-of-service', permanent: true },
