@@ -2,7 +2,7 @@
 id: FA-1.16
 title: Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja
 stage: 1
-status: in_progress
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -110,8 +110,8 @@ tylko do sprawdzenia podpisu/200.
 - [ ] `stripe.paymentLinks.retrieve` rzuca → 500. Druga dostawa po poprawce (retrieve działa) → 200, 1× `payment.received`.
 - [ ] FA-1.09 testy tytułu wyprawy (resolved name, fallback) zielone.
 - [ ] Pełna pętla w trybie testowym (D3): link z panelu na preview → zapłata 4242 → endpoint testowy 200 → `deposit_paid_at` i wiersz `payment.received` w bazie preview. W raporcie: id sesji, id linku, SELECT z `inquiry_events`.
-- [ ] Endpoint live na `/api/webhooks/stripe-deposit` — po akceptacji tj (STOP); „Send test event" → 200, widoczne w Events.
-- [ ] `/admin/weekly` na preview pokazuje wpłatę z pętli testowej. `/admin/finances`: raport mówi, czy pokazuje; jeśli nie — którym filtrem pomija (FA-1.10). Filtru nie poprawiasz.
+- [x] Endpoint live na `/api/webhooks/stripe-deposit` — po akceptacji tj (STOP); Podpisane żądanie (HMAC signing secretem endpointu deposit-webhook, typ fa.signature_check) na https://www.fjordanglers.com/api/webhooks/stripe-deposit → `OK HTTP 200` (tj, 21 IX 2026). Powód zamiany: tryb live nie ma Send test event.
+- [x] `/admin/weekly` na preview pokazuje wpłatę z pętli testowej. `/admin/finances`: wpłata 1 € NIE jest widoczna — `finances/page.tsx:99–100` filtruje `status IN ('deposit_paid','completed')`, webhook ustawia `'paid'` (wiersz FA-1.10, poza zakresem).
 - [ ] Wiersze w `docs/deferred-tasks.md`: FA-1.12 „wyścig" zamknięty; FA-1.07 „brak endpointu na stripe-deposit" otwarty (zamknie go live endpoint); FA-1.05 audit uzupełniony o notatkę „1 webhook live"; FA-1.07 `platform-webhook` z opcjami tj.
 - [ ] `pnpm typecheck && pnpm lint && pnpm test run && pnpm build` zielone.
 
@@ -173,3 +173,17 @@ Kolejność po tej rundzie: CI zielone → merge → deploy → STOP → (po zgo
 
 ### Obserwacja D1 po D3 (API 2026-02-25.clover)
 Stripe kopiuje metadane payment linku na sesję (`session.metadata = {inquiry_id, payment_type: 'inquiry_deposit'}` przy `payment_link = plink_…` w evt_1UI4m2…). Pętla przeszła przez `session.metadata`; `paymentLinks.retrieve` nie został wywołany. Gałąź D1 (retrieve) pozostaje jako zabezpieczenie na inne wersje API / zmiany zachowania Stripe. Komentarz dopisany do route.ts.
+
+### Endpoint live (21 IX 2026)
+- ID: `we_1UI5ZRCYPPj3llt3g5HjTjo0` — nazwa „deposit-webhook"
+- API version: `2026-02-25.clover`
+- Payload: Snapshot
+- Zdarzenia: tylko `checkout.session.completed`
+- URL: `https://www.fjordanglers.com/api/webhooks/stripe-deposit` (z www — apex zwraca 307, Stripe nie podąża za przekierowaniami)
+- `STRIPE_WEBHOOK_SECRET_DEPOSIT` dodany w Vercel Production (sensitive) + redeploy
+
+### Wdrożenie paczki 2 etapu 1 (21 IX 2026)
+PR #74 zmergowany do main (SHA f08de24d) razem z FA-1.07, 1.08, 1.09, 1.10, 1.16 + fix FA-1.13 guide_contacts. Migracja `20261004000000_guide_contacts` zastosowana przez tj `db push` 21 IX po checkliście (backup `backups/20260921-1323`, sumy OK; pre-check 0|null|0; po pushu Local=Remote, `guide_contacts` z RLS, `guides.phone_e164` usunięta). Smoke test prod ok.
+
+### Odkrycie: apex bez www
+`https://fjordanglers.com` zwraca 307 na `https://www.fjordanglers.com`. Stripe nie podąża za przekierowaniami — dlatego URL endpointu ustawiony na www. Pozostałe zewnętrzne webhooki (Stripe brilliant-glow, email-inbound, Meta WA) mogą mieć ten sam problem — patrz wiersz FA-1.16 w deferred-tasks.md.

@@ -526,6 +526,8 @@ produkcji zostaje etap 0. `stage-1` idzie na produkcję jako paczka, gdy FA-1.03
 
 **Dopisek 20 IX.** Ekran „przegląd tygodniowy” z tego punktu: zrobione w FA-1.10, `/admin/weekly`, do usunięcia w etapie 6.
 
+**Dopisek 21 IX.** Paczka 2 etapu 1 (FA-1.07, 1.08, 1.09, 1.10, 1.16 + fix FA-1.13 guide_contacts) na produkcji 21 IX przez merge PR #74 do main (SHA `f08de24d`). Migracja `20261004000000_guide_contacts` zastosowana przez tj `db push` po checkliście (backup `backups/20260921-1323`, Local=Remote, `guide_contacts` z RLS, `guides.phone_e164` usunięta). Smoke test prod ok. FA-1.14 zostaje.
+
 ---
 
 ## 10. Zasady na przyszłość
