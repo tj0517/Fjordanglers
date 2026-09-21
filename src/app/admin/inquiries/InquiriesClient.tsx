@@ -20,6 +20,7 @@ export interface InquiryRow {
   party_size:              number
   created_at:              string
   trip_id:                 string | null
+  experience_page_id:      string | null
   internal_commission_eur: number | null
   deal_currency:           string | null
   lost_reason:             string | null
@@ -230,6 +231,7 @@ function SilenceBadge({ row }: { row: InquiryRow }) {
 
 interface Props {
   allRows:      InquiryRow[]
+  /** tripMap / slugMap / countryMap are keyed by INQUIRY id (resolved via experience-lookup). */
   tripMap:      Record<string, string>
   slugMap:      Record<string, string>
   countryMap:   Record<string, string>
@@ -747,7 +749,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
         <div className="flex flex-col gap-2.5">
           {rows.map(row => {
             const st        = STATUS_STYLE[row.status] ?? STATUS_STYLE.pending
-            const tripTitle = row.trip_id != null ? (tripMap[row.trip_id] ?? '—') : '—'
+            const tripTitle = tripMap[row.id] ?? '—'
             const dates     = row.requested_dates
             const dateLabel = dates != null && dates.length > 0
               ? fmtDate(dates[0]) + (dates.length > 1 ? ` +${dates.length - 1}` : '')

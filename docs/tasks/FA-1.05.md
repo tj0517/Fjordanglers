@@ -296,10 +296,34 @@ pnpm build                 # → clean
 pnpm lint                  # → 40 errors (= stage-1 baseline; no JS/TS files changed)
 ```
 
+### Dowód na prod (19 IX 2026)
+
+`db push` wykonany przez tj, 19 IX 2026. Wyniki z SQL Editora, read-only, `uwxrstbplaoxfghrchcy`.
+
+**a) Rozkład zdarzeń (`SELECT type, source, count(*) FROM inquiry_events GROUP BY 1,2 ORDER BY 1,2`)**
+
+| type | source | count |
+|---|---|---|
+| inquiry.created | backfill | 99 |
+| message.received | backfill | 370 |
+| message.received | webhook | 1 |
+| message.sent | backfill | 314 |
+| offer.presented | backfill | 1 |
+
+> `message.received/webhook = 1` — pierwsze żywe zdarzenie po wdrożeniu; emiter działa.
+
+**b)** Wiadomości bez zdarzenia → **0** ✓  
+**c)** Depozyty bez `payment.received` → **0** ✓  
+**d)** `backfill` z `occurred_at > created_at` → **0** ✓  
+**e)** `backfill` nie-`message.*` z `occurred_at < inquiries.created_at` → **0** ✓  
+duplikaty `inquiry.created` → **0** ✓
+
 ### Checklista przy db push (prod)
 
-Wykonać po wdrożeniu paczki FA-1.04 + FA-1.05 na `uwxrstbplaoxfghrchcy`.
-Bez tych wyników PR nie jest „udowodniony na prod".
+~~Wykonać po wdrożeniu paczki FA-1.04 + FA-1.05 na `uwxrstbplaoxfghrchcy`.~~
+~~Bez tych wyników PR nie jest „udowodniony na prod".~~
+
+Wykonana 19 IX 2026 przez tj. Wyniki powyżej w sekcji „Dowód na prod".
 
 ```sql
 -- 1. Rozkład zdarzeń — oczekiwane: backfill created≈99 / sent≈314 / received≈370 /

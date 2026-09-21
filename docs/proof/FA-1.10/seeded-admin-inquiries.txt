@@ -1,0 +1,59 @@
+ADMIN
+Inquiry Management
+14 total inquiries · review, negotiate, and close deals.
++
+New inquiry
+LEAD
+4
+GUIDE
+2
+CONFIRMED
+3
+LOST
+5
+WIN RATE
+38%
+FROM
+TO
+Lead
+4
+Guide
+2
+Confirmed
+3
+Lost
+5
+👤 Angler view
+🎣 Guide view
+⏱ Bez oferty od
+Gunnar Weekly
+No contact
+— · —
+gunnar@seed.test
+New
+153h no offer
+6d ago
+→
+Frida Weekly
+No contact
+— · —
+frida@seed.test
+Qualifying
+154h no offer
+6d ago
+→
+Nora Weekly
+No contact
+— · —
+nora@seed.test
+Qualifying
+487h no offer
+2w ago
+→
+Alice Seed
+No contact
+— · —
+alice@seed.test
+Qualifying
+1 Jun
+→

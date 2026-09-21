@@ -2,7 +2,7 @@
 id: FA-1.04
 title: inquiries.qualified — z klasyfikacji agenta, z korektą ręczną, unknown dla starych
 stage: 1
-status: done  # kryteria 1 i 4 ("Gotowe, gdy") odroczone do FA-1.10 — lokalny stack bez seed danych; patrz deferred-tasks.md
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -108,6 +108,23 @@ pnpm typecheck && pnpm lint && pnpm build
 # SELECT qualified, qualified_set_by, count(*) FROM inquiries GROUP BY 1,2;
 ```
 
+## Dowód na prod (19 IX 2026)
+
+`db push` wykonany przez tj, 19 IX 2026. SQL Editor, read-only, `uwxrstbplaoxfghrchcy`.
+
+```
+SELECT qualified, count(*) FROM inquiries GROUP BY 1;
+→ unknown | 99   (wszystkie istniejące wiersze)
+
+UPDATE inquiries SET qualified='maybe';
+→ ERROR: violates check constraint "inquiries_qualified_check"  (na czerwono ✓)
+
+SELECT count(*) FROM inquiry_events WHERE type='inquiry.qualified_set' AND source='app';
+→ 0  (brak duplikatów — backfill nie tworzył qualified_set)
+```
+
+Emiter `inquiry.qualified_set` zweryfikowany pośrednio przez FA-1.05 (`message.received/webhook = 1` — pierwsze żywe zdarzenie po wdrożeniu); ścieżka agenta przetestowana w testach jednostkowych (153 passed).
+
 ## Notatki z realizacji
 
 ### Raport runda 2 (19 IX 2026)
@@ -161,3 +178,4 @@ pnpm lint → 40 errors, 81 warnings — wszystkie pre-existing (FA-1.03: src/em
 - `inquiry-agent-round1.test.ts` — mock `insert()` zwracał plain object zamiast łańcucha; emitEvent wymaga `.select().single()`. Naprawione w tym PR.
 - Pre-existing failing test: `src/actions/__tests__/inquiryStatusDefault.test.ts` — „INSERT without status uses the default and returns new" — odpytuje żywy Supabase przez SDK i pada gdy stack jest wyłączony (ECONNREFUSED 127.0.0.1:54421); niesprawiony w FA-1.04, istnieje co najmniej od FA-1.03.
 
+**Kryteria 1 i 4 domknięte w FA-1.10** (lokalny stack + seed, SELECT-y w `docs/proof/FA-1.10/fa-1.04-crit1.out` i `fa-1.04-crit4.out`, raport w `docs/tasks/FA-1.10.md`).

@@ -10,6 +10,50 @@ type SpeciesItem = (typeof FISH_CATALOG)[number] & { count: number }
 
 const CARD_W = 200
 
+// ─── Presentational pieces (declared outside render — see react-hooks/static-components) ──
+
+function ArrowBtn({ dir, onClick }: { dir: 'left' | 'right'; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={dir === 'left' ? 'Scroll left' : 'Scroll right'}
+      className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-all hover:opacity-80"
+      style={{ background: 'transparent', border: '1px solid rgba(10,46,77,0.15)' }}
+    >
+      {dir === 'left'
+        ? <ChevronLeft size={12} strokeWidth={1.5} style={{ color: '#0A2E4D' }} />
+        : <ChevronRight size={12} strokeWidth={1.5} style={{ color: '#0A2E4D' }} />
+      }
+    </button>
+  )
+}
+
+function Card({ s }: { s: SpeciesItem }) {
+  return (
+    <Link
+      href={`/trips?fish=${s.slug}`}
+      className="group flex flex-col items-center"
+    >
+      <div className="relative w-full transition-transform duration-300 group-hover:-translate-y-1" style={{ height: '140px', width: '160px' }}>
+        <Image
+          src={s.img}
+          alt={s.name}
+          fill
+          className="object-contain transition-transform duration-500 group-hover:scale-[1.1]"
+        />
+      </div>
+      <p className="font-semibold text-xs f-display text-center mt-1.5" style={{ color: '#0A2E4D' }}>
+        {s.name}
+      </p>
+      {s.count > 0 && (
+        <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
+          {s.count} {s.count === 1 ? 'trip' : 'trips'}
+        </p>
+      )}
+    </Link>
+  )
+}
+
 export function SpeciesSlider({ species }: { species: SpeciesItem[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const items = [...species, ...species, ...species]
@@ -33,57 +77,18 @@ export function SpeciesSlider({ species }: { species: SpeciesItem[] }) {
     el.scrollLeft = species.length * CARD_W
   }, [species.length])
 
-  const ArrowBtn = ({ dir }: { dir: 'left' | 'right' }) => (
-    <button
-      onClick={() => scroll(dir)}
-      aria-label={dir === 'left' ? 'Scroll left' : 'Scroll right'}
-      className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full transition-all hover:opacity-80"
-      style={{ background: 'transparent', border: '1px solid rgba(10,46,77,0.15)' }}
-    >
-      {dir === 'left'
-        ? <ChevronLeft size={12} strokeWidth={1.5} style={{ color: '#0A2E4D' }} />
-        : <ChevronRight size={12} strokeWidth={1.5} style={{ color: '#0A2E4D' }} />
-      }
-    </button>
-  )
-
-  const Card = ({ s, i }: { s: SpeciesItem; i: number }) => (
-    <Link
-      key={`${s.slug}-${i}`}
-      href={`/trips?fish=${s.slug}`}
-      className="group flex flex-col items-center"
-    >
-      <div className="relative w-full transition-transform duration-300 group-hover:-translate-y-1" style={{ height: '140px', width: '160px' }}>
-        <Image
-          src={s.img}
-          alt={s.name}
-          fill
-          className="object-contain transition-transform duration-500 group-hover:scale-[1.1]"
-        />
-      </div>
-      <p className="font-semibold text-xs f-display text-center mt-1.5" style={{ color: '#0A2E4D' }}>
-        {s.name}
-      </p>
-      {s.count > 0 && (
-        <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-          {s.count} {s.count === 1 ? 'trip' : 'trips'}
-        </p>
-      )}
-    </Link>
-  )
-
   return (
     <>
       {/* ─── DESKTOP: static wrap grid ─────────────────────────────── */}
       <div className="hidden md:flex flex-wrap justify-center gap-x-6 gap-y-4">
-        {species.map((s, i) => (
-          <Card key={s.slug} s={s} i={i} />
+        {species.map(s => (
+          <Card key={s.slug} s={s} />
         ))}
       </div>
 
       {/* ─── MOBILE: infinite scroll slider ────────────────────────── */}
       <div className="md:hidden flex items-center gap-3">
-        <ArrowBtn dir="left" />
+        <ArrowBtn dir="left"  onClick={() => scroll('left')} />
         <div
           ref={onMount}
           onScroll={onScroll}
@@ -116,7 +121,7 @@ export function SpeciesSlider({ species }: { species: SpeciesItem[] }) {
             </Link>
           ))}
         </div>
-        <ArrowBtn dir="right" />
+        <ArrowBtn dir="right" onClick={() => scroll('right')} />
       </div>
     </>
   )

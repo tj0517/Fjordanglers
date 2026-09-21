@@ -16,6 +16,7 @@ import {
 
 interface Props {
   allRows:    InquiryRow[]
+  /** tripMap / slugMap / countryMap are keyed by INQUIRY id (resolved via experience-lookup). */
   tripMap:    Record<string, string>
   slugMap:    Record<string, string>
   countryMap: Record<string, string>
@@ -127,7 +128,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
   const countries = useMemo(() => {
     const set = new Set<string>()
     for (const row of allRows) {
-      const c = row.trip_id ? countryMap[row.trip_id] : undefined
+      const c = countryMap[row.id]
       if (c) set.add(c)
     }
     return [...set].sort()
@@ -138,7 +139,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
     let rows = allRows
     if (country !== null) {
       rows = rows.filter(r => {
-        const c = r.trip_id ? countryMap[r.trip_id] : undefined
+        const c = countryMap[r.id]
         return c === country
       })
     }
@@ -155,7 +156,7 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
   const statusCounts = useMemo(() => {
     const base = country !== null
       ? allRows.filter(r => {
-          const c = r.trip_id ? countryMap[r.trip_id] : undefined
+          const c = countryMap[r.id]
           return c === country
         })
       : allRows
@@ -568,8 +569,8 @@ export function InquiriesCalendar({ allRows, tripMap, slugMap, countryMap }: Pro
                 <div className="flex flex-col gap-2.5">
                   {selectedInquiries.map(row => {
                     const st          = STATUS_STYLE[row.status] ?? STATUS_STYLE.pending
-                    const tripTitle  = row.trip_id ? (tripMap[row.trip_id] ?? '—') : '—'
-                    const tripSlug   = row.trip_id ? (slugMap[row.trip_id] ?? null) : null
+                    const tripTitle  = tripMap[row.id] ?? '—'
+                    const tripSlug   = slugMap[row.id] ?? null
                     const tripHref   = tripSlug != null
                       ? `/experiences/${tripSlug}`
                       : row.trip_id != null ? `/trips/${row.trip_id}` : null

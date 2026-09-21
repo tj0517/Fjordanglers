@@ -4,6 +4,7 @@ import type { FixedCostRow, ManualCostEntryRow } from '@/actions/finances'
 import type { MonthRaw } from './MonthlyPLClient'
 import type { PipelineDeal } from './PipelineClient'
 import { dealOurCut } from './pipeline-utils'
+import { commissionPln, parseFxRates, rowCommissionEur } from '@/lib/metrics/commission'
 
 export const metadata = {
   title: 'Finances — FjordAnglers Admin',
@@ -131,27 +132,29 @@ export default async function FinancesPage() {
   const manualEntries = (manualData   ?? []) as ManualCostEntryRow[]
   const settings      = (settingsData ?? []) as { key: string; value: string }[]
   const pipeline      = (pipelineData ?? []) as PipelineDeal[]
-  const eurRate       = parseFloat(settings.find(s => s.key === 'eur_pln_rate')?.value ?? '4.25')
-  const usdEurRate    = parseFloat(settings.find(s => s.key === 'usd_eur_rate')?.value ?? '0.92')
+  const rates         = parseFxRates(settings)
+  const eurRate       = rates.eurPln
+  const usdEurRate    = rates.usdEur
 
   // Fixed costs → single monthly total (same for every month)
   const fixedMonthly = fixedCosts.reduce((s, r) => s + toMonthlyPln(r), 0)
 
   // ── Aggregate revenue by month ────────────────────────────────────────────────
 
-  const revenueByMonth: Record<string, { eur: number; deals: number }> = {}
-  for (const row of (inquiryData ?? []) as {
+  // Same formula as /admin/weekly — src/lib/metrics/commission.ts is the one place it lives.
+  const revenueRows = (inquiryData ?? []) as {
     deposit_paid_at: string | null
     updated_at: string
     offer_deposit_eur: number | null
     deposit_amount: number | null
     internal_commission_eur: number | null
     deal_currency: string | null
-  }[]) {
+  }[]
+  const revenueByMonth: Record<string, { eur: number; deals: number }> = {}
+  for (const row of revenueRows) {
     const month = (row.deposit_paid_at ?? row.updated_at)?.slice(0, 7)
     if (!month) continue
-    const amt    = Number(row.offer_deposit_eur ?? row.deposit_amount ?? row.internal_commission_eur ?? 0)
-    const amtEur = row.deal_currency === 'USD' ? amt * usdEurRate : amt
+    const amtEur = rowCommissionEur(row, usdEurRate)
     revenueByMonth[month] = {
       eur:   (revenueByMonth[month]?.eur   ?? 0) + amtEur,
       deals: (revenueByMonth[month]?.deals ?? 0) + 1,
@@ -221,7 +224,7 @@ export default async function FinancesPage() {
   // ── Summary metrics for header cards ─────────────────────────────────────────
 
   const totalRevEur  = months.reduce((s, m) => s + m.revenue_eur, 0)
-  const totalRevPln  = totalRevEur * eurRate
+  const totalRevPln  = commissionPln(revenueRows, rates)
   const totalAdSpend = months.reduce((s, m) => s + m.ad_spend_pln, 0)
   const totalFixed   = fixedMonthly * months.length
   const totalManual  = months.reduce((s, m) => s + m.manual_costs_pln, 0)

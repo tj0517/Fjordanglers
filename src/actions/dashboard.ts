@@ -1,9 +1,8 @@
 'use server'
 
 /**
- * Guide Dashboard Server Actions — profile creation and updates.
+ * Guide Dashboard Server Actions — profile updates.
  *
- * createGuideProfile → called from GuideOnboarding wizard (first login after registration)
  * updateGuideProfile → called from /dashboard/profile/edit
  */
 
@@ -19,17 +18,6 @@ import { requireGuide } from '@/lib/auth/guards'
 export type ActionResult<T = undefined> =
   | { success: true; data?: T }
   | { success: false; error: string; code?: string }
-
-export type CreateGuideProfileData = {
-  full_name: string
-  country: string
-  city?: string
-  bio?: string
-  fish_expertise: string[]
-  languages: string[]
-  years_experience?: number | null
-  pricing_model: 'flat_fee' | 'commission'
-}
 
 export type UpdateGuideProfileData = {
   full_name?: string
@@ -75,68 +63,6 @@ const updateGuideProfileSchema = z.object({
 })
 
 // ─── Create guide profile ─────────────────────────────────────────────────────
-
-/**
- * Called from the onboarding wizard on first login.
- * Creates the guides row linked to the auth user.
- *
- * No requireGuide() here — this is called during first-time guide setup
- * before the guides row exists.
- */
-export async function createGuideProfile(
-  data: CreateGuideProfileData,
-): Promise<ActionResult<{ id: string }>> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (user == null) {
-      return { success: false, error: 'Not authenticated.', code: 'UNAUTHORIZED' }
-    }
-
-    // Guard — don't create a duplicate
-    const { data: existing } = await supabase
-      .from('guides')
-      .select('id')
-      .eq('user_id', user.id)
-      .single()
-
-    if (existing != null) {
-      return { success: false, error: 'Guide profile already exists.', code: 'ALREADY_EXISTS' }
-    }
-
-    const { data: guide, error } = await supabase
-      .from('guides')
-      .insert({
-        user_id:             user.id,
-        full_name:           data.full_name.trim(),
-        country:             data.country,
-        city:                data.city?.trim() || null,
-        bio:                 data.bio?.trim() || null,
-        fish_expertise:      data.fish_expertise,
-        languages:           data.languages,
-        years_experience:    data.years_experience ?? null,
-        pricing_model:       data.pricing_model,
-        status:              'pending',
-        is_beta_listing:     false,
-        stripe_charges_enabled: false,
-        stripe_payouts_enabled: false,
-        total_reviews:       0,
-      })
-      .select('id')
-      .single()
-
-    if (error != null) {
-      console.error('[createGuideProfile]', error.message)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, data: { id: guide.id } }
-  } catch (err) {
-    console.error('[createGuideProfile] Unexpected:', err)
-    return { success: false, error: 'An unexpected error occurred. Please try again.' }
-  }
-}
 
 // ─── Accept guide terms ───────────────────────────────────────────────────────
 

@@ -165,19 +165,18 @@ export function SiteNav({ user }: { user: NavUser | null }) {
   const isHome           = pathname === '/'
   const isExperiencePage = pathname.startsWith('/experiences/')
 
-  const [scrolled,  setScrolled]  = useState(false)
-  const [navHidden, setNavHidden] = useState(false)
-  const [menuOpen,  setMenuOpen]  = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  // Auto-hide-on-scroll applies to experience pages only. The state stores *which*
+  // path the nav is hidden on, so a route change shows it again without an effect
+  // that resets state (see react-hooks/set-state-in-effect).
+  const [hiddenOnPath, setHiddenOnPath] = useState<string | null>(null)
+  const navHidden        = isExperiencePage && hiddenOnPath === pathname
   const lastScrollY      = useRef(0)
-  const isExperienceRef  = useRef(isExperiencePage)
-  isExperienceRef.current = isExperiencePage
 
-  // Reset when leaving experience pages
+  // Leaving an experience page restarts the scroll anchor for the next one.
   useEffect(() => {
-    if (!isExperiencePage) {
-      setNavHidden(false)
-      lastScrollY.current = 0
-    }
+    if (!isExperiencePage) lastScrollY.current = 0
   }, [isExperiencePage])
 
   useEffect(() => {
@@ -185,14 +184,14 @@ export function SiteNav({ user }: { user: NavUser | null }) {
       const y = window.scrollY
       setScrolled(y > 20)
 
-      if (isExperienceRef.current) {
+      if (isExperiencePage) {
         const goingDown = y > lastScrollY.current
 
         if (goingDown && y > 80) {
-          setNavHidden(true)
+          setHiddenOnPath(pathname)
           setMenuOpen(false)
         } else if (y <= 80) {
-          setNavHidden(false)
+          setHiddenOnPath(null)
         }
       }
 
@@ -200,7 +199,7 @@ export function SiteNav({ user }: { user: NavUser | null }) {
     }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [isExperiencePage, pathname])
 
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 1024) setMenuOpen(false) }

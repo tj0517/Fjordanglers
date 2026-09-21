@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Info } from 'lucide-react'
 
-export type HelpItem = {
+type HelpItem = {
   icon: string   // emoji
   title: string
   text: string

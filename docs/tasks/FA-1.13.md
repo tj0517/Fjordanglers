@@ -2,7 +2,8 @@
 id: FA-1.13
 title: WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy
 stage: 1
-status: review
+status: blocked
+blocked_by_questions: [O-16]
 difficulty: L
 model: opus
 model_approved:
@@ -10,7 +11,6 @@ effort: high
 agent: fa-core
 branch: feat/whatsapp-instagram
 depends_on: [FA-1.12]
-blocked_by_questions: []
 touches_db: true
 touches_prod: false
 estimate_h: 12
@@ -95,7 +95,9 @@ Szczegółowy raport w opisie PR. Poniżej podsumowanie.
   SELECT result (produkcja, live read 2026-09-18):
     null_phone=24, already_e164=28, to_normalise=47
     Breakdown of 47: Iceland 43, New Zealand 3, Other 1 — żaden NANP.
-    Oczekiwany wynik: normalised=0, skipped=47, null=24
+    Wynik na produkcji (faktyczny, wdrożenie 19 IX 2026, zapisany w commicie `12989cd8`): normalised=28, skipped=47, null=24.
+    Wcześniejszy zapis „Oczekiwany wynik: normalised=0” był błędny: reguła 1 migracji (`LIKE '+%'` → usuń
+    znaki formatowania → UPDATE) obejmuje 28 wierszy, które już były w E.164, więc normalised=28.
     RAISE NOTICE wylistuje wszystkie 47 ID dla tj (manual review).
 - `inquiry-matcher.ts`: `matchInboundPhone` — dopasowanie angler phone + guide phone_e164
   (przypisany lub kontaktowany w otwartym zapytaniu); wielu kandydatów → unmatched.
@@ -154,3 +156,18 @@ do niego nie puka.
 - Kryterium 5 (częściowo): build kompiluje się bez `INSTAGRAM_*`, ale pełna weryfikacja
   z testowym numerem Meta musi poczekać.
 
+### Runda po przeglądzie (20 IX 2026) — numer przewodnika poza publicznym profilem
+
+Przegląd znalazł, że `guides.phone_e164` (migracja `20260918135418`) leży w tabeli z polityką
+`"Public reads all guides" FOR SELECT USING (true)` (`20260904165037_baseline_prod.sql`), czyli
+numer wpisany zgodnie z `docs/ops/whatsapp-e2e-checklist.md` byłby czytelny kluczem publikowalnym.
+Kolumna na produkcji była pusta, więc nic nie wyciekło. Decyzja tj: numer do osobnej tabeli.
+
+- Migracja `20261004000000_guide_contacts.sql`: `guide_contacts` (RLS włączony, polityka wyłącznie
+  `service_role`, `REVOKE ALL` dla `anon`/`authenticated`), przeniesienie danych, `DROP COLUMN guides.phone_e164`.
+  `20260918135418` nie edytowana — jest zastosowana na produkcji. Od tej migracji zdania wyżej
+  o `guides.phone_e164` opisują stan historyczny.
+- Odczyty (`inquiry-matcher.ts`, `actions/messages.ts`, `admin/inquiries/[id]/page.tsx`) idą przez
+  `src/lib/guide-contacts.ts`.
+- Red proof: `src/lib/__tests__/guideContactsRls.test.ts` (anon vs `service_role` na lokalnym stacku).
+- `db push` migracji `20261004000000` na produkcję: **otwarty STOP** — robi tj.

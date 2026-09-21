@@ -192,7 +192,7 @@ export default async function AdminGuideDetailPage({
                 <p className="text-[#0A2E4D]/50 text-sm f-body">
                   {guide.city != null ? `${guide.city}, ` : ''}{guide.country}
                   {guide.tagline != null && (
-                    <span className="ml-2 italic" style={{ color: 'rgba(10,46,77,0.35)' }}>"{guide.tagline}"</span>
+                    <span className="ml-2 italic" style={{ color: 'rgba(10,46,77,0.35)' }}>&quot;{guide.tagline}&quot;</span>
                   )}
                 </p>
                 <p className="text-[10px] f-body mt-1" style={{ color: 'rgba(10,46,77,0.35)' }}>

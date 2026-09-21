@@ -14,21 +14,8 @@ export const COUNTRIES = [
 
 export type Country = (typeof COUNTRIES)[number]
 
-/** ISO 3166-1 alpha-2 codes — used for flag image URLs */
-export const COUNTRY_CODE: Record<Country, string> = {
-  Norway:      'no',
-  Sweden:      'se',
-  Finland:     'fi',
-  Iceland:     'is',
-  Denmark:     'dk',
-  Argentina:   'ar',
-  Chile:       'cl',
-  'New Zealand': 'nz',
-}
-
 /** Region group used for footer tagline context and same-region cross-sell fallback. */
-export const REGION_GROUPS = ['Nordic', 'Patagonia', 'New Zealand'] as const
-export type RegionGroup = (typeof REGION_GROUPS)[number]
+export type RegionGroup = 'Nordic' | 'Patagonia' | 'New Zealand'
 
 export const COUNTRY_REGION: Record<Country, RegionGroup> = {
   Norway:      'Nordic',
@@ -76,29 +63,4 @@ export function getFlagUrl(country: string): string | null {
   return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${isoToTwemojiPath(code)}.svg`
 }
 
-/** @deprecated Emoji flags don't render on Windows — use <CountryFlag> component instead */
-export const COUNTRY_FLAG: Record<Country, string> = {
-  Norway:        '🇳🇴',
-  Sweden:        '🇸🇪',
-  Finland:       '🇫🇮',
-  Iceland:       '🇮🇸',
-  Denmark:       '🇩🇰',
-  Argentina:     '🇦🇷',
-  Chile:         '🇨🇱',
-  'New Zealand': '🇳🇿',
-}
 
-/** Ordered list used in dropdowns and filters */
-export const COUNTRY_OPTIONS = COUNTRIES.map(c => ({
-  value: c,
-  code:  COUNTRY_CODE[c],
-  label: c,
-}))
-
-/** @deprecated Use getFlagUrl() + <img> or <CountryFlag> component instead */
-export function getCountryFlag(country: string): string {
-  const key = country.trim() as Country
-  return COUNTRY_FLAG[key] ?? (COUNTRY_FLAG[
-    (COUNTRIES.find(c => c.toLowerCase() === country.toLowerCase().trim()) ?? '') as Country
-  ] ?? '')
-}

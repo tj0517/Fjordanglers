@@ -95,7 +95,7 @@ export default function AboutPage() {
                   letterSpacing: '-0.01em',
                 }}
               >
-                "We&apos;ve slept in tents on Norwegian coastlines with rods propped against the tent. We know the water. We found the guides who know it even better."
+                &quot;We&apos;ve slept in tents on Norwegian coastlines with rods propped against the tent. We know the water. We found the guides who know it even better.&quot;
               </p>
             </div>
 

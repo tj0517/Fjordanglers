@@ -8,7 +8,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { env } from '@/lib/env'
+import { getGuidePhone } from '@/lib/guide-contacts'
 import { MessageComposer } from './MessageComposer'
 import { ThreadActionsPanel } from './ThreadActionsPanel'
 import type { OfferForPanel } from './ThreadActionsPanel'
@@ -18,15 +20,14 @@ import { NextActionEditor } from './NextActionEditor'
 import { InquiryDetailTabs } from './InquiryDetailTabs'
 import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab'
 import { TripSetupTab } from './TripSetupTab'
-import { ProposalTab } from './ProposalTab'
 import { ReviewLinkGenerator } from './ReviewLinkGenerator'
 import { AgentToggle } from './AgentToggle'
 import { QualifiedChanger } from './QualifiedChanger'
 import type { QualifiedValue } from '@/lib/inquiries/qualified'
 import { RequestedDatesEditor } from './RequestedDatesEditor'
 import { DeleteInquiryButton } from './DeleteInquiryButton'
-import type { TripDetails, OfferQuestion, ScheduleEntry, OfferOptionInput } from '@/actions/inquiries'
-import type { InitialOfferData } from './OfferBuilder'
+import type { TripDetails } from '@/actions/inquiries'
+import { availabilityWindow } from '@/lib/availability-window'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -59,12 +60,6 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtDate(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
-}
 
 function fmtDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-GB', {
@@ -153,7 +148,6 @@ export default async function AdminInquiryDetailPage({
     agent_round:             number | null
   }
 
-  // (AssignGuidePanel removed — guide assignment is now in the Guide Attachment tab)
 
   // ── Fetch messages thread ──────────────────────────────────────────────────
   type MessageRow = {
@@ -179,10 +173,14 @@ export default async function AdminInquiryDetailPage({
     // Table not yet migrated — graceful fallback
   }
 
-  // `inquiries.trip_id` points at the archived legacy `experiences` table (FA-1.06):
-  // no trip title, list price, or trip country can be resolved from it any more.
-  const tripTitle: string | null = null
-  const tripLocationCountry: string | null = null
+  // Trip title and country come from the inquiry's experience_pages row
+  // (experience_page_id first, then trip_id). Null when it cannot be resolved.
+  const experience = await getInquiryExperience({
+    experience_page_id: inquiry.experience_page_id,
+    trip_id:            inquiry.trip_id,
+  })
+  const tripTitle: string | null = experience?.name ?? null
+  const tripLocationCountry: string | null = experience?.country ?? null
 
   // ── Fetch assigned guide (name + contact) ─────────────────────────────────
   const { data: guide } = inquiry.assigned_guide_id != null
@@ -193,8 +191,7 @@ export default async function AdminInquiryDetailPage({
 
   let countryGuides: GuideWithCalendar[] = []
   try {
-    const today     = new Date().toISOString().slice(0, 10)
-    const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
+    const { from: today, to: yearAhead } = availabilityWindow()
 
     const { data: guideRows } = await svc
       .from('guides')
@@ -322,14 +319,7 @@ export default async function AdminInquiryDetailPage({
 
   try {
     if (inquiry.assigned_guide_id != null) {
-      const { data: guidePhoneRow } = await svc
-        .from('guides')
-        .select('phone_e164')
-        .eq('id', inquiry.assigned_guide_id)
-        .single()
-      guideHasPhone = Boolean(
-        (guidePhoneRow as unknown as { phone_e164: string | null } | null)?.phone_e164,
-      )
+      guideHasPhone = Boolean(await getGuidePhone(inquiry.assigned_guide_id))
     }
 
     const waInbounds = threadMessages.filter(
@@ -695,49 +685,6 @@ export default async function AdminInquiryDetailPage({
     />
   )
 
-  // ── Build initialOffer from saved draft ────────────────────────────────────
-  const initialOffer: InitialOfferData | null = inquiry.offer_token != null ? {
-    totalPriceEur:   inquiry.offer_total_eur ?? null,
-    depositEur:      inquiry.offer_deposit_eur ?? null,
-    notes:           inquiry.offer_notes ?? null,
-    licenseInfo:     inquiry.offer_license_info ?? null,
-    licenseHeading:  inquiry.offer_license_heading ?? null,
-    inclusions:      (inquiry.offer_inclusions as string[] | null) ?? [],
-    questions:       (inquiry.offer_questions as OfferQuestion[] | null) ?? [],
-    refundReason:    inquiry.offer_refund_reason ?? null,
-    photos:          (inquiry.offer_photos as string[] | null) ?? [],
-    location:        inquiry.offer_location ?? null,
-    whatToBring:     (inquiry.offer_what_to_bring as string[] | null) ?? [],
-    schedule:        (inquiry.offer_schedule as ScheduleEntry[] | null) ?? [],
-    locationLat:     inquiry.offer_location_lat != null ? Number(inquiry.offer_location_lat) : null,
-    locationLng:     inquiry.offer_location_lng != null ? Number(inquiry.offer_location_lng) : null,
-    locationZoom:    inquiry.offer_location_zoom != null ? Number(inquiry.offer_location_zoom) : 8,
-    locationGeoJson: (inquiry.offer_location_geojson as object | null) ?? null,
-    offerToken:      inquiry.offer_token,
-    offerSentAt:     inquiry.offer_sent_at ?? null,
-    options:         (inquiry.offer_options as OfferOptionInput[] | null) ?? null,
-  } : null
-
-  // ── Proposal tab ───────────────────────────────────────────────────────────
-  const proposalContent = (
-    <ProposalTab
-      inquiryId={inquiry.id}
-      anglerName={inquiry.angler_name}
-      experienceTitle={tripTitle}
-      guideOptions={tripDetails?.guide_options ?? []}
-      guideFinalDates={tripDetails?.guide_final_dates ?? null}
-      existingToken={inquiry.offer_token ?? null}
-      existingTotalEur={inquiry.offer_total_eur ?? null}
-      existingDepositEur={inquiry.offer_deposit_eur ?? null}
-      existingSentAt={inquiry.offer_sent_at ?? null}
-      depositPaidAt={inquiry.deposit_paid_at ?? null}
-      baseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
-      initialOffer={initialOffer}
-      availableGuides={countryGuides.map(g => ({ id: g.id, full_name: g.full_name, avatar_url: g.avatar_url }))}
-      currentGuideId={inquiry.assigned_guide_id ?? null}
-    />
-  )
-
   return (
     <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1100px]">
 
@@ -772,7 +719,6 @@ export default async function AdminInquiryDetailPage({
         sidePanel={sidePanel}
         guideContent={guideContent}
         tripSetupContent={tripSetupContent}
-        proposalContent={proposalContent}
       />
 
     </div>

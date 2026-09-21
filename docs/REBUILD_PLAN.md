@@ -446,6 +446,9 @@ czasie: tylko z `main`, cherry-pick do `stage-1` w tym samym dniu.
 7. `inquiries.qualified` (FA-1.04), backfill zdarzeń (FA-1.05), typy (FA-1.06 done),
    martwy kod (FA-1.07/1.08), legacy edytor (FA-1.09), przegląd tygodniowy (FA-1.10),
    CI (FA-1.11).
+8. **UI panelu admina** (FA-1.15, dopisane 20 IX 2026) — design system na shadcn/ui w barwach
+   FA, lista zapytań, karta zapytania wg etapów flow (stepper ze statusem + pięć zakładek),
+   `/admin/weekly`. Tylko powierzchnia; ekrany analityczne z §6 nadal w etapie 6.
 
 Tag `v1-clean` po pushu.
 
@@ -518,6 +521,10 @@ Jedyny wyjątek, który warto rozważyć przed 30 IX, to **`/destinations` w pro
 **Dopisek 16 IX.** Etap 1 w nowym kształcie nie zmieści się przed 30 IX i nie próbuje. Do 30 IX na
 produkcji zostaje etap 0. `stage-1` idzie na produkcję jako paczka, gdy FA-1.03, 1.12,
 1.13 są `done` i zespół przeszedł wdrożenie; FA-1.14 może dojechać w drugiej paczce.
+
+**Dopisek 19 IX.** Etap 1 wszedł na produkcję 19 IX 2026 (merge #60, SHA `9868956d`). Wdrożone zadania: FA-1.01, 1.02, 1.03, 1.06, 1.11, 1.12, 1.13. FA-1.13 jest wdrożone kodowo, ale nieaktywne do czasu odblokowania konta Meta (odwołanie złożone 18 IX 2026 w Account Quality). Wieczorem tego samego dnia paczka 2 (FA-1.04 + FA-1.05, PR #63, `db push` bez incydentu) — `inquiry_events` ma 785 wierszy (99 created + 684 messages + 1 offer + 1 webhook live), `qualified = unknown` dla 99 zapytań. Do następnego push zostają FA-1.07, 1.08, 1.09, 1.10, 1.14.
+
+**Dopisek 20 IX.** Ekran „przegląd tygodniowy” z tego punktu: zrobione w FA-1.10, `/admin/weekly`, do usunięcia w etapie 6.
 
 ---
 

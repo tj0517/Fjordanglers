@@ -294,7 +294,7 @@ export default function ImageUpload({
       setProgress(0)
       setStatusText('')
     }
-  }, [currentUrl, onUpload])
+  }, [cfg.maxMB, cfg.compress, cfg.maxDim, cfg.quality, guideId, currentUrl, onUpload])
 
   // ── Event handlers ─────────────────────────────────────────────────────────
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

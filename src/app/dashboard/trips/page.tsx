@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { getInquiryExperiences } from '@/lib/inquiries/experience-lookup'
 
 export const revalidate = 0
 
@@ -51,7 +52,7 @@ export default async function GuideTripsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rawTrips } = await (svc as any)
     .from('inquiries')
-    .select('id, angler_name, angler_country, requested_dates, party_size, assigned_at, trip_id')
+    .select('id, angler_name, angler_country, requested_dates, party_size, assigned_at, trip_id, experience_page_id')
     .eq('assigned_guide_id', guide.id)
     .not('status', 'in', '("cancelled","lost")')
     .order('assigned_at', { ascending: false })
@@ -64,9 +65,11 @@ export default async function GuideTripsPage() {
     party_size: number
     assigned_at: string
     trip_id: string | null
+    experience_page_id: string | null
   }
 
   const trips: TripRow[] = rawTrips ?? []
+  const experiences = await getInquiryExperiences(trips)
 
   return (
     <div className="px-4 py-6 sm:px-8 sm:py-10 max-w-2xl">
@@ -102,6 +105,7 @@ export default async function GuideTripsPage() {
           {trips.map(trip => {
             const flag = COUNTRY_FLAG[trip.angler_country ?? ''] ?? ''
             const dates = (trip.requested_dates ?? [])
+            const experienceName = experiences.get(trip.id)?.name ?? null
 
             return (
               <Link
@@ -117,6 +121,11 @@ export default async function GuideTripsPage() {
                     {flag && <span className="mr-1.5">{flag}</span>}
                     {trip.angler_name}
                   </p>
+                  {experienceName != null && (
+                    <p className="text-xs f-body truncate mb-1" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                      {experienceName}
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1">
                     <span className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
                       {trip.party_size} {trip.party_size === 1 ? 'angler' : 'anglers'}

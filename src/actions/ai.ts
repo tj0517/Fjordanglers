@@ -12,6 +12,7 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { requireAdmin } from '@/lib/auth/guards'
+import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import {
   extractTripDetails,
   assembleConversation,
@@ -72,7 +73,7 @@ export async function extractTripDetailsAI(
   // 1. Fetch inquiry fields directly (angler_name is a column, not a join)
   const { data: inquiry, error: inqErr } = await svc
     .from('inquiries')
-    .select('id, message, party_size, requested_dates, angler_name, trip_id')
+    .select('id, message, party_size, requested_dates, angler_name, trip_id, experience_page_id')
     .eq('id', inquiryId)
     .single()
 
@@ -81,7 +82,11 @@ export async function extractTripDetailsAI(
     return { success: false, error: 'Inquiry not found' }
   }
 
-  const experienceTitle: string | null = null
+  const exp = await getInquiryExperience({
+    experience_page_id: inquiry.experience_page_id,
+    trip_id:            inquiry.trip_id,
+  })
+  const experienceTitle: string | null = exp?.name ?? null
 
   // 2. Fetch messages ordered by occurred_at ASC
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

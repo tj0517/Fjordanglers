@@ -22,35 +22,6 @@ import { createServiceClient } from '@/lib/supabase/server'
 import type { GalleryImage } from '@/components/admin/multi-image-upload'
 import { requireAdmin, requireGuide } from '@/lib/auth/guards'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type GuidePhotoRow = {
-  id:         string
-  guide_id:   string
-  url:        string
-  caption:    string | null
-  sort_order: number
-  is_cover:   boolean
-  created_at: string
-}
-
-// ─── Read ─────────────────────────────────────────────────────────────────────
-
-/**
- * Fetch all photos for a given guide (ordered by sort_order).
- * Safe to call from admin pages with a service client.
- */
-export async function getGuidePhotos(guideId: string): Promise<GuidePhotoRow[]> {
-  await requireAdmin()
-  const svc = createServiceClient()
-  const { data } = await svc
-    .from('guide_photos')
-    .select('*')
-    .eq('guide_id', guideId)
-    .order('sort_order', { ascending: true })
-  return data ?? []
-}
-
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 /**

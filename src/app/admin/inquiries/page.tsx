@@ -5,6 +5,7 @@
 
 import { Suspense } from 'react'
 import { createServiceClient } from '@/lib/supabase/server'
+import { getInquiryExperiences } from '@/lib/inquiries/experience-lookup'
 import { InquiriesClient } from './InquiriesClient'
 import type { InquiryRow } from './InquiriesClient'
 
@@ -18,18 +19,24 @@ export default async function AdminInquiriesPage() {
   // ── Fetch all inquiries ─────────────────────────────────────────────────────
   const { data: rawAll } = await svc
     .from('inquiries')
-    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action, assigned_guide_id, guide_acceptance, guide_decline_reason, external_offer_sent, offer_sent_at')
+    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, experience_page_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action, assigned_guide_id, guide_acceptance, guide_decline_reason, external_offer_sent, offer_sent_at')
     .order('created_at', { ascending: false })
 
   const allRows = (rawAll ?? []) as InquiryRow[]
 
-  // ── Trip titles + slugs ──────────────────────────────────────────────────────
-  // `inquiries.trip_id` points at the archived legacy `experiences` table (FA-1.06),
-  // so there is nothing to resolve titles from. The maps stay empty; the client
-  // components render '—' for those rows.
+  // ── Trip titles + slugs + countries ──────────────────────────────────────────
+  // One lookup for the whole list. The maps are keyed by INQUIRY id, because an
+  // inquiry reaches its experience_pages row via experience_page_id or trip_id.
+  // Inquiries that resolve to nothing are absent; the client renders '—' for them.
+  const experiences = await getInquiryExperiences(allRows)
   const tripMap:    Record<string, string> = {}
   const slugMap:    Record<string, string> = {}
   const countryMap: Record<string, string> = {}
+  for (const [inquiryId, exp] of experiences) {
+    tripMap[inquiryId]    = exp.name
+    slugMap[inquiryId]    = exp.slug
+    countryMap[inquiryId] = exp.country
+  }
 
   // ── Guide names ─────────────────────────────────────────────────────────────
   const guideIds = [...new Set(allRows.map(r => r.assigned_guide_id).filter(Boolean))] as string[]

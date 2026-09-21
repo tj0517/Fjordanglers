@@ -1,24 +1,20 @@
 'use client'
 
 /**
- * TripOptionsAccordion
+ * OptionPanel
  *
- * Renders per-variant trip options as an expandable accordion on the
- * /experiences/[slug] public page.
+ * Renders the content of one trip option (catches, species, boat, special
+ * attractions, location, what to bring, includes/excludes, price) on the
+ * /experiences/[slug] public page. Rendered by `ExperienceTabLayout`, which
+ * owns option selection; this file only draws the selected option's body.
  *
- * - Each option has its own: catches, species (from shared library), boat,
- *   special attractions, location, what to bring, includes/excludes, price.
  * - Species details (description, image, season) come from the shared
  *   speciesLibrary (experience_pages.species_details). Options only store
  *   target_species[] names, which are used to filter the library — no duplication.
- * - First option is open by default.
- * - onSelect callback notifies parent (ExperiencePageWithOptions) of the
- *   currently open option so the InquiryWidget can react.
  */
 
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
-import { MapPin, Check, X as XIcon, ArrowRight } from 'lucide-react'
+import { MapPin, Check, X as XIcon } from 'lucide-react'
 import type { SpecialAttraction, ContentBlock, SpeciesDetailItem, Boat } from '@/actions/experience-pages'
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 import { formatPrice } from '@/lib/format-price'
@@ -45,14 +41,6 @@ export interface TripOption {
   what_to_bring:             string[]
   includes:                  string[]
   excludes:                  string[]
-}
-
-interface TripOptionsAccordionProps {
-  options:        TripOption[]
-  selectedIdx:    number
-  onSelect:       (idx: number) => void
-  speciesDetails?: SpeciesDetailItem[]
-  currency:       string
 }
 
 // ─── Per-option content panel ─────────────────────────────────────────────────
@@ -307,184 +295,5 @@ export function OptionPanel({ option, speciesDetails = [], priceOverride, curren
       </section>
 
     </div>
-  )
-}
-
-// ─── Popup modal ──────────────────────────────────────────────────────────────
-
-function OptionModal({
-  option,
-  speciesDetails,
-  currency,
-  onClose,
-}: {
-  option: TripOption
-  speciesDetails?: SpeciesDetailItem[]
-  currency: string
-  onClose: () => void
-}) {
-  // Lock body scroll & close on Escape
-  useEffect(() => {
-    document.body.style.overflow = 'hidden'
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = ''
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [onClose])
-
-  return (
-    <div
-      className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-3 sm:p-4"
-      style={{ background: 'rgba(4,10,20,0.65)', backdropFilter: 'blur(6px)' }}
-      onClick={onClose}
-    >
-      <div
-        className="styled-scroll relative w-full sm:max-w-2xl max-h-[92dvh] overflow-y-auto"
-        style={{
-          background: '#fff',
-          borderRadius: '24px',
-          boxShadow: '0 -4px 60px rgba(4,10,20,0.25)',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Drag handle (mobile) */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(10,46,77,0.12)' }} />
-        </div>
-
-        {/* Header */}
-        <div
-          className="sticky top-0 flex items-center justify-between px-6 py-4"
-          style={{ background: '#fff', borderBottom: '1px solid rgba(10,46,77,0.07)', zIndex: 1 }}
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] f-body mb-0.5" style={{ color: '#E67E50' }}>
-              Trip option
-            </p>
-            <h3 className="text-lg font-bold f-display" style={{ color: '#0A2E4D' }}>
-              {option.label}
-            </h3>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="font-bold f-display" style={{ color: '#E67E50', fontSize: '16px' }}>
-              {formatPrice({ priceFrom: option.price_from, priceType: option.price_type, currency })}
-            </span>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-[rgba(10,46,77,0.06)]"
-              style={{ border: '1px solid rgba(10,46,77,0.12)', color: '#0A2E4D', background: 'none', cursor: 'pointer' }}
-              aria-label="Close"
-            >
-              <XIcon size={16} strokeWidth={2} />
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <OptionPanel option={option} speciesDetails={speciesDetails} currency={currency} />
-      </div>
-    </div>
-  )
-}
-
-// ─── Trip option cards + popup ─────────────────────────────────────────────────
-
-export function TripOptionsAccordion({ options, selectedIdx, onSelect, speciesDetails, currency }: TripOptionsAccordionProps) {
-  const [openIdx, setOpenIdx] = useState<number | null>(null)
-
-  if (options.length === 0) return null
-
-  const openOption = openIdx !== null ? options[openIdx] : null
-
-  return (
-    <section className="mb-4">
-      <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
-      <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-2 f-body" style={{ color: '#E67E50' }}>
-        Trip options
-      </p>
-      <p className="text-sm f-body mb-6" style={{ color: 'rgba(10,46,77,0.5)' }}>
-        Choose the option that fits your group
-      </p>
-
-      <div className="space-y-3">
-        {options.map((option, idx) => {
-          const isSelected = selectedIdx === idx
-          return (
-            <div
-              key={option.id}
-              className="rounded-2xl overflow-hidden transition-all"
-              style={{
-                border:     isSelected ? '2px solid #E67E50' : '1.5px solid rgba(10,46,77,0.12)',
-                background: isSelected ? 'rgba(230,126,80,0.06)' : '#fff',
-                boxShadow:  isSelected ? '0 2px 14px rgba(230,126,80,0.18)' : '0 1px 4px rgba(10,46,77,0.05)',
-              }}
-            >
-              {/* ── Select row ── */}
-              <button
-                type="button"
-                onClick={() => onSelect(idx)}
-                className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors"
-                style={{ cursor: 'pointer', background: 'transparent' }}
-              >
-                {/* Radio indicator */}
-                <div
-                  className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center transition-all"
-                  style={{
-                    border:     isSelected ? 'none' : '2px solid rgba(10,46,77,0.22)',
-                    background: isSelected ? '#E67E50' : 'transparent',
-                    boxShadow:  isSelected ? '0 0 0 3px rgba(230,126,80,0.18)' : 'none',
-                  }}
-                >
-                  {isSelected && (
-                    <div className="w-2 h-2 rounded-full" style={{ background: '#fff' }} />
-                  )}
-                </div>
-
-                {/* Label */}
-                <span
-                  className="flex-1 text-base font-bold f-display"
-                  style={{ color: isSelected ? '#0A2E4D' : 'rgba(10,46,77,0.65)' }}
-                >
-                  {option.label}
-                </span>
-
-                {/* Price */}
-                <span className="font-bold f-display text-sm flex-shrink-0" style={{ color: '#E67E50' }}>
-                  {formatPrice({ priceFrom: option.price_from, priceType: option.price_type, currency })}
-                </span>
-              </button>
-
-              {/* ── Details link ── */}
-              <div
-                className="px-5 pb-3.5"
-                style={{ borderTop: '1px solid rgba(10,46,77,0.06)', paddingTop: '10px' }}
-              >
-                <button
-                  type="button"
-                  onClick={() => { onSelect(idx); setOpenIdx(idx) }}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold f-body transition-opacity hover:opacity-70"
-                  style={{ color: isSelected ? '#E67E50' : 'rgba(10,46,77,0.38)', cursor: 'pointer', background: 'none' }}
-                >
-                  View full details
-                  <ArrowRight size={12} strokeWidth={2.5} />
-                </button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Modal */}
-      {openOption != null && (
-        <OptionModal
-          option={openOption}
-          speciesDetails={speciesDetails}
-          currency={currency}
-          onClose={() => setOpenIdx(null)}
-        />
-      )}
-    </section>
   )
 }

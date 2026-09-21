@@ -31,6 +31,7 @@ import { sendInquiryAgentEmail } from '@/lib/email'
 import { assembleConversation, type ConversationMessage } from '@/lib/ai/extract-trip'
 import { env } from '@/lib/env'
 import { computeQualified, setQualified } from '@/lib/inquiries/qualified'
+import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 
 function newMessageId(): string {
   return `<${randomUUID()}@mail.fjordanglers.com>`
@@ -518,16 +519,13 @@ export async function runAgentRound2(inquiryId: string): Promise<void> {
     .eq('inquiry_id', inquiryId)
     .order('occurred_at', { ascending: true })
 
-  // Fetch trip title
-  let tripTitle = 'your trip'
-  if (inquiry.experience_page_id) {
-    const { data: expPage } = await supabase
-      .from('experience_pages')
-      .select('experience_name')
-      .eq('id', inquiry.experience_page_id)
-      .single()
-    if (expPage?.experience_name) tripTitle = expPage.experience_name
-  }
+  // Fetch trip title (experience_page_id first, then trip_id)
+  const tripTitle = tripTitleOf(
+    await getInquiryExperience({
+      experience_page_id: inquiry.experience_page_id,
+      trip_id:            inquiry.trip_id,
+    }),
+  )
 
   const conversation = assembleConversation(
     inquiry.angler_name,

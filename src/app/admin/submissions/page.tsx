@@ -5,8 +5,10 @@ import { ClipboardList, ArrowRight } from 'lucide-react'
 /**
  * /admin/submissions — FA admin view of all guide trip submissions.
  *
- * Guides fill GuideSubmissionForm → creates guide_submissions row.
- * FA reviews here and clicks "Start building →" to open the full ExperienceForm.
+ * Read-only list of `guide_submissions`. No application path writes that table today
+ * (the public guide-submission form was removed with the guide funnel in FA-1.06);
+ * the rows shown are historical. FA reviews one here and clicks "Start building →"
+ * to open the admin experience editor.
  */
 
 export const metadata = {

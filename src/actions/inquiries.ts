@@ -6,11 +6,6 @@
  * sendDepositLink(inquiryId)
  *   FA sends a Stripe Checkout deposit link to the angler.
  *
- * saveRichOffer(inquiryId, params)
- *   FA builds a full offer: trip plan, license, inclusions, questions, price,
- *   deposit, refund reason. Generates a unique magic-link token, saves everything
- *   to the inquiry, and sends the offer email to the angler.
- *
  * submitOfferAnswers(token, answers)
  *   Angler submits their answers on the public /offers/[token] page.
  *   Returns a Stripe Checkout URL for the deposit payment.
@@ -18,23 +13,24 @@
  * getOfferByToken(token)
  *   Fetches an inquiry (with guide + trip) by its offer token.
  *   Public — no auth required; token IS the authentication.
- *
- * sendMessageToAngler(inquiryId, subject, body)
- *   FA sends a plain-text email to the angler from the admin.
- *   Message is stored in messages for audit trail.
  */
 
 import type { Json } from '@/lib/supabase/database.types'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
 import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
+import { computeFallbackDepositCents } from '@/lib/inquiries/deposit-fallback'
+import {
+  getInquiryExperience,
+  tripTitleOf,
+  GUIDE_NAME_FALLBACK,
+  type InquiryExperience,
+} from '@/lib/inquiries/experience-lookup'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getAppUrl } from '@/lib/app-url'
 import {
   sendDepositLinkAnglerEmail,
-  sendInquiryMessageAnglerEmail,
-  sendRichOfferAnglerEmail,
   sendGuideAssignedEmail,
 } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
@@ -85,28 +81,6 @@ export interface OfferOptionInput {
   inclusions:   string[]
   schedule:     ScheduleEntry[]
   notes:        string | null
-}
-
-export interface RichOfferParams {
-  totalPriceEur: number
-  depositEur: number
-  notes: string | null
-  tripPlan: string | null
-  licenseInfo: string | null
-  licenseHeading: string | null
-  inclusions: string[]
-  questions: OfferQuestion[]
-  refundReason: string | null
-  photos: string[]
-  location: string | null
-  whatToBring: string[]
-  schedule: ScheduleEntry[]
-  locationLat: number | null
-  locationLng: number | null
-  locationZoom: number
-  locationGeoJson: object | null
-  /** Multi-option proposal. When provided, takes precedence over flat fields for display. */
-  options?: OfferOptionInput[]
 }
 
 export interface OfferPageData {
@@ -237,7 +211,8 @@ export async function createManualInquiry(params: {
  *
  * Deposit amount priority:
  *   1. inquiry.offer_deposit_eur — if FA created an offer, always use that exact amount.
- *   2. depositPercent × trip price — legacy fallback.
+ *   2. Otherwise depositPercent × the experience's list price (per person or flat, EUR only) —
+ *      see computeFallbackDepositCents. A price on request or in another currency is refused.
  *
  * Allowed statuses: any status from which `awaiting_payment` is reachable, plus
  * `awaiting_payment` itself (resend — the status does not move a second time).
@@ -256,7 +231,7 @@ export async function sendDepositLink(
 
   const { data: rawInquiry } = await svc
     .from('inquiries')
-    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, message, offer_deposit_eur')
+    .select('id, status, angler_email, angler_name, angler_country, requested_dates, party_size, trip_id, experience_page_id, message, offer_deposit_eur')
     .eq('id', inquiryId)
     .single()
 
@@ -271,15 +246,24 @@ export async function sendDepositLink(
 
   const offerDepositEur = rawInquiry.offer_deposit_eur as number | null
 
-  // The legacy `experiences` list price is gone (table archived, FA-1.06); the
-  // deposit can only come from the saved offer.
-  if (offerDepositEur == null || offerDepositEur <= 0) {
-    return { success: false, error: 'No offer deposit set — save an offer first' }
+  const exp = await getInquiryExperience(rawInquiry)
+
+  // The saved offer deposit always wins. Only when there is none do we fall back to the
+  // experience's list price × party size × deposit % (see deposit-fallback.ts) — and that
+  // refuses a price on request or a non-EUR price instead of guessing an amount.
+  let depositCents: number
+  if (offerDepositEur != null && offerDepositEur > 0) {
+    depositCents = Math.round(offerDepositEur * 100)
+  } else {
+    const fallback = computeFallbackDepositCents(exp, rawInquiry.party_size ?? 1, depositPercent)
+    if (!fallback.ok) {
+      return { success: false, error: fallback.error }
+    }
+    depositCents = fallback.cents
   }
 
-  const depositCents   = Math.round(offerDepositEur * 100)
   const depositPctUsed = depositPercent
-  const tripTitle      = 'Your trip'
+  const tripTitle      = tripTitleOf(exp)
 
   if (depositCents < 50) {
     return { success: false, error: 'Deposit amount is below Stripe minimum (€0.50)' }
@@ -378,130 +362,29 @@ export async function sendDepositLink(
   return { success: true, checkoutUrl: session.url! }
 }
 
-// ─── saveRichOffer ────────────────────────────────────────────────────────────
-
 /**
- * FA creates a rich personalised offer.
- * Generates a unique magic-link token, saves all offer fields, and sends the
- * offer email containing a link to /offers/[token].
+ * Guide row shown on an offer: the assigned guide first, else the guide who owns the
+ * inquiry's experience page. Null when neither resolves (callers fall back to
+ * GUIDE_NAME_FALLBACK). Not exported — this file is 'use server', so every export
+ * would become a client-callable action.
  */
-export async function saveRichOffer(
-  inquiryId: string,
-  params: RichOfferParams,
-): Promise<ActionResult & { offerUrl?: string }> {
-  const { userId } = await requireAdmin()
-  const {
-    totalPriceEur, depositEur, notes,
-    tripPlan, licenseInfo, licenseHeading, inclusions,
-    questions, refundReason,
-    photos, location, whatToBring,
-    schedule, locationLat, locationLng, locationZoom, locationGeoJson,
-  } = params
-
-  if (!Number.isFinite(totalPriceEur) || totalPriceEur <= 0) {
-    return { success: false, error: 'Total price must be greater than €0' }
-  }
-  if (!Number.isFinite(depositEur) || depositEur < 0.5) {
-    return { success: false, error: 'Deposit must be at least €0.50' }
-  }
-  if (depositEur > totalPriceEur) {
-    return { success: false, error: 'Deposit cannot exceed the total trip price' }
-  }
-
+async function resolveOfferGuide(
+  assignedGuideId: string | null,
+  exp: InquiryExperience | null,
+): Promise<{ full_name: string | null; bio: string | null; avatar_url: string | null } | null> {
   const svc = createServiceClient()
+  const candidates = [assignedGuideId, exp?.guideId ?? null]
 
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, status')
-    .eq('id', inquiryId)
-    .single()
-
-  if (inquiry == null) {
-    return { success: false, error: 'Inquiry not found' }
+  for (const guideId of candidates) {
+    if (guideId == null) continue
+    const { data } = await svc
+      .from('guides')
+      .select('full_name, bio, avatar_url')
+      .eq('id', guideId)
+      .maybeSingle()
+    if (data != null) return data
   }
-
-  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
-    return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
-  }
-
-  // Generate unique token (crypto.randomUUID is available in Node 19+/Edge)
-  const token = crypto.randomUUID().replace(/-/g, '')
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
-
-  const baseUrl  = env.NEXT_PUBLIC_APP_URL
-  const offerUrl = `${baseUrl}/offers/${token}`
-
-  const { error: updateError } = await svc
-    .from('inquiries')
-    .update({
-      offer_total_eur:         totalPriceEur,
-      offer_deposit_eur:       depositEur,
-      offer_notes:             notes?.trim() || null,
-      offer_trip_plan:         tripPlan?.trim() || null,
-      offer_license_info:      licenseInfo?.trim() || null,
-      offer_inclusions:        inclusions        as unknown as Json,
-      offer_questions:         questions         as unknown as Json,
-      offer_refund_reason:     refundReason?.trim() || null,
-      offer_photos:            photos            as unknown as Json,
-      offer_location:          location?.trim() || null,
-      offer_what_to_bring:     whatToBring       as unknown as Json,
-      offer_schedule:          schedule          as unknown as Json,
-      offer_license_heading:   licenseHeading?.trim() || null,
-      offer_location_lat:      locationLat,
-      offer_location_lng:      locationLng,
-      offer_location_zoom:     locationZoom,
-      offer_location_geojson:  locationGeoJson   as unknown as Json,
-      offer_options:           (params.options ?? null) as unknown as Json,
-      offer_token:             token,
-      offer_token_expires_at:  expiresAt,
-      offer_sent_at:           new Date().toISOString(),
-      stage_reached:           'offer_sent',
-    })
-    .eq('id', inquiryId)
-
-  if (updateError != null) {
-    console.error('[saveRichOffer] DB error:', updateError)
-    return { success: false, error: 'Failed to save offer' }
-  }
-
-  await sendRichOfferAnglerEmail({
-    to:              inquiry.angler_email,
-    anglerName:      inquiry.angler_name,
-    tripTitle:       'Your trip',
-    guideName:       'Your guide',
-    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
-    partySize:       inquiry.party_size ?? 1,
-    offerTotalEur:   totalPriceEur,
-    offerDepositEur: depositEur,
-    notes:           notes?.trim() || null,
-    offerUrl,
-    inquiryId,
-  })
-
-  // The angler now has a concrete offer in their inbox — that is what the status says.
-  // Re-saving an offer for an inquiry that is already there is not a new transition.
-  if (inquiry.status !== 'offer_presented') {
-    try {
-      await transition(svc, inquiryId, 'offer_presented', {
-        actor:   { kind: 'admin', id: userId },
-        reason:  'Offer sent to the angler',
-        channel: 'email',
-      })
-    } catch (error) {
-      console.error('[saveRichOffer] transition error:', error)
-      return {
-        success: false,
-        error:   error instanceof TransitionError
-          ? `Offer saved and sent, but the status could not be updated: ${error.message}`
-          : 'Offer saved and sent, but the status could not be updated',
-        offerUrl,
-      }
-    }
-  }
-
-  console.log(`[saveRichOffer] Rich offer saved for inquiry ${inquiryId} — total €${totalPriceEur}, deposit €${depositEur} — token ${token}`)
-
-  return { success: true, offerUrl }
+  return null
 }
 
 // ─── getOfferByToken ──────────────────────────────────────────────────────────
@@ -527,21 +410,15 @@ export async function getOfferByToken(token: string): Promise<OfferPageData | nu
     if (expires < new Date()) return null
   }
 
-  const guideId = (inquiry.assigned_guide_id as string | null) ?? null
-  const { data: guide } = guideId
-    ? await svc
-        .from('guides')
-        .select('full_name, bio, avatar_url')
-        .eq('id', guideId)
-        .single()
-    : { data: null }
+  const exp   = await getInquiryExperience(inquiry)
+  const guide = await resolveOfferGuide(inquiry.assigned_guide_id, exp)
 
   return {
     inquiryId:        inquiry.id,
     anglerName:       inquiry.angler_name,
     anglerCountry:    (inquiry.angler_country as string | null) ?? '',
-    tripTitle:        'Your trip',
-    guideName:        guide?.full_name ?? 'Your guide',
+    tripTitle:        tripTitleOf(exp),
+    guideName:        guide?.full_name ?? GUIDE_NAME_FALLBACK,
     guidePhotoUrl:    guide?.avatar_url ?? null,
     guideBio:         guide?.bio ?? null,
     requestedDates:   (inquiry.requested_dates as string[] | null) ?? [],
@@ -586,7 +463,7 @@ export async function submitOfferAnswers(
 
   const { data: inquiry } = await svc
     .from('inquiries')
-    .select('id, status, angler_email, angler_name, trip_id, party_size, offer_deposit_eur')
+    .select('id, status, angler_email, angler_name, trip_id, experience_page_id, party_size, offer_deposit_eur')
     .eq('id', inquiryId)
     .single()
 
@@ -610,6 +487,7 @@ export async function submitOfferAnswers(
   }
 
   const baseUrl = env.NEXT_PUBLIC_APP_URL
+  const exp     = await getInquiryExperience(inquiry)
 
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.create>>
   try {
@@ -622,7 +500,7 @@ export async function submitOfferAnswers(
             currency: 'eur',
             unit_amount: depositCents,
             product_data: {
-              name: 'Refundable Deposit — Your Trip',
+              name: `Refundable Deposit — ${tripTitleOf(exp)}`,
               description: `Secures your spot. The deposit is refundable — ${inquiry.party_size} person(s).`,
             },
           },
@@ -674,37 +552,6 @@ export async function submitOfferAnswers(
   }
 
   return { success: true, checkoutUrl: session.url! }
-}
-
-// ─── saveOffer (compatibility alias) ─────────────────────────────────────────
-
-/**
- * Legacy alias — used by the admin InquiryActionPanel.
- * Wraps saveRichOffer with the old minimal interface.
- */
-export async function saveOffer(
-  inquiryId: string,
-  params: { totalPriceEur: number; depositEur: number; notes: string | null },
-): Promise<ActionResult> {
-  return saveRichOffer(inquiryId, {
-    totalPriceEur:  params.totalPriceEur,
-    depositEur:     params.depositEur,
-    notes:          params.notes,
-    tripPlan:       null,
-    licenseInfo:    null,
-    inclusions:     [],
-    questions:      [],
-    refundReason:   null,
-    photos:         [],
-    location:       null,
-    whatToBring:    [],
-    schedule:       [],
-    licenseHeading: null,
-    locationLat:    null,
-    locationLng:    null,
-    locationZoom:   10,
-    locationGeoJson: null,
-  })
 }
 
 // ─── updateInquiryStatus ──────────────────────────────────────────────────────
@@ -806,196 +653,6 @@ export async function saveInternalDeal(
   revalidatePath('/admin/inquiries')
   console.log(`[saveInternalDeal] Inquiry ${inquiryId} — total ${params.dealCurrency} ${params.dealTotalEur}, commission ${params.dealCurrency} ${params.commissionEur}`)
   return { success: true }
-}
-
-// ─── sendMessageToAngler ──────────────────────────────────────────────────────
-
-/**
- * FA sends a plain-text message to the angler via email.
- * Stored in messages for audit trail.
- */
-export async function sendMessageToAngler(
-  inquiryId: string,
-  subject: string,
-  body: string,
-): Promise<ActionResult> {
-  await requireAdmin()
-  if (subject.trim() === '') return { success: false, error: 'Subject is required' }
-  if (body.trim() === '')    return { success: false, error: 'Message body is required' }
-
-  const svc = createServiceClient()
-
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('id, angler_name, angler_email, trip_id')
-    .eq('id', inquiryId)
-    .single()
-
-  if (inquiry == null) {
-    return { success: false, error: 'Inquiry not found' }
-  }
-
-  const { error: insertError } = await svc.from('messages').insert({
-    inquiry_id:  inquiryId,
-    channel:     'email',
-    direction:   'outbound',
-    counterpart: 'angler',
-    subject:     subject.trim(),
-    body:        body.trim(),
-    status:      'sent',
-    drafted_by:  'admin',
-    occurred_at: new Date().toISOString(),
-  })
-
-  if (insertError != null) {
-    console.error('[sendMessageToAngler] DB error:', insertError)
-  }
-
-  await sendInquiryMessageAnglerEmail({
-    to:          inquiry.angler_email,
-    anglerName:  inquiry.angler_name,
-    subject:     subject.trim(),
-    body:        body.trim(),
-    tripTitle:   'Your trip',
-    inquiryId,
-  })
-
-  console.log(`[sendMessageToAngler] Message sent for inquiry ${inquiryId} — subject: "${subject.trim()}"`)
-
-  return { success: true }
-}
-
-// ─── logLeadMessage ───────────────────────────────────────────────────────────
-
-/**
- * FA logs a manual communication with a client or guide.
- * No email is sent — this is purely an internal CRM record.
- * Also updates last_contact_at on the inquiry.
- */
-
-export type LeadMessage = {
-  id:           string
-  inquiry_id:   string
-  direction:    'inbound' | 'outbound'
-  channel:      'whatsapp' | 'email' | 'note'
-  contact_type: 'client' | 'guide'
-  contact_name: string
-  content:      string
-  created_at:   string
-  created_by:   string
-}
-
-export interface LogLeadMessageParams {
-  direction:   'inbound' | 'outbound'
-  channel:     'whatsapp' | 'email' | 'note'
-  contactType: 'client' | 'guide'
-  contactName: string
-  content:     string
-  createdBy?:  string
-}
-
-export async function logLeadMessage(
-  inquiryId: string,
-  params: LogLeadMessageParams,
-): Promise<ActionResult> {
-  await requireAdmin()
-  if (params.content.trim()     === '') return { success: false, error: 'Content is required' }
-  if (params.contactName.trim() === '') return { success: false, error: 'Contact name is required' }
-
-  const svc = createServiceClient()
-
-  // 'note' channel not supported in messages table — skip DB insert but still update last_contact_at
-  if (params.channel !== 'note') {
-    const { error } = await svc.from('messages').insert({
-      inquiry_id:  inquiryId,
-      direction:   params.direction,
-      channel:     params.channel as 'email' | 'whatsapp' | 'instagram',
-      counterpart: params.contactType === 'client' ? 'angler' : 'guide',
-      body:        params.content.trim(),
-      status:      params.direction === 'inbound' ? 'received' : 'sent',
-      drafted_by:  params.direction === 'inbound' ? null : 'admin',
-      occurred_at: new Date().toISOString(),
-    })
-
-    if (error != null) {
-      console.error('[logLeadMessage] DB error:', error)
-      return { success: false, error: error.message }
-    }
-  }
-
-  // Bump last_contact_at on the parent inquiry
-  await svc
-    .from('inquiries')
-    .update({ last_contact_at: new Date().toISOString() })
-    .eq('id', inquiryId)
-
-  console.log(`[logLeadMessage] ${params.direction} ${params.channel} logged for inquiry ${inquiryId}`)
-  return { success: true }
-}
-
-// ─── bulkLogLeadMessages ──────────────────────────────────────────────────────
-
-/**
- * Bulk-insert multiple messages in one transaction.
- * Used by the conversation importer (paste WhatsApp/email thread).
- * Each message may carry its own createdAt for historical imports.
- * Content is stored as Markdown for AI readability.
- */
-
-export interface BulkLeadMessage {
-  direction:   'inbound' | 'outbound'
-  channel:     'whatsapp' | 'email' | 'note'
-  contactType: 'client' | 'guide'
-  contactName: string
-  content:     string          // Markdown-formatted text
-  createdAt?:  string          // ISO — use parsed timestamp if available
-  createdBy?:  string
-}
-
-export async function bulkLogLeadMessages(
-  inquiryId: string,
-  messages:  BulkLeadMessage[],
-): Promise<ActionResult & { count?: number }> {
-  await requireAdmin()
-  if (messages.length === 0) return { success: false, error: 'No messages to save' }
-
-  const svc = createServiceClient()
-
-  const now = new Date().toISOString()
-  // Filter out 'note' channel — not supported in messages table
-  const filteredMessages = messages.filter(m => m.channel !== 'note')
-  const rows = filteredMessages.map(m => ({
-    inquiry_id:  inquiryId,
-    direction:   m.direction,
-    channel:     m.channel as 'email' | 'whatsapp' | 'instagram',
-    counterpart: m.contactType === 'client' ? 'angler' : 'guide',
-    body:        m.content.trim(),
-    status:      m.direction === 'inbound' ? 'received' : 'sent',
-    drafted_by:  m.direction === 'inbound' ? null : 'admin',
-    occurred_at: m.createdAt ?? now,
-  }))
-
-  if (rows.length > 0) {
-    const { error } = await svc.from('messages').insert(rows)
-    if (error != null) {
-      console.error('[bulkLogLeadMessages] DB error:', error)
-      return { success: false, error: error.message }
-    }
-  }
-
-  // Bump last_contact_at to the most recent message
-  const latestAt = messages
-    .map(m => m.createdAt ?? new Date().toISOString())
-    .sort()
-    .at(-1) ?? new Date().toISOString()
-
-  await svc
-    .from('inquiries')
-    .update({ last_contact_at: latestAt })
-    .eq('id', inquiryId)
-
-  console.log(`[bulkLogLeadMessages] Saved ${messages.length} messages for inquiry ${inquiryId}`)
-  return { success: true, count: messages.length }
 }
 
 // ─── updateNextAction ─────────────────────────────────────────────────────────
@@ -1419,138 +1076,6 @@ export async function saveGuideOfferResponse(
   return { success: true }
 }
 
-// ─── saveOfferDraft ───────────────────────────────────────────────────────────
-
-/**
- * Save a rich offer draft WITHOUT sending the email to the angler.
- * Used by FA to build + preview the offer before sending.
- * Does NOT set offer_sent_at — call sendOfferEmail() to send.
- */
-export async function saveOfferDraft(
-  inquiryId: string,
-  params: RichOfferParams,
-): Promise<ActionResult & { offerUrl?: string }> {
-  await requireAdmin()
-  const {
-    totalPriceEur, depositEur, notes,
-    tripPlan, licenseInfo, licenseHeading, inclusions,
-    questions, refundReason,
-    photos, location, whatToBring,
-    schedule, locationLat, locationLng, locationZoom, locationGeoJson,
-  } = params
-
-  if (!Number.isFinite(totalPriceEur) || totalPriceEur <= 0) {
-    return { success: false, error: 'Total price must be greater than €0' }
-  }
-  if (!Number.isFinite(depositEur) || depositEur < 0.5) {
-    return { success: false, error: 'Deposit must be at least €0.50' }
-  }
-  if (depositEur > totalPriceEur) {
-    return { success: false, error: 'Deposit cannot exceed the total trip price' }
-  }
-
-  const svc = createServiceClient()
-
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('id, status, offer_token')
-    .eq('id', inquiryId)
-    .single()
-
-  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
-
-  if (['paid', 'handed_over', 'completed', 'cancelled'].includes(inquiry.status)) {
-    return { success: false, error: `Cannot modify offer — inquiry is ${inquiry.status}` }
-  }
-
-  // Reuse existing token if available, otherwise generate a new one
-  const token     = (inquiry.offer_token as string | null) ?? crypto.randomUUID().replace(/-/g, '')
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
-  const offerUrl  = `${env.NEXT_PUBLIC_APP_URL}/offers/${token}`
-
-  const { error: updateError } = await svc
-    .from('inquiries')
-    .update({
-      offer_total_eur:         totalPriceEur,
-      offer_deposit_eur:       depositEur,
-      offer_notes:             notes?.trim() || null,
-      offer_trip_plan:         tripPlan?.trim() || null,
-      offer_license_info:      licenseInfo?.trim() || null,
-      offer_inclusions:        inclusions        as unknown as Json,
-      offer_questions:         questions         as unknown as Json,
-      offer_refund_reason:     refundReason?.trim() || null,
-      offer_photos:            photos            as unknown as Json,
-      offer_location:          location?.trim() || null,
-      offer_what_to_bring:     whatToBring       as unknown as Json,
-      offer_schedule:          schedule          as unknown as Json,
-      offer_license_heading:   licenseHeading?.trim() || null,
-      offer_location_lat:      locationLat,
-      offer_location_lng:      locationLng,
-      offer_location_zoom:     locationZoom,
-      offer_location_geojson:  locationGeoJson   as unknown as Json,
-      offer_options:           (params.options ?? null) as unknown as Json,
-      offer_token:             token,
-      offer_token_expires_at:  expiresAt,
-      // NOTE: offer_sent_at is intentionally NOT set here
-    })
-    .eq('id', inquiryId)
-
-  if (updateError != null) {
-    console.error('[saveOfferDraft] DB error:', updateError)
-    return { success: false, error: 'Failed to save offer draft' }
-  }
-
-  console.log(`[saveOfferDraft] Draft saved for inquiry ${inquiryId} — token ${token}`)
-  return { success: true, offerUrl }
-}
-
-// ─── sendOfferEmail ───────────────────────────────────────────────────────────
-
-/**
- * Send the offer email to the angler for an already-saved draft.
- * Sets offer_sent_at to now.
- */
-export async function sendOfferEmail(
-  inquiryId: string,
-): Promise<ActionResult & { offerUrl?: string }> {
-  await requireAdmin()
-  const svc = createServiceClient()
-
-  const { data: inquiry } = await svc
-    .from('inquiries')
-    .select('id, angler_name, angler_email, requested_dates, party_size, trip_id, offer_token, offer_total_eur, offer_deposit_eur, offer_notes, status')
-    .eq('id', inquiryId)
-    .single()
-
-  if (inquiry == null) return { success: false, error: 'Inquiry not found' }
-  if (inquiry.offer_token == null) return { success: false, error: 'No offer draft — save a draft first' }
-
-  const offerUrl = `${env.NEXT_PUBLIC_APP_URL}/offers/${inquiry.offer_token}`
-
-  await sendRichOfferAnglerEmail({
-    to:              inquiry.angler_email,
-    anglerName:      inquiry.angler_name,
-    tripTitle:       'Your trip',
-    guideName:       'Your guide',
-    requestedDates:  (inquiry.requested_dates as string[] | null) ?? [],
-    partySize:       inquiry.party_size ?? 1,
-    offerTotalEur:   Number(inquiry.offer_total_eur ?? 0),
-    offerDepositEur: Number(inquiry.offer_deposit_eur ?? 0),
-    notes:           inquiry.offer_notes ?? null,
-    offerUrl,
-    inquiryId,
-  })
-
-  await svc
-    .from('inquiries')
-    .update({ offer_sent_at: new Date().toISOString(), stage_reached: 'offer_sent' })
-    .eq('id', inquiryId)
-
-  console.log(`[sendOfferEmail] Offer email sent for inquiry ${inquiryId}`)
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  return { success: true, offerUrl }
-}
-
 // ─── acceptOffer ──────────────────────────────────────────────────────────────
 
 /**
@@ -1661,30 +1186,6 @@ export async function declineOffer(
   return { success: true }
 }
 
-// ─── updateInquiryGuide ───────────────────────────────────────────────────────
-
-/**
- * FA overrides which guide is shown on the offer page.
- * Silently sets assigned_guide_id without sending any notification.
- * Pass null to revert to the trip's default guide.
- */
-export async function updateInquiryGuide(
-  inquiryId: string,
-  guideId: string | null,
-): Promise<ActionResult> {
-  await requireAdmin()
-  const svc = createServiceClient()
-  const countryPatch = await tripCountryPatchFromGuide(inquiryId, guideId)
-  const { error } = await svc
-    .from('inquiries')
-    .update({ assigned_guide_id: guideId, ...countryPatch })
-    .eq('id', inquiryId)
-  if (error != null) return { success: false, error: error.message }
-  revalidatePath('/admin/inquiries/' + inquiryId)
-  console.log(`[updateInquiryGuide] Inquiry ${inquiryId} → guide ${guideId ?? '(default)'}`)
-  return { success: true }
-}
-
 // ─── getInquiryConfirmation ───────────────────────────────────────────────────
 
 export type InquiryConfirmation = {
@@ -1706,14 +1207,14 @@ export async function getInquiryConfirmation(id: string): Promise<InquiryConfirm
 
   const { data: inquiry } = await svc
     .from('inquiries')
-    .select('angler_name, deposit_amount, deposit_paid_at, trip_id')
+    .select('angler_name, deposit_amount, deposit_paid_at, trip_id, experience_page_id')
     .eq('id', id)
     .single()
 
   if (inquiry == null) return null
 
   return {
-    tripTitle:         'Your trip',
+    tripTitle:         tripTitleOf(await getInquiryExperience(inquiry)),
     anglerName:        inquiry.angler_name,
     depositAmountEur:  Number(inquiry.deposit_amount ?? 0),
     depositPaidAt:     inquiry.deposit_paid_at ?? null,

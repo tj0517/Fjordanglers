@@ -3,49 +3,11 @@
 /**
  * image-crop.tsx
  *
- * ImageCropModal  — drag + zoom crop modal with live card-shaped preview
- * CropPreview     — small static thumbnail of a saved crop
+ * ImageCropModal — drag + zoom crop modal with live card-shaped preview
  */
 
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { MapPin, LayoutGrid, X, ZoomOut, ZoomIn } from 'lucide-react'
-
-// ─── CropPreview (static) ─────────────────────────────────────────────────────
-
-export function CropPreview({
-  url,
-  aspect = 16 / 9,
-  size   = 120,
-  label,
-}: {
-  url:     string
-  aspect?: number
-  size?:   number
-  label?:  string
-}) {
-  const w = size
-  const h = Math.round(size / aspect)
-  return (
-    <div>
-      {label != null && (
-        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] f-body mb-1.5"
-          style={{ color: 'rgba(10,46,77,0.4)' }}>
-          {label}
-        </p>
-      )}
-      <div className="overflow-hidden flex-shrink-0" style={{
-        width: w, height: h,
-        borderRadius: aspect === 1 ? '50%' : '10px',
-        background: 'rgba(10,46,77,0.06)',
-        border: '1px solid rgba(10,46,77,0.1)',
-      }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="Crop preview"
-          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-      </div>
-    </div>
-  )
-}
 
 // ─── Shared preview helpers ───────────────────────────────────────────────────
 
@@ -237,6 +199,9 @@ export function ImageCropModal({ src, aspect, onConfirm, onCancel }: ImageCropMo
 
   const [blobUrl,   setBlobUrl]  = useState('')
   const [loaded,    setLoaded]   = useState(false)
+  /** naturalWidth of the loaded image — kept in state, not read off the ref during
+   *  render (react-hooks/refs). Set in handleLoad together with `loaded`. */
+  const [naturalW,  setNaturalW] = useState(0)
   const [scale,     setScale]    = useState(1)
   const [tx,        setTx]       = useState(0)
   const [ty,        setTy]       = useState(0)
@@ -298,6 +263,7 @@ export function ImageCropModal({ src, aspect, onConfirm, onCancel }: ImageCropMo
     )
     setFitScale(fit)
     setMin(fit * 0.3)   // allow zooming out to ~30% of fill — shows full image
+    setNaturalW(img.naturalWidth)
     setScale(fit); setTx(cx); setTy(cy); setLoaded(true)
   }, [CROP_W, CROP_H, clampPos])
 
@@ -369,8 +335,8 @@ export function ImageCropModal({ src, aspect, onConfirm, onCancel }: ImageCropMo
     }, 'image/jpeg', 0.94)
   }
 
-  const imgDispW = loaded && imgRef.current != null ? imgRef.current.naturalWidth * scale : 0
-  const natW     = imgRef.current?.naturalWidth ?? 0
+  const imgDispW = loaded ? naturalW * scale : 0
+  const natW     = naturalW
 
   return (
     <div

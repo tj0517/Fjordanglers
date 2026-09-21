@@ -6,6 +6,7 @@
  */
 
 import { createServiceClient } from '@/lib/supabase/server'
+import { findGuideIdsByPhone } from '@/lib/guide-contacts'
 
 /**
  * Normalise a phone number to a consistent format for comparison.
@@ -16,42 +17,12 @@ import { createServiceClient } from '@/lib/supabase/server'
  *   "48123456789"     → "+48123456789"  (Meta sends without +)
  *   "+48 123-456-789" → "+48123456789"
  */
-export function normalisePhone(raw: string): string {
+function normalisePhone(raw: string): string {
   // Remove all non-digit characters except leading +
   const stripped = raw.replace(/[^\d+]/g, '')
   // Ensure leading +
   if (stripped.startsWith('+')) return stripped
   return '+' + stripped
-}
-
-/**
- * Find the most recent non-cancelled inquiry matching the given phone number.
- * Returns the inquiry id or null if no match.
- */
-export async function matchInquiryByPhone(phone: string): Promise<string | null> {
-  const normalised = normalisePhone(phone)
-  const supabase = createServiceClient()
-
-  // Query with normalised phone — strip non-digits from DB value via replace
-  // We fetch recent inquiries and compare normalised values in JS to avoid
-  // DB-side function overhead.
-  const { data, error } = await supabase
-    .from('inquiries')
-    .select('id, angler_phone')
-    .not('status', 'in', '("cancelled","refunded")')
-    .not('angler_phone', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(500)
-
-  if (error || !data) return null
-
-  for (const row of data as Array<{ id: string; angler_phone: string | null }>) {
-    if (!row.angler_phone) continue
-    const normalised_db = normalisePhone(row.angler_phone)
-    if (normalised_db === normalised) return row.id
-  }
-
-  return null
 }
 
 // ─── matchInboundPhone ────────────────────────────────────────────────────────
@@ -64,7 +35,7 @@ export interface InboundPhoneMatch {
 
 /**
  * Match an inbound WA phone number to open inquiries.
- * Checks (1) inquiries.angler_phone and (2) guides.phone_e164 on open inquiries
+ * Checks (1) inquiries.angler_phone and (2) guide_contacts.phone_e164 on open inquiries
  * where the guide is assigned or was contacted.
  *
  * Returns [] when no match, a single-element array for a clean match,
@@ -93,24 +64,23 @@ export async function matchInboundPhone(phone: string): Promise<InboundPhoneMatc
     }
   }
 
-  // 2. Guide phone match — find guides with this phone_e164
-  const { data: guides } = await supabase
-    .from('guides')
-    .select('id')
-    .eq('phone_e164', normalised)
+  // 2. Guide phone match — find guides with this number (guide_contacts, service_role only)
+  const guideIds = await findGuideIdsByPhone(normalised)
 
-  for (const guide of (guides ?? []) as Array<{ id: string }>) {
-    // Inquiries where guide is assigned
+  for (const guideId of guideIds) {
+    // Inquiries where the guide is assigned (assigned_guide_id — what the admin sets) or
+    // is the owner of the experience page it came from (guide_id — written by createInquiry).
+    // guideId is a uuid read from the database, so it is safe inside the .or() string.
     const { data: assigned } = await supabase
       .from('inquiries')
       .select('id')
-      .eq('guide_id', guide.id)
+      .or(`guide_id.eq.${guideId},assigned_guide_id.eq.${guideId}`)
       .not('status', 'in', '("cancelled","refunded")')
 
     for (const inq of (assigned ?? []) as Array<{ id: string }>) {
       if (!seen.has(inq.id)) {
         seen.add(inq.id)
-        matches.push({ inquiryId: inq.id, counterpart: 'guide', counterpartId: guide.id })
+        matches.push({ inquiryId: inq.id, counterpart: 'guide', counterpartId: guideId })
       }
     }
 
@@ -118,7 +88,7 @@ export async function matchInboundPhone(phone: string): Promise<InboundPhoneMatc
     const { data: msgs } = await supabase
       .from('messages')
       .select('inquiry_id')
-      .eq('counterpart_id', guide.id)
+      .eq('counterpart_id', guideId)
       .eq('counterpart', 'guide')
       .eq('direction', 'outbound')
 
@@ -133,7 +103,7 @@ export async function matchInboundPhone(phone: string): Promise<InboundPhoneMatc
       for (const inq of (openInqs ?? []) as Array<{ id: string }>) {
         if (!seen.has(inq.id)) {
           seen.add(inq.id)
-          matches.push({ inquiryId: inq.id, counterpart: 'guide', counterpartId: guide.id })
+          matches.push({ inquiryId: inq.id, counterpart: 'guide', counterpartId: guideId })
         }
       }
     }

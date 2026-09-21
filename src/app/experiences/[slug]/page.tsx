@@ -17,6 +17,7 @@ import type { TripOption } from '@/components/trips/TripOptionsAccordion'
 import { formatPrice, currencySymbol } from '@/lib/format-price'
 import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
+import { availabilityWindow } from '@/lib/availability-window'
 
 export const revalidate = 3600
 
@@ -128,8 +129,7 @@ export default async function ExperiencePublicPage({
   const maxGuests = 12
 
   if (page.trip_id && page.guide_id) {
-    const today     = new Date().toISOString().slice(0, 10)
-    const yearAhead = new Date(Date.now() + 366 * 86_400_000).toISOString().slice(0, 10)
+    const { from: today, to: yearAhead } = availabilityWindow()
 
     const { data: availRows } = await svc
       .from('guide_unavailable_dates')

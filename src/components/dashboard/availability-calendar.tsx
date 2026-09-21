@@ -46,7 +46,7 @@ interface Props {
 }
 
 export function AvailabilityCalendar({ initialDates }: Props) {
-  const today = useMemo(todayISO, [])
+  const today = useMemo(() => todayISO(), [])
   const now   = new Date()
 
   // Calendar state
@@ -161,14 +161,12 @@ export function AvailabilityCalendar({ initialDates }: Props) {
     ...Array.from({ length: numDays }, (_, i) => i + 1),
   ]
 
-  const blockedThisMonth = useMemo(() => {
-    let n = 0
-    for (let d = 1; d <= numDays; d++) {
-      const iso = isoDate(viewYear, viewMonth, d)
-      if (iso >= today && blocked.has(iso)) n++
-    }
-    return n
-  }, [blocked, viewYear, viewMonth, numDays, today])
+  // Plain computation — at most 31 iterations; the React Compiler memoises it.
+  let blockedThisMonth = 0
+  for (let d = 1; d <= numDays; d++) {
+    const iso = isoDate(viewYear, viewMonth, d)
+    if (iso >= today && blocked.has(iso)) blockedThisMonth++
+  }
 
   const canOpen = rangeFrom && rangeTo && rangeFrom <= rangeTo
 

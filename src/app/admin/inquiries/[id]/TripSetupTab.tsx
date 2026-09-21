@@ -5,7 +5,6 @@ import { saveTripDetails } from '@/actions/inquiries'
 import { extractTripDetailsAI } from '@/actions/ai'
 import type { TripDetails } from '@/actions/inquiries'
 
-export type { TripDetails }
 
 // ─── Date flexibility options ─────────────────────────────────────────────────
 

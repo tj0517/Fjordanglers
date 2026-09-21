@@ -1,0 +1,43 @@
+# FA-1.08 — dowód NA CZERWONO: joby `knip` i `check` (krok lint) blokują PR
+# PR: https://github.com/tj0517/Fjordanglers/pull/73 · gałąź chore/dead-code-2-components-routes
+# 2026-09-20T16:33Z
+
+## 1. Przebieg ZIELONY (commit 493fab19 — stan paczki)
+run 35522580463 — https://github.com/tj0517/Fjordanglers/actions/runs/35522580463
+wynik: success
+  db	success
+  sync	success
+  check	success
+  knip	success
+
+## 2. Commit-dowód (e8c9b56c) — dwie celowe usterki
+  a) nieużywany eksport `redProofUnusedExport` w src/lib/availability-window.ts  → job knip
+  b) surowy apostrof w JSX w src/app/forgot-password/page.tsx:117 ("we'll")      → krok lint w jobie check
+
+## 3. Przebieg CZERWONY
+run 35522844531 — https://github.com/tj0517/Fjordanglers/actions/runs/35522844531
+wynik: failure
+  knip	failure
+  sync	success
+  db	success
+  check	failure
+
+### wycinek logów (gh run view 35522844531 --log-failed)
+knip  |  knip (bramka od FA-1.08)  |  2026-09-20T16:29:21.2263282Z Unused exports (1)
+knip  |  knip (bramka od FA-1.08)  |  2026-09-20T16:29:21.2271423Z redProofUnusedExport  function  src/lib/availability-window.ts:21:17
+knip  |  knip (bramka od FA-1.08)  |  2026-09-20T16:29:21.2721127Z ##[error]Process completed with exit code 1.
+check  |  lint (bramka od FA-1.08)  |  2026-09-20T16:30:02.5120746Z ##[error]  117:40  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+check  |  lint (bramka od FA-1.08)  |  2026-09-20T16:30:02.5232900Z ✖ 67 problems (1 error, 66 warnings)
+check  |  lint (bramka od FA-1.08)  |  2026-09-20T16:30:02.6502204Z ##[error]Process completed with exit code 1.
+
+## 4. Commit-dowód wycofany (revert 41768f48)
+run 35523248174 — https://github.com/tj0517/Fjordanglers/actions/runs/35523248174
+wynik: success
+  check	success
+  sync	success
+  knip	success
+  db	success
+
+Czyli: ten sam workflow jest zielony na stanie paczki, czerwony na commicie z jedną
+nieużywaną rzeczą i jednym apostrofem, i znów zielony po wycofaniu. Bramka działa
+w obie strony, nie tylko "nie psuje".

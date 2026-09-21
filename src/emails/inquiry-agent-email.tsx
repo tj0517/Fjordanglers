@@ -30,4 +30,3 @@ export function InquiryAgentEmail({
   )
 }
 
-export default InquiryAgentEmail

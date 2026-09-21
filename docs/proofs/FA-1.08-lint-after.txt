@@ -1,0 +1,182 @@
+# FA-1.08 — pnpm lint, stan PO zmianach
+# commit kodu: 7bdd8739+ (working tree) · polecenie: pnpm lint · 2026-09-20T16:22Z
+# WEJŚCIE (docs/proofs/FA-1.08-lint-before.txt): 35 błędów, 75 ostrzeżeń
+# WYJŚCIE: 0 błędów, 66 ostrzeżeń · exit 0
+#
+# Uwaga: skrypt `lint` dostał w tej paczce flagę --report-unused-disable-directives,
+# więc nieużywana dyrektywa eslint-disable jest od teraz błędem (D1: "nieużywane
+# eslint-disable → usunięcie" ma się czym trzymać). Cztery takie znalezione i usunięte.
+
+$ pnpm lint; echo $?
+
+> fjordanglers@0.1.0 lint /Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers
+> eslint --report-unused-disable-directives
+
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/scripts/proofs/fa-1.12-ui-walk.spec.ts
+  43:7  warning  'LOCAL_ANON_KEY' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/scripts/proofs/stubs/next-cache.mts
+  1:32  warning  '_path' is defined but never used  @typescript-eslint/no-unused-vars
+  1:47  warning  '_type' is defined but never used  @typescript-eslint/no-unused-vars
+  2:31  warning  '_tag' is defined but never used   @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/actions/__tests__/messages-thread.test.ts
+   48:23  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+  181:18  warning  '_data' is defined but never used           @typescript-eslint/no-unused-vars
+  185:18  warning  '_cols' is defined but never used           @typescript-eslint/no-unused-vars
+  185:33  warning  '_opts' is defined but never used           @typescript-eslint/no-unused-vars
+  243:18  warning  '_data' is defined but never used           @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/(public)/blog/page.tsx
+  14:7  warning  'CATEGORY_COLORS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/(public)/guides/[id]/page.tsx
+  7:10  warning  'heroFull' is defined but never used   @typescript-eslint/no-unused-vars
+  7:31  warning  'cardThumb' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/ads/AdsCharts.tsx
+  27:10  warning  'plnFormatter' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/finances/FinancesClient.tsx
+  15:10  warning  'toMonthlyPln' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/forms/[id]/page.tsx
+  3:21  warning  'Copy' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/guides/[id]/page.tsx
+  22:10  warning  'SectionCard' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/admin/inquiries/unmatched/UnmatchedPageClient.tsx
+  61:7  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/api/webhooks/__tests__/email-inbound-unmatched.test.ts
+  48:18  warning  '_row' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/api/webhooks/__tests__/stripe-deposit.test.ts
+  171:14  warning  'table' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/guide-intake/[token]/IntakeFormClient.tsx
+  176:3  warning  'idx' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/cookie-policy/page.tsx
+   3:8   warning  'Image' is defined but never used       @typescript-eslint/no-unused-vars
+  51:10  warning  'BulletList' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/legal-notice/page.tsx
+  2:8  warning  'Link' is defined but never used   @typescript-eslint/no-unused-vars
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/privacy-policy/page.tsx
+  2:8  warning  'Link' is defined but never used   @typescript-eslint/no-unused-vars
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/legal/terms-of-service/page.tsx
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/trips/exp-page-map-section.tsx
+  165:3  warning  'hovered' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/app/trips/exp-page-map-view.tsx
+  300:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/admin/link-guide-button.tsx
+  21:52  warning  'inviteEmail' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/TripBriefCard.tsx
+  39:33  warning  'anglerName' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/availability-calendar.tsx
+  85:9  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  93:5  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/profile-edit-form.tsx
+  200:29  warning  'setGoogleUrl' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  201:29  warning  'setGoogleRating' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  202:29  warning  'setGoogleReviewCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/sidenav.tsx
+  29:7  warning  'contentItems' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/dashboard/terms-gate.tsx
+  16:44  warning  'initialMarketingConsent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/inquiry/InquiryWidget.tsx
+  348:6   warning  React Hook useCallback has missing dependencies: 'country' and 'tripTitle'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  953:44  warning  '_tripId' is defined but never used                                                                                             @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/trips/location-picker-map.tsx
+  133:6  warning  React Hook useEffect has missing dependencies: 'existingArea', 'map', and 'onAreaChange'. Either include them or remove the dependency array. If 'onAreaChange' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/components/ui/cookie-banner.tsx
+  64:39  warning  '_gtmId' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/booking-confirmed-guide.tsx
+  2:56  warning  'labelCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:94  warning  'successBox' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/deposit-confirmed-angler.tsx
+  2:56  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/deposit-confirmed-fa.tsx
+  2:56  warning  'labelCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:94  warning  'successBox' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/deposit-link-angler.tsx
+  2:76  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:87  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/inquiry-received-angler.tsx
+  2:56  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/emails/inquiry-received-fa.tsx
+  2:76  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:87  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/channels/email.ts
+  55:19  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/channels/instagram.ts
+  20:19  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+  24:14  warning  '_params' is defined but never used         @typescript-eslint/no-unused-vars
+  31:16  warning  '_raw' is defined but never used            @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/events/emit.test.ts
+  9:10  warning  '_table' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/inquiries/qualified.test.ts
+  1:10  warning  'vi' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/tymonjezionek/Desktop/fjordAnglers/web/fjordanglers/src/lib/inquiries/state.test.ts
+  55:16  warning  '_col' is defined but never used    @typescript-eslint/no-unused-vars
+  55:30  warning  '_val' is defined but never used    @typescript-eslint/no-unused-vars
+  60:16  warning  '_idCol' is defined but never used  @typescript-eslint/no-unused-vars
+  60:32  warning  '_id' is defined but never used     @typescript-eslint/no-unused-vars
+
+✖ 66 problems (0 errors, 66 warnings)
+
+0
+
+================ podział 35 błędów wejściowych ================
+znika z martwym kodem            0   (żaden z 35 nie siedział w pliku usuniętym w tej paczce)
+naprawa składniowa              12   10× react/no-unescaped-entities (&apos; / &quot;, ten sam glif)
+                                      1× prefer-const (InquiryWidget buildBlockedSet — helper potem usunięty jako martwy)
+                                      1× @typescript-eslint/no-require-imports (fa-1.12-ui-walk.spec.ts)
+parse error                      1   whatsapp-bridge/poll-emails.mjs — plik nie parsował się w ogóle
+react-hooks/*                   22   refs 9 (image-crop 8, nav 1), set-state-in-effect 3,
+                                      preserve-manual-memoization 5, static-components 2,
+                                      purity 2, use-memo 1
+                                     (uzupełnienie tj mówiło 21 — faktyczny odczyt to 22)
+────────────────────────────────────
+razem                           35
+
+Kaskada: react-hooks to reguły kompilatora Reacta — kompilator przerywa analizę
+komponentu po pierwszym błędzie, więc naprawa jednego odsłania następny w tym samym
+pliku. Ponad 35 z wejścia doszły w trakcie: availability-calendar (preserve-manual-
+memoization po naprawie use-memo), nav.tsx (set-state-in-effect po usunięciu refa),
+ExperienceTabLayout (set-state-in-effect po usunięciu nieużywanej dyrektywy).
+Wszystkie naprawione — końcowy odczyt to 0, nie "35 naprawionych".
