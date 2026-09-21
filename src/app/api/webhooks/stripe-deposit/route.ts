@@ -84,6 +84,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
 
   // Resolve metadata: directly from session (Checkout Session path),
   // or from the payment link when session.metadata is empty (Payment Link path — D1).
+  //
+  // Note (D3 pętla, 21 IX 2026, API 2026-02-25.clover): Stripe copies payment link
+  // metadata onto the session, so session.metadata was populated in the live test.
+  // The paymentLinks.retrieve branch below is a fallback for older API versions or
+  // future Stripe behaviour changes — the logic is correct regardless of which path
+  // delivers the metadata.
   let metadata: Stripe.Metadata | null = session.metadata
 
   if (metadata?.payment_type == null) {

@@ -28,8 +28,10 @@ owner: tj
 - `src/actions/inquiries.ts` (~317, ~656) — `sendDepositLink`: `checkout.sessions.create`
   z `metadata.payment_type='inquiry_deposit'` i `inquiry_id` **na sesji**
 - `src/actions/messages.ts` (~595–675) — `createPaymentLink` z FA-1.12: `paymentLinks.create`
-  z metadanymi **na linku**; sesja powstała z payment linku ma puste `session.metadata`,
-  więc filtr z linii 70 ją odrzuca
+  z metadanymi **na linku**; przy API 2026-02-25.clover Stripe **kopiuje** metadane linku
+  na sesję, więc `session.metadata` jest wypełnione; filtr z linii 70 działa przez
+  `session.metadata`, a nie przez `paymentLinks.retrieve`; gałąź D1 (retrieve) pozostaje
+  jako zabezpieczenie na wypadek innej wersji API lub zmiany zachowania Stripe
 - `src/lib/env.ts:41,47,51` — `STRIPE_WEBHOOK_SECRET` (wymagany), `STRIPE_CONNECT_WEBHOOK_SECRET`
   i `STRIPE_WEBHOOK_SECRET_DEPOSIT` (oba opcjonalne, z fallbackiem)
 - `docs/deferred-tasks.md` — wiersze: FA-1.12 „obsługa sesji `payment_link`", FA-1.12 „wyścig
@@ -58,6 +60,10 @@ na `/api/webhooks/stripe-deposit`, trasa rozpoznaje sesję niezależnie od tego,
 z Checkout Session czy z payment linku, zapisuje `deposit_paid_at` atomowo i emituje
 `payment.received`. Bez tego `/admin/weekly`, `/admin/finances` i strona potwierdzenia dla
 klienta pokazują zera niezależnie od tego, ile wpłat faktycznie przyszło.
+
+**Korekta po D3 (21 IX 2026):** przyczyną zer nie były metadane (te działały przez `session.metadata`
+przy API 2026-02-25.clover), lecz brak endpointu Stripe celującego w `/api/webhooks/stripe-deposit`.
+Kod D1 (gałąź `paymentLinks.retrieve`) jest zabezpieczeniem, a nie naprawą obserwowanego błędu.
 
 ## Decyzje tj (21 IX 2026)
 **D1 = (b):** obie ścieżki zostają. Webhook: gdy `session.metadata` nie ma `payment_type`/
@@ -94,6 +100,9 @@ tylko do sprawdzenia podpisu/200.
       `deposit_paid_at` ustawione, `payment.received` w `inquiry_events`, status przez
       `transition()`. **Na czerwono:** ten sam fixture na kodzie sprzed poprawki → cichy `return`,
       zero zapisów; zrzut obu przebiegów w raporcie.
+      _(Uwaga po D3: gałąź D1 `paymentLinks.retrieve` jest zabezpieczeniem — w D3 Stripe przy
+      API 2026-02-25.clover kopiował metadane na sesję, więc pętla przeszła przez `session.metadata`.
+      Red proof D1 pozostaje ważny: testuje gałąź na inne wersje API / zmiany zachowania Stripe.)_
 - [ ] Test jednostkowy: fixture sesji z payment linku (puste `session.metadata`, `session.payment_link` ustawione, zamockowany odczyt linku z metadanymi) → `deposit_paid_at` ustawione, `payment.received` w `inquiry_events`, status przez `transition()`. Na czerwono: ten sam fixture na kodzie sprzed poprawki → cichy return, zero zapisów. Zrzut obu przebiegów.
 - [ ] Test: sesja z payment linku, metadane nie mają `payment_type='inquiry_deposit'` → zero zapisów.
 - [ ] Istniejące testy sesji Checkout (metadane na sesji) zielone bez zmian w asercjach.
@@ -137,7 +146,7 @@ pnpm vitest run src/app/api/webhooks/__tests__/stripe-deposit.test.ts
 ### Decyzje (21 IX 2026)
 - D1 = (b): obie ścieżki zostają; gdy `session.metadata` nie ma `payment_type`, a `session.payment_link` ustawione → `stripe.paymentLinks.retrieve(id)` → metadane linku; retrieve błąd → `RetriableError` → 500
 - D2 = tak: atomowy `UPDATE … WHERE deposit_paid_at IS NULL RETURNING id`; brak zwróconego wiersza = już przetworzone lub nie nasze
-- D3 = tryb testowy na preview z kluczami `sk_test`; `stripe trigger` tylko do testu podpisu
+- D3 = lokalnie (nie preview): lokalny stack Supabase + `pnpm dev` + `stripe listen`; preview wskazuje na bazę prod (uwxrstbplaoxfghrchcy) — wiersz w deferred-tasks.md; `stripe trigger` tylko do testu podpisu
 - D4 = runda 2 (tj): retrieve rzuca → 500 zamiast 200; Stripe ponawia; bezpieczne dzięki D2
 
 ### experience_page_id i tytuł wyprawy
@@ -145,3 +154,13 @@ Po rebase na origin/stage-1: `experience_page_id` przywrócony do SELECT w atomo
 
 ### 1 webhook live (FA-1.05 audit dopisek)
 Według REBUILD_PLAN.md §9 dopisek 19 IX: `inquiry_events` = 785 wierszy, w tym **1 z `source='webhook'`**. Odczyt produkcji niewykonany (MCP `execute_sql` → permission error). Do wykonania przez tj: `SELECT type, source, channel, occurred_at FROM inquiry_events WHERE source = 'webhook' ORDER BY occurred_at DESC LIMIT 5`.
+
+### Pętla D3 (21 IX 2026, 12:47–12:50 CEST, lokalny stack)
+- plink_1UI4knCkrtMjTevhGFMUtX9T → cs_test_a1X0eq0pCGLNVzoFEvX4d4snuAY56Xk3DYWOjSxF389fF5XIdB49oxtgDr → evt_1UI4m2CkrtMjTevhLhA3JI7q; stripe listen: `<-- [200] POST …/api/webhooks/stripe-deposit`.
+- Lokalna baza: inquiries a2a2…202 → status=paid, deposit_paid_at=2026-09-21 10:48:41.678+00, deposit_stripe_session_id=cs_test_a1X0eq0p…
+- inquiry_events: payment.link_sent (app, 10:47:20) → status.changed (app, 10:47:21) → payment.received (webhook/stripe, 10:48:41.733, 100 centów EUR) → status.changed (webhook/stripe, 10:48:41.808)
+- Resend evt_1UI4m2… → nadal payment.received=1, status.changed(webhook)=1. [linii z listen/dev potwierdzające dotarcie resend — do dopisania przez tj]
+- HTTP 401 Resend przy mailu (nieważny klucz lokalny) — przechwycony po zapisie; poza zakresem (wiersz w deferred-tasks.md).
+
+### Obserwacja D1 po D3 (API 2026-02-25.clover)
+Stripe kopiuje metadane payment linku na sesję (`session.metadata = {inquiry_id, payment_type: 'inquiry_deposit'}` przy `payment_link = plink_…` w evt_1UI4m2…). Pętla przeszła przez `session.metadata`; `paymentLinks.retrieve` nie został wywołany. Gałąź D1 (retrieve) pozostaje jako zabezpieczenie na inne wersje API / zmiany zachowania Stripe. Komentarz dopisany do route.ts.
