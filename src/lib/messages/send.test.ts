@@ -10,24 +10,26 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.mock('@/lib/channels/email', () => ({
   emailAdapter: {
-    send: async () => ({ externalId: 'ext-1', threadKey: 'thread-1' }),
+    send: vi.fn().mockResolvedValue({ externalId: 'ext-1', threadKey: 'thread-1' }),
   },
 }))
 
 vi.mock('@/lib/channels/whatsapp', () => ({
   whatsappAdapter: {
-    send: async () => ({ externalId: 'ext-1', threadKey: null }),
-    canSendFreeform: () => true,
+    send: vi.fn().mockResolvedValue({ externalId: 'ext-1', threadKey: null }),
+    canSendFreeform: vi.fn(() => true),
   },
 }))
 
 vi.mock('@/lib/channels/instagram', () => ({
   instagramAdapter: {
-    send: async () => ({ externalId: 'ext-1', threadKey: null }),
+    send: vi.fn().mockResolvedValue({ externalId: 'ext-1', threadKey: null }),
   },
 }))
 
 import { sendMessage, DraftNotFoundError } from './send'
+import { emailAdapter }    from '@/lib/channels/email'
+import { whatsappAdapter } from '@/lib/channels/whatsapp'
 
 // ─── Mock Supabase client ─────────────────────────────────────────────────────
 
@@ -43,11 +45,13 @@ function makeMockClient(opts: { draftUpdateReturns?: 'found' | 'not_found' } = {
   emittedEvents = []
   const insertedMessages: Record<string, unknown>[] = []
   const updatedMessages:  Record<string, unknown>[] = []
+  // Accumulates every .eq(col, val) called on the UPDATE chain
+  const capturedUpdateFilters: { col: string; val: unknown }[] = []
 
   // Fluent chain for .update().*eq()*.select()
   type UpdChain = { eq(k: string, v: unknown): UpdChain; select(col: string): { data: { id: string }[]; error: null } }
   const makeUpdateChain = (): UpdChain => ({
-    eq:     () => makeUpdateChain(),
+    eq:     (k, v) => { capturedUpdateFilters.push({ col: k, val: v }); return makeUpdateChain() },
     select: () => ({
       data:  opts.draftUpdateReturns === 'not_found' ? [] : [{ id: 'draft-row-id' }],
       error: null,
@@ -83,7 +87,7 @@ function makeMockClient(opts: { draftUpdateReturns?: 'found' | 'not_found' } = {
       }),
     }),
   }
-  return { client, insertedMessages, updatedMessages }
+  return { client, insertedMessages, updatedMessages, capturedUpdateFilters }
 }
 
 describe('sendMessage — payload.drafted_by in message.sent event', () => {
@@ -169,11 +173,14 @@ describe('sendMessage — draftId lifecycle (FA-1.14 round 2)', () => {
 })
 
 describe('sendMessage — promotion guard (FA-1.14 round 3)', () => {
-  beforeEach(() => { emittedEvents = [] })
+  beforeEach(() => {
+    emittedEvents = []
+    vi.clearAllMocks()
+  })
 
-  // Point 1: stale draftId (row already 'sent') → guard rejects, no provider call, no event
-  it('(r3-1) stale draftId (already sent row) → throws DraftNotFoundError, email not called, no event', async () => {
-    const { client } = makeMockClient({ draftUpdateReturns: 'not_found' })
+  // r3-1: stale draftId (row already 'sent') → guard rejects; verifies all WHERE conditions
+  it('(r3-1) stale draftId → throws DraftNotFoundError, all 5 WHERE conditions applied, email adapter not called', async () => {
+    const { client, capturedUpdateFilters } = makeMockClient({ draftUpdateReturns: 'not_found' })
 
     await expect(
       sendMessage(
@@ -192,23 +199,35 @@ describe('sendMessage — promotion guard (FA-1.14 round 3)', () => {
       ),
     ).rejects.toThrow(DraftNotFoundError)
 
-    // Guard throws before any provider or event — no message.sent emitted
+    // All 5 WHERE conditions must be applied — if any is missing, removing it from send.ts fails here
+    expect(capturedUpdateFilters).toEqual(expect.arrayContaining([
+      { col: 'id',          val: 'already-sent-draft-id' },
+      { col: 'inquiry_id',  val: 'inq-1' },
+      { col: 'channel',     val: 'email' },
+      { col: 'counterpart', val: 'angler' },
+      { col: 'status',      val: 'draft' },
+    ]))
+
+    // Guard throws before provider — email adapter not called
+    expect(vi.mocked(emailAdapter.send)).not.toHaveBeenCalled()
+
+    // No message.sent event emitted
     expect(emittedEvents.find(e => e.type === 'message.sent')).toBeUndefined()
   })
 
-  // Point 2: channel/counterpart mismatch → same guard rejects
-  it('(r3-2) channel/counterpart mismatch → throws DraftNotFoundError, no event', async () => {
-    const { client } = makeMockClient({ draftUpdateReturns: 'not_found' })
+  // r3-2: channel/counterpart mismatch — same guard, verifies channel/counterpart/status in WHERE
+  it('(r3-2) channel/counterpart mismatch → throws DraftNotFoundError, channel+status in WHERE, wa adapter not called', async () => {
+    const { client, capturedUpdateFilters } = makeMockClient({ draftUpdateReturns: 'not_found' })
 
-    // Draft was email/angler; we try to send as whatsapp/guide — guard catches it
+    // Draft was email/angler; sending as whatsapp/guide — guard must catch the mismatch
     await expect(
       sendMessage(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         client as any,
         {
           inquiryId:   'inq-1',
-          channel:     'whatsapp',  // ← mismatched
-          counterpart: 'guide',      // ← mismatched
+          channel:     'whatsapp',
+          counterpart: 'guide',
           to:          '+48123456789',
           body:        'Wrong channel send.',
           draftedBy:   'agent',
@@ -217,6 +236,16 @@ describe('sendMessage — promotion guard (FA-1.14 round 3)', () => {
         },
       ),
     ).rejects.toThrow(DraftNotFoundError)
+
+    // channel, counterpart, status must all be in the WHERE — removing any one must break this
+    expect(capturedUpdateFilters).toEqual(expect.arrayContaining([
+      { col: 'channel',     val: 'whatsapp' },
+      { col: 'counterpart', val: 'guide' },
+      { col: 'status',      val: 'draft' },
+    ]))
+
+    // Guard throws before provider
+    expect(vi.mocked(whatsappAdapter.send)).not.toHaveBeenCalled()
 
     expect(emittedEvents.find(e => e.type === 'message.sent')).toBeUndefined()
   })
