@@ -159,8 +159,17 @@ Według REBUILD_PLAN.md §9 dopisek 19 IX: `inquiry_events` = 785 wierszy, w tym
 - plink_1UI4knCkrtMjTevhGFMUtX9T → cs_test_a1X0eq0pCGLNVzoFEvX4d4snuAY56Xk3DYWOjSxF389fF5XIdB49oxtgDr → evt_1UI4m2CkrtMjTevhLhA3JI7q; stripe listen: `<-- [200] POST …/api/webhooks/stripe-deposit`.
 - Lokalna baza: inquiries a2a2…202 → status=paid, deposit_paid_at=2026-09-21 10:48:41.678+00, deposit_stripe_session_id=cs_test_a1X0eq0p…
 - inquiry_events: payment.link_sent (app, 10:47:20) → status.changed (app, 10:47:21) → payment.received (webhook/stripe, 10:48:41.733, 100 centów EUR) → status.changed (webhook/stripe, 10:48:41.808)
-- Resend evt_1UI4m2… → nadal payment.received=1, status.changed(webhook)=1. [linii z listen/dev potwierdzające dotarcie resend — do dopisania przez tj]
+- Resend evt_1UI4m2… → nadal payment.received=1, status.changed(webhook)=1. Dowód idempotencji na żywym stacku: stripe listen 12:51:45 `<-- [200] … [evt_1UI4m2…]`, pnpm dev `[stripe-deposit/webhook] Skipped — already processed or not found: a2a2…202` (drugi odbiór tego samego zdarzenia → zero zapisów, zero emisji).
 - HTTP 401 Resend przy mailu (nieważny klucz lokalny) — przechwycony po zapisie; poza zakresem (wiersz w deferred-tasks.md).
+
+### /admin/weekly po D3 (lokalnie, 21 IX 2026)
+M1 = 2842 zł (seed 2838 zł + 1 € × 4,30 = 4 paid deposits); M2 = 3 zapytania w 2026-09. /admin/finances: do uzupełnienia przez tj.
+
+### platform-webhook usunięty (21 IX 2026)
+tj usunął endpoint `platform-webhook` z dashboardu Stripe live 21 IX 2026. Wiersz FA-1.07 zamknięty.
+
+### Decyzja endpoint live (tj, 21 IX 2026)
+Kolejność po tej rundzie: CI zielone → merge → deploy → STOP → (po zgodzie tj osobno) endpoint live w Stripe (wersja API = `2026-02-25.clover`, zdarzenie tylko `checkout.session.completed`, URL `https://fjordanglers.com/api/webhooks/stripe-deposit`) + `STRIPE_WEBHOOK_SECRET_DEPOSIT` w Vercel Production + redeploy → „Send test event" → 200. Status FA-1.16 = `in_progress` do czasu endpointu live.
 
 ### Obserwacja D1 po D3 (API 2026-02-25.clover)
 Stripe kopiuje metadane payment linku na sesję (`session.metadata = {inquiry_id, payment_type: 'inquiry_deposit'}` przy `payment_link = plink_…` w evt_1UI4m2…). Pętla przeszła przez `session.metadata`; `paymentLinks.retrieve` nie został wywołany. Gałąź D1 (retrieve) pozostaje jako zabezpieczenie na inne wersje API / zmiany zachowania Stripe. Komentarz dopisany do route.ts.
