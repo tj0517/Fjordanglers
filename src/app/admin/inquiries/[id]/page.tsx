@@ -492,10 +492,10 @@ export default async function AdminInquiryDetailPage({
       )}
 
       {/* Message composer — full width */}
-      <div className="rounded-xl overflow-hidden border border-primary/20 bg-primary/80">
-        <div className="px-5 py-3 border-b border-white/10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-white/40">Anytime</p>
-          <p className="text-sm font-bold f-body mt-0.5 text-white">Send message</p>
+      <div className="rounded-xl overflow-hidden border border-border bg-card">
+        <div className="px-5 py-3 border-b border-border">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-muted-foreground">Anytime</p>
+          <p className="text-sm font-bold f-body mt-0.5 text-foreground">Send message</p>
         </div>
         <div className="px-5 py-4">
           <MessageComposer

@@ -92,12 +92,12 @@ export function StatusChanger({
   }
 
   return (
-    <div className="rounded-[20px] overflow-hidden bg-primary/55 border border-white/[7%]">
-      <div className="px-5 py-3.5 border-b border-white/[6%]">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-white/[28%]">
+    <div className="rounded-[20px] overflow-hidden bg-card border border-border">
+      <div className="px-5 py-3.5 border-b border-border">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-muted-foreground">
           Deal status
         </p>
-        <p className="text-sm font-bold f-body mt-0.5 text-white">Set status</p>
+        <p className="text-sm font-bold f-body mt-0.5 text-foreground">Set status</p>
       </div>
 
       <div className="px-5 py-4 space-y-3">
@@ -124,7 +124,7 @@ export function StatusChanger({
                 data-status={isActive ? s.key : undefined}
                 className={cn(
                   'status-badge flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[10px] font-bold f-body transition-all',
-                  !isActive && 'bg-white/5 text-white/40 border border-white/[8%]',
+                  !isActive && 'bg-muted text-muted-foreground border border-border',
                   !isActive && !isAllowed && 'opacity-25',
                   !isActive && isAllowed && pending && 'opacity-50',
                   (isActive || disabled) ? 'cursor-default' : 'cursor-pointer',
@@ -141,7 +141,7 @@ export function StatusChanger({
         </div>
 
         {!isInquiryStatus(currentStatus) && (
-          <p className="text-[10px] f-body text-red-300">
+          <p className="text-[10px] f-body text-destructive">
             This inquiry holds the retired status <strong>{currentStatus}</strong>, which has no
             allowed moves. Tell tj — it should have been migrated.
           </p>
@@ -155,15 +155,15 @@ export function StatusChanger({
               value={lostReasonCode}
               onChange={e => setLostReasonCode(e.target.value)}
               className={cn(
-                'w-full px-3 py-2 rounded-xl text-xs f-body outline-none bg-white/[7%] text-white border',
+                'w-full px-3 py-2 rounded-xl text-xs f-body outline-none bg-muted/40 text-foreground border',
                 lostReasonCode
-                  ? 'border-red-500/50 text-white'
-                  : 'border-red-500/30 text-white/40',
+                  ? 'border-red-500/50'
+                  : 'border-red-500/30 text-muted-foreground',
               )}
             >
               <option value="" disabled>Select reason (required)</option>
               {LOST_REASON_CODES.map(r => (
-                <option key={r.key} value={r.key} className="bg-primary text-white">
+                <option key={r.key} value={r.key}>
                   {r.label}
                 </option>
               ))}
@@ -175,14 +175,14 @@ export function StatusChanger({
               value={lostComment}
               onChange={e => setLostComment(e.target.value)}
               placeholder="Comment (optional)"
-              className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:opacity-30 bg-white/[7%] border border-red-500/20 text-white"
+              className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:text-muted-foreground/50 bg-muted/40 border border-red-500/20 text-foreground"
             />
 
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => { setShowLostInput(false); setLostReasonCode(''); setLostComment('') }}
-                className="flex-1 py-2 rounded-xl text-[10px] font-semibold f-body bg-white/5 text-white/40 border border-white/[8%]"
+                className="flex-1 py-2 rounded-xl text-[10px] font-semibold f-body bg-muted text-muted-foreground border border-border"
               >
                 Cancel
               </button>
@@ -193,8 +193,8 @@ export function StatusChanger({
                 className={cn(
                   'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-bold f-body border',
                   lostReasonCode
-                    ? 'bg-red-500/22 text-red-300 border-red-500/35 cursor-pointer'
-                    : 'bg-white/5 text-white/30 border-white/[8%] cursor-not-allowed',
+                    ? 'bg-red-50 text-red-700 border-red-200 cursor-pointer'
+                    : 'bg-muted text-muted-foreground/50 border-border cursor-not-allowed',
                 )}
               >
                 {changingTo === 'lost' && <Loader2 size={9} className="animate-spin" />}
@@ -205,7 +205,7 @@ export function StatusChanger({
         )}
 
         {error != null && (
-          <p className="text-[10px] f-body text-red-300">{error}</p>
+          <p className="text-[10px] f-body text-destructive">{error}</p>
         )}
       </div>
     </div>

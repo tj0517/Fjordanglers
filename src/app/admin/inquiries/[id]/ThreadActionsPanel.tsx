@@ -39,12 +39,11 @@ export interface ThreadActionsPanelProps {
   guideNotifiedPaid:      boolean
 }
 
-// Reusable flash success banner (dark-panel context)
 function FlashBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 bg-emerald-500/15 border border-emerald-500/30">
-      <Check size={12} className="text-emerald-300" />
-      <p className="text-xs font-semibold f-body text-emerald-300">{message}</p>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 bg-emerald-50 border border-emerald-200">
+      <Check size={12} className="text-emerald-700" />
+      <p className="text-xs font-semibold f-body text-emerald-700">{message}</p>
     </div>
   )
 }
@@ -220,10 +219,10 @@ export function ThreadActionsPanel({
   if (isHandedOver) return null
 
   return (
-    <div className="rounded-[20px] overflow-hidden bg-primary/75 border border-white/[7%]">
+    <div className="rounded-[20px] overflow-hidden bg-card border border-border">
 
-      <div className="px-5 py-4 border-b border-white/[6%]">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-white/[28%]">
+      <div className="px-5 py-4 border-b border-border">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-muted-foreground">
           Thread actions
         </p>
       </div>
@@ -238,13 +237,13 @@ export function ThreadActionsPanel({
               <button
                 type="button"
                 onClick={() => setShowOfferForm(true)}
-                className="w-full py-2.5 rounded-xl text-xs font-bold f-body bg-white/10 text-white border border-white/[12%]"
+                className="w-full py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border"
               >
                 Mark as Guide Offer
               </button>
             ) : (
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body text-white/35">
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body text-muted-foreground">
                   Guide offer — option 1
                 </p>
 
@@ -253,7 +252,7 @@ export function ThreadActionsPanel({
                   value={optionLabel}
                   onChange={e => setOptionLabel(e.target.value)}
                   placeholder="e.g. Trout fly fishing — 3 days"
-                  className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:opacity-30 bg-white/7 border border-white/[12%] text-white"
+                  className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:text-muted-foreground/50 bg-muted/40 border border-input text-foreground"
                 />
 
                 <div className="flex gap-2">
@@ -264,12 +263,12 @@ export function ThreadActionsPanel({
                     value={optionPrice}
                     onChange={e => setOptionPrice(e.target.value)}
                     placeholder="Price (EUR)"
-                    className="flex-1 px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:opacity-30 bg-white/7 border border-white/[12%] text-white"
+                    className="flex-1 px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:text-muted-foreground/50 bg-muted/40 border border-input text-foreground"
                   />
                   <select
                     value={optionCurrency}
                     onChange={e => setOptionCurrency(e.target.value)}
-                    className="px-3 py-2 rounded-xl text-xs f-body outline-none bg-white/7 border border-white/[12%] text-white"
+                    className="px-3 py-2 rounded-xl text-xs f-body outline-none bg-muted/40 border border-input text-foreground"
                   >
                     <option value="eur">EUR</option>
                     <option value="usd">USD</option>
@@ -278,14 +277,14 @@ export function ThreadActionsPanel({
                 </div>
 
                 {offerError != null && (
-                  <p className="text-[11px] f-body text-red-300">{offerError}</p>
+                  <p className="text-[11px] f-body text-destructive">{offerError}</p>
                 )}
 
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => { setShowOfferForm(false); setOfferError(null) }}
-                    className="flex-1 py-2 rounded-xl text-xs font-semibold f-body bg-white/7 text-white/45 border border-white/10"
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold f-body bg-muted text-muted-foreground border border-border"
                   >
                     Cancel
                   </button>
@@ -312,7 +311,7 @@ export function ThreadActionsPanel({
           <div>
             {presentFlash && <FlashBanner message="Offer presented" />}
             {presentError != null && (
-              <p className="text-[11px] f-body mb-1 text-red-300">{presentError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{presentError}</p>
             )}
             <button
               type="button"
@@ -336,7 +335,7 @@ export function ThreadActionsPanel({
           <div className="space-y-2">
             {acceptFlash && <FlashBanner message="Done" />}
             {acceptError != null && (
-              <p className="text-[11px] f-body text-red-300">{acceptError}</p>
+              <p className="text-[11px] f-body text-destructive">{acceptError}</p>
             )}
             {offer!.options.map(opt => (
               <button
@@ -359,7 +358,7 @@ export function ThreadActionsPanel({
               type="button"
               onClick={handleClientDeclined}
               disabled={acceptPending}
-              className="w-full py-2 rounded-xl text-xs font-semibold f-body bg-red-500/15 text-red-300 border border-red-500/25 disabled:cursor-not-allowed"
+              className="w-full py-2 rounded-xl text-xs font-semibold f-body bg-red-50 text-red-700 border border-red-200 disabled:cursor-not-allowed"
             >
               Client Declined
             </button>
@@ -372,11 +371,11 @@ export function ThreadActionsPanel({
             {depositFlash && depositUrl != null && (
               <div className="space-y-2 mb-2">
                 <FlashBanner message="Deposit link created" />
-                <p className="text-[10px] f-body break-all text-white/45">{depositUrl}</p>
+                <p className="text-[10px] f-body break-all text-muted-foreground">{depositUrl}</p>
               </div>
             )}
             {depositError != null && (
-              <p className="text-[11px] f-body mb-1 text-red-300">{depositError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{depositError}</p>
             )}
             {depositUrl == null && (
               <button
@@ -402,13 +401,13 @@ export function ThreadActionsPanel({
           <div>
             {notifyFlash && <FlashBanner message="Guide notified" />}
             {notifyError != null && (
-              <p className="text-[11px] f-body mb-1 text-red-300">{notifyError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{notifyError}</p>
             )}
             <button
               type="button"
               onClick={handleGuideNotifiedPaid}
               disabled={notifyPending}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body bg-white/10 text-white border border-white/[12%] disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border disabled:cursor-not-allowed"
             >
               {notifyPending && <Loader2 size={11} className="animate-spin" />}
               Guide Notified Paid
@@ -421,13 +420,13 @@ export function ThreadActionsPanel({
           <div>
             {contactsFlash && <FlashBanner message="Contacts exchanged" />}
             {contactsError != null && (
-              <p className="text-[11px] f-body mb-1 text-red-300">{contactsError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{contactsError}</p>
             )}
             <button
               type="button"
               onClick={handleContactsExchanged}
               disabled={contactsPending}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body bg-white/10 text-white border border-white/[12%] disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border disabled:cursor-not-allowed"
             >
               {contactsPending && <Loader2 size={11} className="animate-spin" />}
               Contacts Exchanged
@@ -437,7 +436,7 @@ export function ThreadActionsPanel({
 
         {/* ── Empty state ────────────────────────────────────────────────── */}
         {noOffer && latestInboundMsgId == null && !isPaid && (
-          <p className="text-xs f-body text-white/30">
+          <p className="text-xs f-body text-muted-foreground">
             Send a message to the guide, then mark their reply as the guide offer.
           </p>
         )}

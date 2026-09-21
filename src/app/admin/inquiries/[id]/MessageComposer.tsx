@@ -94,9 +94,9 @@ export function MessageComposer({
 
   if (sent) {
     return (
-      <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30">
-        <Check size={14} className="text-emerald-300 flex-shrink-0" />
-        <p className="text-sm font-semibold f-body text-emerald-300">
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200">
+        <Check size={14} className="text-emerald-700 flex-shrink-0" />
+        <p className="text-sm font-semibold f-body text-emerald-700">
           Message sent to {counterpart}
         </p>
       </div>
@@ -135,8 +135,8 @@ export function MessageComposer({
               channel === ch.id
                 ? 'bg-accent text-white border-transparent'
                 : ch.disabled
-                  ? 'bg-white/7 text-white/20 border-white/10 cursor-not-allowed'
-                  : 'bg-white/7 text-white/45 border-white/10 cursor-pointer',
+                  ? 'bg-muted text-muted-foreground/40 border-border cursor-not-allowed'
+                  : 'bg-muted text-muted-foreground border-border cursor-pointer',
             )}
           >
             {ch.icon}
@@ -156,8 +156,8 @@ export function MessageComposer({
               className={cn(
                 'flex-1 h-auto py-1.5 rounded-lg text-xs font-semibold f-body capitalize border',
                 counterpart === cp
-                  ? 'bg-primary text-white border-white/20'
-                  : 'bg-white/7 text-white/45 border-white/10',
+                  ? 'bg-primary text-white border-transparent'
+                  : 'bg-muted text-muted-foreground border-border',
               )}
             >
               {cp}
@@ -168,19 +168,19 @@ export function MessageComposer({
 
       {/* WhatsApp window-closed notice */}
       {channel === 'whatsapp' && !waAvailable && (
-        <p className="text-xs f-body text-red-300">
+        <p className="text-xs f-body text-destructive">
           No phone number on record for this {counterpart}.
         </p>
       )}
       {channel === 'whatsapp' && waAvailable && isTemplatePath && (
-        <div className="px-3 py-2.5 rounded-xl text-xs f-body bg-yellow-500/12 border border-yellow-500/25 text-yellow-200/85">
+        <div className="px-3 py-2.5 rounded-xl text-xs f-body bg-amber-50 border border-amber-200 text-amber-700">
           24-hour window closed. Sending a pre-approved template.
         </div>
       )}
 
       {/* Instagram disabled notice */}
       {channel === 'instagram' && !igEnabled && (
-        <p className="text-xs f-body text-white/[38%]">
+        <p className="text-xs f-body text-muted-foreground">
           Instagram channel inactive — set INSTAGRAM_ACCESS_TOKEN to enable.
         </p>
       )}
@@ -188,7 +188,7 @@ export function MessageComposer({
       {/* Email subject (email only) */}
       {channel === 'email' && (
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-white/[38%]">
+          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-muted-foreground">
             Subject
           </label>
           <Input
@@ -196,7 +196,6 @@ export function MessageComposer({
             value={subject}
             onChange={e => setSubject(e.target.value)}
             placeholder="Re: your inquiry…"
-            className="bg-white/7 border-white/[12%] text-white placeholder:text-white/30 focus-visible:border-white/40"
           />
         </div>
       )}
@@ -208,13 +207,13 @@ export function MessageComposer({
             type="button"
             onClick={handlePropose}
             disabled={draftPending}
-            className="w-full flex items-center justify-center gap-1.5 h-auto py-2 rounded-xl text-xs font-semibold f-body bg-white/[6%] text-white/55 border border-white/10 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-1.5 h-auto py-2 rounded-xl text-xs font-semibold f-body bg-muted text-muted-foreground border border-border disabled:cursor-not-allowed"
           >
             {draftPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
             {draftPending ? 'Drafting…' : 'Zaproponuj'}
           </Button>
           {draftError != null && (
-            <p className="text-[11px] f-body mt-1 text-red-300">{draftError}</p>
+            <p className="text-[11px] f-body mt-1 text-destructive">{draftError}</p>
           )}
         </div>
       )}
@@ -222,19 +221,19 @@ export function MessageComposer({
       {/* Message body — hidden for WA template path */}
       {!isTemplatePath && (
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-white/[38%]">
+          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-muted-foreground">
             Message
           </label>
           <Textarea
             value={body}
             onChange={e => setBody(e.target.value)}
             placeholder={'Hi Jan,\n\nThanks for your inquiry…'}
-            className="min-h-[300px] resize-y bg-white/7 border-white/[12%] text-white placeholder:text-white/30 focus-visible:border-white/40"
+            className="min-h-[300px] resize-y"
           />
           {channel === 'whatsapp' && (
             <p className={cn(
               'text-[10px] f-body mt-1 text-right',
-              body.length > 4096 ? 'text-red-300' : 'text-white/30',
+              body.length > 4096 ? 'text-destructive' : 'text-muted-foreground/50',
             )}>
               {body.length}/4096
             </p>
@@ -243,14 +242,14 @@ export function MessageComposer({
       )}
 
       {error != null && (
-        <p className="text-xs f-body text-red-300">{error}</p>
+        <p className="text-xs f-body text-destructive">{error}</p>
       )}
 
       <Button
         type="button"
         onClick={handleSend}
         disabled={isPending || !canSend}
-        className="w-full flex items-center justify-center gap-2 h-auto py-2.5 rounded-xl text-xs font-bold f-body bg-white/10 text-white border border-white/[12%] disabled:cursor-not-allowed disabled:opacity-40"
+        className="w-full flex items-center justify-center gap-2 h-auto py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border disabled:cursor-not-allowed disabled:opacity-40"
       >
         {isPending && <Loader2 size={12} className="animate-spin" />}
         {isPending

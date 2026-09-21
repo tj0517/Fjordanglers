@@ -146,7 +146,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body>
+      <body className="bg-background">
         {children}
         <GclidCapture />
         {GTM_ID && <CookieBanner gtmId={GTM_ID} />}
