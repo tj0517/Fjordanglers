@@ -120,12 +120,18 @@ function buildHappyMock(row = INQUIRY_ROW) {
  * dbState is shared across both concurrent POST calls.
  * The async select() body has no internal await, so it runs synchronously
  * when called — the first writer mutates dbState before the second sees it.
+ *
+ * Also supports the OLD check-then-write path (.select().eq().single()):
+ * both concurrent reads see deposit_paid_at: null (the pre-FA-1.16 race condition),
+ * proving that D2 is needed. The old code's .update().eq() never calls .is(), so
+ * dbState stays null throughout — both callers proceed and both emit.
  */
 function buildSharedStateMock(dbState: { deposit_paid_at: string | null }) {
   return {
     from: (table: string) => {
       if (table === 'inquiries') {
         return {
+          // NEW path (D2 — FA-1.16): UPDATE … IS NULL … RETURNING
           update: (data: Record<string, unknown>) => ({
             eq: (_col: string, _val: string) => ({
               is: (col: string, val: null) => ({
@@ -136,6 +142,18 @@ function buildSharedStateMock(dbState: { deposit_paid_at: string | null }) {
                   }
                   return { data: [], error: null }
                 },
+              }),
+            }),
+          }),
+          // OLD path (check-then-write, pre-FA-1.16): SELECT … WHERE id = … RETURNING
+          // Both concurrent reads see deposit_paid_at: null (the race condition).
+          // The old UPDATE never calls .is(), so dbState is never mutated —
+          // the second reader also sees null and both callers proceed to emit.
+          select: (_cols: string) => ({
+            eq: (_col: string, _val: string) => ({
+              single: async () => ({
+                data: { ...INQUIRY_ROW, id: 'inq-parallel', deposit_paid_at: dbState.deposit_paid_at },
+                error: null,
               }),
             }),
           }),
