@@ -50,9 +50,10 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.11 | CI: typecheck/lint/test/build, migracje na czysto, typy bez dryfu, `stage-1` zawiera `main` | M | sonnet | done | FA-1.01 |
 | FA-1.12 | `messages` — jeden wątek na zapytanie; e-mail w obie strony z karty; `offers` z opcjami; link Stripe z aplikacji | L | opus | done | FA-1.03 |
 | FA-1.13 | WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy | L | opus | blocked | FA-1.12 |
-| FA-1.14 | Agent w wątku — propozycja odpowiedzi z bazy wiedzy; auto-wysyłka off | L | opus | todo | FA-1.12 |
+| FA-1.14 | Agent w wątku — instalacja: „zaproponuj” w kompozytorze, loader `docs/knowledge/`, prompt-zaślepka, auto-wysyłka off (zawężone 21 IX: treść i logika → FA-1.17) | M | sonnet | todo | FA-1.12 |
 | FA-1.15 | Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly` | L | opus | todo | FA-1.10, FA-1.12, FA-1.13 (kod w stage-1; kryterium E2E czeka na O-16), FA-1.14 |
 | FA-1.16 | Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja | M | sonnet | in_progress | FA-1.12 |
+| FA-1.17 | Treść i logika agenta — baza wiedzy (pliki) i graf działania; robi tj | M | — (człowiek) | todo | FA-1.14 |
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
