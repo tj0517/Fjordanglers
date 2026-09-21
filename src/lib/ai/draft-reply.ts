@@ -16,7 +16,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { assembleConversation, type ConversationMessage } from './extract-trip'
 import { loadKnowledge } from './knowledge'
-import { buildDraftPrompt } from './draft-reply-prompt'
+import { buildDraftPrompt, buildDraftSubject } from './draft-reply-prompt'
 import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 
 export interface DraftReplyParams {
@@ -128,10 +128,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
 
   const draftText = block.text.trim()
 
-  // Suggest a subject line for email channel (stub — FA-1.17 may improve this)
-  const subject: string | null = channel === 'email'
-    ? `Re: Your ${inquiry.trip_country ?? 'fishing'} inquiry — ${inquiry.angler_name}`
-    : null
+  const subject = buildDraftSubject(inquiry, channel)
 
   // Upsert draft — overwrite existing draft for this inquiry/counterpart/channel if present
   const { data: existingDraft } = await supabase

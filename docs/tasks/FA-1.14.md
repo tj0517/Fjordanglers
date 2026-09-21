@@ -117,8 +117,12 @@ Szczegóły w opisie PR. Poniżej skrót.
 - Reguła RESEND_DEV_FAKE: §10 w `docs/05-agent-operations.md`; guard w `demo-draft-lifecycle.mts`
 - Przyznanie rundy 2: wysyłka przez prawdziwe Resend na piotr@example.invalid (brak flagi)
 
-### Not done (runda 3)
-- Kryterium 2 przez UI (pkt 4): STOP — Playwright MCP CONNECTION_CLOSED, brak zrzutu ekranu
+### Done (runda 4 — uzupełnienia)
+- Testy r3-1/r3-2 wzmocnione: `capturedUpdateFilters` rejestruje każde `.eq(col, val)` na UPDATE chainie; asercje weryfikują wszystkie 5 warunków WHERE + spy nie wywołany; RED proofs dla usunięcia `status='draft'` i `channel`
+- `buildDraftSubject(inquiry, channel)` wyeksportowana z `draft-reply-prompt.ts` (obok `STUB_PROMPT`); `draft-reply.ts` tylko ją woła; testy: email → niepusty, whatsapp/instagram → null; łącznie 308 testów (32 pliki)
+- Pole `subject` wypełniane dla kanału email: `Re: Your {country} inquiry — {name}`; zapisywane w draft i promoted; `MessageComposer` wywołuje `setSubject`
+- UI demo krok (d): Zaproponuj (angler/email) → guard utrzymał draft jako 'draft'; nowy wiersz sent z `drafted_by='admin'` potwierdzony SQL
+- `guides.invite_email = 'erik@fjordanglers.local'` ustawione dla lokalnego seed guide (demo)
 
 ### Not done
 - Nic z zakresu.

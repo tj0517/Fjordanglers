@@ -20,6 +20,26 @@ Draft a warm, professional reply to the angler's most recent message.
 Use the conversation history and knowledge files provided.
 Return only the reply text — no subject line, no greeting scaffold, no commentary.`
 
+// ─── Subject line ─────────────────────────────────────────────────────────────
+// FA-1.17 may replace this with a smarter formula or AI-generated subject.
+
+/**
+ * Returns a suggested email subject for a draft reply, or null for non-email channels.
+ * @param inquiry - { angler_name, trip_country } from the inquiries row
+ * @param channel - the message channel
+ */
+export function buildDraftSubject(
+  inquiry: { angler_name: string | null; trip_country: string | null },
+  channel: string,
+): string | null {
+  if (channel !== 'email') return null
+  const country = inquiry.trip_country ?? 'fishing'
+  const name    = inquiry.angler_name  ?? ''
+  return name
+    ? `Re: Your ${country} inquiry — ${name}`
+    : `Re: Your ${country} inquiry`
+}
+
 // ─── Assembler ────────────────────────────────────────────────────────────────
 
 /**

@@ -261,3 +261,33 @@ describe('draftReply — draft lifecycle (FA-1.14 round 2)', () => {
     expect(prompt).not.toContain('THIS IS A DRAFT')
   })
 })
+
+// ─── buildDraftSubject ────────────────────────────────────────────────────────
+
+import { buildDraftSubject } from './draft-reply-prompt'
+
+describe('buildDraftSubject', () => {
+  const inquiry = { angler_name: 'Jan Kowalski', trip_country: 'Iceland' }
+
+  it('email → non-empty subject containing country and name', () => {
+    const subject = buildDraftSubject(inquiry, 'email')
+    expect(subject).not.toBeNull()
+    expect(subject!.length).toBeGreaterThan(0)
+    expect(subject).toContain('Iceland')
+    expect(subject).toContain('Jan Kowalski')
+  })
+
+  it('whatsapp → null', () => {
+    expect(buildDraftSubject(inquiry, 'whatsapp')).toBeNull()
+  })
+
+  it('instagram → null', () => {
+    expect(buildDraftSubject(inquiry, 'instagram')).toBeNull()
+  })
+
+  it('email with null country → uses fallback', () => {
+    const subject = buildDraftSubject({ angler_name: 'Jan', trip_country: null }, 'email')
+    expect(subject).not.toBeNull()
+    expect(subject!.length).toBeGreaterThan(0)
+  })
+})
