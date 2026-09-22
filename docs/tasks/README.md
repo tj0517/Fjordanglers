@@ -52,8 +52,8 @@ Szablon: `_template.md`. Tablica: `INDEX.md`.
 
 ## Cykl życia
 
-`todo` → (`/fa-task` składa prompt) → `in_progress` → (PR + raport) → `review` →
-(`/fa-review`: wszystkie kryteria *udowodnione*) → `done`. Status zmienia człowiek
+`todo` → (`wf-task` składa prompt) → `in_progress` → (PR + raport) → `review` →
+(`wf-review`: wszystkie kryteria *udowodnione*) → `done`. Status zmienia człowiek
 w pliku, w tym samym PR co kod (agent może zaproponować zmianę, nie robi jej sam).
 `blocked` zawsze z powodem w notatkach.
 
