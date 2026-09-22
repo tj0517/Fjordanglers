@@ -2,7 +2,7 @@
 id: FA-1.24
 title: Panel wiedzy agenta — /admin/knowledge: lista, edycja z podglądem, wyłączanie wpisu, odnośnik z karty przewodnika
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:

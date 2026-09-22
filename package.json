@@ -35,6 +35,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.8.1",
     "stripe": "^20.4.0",
     "supercluster": "^8.0.1",
