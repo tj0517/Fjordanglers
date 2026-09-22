@@ -2,7 +2,7 @@
 id: FA-1.22
 title: Baza wiedzy agenta w bazie danych — tabela wpisów (instrukcje, ton, kraj, przewodnik), dostęp tylko dla admina
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -82,3 +82,7 @@ pnpm typecheck && pnpm lint && pnpm test
 ```
 
 ## Notatki z realizacji
+
+- 2026-09-22 tj: seed nie miał kont guide/admin/klient; zdecydowano wariant A — ten PR
+  dodaje do `seed.sql` fikcyjne konta ról (admin, klient) i jednego przewodnika.
+
