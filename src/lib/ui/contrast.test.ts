@@ -5,9 +5,11 @@ import { describe, it, expect } from 'vitest'
 const TEXT_PAIRS: [string, string][] = [
   ['#0A2E4D', '#F8FAFB'],  // --foreground on --background
   ['#0A2E4D', '#FFFFFF'],  // --card-foreground on --card
+  ['#0A2E4D', '#FFFFFF'],  // --popover-foreground on --popover (dropdown text on white)
   ['#F8FAFB', '#0A2E4D'],  // --primary-foreground on --primary
   ['#0A2E4D', '#F1F5F9'],  // --secondary-foreground on --secondary
   ['#475569', '#F1F5F9'],  // --muted-foreground on --muted (slate-600, 6.4:1)
+  ['#0A2E4D', '#E67E50'],  // --accent-foreground on --accent (focus highlight — 4.9:1)
 ]
 
 // Non-text pairs (WCAG 1.4.11 — UI component boundaries, icons, focus rings).
