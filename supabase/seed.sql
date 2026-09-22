@@ -198,3 +198,115 @@ VALUES
   ('e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e505', (date_trunc('week', now() AT TIME ZONE 'Europe/Warsaw')::date - 13),
    'google_ads', 'Seed Norway', 60.00, 2000, 40, 1.5000)
 ON CONFLICT (id) DO NOTHING;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- FA-1.22 — role accounts, one guide, and the agent's knowledge base
+--
+-- Until now this seed had no auth.users, no profiles and no guides at all, so there was
+-- no way to prove an RLS policy locally: "the angler sees nothing" is worthless when no
+-- angler exists. tj decision 22 Sep (option A): the accounts are fictional and live here.
+--
+-- LOCAL ONLY. Both passwords are the literal below, written down on purpose so a human
+-- can sign in to the local stack. Nothing here ever reaches production — seed.sql is not
+-- applied by `supabase db push`.
+--
+--   admin@seed.test  / seed-admin-password-2026    (profiles.role = 'admin')
+--   angler@seed.test / seed-angler-password-2026   (profiles.role = 'angler')
+--
+-- The profiles rows are NOT inserted here: auth.users has an AFTER INSERT trigger
+-- (public.handle_new_user, baseline lines 264-277) that creates them from
+-- raw_user_meta_data ->> 'role'. One writer, so the two can never drift.
+-- pgcrypto lives in the `extensions` schema (baseline line 33), hence the qualified calls.
+-- All UUIDs are v4 (version digit = 4, variant = 8), like the rest of this file.
+-- ═════════════════════════════════════════════════════════════════════════════
+
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) VALUES
+  ('00000000-0000-0000-0000-000000000000',
+   '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01',
+   'authenticated', 'authenticated', 'admin@seed.test',
+   extensions.crypt('seed-admin-password-2026', extensions.gen_salt('bf')),
+   now(),
+   '{"provider":"email","providers":["email"]}',
+   '{"role":"admin","full_name":"Adam Seed (admin)"}',
+   now(), now(), '', '', '', ''),
+
+  ('00000000-0000-0000-0000-000000000000',
+   '9b9b9b9b-9b9b-4b9b-8b9b-9b9b9b9b9b02',
+   'authenticated', 'authenticated', 'angler@seed.test',
+   extensions.crypt('seed-angler-password-2026', extensions.gen_salt('bf')),
+   now(),
+   '{"provider":"email","providers":["email"]}',
+   '{"role":"angler","full_name":"Anna Seed (angler)"}',
+   now(), now(), '', '', '', '')
+ON CONFLICT (id) DO NOTHING;
+
+-- Identities: without them gotrue refuses a password sign-in, and the RLS proof would be
+-- limited to faking claims with `SET LOCAL request.jwt.claims`.
+INSERT INTO auth.identities (
+  id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+) VALUES
+  ('9d9d9d9d-9d9d-4d9d-8d9d-9d9d9d9d9d01',
+   '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01',
+   '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01',
+   '{"sub":"9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01","email":"admin@seed.test","email_verified":true,"phone_verified":false}',
+   'email', now(), now(), now()),
+
+  ('9d9d9d9d-9d9d-4d9d-8d9d-9d9d9d9d9d02',
+   '9b9b9b9b-9b9b-4b9b-8b9b-9b9b9b9b9b02',
+   '9b9b9b9b-9b9b-4b9b-8b9b-9b9b9b9b9b02',
+   '{"sub":"9b9b9b9b-9b9b-4b9b-8b9b-9b9b9b9b9b02","email":"angler@seed.test","email_verified":true,"phone_verified":false}',
+   'email', now(), now(), now())
+ON CONFLICT (id) DO NOTHING;
+
+-- One guide, so the `guide` knowledge entry has something to point at. Fictional.
+INSERT INTO guides (
+  id, full_name, country, city, status, languages, fish_expertise, years_experience, bio
+) VALUES (
+  '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03',
+  'Jon Seed', 'Iceland', 'Reykjavik', 'active',
+  ARRAY['en', 'is'], ARRAY['atlantic salmon', 'brown trout'], 12,
+  'Fictional seed guide. Not a real person, not real content.'
+) ON CONFLICT (id) DO NOTHING;
+
+-- ─── agent_knowledge — one entry of each kind (FA-1.22) ──────────────────────
+-- The `instructions` body is a verbatim copy of STUB_PROMPT from
+-- src/lib/ai/draft-reply-prompt.ts (lines 17-21). The constant is module-private, so SQL
+-- cannot import it and a copy is the only option; FA-1.23 deletes the original once the
+-- agent reads this table instead. tj decision 22 Sep (D-B).
+INSERT INTO agent_knowledge (id, kind, country, guide_id, title, body, active, updated_by)
+VALUES
+  ('d1d1d1d1-d1d1-4d1d-8d1d-d1d1d1d1d101',
+   'instructions', NULL, NULL,
+   'Draft-reply instructions (stub)',
+   'You are the FjordAnglers reply assistant.
+
+Draft a warm, professional reply to the angler''s most recent message.
+Use the conversation history and knowledge files provided.
+Return only the reply text — no subject line, no greeting scaffold, no commentary.',
+   true, '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01'),
+
+  ('d2d2d2d2-d2d2-4d2d-8d2d-d2d2d2d2d202',
+   'tone', NULL, NULL,
+   'Tone of voice',
+   'Warm, direct, no marketing jargon. Short sentences. Never promise a date or a price
+that is not in the thread. Fictional seed content.',
+   true, '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01'),
+
+  ('d3d3d3d3-d3d3-4d3d-8d3d-d3d3d3d3d303',
+   'destination', 'Iceland', NULL,
+   'Iceland — basics',
+   'Season runs June to September. Licences are arranged by the guide. Fictional seed
+content — the real text arrives with FA-1.17 / FA-1.26, typed by tj in the panel.',
+   true, '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01'),
+
+  ('d4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d404',
+   'guide', NULL, '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03',
+   'Jon Seed — rates and style',
+   'Rates as prose, per O-21: 450 EUR per day for two anglers, boat and gear included.
+Fishes the south-west rivers. Fictional seed content.',
+   true, '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01')
+ON CONFLICT (id) DO NOTHING;

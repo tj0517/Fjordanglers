@@ -117,4 +117,16 @@ pnpm typecheck && pnpm lint && pnpm test
   Historii zmian nie ma (O-22), więc kaskada po cichu zniszczyłaby notatki o stawkach
   wpisane ręcznie przez tj. Usunięcie przewodnika ma się wywalić, dopóki ktoś świadomie
   nie zajmie się jego wpisami. Komentarz kolumny poprawiony, żeby nie sugerował kaskady.
+- **2026-09-22 tj (D-F):** `agent_knowledge_country_check` powiela `COUNTRIES`
+  z `src/lib/countries.ts` — dwa źródła tej samej listy, nic ich nie pilnuje. Do tego PR
+  wchodzi **test synchronizacji**: czyta żywą definicję ograniczenia z lokalnej bazy
+  (`pg_get_constraintdef` po `agent_knowledge_country_check`) i sprawdza, że zbiór
+  wartości równa się `COUNTRIES`. Red proof: tymczasowo dorzucić kraj do `COUNTRIES`,
+  pokazać czerwony test, cofnąć zmianę w `countries.ts`.
+- **2026-09-22 tj (D-G):** `agent_knowledge_title_not_blank`
+  i `agent_knowledge_body_not_blank` zostają tak, jak zaprojektowane. Dwa dodatkowe
+  red proofy do kryteriów odbioru: INSERT z pustym `title`, INSERT z pustym `body`.
+- **2026-09-22 (agent):** plik migracji po angielsku — `docs/03-conventions.md`
+  §Language wymaga angielskiego w komentarzach w kodzie. Wpisy w tych notatkach zostają
+  po polsku, zgodnie z konwencją pliku zadania.
 
