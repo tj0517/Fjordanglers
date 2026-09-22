@@ -79,7 +79,11 @@ describe('loadKnowledge', () => {
       guide:        'Siggi Thorvaldsson',
       knowledgeDir: FIXTURE_DIR,
     })
-    const prompt = buildDraftPrompt(files, 'test conversation')
+    const prompt = buildDraftPrompt(
+      { counterpart: 'angler', channel: 'email', status: 'qualifying', guideName: 'Siggi Thorvaldsson' },
+      files,
+      'test conversation',
+    )
     // Tone content is referenced
     expect(prompt).toContain('brand-voice')
     // Destination content is referenced

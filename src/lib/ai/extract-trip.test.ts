@@ -11,13 +11,13 @@
 import { describe, it, expect } from 'vitest'
 import { assembleConversation, type ConversationMessage } from './extract-trip'
 
-const BASE_ARGS = [
+const BASE_ARGS: [string, string | null, string[], number, string | null] = [
   'Jan Kowalski',
   'I want to fish for salmon',
   ['2026-07-15'],
   2,
   'Iceland Salmon Week',
-] as const
+]
 
 describe('assembleConversation — speaker labels (FA-1.21)', () => {
   it('labels an inbound message from the guide as the guide, not "Angler"', () => {

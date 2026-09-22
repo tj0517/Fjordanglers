@@ -16,7 +16,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { assembleConversation, type ConversationMessage } from './extract-trip'
 import { loadKnowledge } from './knowledge'
-import { buildDraftPrompt, buildDraftSubject } from './draft-reply-prompt'
+import { buildDraftPrompt, buildDraftSubject, type DraftContext } from './draft-reply-prompt'
 import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 
 export interface DraftReplyParams {
@@ -53,7 +53,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   // Fetch inquiry context
   const { data: inquiry, error: inquiryErr } = await supabase
     .from('inquiries')
-    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id')
+    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id, status')
     .eq('id', inquiryId)
     .single()
 
@@ -64,7 +64,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   // Fetch message thread — exclude drafts so they don't pollute the AI context
   const { data: messages } = await supabase
     .from('messages')
-    .select('direction, channel, body, occurred_at')
+    .select('direction, channel, body, occurred_at, counterpart')
     .eq('inquiry_id', inquiryId)
     .neq('status', 'draft')
     .order('occurred_at', { ascending: true })
@@ -109,10 +109,12 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     inquiry.party_size ?? 1,
     tripTitle,
     thread,
+    guideName,
   )
 
   // Build prompt + call model
-  const fullPrompt = buildDraftPrompt(knowledge, conversation)
+  const context: DraftContext = { counterpart, channel, status: inquiry.status, guideName }
+  const fullPrompt = buildDraftPrompt(context, knowledge, conversation)
 
   const client = new Anthropic({ apiKey })
   const response = await client.messages.create({
