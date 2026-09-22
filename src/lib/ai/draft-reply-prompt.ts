@@ -1,32 +1,19 @@
 /**
- * Draft-reply prompt builder. FA-1.14.
+ * Draft-reply prompt builder. FA-1.14 / FA-1.23.
  *
- * This file is the ONE place with the draft-reply system prompt text.
- * FA-1.17 replaces the stub below with the real prompt — no other code changes needed.
- *
- * buildDraftPrompt assembles the system prompt from:
- *   - the injected knowledge files (tone + destination + guide)
- *   - the stub (or real, after FA-1.17) instruction text
+ * buildDraftPrompt assembles the complete prompt from:
+ *   - the draft context (addressee, channel, status, guide)
+ *   - knowledge entries loaded from agent_knowledge (tone + destination + guide)
+ *   - the instructions text from the active agent_knowledge instructions entry
+ *   - the assembled conversation
  */
 
-import type { KnowledgeFile } from './knowledge'
-
-// ─── Stub system prompt ───────────────────────────────────────────────────────
-// FA-1.17 replaces this constant with the real prompt.
-
-const STUB_PROMPT = `You are the FjordAnglers reply assistant.
-
-Draft a warm, professional reply to the angler's most recent message.
-Use the conversation history and knowledge files provided.
-Return only the reply text — no subject line, no greeting scaffold, no commentary.`
+import type { KnowledgeEntry } from './knowledge'
 
 // ─── Subject line ─────────────────────────────────────────────────────────────
-// FA-1.17 may replace this with a smarter formula or AI-generated subject.
 
 /**
  * Returns a suggested email subject for a draft reply, or null for non-email channels.
- * @param inquiry - { angler_name, trip_country } from the inquiries row
- * @param channel - the message channel
  */
 export function buildDraftSubject(
   inquiry: { angler_name: string | null; trip_country: string | null },
@@ -58,14 +45,16 @@ export interface DraftContext {
 // ─── Assembler ────────────────────────────────────────────────────────────────
 
 /**
- * Returns the complete system prompt: draft context + knowledge sections + instructions.
- * @param context - addressee, channel, inquiry status, assigned guide
- * @param knowledge - files loaded by loadKnowledge for this inquiry
+ * Returns the complete prompt: instructions + draft context + knowledge sections + conversation.
+ * @param context      - addressee, channel, inquiry status, assigned guide
+ * @param instructions - body of the active agent_knowledge instructions entry
+ * @param knowledge    - tone/destination/guide entries loaded by loadKnowledge
  * @param conversation - full conversation assembled by assembleConversation
  */
 export function buildDraftPrompt(
-  context: DraftContext,
-  knowledge: KnowledgeFile[],
+  context:      DraftContext,
+  instructions: string,
+  knowledge:    KnowledgeEntry[],
   conversation: string,
 ): string {
   const sections: string[] = []
@@ -78,15 +67,14 @@ export function buildDraftPrompt(
   sections.push('')
 
   if (knowledge.length > 0) {
-    sections.push('=== KNOWLEDGE FILES ===')
-    for (const f of knowledge) {
-      const label = f.kind === 'guide'
-        ? `Guide: ${f.guide_name ?? 'unknown'}`
-        : f.kind === 'destination'
-          ? `Destination: ${f.country ?? 'unknown'}`
-          : `Tone`
-      sections.push(`\n--- ${label} (${f.path}) ---`)
-      sections.push(f.content)
+    sections.push('=== KNOWLEDGE ===')
+    for (const entry of knowledge) {
+      const label =
+        entry.kind === 'guide'       ? `Guide (${entry.guide_id ?? 'unknown'})` :
+        entry.kind === 'destination' ? `Destination: ${entry.country ?? 'unknown'}` :
+        'Tone'
+      sections.push(`\n--- ${label} (${entry.title}) ---`)
+      sections.push(entry.body)
     }
     sections.push('\n')
   }
@@ -94,5 +82,5 @@ export function buildDraftPrompt(
   sections.push('=== CONVERSATION ===')
   sections.push(conversation)
 
-  return STUB_PROMPT + '\n\n' + sections.join('\n')
+  return instructions + '\n\n' + sections.join('\n')
 }

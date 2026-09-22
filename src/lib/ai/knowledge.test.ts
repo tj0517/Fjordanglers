@@ -1,96 +1,96 @@
 /**
- * FA-1.14 — loadKnowledge fixture test.
+ * FA-1.23 — loadKnowledge DB-based loader tests.
+ *
+ * Uses a mocked createServiceClient (same pattern as draft-reply.test.ts).
+ * The mock returns a fixed set of active entries; the DB-side eq('active', true)
+ * filter is simulated by only including active rows in the mock data.
  *
  * Verifies that the loader:
- *   - always includes tone files
- *   - includes a destination file when country matches
- *   - includes a guide file when guide name matches (case-insensitive)
- *   - excludes destination files for a different country
- *   - excludes guide files for a different guide
- *   - skips destination files when country is not provided
- *   - skips guide files when guide is not provided
- *   - includes used files in the assembled draft prompt
- *
- * Uses fixtures from src/lib/ai/__fixtures__/knowledge/ — no real docs/knowledge/.
+ *   - always picks up the instructions and tone entries
+ *   - picks the destination entry when country matches (case-insensitive)
+ *   - picks the guide entry when guideId matches
+ *   - skips destination entries for other countries
+ *   - skips guide entries for other guide ids
+ *   - returns null instructions when none are active
  */
 
-import path from 'path'
-import { describe, it, expect } from 'vitest'
-import { loadKnowledge } from './knowledge'
-import { buildDraftPrompt } from './draft-reply-prompt'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-const FIXTURE_DIR = path.resolve(__dirname, '__fixtures__/knowledge')
+vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
+
+import { createServiceClient } from '@/lib/supabase/server'
+import { loadKnowledge } from './knowledge'
+
+// ─── Test data ────────────────────────────────────────────────────────────────
+
+const ROWS_ALL_ACTIVE = [
+  { id: 'k-inst',     kind: 'instructions', country: null,        guide_id: null,  title: 'Instructions (stub)', body: 'You are the FA assistant.' },
+  { id: 'k-tone',     kind: 'tone',         country: null,        guide_id: null,  title: 'Tone of voice',       body: 'Warm, direct, no jargon.' },
+  { id: 'k-iceland',  kind: 'destination',  country: 'Iceland',   guide_id: null,  title: 'Iceland — basics',    body: 'Iceland season: June–September.' },
+  { id: 'k-nz',       kind: 'destination',  country: 'New Zealand', guide_id: null, title: 'NZ — basics',        body: 'NZ brown trout.' },
+  { id: 'k-guide-x',  kind: 'guide',        country: null,        guide_id: 'g-x', title: 'Guide X — rates',    body: '400 EUR per day.' },
+  { id: 'k-guide-y',  kind: 'guide',        country: null,        guide_id: 'g-y', title: 'Guide Y — rates',    body: '500 EUR per day.' },
+]
+
+function mockClient(rows: typeof ROWS_ALL_ACTIVE) {
+  vi.mocked(createServiceClient).mockReturnValue({
+    from: () => ({
+      select: () => ({
+        eq: () => Promise.resolve({ data: rows, error: null }),
+      }),
+    }),
+  } as unknown as ReturnType<typeof createServiceClient>)
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('loadKnowledge', () => {
-  it('always loads tone files', () => {
-    const files = loadKnowledge({ knowledgeDir: FIXTURE_DIR })
-    expect(files.some(f => f.kind === 'tone')).toBe(true)
+  beforeEach(() => mockClient(ROWS_ALL_ACTIVE))
+
+  it('country:Iceland + guideId:g-x → returns instructions + tone + iceland + guide-x', async () => {
+    const result = await loadKnowledge({ country: 'Iceland', guideId: 'g-x' })
+
+    expect(result.instructions?.id).toBe('k-inst')
+    expect(result.entries.map(e => e.id)).toEqual(['k-tone', 'k-iceland', 'k-guide-x'])
+    expect(result.usedIds).toEqual(['k-inst', 'k-tone', 'k-iceland', 'k-guide-x'])
   })
 
-  it('loads destination file when country matches', () => {
-    const files = loadKnowledge({ country: 'Iceland', knowledgeDir: FIXTURE_DIR })
-    const destinations = files.filter(f => f.kind === 'destination')
-    expect(destinations).toHaveLength(1)
-    expect(destinations[0].country).toBe('Iceland')
+  it('skips destination entry for other country (NZ skipped for Iceland inquiry)', async () => {
+    const result = await loadKnowledge({ country: 'Iceland', guideId: 'g-x' })
+    expect(result.entries.every(e => e.id !== 'k-nz')).toBe(true)
   })
 
-  it('skips destination file for different country', () => {
-    const files = loadKnowledge({ country: 'Norway', knowledgeDir: FIXTURE_DIR })
-    expect(files.filter(f => f.kind === 'destination')).toHaveLength(0)
+  it('skips guide entry for other guide id (guide-y skipped when guideId=g-x)', async () => {
+    const result = await loadKnowledge({ country: 'Iceland', guideId: 'g-x' })
+    expect(result.entries.every(e => e.id !== 'k-guide-y')).toBe(true)
   })
 
-  it('skips destination files when country is not provided', () => {
-    const files = loadKnowledge({ knowledgeDir: FIXTURE_DIR })
-    expect(files.filter(f => f.kind === 'destination')).toHaveLength(0)
+  it('destination match is case-insensitive', async () => {
+    const result = await loadKnowledge({ country: 'iceland', guideId: 'g-x' })
+    expect(result.entries.some(e => e.id === 'k-iceland')).toBe(true)
   })
 
-  it('loads guide file when guide_name matches (case-insensitive)', () => {
-    const files = loadKnowledge({ guide: 'josh hart', knowledgeDir: FIXTURE_DIR })
-    const guides = files.filter(f => f.kind === 'guide')
-    expect(guides).toHaveLength(1)
-    expect(guides[0].guide_name).toBe('Josh Hart')
+  it('no guideId → skips all guide entries', async () => {
+    const result = await loadKnowledge({ country: 'Iceland' })
+    expect(result.entries.filter(e => e.kind === 'guide')).toHaveLength(0)
   })
 
-  it('skips guide file for different guide', () => {
-    const files = loadKnowledge({ guide: 'Unknown Guide', knowledgeDir: FIXTURE_DIR })
-    expect(files.filter(f => f.kind === 'guide')).toHaveLength(0)
+  it('no country → skips all destination entries', async () => {
+    const result = await loadKnowledge({ guideId: 'g-x' })
+    expect(result.entries.filter(e => e.kind === 'destination')).toHaveLength(0)
   })
 
-  it('skips guide files when guide is not provided', () => {
-    const files = loadKnowledge({ knowledgeDir: FIXTURE_DIR })
-    expect(files.filter(f => f.kind === 'guide')).toHaveLength(0)
+  it('no params → returns only instructions + tone', async () => {
+    const result = await loadKnowledge()
+    expect(result.instructions?.id).toBe('k-inst')
+    expect(result.entries.map(e => e.id)).toEqual(['k-tone'])
+    expect(result.usedIds).toEqual(['k-inst', 'k-tone'])
   })
 
-  it('loads tone + destination + guide for fully matched inquiry', () => {
-    const files = loadKnowledge({
-      country:      'New Zealand',
-      guide:        'Josh Hart',
-      knowledgeDir: FIXTURE_DIR,
-    })
-    expect(files.some(f => f.kind === 'tone')).toBe(true)
-    expect(files.some(f => f.kind === 'destination' && f.country === 'New Zealand')).toBe(true)
-    expect(files.some(f => f.kind === 'guide' && f.guide_name === 'Josh Hart')).toBe(true)
-    expect(files).toHaveLength(3)
-  })
-
-  it('loaded files appear in the assembled draft prompt', () => {
-    const files = loadKnowledge({
-      country:      'Iceland',
-      guide:        'Siggi Thorvaldsson',
-      knowledgeDir: FIXTURE_DIR,
-    })
-    const prompt = buildDraftPrompt(
-      { counterpart: 'angler', channel: 'email', status: 'qualifying', guideName: 'Siggi Thorvaldsson' },
-      files,
-      'test conversation',
-    )
-    // Tone content is referenced
-    expect(prompt).toContain('brand-voice')
-    // Destination content is referenced
-    expect(prompt).toContain('iceland')
-    // Guide content is referenced
-    expect(prompt).toContain('siggi-thorvaldsson')
-    // Conversation is included
-    expect(prompt).toContain('test conversation')
+  it('returns null instructions when DB has no instructions rows', async () => {
+    mockClient(ROWS_ALL_ACTIVE.filter(r => r.kind !== 'instructions'))
+    const result = await loadKnowledge({ country: 'Iceland' })
+    expect(result.instructions).toBeNull()
+    expect(result.usedIds).not.toContain('k-inst')
   })
 })

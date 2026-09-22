@@ -1,5 +1,5 @@
 /**
- * FA-1.21 — buildDraftPrompt draft-context block.
+ * FA-1.21 / FA-1.23 — buildDraftPrompt draft-context block.
  *
  * Verifies the `=== DRAFT CONTEXT ===` header carries addressee, channel,
  * inquiry status and assigned guide, ahead of the knowledge section.
@@ -8,10 +8,13 @@
 import { describe, it, expect } from 'vitest'
 import { buildDraftPrompt } from './draft-reply-prompt'
 
+const STUB_INSTRUCTIONS = 'You are the FA assistant.'
+
 describe('buildDraftPrompt — draft context (FA-1.21)', () => {
   it('context block contains counterpart, channel, status and guide name', () => {
     const prompt = buildDraftPrompt(
       { counterpart: 'guide', channel: 'whatsapp', status: 'waiting_guide', guideName: 'Siggi Thorvaldsson' },
+      STUB_INSTRUCTIONS,
       [],
       'conversation',
     )
@@ -26,6 +29,7 @@ describe('buildDraftPrompt — draft context (FA-1.21)', () => {
   it('draft context precedes the knowledge and conversation sections', () => {
     const prompt = buildDraftPrompt(
       { counterpart: 'angler', channel: 'email', status: 'qualifying', guideName: null },
+      STUB_INSTRUCTIONS,
       [],
       'conversation',
     )
@@ -39,6 +43,7 @@ describe('buildDraftPrompt — draft context (FA-1.21)', () => {
   it('shows "none" for assigned guide when no guide is resolved', () => {
     const prompt = buildDraftPrompt(
       { counterpart: 'angler', channel: 'email', status: 'new', guideName: null },
+      STUB_INSTRUCTIONS,
       [],
       'conversation',
     )

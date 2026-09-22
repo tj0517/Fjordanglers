@@ -2,7 +2,7 @@
 id: FA-1.23
 title: Agent czyta wiedzę i instrukcje z bazy zamiast z plików — docs/knowledge/ znika
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
