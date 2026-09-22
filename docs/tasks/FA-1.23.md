@@ -9,7 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: feat/agent-knowledge-db
-pr: pending
+pr: 88
 depends_on: [FA-1.21, FA-1.22]
 blocked_by_questions: []
 touches_db: true
