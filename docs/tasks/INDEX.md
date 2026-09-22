@@ -35,8 +35,6 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 
 | id | title | diff | model | status | depends |
 |---|---|---|---|---|---|
-| id | title | diff | model | status | depends |
-|---|---|---|---|---|---|
 | FA-1.01 | Baseline: `db pull` produkcji, archiwizacja 61 migracji, pogodzenie historii (`migration repair`) | L | opus | done | FA-0.08 |
 | FA-1.02 | `drop_marketplace_leftovers` — schemat `archive` + martwe tabele `public` bez danych | M | opus | done | FA-1.01 |
 | FA-1.03 | Maszyna stanów §4 + `inquiry_events` + `transition()` — statusy „na kogo czekamy" (przepisane 16 IX) | L | opus | done | FA-1.01 |
@@ -53,10 +51,17 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.14 | Agent w wątku — instalacja: „zaproponuj” w kompozytorze, loader `docs/knowledge/`, prompt-zaślepka, auto-wysyłka off (zawężone 21 IX: treść i logika → FA-1.17) | M | sonnet | done | FA-1.12 |
 | FA-1.15 | Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly` | L | opus | done | FA-1.10, FA-1.12, FA-1.13 (kod w stage-1; kryterium E2E czeka na O-16), FA-1.14 |
 | FA-1.16 | Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja | M | sonnet | done | FA-1.12 |
-| FA-1.17 | Treść i logika agenta — baza wiedzy (pliki) i graf działania; robi tj | M | — (człowiek) | todo | FA-1.14 |
+| FA-1.17 | Treść agenta cz. 1 — graf, instrukcje, ton, NZ przez panel; ocena na 3 wątkach na prod (przepisane 22 IX: wiedza w bazie) | M | — (człowiek) | todo | FA-1.21, FA-1.22, FA-1.23, FA-1.24 |
+| FA-1.21 | Agent wie, do kogo i na jakim etapie pisze — adresat, kanał, status w prompcie; strony wątku podpisane | M | sonnet | todo | FA-1.14 |
+| FA-1.22 | Baza wiedzy agenta w bazie — tabela `agent_knowledge`, reguły, RLS tylko admin | L | opus | todo | FA-1.14 |
+| FA-1.23 | Agent czyta wiedzę i instrukcje z bazy; `docs/knowledge/` znika | M | sonnet | todo | FA-1.21, FA-1.22 |
+| FA-1.24 | Panel `/admin/knowledge` — lista, edycja, wyłączanie, braki, odnośnik z karty przewodnika | M | sonnet | todo | FA-1.22, FA-1.15 |
+| FA-1.25 | Stary agent bez rund — tylko klasyfikacja; bez `AgentToggle` | M | sonnet | todo | FA-1.14 |
+| FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | todo | FA-1.17 |
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
 Stage-1 files written: FA-1.01–1.16 (complete). FA-1.05, 1.07, 1.08, 1.10 written 19 IX 2026 after FA-1.12 landed.
 FA-1.15 (UI panelu admina) dopisane 20 IX 2026 — decyzje tj D1–D5 w pliku zadania; otwarte O-17.
 FA-1.16 (domknięcie pętli depozytu) dopisane 20 IX 2026 — decyzje tj D1–D3 w pliku zadania.
+FA-1.21–1.26 dopisane 22 IX 2026 (/wf-plan fa 17): wiedza agenta w bazie (decyzja tj, opcja C), O-18–O-22 rozstrzygnięte. FA-1.20 zajęte w innym wątku.
