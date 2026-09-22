@@ -86,3 +86,35 @@ pnpm typecheck && pnpm lint && pnpm test
 - 2026-09-22 tj: seed nie miał kont guide/admin/klient; zdecydowano wariant A — ten PR
   dodaje do `seed.sql` fikcyjne konta ról (admin, klient) i jednego przewodnika.
 
+### Rozstrzygnięcia przy bramce STOP (projekt SQL) — 2026-09-22, tj
+
+- **2026-09-22 tj (D-A):** rodzaj `offer` i pole `regions` z `docs/knowledge/README.md`
+  **nie wchodzą** do tabeli. Zostają cztery rodzaje —
+  `instructions | tone | destination | guide` — i żadnej kolumny `regions`. Treść
+  w `docs/knowledge/*` jest pusta, więc nic nie ginie; szczegół regionu opisuje się
+  tekstem w `body`. Potwierdza pierwotny projekt, nie zmienia SQL-a.
+- **2026-09-22 tj (D-B):** seed **kopiuje treść `STUB_PROMPT`** dosłownie, z komentarzem
+  wskazującym źródło (`src/lib/ai/draft-reply-prompt.ts`, linie 17–21). `STUB_PROMPT` nie
+  jest eksportowany i SQL i tak nie zaimportowałby TS-a. Duplikat żyje do FA-1.23, która
+  usuwa oryginał. Bez zmian w SQL.
+- **2026-09-22 tj (D-C):** to nie była decyzja — `service_role` ma `rolbypassrls = true`,
+  więc polityka RLS dla tej roli nic nie robi. Blok
+  `CREATE POLICY "service_role manages agent_knowledge"` **usunięty** jako szum. Zostaje
+  sama polityka admina. `GRANT ALL ON TABLE public.agent_knowledge TO service_role`
+  **zostaje** — to ono realnie otwiera tabelę loaderowi z FA-1.23
+  (`createServiceClient`), nie polityka.
+- **2026-09-22 tj (D-D):** kształt ścisły, jeden per rodzaj — każdy rodzaj niesie tylko
+  swoje pole: `destination` → `country IS NOT NULL AND guide_id IS NULL`;
+  `guide` → `guide_id IS NOT NULL AND country IS NULL`;
+  `instructions`/`tone` → `country IS NULL AND guide_id IS NULL`. Cztery wcześniejsze
+  ograniczenia zwinięte do **trzech** (`agent_knowledge_destination_shape`,
+  `agent_knowledge_guide_shape`, `agent_knowledge_global_shape`); nadmiarowe
+  `agent_knowledge_scope_is_exclusive` znika — każdy CHECK mówi naraz o polu wymaganym
+  i zakazanym. Dwa nowe red proofy do następnej rundy: wpis `guide` z ustawionym
+  `country` → `agent_knowledge_guide_shape`; wpis `destination` z ustawionym `guide_id`
+  → `agent_knowledge_destination_shape`.
+- **2026-09-22 tj (D-E):** `guide_id` FK z `ON DELETE CASCADE` na **`ON DELETE RESTRICT`**.
+  Historii zmian nie ma (O-22), więc kaskada po cichu zniszczyłaby notatki o stawkach
+  wpisane ręcznie przez tj. Usunięcie przewodnika ma się wywalić, dopóki ktoś świadomie
+  nie zajmie się jego wpisami. Komentarz kolumny poprawiony, żeby nie sugerował kaskady.
+
