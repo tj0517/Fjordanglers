@@ -54,7 +54,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.17 | Treść agenta cz. 1 — graf, instrukcje, ton, NZ przez panel; ocena na 3 wątkach na prod (przepisane 22 IX: wiedza w bazie) | M | — (człowiek) | todo | FA-1.21, FA-1.22, FA-1.23, FA-1.24 |
 | FA-1.21 | Agent wie, do kogo i na jakim etapie pisze — adresat, kanał, status w prompcie; strony wątku podpisane | M | sonnet | done | FA-1.14 |
 | FA-1.22 | Baza wiedzy agenta w bazie — tabela `agent_knowledge`, reguły, RLS tylko admin | L | opus | done | FA-1.14 |
-| FA-1.23 | Agent czyta wiedzę i instrukcje z bazy; `docs/knowledge/` znika | M | sonnet | todo | FA-1.21, FA-1.22 |
+| FA-1.23 | Agent czyta wiedzę i instrukcje z bazy; `docs/knowledge/` znika | M | sonnet | done | FA-1.21, FA-1.22 |
 | FA-1.24 | Panel `/admin/knowledge` — lista, edycja, wyłączanie, braki, odnośnik z karty przewodnika | M | sonnet | todo | FA-1.22, FA-1.15 |
 | FA-1.25 | Stary agent bez rund — tylko klasyfikacja; bez `AgentToggle` | M | sonnet | todo | FA-1.14 |
 | FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | todo | FA-1.17 |

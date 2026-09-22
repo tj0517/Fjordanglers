@@ -2,13 +2,14 @@
 id: FA-1.23
 title: Agent czyta wiedzę i instrukcje z bazy zamiast z plików — docs/knowledge/ znika
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/agent-knowledge-db
+pr: 88
 depends_on: [FA-1.21, FA-1.22]
 blocked_by_questions: []
 touches_db: true
@@ -73,3 +74,9 @@ pnpm typecheck && pnpm lint && pnpm knip
 ```
 
 ## Notatki z realizacji
+
+- 2026-09-22 — odbiór (tj): PR #88 zaakceptowany. Udowodnione: loader z bazy (9 testów, w tym
+  `active=false` red→green), `DraftReplyError` przy braku instrukcji (red→green), lokalny dowód
+  bez restartu (draft b56d0f41…, usedIds = instrukcje + ton, UPDATE tonu odzwierciedlony),
+  grep 0, typecheck/lint/test/knip/build zielone. Uzupełnienia w rundzie 2: test
+  `active=false`, usunięty `demo-draft-lifecycle.mts`, `.from` poza warstwą danych → deferred.
