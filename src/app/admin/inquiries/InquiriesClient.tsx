@@ -69,23 +69,23 @@ const ACTIVE_STATUSES = new Set([
 
 export type MainFilter = 'lead' | 'guide' | 'confirmed' | 'lost'
 
-export const STATUS_GROUPS: Record<MainFilter, string[]> = {
+const STATUS_GROUPS: Record<MainFilter, string[]> = {
   lead:      ['new', 'qualifying'],
   guide:     ['waiting_guide', 'offer_presented', 'awaiting_payment'],
   confirmed: ['paid', 'handed_over', 'completed'],
   lost:      ['lost', 'cancelled'],
 }
 
-export const MAIN_LABELS: Record<MainFilter, string> = {
+const MAIN_LABELS: Record<MainFilter, string> = {
   lead:      'Lead',
   guide:     'Guide',
   confirmed: 'Confirmed',
   lost:      'Lost',
 }
 
-export interface SubOption { key: string; label: string; special?: boolean }
+interface SubOption { key: string; label: string; special?: boolean }
 
-export const SUB_OPTIONS: Record<MainFilter, SubOption[]> = {
+const SUB_OPTIONS: Record<MainFilter, SubOption[]> = {
   lead: [
     { key: 'new',        label: STATUS_LABELS.new        },
     { key: 'qualifying', label: STATUS_LABELS.qualifying },
@@ -201,6 +201,76 @@ function SilenceBadge({ row }: { row: InquiryRow }) {
   )
 }
 
+// ─── Base filter (shared: list + calendar) ────────────────────────────────────
+// from/to are intentionally absent — they are list-only (created_at range).
+
+export interface BaseFilterParams {
+  mainFilter:      MainFilter
+  subFilter:       string | null
+  q:               string
+  countryFilter:   string
+  guideIdFilter:   string
+  guideRespFilter: string
+  sourceFilter:    string
+  qualifiedFilter: string
+  slaFilter:       boolean
+  tripMap:         Record<string, string>
+  countryMap:      Record<string, string>
+}
+
+export function applyBaseFilters(allRows: InquiryRow[], p: BaseFilterParams): InquiryRow[] {
+  const group = STATUS_GROUPS[p.mainFilter]
+  let result: InquiryRow[]
+
+  if (p.subFilter === 'needs_attention') {
+    result = allRows.filter(r => group.includes(r.status) && needsAttention(r))
+    result = [...result].sort((a, b) => silenceDays(b) - silenceDays(a))
+  } else if (p.subFilter != null) {
+    result = allRows.filter(r => r.status === p.subFilter)
+  } else {
+    result = allRows.filter(r => group.includes(r.status))
+  }
+
+  if (p.q) {
+    const lq = p.q.toLowerCase()
+    result = result.filter(r =>
+      (r.angler_name  ?? '').toLowerCase().includes(lq) ||
+      (r.angler_email ?? '').toLowerCase().includes(lq) ||
+      (p.tripMap[r.id] ?? '').toLowerCase().includes(lq)
+    )
+  }
+
+  if (p.countryFilter)
+    result = result.filter(r => (r.trip_country ?? p.countryMap[r.id]) === p.countryFilter)
+
+  if (p.guideIdFilter)
+    result = result.filter(r => r.assigned_guide_id === p.guideIdFilter)
+
+  if (p.guideRespFilter === 'none')
+    result = result.filter(r => r.assigned_guide_id === null)
+  else if (p.guideRespFilter === 'pending')
+    result = result.filter(r => r.assigned_guide_id !== null && r.guide_acceptance === null)
+  else if (p.guideRespFilter === 'accepted')
+    result = result.filter(r => r.guide_acceptance === 'accepted')
+  else if (p.guideRespFilter === 'declined')
+    result = result.filter(r => r.guide_acceptance === 'declined')
+
+  if (p.sourceFilter)
+    result = result.filter(r => r.source === p.sourceFilter)
+
+  if (p.qualifiedFilter === 'yes')
+    result = result.filter(r => r.qualified === 'yes')
+  else if (p.qualifiedFilter === 'no')
+    result = result.filter(r => r.qualified === 'no')
+  else if (p.qualifiedFilter === 'unknown')
+    result = result.filter(r => r.qualified !== 'yes' && r.qualified !== 'no')
+
+  if (p.slaFilter)
+    result = result.filter(r => needsAttention(r) || noOfferSinceHours(r) !== null)
+
+  return result
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -291,61 +361,22 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     lost:      allRows.filter(r => STATUS_GROUPS.lost.includes(r.status)).length,
   }), [allRows])
 
-  // ── Filtered rows ──────────────────────────────────────────────────────────
+  // ── Base rows: all filters EXCEPT from/to — used by calendar ──────────────
+  const baseRows = useMemo(() =>
+    applyBaseFilters(allRows, {
+      mainFilter, subFilter, q, countryFilter, guideIdFilter, guideRespFilter,
+      sourceFilter, qualifiedFilter, slaFilter, tripMap, countryMap,
+    }),
+    [allRows, mainFilter, subFilter, q, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, tripMap, countryMap]
+  )
+
+  // ── List rows: from/to applied on top of baseRows — list-only ─────────────
   const rows = useMemo(() => {
-    const group = STATUS_GROUPS[mainFilter]
-    let result: InquiryRow[]
-
-    if (subFilter === 'needs_attention') {
-      result = allRows.filter(r => group.includes(r.status) && needsAttention(r))
-      result = [...result].sort((a, b) => silenceDays(b) - silenceDays(a))
-    } else if (subFilter != null) {
-      result = allRows.filter(r => r.status === subFilter)
-    } else {
-      result = allRows.filter(r => group.includes(r.status))
-    }
-
-    if (q) {
-      const lq = q.toLowerCase()
-      result = result.filter(r =>
-        (r.angler_name  ?? '').toLowerCase().includes(lq) ||
-        (r.angler_email ?? '').toLowerCase().includes(lq) ||
-        (tripMap[r.id]  ?? '').toLowerCase().includes(lq)
-      )
-    }
+    let result = baseRows
     if (from) result = result.filter(r => r.created_at >= from)
     if (to)   result = result.filter(r => r.created_at.slice(0, 10) <= to)
-
-    if (countryFilter)
-      result = result.filter(r => (r.trip_country ?? countryMap[r.id]) === countryFilter)
-
-    if (guideIdFilter)
-      result = result.filter(r => r.assigned_guide_id === guideIdFilter)
-
-    if (guideRespFilter === 'none')
-      result = result.filter(r => r.assigned_guide_id === null)
-    else if (guideRespFilter === 'pending')
-      result = result.filter(r => r.assigned_guide_id !== null && r.guide_acceptance === null)
-    else if (guideRespFilter === 'accepted')
-      result = result.filter(r => r.guide_acceptance === 'accepted')
-    else if (guideRespFilter === 'declined')
-      result = result.filter(r => r.guide_acceptance === 'declined')
-
-    if (sourceFilter)
-      result = result.filter(r => r.source === sourceFilter)
-
-    if (qualifiedFilter === 'yes')
-      result = result.filter(r => r.qualified === 'yes')
-    else if (qualifiedFilter === 'no')
-      result = result.filter(r => r.qualified === 'no')
-    else if (qualifiedFilter === 'unknown')
-      result = result.filter(r => r.qualified !== 'yes' && r.qualified !== 'no')
-
-    if (slaFilter)
-      result = result.filter(r => needsAttention(r) || noOfferSinceHours(r) !== null)
-
     return result
-  }, [allRows, mainFilter, subFilter, q, from, to, countryFilter, guideIdFilter, guideRespFilter, sourceFilter, qualifiedFilter, slaFilter, tripMap, countryMap])
+  }, [baseRows, from, to])
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const { totalCommission, hasMixedCurrency, convPct } = useMemo(() => {
@@ -472,15 +503,7 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
         </div>
       )}
 
-      {/* ─── Calendar view ──────────────────────────────────────── */}
-      {displayMode === 'calendar' && (
-        <InquiriesCalendar allRows={allRows} tripMap={tripMap} slugMap={slugMap} countryMap={countryMap} />
-      )}
-
-      {/* ─── List view ──────────────────────────────────────────── */}
-      {displayMode === 'list' && (<>
-
-      {/* ─── Status group chips ─────────────────────────────────── */}
+      {/* ─── Status group chips (shared: list + calendar) ──────────── */}
       {openPopup != null && (
         <div className="fixed inset-0 z-40" onClick={() => setOpenPopup(null)} />
       )}
@@ -623,41 +646,43 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
           )}
         </div>
 
-        {/* From date */}
-        <div className={cn(
-          'flex items-center gap-1.5 px-2.5 rounded-lg bg-background border h-8',
-          from ? 'border-primary/25' : 'border-input',
-        )}>
-          <CalendarDays size={13} className="text-muted-foreground flex-shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex-shrink-0">From</span>
-          <Input
-            type="date" value={from} onChange={e => setFrom(e.target.value)}
-            className={cn('border-0 shadow-none bg-transparent p-0 h-auto text-sm ring-0 focus-visible:ring-0', from ? 'text-foreground' : 'text-muted-foreground')}
-          />
-          {from && (
-            <Button variant="ghost" size="icon-xs" onClick={() => setFrom('')} className="flex-shrink-0 -mr-1">
-              <X size={11} />
-            </Button>
-          )}
-        </div>
-
-        {/* To date */}
-        <div className={cn(
-          'flex items-center gap-1.5 px-2.5 rounded-lg bg-background border h-8',
-          to ? 'border-primary/25' : 'border-input',
-        )}>
-          <CalendarDays size={13} className="text-muted-foreground flex-shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex-shrink-0">To</span>
-          <Input
-            type="date" value={to} onChange={e => setTo(e.target.value)}
-            className={cn('border-0 shadow-none bg-transparent p-0 h-auto text-sm ring-0 focus-visible:ring-0', to ? 'text-foreground' : 'text-muted-foreground')}
-          />
-          {to && (
-            <Button variant="ghost" size="icon-xs" onClick={() => setTo('')} className="flex-shrink-0 -mr-1">
-              <X size={11} />
-            </Button>
-          )}
-        </div>
+        {/* From / To — list only (created_at filter would confuse calendar view) */}
+        {displayMode === 'list' && (
+          <div className={cn(
+            'flex items-center gap-1.5 px-2.5 rounded-lg bg-background border h-8',
+            from ? 'border-primary/25' : 'border-input',
+          )}>
+            <CalendarDays size={13} className="text-muted-foreground flex-shrink-0" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex-shrink-0">From</span>
+            <Input
+              type="date" value={from} onChange={e => setFrom(e.target.value)}
+              className={cn('border-0 shadow-none bg-transparent p-0 h-auto text-sm ring-0 focus-visible:ring-0', from ? 'text-foreground' : 'text-muted-foreground')}
+            />
+            {from && (
+              <Button variant="ghost" size="icon-xs" onClick={() => setFrom('')} className="flex-shrink-0 -mr-1">
+                <X size={11} />
+              </Button>
+            )}
+          </div>
+        )}
+        {displayMode === 'list' && (
+          <div className={cn(
+            'flex items-center gap-1.5 px-2.5 rounded-lg bg-background border h-8',
+            to ? 'border-primary/25' : 'border-input',
+          )}>
+            <CalendarDays size={13} className="text-muted-foreground flex-shrink-0" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground flex-shrink-0">To</span>
+            <Input
+              type="date" value={to} onChange={e => setTo(e.target.value)}
+              className={cn('border-0 shadow-none bg-transparent p-0 h-auto text-sm ring-0 focus-visible:ring-0', to ? 'text-foreground' : 'text-muted-foreground')}
+            />
+            {to && (
+              <Button variant="ghost" size="icon-xs" onClick={() => setTo('')} className="flex-shrink-0 -mr-1">
+                <X size={11} />
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Country */}
         {countries.length > 0 && (
@@ -738,7 +763,14 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
         )}
       </div>
 
-      {/* ─── Results count ──────────────────────────────────────── */}
+      {/* ─── Calendar view ──────────────────────────────────────── */}
+      {displayMode === 'calendar' && (
+        <InquiriesCalendar rows={baseRows} tripMap={tripMap} slugMap={slugMap} />
+      )}
+
+      {/* ─── List: results count + table ────────────────────────── */}
+      {displayMode === 'list' && (<>
+
       {(hasActiveFilters || subFilter != null) && (
         <p className="text-xs f-body mb-4 text-primary/40">
           {rows.length === 0 ? 'No results' : `${rows.length} result${rows.length !== 1 ? 's' : ''}`}
@@ -895,3 +927,4 @@ export function InquiriesClient({ allRows, tripMap, slugMap, countryMap, guideMa
     </div>
   )
 }
+
