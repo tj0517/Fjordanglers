@@ -40,18 +40,42 @@ export function buildDraftSubject(
     : `Re: Your ${country} inquiry`
 }
 
+// ─── Draft context ─────────────────────────────────────────────────────────────
+
+/**
+ * Who the draft goes to, over which channel, at what stage of the inquiry.
+ * FA-1.21: precedes the knowledge section so the model never confuses the
+ * two sides of the thread or addresses the wrong recipient.
+ */
+export interface DraftContext {
+  counterpart: 'angler' | 'guide'
+  channel:     'email' | 'whatsapp' | 'instagram'
+  /** inquiries.status — see docs/01-architecture.md §4 for the enum. */
+  status:      string
+  guideName:   string | null
+}
+
 // ─── Assembler ────────────────────────────────────────────────────────────────
 
 /**
- * Returns the complete system prompt: knowledge sections + instructions.
+ * Returns the complete system prompt: draft context + knowledge sections + instructions.
+ * @param context - addressee, channel, inquiry status, assigned guide
  * @param knowledge - files loaded by loadKnowledge for this inquiry
  * @param conversation - full conversation assembled by assembleConversation
  */
 export function buildDraftPrompt(
+  context: DraftContext,
   knowledge: KnowledgeFile[],
   conversation: string,
 ): string {
   const sections: string[] = []
+
+  sections.push('=== DRAFT CONTEXT ===')
+  sections.push(`Addressee: ${context.counterpart}`)
+  sections.push(`Channel: ${context.channel}`)
+  sections.push(`Inquiry status: ${context.status}`)
+  sections.push(`Assigned guide: ${context.guideName ?? 'none'}`)
+  sections.push('')
 
   if (knowledge.length > 0) {
     sections.push('=== KNOWLEDGE FILES ===')
