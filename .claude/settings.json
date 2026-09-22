@@ -38,5 +38,12 @@
         ]
       }
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase-prod",
+    "playwright",
+    "stripe",
+    "github",
+    "context7"
+  ]
 }

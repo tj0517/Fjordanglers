@@ -131,6 +131,17 @@ The agent never prints an env value, key or token, even to "check it is set" —
 with `test -n "$VAR"`. Service-role keys do not belong in local env files (O-11). If a
 tool output contains a secret, the agent does not repeat it in the report.
 
+### MCP servers (`.mcp.json`, committed — no secrets inside)
+
+The agent's MCP servers are pinned to this repo in `.mcp.json` (generated from tj's
+`agent-workflow/projects/fa/project.md`). Values live only in your shell (`~/.zshrc`):
+
+- `GITHUB_TOKEN` — fine-grained PAT, this repo only (server `github`)
+- `STRIPE_RESTRICTED_KEY` — Stripe **restricted key, Read only** (server `stripe`); never `sk_live`
+- Supabase (`supabase-prod`, read-only) uses OAuth: in Claude Code run `/mcp` → Authenticate once.
+
+Check: `bash ~/Documents/agent-workflow/bin/mcp-doctor.sh fa`.
+
 ## 8. Subagents
 
 | Agent | Use when | Model |
