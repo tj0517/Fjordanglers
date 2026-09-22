@@ -2,7 +2,7 @@
 id: FA-1.22
 title: Baza wiedzy agenta w bazie danych — tabela wpisów (instrukcje, ton, kraj, przewodnik), dostęp tylko dla admina
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -180,3 +180,4 @@ GRANT ALL                            ON TABLE public.agent_knowledge TO service_
 
 Po poprawce: `authenticated | DELETE,INSERT,SELECT,UPDATE`, `anon` bez żadnego wiersza.
 
+2026-09-22 — odbiór (tj): PR #86 zaakceptowany. Udowodnione: db reset + seed (4 wpisy, 2 konta), 10 czerwonych dowodów reguł z nazwami constraintów, RLS przez prawdziwe logowanie (angler 0 wierszy / 403, admin 4, anon brak uprawnień), updated_at, brak dryfu, typy, test krajów red→green, CI zielone. Odstępstwo w grantach (REVOKE TRUNCATE) przyjęte.
