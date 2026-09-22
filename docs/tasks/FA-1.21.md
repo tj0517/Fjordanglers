@@ -68,3 +68,5 @@ pnpm typecheck && pnpm lint && pnpm knip
 ```
 
 ## Notatki z realizacji
+
+2026-09-22 — tj: guide message without an assigned guide is labelled "Guide (unassigned)" instead of throwing (review option A); per-message guide identity via counterpart_id stays deferred.

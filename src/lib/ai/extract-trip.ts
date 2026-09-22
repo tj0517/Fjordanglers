@@ -44,8 +44,9 @@ export interface ConversationMessage {
 /**
  * Speaker label for one message. counterpart absent → today's plain
  * Angler/FA labelling, byte-identical for callers that don't select it.
- * A guide message with no resolved guideName is refused rather than
- * guessed — draftReply must resolve the assigned guide's name first.
+ * A guide message with no resolved guideName (e.g. FA wrote to a guide
+ * before one was assigned) is labelled "Guide (unassigned)" rather than
+ * guessed a name — review decision, 2026-09-22 (see FA-1.21 task notes).
  */
 function speakerLabel(msg: ConversationMessage, guideName: string | null | undefined): string {
   if (msg.counterpart === undefined) {
@@ -53,10 +54,7 @@ function speakerLabel(msg: ConversationMessage, guideName: string | null | undef
   }
   if (msg.direction === 'inbound') {
     if (msg.counterpart === 'angler') return 'Angler'
-    if (!guideName) {
-      throw new Error('assembleConversation: guide message with no resolved guide name — refusing to guess the label')
-    }
-    return `Guide ${guideName}`
+    return guideName ? `Guide ${guideName}` : 'Guide (unassigned)'
   }
   return msg.counterpart === 'guide' ? 'FA → guide' : 'FA → angler'
 }

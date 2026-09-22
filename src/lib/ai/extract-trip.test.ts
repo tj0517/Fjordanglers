@@ -74,11 +74,13 @@ describe('assembleConversation — speaker labels (FA-1.21)', () => {
     expect(conversation).not.toContain('FA →')
   })
 
-  it('stops instead of guessing when a guide message has no resolved guide name', () => {
+  it('labels a guide message "Guide (unassigned)" instead of guessing a name, and does not throw', () => {
     const messages: ConversationMessage[] = [
       { direction: 'inbound', channel: 'whatsapp', body: 'I can do it', occurred_at: '2026-07-02T10:00:00Z', counterpart: 'guide' },
     ]
 
-    expect(() => assembleConversation(...BASE_ARGS, messages, null)).toThrow()
+    let conversation = ''
+    expect(() => { conversation = assembleConversation(...BASE_ARGS, messages, null) }).not.toThrow()
+    expect(conversation).toContain('Guide (unassigned)')
   })
 })
