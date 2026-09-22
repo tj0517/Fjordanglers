@@ -2,8 +2,9 @@
  * FA-1.23 — loadKnowledge DB-based loader tests.
  *
  * Uses a mocked createServiceClient (same pattern as draft-reply.test.ts).
- * The mock returns a fixed set of active entries; the DB-side eq('active', true)
- * filter is simulated by only including active rows in the mock data.
+ * The mock honours the .eq('active', true) call by filtering out rows where
+ * active === false before resolving — so the inactive-exclusion test is
+ * meaningful, not a tautology.
  *
  * Verifies that the loader:
  *   - always picks up the instructions and tone entries
@@ -11,6 +12,7 @@
  *   - picks the guide entry when guideId matches
  *   - skips destination entries for other countries
  *   - skips guide entries for other guide ids
+ *   - does NOT return entries with active=false (proven by a red/green proof)
  *   - returns null instructions when none are active
  */
 
@@ -23,20 +25,42 @@ import { loadKnowledge } from './knowledge'
 
 // ─── Test data ────────────────────────────────────────────────────────────────
 
-const ROWS_ALL_ACTIVE = [
-  { id: 'k-inst',     kind: 'instructions', country: null,        guide_id: null,  title: 'Instructions (stub)', body: 'You are the FA assistant.' },
-  { id: 'k-tone',     kind: 'tone',         country: null,        guide_id: null,  title: 'Tone of voice',       body: 'Warm, direct, no jargon.' },
-  { id: 'k-iceland',  kind: 'destination',  country: 'Iceland',   guide_id: null,  title: 'Iceland — basics',    body: 'Iceland season: June–September.' },
-  { id: 'k-nz',       kind: 'destination',  country: 'New Zealand', guide_id: null, title: 'NZ — basics',        body: 'NZ brown trout.' },
-  { id: 'k-guide-x',  kind: 'guide',        country: null,        guide_id: 'g-x', title: 'Guide X — rates',    body: '400 EUR per day.' },
-  { id: 'k-guide-y',  kind: 'guide',        country: null,        guide_id: 'g-y', title: 'Guide Y — rates',    body: '500 EUR per day.' },
+type TestRow = {
+  id: string
+  kind: string
+  country: string | null
+  guide_id: string | null
+  title: string
+  body: string
+  active: boolean
+}
+
+const ALL_ROWS: TestRow[] = [
+  { id: 'k-inst',         kind: 'instructions', country: null,          guide_id: null,  title: 'Instructions',       body: 'You are the FA assistant.', active: true  },
+  { id: 'k-inst-old',     kind: 'instructions', country: null,          guide_id: null,  title: 'Old instructions',   body: 'Outdated.',                 active: false },
+  { id: 'k-tone',         kind: 'tone',         country: null,          guide_id: null,  title: 'Tone of voice',      body: 'Warm, direct, no jargon.',  active: true  },
+  { id: 'k-tone-inactive',kind: 'tone',         country: null,          guide_id: null,  title: 'Old tone',           body: 'Very formal.',              active: false },
+  { id: 'k-iceland',      kind: 'destination',  country: 'Iceland',     guide_id: null,  title: 'Iceland — basics',   body: 'Iceland season: June–Sep.', active: true  },
+  { id: 'k-iceland-old',  kind: 'destination',  country: 'Iceland',     guide_id: null,  title: 'Iceland (old)',      body: 'Outdated Iceland.',         active: false },
+  { id: 'k-nz',           kind: 'destination',  country: 'New Zealand', guide_id: null,  title: 'NZ — basics',        body: 'NZ brown trout.',           active: true  },
+  { id: 'k-guide-x',      kind: 'guide',        country: null,          guide_id: 'g-x', title: 'Guide X — rates',   body: '400 EUR per day.',          active: true  },
+  { id: 'k-guide-y',      kind: 'guide',        country: null,          guide_id: 'g-y', title: 'Guide Y — rates',   body: '500 EUR per day.',          active: true  },
 ]
 
-function mockClient(rows: typeof ROWS_ALL_ACTIVE) {
+/**
+ * Sets up the mock. When .eq('active', true) is called the mock filters out
+ * rows with active=false, mirroring what the real DB query does.
+ */
+function mockClient(rows: TestRow[]) {
   vi.mocked(createServiceClient).mockReturnValue({
     from: () => ({
       select: () => ({
-        eq: () => Promise.resolve({ data: rows, error: null }),
+        eq: (k: string, v: unknown) => {
+          if (k === 'active' && v === true) {
+            return Promise.resolve({ data: rows.filter(r => r.active), error: null })
+          }
+          return Promise.resolve({ data: rows, error: null })
+        },
       }),
     }),
   } as unknown as ReturnType<typeof createServiceClient>)
@@ -45,7 +69,7 @@ function mockClient(rows: typeof ROWS_ALL_ACTIVE) {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('loadKnowledge', () => {
-  beforeEach(() => mockClient(ROWS_ALL_ACTIVE))
+  beforeEach(() => mockClient(ALL_ROWS))
 
   it('country:Iceland + guideId:g-x → returns instructions + tone + iceland + guide-x', async () => {
     const result = await loadKnowledge({ country: 'Iceland', guideId: 'g-x' })
@@ -87,8 +111,17 @@ describe('loadKnowledge', () => {
     expect(result.usedIds).toEqual(['k-inst', 'k-tone'])
   })
 
-  it('returns null instructions when DB has no instructions rows', async () => {
-    mockClient(ROWS_ALL_ACTIVE.filter(r => r.kind !== 'instructions'))
+  it('entries with active=false are excluded — inactive instructions, tone and destination are not returned', async () => {
+    const result = await loadKnowledge({ country: 'Iceland', guideId: 'g-x' })
+    // k-inst-old, k-tone-inactive, k-iceland-old are all active=false and must be absent
+    const ids = [...(result.instructions ? [result.instructions.id] : []), ...result.entries.map(e => e.id)]
+    expect(ids).not.toContain('k-inst-old')
+    expect(ids).not.toContain('k-tone-inactive')
+    expect(ids).not.toContain('k-iceland-old')
+  })
+
+  it('returns null instructions when DB has no active instructions rows', async () => {
+    mockClient(ALL_ROWS.filter(r => r.kind !== 'instructions' || !r.active))
     const result = await loadKnowledge({ country: 'Iceland' })
     expect(result.instructions).toBeNull()
     expect(result.usedIds).not.toContain('k-inst')
