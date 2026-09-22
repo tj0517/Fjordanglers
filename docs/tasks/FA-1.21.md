@@ -2,7 +2,7 @@
 id: FA-1.21
 title: Agent wie, do kogo i na jakim etapie pisze — adresat, kanał i status w prompcie, strony wątku podpisane poprawnie
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -70,3 +70,5 @@ pnpm typecheck && pnpm lint && pnpm knip
 ## Notatki z realizacji
 
 2026-09-22 — tj: guide message without an assigned guide is labelled "Guide (unassigned)" instead of throwing (review option A); per-message guide identity via counterpart_id stays deferred.
+
+2026-09-22 — tj: accepted, PR #87. Proven: red proof on 3fc71f1 (guide message labelled "Angler"), draft-context block test, round1/round2 tests untouched (empty diff), typecheck/lint/knip clean, 336/336 tests. Open: per-message guide identity via counterpart_id → docs/deferred-tasks.md.
