@@ -58,6 +58,11 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.24 | Panel `/admin/knowledge` — lista, edycja, wyłączanie, braki, odnośnik z karty przewodnika | M | sonnet | todo | FA-1.22, FA-1.15 |
 | FA-1.25 | Stary agent bez rund — tylko klasyfikacja; bez `AgentToggle` | M | sonnet | todo | FA-1.14 |
 | FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | todo | FA-1.17 |
+| FA-1.17 | Treść i logika agenta — baza wiedzy (pliki) i graf działania; robi tj | M | — (człowiek) | todo | FA-1.14 |
+| FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | todo | FA-1.75 |
+| FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | todo | — |
+| FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
+| FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | todo | — |
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
@@ -65,3 +70,4 @@ Stage-1 files written: FA-1.01–1.16 (complete). FA-1.05, 1.07, 1.08, 1.10 writ
 FA-1.15 (UI panelu admina) dopisane 20 IX 2026 — decyzje tj D1–D5 w pliku zadania; otwarte O-17.
 FA-1.16 (domknięcie pętli depozytu) dopisane 20 IX 2026 — decyzje tj D1–D3 w pliku zadania.
 FA-1.21–1.26 dopisane 22 IX 2026 (/wf-plan fa 17): wiedza agenta w bazie (decyzja tj, opcja C), O-18–O-22 rozstrzygnięte. FA-1.20 zajęte w innym wątku.
+FA-1.18, FA-1.19 dopisane 22 IX 2026 — luki z audytu agent-workflow (środowisko dev, skan sekretów); rozpisane ponownie przez wf-plan tego samego dnia (+ FA-1.20, FA-1.75), decyzje tj D1–D4 w plikach zadań.

@@ -1,0 +1,99 @@
+---
+id: FA-1.18
+title: Środowisko dev — projekt Supabase `fjordanglers-dev` z migracjami i seedem; Vercel Preview na dev, tylko klucze testowe i flagi fake
+stage: 1
+status: todo
+difficulty: M
+model: sonnet
+model_approved:
+effort: medium
+agent: fa-core
+branch: chore/dev-environment
+depends_on: [FA-1.75]
+blocked_by_questions: []
+touches_db: true
+touches_prod: true
+estimate_h: 4
+owner: tj
+---
+
+# FA-1.18 — Środowisko dev
+
+## Kontekst — przeczytaj przed startem
+- `CLAUDE.md` — reguły nienegocjowalne
+- `docs/03-conventions.md` — sekcje „CI" i „Production verification"
+- `docs/05-agent-operations.md` §3 (STOP), §7 (sekrety), §9 (lokalne środowisko), §10 (flagi fake: `RESEND_DEV_FAKE`)
+- `docs/deferred-tasks.md` — wiersze FA-1.16 „Vercel Preview wskazuje na produkcyjną bazę" i „`pending_webhooks: 2`"; FA-1.12 „`.env.local` zawiera produkcyjny `RESEND_API_KEY`"
+- `supabase/seed.sql` — 14 kont `@seed.test`, dane syntetyczne
+- `src/lib/env.ts` — pełna lista zmiennych, które aplikacja wymaga (to ona wyznacza, co musi być w Preview)
+- `scripts/agent-guard.sh` — blokuje **każde** `supabase db push` (także na dev) i `vercel env add|rm`; tych komend nie uruchamiasz, przygotowujesz je dla tj
+- `supabase/.temp/project-ref` — repo jest zlinkowane z **produkcją**; tak ma zostać
+
+Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
+
+## Cel
+Dziś Vercel Preview używa bazy produkcyjnej, więc każde testowe kliknięcie na preview jest
+prawdziwym zapisem (FA-1.75 wyłącza preview do czasu tego zadania). Po zadaniu istnieje
+osobny projekt Supabase `fjordanglers-dev` ze schematem z repo i syntetycznym seedem,
+Preview wskazuje na niego, używa wyłącznie kluczy testowych Stripe i nie wysyła prawdziwych
+maili. Preview wraca i znów służy do review wizualnego i dem — bez ryzyka dla produkcji.
+Drabina środowisk: local → dev → prod (`core/environments.md` repo agent-workflow).
+
+## Zakres
+- [ ] **Odczyt stanu (do raportu, bez wartości):** `vercel env ls preview` — same nazwy i zakresy; dla każdej zmiennej z `src/lib/env.ts` wskaż, czy w Preview istnieje. **Nie** używaj `vercel env pull` ani niczego, co wypisuje wartości. Które z nich wskazują na prod — potwierdza tj.
+- [ ] **Odczyt stanu Stripe (tryb testowy):** lista endpointów webhooków trybu testowego (`stripe webhook_endpoints list` na kluczu testowym) — wyjaśnij drugiego odbiorcę z `pending_webhooks: 2` (wiersz FA-1.16).
+- [ ] **tj:** utworzenie projektu `fjordanglers-dev` (plan Free, obecna organizacja, ten sam region co prod). Agent podaje checklistę kroków w dashboardzie.
+- [ ] **tj:** migracje na dev jawnym adresem, **bez** `supabase link`: `supabase db push --db-url "$DEV_DB_URL"` (agent przygotowuje komendę; guard blokuje ją agentowi).
+- [ ] **tj:** seed na dev: `psql "$DEV_DB_URL" -f supabase/seed.sql` (agent przygotowuje komendę).
+- [ ] Ustawienia Auth na dev (site URL, dozwolone redirecty dla domen preview `*.vercel.app` projektu) — checklista dla tj, wartości w raporcie.
+- [ ] **tj, każda zmiana osobno (STOP):** Vercel Preview → `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` z projektu dev; Stripe: `STRIPE_SECRET_KEY` i `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` testowe, `STRIPE_WEBHOOK_SECRET` placeholder (D3: bez endpointu dla preview); `RESEND_DEV_FAKE=1`; pozostałe zmienne wskazujące na prod (WhatsApp, Google Ads, AI itd.) — lista z odczytu, decyzja tj dla każdej.
+- [ ] `.mcp.json`: serwer `supabase-dev` (tylko odczyt) obok `supabase-prod` — przez `agent-workflow/bin/mcp-render.py fa` (render robi tj w repo workflow; agent nie edytuje `.mcp.json` ręcznie).
+- [ ] **tj:** zdjęcie Ignored Build Step z FA-1.75, gdy kryteria env są spełnione.
+- [ ] Dokumentacja: `README.md` (sekcja o środowiskach: local / dev / prod i co wskazuje Preview), `docs/05-agent-operations.md` — nowy podrozdział „Środowisko dev" (jak odtworzyć dev, że Free usypia projekt po tygodniu bez ruchu i jak go wybudzić, że `db push` na dev robi człowiek do czasu FA-1.20).
+- [ ] Wiersze w `docs/deferred-tasks.md`: FA-1.16 „Preview → prod" i „`pending_webhooks: 2`" zamknięte z odsyłaczem do tego zadania.
+
+## Gotowe, gdy
+- [ ] Schemat dev = repo: `supabase migration list --db-url "$DEV_DB_URL"` → każda z migracji w `supabase/migrations` ma Local = Remote — **wklej wynik**.
+- [ ] Seed na dev: `select count(*) from auth.users where email like '%@seed.test'` na dev → 14 — **wklej wynik**.
+- [ ] Na dev nie ma danych osobowych z prod: `select count(*) from auth.users where email not like '%@seed.test'` na dev = 0 — **wklej wynik**.
+- [ ] Repo nadal zlinkowane z produkcją: `cat supabase/.temp/project-ref` przed i po zadaniu → ta sama wartość (pierwsze 4 znaki w raporcie).
+- [ ] **Preview nie dotyka prod (dowód zachowania, nie konfiguracji):** na preview gałęzi `chore/dev-environment` wysłane zapytanie z adresem `preview-check-<RRRRMMDD>@example.com` → na dev `select count(*) from inquiries where angler_email = '<adres>'` = 1; na **prod** to samo zapytanie = 0 (SELECT wykonuje tj lub MCP read-only) — **wklej oba wyniki**.
+- [ ] Stripe na preview testowy: link depozytu wygenerowany na preview dla zapytania z poprzedniego kryterium → URL zawiera `cs_test_` albo `plink_` z trybu testowego (dashboard Stripe, tryb testowy) — **wklej prefiks**.
+- [ ] Maile na preview fake: odpowiedź z karty zapytania na preview → wiersz w `messages` na dev z fake `external_id`; w logach Resend (prod) brak wysyłki na adres testowy — **zrzut / zapytanie**.
+- [ ] Lista zmiennych Preview po zmianie (`vercel env ls preview`, same nazwy) + tabela: zmienna → wskazuje na dev / test / fake / „świadomie prod, decyzja tj <data>".
+- [ ] Drugi odbiorca webhooków testowych nazwany (URL endpointu, bez sekretu) i opisany w raporcie; jeśli celuje w `fjordanglers.com` lub `*.vercel.app` → decyzja tj w notatkach.
+- [ ] Ignored Build Step zdjęty; nowy push gałęzi zadania tworzy preview „Ready".
+- [ ] `pnpm typecheck && pnpm lint && pnpm test run` zielone (zmiany tylko w dokumentacji — CI na PR wystarczy).
+
+## Poza zakresem
+- Automatyczne docieranie migracji na dev w CI → FA-1.20
+- Endpoint webhooka Stripe dla preview (D3: pętla płatności testowana lokalnie, jak w FA-1.16)
+- Supabase Branching, baza per PR
+- Kopiowanie jakichkolwiek danych z produkcji na dev — **zakazane** (dane osobowe nie opuszczają prod)
+- Porządki w `.env.local` / `dev.sh` (produkcyjne klucze lokalnie) → wiersze FA-1.10 i FA-1.12 w deferred, O-11
+- Tagowanie środowiska w Sentry, crony (Vercel uruchamia je tylko na produkcji)
+- Zmiany w `supabase/config.toml` i w migracjach
+Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
+
+## Bramki STOP
+- Utworzenie projektu Supabase, każda zmiana ustawień Auth na dev — robi tj.
+- `supabase db push` na dev i seed na dev — komendy przygotowujesz, wykonuje tj (guard i tak je zablokuje).
+- `supabase link` na cokolwiek — **zakaz**; zmiana linku sprawiłaby, że następny `db push` tj trafi w inny projekt, niż myśli.
+- Każda zmiana zmiennych w Vercelu (dowolny zakres) — osobno, z wypisaniem nazwy i zakresu, bez wartości.
+- Jakiekolwiek zapytanie do prod inne niż SELECT; stan bazy ustalasz bieżącym odczytem, nigdy z pamięci, notatek ani pliku typów.
+- Zmiana endpointów Stripe (także testowych).
+
+## Weryfikacja
+```
+supabase migration list --db-url "$DEV_DB_URL"
+psql "$DEV_DB_URL" -c "select count(*) from auth.users where email like '%@seed.test'"
+cat supabase/.temp/project-ref | cut -c1-4
+vercel env ls preview
+pnpm typecheck && pnpm lint && pnpm test run
+```
+
+## Notatki z realizacji
+- 2026-09-22 tj: tworzymy dev (audyt agent-workflow, luka „brak środowiska dev”). Pierwsza wersja pliku: commit `5b05b3fd` na `docs/workflow-wf-skills`; ta wersja ją zastępuje (wf-plan 22 IX).
+- 2026-09-22 tj (wf-plan): dev = osobny projekt Supabase na planie Free w obecnej organizacji (O-18 rozstrzygnięte przy planowaniu).
+- 2026-09-22 tj (wf-plan): Stripe na preview tylko `sk_test`, bez endpointu webhooka dla preview (D3).
+- 2026-09-22 tj (wf-plan): automatyczne migracje na dev w CI osobno, w FA-1.20 (D2).
