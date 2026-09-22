@@ -137,15 +137,45 @@ pnpm typecheck && pnpm lint && pnpm test
 - **2026-09-22 tj:** dowód RLS (klient vs admin) tylko lokalnie — CI startuje stack
   z `-x gotrue`, więc nie ma jak zalogować użytkownika. Wynik lokalny w raporcie
   wystarcza; nie dokładamy kroku do CI.
-- **2026-09-22 (agent, znalezione przy weryfikacji):** `authenticated` dostawał od
-  `ALTER DEFAULT PRIVILEGES` z baseline **wszystkie** uprawnienia do nowej tabeli, w tym
-  `TRUNCATE` — a `TRUNCATE` nie podlega RLS, więc zalogowany klient mógł wyczyścić całą
-  bazę wiedzy mimo polityki admina. Migracja poprawiona: najpierw
-  `REVOKE ALL … FROM anon, authenticated`, potem `GRANT SELECT, INSERT, UPDATE, DELETE`
-  dla `authenticated`. Ten sam powód, dla którego `inquiry_events` (20260916201226)
-  odbiera `TRUNCATE`. Poprawka w pliku migracji tego zadania — migracja nie była
-  wdrożona ani na prod, ani nigdzie poza lokalnym stackiem.
 - **2026-09-22 (agent):** plik migracji po angielsku — `docs/03-conventions.md`
   §Language wymaga angielskiego w komentarzach w kodzie. Wpisy w tych notatkach zostają
   po polsku, zgodnie z konwencją pliku zadania.
+
+### ⚠ Odstępstwo od SQL-a zaakceptowanego na bramce STOP — 2026-09-22 (agent)
+
+**To jest zmiana w SQL-u już po akceptacji tj.** Nie była wdrożona nigdzie poza lokalnym
+stackiem (ani prod, ani push, ani merge), ale zmienia zatwierdzoną treść migracji, więc
+zapisana jest osobno, a nie w liście rozstrzygnięć powyżej.
+
+Zaakceptowana wersja kończyła się tak:
+
+```sql
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_knowledge TO authenticated;
+GRANT ALL                            ON TABLE public.agent_knowledge TO service_role;
+REVOKE ALL                           ON TABLE public.agent_knowledge FROM anon;
+```
+
+Odczyt żywych uprawnień po `db reset` pokazał, że to za mało:
+
+```
+authenticated | DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE
+```
+
+`ALTER DEFAULT PRIVILEGES` z baseline (linie 9699–9702) nadaje **`authenticated` wszystkie**
+uprawnienia do każdej nowej tabeli w `public`, więc `GRANT SELECT, INSERT, UPDATE, DELETE`
+nie dodawał niczego, czego by już nie było. Wśród nich jest `TRUNCATE`, a **`TRUNCATE` nie
+podlega RLS** — zalogowany klient mógł wyczyścić całą bazę wiedzy mimo polityki „tylko
+admin". Tak samo rozumuje `inquiry_events` (`20260916201226`), które jawnie odbiera
+`TRUNCATE`.
+
+Poprawiona wersja — najpierw odbierz wszystko, potem oddaj tylko to, co potrzebne:
+
+```sql
+REVOKE ALL ON TABLE public.agent_knowledge FROM anon, authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_knowledge TO authenticated;
+GRANT ALL                            ON TABLE public.agent_knowledge TO service_role;
+```
+
+Po poprawce: `authenticated | DELETE,INSERT,SELECT,UPDATE`, `anon` bez żadnego wiersza.
 
