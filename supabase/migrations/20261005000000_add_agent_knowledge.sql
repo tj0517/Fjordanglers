@@ -131,6 +131,12 @@ CREATE POLICY "Admins manage agent_knowledge" ON public.agent_knowledge
 -- ────────────────────────────────────────────────────────
 -- 5. Table privileges
 -- ────────────────────────────────────────────────────────
+-- REVOKE first, then grant back only what is needed. The baseline's ALTER DEFAULT
+-- PRIVILEGES hands anon AND authenticated every privilege on a new public table,
+-- including TRUNCATE — and TRUNCATE is not subject to row-level security, so leaving it
+-- in place would let any signed-in angler empty the table despite the policy above.
+-- inquiry_events (20260916201226) revokes TRUNCATE for the same reason.
+REVOKE ALL ON TABLE public.agent_knowledge FROM anon, authenticated;
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.agent_knowledge TO authenticated;
 GRANT ALL                            ON TABLE public.agent_knowledge TO service_role;
-REVOKE ALL                           ON TABLE public.agent_knowledge FROM anon;

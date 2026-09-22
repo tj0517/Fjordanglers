@@ -2,7 +2,7 @@
 id: FA-1.22
 title: Baza wiedzy agenta w bazie danych — tabela wpisów (instrukcje, ton, kraj, przewodnik), dostęp tylko dla admina
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -126,6 +126,25 @@ pnpm typecheck && pnpm lint && pnpm test
 - **2026-09-22 tj (D-G):** `agent_knowledge_title_not_blank`
   i `agent_knowledge_body_not_blank` zostają tak, jak zaprojektowane. Dwa dodatkowe
   red proofy do kryteriów odbioru: INSERT z pustym `title`, INSERT z pustym `body`.
+- **2026-09-22 tj (D-F, dopowiedzenie):** `pg_get_constraintdef` jest nieosiągalny
+  z testu — testy chodzą przez PostgREST, a ten wystawia tylko `public`; repo nie ma
+  klienta `pg`. Zamiast jednego testu wchodzą **dwa**: (1) behawioralny — wszystkie
+  osiem wartości z `COUNTRIES` wchodzi jako wpis `destination`, wartość spoza listy
+  odbija się o `agent_knowledge_country_check`, wiersze sprzątane po teście;
+  (2) parsujący — test czyta listę z `CHECK` w pliku migracji i porównuje ją
+  z `COUNTRIES`. Każdy z własnym red proofem: dorzucić kraj do `COUNTRIES`, pokazać
+  oba testy na czerwono, cofnąć zmianę.
+- **2026-09-22 tj:** dowód RLS (klient vs admin) tylko lokalnie — CI startuje stack
+  z `-x gotrue`, więc nie ma jak zalogować użytkownika. Wynik lokalny w raporcie
+  wystarcza; nie dokładamy kroku do CI.
+- **2026-09-22 (agent, znalezione przy weryfikacji):** `authenticated` dostawał od
+  `ALTER DEFAULT PRIVILEGES` z baseline **wszystkie** uprawnienia do nowej tabeli, w tym
+  `TRUNCATE` — a `TRUNCATE` nie podlega RLS, więc zalogowany klient mógł wyczyścić całą
+  bazę wiedzy mimo polityki admina. Migracja poprawiona: najpierw
+  `REVOKE ALL … FROM anon, authenticated`, potem `GRANT SELECT, INSERT, UPDATE, DELETE`
+  dla `authenticated`. Ten sam powód, dla którego `inquiry_events` (20260916201226)
+  odbiera `TRUNCATE`. Poprawka w pliku migracji tego zadania — migracja nie była
+  wdrożona ani na prod, ani nigdzie poza lokalnym stackiem.
 - **2026-09-22 (agent):** plik migracji po angielsku — `docs/03-conventions.md`
   §Language wymaga angielskiego w komentarzach w kodzie. Wpisy w tych notatkach zostają
   po polsku, zgodnie z konwencją pliku zadania.
