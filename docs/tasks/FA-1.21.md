@@ -2,7 +2,7 @@
 id: FA-1.21
 title: Agent wie, do kogo i na jakim etapie pisze — adresat, kanał i status w prompcie, strony wątku podpisane poprawnie
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
