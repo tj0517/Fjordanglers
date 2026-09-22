@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: db/agent-knowledge
+pr: 86
 depends_on: [FA-1.14]
 blocked_by_questions: []
 touches_db: true
