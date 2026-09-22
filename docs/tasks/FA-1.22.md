@@ -84,6 +84,11 @@ pnpm typecheck && pnpm lint && pnpm test
 
 ## Notatki z realizacji
 
+- 2026-09-22 — odbiór (tj): PR #86 zaakceptowany. Udowodnione: db reset + seed (4 wpisy,
+  2 konta), 10 czerwonych dowodów reguł z nazwami constraintów, RLS przez prawdziwe
+  logowanie (angler 0 wierszy / 403, admin 4, anon brak uprawnień), updated_at, brak
+  dryfu, typy, test krajów red→green, CI zielone. Odstępstwo w grantach (REVOKE TRUNCATE)
+  przyjęte.
 - 2026-09-22 tj: seed nie miał kont guide/admin/klient; zdecydowano wariant A — ten PR
   dodaje do `seed.sql` fikcyjne konta ról (admin, klient) i jednego przewodnika.
 
@@ -179,5 +184,3 @@ GRANT ALL                            ON TABLE public.agent_knowledge TO service_
 ```
 
 Po poprawce: `authenticated | DELETE,INSERT,SELECT,UPDATE`, `anon` bez żadnego wiersza.
-
-2026-09-22 — odbiór (tj): PR #86 zaakceptowany. Udowodnione: db reset + seed (4 wpisy, 2 konta), 10 czerwonych dowodów reguł z nazwami constraintów, RLS przez prawdziwe logowanie (angler 0 wierszy / 403, admin 4, anon brak uprawnień), updated_at, brak dryfu, typy, test krajów red→green, CI zielone. Odstępstwo w grantach (REVOKE TRUNCATE) przyjęte.
