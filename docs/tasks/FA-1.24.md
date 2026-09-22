@@ -9,6 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: feat/admin-knowledge
+pr: 89
 depends_on: [FA-1.22, FA-1.15]
 blocked_by_questions: []
 touches_db: true
