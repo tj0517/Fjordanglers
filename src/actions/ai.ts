@@ -1,14 +1,5 @@
 'use server'
 
-/**
- * AI-powered server actions for FjordAnglers admin.
- *
- * extractTripDetailsAI(inquiryId)
- *   Fetches the full inquiry conversation (original message + messages)
- *   and calls Claude to extract structured trip brief fields.
- *   Returns ExtractedTripDetails — does NOT save to DB (caller decides).
- */
-
 import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { requireAdmin } from '@/lib/auth/guards'
@@ -25,30 +16,6 @@ import {
 export type ExtractTripDetailsResult =
   | { success: true;  data: ExtractedTripDetails }
   | { success: false; error: string }
-
-// ─── setAgentStatus ───────────────────────────────────────────────────────────
-
-/**
- * Stops or restarts the AI inquiry agent for a specific inquiry.
- * Setting to 'stopped' prevents any future automated agent rounds.
- * Setting to 'waiting' re-enables it (agent will reply on next inbound message).
- */
-export async function setAgentStatus(
-  inquiryId: string,
-  status: 'waiting' | 'stopped',
-): Promise<{ success: boolean; error?: string }> {
-  await requireAdmin()
-  const svc = createServiceClient()
-  const { error } = await svc
-    .from('inquiries')
-    .update({ agent_status: status })
-    .eq('id', inquiryId)
-  if (error != null) {
-    console.error('[setAgentStatus] Error:', error)
-    return { success: false, error: error.message }
-  }
-  return { success: true }
-}
 
 // ─── extractTripDetailsAI ──────────────────────────────────────────────────────
 

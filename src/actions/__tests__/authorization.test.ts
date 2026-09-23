@@ -326,18 +326,6 @@ describe('ads.ts', () => {
   })
 })
 
-// ─── ai.ts ────────────────────────────────────────────────────────────────────
-
-describe('ai.ts', () => {
-  describe('setAgentStatus', () => {
-    it('throws UnauthorizedError when there is no session', async () => {
-      mockNoSession()
-      const { setAgentStatus } = await import('@/actions/ai')
-      await expect(setAgentStatus('inq-1', 'stopped')).rejects.toBeInstanceOf(UnauthorizedError)
-    })
-  })
-})
-
 // ─── availability.ts ──────────────────────────────────────────────────────────
 
 describe('availability.ts', () => {

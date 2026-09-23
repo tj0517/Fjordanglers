@@ -21,7 +21,6 @@ import { DepositConfirmedAnglerEmail } from '@/emails/deposit-confirmed-angler'
 import { DepositConfirmedFaEmail } from '@/emails/deposit-confirmed-fa'
 import { BookingConfirmedGuideEmail } from '@/emails/booking-confirmed-guide'
 import { GuideAssignedEmail } from '@/emails/guide-assigned'
-import { InquiryAgentEmail } from '@/emails/inquiry-agent-email'
 import type { PasswordResetEmailProps } from '@/emails/password-reset'
 import type { InquiryReceivedFaEmailProps } from '@/emails/inquiry-received-fa'
 import type { InquiryReceivedAnglerEmailProps } from '@/emails/inquiry-received-angler'
@@ -30,13 +29,12 @@ import type { DepositConfirmedAnglerEmailProps } from '@/emails/deposit-confirme
 import type { DepositConfirmedFaEmailProps } from '@/emails/deposit-confirmed-fa'
 import type { BookingConfirmedGuideEmailProps } from '@/emails/booking-confirmed-guide'
 import type { GuideAssignedEmailProps } from '@/emails/guide-assigned'
-import type { InquiryAgentEmailProps } from '@/emails/inquiry-agent-email'
 
 const FROM = env.FA_FROM_EMAIL
 
 // ─── Thread headers (email threading) ────────────────────────────────────────
 
-export interface ThreadHeaders {
+interface ThreadHeaders {
   /** Message-ID for THIS outbound email, e.g. `<uuid@mail.fjordanglers.com>` */
   messageId:  string
   /** Message-ID of the email we are replying to (omit for the first email in the thread) */
@@ -217,19 +215,3 @@ export async function sendGuideAssignedEmail(
   })
 }
 
-/**
- * Sent by the AI agent when it needs one more detail from the angler.
- * Minimal, conversational — no buttons, no marketing.
- * Non-blocking: callers should fire-and-forget with .catch().
- */
-export async function sendInquiryAgentEmail(
-  props: { to: string; threadHeaders?: ThreadHeaders } & InquiryAgentEmailProps,
-): Promise<void> {
-  const { to, threadHeaders, ...templateProps } = props
-  await sendEmail({
-    to,
-    subject: `Quick question about your ${templateProps.tripTitle} inquiry`,
-    react:   createElement(InquiryAgentEmail, templateProps),
-    threadHeaders,
-  })
-}

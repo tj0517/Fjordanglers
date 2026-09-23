@@ -25,7 +25,7 @@ vi.mock('@/lib/inquiry-matcher', () => ({
 }))
 
 vi.mock('@/lib/ai/inquiry-agent', () => ({
-  runAgentRound2: vi.fn(),
+  classifyInquiry: vi.fn(),
 }))
 
 vi.mock('@/lib/events/emit', () => ({
