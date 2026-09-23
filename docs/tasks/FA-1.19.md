@@ -2,7 +2,7 @@
 id: FA-1.19
 title: Skan sekretów w CI — gitleaks (przypięta wersja + suma kontrolna) jako bramka na PR; jednorazowy skan całej historii
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
@@ -74,3 +74,5 @@ pnpm typecheck && pnpm lint && pnpm test run
 ## Notatki z realizacji
 - 2026-09-22 tj: skan sekretów w CI (audyt agent-workflow). Pierwsza wersja pliku: commit `5b05b3fd` na `docs/workflow-wf-skills`; ta wersja ją zastępuje (wf-plan 22 IX).
 - 2026-09-22 tj (wf-plan): zakres = bramka na nowe zmiany + jednorazowy skan całej historii (D4).
+- 2026-09-23 (D1): `workflow_dispatch` jest dostępny tylko gdy workflow jest na domyślnej gałęzi (`main`); ta gałąź trafi na `main` po zmergowaniu stage-1 → main w końcowej fazie etapu 1. Jednorazowy skan całej historii wykonywany jest lokalnie przez agenta z tą samą przypiętą binarką i tym samym `.gitleaks.toml`, `--redact`. Tryb `workflow_dispatch` wciąż dodawany do CI na przyszłość.
+- 2026-09-23 tj: skan historii — 1 trafienie: FIRECRAWL_API_KEY w .mcp.json (commit 7ac87868, usunięty w 9a72f8e3). Klucz unieważniony przez tj w panelu Firecrawl. Trafienie pominięte w .gitleaksignore po odcisku (bez wartości). Historia nieprzepisywana.
