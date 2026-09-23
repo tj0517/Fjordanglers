@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Fraunces, DM_Sans } from 'next/font/google'
+import localFont from 'next/font/local'
 import Script from 'next/script'
 import { CookieBanner } from '@/components/ui/cookie-banner'
 import { GclidCapture } from '@/components/analytics/GclidCapture'
@@ -7,19 +7,20 @@ import './globals.css'
 
 const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID
 
-const fraunces = Fraunces({
-  subsets: ['latin'],
+const fraunces = localFont({
+  src: [
+    { path: './fonts/Fraunces-Variable.woff2', style: 'normal', weight: '100 900' },
+    { path: './fonts/Fraunces-Variable-Italic.woff2', style: 'italic', weight: '100 900' },
+  ],
   variable: '--font-fraunces',
   display: 'swap',
-  weight: ['400', '500', '600', '700', '900'],
-  style: ['normal', 'italic'],
 })
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
+const dmSans = localFont({
+  src: './fonts/DMSans-Variable.woff2',
   variable: '--font-dm-sans',
   display: 'swap',
-  weight: ['300', '400', '500', '600'],
+  weight: '100 900',
 })
 
 export const metadata: Metadata = {

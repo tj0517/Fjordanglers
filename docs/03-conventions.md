@@ -78,6 +78,7 @@ justification, it goes in an ADR and this file links to it.
 - **Red proof**: any new guard, constraint, policy or trigger is demonstrated failing on
   a deliberately bad input in the PR (paste the error).
 - `pnpm typecheck && pnpm lint && pnpm test && pnpm build` green before "done".
+- Fonts are self-hosted via `next/font/local` (`src/app/fonts/`); `next/font/google` is not used — the build must not depend on a third-party fetch (FA-0.22).
 
 ## CI
 

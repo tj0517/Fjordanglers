@@ -28,6 +28,7 @@ the same PR that changes a task's status. Stage descriptions: `docs/REBUILD_PLAN
 | FA-0.19 | Hub prowizji ustawia `external_offer_sent` — licznik SLA bez fałszywych pozytywów | S | sonnet | done | FA-0.16 |
 | FA-0.20 | Martwy status `pending_fa_review` — default kolumny łamie własny constraint tabeli | S | sonnet | done | — |
 | FA-0.21 | Testy integracyjne piszą do produkcji — `.env.test` i bezpiecznik w `vitest.config.ts` | S | sonnet | done | — |
+| FA-0.22 | Build nie zależy od Google Fonts — Fraunces + DM Sans self-hosted przez `next/font/local` | S | sonnet | done | — |
 
 ## Stage 1 — one place for the conversation + schema tells the truth
 
