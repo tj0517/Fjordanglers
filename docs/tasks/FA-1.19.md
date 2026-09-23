@@ -2,7 +2,7 @@
 id: FA-1.19
 title: Skan sekretów w CI — gitleaks (przypięta wersja + suma kontrolna) jako bramka na PR; jednorazowy skan całej historii
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -77,3 +77,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-23 (D1): `workflow_dispatch` jest dostępny tylko gdy workflow jest na domyślnej gałęzi (`main`); ta gałąź trafi na `main` po zmergowaniu stage-1 → main w końcowej fazie etapu 1. Jednorazowy skan całej historii wykonywany jest lokalnie przez agenta z tą samą przypiętą binarką i tym samym `.gitleaks.toml`, `--redact`. Tryb `workflow_dispatch` wciąż dodawany do CI na przyszłość.
 - 2026-09-23 tj: skan historii — 1 trafienie: FIRECRAWL_API_KEY w .mcp.json (commit 7ac87868, usunięty w 9a72f8e3). Klucz unieważniony przez tj w panelu Firecrawl. Trafienie pominięte w .gitleaksignore po odcisku (bez wartości). Historia nieprzepisywana.
 PR: https://github.com/tj0517/Fjordanglers/pull/97
+- 2026-09-23 — odbiór (tj): PR #97 przyjęty po rundzie 2. Udowodnione: gitleaks 8.30.1 przypięty wersją i sha256 (zła suma → czerwono, #95), wykrycie fałszywego klucza w src/ (#96) i w .env.test (#98, allowlista po wartości nie jest dziurą), zielony `secrets` na tym PR, lokalny skan historii 550 commitów → 0 trafień po .gitleaksignore (1 odcisk: FIRECRAWL_API_KEY z 7ac87868, klucz unieważniony przez tj). `db` padał na limicie ghcr.io (infrastruktura, deferred) — merge dopiero po zielonym `db`.
