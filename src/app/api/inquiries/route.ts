@@ -20,7 +20,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
 import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/lib/email'
 import { env } from '@/lib/env'
-import { runAgentRound1 } from '@/lib/ai/inquiry-agent'
+import { classifyInquiry } from '@/lib/ai/inquiry-agent'
 import { addBusinessDays, formatBusinessDay } from '@/lib/business-days'
 
 export const runtime  = 'nodejs'
@@ -188,10 +188,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (env.AI_AUTO_REPLY_ENABLED) {
     try {
-      await runAgentRound1({
+      await classifyInquiry({
         inquiryId:      inquiry.id,
         anglerName:     parsed.data.angler_name,
-        anglerEmail:    parsed.data.angler_email,
         tripTitle,
         message:        parsed.data.message ?? null,
         requestedDates: sortedDates,

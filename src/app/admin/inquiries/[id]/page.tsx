@@ -21,7 +21,6 @@ import { InquiryDetailTabs } from './InquiryDetailTabs'
 import { GuideAttachmentTab, type GuideWithCalendar } from './GuideAttachmentTab'
 import { TripSetupTab } from './TripSetupTab'
 import { ReviewLinkGenerator } from './ReviewLinkGenerator'
-import { AgentToggle } from './AgentToggle'
 import { QualifiedChanger } from './QualifiedChanger'
 import type { QualifiedValue } from '@/lib/inquiries/qualified'
 import { RequestedDatesEditor } from './RequestedDatesEditor'
@@ -113,8 +112,6 @@ export default async function AdminInquiryDetailPage({
     external_offer_sent:     boolean
     offer_token:             string | null
     deposit_paid_at:         string | null
-    agent_status:            string | null
-    agent_round:             number | null
   }
 
   // ── Fetch messages thread ─────────────────────────────────────────────────
@@ -458,8 +455,6 @@ export default async function AdminInquiryDetailPage({
       {/* Right: actions sidebar */}
       <div className="lg:sticky lg:top-6 space-y-3">
         <StatusChanger inquiryId={inquiry.id} currentStatus={inquiry.status} />
-
-        <AgentToggle inquiryId={inquiry.id} initialStatus={inquiry.agent_status} />
 
         <QualifiedChanger
           inquiryId={inquiry.id}

@@ -16,7 +16,6 @@ import type { Json } from '@/lib/supabase/database.types'
 import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByEmail } from '@/lib/inquiry-matcher'
-import { runAgentRound2 } from '@/lib/ai/inquiry-agent'
 import { emitEvent } from '@/lib/events/emit'
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
@@ -154,17 +153,6 @@ export async function POST(req: Request) {
 
       console.log(`[email-inbound] Email from ${fromEmail} → inquiry ${inquiryId}`)
 
-      if (env.AI_AUTO_REPLY_ENABLED) {
-        const { data: inq } = await supabase
-          .from('inquiries')
-          .select('agent_status')
-          .eq('id', inquiryId)
-          .single()
-        if (inq?.agent_status === 'waiting') {
-          try { await runAgentRound2(inquiryId) }
-          catch (err) { console.error('[email-inbound] Agent error:', err) }
-        }
-      }
     }
   } else {
     const { error } = await supabase.from('unmatched_messages').insert({
