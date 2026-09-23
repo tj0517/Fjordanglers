@@ -89,3 +89,4 @@ gh run list --branch fix/self-host-fonts --limit 3
 ## Notatki z realizacji
 
 2026-09-23 tj: hotfix, plik zadania tworzony w PR (CI czerwone na bazie — wyjątek od reguły).
+PR: https://github.com/tj0517/Fjordanglers/pull/92
