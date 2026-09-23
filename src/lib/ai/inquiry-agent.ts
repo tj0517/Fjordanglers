@@ -173,7 +173,7 @@ function classificationUpdate(
   const update: Record<string, string> = {}
   if (!existing.trip_country && result.trip_country) update.trip_country = result.trip_country
   if (!existing.trip_type    && result.trip_type)    update.trip_type    = result.trip_type
-  // Priority is always overwritten — later rounds have more context
+  // Priority is always overwritten — each call may have more context than the last
   if (result.priority) update.priority = result.priority
   return update
 }
