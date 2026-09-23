@@ -8,7 +8,7 @@ import LinkGuidePanel from '@/components/admin/link-guide-panel'
 import CopyInviteLink from '@/components/admin/copy-invite-link'
 import { AdminGuideActions } from './AdminGuideActions'
 import { MigratePhotosButton } from './MigratePhotosButton'
-import { ExternalLink, Pencil, Mail, Images } from 'lucide-react'
+import { ExternalLink, Pencil, Mail, Images, BookOpen } from 'lucide-react'
 
 const STATUS_STYLES = {
   active:    { bg: 'rgba(74,222,128,0.1)',  color: '#16A34A', label: 'Active'    },
@@ -85,7 +85,7 @@ export default async function AdminGuideDetailPage({
   const { id } = await params
   const supabase = createServiceClient()
 
-  const [{ data: guide }, { data: guidePhotosRaw }] = await Promise.all([
+  const [{ data: guide }, { data: guidePhotosRaw }, { data: knowledgeEntry }] = await Promise.all([
     supabase
       .from('guides')
       .select(`
@@ -108,6 +108,13 @@ export default async function AdminGuideDetailPage({
       .select('id, url, sort_order')
       .eq('guide_id', id)
       .order('sort_order', { ascending: true }),
+    supabase
+      .from('agent_knowledge')
+      .select('id')
+      .eq('guide_id', id)
+      .eq('active', true)
+      .limit(1)
+      .maybeSingle(),
   ])
 
   if (guide == null) notFound()
@@ -237,6 +244,16 @@ export default async function AdminGuideDetailPage({
                 >
                   <Mail width={11} height={11} strokeWidth={1.3} />
                   Payouts
+                </Link>
+                <Link
+                  href={knowledgeEntry != null
+                    ? `/admin/knowledge/${knowledgeEntry.id}/edit`
+                    : `/admin/knowledge/new?kind=guide&guide_id=${guide.id}`}
+                  className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-full transition-all hover:brightness-95 f-body"
+                  style={{ background: 'rgba(10,46,77,0.07)', color: '#0A2E4D' }}
+                >
+                  <BookOpen width={11} height={11} strokeWidth={1.3} />
+                  Agent knowledge
                 </Link>
                 <DeleteGuideButton guideId={guide.id} guideName={guide.full_name} hasAuthUser={guide.user_id != null} />
               </div>

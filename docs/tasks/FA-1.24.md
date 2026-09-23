@@ -2,14 +2,15 @@
 id: FA-1.24
 title: Panel wiedzy agenta — /admin/knowledge: lista, edycja z podglądem, wyłączanie wpisu, odnośnik z karty przewodnika
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/admin-knowledge
-depends_on: [FA-1.22, FA-1.15]
+pr: 89
+depends_on: [FA-1.22, FA-1.15, FA-1.23]
 blocked_by_questions: []
 touches_db: true
 touches_prod: false
@@ -71,3 +72,10 @@ pnpm typecheck && pnpm lint && pnpm knip
 ```
 
 ## Notatki z realizacji
+
+- 2026-09-22 — odbiór (tj): PR #89 przyjęty jak jest. Udowodnione: `requireAdmin()` na 3 akcjach
+  (red→green), `updated_by` z sesji, sprawdzanie liczby zmienionych wierszy po UPDATE,
+  komunikaty po nazwach constraintów, typecheck/lint/test/knip/build zielone. Zadeklarowane:
+  ścieżka Playwright (zrzuty lokalnie w `.playwright-mcp`, poza repo). **Niezweryfikowane,
+  ryzyko przyjęte przez tj:** kryterium 4 (edycja tonu w panelu → nowy draft). Odstępstwa
+  (`as any`, `.from` w stronach, brak joina `updated_by`) → deferred.
