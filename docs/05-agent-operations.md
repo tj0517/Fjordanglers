@@ -6,17 +6,23 @@ the founders and the agents. Read it once per session.
 ## 1. The loop
 
 ```
-docs/tasks/FA-x.yy.md ──▶ /fa-task (Claude Code) or fa-task (Cowork) builds the prompt
+docs/tasks/FA-x.yy.md ──▶ wf-task (Claude app, repo agent-workflow) builds a self-contained prompt
         │
         ▼
 agent works on branch ──▶ report (format §5) ──▶ PR
         │
         ▼
-/fa-review or fa-review (Cowork) ──▶ coverage table: proven / declared / uncovered
+wf-review (Claude app) ──▶ coverage table: proven / declared / uncovered
         │
         ▼
 founder merges ──▶ task status → done in the task file + INDEX.md
 ```
+
+Since 2026-09-22 prompts and reviews come from the shared `wf-*` skills (tj's
+`agent-workflow` repo, project context `projects/fa/project.md`), the same for every
+project. The prompt carries branch and status housekeeping itself — the agent does **not**
+run `/fa-task`. `/fa-task`, `/fa-review` and `.claude/agents/fa-reviewer.md` stay in the
+repo: the reviewer checklist (§5 of that file) is still read by every review.
 
 One task = one branch = one PR. The agent never starts a second task in the same
 session without being told to. The agent never pushes to `main` directly and never
@@ -124,6 +130,17 @@ and say so; do not silently widen the scope.
 The agent never prints an env value, key or token, even to "check it is set" — check
 with `test -n "$VAR"`. Service-role keys do not belong in local env files (O-11). If a
 tool output contains a secret, the agent does not repeat it in the report.
+
+### MCP servers (`.mcp.json`, committed — no secrets inside)
+
+The agent's MCP servers are pinned to this repo in `.mcp.json` (generated from tj's
+`agent-workflow/projects/fa/project.md`). Values live only in your shell (`~/.zshrc`):
+
+- `GITHUB_TOKEN` — fine-grained PAT, this repo only (server `github`)
+- `STRIPE_RESTRICTED_KEY` — Stripe **restricted key, Read only** (server `stripe`); never `sk_live`
+- Supabase (`supabase-prod`, read-only) uses OAuth: in Claude Code run `/mcp` → Authenticate once.
+
+Check: `bash ~/Documents/agent-workflow/bin/mcp-doctor.sh fa`.
 
 ## 8. Subagents
 

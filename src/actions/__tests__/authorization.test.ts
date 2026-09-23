@@ -17,6 +17,11 @@ vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: vi.fn(),
 }))
 
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}))
+
 vi.mock('@/lib/stripe/client', () => ({
   stripe: {
     checkout: { sessions: { create: vi.fn() } },
@@ -321,18 +326,6 @@ describe('ads.ts', () => {
   })
 })
 
-// ─── ai.ts ────────────────────────────────────────────────────────────────────
-
-describe('ai.ts', () => {
-  describe('setAgentStatus', () => {
-    it('throws UnauthorizedError when there is no session', async () => {
-      mockNoSession()
-      const { setAgentStatus } = await import('@/actions/ai')
-      await expect(setAgentStatus('inq-1', 'stopped')).rejects.toBeInstanceOf(UnauthorizedError)
-    })
-  })
-})
-
 // ─── availability.ts ──────────────────────────────────────────────────────────
 
 describe('availability.ts', () => {
@@ -430,6 +423,105 @@ describe('submissions.ts', () => {
       mockNoSession()
       const { markSubmissionInProgress } = await import('@/actions/submissions')
       await expect(markSubmissionInProgress('sub-1')).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+  })
+})
+
+// ─── knowledge.ts ────────────────────────────────────────────────────────────
+
+const VALID_KNOWLEDGE_PAYLOAD = {
+  kind: 'destination' as const,
+  country: 'Iceland' as const,
+  guide_id: null,
+  title: 'Test title',
+  body: 'Test body',
+  active: true,
+}
+
+describe('knowledge.ts', () => {
+  describe('createKnowledgeEntry', () => {
+    it('throws UnauthorizedError when there is no session', async () => {
+      mockNoSession()
+      const { createKnowledgeEntry } = await import('@/actions/knowledge')
+      await expect(createKnowledgeEntry(VALID_KNOWLEDGE_PAYLOAD)).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+
+    it('throws UnauthorizedError when caller is not admin', async () => {
+      mockNonAdmin()
+      const { createKnowledgeEntry } = await import('@/actions/knowledge')
+      await expect(createKnowledgeEntry(VALID_KNOWLEDGE_PAYLOAD)).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+  })
+
+  describe('updateKnowledgeEntry', () => {
+    it('throws UnauthorizedError when there is no session', async () => {
+      mockNoSession()
+      const { updateKnowledgeEntry } = await import('@/actions/knowledge')
+      await expect(
+        updateKnowledgeEntry('00000000-0000-4000-8000-000000000001', VALID_KNOWLEDGE_PAYLOAD),
+      ).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+
+    it('throws UnauthorizedError when caller is not admin', async () => {
+      mockNonAdmin()
+      const { updateKnowledgeEntry } = await import('@/actions/knowledge')
+      await expect(
+        updateKnowledgeEntry('00000000-0000-4000-8000-000000000001', VALID_KNOWLEDGE_PAYLOAD),
+      ).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+  })
+
+  describe('setKnowledgeActive', () => {
+    it('throws UnauthorizedError when there is no session', async () => {
+      mockNoSession()
+      const { setKnowledgeActive } = await import('@/actions/knowledge')
+      await expect(
+        setKnowledgeActive('00000000-0000-4000-8000-000000000001', false),
+      ).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+
+    it('throws UnauthorizedError when caller is not admin', async () => {
+      mockNonAdmin()
+      const { setKnowledgeActive } = await import('@/actions/knowledge')
+      await expect(
+        setKnowledgeActive('00000000-0000-4000-8000-000000000001', false),
+      ).rejects.toBeInstanceOf(UnauthorizedError)
+    })
+  })
+
+  describe('updateKnowledgeEntry — updated_by', () => {
+    it('sets updated_by to the session user id', async () => {
+      const adminUserId = 'admin-user-uuid-1234'
+      let capturedUpdatedBy: string | undefined
+
+      vi.mocked(createClient).mockResolvedValue({
+        auth: { getUser: async () => ({ data: { user: { id: adminUserId } }, error: null }) },
+        from: () => ({
+          select: () => ({
+            eq: () => ({
+              single: async () => ({ data: { role: 'admin' }, error: null }),
+            }),
+          }),
+        }),
+      } as unknown as Awaited<ReturnType<typeof createClient>>)
+
+      vi.mocked(createServiceClient).mockReturnValue({
+        from: () => ({
+          update: (data: Record<string, unknown>) => {
+            capturedUpdatedBy = data.updated_by as string
+            return {
+              eq: () => ({
+                select: () => ({ data: [{ id: '00000000-0000-4000-8000-000000000001' }], error: null }),
+              }),
+            }
+          },
+        }),
+      } as unknown as ReturnType<typeof createServiceClient>)
+
+      const { updateKnowledgeEntry } = await import('@/actions/knowledge')
+      await updateKnowledgeEntry('00000000-0000-4000-8000-000000000001', VALID_KNOWLEDGE_PAYLOAD)
+
+      expect(capturedUpdatedBy).toBe(adminUserId)
     })
   })
 })

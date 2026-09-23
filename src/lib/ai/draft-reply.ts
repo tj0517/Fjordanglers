@@ -1,12 +1,12 @@
 /**
- * Draft-reply agent. FA-1.14.
+ * Draft-reply agent. FA-1.14 / FA-1.23.
  *
  * draftReply({ inquiryId, counterpart, channel })
  *   - Fetches the conversation and inquiry context from the DB.
- *   - Loads matching knowledge files from docs/knowledge/.
+ *   - Loads active knowledge entries from agent_knowledge (instructions, tone, destination, guide).
  *   - Calls the Anthropic API with the assembled prompt.
  *   - Saves the result as a messages row with status='draft', drafted_by='agent'.
- *   - Returns { draftId, text, usedFiles } — does NOT send the message.
+ *   - Returns { draftId, text, subject, usedIds } — does NOT send the message.
  *
  * SERVER-ONLY. Callers: src/actions/messages.ts.
  */
@@ -16,23 +16,21 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { assembleConversation, type ConversationMessage } from './extract-trip'
 import { loadKnowledge } from './knowledge'
-import { buildDraftPrompt, buildDraftSubject } from './draft-reply-prompt'
+import { buildDraftPrompt, buildDraftSubject, type DraftContext } from './draft-reply-prompt'
 import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 
 export interface DraftReplyParams {
   inquiryId:   string
   counterpart: 'angler' | 'guide'
   channel:     'email' | 'whatsapp' | 'instagram'
-  /** Override knowledge directory for tests. */
-  knowledgeDir?: string
 }
 
 export interface DraftReplyResult {
-  draftId:   string
-  text:      string
+  draftId:  string
+  text:     string
   /** Suggested email subject (email channel only; null for other channels). */
-  subject:   string | null
-  usedFiles: string[]
+  subject:  string | null
+  usedIds:  string[]
 }
 
 export class DraftReplyError extends Error {
@@ -43,7 +41,7 @@ export class DraftReplyError extends Error {
 }
 
 export async function draftReply(params: DraftReplyParams): Promise<DraftReplyResult> {
-  const { inquiryId, counterpart, channel, knowledgeDir } = params
+  const { inquiryId, counterpart, channel } = params
 
   const apiKey = env.ANTHROPIC_API_KEY
   if (!apiKey) throw new DraftReplyError('ANTHROPIC_API_KEY not set')
@@ -53,7 +51,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   // Fetch inquiry context
   const { data: inquiry, error: inquiryErr } = await supabase
     .from('inquiries')
-    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id')
+    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id, status')
     .eq('id', inquiryId)
     .single()
 
@@ -64,7 +62,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   // Fetch message thread — exclude drafts so they don't pollute the AI context
   const { data: messages } = await supabase
     .from('messages')
-    .select('direction, channel, body, occurred_at')
+    .select('direction, channel, body, occurred_at, counterpart')
     .eq('inquiry_id', inquiryId)
     .neq('status', 'draft')
     .order('occurred_at', { ascending: true })
@@ -75,7 +73,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
   }
 
-  // Resolve guide name for knowledge lookup
+  // Resolve guide name for conversation context
   let guideName: string | null = null
   if (inquiry.assigned_guide_id) {
     const { data: guide } = await supabase
@@ -86,12 +84,18 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     guideName = guide?.full_name ?? null
   }
 
-  // Load knowledge files
-  const knowledge = loadKnowledge({
-    country:      inquiry.trip_country,
-    guide:        guideName,
-    knowledgeDir,
+  // Load knowledge entries from agent_knowledge table
+  const { instructions, entries, usedIds } = await loadKnowledge({
+    country: inquiry.trip_country,
+    guideId: inquiry.assigned_guide_id,
   })
+
+  if (instructions == null) {
+    throw new DraftReplyError(
+      'No active instructions entry found in agent_knowledge. ' +
+      'Add one in the admin panel before drafting.',
+    )
+  }
 
   // Fetch trip title for conversation context
   const tripTitle = tripTitleOf(
@@ -109,10 +113,12 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     inquiry.party_size ?? 1,
     tripTitle,
     thread,
+    guideName,
   )
 
   // Build prompt + call model
-  const fullPrompt = buildDraftPrompt(knowledge, conversation)
+  const context: DraftContext = { counterpart, channel, status: inquiry.status, guideName }
+  const fullPrompt = buildDraftPrompt(context, instructions.body, entries, conversation)
 
   const client = new Anthropic({ apiKey })
   const response = await client.messages.create({
@@ -177,8 +183,8 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
 
   return {
     draftId,
-    text:      draftText,
+    text:    draftText,
     subject,
-    usedFiles: knowledge.map(f => f.path),
+    usedIds,
   }
 }

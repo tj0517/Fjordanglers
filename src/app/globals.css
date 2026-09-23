@@ -1,9 +1,200 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* FA brand tokens — readable as CSS custom properties and mapped to Tailwind v4 */
+:root {
+  --background:             248 250 251;  /* #F8FAFB glacier white (admin surface) */
+  --foreground:             10 46 77;     /* #0A2E4D fjord navy */
+  --card:                   255 255 255;
+  --card-foreground:        10 46 77;
+  --primary:                10 46 77;     /* #0A2E4D */
+  --primary-foreground:     248 250 251;  /* white — NOT salmon (#E67E50 fails AA as bg/white) */
+  --secondary:              241 245 249;
+  --secondary-foreground:   10 46 77;
+  --muted:                  241 245 249;
+  --muted-foreground:       71 85 105;    /* slate-600 — 6.4:1 on muted, passes AA */
+  --accent:                 230 126 80;   /* #E67E50 salmon — only for borders/icons/focus */
+  --accent-foreground:      10 46 77;
+  --destructive:            239 68 68;
+  --destructive-foreground: 255 255 255;
+  --popover:                255 255 255;  /* white — dropdown/popup background */
+  --popover-foreground:     10 46 77;    /* navy — dropdown/popup text */
+  --border:                 226 232 240;
+  --input:                  226 232 240;
+  --ring:                   230 126 80;   /* salmon focus ring */
+  --radius:                 0.75rem;
+  /* Raw hex for non-Tailwind CSS */
+  --fa-navy:   #0A2E4D;
+  --fa-salmon: #E67E50;
+  --fa-white:  #F8FAFB;
+}
 
 @theme {
   --font-display: var(--font-fraunces), Georgia, serif;
   --font-body: var(--font-dm-sans), system-ui, sans-serif;
+  /* Map tokens to Tailwind utilities */
+  --color-background:          rgb(var(--background));
+  --color-foreground:          rgb(var(--foreground));
+  --color-card:                rgb(var(--card));
+  --color-card-foreground:     rgb(var(--card-foreground));
+  --color-primary:             rgb(var(--primary));
+  --color-primary-foreground:  rgb(var(--primary-foreground));
+  --color-secondary:           rgb(var(--secondary));
+  --color-secondary-foreground:rgb(var(--secondary-foreground));
+  --color-popover:             rgb(var(--popover));
+  --color-popover-foreground:  rgb(var(--popover-foreground));
+  --color-muted:               rgb(var(--muted));
+  --color-muted-foreground:    rgb(var(--muted-foreground));
+  --color-accent:              rgb(var(--accent));
+  --color-accent-foreground:   rgb(var(--accent-foreground));
+  --color-destructive:         rgb(var(--destructive));
+  --color-destructive-foreground: rgb(var(--destructive-foreground));
+  --color-border:              rgb(var(--border));
+  --color-input:               rgb(var(--input));
+  --color-ring:                rgb(var(--ring));
+  --radius:                    var(--radius);
 }
+
+/* ─── INQUIRY STATUS BADGE COLORS ───────────────────────── */
+/* Used with data-status attribute to avoid dynamic style={{ }} */
+.status-badge[data-status="new"]              { color: #92400E; background: rgba(251,191,36,0.15);  border: 1px solid rgba(251,191,36,0.4);   }
+.status-badge[data-status="qualifying"]       { color: #5B21B6; background: rgba(139,92,246,0.15);  border: 1px solid rgba(139,92,246,0.35);  }
+.status-badge[data-status="waiting_guide"]    { color: #C2410C; background: rgba(234,88,12,0.12);   border: 1px solid rgba(234,88,12,0.35);   }
+.status-badge[data-status="offer_presented"]  { color: #0E7490; background: rgba(6,182,212,0.12);   border: 1px solid rgba(6,182,212,0.35);   }
+.status-badge[data-status="awaiting_payment"] { color: #3730A3; background: rgba(99,102,241,0.12);  border: 1px solid rgba(99,102,241,0.35);  }
+.status-badge[data-status="paid"]             { color: #065F46; background: rgba(16,185,129,0.12);  border: 1px solid rgba(16,185,129,0.3);   }
+.status-badge[data-status="handed_over"]      { color: #1E40AF; background: rgba(59,130,246,0.12);  border: 1px solid rgba(59,130,246,0.35);  }
+.status-badge[data-status="completed"]        { color: #374151; background: rgba(107,114,128,0.10); border: 1px solid rgba(107,114,128,0.2);  }
+.status-badge[data-status="lost"]             { color: #991B1B; background: rgba(239,68,68,0.10);   border: 1px solid rgba(239,68,68,0.25);   }
+.status-badge[data-status="cancelled"]        { color: #991B1B; background: rgba(239,68,68,0.10);   border: 1px solid rgba(239,68,68,0.25);   }
+
+/* ─── AGENT STATUS BADGE COLORS ─────────────────────────── */
+.agent-status-badge[data-agent-status="waiting"] { background: rgba(59,130,246,0.12); color: #1E40AF; }
+.agent-status-badge[data-agent-status="ready"]   { background: rgba(16,185,129,0.12); color: #065F46; }
+.agent-status-badge[data-agent-status="stopped"] { background: rgba(239,68,68,0.10);  color: #991B1B; }
+
+/* ─── QUALIFIED BADGE COLORS ─────────────────────────────── */
+.qualified-badge[data-value="yes"]     { color: #065F46; background: rgba(16,185,129,0.18); border: 1px solid rgba(16,185,129,0.35); }
+.qualified-badge[data-value="no"]      { color: #991B1B; background: rgba(239,68,68,0.18);  border: 1px solid rgba(239,68,68,0.35);  }
+.qualified-badge[data-value="unknown"] { color: #6B7280; background: rgba(107,114,128,0.12);border: 1px solid rgba(107,114,128,0.3); }
+
+/* ─── TRIP SETUP TAB SHARED INPUT / LABEL HELPERS ─────── */
+/* trip-input-ai overrides trip-input when both are applied */
+.trip-input {
+  width: 100%;
+  background: rgba(10,46,77,0.03);
+  border: 1px solid rgba(10,46,77,0.10);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #0A2E4D;
+  outline: none;
+  font-family: inherit;
+}
+.trip-input-ai {
+  background: rgba(230,126,80,0.08);
+  border: 1px solid #E67E50;
+}
+.trip-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: rgba(10,46,77,0.4);
+  margin-bottom: 6px;
+}
+
+/* ─── QUALIFIED OPTION BUTTON COLORS ────────────────────── */
+.qualified-option[data-value="yes"]     { color: #065F46; background: rgba(16,185,129,0.18); border: 1px solid rgba(16,185,129,0.35); }
+.qualified-option[data-value="no"]      { color: #991B1B; background: rgba(239,68,68,0.18);  border: 1px solid rgba(239,68,68,0.35);  }
+.qualified-option[data-value="unknown"] { color: #6B7280; background: rgba(107,114,128,0.12);border: 1px solid rgba(107,114,128,0.3); }
+
+/* ─── STATUS DOT (inquiry list / calendar) ──────────────── */
+.status-dot { background: #9CA3AF; }
+.status-dot[data-status="new"]              { background: #92400E; box-shadow: 0 0 0 3px rgba(251,191,36,0.15); }
+.status-dot[data-status="qualifying"]       { background: #5B21B6; box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
+.status-dot[data-status="waiting_guide"]    { background: #C2410C; box-shadow: 0 0 0 3px rgba(234,88,12,0.12); }
+.status-dot[data-status="offer_presented"]  { background: #0E7490; box-shadow: 0 0 0 3px rgba(6,182,212,0.12); }
+.status-dot[data-status="awaiting_payment"] { background: #3730A3; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+.status-dot[data-status="paid"]             { background: #065F46; box-shadow: 0 0 0 3px rgba(16,185,129,0.12); }
+.status-dot[data-status="handed_over"]      { background: #1E40AF; box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+.status-dot[data-status="completed"]        { background: #374151; box-shadow: 0 0 0 3px rgba(107,114,128,0.10); }
+.status-dot[data-status="lost"]             { background: #991B1B; box-shadow: 0 0 0 3px rgba(239,68,68,0.10); }
+.status-dot[data-status="cancelled"]        { background: #991B1B; box-shadow: 0 0 0 3px rgba(239,68,68,0.10); }
+
+/* ─── GUIDE STAGE BADGE ───────────────────────────────────── */
+.guide-stage-badge[data-stage="no_guide"]          { color: rgba(10,46,77,0.4);  background: rgba(10,46,77,0.05);    border: 1px solid rgba(10,46,77,0.1); }
+.guide-stage-badge[data-stage="awaiting_response"] { color: #92400E;             background: rgba(251,191,36,0.12);  border: 1px solid rgba(251,191,36,0.35); }
+.guide-stage-badge[data-stage="declined"]          { color: #991B1B;             background: rgba(239,68,68,0.08);   border: 1px solid rgba(239,68,68,0.2); }
+.guide-stage-badge[data-stage="needs_offer"]       { color: #1E40AF;             background: rgba(59,130,246,0.1);   border: 1px solid rgba(59,130,246,0.25); }
+.guide-stage-badge[data-stage="offer_sent"]        { color: #065F46;             background: rgba(16,185,129,0.1);   border: 1px solid rgba(16,185,129,0.25); }
+.guide-stage-dot[data-stage="no_guide"]          { background: rgba(10,46,77,0.4); box-shadow: 0 0 0 3px rgba(10,46,77,0.05); }
+.guide-stage-dot[data-stage="awaiting_response"] { background: #92400E; box-shadow: 0 0 0 3px rgba(251,191,36,0.12); }
+.guide-stage-dot[data-stage="declined"]          { background: #991B1B; box-shadow: 0 0 0 3px rgba(239,68,68,0.08); }
+.guide-stage-dot[data-stage="needs_offer"]       { background: #1E40AF; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.guide-stage-dot[data-stage="offer_sent"]        { background: #065F46; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+
+/* ─── SILENCE BADGE ────────────────────────────────────────── */
+.silence-badge[data-state="new"]   { background: rgba(230,126,80,0.15); color: #E67E50; border: 1px solid rgba(230,126,80,0.35); }
+.silence-badge[data-state="never"] { background: rgba(239,68,68,0.1);   color: #DC2626; border: 1px solid rgba(239,68,68,0.25); }
+.silence-badge[data-state="stale"] { background: rgba(239,68,68,0.1);   color: #DC2626; border: 1px solid rgba(239,68,68,0.25); }
+.silence-badge[data-state="cold"]  { background: rgba(234,88,12,0.1);   color: #EA580C; border: 1px solid rgba(234,88,12,0.25); }
+.silence-badge[data-state="warm"]  { background: rgba(202,138,4,0.1);   color: #A16207; border: 1px solid rgba(202,138,4,0.25); }
+.silence-badge[data-state="ok"]    { background: rgba(16,185,129,0.08); color: #059669; border: 1px solid rgba(16,185,129,0.2); }
+
+/* ─── SLA BADGE ────────────────────────────────────────────── */
+.sla-badge[data-state="red"]    { background: rgba(239,68,68,0.12); color: #DC2626; border: 1px solid rgba(239,68,68,0.3); }
+.sla-badge[data-state="orange"] { background: rgba(234,88,12,0.1);  color: #EA580C; border: 1px solid rgba(234,88,12,0.28); }
+
+/* ─── MAIN FILTER TAB PILLS ───────────────────────────────── */
+.filter-tab[data-active="false"] { background: rgba(10,46,77,0.06); color: rgba(10,46,77,0.6); border: 1px solid rgba(10,46,77,0.1); }
+.filter-tab[data-key="lead"][data-active="true"]      { background: #0A2E4D; color: #fff; border: none; }
+.filter-tab[data-key="guide"][data-active="true"]     { background: #5B21B6; color: #fff; border: none; }
+.filter-tab[data-key="confirmed"][data-active="true"] { background: #065F46; color: #fff; border: none; }
+.filter-tab[data-key="lost"][data-active="true"]      { background: #991B1B; color: #fff; border: none; }
+.filter-chevron[data-active="true"]  { border-left: 1px solid rgba(255,255,255,0.15); }
+.filter-chevron[data-active="false"] { border-left: 1px solid rgba(10,46,77,0.1); }
+.filter-count[data-active="true"]  { background: rgba(255,255,255,0.18); color: rgba(255,255,255,0.9); }
+.filter-count[data-active="false"] { background: rgba(10,46,77,0.1);    color: rgba(10,46,77,0.5); }
+
+/* ─── INQUIRY ROW STATES ──────────────────────────────────── */
+.inquiry-row                            { background: #FDFAF7; border: 1px solid rgba(10,46,77,0.07); }
+.inquiry-row[data-state="new"]          { background: rgba(230,126,80,0.04); border: 1px solid rgba(230,126,80,0.2); }
+.inquiry-row[data-state="attention"]    { background: rgba(239,68,68,0.025); border: 1px solid rgba(239,68,68,0.15); }
+.inquiry-row[data-state="guide-await"]  { background: rgba(251,191,36,0.04); border: 1px solid rgba(251,191,36,0.25); }
+.inquiry-row[data-state="guide-dec"]    { background: #FDFAF7; border: 1px solid rgba(239,68,68,0.15); }
+
+/* ─── CALENDAR DAY CELL ───────────────────────────────────── */
+.cal-day-cell { background: transparent; border: 1px solid transparent; cursor: default; }
+.cal-day-cell[data-has-inquiries="true"]  { background: rgba(10,46,77,0.035); border: 1px solid rgba(10,46,77,0.1); cursor: pointer; }
+.cal-day-cell[data-today="true"]          { border: 1.5px solid rgba(230,126,80,0.55); }
+.cal-day-cell[data-sibling="true"]        { background: rgba(230,126,80,0.08); border: 1.5px solid rgba(230,126,80,0.4); }
+.cal-day-cell[data-selected="true"]       { background: #0A2E4D; border: 1.5px solid #0A2E4D; cursor: pointer; }
+.cal-day-num { color: rgba(10,46,77,0.75); }
+.cal-day-num[data-today="true"]           { color: #E67E50; }
+.cal-day-num[data-sibling="true"]         { color: #C2410C; }
+.cal-day-num[data-selected="true"]        { color: #fff; }
+/* Status dot in calendar (data-selected overrides data-status) */
+.cal-status-dot { background: #9CA3AF; }
+.cal-status-dot[data-status="new"]              { background: #FBBF24; }
+.cal-status-dot[data-status="qualifying"]       { background: #8B5CF6; }
+.cal-status-dot[data-status="waiting_guide"]    { background: #EA580C; }
+.cal-status-dot[data-status="offer_presented"]  { background: #06B6D4; }
+.cal-status-dot[data-status="awaiting_payment"] { background: #6366F1; }
+.cal-status-dot[data-status="paid"]             { background: #10B981; }
+.cal-status-dot[data-status="handed_over"]      { background: #3B82F6; }
+.cal-status-dot[data-status="completed"]        { background: #9CA3AF; }
+.cal-status-dot[data-status="lost"]             { background: #EF4444; }
+.cal-status-dot[data-status="cancelled"]        { background: #EF4444; }
+.cal-status-dot[data-selected="true"]           { background: rgba(255,255,255,0.75); }
+
+/* ─── MINI CALENDAR DAY STATES ──────────────────────────── */
+.cal-day                          { background: transparent; color: rgba(10,46,77,0.65); }
+.cal-day[data-state="past"]       { color: rgba(10,46,77,0.18); }
+.cal-day[data-state="blocked"]    { background: rgba(10,46,77,0.06); color: rgba(10,46,77,0.28); text-decoration: line-through; }
+.cal-day[data-state="requested"]  { background: rgba(230,126,80,0.15); color: #C05C28; border: 1.5px solid rgba(230,126,80,0.4); font-weight: 700; }
+.cal-day[data-state="conflict"]   { background: rgba(239,68,68,0.15); color: #DC2626; border: 1.5px solid rgba(239,68,68,0.4); font-weight: 700; }
 
 /* Reset */
 *,

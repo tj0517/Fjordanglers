@@ -1,18 +1,17 @@
 /**
- * FA-1.14 — draftReply unit tests.
+ * FA-1.14 / FA-1.23 — draftReply unit tests.
  *
  * Verifies that draftReply:
  *   - saves a messages row with status='draft' and drafted_by='agent'
  *   - does NOT emit any inquiry_events row
  *   - throws a readable error when the conversation thread is empty
+ *   - throws DraftReplyError when there is no active instructions entry
  *
  * Anthropic, Supabase and @/lib/env are mocked.
+ * Knowledge is provided via the agent_knowledge mock rows in mockDb().
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import path from 'path'
-
-const FIXTURE_DIR = path.resolve(__dirname, '__fixtures__/knowledge')
 
 const anthropicCreate = vi.fn().mockResolvedValue({
   content: [{ type: 'text', text: 'Draft reply text from stub.' }],
@@ -58,13 +57,15 @@ const INQUIRY_DATA = {
   assigned_guide_id:  null,
   trip_id:            null,
   experience_page_id: null,
+  status:             'qualifying',
 }
 
-/**
- * @param messages - thread messages returned by the DB
- * @param existingDraft - if non-null, the messages table returns this as an existing draft
- *                        (simulates a second "zaproponuj" call)
- */
+const DEFAULT_KNOWLEDGE_ROWS = [
+  { id: 'k-inst',    kind: 'instructions', country: null,      guide_id: null, title: 'Instructions (stub)', body: 'You are the FA assistant.' },
+  { id: 'k-tone',    kind: 'tone',         country: null,      guide_id: null, title: 'Tone',               body: 'Warm, direct.' },
+  { id: 'k-iceland', kind: 'destination',  country: 'Iceland', guide_id: null, title: 'Iceland',            body: 'Season: June–September.' },
+]
+
 interface MockBuilder {
   eq(k: string, v: unknown): MockBuilder
   neq(k: string, v: unknown): MockBuilder
@@ -73,56 +74,70 @@ interface MockBuilder {
   maybeSingle(): Promise<{ data: unknown; error: null }>
 }
 
-function mockDb(messages: unknown[] = [], existingDraft: { id: string } | null = null) {
+function mockDb(
+  messages: unknown[] = [],
+  existingDraft: { id: string } | null = null,
+  knowledgeRows: unknown[] = DEFAULT_KNOWLEDGE_ROWS,
+) {
   insertedMessages = []
   insertedEvents   = []
   updatedMessages  = []
 
   vi.mocked(createServiceClient).mockReturnValue({
-    from: (table: string) => ({
-      select: () => {
-        // Fluent builder — accumulates eq/neq filters, resolves on terminal call
-        const eqs:  [string, unknown][] = []
-        const neqs: [string, unknown][] = []
-
-        const builder: MockBuilder = {
-          eq(k: string, v: unknown): MockBuilder  { eqs.push([k, v]);  return builder },
-          neq(k: string, v: unknown): MockBuilder { neqs.push([k, v]); return builder },
-          order(): Promise<{ data: unknown[]; error: null }> {
-            // Thread query: apply neq filters (e.g. status != 'draft')
-            const filtered = (messages as Array<Record<string, unknown>>).filter(row =>
-              !neqs.some(([k, v]) => row[k] === v),
-            )
-            return Promise.resolve({ data: filtered, error: null })
-          },
-          async single() {
-            if (table === 'inquiries') return { data: INQUIRY_DATA, error: null }
-            return { data: null, error: null }
-          },
-          async maybeSingle() {
-            if (table === 'messages') {
-              const isDraftQuery = eqs.some(([k, v]) => k === 'status' && v === 'draft')
-              if (isDraftQuery && existingDraft != null) return { data: existingDraft, error: null }
-            }
-            return { data: null, error: null }
-          },
-        }
-        return builder
-      },
-      update: (payload: Record<string, unknown>) => {
-        if (table === 'messages') updatedMessages.push(payload)
-        return { eq: () => ({ error: null }) }
-      },
-      insert: (row: Record<string, unknown>) => {
-        if (table === 'messages')       insertedMessages.push(row)
-        if (table === 'inquiry_events') insertedEvents.push(row)
+    from: (table: string) => {
+      // agent_knowledge: flat select().eq() terminates as a Promise
+      if (table === 'agent_knowledge') {
         return {
           select: () => ({
-            single: async () => ({ data: { id: 'draft-msg-id-1' }, error: null }),
+            eq: () => Promise.resolve({ data: knowledgeRows, error: null }),
           }),
         }
-      },
-    }),
+      }
+
+      // All other tables use the fluent builder
+      return {
+        select: () => {
+          const eqs:  [string, unknown][] = []
+          const neqs: [string, unknown][] = []
+
+          const builder: MockBuilder = {
+            eq(k: string, v: unknown): MockBuilder  { eqs.push([k, v]);  return builder },
+            neq(k: string, v: unknown): MockBuilder { neqs.push([k, v]); return builder },
+            order(): Promise<{ data: unknown[]; error: null }> {
+              const filtered = (messages as Array<Record<string, unknown>>).filter(row =>
+                !neqs.some(([k, v]) => row[k] === v),
+              )
+              return Promise.resolve({ data: filtered, error: null })
+            },
+            async single() {
+              if (table === 'inquiries') return { data: INQUIRY_DATA, error: null }
+              return { data: null, error: null }
+            },
+            async maybeSingle() {
+              if (table === 'messages') {
+                const isDraftQuery = eqs.some(([k, v]) => k === 'status' && v === 'draft')
+                if (isDraftQuery && existingDraft != null) return { data: existingDraft, error: null }
+              }
+              return { data: null, error: null }
+            },
+          }
+          return builder
+        },
+        update: (payload: Record<string, unknown>) => {
+          if (table === 'messages') updatedMessages.push(payload)
+          return { eq: () => ({ error: null }) }
+        },
+        insert: (row: Record<string, unknown>) => {
+          if (table === 'messages')       insertedMessages.push(row)
+          if (table === 'inquiry_events') insertedEvents.push(row)
+          return {
+            select: () => ({
+              single: async () => ({ data: { id: 'draft-msg-id-1' }, error: null }),
+            }),
+          }
+        },
+      }
+    },
   } as unknown as ReturnType<typeof createServiceClient>)
 }
 
@@ -140,10 +155,9 @@ describe('draftReply', () => {
 
   it('saves a draft row with status=draft and drafted_by=agent', async () => {
     const result = await draftReply({
-      inquiryId:    'inquiry-1',
-      counterpart:  'angler',
-      channel:      'email',
-      knowledgeDir: FIXTURE_DIR,
+      inquiryId:   'inquiry-1',
+      counterpart: 'angler',
+      channel:     'email',
     })
 
     expect(result.draftId).toBe('draft-msg-id-1')
@@ -159,48 +173,58 @@ describe('draftReply', () => {
 
   it('does NOT insert an inquiry_events row', async () => {
     await draftReply({
-      inquiryId:    'inquiry-1',
-      counterpart:  'angler',
-      channel:      'email',
-      knowledgeDir: FIXTURE_DIR,
+      inquiryId:   'inquiry-1',
+      counterpart: 'angler',
+      channel:     'email',
     })
 
     expect(insertedEvents).toHaveLength(0)
   })
 
-  it('returns the paths of used knowledge files', async () => {
+  it('returns the ids of used knowledge entries', async () => {
     const result = await draftReply({
-      inquiryId:    'inquiry-1',
-      counterpart:  'angler',
-      channel:      'email',
-      knowledgeDir: FIXTURE_DIR,
+      inquiryId:   'inquiry-1',
+      counterpart: 'angler',
+      channel:     'email',
     })
 
-    // Iceland inquiry → tone + iceland destination
-    expect(result.usedFiles.some(f => f.includes('tone'))).toBe(true)
-    expect(result.usedFiles.some(f => f.includes('iceland'))).toBe(true)
+    // Iceland inquiry → instructions + tone + iceland destination
+    expect(result.usedIds).toContain('k-inst')
+    expect(result.usedIds).toContain('k-tone')
+    expect(result.usedIds).toContain('k-iceland')
   })
 
   it('throws a readable DraftReplyError when thread is empty', async () => {
     mockDb([]) // no messages
 
     await expect(
-      draftReply({
-        inquiryId:    'inquiry-empty',
-        counterpart:  'angler',
-        channel:      'email',
-        knowledgeDir: FIXTURE_DIR,
-      }),
+      draftReply({ inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email' }),
     ).rejects.toThrow(DraftReplyError)
 
     await expect(
-      draftReply({
-        inquiryId:    'inquiry-empty',
-        counterpart:  'angler',
-        channel:      'email',
-        knowledgeDir: FIXTURE_DIR,
-      }),
+      draftReply({ inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email' }),
     ).rejects.toThrow('conversation thread is empty')
+  })
+
+  it('throws DraftReplyError when no active instructions entry exists', async () => {
+    mockDb(
+      [
+        { direction: 'inbound', channel: 'email', body: 'Hello', occurred_at: '2026-07-01T10:00:00Z' },
+      ],
+      null,
+      // knowledge rows without any instructions entry
+      [
+        { id: 'k-tone', kind: 'tone', country: null, guide_id: null, title: 'Tone', body: 'Warm.' },
+      ],
+    )
+
+    await expect(
+      draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email' }),
+    ).rejects.toThrow(DraftReplyError)
+
+    await expect(
+      draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email' }),
+    ).rejects.toThrow('No active instructions entry')
   })
 })
 
@@ -215,7 +239,6 @@ describe('draftReply — draft lifecycle (FA-1.14 round 2)', () => {
   })
 
   it('(b) second call with existing draft updates the row — no duplicate insert', async () => {
-    // Simulate existing draft row already saved for this inquiry/counterpart/channel
     mockDb(
       [
         { direction: 'inbound', channel: 'email', body: 'Hello', status: 'sent', occurred_at: '2026-07-01T10:00:00Z' },
@@ -223,17 +246,15 @@ describe('draftReply — draft lifecycle (FA-1.14 round 2)', () => {
         { direction: 'inbound', channel: 'email', body: 'More details', status: 'sent', occurred_at: '2026-07-01T12:00:00Z' },
         { direction: 'inbound', channel: 'email', body: 'Last message', status: 'sent', occurred_at: '2026-07-01T13:00:00Z' },
       ],
-      { id: 'existing-draft-id' }, // ← existing draft already in DB
+      { id: 'existing-draft-id' },
     )
 
     const result = await draftReply({
-      inquiryId:    'inquiry-1',
-      counterpart:  'angler',
-      channel:      'email',
-      knowledgeDir: FIXTURE_DIR,
+      inquiryId:   'inquiry-1',
+      counterpart: 'angler',
+      channel:     'email',
     })
 
-    // Must reuse the existing row, not insert a new one
     expect(result.draftId).toBe('existing-draft-id')
     expect(insertedMessages).toHaveLength(0)
     expect(updatedMessages).toHaveLength(1)
@@ -241,7 +262,6 @@ describe('draftReply — draft lifecycle (FA-1.14 round 2)', () => {
   })
 
   it('(c) draft messages are excluded from the conversation context sent to AI', async () => {
-    // Mix of sent + draft messages — only sent ones must reach the AI
     mockDb([
       { direction: 'inbound',  channel: 'email', body: 'Real message 1', status: 'sent',  occurred_at: '2026-07-01T10:00:00Z' },
       { direction: 'inbound',  channel: 'email', body: 'Real message 2', status: 'sent',  occurred_at: '2026-07-01T11:00:00Z' },
@@ -250,10 +270,9 @@ describe('draftReply — draft lifecycle (FA-1.14 round 2)', () => {
     ])
 
     await draftReply({
-      inquiryId:    'inquiry-1',
-      counterpart:  'angler',
-      channel:      'email',
-      knowledgeDir: FIXTURE_DIR,
+      inquiryId:   'inquiry-1',
+      counterpart: 'angler',
+      channel:     'email',
     })
 
     expect(anthropicCreate).toHaveBeenCalledOnce()

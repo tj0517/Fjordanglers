@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { saveInternalDeal } from '@/actions/inquiries'
 
 interface Props {
@@ -65,31 +66,27 @@ export function InternalDealTracker({
   }
 
   return (
-    <div
-      className="rounded-[20px] overflow-hidden"
-      style={{ background: 'rgba(10,46,77,0.4)', border: '1px solid rgba(255,255,255,0.06)' }}
-    >
+    <div className="rounded-[20px] overflow-hidden bg-card border border-border">
       {/* Header */}
-      <div className="px-5 py-3.5 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="px-5 py-3.5 flex items-center justify-between border-b border-border">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
-            style={{ color: 'rgba(255,255,255,0.25)' }}>Internal only · no email</p>
-          <p className="text-sm font-bold f-body mt-0.5" style={{ color: '#FFFFFF' }}>Deal tracker</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-muted-foreground">
+            Internal only · no email
+          </p>
+          <p className="text-sm font-bold f-body mt-0.5 text-foreground">Deal tracker</p>
         </div>
 
         {/* EUR / USD toggle */}
-        <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.12)' }}>
+        <div className="flex rounded-lg overflow-hidden border border-border">
           {(['EUR', 'USD'] as const).map(c => (
             <button
               key={c}
               type="button"
               onClick={() => setCurrency(c)}
-              className="px-2.5 py-1 text-[10px] font-bold f-body transition-all"
-              style={{
-                background: currency === c ? 'rgba(255,255,255,0.15)' : 'transparent',
-                color:      currency === c ? '#FFFFFF' : 'rgba(255,255,255,0.35)',
-                cursor:     'pointer',
-              }}
+              className={cn(
+                'px-2.5 py-1 text-[10px] font-bold f-body transition-all cursor-pointer',
+                currency === c ? 'bg-muted text-foreground' : 'bg-transparent text-muted-foreground',
+              )}
             >
               {c}
             </button>
@@ -101,63 +98,56 @@ export function InternalDealTracker({
 
         {/* Flash */}
         {flash && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-            <Check size={12} style={{ color: '#6EE7B7' }} />
-            <p className="text-xs f-body font-semibold" style={{ color: '#6EE7B7' }}>Saved</p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200">
+            <Check size={12} className="text-emerald-700" />
+            <p className="text-xs f-body font-semibold text-emerald-700">Saved</p>
           </div>
         )}
 
         {/* Deal total */}
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block"
-            style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-muted-foreground">
             Deal total ({currency})
           </label>
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <span className="text-sm font-bold f-body" style={{ color: 'rgba(255,255,255,0.28)' }}>{currencySymbol}</span>
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-muted/40 border border-input">
+            <span className="text-sm font-bold f-body text-muted-foreground">{currencySymbol}</span>
             <input
               type="number" min="0" step="0.01"
               value={total}
               onChange={e => setTotal(e.target.value)}
               placeholder="1200.00"
-              className="flex-1 bg-transparent outline-none text-sm font-semibold f-body placeholder:opacity-25"
-              style={{ color: '#FFFFFF' }}
+              className="flex-1 bg-transparent outline-none text-sm font-semibold f-body placeholder:text-muted-foreground/50 text-foreground"
             />
           </div>
         </div>
 
         {/* Our commission */}
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 flex items-center gap-2"
-            style={{ color: 'rgba(255,255,255,0.35)' }}>
+          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 flex items-center gap-2 text-muted-foreground">
             Our commission ({currency})
             {commissionPct != null && (
-              <span className="font-bold" style={{ color: '#E67E50' }}>{commissionPct}%</span>
+              <span className="font-bold text-accent">{commissionPct}%</span>
             )}
           </label>
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <span className="text-sm font-bold f-body" style={{ color: 'rgba(255,255,255,0.28)' }}>{currencySymbol}</span>
+          <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-muted/40 border border-input">
+            <span className="text-sm font-bold f-body text-muted-foreground">{currencySymbol}</span>
             <input
               type="number" min="0" step="0.01"
               value={commission}
               onChange={e => setCommission(e.target.value)}
               placeholder="120.00"
-              className="flex-1 bg-transparent outline-none text-sm font-semibold f-body placeholder:opacity-25"
-              style={{ color: '#E67E50' }}
+              className="flex-1 bg-transparent outline-none text-sm font-semibold f-body placeholder:text-muted-foreground/50 text-accent"
             />
           </div>
         </div>
 
         {/* Net to guide (calculated) */}
         {netGuide != null && netGuide >= 0 && (
-          <div className="flex items-center justify-between px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-            <span className="text-[10px] f-body uppercase tracking-[0.12em]"
-              style={{ color: 'rgba(255,255,255,0.28)' }}>Guide gets</span>
-            <span className="text-xs font-bold f-body" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-muted/40 border border-border">
+            <span className="text-[10px] f-body uppercase tracking-[0.12em] text-muted-foreground">
+              Guide gets
+            </span>
+            <span className="text-xs font-bold f-body text-foreground">
               {currencySymbol}{netGuide.toFixed(2)}
             </span>
           </div>
@@ -165,39 +155,27 @@ export function InternalDealTracker({
 
         {/* Internal notes */}
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block"
-            style={{ color: 'rgba(255,255,255,0.35)' }}>
-            Internal notes <span style={{ fontWeight: 400, opacity: 0.55 }}>(optional)</span>
+          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-muted-foreground">
+            Internal notes <span className="font-normal opacity-55">(optional)</span>
           </label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder="e.g. Negotiated down from €1400, guide confirmed availability…"
             rows={2}
-            className="w-full px-3 py-2.5 rounded-xl text-xs f-body outline-none resize-none placeholder:opacity-25"
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              border:     '1px solid rgba(255,255,255,0.1)',
-              color:      '#FFFFFF',
-            }}
+            className="w-full px-3 py-2.5 rounded-xl text-xs f-body outline-none resize-none placeholder:text-muted-foreground/50 bg-muted/40 border border-input text-foreground"
           />
         </div>
 
         {error != null && (
-          <p className="text-[10px] f-body" style={{ color: '#FCA5A5' }}>{error}</p>
+          <p className="text-[10px] f-body text-destructive">{error}</p>
         )}
 
         <button
           type="button"
           onClick={handleSave}
           disabled={pending}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body transition-all"
-          style={{
-            background: 'rgba(255,255,255,0.08)',
-            color:      pending ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.7)',
-            border:     '1px solid rgba(255,255,255,0.1)',
-            cursor:     pending ? 'not-allowed' : 'pointer',
-          }}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body transition-all bg-muted border border-border text-foreground/70 disabled:text-muted-foreground/50 disabled:cursor-not-allowed"
         >
           {pending && <Loader2 size={12} className="animate-spin" />}
           {pending ? 'Saving…' : 'Save internally (no email)'}
