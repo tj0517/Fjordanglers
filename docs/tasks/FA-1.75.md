@@ -2,7 +2,7 @@
 id: FA-1.75
 title: Preview wyłączone do czasu środowiska dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18)
 stage: 1
-status: todo
+status: done
 difficulty: S
 model: — (człowiek)
 model_approved:
@@ -59,3 +59,7 @@ gh api "repos/tj0517/Fjordanglers/deployments?ref=fix/preview-off-check" --jq '.
 
 ## Notatki z realizacji
 - 2026-09-22 tj (wf-plan): preview wyłączyć od razu, nie czekać na FA-1.18 (D1).
+- 2026-09-23 14:25 — tj: Ignored Build Step w Vercelu ustawiony na
+  `[ "$VERCEL_ENV" != "production" ] || git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/**' ':(exclude).claude/**' ':(exclude)*.md'`
+  (połączony z istniejącą regułą „tylko docs”). Dowód: deployment `fix/preview-off-check`
+  (commit z plikiem spoza docs) = Canceled; redeploy produkcji = Ready; gałąź testowa usunięta.

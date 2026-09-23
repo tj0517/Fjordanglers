@@ -61,7 +61,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | todo | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | todo | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
-| FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | todo | — |
+| FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | done | — |
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
