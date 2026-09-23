@@ -7,17 +7,20 @@ Google Fonts (FA-0.22). They are served via `next/font/local` in `src/app/layout
 
 | File | Font | Version | Subset | Axes |
 |---|---|---|---|---|
-| `Fraunces-Variable.woff2` | Fraunces normal | v38 | latin | opsz, wght 100–900 |
-| `Fraunces-Variable-Italic.woff2` | Fraunces italic | v38 | latin | opsz, wght 100–900 |
-| `DMSans-Variable.woff2` | DM Sans normal | v17 | latin | opsz, wght 100–900 |
+| `Fraunces-Variable.woff2` | Fraunces normal | v38 | latin | wght 100–900 |
+| `Fraunces-Variable-Italic.woff2` | Fraunces italic | v38 | latin | wght 100–900 |
+| `DMSans-Variable.woff2` | DM Sans normal | v17 | latin | wght 100–1000 |
+
+`wght` axis only — no `opsz`. Matches the original `next/font/google` request which
+listed discrete weights and did not activate optical sizing.
 
 ## Sources
 
-Files are the Latin-subset woff2 slices served by the Google Fonts CDN
-(`fonts.gstatic.com`) as of 2026-09-23, fetched by requesting:
+Files are the Latin-subset woff2 slices served by `fonts.gstatic.com` as of 2026-09-23,
+fetched by requesting the **weight-only** variants:
 
-- Fraunces: `https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap`
-- DM Sans: `https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..900&display=swap`
+- Fraunces: `https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,100..900;1,100..900&display=swap`
+- DM Sans: `https://fonts.googleapis.com/css2?family=DM+Sans:wght@100..900&display=swap`
 
 Upstream font projects:
 - Fraunces — https://github.com/undercasetype/Fraunces (Undercase Type)
