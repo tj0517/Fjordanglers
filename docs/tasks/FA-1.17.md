@@ -20,6 +20,8 @@ owner: tj
 # FA-1.17 — Treść i logika agenta, część 1
 
 ## Kontekst — przeczytaj przed startem
+- `docs/archive/agent-rules-v1.md` — reguły starego agenta (FA-1.25); **podstawa wpisu `instructions`**, nie pisanie od zera
+- Szkic v2 z 22 IX w `Claude outputs/fa-1.17/`: `02-instructions.md` (reguły starego agenta + warstwa komunikacji + decyzje tj), `03-tone.md` (skill korespondencji + „Voice”), `04`–`07` (NZ + 3 przewodników, v1 — do przejrzenia z tj)
 - `/admin/knowledge` (FA-1.24) — tu wpisujesz treść
 - `docs/tasks/FA-1.21.md` — co agent dostaje w nagłówku (adresat, kanał, status, przewodnik)
 - `docs/01-architecture.md` §4 — statusy, na których opiera się graf
@@ -54,15 +56,19 @@ przez panel, na produkcji po wdrożeniu paczki z FA-1.21–1.24.
 ## Poza zakresem
 - IS, NO, SE, FI i ich przewodnicy → FA-1.26.
 - Zmiany w kodzie — jeśli potrzebne, osobne zadanie.
-- Auto-wysyłka bez admina.
+- Auto-wysyłka bez admina → FA-1.27 (decyzja tj 2026-09-22: hybryda — auto tylko gdy sędzia ≥ 0.9 i żaden stan „nigdy auto”).
 Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 
 ## Bramki STOP
 - Wysłanie draftu z oceny do prawdziwego klienta lub przewodnika — tylko świadomie, jako normalna odpowiedź, nie jako test.
-- Włączenie `AI_AUTO_REPLY_ENABLED=true` — STOP.
+- Włączenie `AI_AUTO_REPLY_ENABLED=true` — STOP; włącza tj po FA-1.27 i po ocenie z tego zadania.
 
 ## Weryfikacja
 - `/admin/knowledge` → sekcja „braki” (zrzut).
 - Id 3 zapytań i draftów w notatkach.
 
 ## Notatki z realizacji
+- 2026-09-22 tj (/wf-task, wywiad): grupy krajów — oferta od przewodnika: NO, IS, FI (średnia cena z wpisu kraju dozwolona jako widełki); oferta stała: NZ, Patagonia, SE (zawsze cena + pytanie na końcu). Komplet danych → cena + „pasuje? sprawdzimy, który przewodnik jest wolny”; bez nazwiska przewodnika. NZ: nie pytamy o nocleg. Pierwsze pytanie: daty i długość; przy kilku dniach (poza NZ) nocleg nasz czy klienta.
+- 2026-09-22 tj: cena „od” z wpisu przewodnika tylko z jednostką; brak faktu → zdanie do klienta „potwierdzę i wrócę”; zawsze angielski.
+- 2026-09-22 tj: reguły starego agenta (`AGENT_RULES`) zostają jako fundament instrukcji, rozszerzone o ton i zasady komunikacji.
+- Otwarte na 23 IX: (1) budżet przy NO/IS/FI — przyjęta roboczo reguła starego agenta (pytamy; multi-day obowiązkowo; odmowa → widełki); (2) co pisze agent przy ofercie od przewodnika z kompletem danych; (3) podpis w mailu; (4) przegląd wpisów NZ + Josh, Dustin, Kristina (marża 20% na transferze Kristiny, nazwa firmy Kristiny, nazwisko Dustina).
