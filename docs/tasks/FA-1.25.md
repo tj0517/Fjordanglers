@@ -2,7 +2,7 @@
 id: FA-1.25
 title: Stary agent bez rund — przy nowym zapytaniu tylko klasyfikacja; koniec fałszywego „czekam, runda N” i przełącznika w panelu
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
