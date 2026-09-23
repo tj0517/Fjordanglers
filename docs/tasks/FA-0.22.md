@@ -2,7 +2,7 @@
 id: FA-0.22
 title: Build nie zależy od Google Fonts — Fraunces i DM Sans self-hosted przez next/font/local
 stage: 0
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
