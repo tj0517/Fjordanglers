@@ -2,7 +2,7 @@
 id: FA-0.22
 title: Build nie zależy od Google Fonts — Fraunces i DM Sans self-hosted przez next/font/local
 stage: 0
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -90,3 +90,4 @@ gh run list --branch fix/self-host-fonts --limit 3
 
 2026-09-23 tj: hotfix, plik zadania tworzony w PR (CI czerwone na bazie — wyjątek od reguły).
 PR: https://github.com/tj0517/Fjordanglers/pull/92
+2026-09-23 — odbiór (tj): PR #92 przyjęty po rundzie 2. Udowodnione: `next/font/google` usunięte (grep 0), build zielony przy zablokowanym Google (HTTPS_PROXY), pliki woff2 tylko z osią wght (fvar: Fraunces 100–900 normal+italic, DM Sans 100–1000; opsz usunięte w rundzie 2, żeby wygląd liter był jak na produkcji), @font-face pokrywa wszystkie używane wagi, CI 35863864312: check/knip/db zielone. Bez zrzutu (brak Chromium) — wygląd do sprawdzenia na produkcji po deployu.
