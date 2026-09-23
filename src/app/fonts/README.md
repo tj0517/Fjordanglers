@@ -11,8 +11,8 @@ Google Fonts (FA-0.22). They are served via `next/font/local` in `src/app/layout
 | `Fraunces-Variable-Italic.woff2` | Fraunces italic | v38 | latin | wght 100–900 |
 | `DMSans-Variable.woff2` | DM Sans normal | v17 | latin | wght 100–1000 |
 
-`wght` axis only — no `opsz`. Matches the original `next/font/google` request which
-listed discrete weights and did not activate optical sizing.
+`wght` axis only — no `opsz`. Matches the original font request which listed discrete
+weights and did not activate optical sizing.
 
 ## Sources
 
