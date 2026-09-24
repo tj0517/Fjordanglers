@@ -2,7 +2,7 @@
 id: FA-1.18
 title: Środowisko dev — projekt Supabase `fjordanglers-dev` z migracjami i seedem; Vercel Preview na dev, tylko klucze testowe i flagi fake
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -48,16 +48,19 @@ Drabina środowisk: local → dev → prod (`core/environments.md` repo agent-wo
 - [ ] Ustawienia Auth na dev (site URL, dozwolone redirecty dla domen preview `*.vercel.app` projektu) — checklista dla tj, wartości w raporcie.
 - [ ] **tj, każda zmiana osobno (STOP):** Vercel Preview → `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` z projektu dev; Stripe: `STRIPE_SECRET_KEY` i `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` testowe, `STRIPE_WEBHOOK_SECRET` placeholder (D3: bez endpointu dla preview); `RESEND_DEV_FAKE=1`; pozostałe zmienne wskazujące na prod (WhatsApp, Google Ads, AI itd.) — lista z odczytu, decyzja tj dla każdej.
 - [ ] `.mcp.json`: serwer `supabase-dev` (tylko odczyt) obok `supabase-prod` — przez `agent-workflow/bin/mcp-render.py fa` (render robi tj w repo workflow; agent nie edytuje `.mcp.json` ręcznie).
+- [ ] `vercel.json`: usuń `"chore/*": false` z `git.deploymentEnabled` (decyzja tj 2026-09-24). Zacommituj, ale **nie pushuj** dopóki tj nie potwierdzi, że zmiany env są gotowe i Ignored Build Step jest przywrócony do reguły docs-only.
+- [ ] **Dla mnie — Ignored Build Step:** przywróć regułę docs-only przed FA-1.75: `git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/**' ':(exclude).claude/**' ':(exclude)*.md'`. Dopy-pushy tylko z docs nie będą budować; dodaj notatkę do docs/05.
+- [ ] Zmienna `RESEND_API_KEY` na Preview: placeholder (nie-działający) — decyzja tj 2026-09-24: `src/lib/email.ts` ignoruje `RESEND_DEV_FAKE`; z placeholderem wysyłki transakcyjne padają przechwyconym błędem, ale flow zapytania i depozytu kończą się poprawnie.
 - [ ] **tj:** zdjęcie Ignored Build Step z FA-1.75, gdy kryteria env są spełnione.
-- [ ] Dokumentacja: `README.md` (sekcja o środowiskach: local / dev / prod i co wskazuje Preview), `docs/05-agent-operations.md` — nowy podrozdział „Środowisko dev" (jak odtworzyć dev, że Free usypia projekt po tygodniu bez ruchu i jak go wybudzić, że `db push` na dev robi człowiek do czasu FA-1.20).
+- [ ] Dokumentacja: `README.md` (sekcja o środowiskach: local / dev / prod i co wskazuje Preview), `docs/05-agent-operations.md` — nowy podrozdział „Środowisko dev" (jak odtworzyć dev, że Free usypia projekt po tygodniu bez ruchu i jak go wybudzić, że `db push` na dev robi człowiek do czasu FA-1.20, że Preview ma placeholder `RESEND_API_KEY` i password reset nie wysyła, że `chore/*` jest teraz na).
 - [ ] Wiersze w `docs/deferred-tasks.md`: FA-1.16 „Preview → prod" i „`pending_webhooks: 2`" zamknięte z odsyłaczem do tego zadania.
 
 ## Gotowe, gdy
 - [ ] Schemat dev = repo: `supabase migration list --db-url "$DEV_DB_URL"` → każda z migracji w `supabase/migrations` ma Local = Remote — **wklej wynik**.
-- [ ] Seed na dev: `select count(*) from auth.users where email like '%@seed.test'` na dev → 14 — **wklej wynik**.
+- [ ] Seed na dev: `select count(*) from auth.users where email like '%@seed.test'` na dev = 2 **i** `select count(*) from inquiries where angler_email like '%@seed.test'` na dev = 14 — **wklej oba wyniki**.
 - [ ] Na dev nie ma danych osobowych z prod: `select count(*) from auth.users where email not like '%@seed.test'` na dev = 0 — **wklej wynik**.
 - [ ] Repo nadal zlinkowane z produkcją: `cat supabase/.temp/project-ref` przed i po zadaniu → ta sama wartość (pierwsze 4 znaki w raporcie).
-- [ ] **Preview nie dotyka prod (dowód zachowania, nie konfiguracji):** na preview gałęzi `chore/dev-environment` wysłane zapytanie z adresem `preview-check-<RRRRMMDD>@example.com` → na dev `select count(*) from inquiries where angler_email = '<adres>'` = 1; na **prod** to samo zapytanie = 0 (SELECT wykonuje tj lub MCP read-only) — **wklej oba wyniki**.
+- [ ] **Preview nie dotyka prod (dowód zachowania, nie konfiguracji):** na preview gałęzi `chore/dev-environment`, zalogowany jako `admin@seed.test`, utwórz zapytanie przez `/admin/inquiries/new` z adresem `preview-check-<RRRRMMDD>@example.com` (seed nie ma aktywnej strony wyprawy — formularz publiczny nie działa) → na dev `select count(*) from inquiries where angler_email = '<adres>'` = 1; na **prod** to samo zapytanie = 0 (SELECT przez supabase-prod MCP) — **wklej oba wyniki**.
 - [ ] Stripe na preview testowy: link depozytu wygenerowany na preview dla zapytania z poprzedniego kryterium → URL zawiera `cs_test_` albo `plink_` z trybu testowego (dashboard Stripe, tryb testowy) — **wklej prefiks**.
 - [ ] Maile na preview fake: odpowiedź z karty zapytania na preview → wiersz w `messages` na dev z fake `external_id`; w logach Resend (prod) brak wysyłki na adres testowy — **zrzut / zapytanie**.
 - [ ] Lista zmiennych Preview po zmianie (`vercel env ls preview`, same nazwy) + tabela: zmienna → wskazuje na dev / test / fake / „świadomie prod, decyzja tj <data>".
@@ -97,3 +100,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-22 tj (wf-plan): dev = osobny projekt Supabase na planie Free w obecnej organizacji (O-18 rozstrzygnięte przy planowaniu).
 - 2026-09-22 tj (wf-plan): Stripe na preview tylko `sk_test`, bez endpointu webhooka dla preview (D3).
 - 2026-09-22 tj (wf-plan): automatyczne migracje na dev w CI osobno, w FA-1.20 (D2).
+- 2026-09-24 tj (wf-task): seed = 2 konta auth + 14 zapytań @seed.test (kryterium poprawione); preview-check przez /admin/inquiries/new jako admin@seed.test (seed nie ma strony wyprawy); na Preview RESEND_API_KEY = placeholder, bo src/lib/email.ts ignoruje RESEND_DEV_FAKE; usuwamy "chore/*" z git.deploymentEnabled w vercel.json, żeby gałąź zadania dostała preview.
