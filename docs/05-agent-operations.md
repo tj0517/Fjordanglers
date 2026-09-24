@@ -350,4 +350,9 @@ Od FA-1.18 `chore/*` jest usunięte z `git.deploymentEnabled` w `vercel.json`.
 Gałęzie `chore/*` dostają Preview tak samo jak `fix/*` i `feat/*`.
 Gałęzie, które wciąż nie dostają Preview: `docs/*`, `staging`, `preview`.
 Commity docs-only (tylko `docs/**`, `.claude/**`, `*.md`) nie budują Preview — Ignored
-Build Step wykrywa to i zwraca `exit 0` (`scripts/vercel-ignore-build.sh`).
+Build Step ustawiony inline (2026-09-24, FA-1.18):
+```
+git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/**' ':(exclude).claude/**' ':(exclude)*.md'
+```
+`scripts/vercel-ignore-build.sh` zawiera tę samą logikę, ale IBS jest ustawiony bezpośrednio
+w Vercelu (Settings → Git → Ignored Build Step), nie przez skrypt.
