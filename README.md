@@ -8,11 +8,11 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 | **dev** (`fjordanglers-dev`) | Supabase project `fjordanglers-dev` (Free plan) | Vercel Preview | visual review, demos, safe test clicks |
 | **prod** (`uwxrstbplaoxfghrchcy`) | Supabase project `fjordanglers-prod` | `main` branch on Vercel | live product |
 
-**Vercel Preview** points at **dev**, not production. Previews build on `fix/*`, `feat/*` and `chore/*` branches; docs-only commits are skipped by `scripts/vercel-ignore-build.sh`. Crons run only in production.
+**Vercel Preview** points at **dev**, not production. Previews build on `fix/*`, `feat/*` and `chore/*` branches; docs-only commits are skipped by the Ignored Build Step set inline in Vercel (same logic as `scripts/vercel-ignore-build.sh`, see docs/05 §11). Crons run only in production.
 
 Preview uses Stripe test keys (`sk_test_…`) and `RESEND_DEV_FAKE=1`. Transactional emails (`src/lib/email.ts`) use a non-working placeholder `RESEND_API_KEY` on Preview — password reset and deposit-link emails fail silently on Preview (by design).
 
-Seed accounts on dev: `admin@seed.test` / `seed-admin-password-2026`, `angler@seed.test` / `seed-angler-password-2026`.
+Seed accounts on dev: `admin@seed.test` (admin) and `angler@seed.test` (angler) — passwords in the comment at the top of `supabase/seed.sql`.
 
 See `docs/05-agent-operations.md` §11 for how to recreate dev and what to do when Free plan sleeps the project.
 

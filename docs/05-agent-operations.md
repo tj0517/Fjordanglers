@@ -281,7 +281,7 @@ Bramka STOP dla agenta: **jakakolwiek wysyłka z `.fa-proofs/` bez odpowiedniej 
 
 ## 11. Środowisko dev (`fjordanglers-dev`)
 
-Projekt Supabase `fjordanglers-dev` (plan Free, ta sama organizacja co prod) jest
+Projekt Supabase `fjordanglers-dev` (plan Free, **osobna organizacja Supabase**, ten sam region co prod) jest
 odizolowaną bazą dla Vercel Preview. Preview wskazuje na dev, nie na produkcję —
 wszystkie kliknięcia testowe są bezpieczne.
 
@@ -291,13 +291,14 @@ wszystkie kliknięcia testowe są bezpieczne.
 
 Jeśli projekt dev zostanie usunięty lub uśpiony:
 
-1. Utwórz nowy projekt `fjordanglers-dev` w Supabase Dashboard (plan Free, ta sama
-   organizacja, ten sam region co prod `uwxrstbplaoxfghrchcy`).
+1. Utwórz nowy projekt `fjordanglers-dev` w Supabase Dashboard (plan Free, **osobna organizacja**,
+   ten sam region co prod `uwxrstbplaoxfghrchcy` — organizacja prod jest na planie płatnym, Free tam niemożliwy).
 2. Wejdź w Settings → Database → Connection string → **Session pooler** (port 5432) → skopiuj URL.
    Zapisz do `~/.config/fa/dev.env` (poza repo, `chmod 600`):
    ```
-   DEV_DB_URL=postgresql://...
+   DEV_DB_URL='postgresql://...'
    ```
+   Cudzysłów pojedynczy wymagany — hasło może zawierać `$`, `&`, `!`, które bez cudzysłowów rozwinęłyby się przez shell przy `source`.
    W każdej komendzie używaj: `set -a; . ~/.config/fa/dev.env; set +a; <command>`.
    Nigdy nie echuj, nie commituj, nie pisz nigdzie indziej.
 3. Zastosuj migracje bez zmiany linku repo (pełna forma z env-file):
@@ -306,11 +307,17 @@ Jeśli projekt dev zostanie usunięty lub uśpiony:
    supabase db push --db-url "$DEV_DB_URL"
    ```
    (guard blokuje to polecenie agentowi — robi człowiek)
-4. Zaaplikuj seed:
+4. Upewnij się, że `psql` jest zainstalowany (`psql --version`); jeśli nie:
+   ```
+   sudo apt install -y postgresql-client
+   ```
+   (pakiet `postgresql-client`, nie `postgresql-client-common`)
+   Następnie zaaplikuj seed (jeden raz, all-or-nothing):
    ```
    set -a; . ~/.config/fa/dev.env; set +a
-   psql "$DEV_DB_URL" -f supabase/seed.sql
+   psql "$DEV_DB_URL" -v ON_ERROR_STOP=1 -1 -f supabase/seed.sql
    ```
+   **Backfill `inquiry_events` NIE jest uruchamiany na dev.** Seed tworzy zapytania bez historii zdarzeń — oś czasu na karcie zapytania jest pusta (tak samo jak lokalnie po `db reset` bez ręcznego backfillu).
 5. W Supabase Dashboard → Authentication → URL Configuration ustaw:
    - Site URL: główny alias Preview projektu Vercel (`https://<project>.vercel.app`)
    - Allowed Redirect URLs — **zawęzione do tego projektu** (nie `*.vercel.app` — zbyt szerokie):
