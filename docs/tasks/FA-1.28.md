@@ -2,7 +2,7 @@
 id: FA-1.28
 title: Kwota depozytu w danych — kwota w groszach, waluta opcji, kurs do EUR zamrożony; pole kwoty na karcie z podpowiedzią 20%
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
