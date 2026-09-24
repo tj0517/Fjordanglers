@@ -2,7 +2,7 @@
 id: FA-1.28
 title: Kwota depozytu w danych — kwota w groszach, waluta opcji, kurs do EUR zamrożony; pole kwoty na karcie z podpowiedzią 20%
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -93,3 +93,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-24 tj (wf-plan): zadanie powstało z wiersza FA-1.18 w `docs/deferred-tasks.md` (bloker na żywej ścieżce, kod na produkcji od 19 IX); decyzje w sekcji „Decyzje tj”.
 - 2026-09-24 tj (wf-task): przycisk „Create Deposit Link” (warunek pokazania i działanie) w całości w FA-1.29; 1.28 tylko ustawia i zapisuje kwotę.
 - 2026-09-24 tj (STOP migracji): waluty depozytu tylko EUR/USD/ISK/NZD (CHECK w bazie; oferta w innej walucie, np. NOK/SEK, nie dostanie depozytu do czasu migracji rozszerzającej listę); baza pilnuje „wszystko albo nic” i kwoty > 0; ISK w groszach (×100) jak offer_options.price_cents.
+- 2026-09-24 tj (wf-review): przyjęte po 2 rundach, PR #103. Udowodnione: migracja (db reset + information_schema + CI db), 3 red proofy bazy (all_or_nothing / positive / currency_check), zapis przez UI + zdarzenie deposit.amount_set (SELECT), metryki i webhook na nowych polach i starym wierszu (testy), kurs ISK na żywo z frankfurter (138.0). UI: zrzuty wg konwencji (ścieżki + ls, .playwright-mcp w .gitignore). Deferred: blokada edycji po wpłacie, zdarzenie łykane po UPDATE.
