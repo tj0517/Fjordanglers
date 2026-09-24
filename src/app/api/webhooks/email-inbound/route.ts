@@ -17,6 +17,8 @@ import { env } from '@/lib/env'
 import { createServiceClient } from '@/lib/supabase/server'
 import { matchInquiryByEmail } from '@/lib/inquiry-matcher'
 import { emitEvent } from '@/lib/events/emit'
+import { transition } from '@/lib/inquiries/state'
+import { hasAgentAutoReply, autoSendReply } from '@/lib/ai/auto-send'
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
@@ -152,6 +154,35 @@ export async function POST(req: Request) {
       })
 
       console.log(`[email-inbound] Email from ${fromEmail} → inquiry ${inquiryId}`)
+
+      if (env.AI_AUTO_REPLY_ENABLED) {
+        // D2: angler replies to a 'new' inquiry that already got an auto-reply →
+        // move to 'qualifying' so the SLA clock starts from the right state.
+        try {
+          const { data: inq } = await supabase
+            .from('inquiries')
+            .select('status')
+            .eq('id', inquiryId)
+            .maybeSingle()
+
+          if (inq?.status === 'new' && await hasAgentAutoReply(inquiryId)) {
+            await transition(supabase, inquiryId, 'qualifying', {
+              actor:   { kind: 'agent' },
+              source:  'webhook',
+              channel: 'email',
+              reason:  'angler replied after agent auto-reply',
+            })
+          }
+        } catch (err) {
+          console.error('[email-inbound] D2 transition error:', err)
+        }
+
+        try {
+          await autoSendReply({ inquiryId, counterpart: 'angler', channel: 'email' })
+        } catch (err) {
+          console.error('[email-inbound] Auto-send error:', err)
+        }
+      }
 
     }
   } else {

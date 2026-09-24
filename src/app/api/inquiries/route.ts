@@ -21,6 +21,7 @@ import { createInquiry } from '@/lib/inquiries/create'
 import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 import { classifyInquiry } from '@/lib/ai/inquiry-agent'
+import { autoSendReply } from '@/lib/ai/auto-send'
 import { addBusinessDays, formatBusinessDay } from '@/lib/business-days'
 
 export const runtime  = 'nodejs'
@@ -199,6 +200,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     } catch (err) {
       console.error('[inquiries/POST] Agent error:', err)
       // never block the 201 response
+    }
+
+    try {
+      await autoSendReply({ inquiryId: inquiry.id, counterpart: 'angler', channel: 'email' })
+    } catch (err) {
+      console.error('[inquiries/POST] Auto-send error:', err)
     }
   }
 
