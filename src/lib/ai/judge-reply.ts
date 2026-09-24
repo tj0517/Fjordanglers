@@ -71,7 +71,8 @@ export async function judgeReply(conversation: string, draftText: string): Promi
 
   let parsed: unknown
   try {
-    const text = block.text.trim()
+    // Strip markdown code fences if the model added them despite the prompt instruction
+    const text = block.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim()
     parsed = JSON.parse(text)
   } catch {
     throw new Error(`[judgeReply] Could not parse judge response: ${block.text}`)
