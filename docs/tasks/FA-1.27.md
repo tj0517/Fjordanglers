@@ -2,7 +2,7 @@
 id: FA-1.27
 title: Hybrydowa auto-wysyłka do klienta — sędzia ≥ 0.9 i stany „nigdy auto”; reszta zostaje draftem
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
@@ -87,3 +87,25 @@ pnpm typecheck && pnpm lint && pnpm knip
 
 ## Notatki z realizacji
 - 2026-09-22 tj: zadanie dopisane (/wf-plan); decyzje D1–D5 wyżej.
+- 2026-09-24 agent: realizacja zakończona (PR #— do otwarcia).
+
+### Zrobione
+- `src/lib/events/types.ts` — `agent.auto_send_decided` dodane do `EMITTED_EVENT_TYPES`.
+- `docs/REBUILD_PLAN.md` Appendix C — wiersz dla `agent.auto_send_decided`.
+- `src/lib/ai/judge-reply.ts` — NEW: `judgeReply(conversation, draftText)` → `{score, send, reasons}`, model `claude-haiku-4-5-20251001`, `JUDGE_THRESHOLD = 0.9`.
+- `src/lib/ai/auto-send.ts` — NEW: `autoSendReply({inquiryId, counterpart, channel})` z pełną kolejnością bramek (counterpart → channel → status → draftReply → destination entry → judge → send/hold → emitEvent); `hasAgentAutoReply(inquiryId)` dla D2.
+- `src/app/api/inquiries/route.ts` — wywołanie `autoSendReply` po `classifyInquiry` przy `AI_AUTO_REPLY_ENABLED`.
+- `src/app/api/webhooks/email-inbound/route.ts` — D2: `new → qualifying` gdy `inq.status=new && hasAgentAutoReply`; następnie `autoSendReply`.
+- Testy (350 zielone, typecheck/lint/knip czyste):
+  - `src/lib/ai/auto-send.test.ts` — bramki (red→green + RED-proof dla wpisu kraju), happy path, D2, flag-off.
+  - `src/app/api/webhooks/__tests__/email-inbound-matched.test.ts` — D2 transition testy + flag-off.
+  - `src/app/api/inquiries/__tests__/route.test.ts` — flag-off dla `/api/inquiries`.
+
+### Nie zrobione
+- Demo z `RESEND_DEV_FAKE=1` i SELECT z bazy — zrobi tj przed merge (STOP gate D4 w zadaniu).
+
+### Zauważone, odłożone
+- Nic nowego poza zakresem.
+
+### Potrzebna decyzja
+- Brak.
