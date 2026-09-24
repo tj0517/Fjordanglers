@@ -5,6 +5,7 @@ where, why it matters, which task noticed it. Promote to `docs/tasks/` when sche
 
 | Noticed in | What | Where | Why it matters |
 |---|---|---|---|
+| FA-1.19 | `db` job pada na `ghcr.io` rate limit (`toomanyrequests`) gdy kilka PR-ów z jobem `db` odpala się jednocześnie — re-run rozwiązuje; można ograniczyć przez uwierzytelnianie obrazów Docker lub rozłożenie PR-ów w czasie | `.github/workflows/ci.yml` job `db` (krok `supabase start`) | transient, ale frustrujące — przy dużej liczbie otwartych PR-ów blokuje CI bez błędu w kodzie |
 | FA-1.02 | `audit_log` pisany triggerem `audit_trigger_fn` z `guides` i `guide_images`; żaden `src/` go nie czyta. Decyzja: zostaje, rozważyć w etapie 4 razem z `guide_images` | `public.audit_log`, `audit_trigger_fn` | nie dropować bez decyzji o potrzebie operacyjnej |
 | FA-1.02 | `public.offers` (14 wierszy, era ekspedycji) koliduje nazwą z nową tabelą `offers` z FA-1.12 | `public.offers` | rozstrzygnąć w FA-1.12 — rename albo drop (dane: era ekspedycji, brak kodu-czytnika) |
 | audit 2026-08-31 | ~~`robots.ts` disallows ghost routes `/account/`, `/book/`, `/invite/`~~ — **closed before FA-1.08**: `grep -n "account/\|book/\|invite/" src/app/robots.ts` → brak trafień, `ls -d src/app/{account,book,invite}` → „No such file or directory". Zamknięte wcześniejszą paczką (FA-1.06/1.07), nie przez FA-1.08; FA-1.08 tylko potwierdziło odczytem | `src/app/robots.ts` | closed |

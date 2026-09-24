@@ -1,0 +1,24 @@
+# FA-1.19 — Gitleaks configuration
+#
+# Extends the default ruleset. The only allowlisted values are the ones committed
+# intentionally in .env.test (FA-0.21): the standard Supabase local-dev JWTs
+# (identical on every developer machine — publicly documented) and the Stripe/Resend
+# placeholders. Everything else triggers a finding.
+#
+# Allowlist by exact secret value (regexTarget = "secret"), not by file path —
+# a new real key added to .env.test must still be caught.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+id = "env-test-safe-values"
+regexTarget = "secret"
+regexes = [
+  # Supabase local-dev anon JWT (supabase-demo, publicly documented, deterministic)
+  '^eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9\.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0$',
+  # Supabase local-dev service_role JWT (supabase-demo, publicly documented, deterministic)
+  '^eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0\.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU$',
+  # Stripe key placeholder — not a real credential
+  '^sk_test_placeholder$',
+]
