@@ -83,11 +83,12 @@ justification, it goes in an ADR and this file links to it.
 ## CI
 
 `.github/workflows/ci.yml` runs on every PR to `main` and to `stage-1`, and on push to
-`stage-1`. Four gating jobs — the exact names to require in branch protection are `check`,
-`db`, `knip` and `sync`. `knip` became a gate in FA-1.08, when the dead-code count reached
-zero. No secrets: every value comes from the committed `.env.test` (local Supabase
-keys are deterministic, Stripe/Resend are placeholders), and `secrets.*` appears nowhere
-in the workflow.
+`stage-1`. Five jobs — `check`, `db`, `knip`, `sync`, and `secrets` (added FA-1.19).
+`check`, `db`, `knip`, and `sync` are required checks in branch protection; `secrets`
+becomes required once tj adds it after the FA-1.19 review. `knip` became a gate in
+FA-1.08, when the dead-code count reached zero. No secrets in the workflow: every value
+comes from the committed `.env.test` (local Supabase keys are deterministic, Stripe/Resend
+are placeholders), and `secrets.*` appears nowhere in the workflow.
 
 | job | when | what it proves | how to fix a red run |
 |---|---|---|---|
@@ -95,6 +96,9 @@ in the workflow.
 | `db` | PRs only | migrations apply to an empty database; `database.types.ts` matches the schema; tests pass against a fresh stack | see the three cases below |
 | `knip` | every PR + push to `stage-1` | `pnpm knip` reports zero unused files, exports, types, dependencies and duplicates. A gate since FA-1.08; the count still goes to the job summary | `pnpm knip` locally and delete what it names; fix the config, not with `// knip-ignore` |
 | `sync` | PRs to `stage-1` only | merging this PR leaves `main` an ancestor of `stage-1`, and the PR branch already contains `main` | `git merge origin/main` into whichever the error names |
+| `secrets` | every PR + push to `stage-1` | gitleaks finds no newly committed secret in the PR/push range; `--redact` keeps values out of the log | a finding means the secret is already public — rotate first (tj decides), then allowlist the safe placeholder in `.gitleaks.toml` by its exact value, or add a fingerprint-only entry to `.gitleaksignore` for a revoked historical key |
+
+**`.gitleaksignore`**: fingerprint-only entries (`commit:file:rule:line`). Each entry requires the secret to have been revoked before it is added, and a note in the task file recording what was revoked and when. Never use path or rule exclusions — they suppress future real findings.
 
 **Lint is a gate since FA-1.08.** The 35 errors that had been sitting on `main` since
 FA-1.03 are gone, so `pnpm lint` exits zero and the `lint` step in `check` no longer carries
