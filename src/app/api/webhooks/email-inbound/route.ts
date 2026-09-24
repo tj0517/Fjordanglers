@@ -19,6 +19,7 @@ import { matchInquiryByEmail } from '@/lib/inquiry-matcher'
 import { emitEvent } from '@/lib/events/emit'
 import { transition } from '@/lib/inquiries/state'
 import { hasAgentAutoReply, autoSendReply } from '@/lib/ai/auto-send'
+import { getInquiryStatusForD2 } from '@/lib/supabase/queries'
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
@@ -159,11 +160,7 @@ export async function POST(req: Request) {
         // D2: angler replies to a 'new' inquiry that already got an auto-reply →
         // move to 'qualifying' so the SLA clock starts from the right state.
         try {
-          const { data: inq } = await supabase
-            .from('inquiries')
-            .select('status')
-            .eq('id', inquiryId)
-            .maybeSingle()
+          const inq = await getInquiryStatusForD2(supabase, inquiryId)
 
           if (inq?.status === 'new' && await hasAgentAutoReply(inquiryId)) {
             await transition(supabase, inquiryId, 'qualifying', {

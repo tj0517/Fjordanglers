@@ -2,10 +2,11 @@
  * Hybrid auto-send pipeline. FA-1.27.
  *
  * autoSendReply({ inquiryId, counterpart, channel })
- *   Hard gates → draftReply (always saves draft) → destination gate → judge → send or hold.
- *   Emits `agent.auto_send_decided` with {sent, score, reasons, draft_message_id}.
- *   Returns null when a pre-draft gate blocks (counterpart, channel, status) — no draft,
- *   no event, no side-effects. Returns AutoSendResult for all post-draft outcomes.
+ *   Pre-draft gates → draftReply (always saves draft) → destination gate → judge → send or hold.
+ *   Emits `agent.auto_send_decided` for EVERY invocation:
+ *     - pre-draft gate failures: sent=false, score=null, draft_message_id=null + reason
+ *     - all post-draft outcomes: sent, score, draft_message_id from the saved draft
+ *   Exception: flag-off is the CALLER's responsibility — no call → no event.
  *
  * hasAgentAutoReply(inquiryId)
  *   True when this inquiry already has an agent-drafted sent message to the angler.
@@ -20,41 +21,39 @@ import { judgeReply, JUDGE_THRESHOLD } from '@/lib/ai/judge-reply'
 import { loadKnowledge } from '@/lib/ai/knowledge'
 import { sendMessage } from '@/lib/messages/send'
 import { emitEvent } from '@/lib/events/emit'
+import {
+  getInquiryForAutoSend,
+  hasAgentSentReplyToAngler,
+  getConversationForJudge,
+} from '@/lib/supabase/queries'
 
 export interface AutoSendResult {
   sent:           boolean
   score:          number | null
   reasons:        string[]
-  draftMessageId: string
+  draftMessageId: string | null
 }
 
 // ─── hasAgentAutoReply ────────────────────────────────────────────────────────
 
 /**
  * Returns true when the inquiry already has at least one outbound angler message
- * drafted by the agent that was sent. Used for the D2 transition: when the angler
- * replies to a 'new' inquiry that received an auto-reply, move status to 'qualifying'.
+ * drafted by the agent that was sent. Used for the D2 transition.
  */
 export async function hasAgentAutoReply(inquiryId: string): Promise<boolean> {
   const supabase = createServiceClient()
-  const { count } = await supabase
-    .from('messages')
-    .select('id', { count: 'exact', head: true })
-    .eq('inquiry_id', inquiryId)
-    .eq('direction', 'outbound')
-    .eq('counterpart', 'angler')
-    .eq('drafted_by', 'agent')
-    .in('status', ['sent', 'queued'])
-
-  return (count ?? 0) > 0
+  return hasAgentSentReplyToAngler(supabase, inquiryId)
 }
 
 // ─── autoSendReply ────────────────────────────────────────────────────────────
 
 /**
- * Runs the full auto-send pipeline for one inquiry. Returns null when a pre-draft
- * gate does not pass (no DB writes). Returns AutoSendResult for all post-draft
- * outcomes (draft row always exists in the DB by the time this returns non-null).
+ * Runs the full auto-send pipeline for one inquiry.
+ *
+ * Emits `agent.auto_send_decided` for every invocation, including pre-draft gate
+ * failures. Returns null ONLY for hard errors (inquiry not found, no angler email,
+ * draftReply failed). Returns AutoSendResult for gate failures and post-draft outcomes.
+ * Flag-off is the caller's responsibility — do not call this when the flag is off.
  */
 export async function autoSendReply(params: {
   inquiryId:   string
@@ -62,23 +61,30 @@ export async function autoSendReply(params: {
   channel:     'email' | 'whatsapp' | 'instagram'
 }): Promise<AutoSendResult | null> {
   const { inquiryId, counterpart, channel } = params
+  const supabase = createServiceClient()
 
   // Gate 1: only angler replies can be auto-sent
-  if (counterpart !== 'angler') return null
+  if (counterpart !== 'angler') {
+    await emitDecision(supabase, inquiryId, null, false, null, ['counterpart is not angler'])
+    return { sent: false, score: null, reasons: ['counterpart is not angler'], draftMessageId: null }
+  }
 
   // Gate 2: only email for now (D3)
-  if (channel !== 'email') return null
+  if (channel !== 'email') {
+    const reason = `channel '${channel}' is not email`
+    await emitDecision(supabase, inquiryId, null, false, null, [reason])
+    return { sent: false, score: null, reasons: [reason], draftMessageId: null }
+  }
 
   // Gate 3: only while qualifying is still open
-  const supabase = createServiceClient()
-  const { data: inquiry } = await supabase
-    .from('inquiries')
-    .select('id, status, trip_country, angler_email')
-    .eq('id', inquiryId)
-    .maybeSingle()
+  const inquiry = await getInquiryForAutoSend(supabase, inquiryId)
 
   if (inquiry == null) return null
-  if (inquiry.status !== 'new' && inquiry.status !== 'qualifying') return null
+  if (inquiry.status !== 'new' && inquiry.status !== 'qualifying') {
+    const reason = `status '${inquiry.status}' is not eligible for auto-send`
+    await emitDecision(supabase, inquiryId, null, false, null, [reason])
+    return { sent: false, score: null, reasons: [reason], draftMessageId: null }
+  }
   if (!inquiry.angler_email) return null
 
   // Draft — saved here regardless of gate 4 or judge, so admin always has it to edit.
@@ -101,26 +107,14 @@ export async function autoSendReply(params: {
   const hasDestination = entries.some(e => e.kind === 'destination')
 
   if (!hasDestination) {
-    await emitDecision(inquiryId, draft.draftId, false, null, [
-      'no active destination knowledge entry for country: ' + (inquiry.trip_country ?? 'unknown'),
-    ])
-    return {
-      sent:           false,
-      score:          null,
-      reasons:        ['no active destination knowledge entry for country: ' + (inquiry.trip_country ?? 'unknown')],
-      draftMessageId: draft.draftId,
-    }
+    const reason = 'no active destination knowledge entry for country: ' + (inquiry.trip_country ?? 'unknown')
+    await emitDecision(supabase, inquiryId, draft.draftId, false, null, [reason])
+    return { sent: false, score: null, reasons: [reason], draftMessageId: draft.draftId }
   }
 
   // Build conversation text for the judge from sent/received messages (no drafts).
-  const { data: msgs } = await supabase
-    .from('messages')
-    .select('direction, body, occurred_at')
-    .eq('inquiry_id', inquiryId)
-    .neq('status', 'draft')
-    .order('occurred_at', { ascending: true })
-
-  const conversationText = (msgs ?? [])
+  const msgs = await getConversationForJudge(supabase, inquiryId)
+  const conversationText = msgs
     .map(m => `[${m.direction === 'inbound' ? 'ANGLER' : 'AGENT'}] ${m.body}`)
     .join('\n\n')
 
@@ -131,7 +125,7 @@ export async function autoSendReply(params: {
   } catch (err) {
     const reason = `judge error: ${err instanceof Error ? err.message : String(err)}`
     console.error('[autoSendReply] judgeReply failed:', err)
-    await emitDecision(inquiryId, draft.draftId, false, null, [reason])
+    await emitDecision(supabase, inquiryId, draft.draftId, false, null, [reason])
     return { sent: false, score: null, reasons: [reason], draftMessageId: draft.draftId }
   }
 
@@ -140,7 +134,7 @@ export async function autoSendReply(params: {
   if (shouldSend) {
     await sendMessage(supabase, {
       inquiryId,
-      channel:    'email',
+      channel:     'email',
       counterpart: 'angler',
       to:          inquiry.angler_email,
       subject:     draft.subject ?? undefined,
@@ -151,7 +145,7 @@ export async function autoSendReply(params: {
     })
   }
 
-  await emitDecision(inquiryId, draft.draftId, shouldSend, judged.score, judged.reasons)
+  await emitDecision(supabase, inquiryId, draft.draftId, shouldSend, judged.score, judged.reasons)
 
   return {
     sent:           shouldSend,
@@ -164,13 +158,13 @@ export async function autoSendReply(params: {
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 async function emitDecision(
-  inquiryId:       string,
-  draftMessageId:  string,
-  sent:            boolean,
-  score:           number | null,
-  reasons:         string[],
+  supabase:       ReturnType<typeof createServiceClient>,
+  inquiryId:      string,
+  draftMessageId: string | null,
+  sent:           boolean,
+  score:          number | null,
+  reasons:        string[],
 ): Promise<void> {
-  const supabase = createServiceClient()
   await emitEvent(supabase, {
     inquiryId,
     type:    'agent.auto_send_decided',
