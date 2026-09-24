@@ -102,3 +102,5 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-22 tj (wf-plan): automatyczne migracje na dev w CI osobno, w FA-1.20 (D2).
 - 2026-09-24 tj (wf-task): seed = 2 konta auth + 14 zapytań @seed.test (kryterium poprawione); preview-check przez /admin/inquiries/new jako admin@seed.test (seed nie ma strony wyprawy); na Preview RESEND_API_KEY = placeholder, bo src/lib/email.ts ignoruje RESEND_DEV_FAKE; usuwamy "chore/*" z git.deploymentEnabled w vercel.json, żeby gałąź zadania dostała preview.
 - 2026-09-24 tj: dev = krqhfauhhjxwpuradwws, <organizacja/plan> — replaces "Free w obecnej organizacji" (the prod org is on a paid plan, so a Free project there is not possible).
+- 2026-09-24 tj: NEXT_PUBLIC_GTM_ID, NEXT_PUBLIC_META_PIXEL_ID, NEXT_PUBLIC_CLARITY_ID — usunąć z Preview (test traffic nie może docierać do Google Ads / Meta jako konwersje). App jest null-safe: wszystkie trzy użycia są guarded (cookie-banner.tsx:81,88; layout.tsx:153,156). Decyzja tj 2026-09-24.
+- 2026-09-24 tj: AI_AUTO_REPLY_ENABLED = false dla Preview tylko (nowy wpis Preview-only po odznaczeniu shared Prod+Preview entry). Decyzja tj 2026-09-24.

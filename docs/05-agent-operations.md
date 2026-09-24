@@ -315,11 +315,10 @@ Jeśli projekt dev zostanie usunięty lub uśpiony:
    - Site URL: główny alias Preview projektu Vercel (`https://<project>.vercel.app`)
    - Allowed Redirect URLs — **zawęzione do tego projektu** (nie `*.vercel.app` — zbyt szerokie):
      ```
-     https://<project>-*-<scope>.vercel.app/**
-     https://<project>-git-*-<scope>.vercel.app/**
+     https://fjordanglers-*-tymon-jezionek.vercel.app/**
+     https://fjordanglers-git-*-tymon-jezionek.vercel.app/**
      ```
-     Gdzie `<project>` i `<scope>` odczytujesz z `vercel ls` po zalogowaniu.
-     Przykład: projekt `fjordanglers`, scope `tj0517` → `https://fjordanglers-*-tj0517.vercel.app/**`
+     (scope `tymon-jezionek`, projekt `fjordanglers` — z `vercel ls`, 24 IX 2026)
 6. W Vercel zaktualizuj zmienne Preview (`NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) na nowy projekt.
 
