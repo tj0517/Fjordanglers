@@ -278,3 +278,88 @@ wiadomość trafiła na `piotr@example.invalid` przez prawdziwe konto Resend.
 
 Bramka STOP dla agenta: **jakakolwiek wysyłka z `.fa-proofs/` bez odpowiedniej flagi fake
 → STOP** (tak samo jak zapis na prod).
+
+## 11. Środowisko dev (`fjordanglers-dev`)
+
+Projekt Supabase `fjordanglers-dev` (plan Free, **osobna organizacja Supabase**, ten sam region co prod) jest
+odizolowaną bazą dla Vercel Preview. Preview wskazuje na dev, nie na produkcję —
+wszystkie kliknięcia testowe są bezpieczne.
+
+**Drabina środowisk:** local → dev → prod.
+
+### Odtworzenie środowiska dev
+
+Jeśli projekt dev zostanie usunięty lub uśpiony:
+
+1. Utwórz nowy projekt `fjordanglers-dev` w Supabase Dashboard (plan Free, **osobna organizacja**,
+   ten sam region co prod `uwxrstbplaoxfghrchcy` — organizacja prod jest na planie płatnym, Free tam niemożliwy).
+2. Wejdź w Settings → Database → Connection string → **Session pooler** (port 5432) → skopiuj URL.
+   Zapisz do `~/.config/fa/dev.env` (poza repo, `chmod 600`):
+   ```
+   DEV_DB_URL='postgresql://...'
+   ```
+   Cudzysłów pojedynczy wymagany — hasło może zawierać `$`, `&`, `!`, które bez cudzysłowów rozwinęłyby się przez shell przy `source`.
+   W każdej komendzie używaj: `set -a; . ~/.config/fa/dev.env; set +a; <command>`.
+   Nigdy nie echuj, nie commituj, nie pisz nigdzie indziej.
+3. Zastosuj migracje bez zmiany linku repo (pełna forma z env-file):
+   ```
+   set -a; . ~/.config/fa/dev.env; set +a
+   supabase db push --db-url "$DEV_DB_URL"
+   ```
+   (guard blokuje to polecenie agentowi — robi człowiek)
+4. Upewnij się, że `psql` jest zainstalowany (`psql --version`); jeśli nie:
+   ```
+   sudo apt install -y postgresql-client
+   ```
+   (pakiet `postgresql-client`, nie `postgresql-client-common`)
+   Następnie zaaplikuj seed (jeden raz, all-or-nothing):
+   ```
+   set -a; . ~/.config/fa/dev.env; set +a
+   psql "$DEV_DB_URL" -v ON_ERROR_STOP=1 -1 -f supabase/seed.sql
+   ```
+   **Backfill `inquiry_events` NIE jest uruchamiany na dev.** Seed tworzy zapytania bez historii zdarzeń — oś czasu na karcie zapytania jest pusta (tak samo jak lokalnie po `db reset` bez ręcznego backfillu).
+5. W Supabase Dashboard → Authentication → URL Configuration ustaw:
+   - Site URL: główny alias Preview projektu Vercel (`https://<project>.vercel.app`)
+   - Allowed Redirect URLs — **zawęzione do tego projektu** (nie `*.vercel.app` — zbyt szerokie):
+     ```
+     https://fjordanglers-*-tymon-jezionek.vercel.app/**
+     https://fjordanglers-git-*-tymon-jezionek.vercel.app/**
+     ```
+     (scope `tymon-jezionek`, projekt `fjordanglers` — z `vercel ls`, 24 IX 2026)
+6. W Vercel zaktualizuj zmienne Preview (`NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) na nowy projekt.
+
+**Plan Free usypia projekt po ~1 tygodniu bez ruchu.** Aby obudzić: wejdź na
+`app.supabase.com`, kliknij projekt, Restore. Kilka sekund i jest gotowy.
+
+**`db push` na dev** robi człowiek (nie CI) do czasu FA-1.20, który to automatyzuje.
+Agent przygotowuje komendę i czeka na potwierdzenie — guard ją blokuje.
+
+### Zmienne Preview po FA-1.18
+
+Klucz | Wartość
+`NEXT_PUBLIC_SUPABASE_URL` | dev projekt
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` | dev projekt
+`SUPABASE_SERVICE_ROLE_KEY` | dev projekt (server-only!)
+`STRIPE_SECRET_KEY` | `sk_test_…` (test mode)
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_…` (test mode)
+`STRIPE_WEBHOOK_SECRET` | placeholder (brak endpointu Stripe dla Preview — D3)
+`RESEND_DEV_FAKE` | `1` (kanał email.ts omija Resend)
+`RESEND_API_KEY` | placeholder (nie-działający) — `src/lib/email.ts` ignoruje
+`RESEND_DEV_FAKE`; wysyłki transakcyjne (confirmation, deposit-link, password-reset)
+padają przechwyconym błędem na Preview. Reset hasła nie wysyła na Preview.
+
+Pozostałe zmienne — decyzje tj z FA-1.18 (data + co zrobić przy każdej).
+
+### Gałęzie `chore/*` i buildy Preview
+
+Od FA-1.18 `chore/*` jest usunięte z `git.deploymentEnabled` w `vercel.json`.
+Gałęzie `chore/*` dostają Preview tak samo jak `fix/*` i `feat/*`.
+Gałęzie, które wciąż nie dostają Preview: `docs/*`, `staging`, `preview`.
+Commity docs-only (tylko `docs/**`, `.claude/**`, `*.md`) nie budują Preview — Ignored
+Build Step ustawiony inline (2026-09-24, FA-1.18):
+```
+git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/**' ':(exclude).claude/**' ':(exclude)*.md'
+```
+`scripts/vercel-ignore-build.sh` zawiera tę samą logikę, ale IBS jest ustawiony bezpośrednio
+w Vercelu (Settings → Git → Ignored Build Step), nie przez skrypt.
