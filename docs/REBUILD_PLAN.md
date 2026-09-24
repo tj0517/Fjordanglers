@@ -635,6 +635,7 @@ w aplikacji — nigdy jako osobny krok „dopisz".
 | `status.changed` | admin / system | app | `transition()` | lejek, `stage_reached` |
 | `inquiry.lost` | admin | app | `transition(lost)` z `lost_reason_code` | powody przegranych |
 | `trip.completed` | admin / system | app | data zakończenia | M14–M16 |
+| `agent.auto_send_decided` | agent | email | `autoSendReply()` po każdej próbie auto-wysyłki (FA-1.27); `payload.sent`, `payload.score`, `payload.reasons`, `payload.draft_message_id` | M11 (nie liczy się jako ręczne dotknięcie) |
 
 Zarezerwowane, bez emisji w etapie 1 (w `types.ts` z komentarzem `// stage N`):
 `agent.round_completed`, `inquiry.brief_completed`, `guide.assigned`/`unassigned`,

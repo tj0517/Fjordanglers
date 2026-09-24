@@ -29,22 +29,23 @@ export type EventSource = typeof EVENT_SOURCES[number]
 // ─── Types emitted from stage 1 ───────────────────────────────────────────────
 
 const EMITTED_EVENT_TYPES = [
-  'inquiry.created',        // core.inquiries.create
-  'inquiry.qualified_set',  // classification + correction (FA-1.04)
-  'message.sent',           // sending from the thread (FA-1.12)
-  'message.received',       // webhooks + matching from unmatched_messages (FA-1.12)
-  'guide.contacted',        // first outbound message to a guide on this inquiry (FA-1.12)
-  'guide.offer_received',   // admin marks an inbound guide message as "this is the offer" (FA-1.12)
-  'offer.presented',        // outbound message to the angler marked "presents an offer" (FA-1.12)
-  'offer.accepted',         // admin marks the angler's answer (FA-1.12)
-  'offer.declined',         // as above; leads to inquiry.lost (FA-1.12)
-  'payment.link_sent',      // Stripe Payment Link generated from the app (FA-1.12)
-  'payment.received',       // checkout.session.completed webhook; UnmatchedLinker as fallback
-  'guide.notified_paid',    // message to the guide marked "told about the deposit" (FA-1.12)
-  'contacts.exchanged',     // contacts sent to both sides (FA-1.12)
-  'status.changed',         // transition()
-  'inquiry.lost',           // transition('lost') with a lost_reason_code
-  'trip.completed',         // trip finished
+  'inquiry.created',          // core.inquiries.create
+  'inquiry.qualified_set',    // classification + correction (FA-1.04)
+  'message.sent',             // sending from the thread (FA-1.12)
+  'message.received',         // webhooks + matching from unmatched_messages (FA-1.12)
+  'guide.contacted',          // first outbound message to a guide on this inquiry (FA-1.12)
+  'guide.offer_received',     // admin marks an inbound guide message as "this is the offer" (FA-1.12)
+  'offer.presented',          // outbound message to the angler marked "presents an offer" (FA-1.12)
+  'offer.accepted',           // admin marks the angler's answer (FA-1.12)
+  'offer.declined',           // as above; leads to inquiry.lost (FA-1.12)
+  'payment.link_sent',        // Stripe Payment Link generated from the app (FA-1.12)
+  'payment.received',         // checkout.session.completed webhook; UnmatchedLinker as fallback
+  'guide.notified_paid',      // message to the guide marked "told about the deposit" (FA-1.12)
+  'contacts.exchanged',       // contacts sent to both sides (FA-1.12)
+  'status.changed',           // transition()
+  'inquiry.lost',             // transition('lost') with a lost_reason_code
+  'trip.completed',           // trip finished
+  'agent.auto_send_decided',  // hybrid auto-send decision: score, send, reasons (FA-1.27)
 ] as const
 
 // ─── Reserved — no emitter yet ────────────────────────────────────────────────
