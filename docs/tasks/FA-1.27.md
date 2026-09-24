@@ -2,7 +2,7 @@
 id: FA-1.27
 title: Hybrydowa auto-wysyłka do klienta — sędzia ≥ 0.9 i stany „nigdy auto”; reszta zostaje draftem
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -94,6 +94,15 @@ pnpm typecheck && pnpm lint && pnpm knip
   opisującym stan. Wyjątek: flaga wyłączona → nic (odpowiedzialność wywołującego).
 - 2026-09-24 agent: runda 2 zakończona — zmiany poniżej.
 - 2026-09-24 agent: runda 3 zakończona — build, demo, test iniekcji, zmiany poniżej.
+- 2026-09-24 odbiór (tj): PR #100 przyjęty po rundzie 3. Udowodnione: bramki „nigdy auto"
+  (przewodnik, kanał, status, brak wpisu kraju — red proof, sędzia 0.89, send=false) z
+  zdarzeniem `agent.auto_send_decided`; szczęśliwa ścieżka (mock 0.93 → wysyłka przez fake
+  Resend, status new); D2 new→qualifying; flaga off → 0 wywołań; sędzia rzuca / zły JSON →
+  nie wysyła, /api/inquiries 201; warstwa danych (grep .from → pusto); build zielony. Demo
+  lokalne z prawdziwym sędzią (Haiku): IS z wpisem → 0.85, nie wysłano (powody trafne:
+  pytanie o liczbę osób, zmyślona data — instrukcje to zaślepka z seeda); NO bez wpisu →
+  nie wysłano. Próba manipulacji → score 0. Niesprawdzone na żywo: wysyłka ≥0.9 z prawdziwym
+  sędzią — pierwsza po FA-1.17, test na adres tj przed włączeniem flagi na prod.
 
 ### Zrobione — runda 1
 - `src/lib/events/types.ts` — `agent.auto_send_decided` dodane do `EMITTED_EVENT_TYPES`.
