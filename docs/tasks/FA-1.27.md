@@ -87,25 +87,43 @@ pnpm typecheck && pnpm lint && pnpm knip
 
 ## Notatki z realizacji
 - 2026-09-22 tj: zadanie dopisane (/wf-plan); decyzje D1–D5 wyżej.
-- 2026-09-24 agent: realizacja zakończona (PR #— do otwarcia).
+- 2026-09-24 agent: realizacja zakończona (PR #100 otwarty).
+- 2026-09-24 tj (decyzja): pre-draft stany „nigdy auto" (counterpart=guide, channel≠email,
+  status poza new/qualifying) → brak draftu i brak wywołania modelu, ale emituj
+  `agent.auto_send_decided` z sent=false, score=null, draft_message_id=null i powodem
+  opisującym stan. Wyjątek: flaga wyłączona → nic (odpowiedzialność wywołującego).
+- 2026-09-24 agent: runda 2 zakończona — zmiany poniżej.
 
-### Zrobione
+### Zrobione — runda 1
 - `src/lib/events/types.ts` — `agent.auto_send_decided` dodane do `EMITTED_EVENT_TYPES`.
 - `docs/REBUILD_PLAN.md` Appendix C — wiersz dla `agent.auto_send_decided`.
 - `src/lib/ai/judge-reply.ts` — NEW: `judgeReply(conversation, draftText)` → `{score, send, reasons}`, model `claude-haiku-4-5-20251001`, `JUDGE_THRESHOLD = 0.9`.
-- `src/lib/ai/auto-send.ts` — NEW: `autoSendReply({inquiryId, counterpart, channel})` z pełną kolejnością bramek (counterpart → channel → status → draftReply → destination entry → judge → send/hold → emitEvent); `hasAgentAutoReply(inquiryId)` dla D2.
-- `src/app/api/inquiries/route.ts` — wywołanie `autoSendReply` po `classifyInquiry` przy `AI_AUTO_REPLY_ENABLED`.
-- `src/app/api/webhooks/email-inbound/route.ts` — D2: `new → qualifying` gdy `inq.status=new && hasAgentAutoReply`; następnie `autoSendReply`.
-- Testy (350 zielone, typecheck/lint/knip czyste):
-  - `src/lib/ai/auto-send.test.ts` — bramki (red→green + RED-proof dla wpisu kraju), happy path, D2, flag-off.
-  - `src/app/api/webhooks/__tests__/email-inbound-matched.test.ts` — D2 transition testy + flag-off.
-  - `src/app/api/inquiries/__tests__/route.test.ts` — flag-off dla `/api/inquiries`.
+- `src/lib/ai/auto-send.ts` — NEW: `autoSendReply` + `hasAgentAutoReply`; pełna kolejność bramek.
+- `src/app/api/inquiries/route.ts` — wywołanie `autoSendReply` po `classifyInquiry`.
+- `src/app/api/webhooks/email-inbound/route.ts` — D2 transition + `autoSendReply`.
+- Testy runda 1: 350 zielone.
+
+### Zrobione — runda 2
+- Pre-draft stany „nigdy auto" (counterpart/channel/status) emitują `agent.auto_send_decided`
+  z sent=false, score=null, draft_message_id=null + powód; `draftMessageId: string | null`.
+- Reguła warstwy danych wyegzekwowana: nowe helpery w `src/lib/supabase/queries.ts`
+  (`getInquiryForAutoSend`, `hasAgentSentReplyToAngler`, `getConversationForJudge`,
+  `getInquiryStatusForD2`); wszystkie `.from()` usunięte z `src/lib/ai/auto-send.ts`
+  i z nowego bloku D2 w `email-inbound/route.ts`.
+  Weryfikacja: `git diff origin/stage-1 -- 'src/app/**' 'src/lib/ai/**' | grep '^+.*\.from('` → puste.
+- Testy uzupełnione: judgeReply throws (API error + malformed JSON) → sent=false, powód;
+  prompt injection → not sent (sędzia jako mechanizm bezpieczeństwa udokumentowany);
+  `/api/inquiries` zwraca 201 gdy `autoSendReply` rzuca.
+- Testy bramek pre-draft przepisane: assertują AutoSendResult{sent=false} + zdarzenie.
+- 354 zielone, typecheck/lint/knip czyste.
+- RED proofs: (a) destination gate usunięty → test `does NOT send and emits sent=false when no destination entry exists` pada (AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times); (b) emitDecision usunięty z bramki counterpart → test `returns AutoSendResult{sent=false} for counterpart=guide and emits agent.auto_send_decided` pada (AssertionError: expected [] to have a length of 1 but got +0).
 
 ### Nie zrobione
-- Demo z `RESEND_DEV_FAKE=1` i SELECT z bazy — zrobi tj przed merge (STOP gate D4 w zadaniu).
+- Demo z `RESEND_DEV_FAKE=1` i SELECT z bazy — zrobi tj (kryterium akceptacji, nie STOP gate).
+- `pnpm build` — przy zatrzymanym stacku; zrobi tj lub agent przed merge.
 
 ### Zauważone, odłożone
-- Nic nowego poza zakresem.
+- Sędzia działa na Haiku (claude-haiku-4-5-20251001); próg 0.9 nie był kalibrowany na tym modelu — do weryfikacji podczas oceny FA-1.17.
 
 ### Potrzebna decyzja
 - Brak.
