@@ -60,7 +60,12 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.25 | Stary agent bez rund — tylko klasyfikacja; bez `AgentToggle` | M | sonnet | done | FA-1.14 |
 | FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | todo | FA-1.17 |
 | FA-1.27 | Hybrydowa auto-wysyłka do klienta — sędzia ≥ 0.9, stany „nigdy auto”, tylko e-mail | L | opus | done | FA-1.23, FA-1.25 |
-| FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | todo | FA-1.75 |
+| FA-1.28 | Kwota depozytu w danych — grosze + waluta opcji + kurs do EUR zamrożony; pole kwoty na karcie z podpowiedzią 20% (bloker: ścieżka depozytu zepsuta na prod od 19 IX) | L | opus | todo | — |
+| FA-1.29 | Link depozytu działa — „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie, pętla 4242 lokalnie | L | opus | todo | FA-1.28 |
+| FA-1.30 | Wiadomość z linkiem depozytu — nazwa i opis wyprawy w Stripe; szkic od agenta AI, kwotę i link wstawia kod | M | sonnet | todo | FA-1.29 |
+| FA-1.31 | Panel admina reaguje — stan ładowania przy nawigacji, „trwa” i blokada podwójnego kliknięcia na wszystkich akcjach | M | sonnet | todo | FA-1.29 |
+| FA-1.32 | Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa | L | opus | todo | FA-1.31 + makieta (O-24) |
+| FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
 | FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | done | — |
@@ -73,3 +78,4 @@ FA-1.16 (domknięcie pętli depozytu) dopisane 20 IX 2026 — decyzje tj D1–D3
 FA-1.21–1.26 dopisane 22 IX 2026 (/wf-plan fa 17): wiedza agenta w bazie (decyzja tj, opcja C), O-18–O-22 rozstrzygnięte. FA-1.20 zajęte w innym wątku.
 FA-1.18, FA-1.19 dopisane 22 IX 2026 — luki z audytu agent-workflow (środowisko dev, skan sekretów); rozpisane ponownie przez wf-plan tego samego dnia (+ FA-1.20, FA-1.75), decyzje tj D1–D4 w plikach zadań.
 FA-1.27 dopisane 22 IX 2026 (/wf-plan) — hybryda auto-wysyłki, decyzje tj D1–D5 w pliku zadania; plik trafił na stage-1 23 IX razem z archiwum `AGENT_RULES`.
+FA-1.28–1.32 dopisane 24 IX 2026 (wf-plan) z wierszy FA-1.18 w `docs/deferred-tasks.md`; decyzje tj w plikach zadań. Ścieżka krytyczna przed wydaniem paczki `stage-1`: FA-1.28 → FA-1.29.
