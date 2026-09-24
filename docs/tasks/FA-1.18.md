@@ -2,7 +2,7 @@
 id: FA-1.18
 title: Środowisko dev — projekt Supabase `fjordanglers-dev` z migracjami i seedem; Vercel Preview na dev, tylko klucze testowe i flagi fake
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -109,3 +109,5 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-24 tj: IBS ustawiony inline (nie skrypt): `git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/**' ':(exclude).claude/**' ':(exclude)*.md'`. Docs/05 §11 zaktualizowane.
 - 2026-09-24 tj: Stripe sandbox — 2 endpointy testowe znalezione: captivating-radiance (thin payload, 15 events) i vercel (snapshot payload, 2 events), oba → https://fjordanglers-git-staging-….vercel.app (stary staging alias, staging disabled w vercel.json, 0% error rate). Oba DISABLED (nie deleted) przez tj 2026-09-24. URL zawierał bypass token — bypass token zregenerowany. Token nigdzie nie zapisywany — "bypass token (rotated)".
 - 2026-09-24 agent: prod check cs_test_ — `select count(*) from inquiries where deposit_stripe_session_id like 'cs_test_%'` → 0. Brak danych testowych Stripe na produkcji.
+- 2026-09-24 tj: Preview built and Ready — SHA 5d1a620. URL: https://fjordanglers-git-chore-dev-environment-tymon-jezionek.vercel.app. IBS na pierwsze pushnięcie nie zapisało się (skipped build); tj poprawił, redeployment potwierdził "Ready" (kryterium 10). Git-branch alias: fjordanglers-git-chore-dev-environment-tymon-jezionek.vercel.app.
+- 2026-09-24 tj (kryterium 6): `deposit_amount` nie ma settera w UI — wykryte przy próbie kliknięcia „Utwórz link do depozytu" dla alice@seed.test. tj ustawił ręcznie: `UPDATE inquiries SET deposit_amount = 100 WHERE id = 'a1a1a1a1-…-a101'` na dev (tylko dev, dane syntetyczne). Klik × 2 na Preview: dwa wiersze w `messages` ze statusem `draft`, URL `https://buy.stripe.com/test_…` — tryb testowy Stripe potwierdzony. Zdarzenia: `payment.link_sent` × 2, `link_id: plink_1UJAyoCkrtMjTevhvsXgYTYY`, `plink_1UJAyYCkrtMjTevhGIw6pMhg`. Uwaga: `createPaymentLink` nie wysyła maila — wstawia draft do `messages`, admin klei ręcznie; `src/lib/email.ts` nie jest w tej ścieżce. Brak settera `deposit_amount` = STAGE-1 RELEASE BLOCKER (wiersz FA-1.18 w `docs/deferred-tasks.md`). Decyzja tj 2026-09-24.
