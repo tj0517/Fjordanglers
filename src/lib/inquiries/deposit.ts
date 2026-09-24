@@ -5,7 +5,7 @@ export function depositHintCents(optionPriceCents: number): number {
   return Math.round(optionPriceCents * DEPOSIT_PERCENT / 100)
 }
 
-export const ALLOWED_DEPOSIT_CURRENCIES = ['EUR', 'USD', 'ISK', 'NZD'] as const
+const ALLOWED_DEPOSIT_CURRENCIES = ['EUR', 'USD', 'ISK', 'NZD'] as const
 export type DepositCurrency = (typeof ALLOWED_DEPOSIT_CURRENCIES)[number]
 
 export function isDepositCurrency(value: string): value is DepositCurrency {
