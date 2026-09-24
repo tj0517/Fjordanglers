@@ -2,7 +2,7 @@
 id: FA-1.27
 title: Hybrydowa auto-wysyłka do klienta — sędzia ≥ 0.9 i stany „nigdy auto”; reszta zostaje draftem
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
