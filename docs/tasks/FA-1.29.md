@@ -38,6 +38,7 @@ Dziś „Client Accepted” od razu przestawia zapytanie na „czeka na płatno�
 
 ## Zakres
 - [ ] Odczyt bieżącego stanu (do raportu): na produkcji liczba zapytań w `awaiting_payment` bez zdarzenia `payment.link_sent` (utknęły przez obecny błąd) — samo `count(*)`; lokalnie zachowanie `markClientAccepted` i `createPaymentLink` na seedzie.
+- [ ] Przycisk „Create Deposit Link" pokazuje się na podstawie pól kwoty z FA-1.28 (decyzja tj 2026-09-24).
 - [ ] `markClientAccepted` nie zmienia statusu (zostaje `offer_presented`); jedyną drogą do `awaiting_payment` jest utworzenie linku.
 - [ ] `createPaymentLink` bierze kwotę, walutę i kurs z danych zapytania (FA-1.28), nie od klienta; bez ustawionej kwoty — błąd bez obiektu w Stripe.
 - [ ] Jeden aktywny link na zapytanie: ponowne wywołanie przy tej samej kwocie i walucie zwraca istniejący link (bez nowego obiektu w Stripe); przy zmienionej kwocie lub walucie poprzedni link zostaje wyłączony w Stripe, a powstaje nowy. Id i URL aktywnego linku zapisane w kolumnach z FA-1.28.
