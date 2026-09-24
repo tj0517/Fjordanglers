@@ -34,7 +34,7 @@ export async function getWeeklyReviewData(since: string, adSince: string): Promi
     supabase
       .from('inquiries')
       .select(
-        'created_at, updated_at, deposit_paid_at, status, qualified, gclid, utm, lost_reason_code, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency',
+        'created_at, updated_at, deposit_paid_at, status, qualified, gclid, utm, lost_reason_code, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, deposit_amount_cents, deposit_currency, deposit_eur_rate',
       )
       .gte('created_at', since),
     supabase.from('ad_campaigns').select('date, spend').gte('date', adSince),

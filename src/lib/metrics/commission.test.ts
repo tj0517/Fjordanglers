@@ -14,6 +14,9 @@ const row = (over: Partial<CommissionRow>): CommissionRow => ({
   deposit_amount: null,
   internal_commission_eur: null,
   deal_currency: 'EUR',
+  deposit_amount_cents: null,
+  deposit_currency: null,
+  deposit_eur_rate: null,
   ...over,
 })
 
@@ -62,6 +65,22 @@ describe('rowCommissionEur', () => {
     expect(rowCommissionEur(row({ offer_deposit_eur: 200, deal_currency: 'USD' }), 0.5)).toBe(100)
     expect(rowCommissionEur(row({ offer_deposit_eur: 200, deal_currency: 'EUR' }), 0.5)).toBe(200)
     expect(rowCommissionEur(row({ offer_deposit_eur: 200, deal_currency: null }), 0.5)).toBe(200)
+  })
+
+  it('(FA-1.28) ISK deposit in minor units ×100 with frozen rate yields correct EUR', () => {
+    // 150 000 ISK ×100 = 15 000 000 minor units, rate 138 → 15 000 000 / 138 / 100 ≈ 1086.96 EUR
+    const iskRow = row({ deposit_amount_cents: 15_000_000, deposit_currency: 'ISK', deposit_eur_rate: 138 })
+    expect(rowCommissionEur(iskRow, 0.9)).toBeCloseTo(15_000_000 / 138 / 100, 5)
+  })
+
+  it('(FA-1.28) deposit_amount_cents takes priority over legacy fields', () => {
+    const newRow = row({ deposit_amount_cents: 20000, deposit_eur_rate: 1, deposit_currency: 'EUR', offer_deposit_eur: 999 })
+    expect(rowCommissionEur(newRow, 0.9)).toBe(200) // 20000 / 1 / 100
+  })
+
+  it('(FA-1.28) legacy rows (null cents) compute exactly as before', () => {
+    const legacyRow = row({ deposit_amount: 50, deal_currency: 'USD' })
+    expect(rowCommissionEur(legacyRow, 0.5)).toBe(25) // 50 USD * 0.5
   })
 })
 

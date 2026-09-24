@@ -91,3 +91,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 ## Notatki z realizacji
 - 2026-09-24 tj (wf-plan): zadanie powstało z wiersza FA-1.18 w `docs/deferred-tasks.md` (bloker na żywej ścieżce, kod na produkcji od 19 IX); decyzje w sekcji „Decyzje tj”.
 - 2026-09-24 tj (wf-task): przycisk „Create Deposit Link” (warunek pokazania i działanie) w całości w FA-1.29; 1.28 tylko ustawia i zapisuje kwotę.
+- 2026-09-24 tj (STOP migracji): waluty depozytu tylko EUR/USD/ISK/NZD (CHECK w bazie; oferta w innej walucie, np. NOK/SEK, nie dostanie depozytu do czasu migracji rozszerzającej listę); baza pilnuje „wszystko albo nic” i kwoty > 0; ISK w groszach (×100) jak offer_options.price_cents.

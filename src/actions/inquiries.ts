@@ -41,6 +41,9 @@ import {
   isInquiryStatus,
 } from '@/lib/inquiries/state'
 import { setQualified, QualifiedError, type QualifiedValue } from '@/lib/inquiries/qualified'
+import { emitEvent } from '@/lib/events/emit'
+import { fetchEurRate } from '@/lib/fx'
+import { isDepositCurrency } from '@/lib/inquiries/deposit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -652,6 +655,118 @@ export async function saveInternalDeal(
   revalidatePath('/admin/inquiries/' + inquiryId)
   revalidatePath('/admin/inquiries')
   console.log(`[saveInternalDeal] Inquiry ${inquiryId} — total ${params.dealCurrency} ${params.dealTotalEur}, commission ${params.dealCurrency} ${params.commissionEur}`)
+  return { success: true }
+}
+
+// ─── setDepositAmount ─────────────────────────────────────────────────────────
+
+export type SetDepositAmountResult =
+  | { success: true }
+  | { success: false; error: string }
+
+/**
+ * Admin sets the deposit amount on an inquiry.
+ * The currency is derived from the accepted offer option (not supplied by the caller).
+ * The EUR rate is fetched from frankfurter.app and frozen at the moment of the call.
+ */
+export async function setDepositAmount(
+  inquiryId: string,
+  amountCents: number,
+): Promise<SetDepositAmountResult> {
+  const { userId } = await requireAdmin()
+
+  if (!Number.isInteger(amountCents) || amountCents <= 0) {
+    return { success: false, error: 'Amount must be a positive integer (minor units)' }
+  }
+
+  const svc = createServiceClient()
+
+  // Find the accepted offer option's currency (two queries — Supabase client has no subquery).
+  const { data: offers, error: offersErr } = await svc
+    .from('offers')
+    .select('id')
+    .eq('inquiry_id', inquiryId)
+
+  if (offersErr != null) {
+    console.error('[setDepositAmount] offers lookup error:', offersErr)
+    return { success: false, error: 'Could not read offers' }
+  }
+  if (!offers || offers.length === 0) {
+    return { success: false, error: 'No offer found for this inquiry' }
+  }
+
+  const offerIds = offers.map(o => o.id)
+  const { data: accepted, error: optErr } = await svc
+    .from('offer_options')
+    .select('currency')
+    .eq('is_accepted', true)
+    .in('offer_id', offerIds)
+    .limit(1)
+    .maybeSingle()
+
+  if (optErr != null) {
+    console.error('[setDepositAmount] offer_options lookup error:', optErr)
+    return { success: false, error: 'Could not read offer options' }
+  }
+  if (accepted == null) {
+    return { success: false, error: 'No accepted offer option found for this inquiry' }
+  }
+
+  const rawCurrency = accepted.currency.toUpperCase()
+  if (!isDepositCurrency(rawCurrency)) {
+    return { success: false, error: `Deposit currency ${rawCurrency} not supported (allowed: EUR, USD, ISK, NZD)` }
+  }
+  const currency = rawCurrency
+
+  // Fetch frozen FX rate (1 EUR = X currency units). EUR → 1.
+  let eurRate: number
+  if (currency === 'EUR') {
+    eurRate = 1
+  } else {
+    const rate = await fetchEurRate(currency)
+    if (rate == null) {
+      return { success: false, error: `Could not fetch EUR/${currency} rate — try again in a moment` }
+    }
+    eurRate = rate
+  }
+
+  const rateAt = new Date().toISOString()
+
+  const { error: updateErr } = await svc
+    .from('inquiries')
+    .update({
+      deposit_amount_cents: amountCents,
+      deposit_currency:     currency,
+      deposit_eur_rate:     eurRate,
+      deposit_eur_rate_at:  rateAt,
+    })
+    .eq('id', inquiryId)
+
+  if (updateErr != null) {
+    console.error('[setDepositAmount] update error:', updateErr)
+    return { success: false, error: updateErr.message }
+  }
+
+  try {
+    await emitEvent(svc, {
+      inquiryId,
+      type:    'deposit.amount_set',
+      actor:   { kind: 'admin', id: userId },
+      source:  'app',
+      channel: 'app',
+      payload: {
+        amount_cents: amountCents,
+        currency,
+        eur_rate:     eurRate,
+        eur_rate_at:  rateAt,
+      },
+    })
+  } catch (err) {
+    console.error('[setDepositAmount] emitEvent error:', err)
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  console.log(`[setDepositAmount] Inquiry ${inquiryId} — ${amountCents} ${currency} @ ${eurRate}`)
   return { success: true }
 }
 

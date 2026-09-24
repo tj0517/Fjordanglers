@@ -252,7 +252,7 @@ export default async function AdminInquiryDetailPage({
     if (offerRow != null) {
       const { data: opts } = await svc
         .from('offer_options')
-        .select('id, label, price_cents, currency')
+        .select('id, label, price_cents, currency, is_accepted')
         .eq('offer_id', offerRow.id)
       panelOffer = {
         id:                offerRow.id,
@@ -263,6 +263,7 @@ export default async function AdminInquiryDetailPage({
           label:       o.label,
           price_cents: o.price_cents,
           currency:    o.currency,
+          is_accepted: o.is_accepted ?? false,
         })),
       }
     }
@@ -548,6 +549,8 @@ export default async function AdminInquiryDetailPage({
         latestOutboundGuideId={latestOutboundGuideId}
         guideId={inquiry.assigned_guide_id ?? null}
         depositAmountEur={inquiry.deposit_amount ?? null}
+        depositAmountCents={inquiry.deposit_amount_cents ?? null}
+        depositCurrency={inquiry.deposit_currency ?? null}
         guideNotifiedPaid={guideNotifiedPaid}
       />
 

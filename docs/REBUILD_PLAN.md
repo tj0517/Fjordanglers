@@ -636,6 +636,7 @@ w aplikacji — nigdy jako osobny krok „dopisz".
 | `inquiry.lost` | admin | app | `transition(lost)` z `lost_reason_code` | powody przegranych |
 | `trip.completed` | admin / system | app | data zakończenia | M14–M16 |
 | `agent.auto_send_decided` | agent | email | `autoSendReply()` po każdej próbie auto-wysyłki (FA-1.27); `payload.sent`, `payload.score`, `payload.reasons`, `payload.draft_message_id` | M11 (nie liczy się jako ręczne dotknięcie) |
+| `deposit.amount_set` | admin | app | admin ustawia kwotę depozytu na karcie zapytania (FA-1.28); `payload.amount_cents`, `payload.currency`, `payload.eur_rate`, `payload.eur_rate_at` | M1, M3 |
 
 Zarezerwowane, bez emisji w etapie 1 (w `types.ts` z komentarzem `// stage N`):
 `agent.round_completed`, `inquiry.brief_completed`, `guide.assigned`/`unassigned`,

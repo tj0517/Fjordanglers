@@ -1,6 +1,6 @@
 'use client'
 
-import { dealTripPrice, dealOurCut } from './pipeline-utils'
+import { dealTripPrice, dealOurCut, dealOurCutEur } from './pipeline-utils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +16,10 @@ export interface PipelineDeal {
   deposit_amount: number | null          // legacy deposit field
   internal_commission_eur: number | null // our cut (internal tracking)
   deal_currency: string | null           // 'EUR' | 'USD' — currency of internal deal
+  // FA-1.28: new fields — null on rows created before the migration
+  deposit_amount_cents: number | null
+  deposit_currency: string | null
+  deposit_eur_rate: number | null
   status: string
   created_at: string
 }
@@ -48,7 +52,7 @@ export function PipelineClient({
     currency === 'USD' ? amt * usdEurRate : amt
 
   const totalEur    = deals.reduce((s, d) => s + toEur(dealTripPrice(d) ?? 0, d.deal_currency), 0)
-  const totalDepEur = deals.reduce((s, d) => s + toEur(dealOurCut(d) ?? 0, d.deal_currency), 0)
+  const totalDepEur = deals.reduce((s, d) => s + (dealOurCutEur(d, usdEurRate) ?? 0), 0)
   const hasUsd      = deals.some(d => d.deal_currency === 'USD')
 
   const fmtEur = (n: number) =>
@@ -173,7 +177,7 @@ export function PipelineClient({
 
                   {/* Cut in PLN */}
                   <td className="px-4 py-3 text-right font-mono text-xs" style={{ color: 'rgba(10,46,77,0.45)' }}>
-                    {deposit != null ? fmtPln(toEur(deposit, d.deal_currency) * eurRate) : '—'}
+                    {dealOurCutEur(d, usdEurRate) != null ? fmtPln((dealOurCutEur(d, usdEurRate) ?? 0) * eurRate) : '—'}
                   </td>
 
                   {/* Days waiting */}

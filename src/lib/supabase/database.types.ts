@@ -1413,7 +1413,13 @@ export type Database = {
           created_at: string
           deal_currency: string
           deposit_amount: number | null
+          deposit_amount_cents: number | null
+          deposit_currency: string | null
+          deposit_eur_rate: number | null
+          deposit_eur_rate_at: string | null
           deposit_paid_at: string | null
+          deposit_payment_link_id: string | null
+          deposit_payment_link_url: string | null
           deposit_stripe_session_id: string | null
           email_thread_message_id: string | null
           experience_page_id: string | null
@@ -1486,7 +1492,13 @@ export type Database = {
           created_at?: string
           deal_currency?: string
           deposit_amount?: number | null
+          deposit_amount_cents?: number | null
+          deposit_currency?: string | null
+          deposit_eur_rate?: number | null
+          deposit_eur_rate_at?: string | null
           deposit_paid_at?: string | null
+          deposit_payment_link_id?: string | null
+          deposit_payment_link_url?: string | null
           deposit_stripe_session_id?: string | null
           email_thread_message_id?: string | null
           experience_page_id?: string | null
@@ -1559,7 +1571,13 @@ export type Database = {
           created_at?: string
           deal_currency?: string
           deposit_amount?: number | null
+          deposit_amount_cents?: number | null
+          deposit_currency?: string | null
+          deposit_eur_rate?: number | null
+          deposit_eur_rate_at?: string | null
           deposit_paid_at?: string | null
+          deposit_payment_link_id?: string | null
+          deposit_payment_link_url?: string | null
           deposit_stripe_session_id?: string | null
           email_thread_message_id?: string | null
           experience_page_id?: string | null

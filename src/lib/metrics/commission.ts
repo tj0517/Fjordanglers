@@ -22,6 +22,10 @@ export type CommissionRow = {
   deposit_amount: number | null
   internal_commission_eur: number | null
   deal_currency: string | null
+  // FA-1.28: new fields — null on rows created before the migration
+  deposit_amount_cents: number | null
+  deposit_currency: string | null
+  deposit_eur_rate: number | null
 }
 
 function parseRate(settings: { key: string; value: string }[], key: string, fallback: number): number {
@@ -39,8 +43,11 @@ export function parseFxRates(settings: { key: string; value: string }[]): FxRate
   }
 }
 
-/** Commission of one row in EUR (USD rows converted with `usdEur`). */
+/** Commission of one row in EUR. New rows use the frozen deposit_eur_rate; legacy rows use usdEur. */
 export function rowCommissionEur(row: CommissionRow, usdEur: number): number {
+  if (row.deposit_amount_cents != null && row.deposit_eur_rate != null) {
+    return row.deposit_amount_cents / row.deposit_eur_rate / 100
+  }
   const amt = Number(row.offer_deposit_eur ?? row.deposit_amount ?? row.internal_commission_eur ?? 0)
   return row.deal_currency === 'USD' ? amt * usdEur : amt
 }
