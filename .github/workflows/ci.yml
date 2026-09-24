@@ -21,6 +21,16 @@ on:
     branches: [main, stage-1]
   push:
     branches: [stage-1]
+  workflow_dispatch:
+    inputs:
+      full_history:
+        description: 'Scan full git history (run once after workflow lands on main)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 # Jeden przebieg na PR — kolejny push anuluje poprzedni.
 concurrency:
@@ -36,6 +46,9 @@ env:
   # Ta sama wersja, na której pracuje zespół lokalnie. Nie podnosić bez sprawdzenia
   # `gen types` — zdalny i lokalny generator dają różny szkielet pliku (deferred FA-0.05).
   SUPABASE_CLI_VERSION: '2.75.0'
+  GITLEAKS_VERSION: '8.30.1'
+  # sha256 of gitleaks_8.30.1_linux_x64.tar.gz — verified against upstream checksums.txt (FA-1.19)
+  GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
@@ -277,3 +290,64 @@ jobs:
           fi
 
           exit "$fail"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # secrets — gitleaks scans the new commits for accidentally committed secrets.
+  #
+  # Binary downloaded at a pinned version and sha256-verified before execution.
+  # No third-party action — supply-chain surface is one tarball from GitHub releases.
+  # Always --redact: secret values never appear in the log.
+  #
+  # On PR:             scans base..HEAD (commits in this PR only)
+  # On push:           scans before..after (commits in this push only)
+  # workflow_dispatch: scans full history when full_history == 'true' (run once
+  #                    after the workflow first lands on main; tj triggers manually)
+  #
+  # Becomes a required check in branch protection after tj adds it post-review.
+  # ───────────────────────────────────────────────────────────────────────────
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.full_history == 'true')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: install gitleaks ${{ env.GITLEAKS_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -fsSL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            -o /tmp/gitleaks.tar.gz
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tar.gz" | sha256sum --check
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          chmod +x /tmp/gitleaks
+
+      - name: scan PR commits (base..HEAD)
+        if: github.event_name == 'pull_request'
+        run: |
+          /tmp/gitleaks git --redact --config .gitleaks.toml \
+            --log-opts="${{ github.event.pull_request.base.sha }}..HEAD" .
+
+      - name: scan push commits (before..after)
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          before="${{ github.event.before }}"
+          after="${{ github.event.after }}"
+          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            /tmp/gitleaks git --redact --config .gitleaks.toml --log-opts="-1 $after" .
+          else
+            /tmp/gitleaks git --redact --config .gitleaks.toml \
+              --log-opts="${before}..${after}" .
+          fi
+
+      - name: scan full history (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.full_history == 'true'
+        run: |
+          /tmp/gitleaks git --redact --config .gitleaks.toml .
