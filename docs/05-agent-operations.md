@@ -293,20 +293,33 @@ Jeśli projekt dev zostanie usunięty lub uśpiony:
 
 1. Utwórz nowy projekt `fjordanglers-dev` w Supabase Dashboard (plan Free, ta sama
    organizacja, ten sam region co prod `uwxrstbplaoxfghrchcy`).
-2. Wejdź w Settings → Database → Connection string → Transaction pooler → skopiuj URL
-   i zapisz jako `$DEV_DB_URL` w terminalu (nigdy nie commituj).
-3. Zastosuj migracje bez zmiany linku repo:
+2. Wejdź w Settings → Database → Connection string → **Session pooler** (port 5432) → skopiuj URL.
+   Zapisz do `~/.config/fa/dev.env` (poza repo, `chmod 600`):
    ```
+   DEV_DB_URL=postgresql://...
+   ```
+   W każdej komendzie używaj: `set -a; . ~/.config/fa/dev.env; set +a; <command>`.
+   Nigdy nie echuj, nie commituj, nie pisz nigdzie indziej.
+3. Zastosuj migracje bez zmiany linku repo (pełna forma z env-file):
+   ```
+   set -a; . ~/.config/fa/dev.env; set +a
    supabase db push --db-url "$DEV_DB_URL"
    ```
    (guard blokuje to polecenie agentowi — robi człowiek)
 4. Zaaplikuj seed:
    ```
+   set -a; . ~/.config/fa/dev.env; set +a
    psql "$DEV_DB_URL" -f supabase/seed.sql
    ```
 5. W Supabase Dashboard → Authentication → URL Configuration ustaw:
-   - Site URL: `https://<slug>.vercel.app` (główny alias Preview tego projektu)
-   - Allowed Redirect URLs: `https://*.vercel.app/**`
+   - Site URL: główny alias Preview projektu Vercel (`https://<project>.vercel.app`)
+   - Allowed Redirect URLs — **zawęzione do tego projektu** (nie `*.vercel.app` — zbyt szerokie):
+     ```
+     https://<project>-*-<scope>.vercel.app/**
+     https://<project>-git-*-<scope>.vercel.app/**
+     ```
+     Gdzie `<project>` i `<scope>` odczytujesz z `vercel ls` po zalogowaniu.
+     Przykład: projekt `fjordanglers`, scope `tj0517` → `https://fjordanglers-*-tj0517.vercel.app/**`
 6. W Vercel zaktualizuj zmienne Preview (`NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) na nowy projekt.
 
