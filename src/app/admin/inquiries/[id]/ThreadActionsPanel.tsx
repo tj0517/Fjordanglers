@@ -486,19 +486,24 @@ export function ThreadActionsPanel({
             {depositError != null && (
               <p className="text-[11px] f-body mb-1 text-destructive">{depositError}</p>
             )}
-            {/* Show existing link (no D2 mismatch) with copy button */}
+            {/* Show existing link (no D2 mismatch) with amount, currency, and copy button */}
             {depositUrl != null &&
               depositPaymentLinkAmountCents === depositAmountCents &&
               depositPaymentLinkCurrency === depositCurrency && (
-              <div className="flex items-center gap-2 mb-2">
-                <p className="text-[10px] f-body break-all text-muted-foreground flex-1 min-w-0">{depositUrl}</p>
-                <button
-                  type="button"
-                  onClick={() => { void navigator.clipboard.writeText(depositUrl) }}
-                  className="shrink-0 text-[10px] f-body px-2 py-1 rounded border border-border text-muted-foreground hover:bg-muted cursor-pointer"
-                >
-                  Copy
-                </button>
+              <div className="space-y-1 mb-2">
+                <p className="text-[10px] font-semibold f-body text-muted-foreground">
+                  {(depositAmountCents / 100).toLocaleString('en', { minimumFractionDigits: 2 })} {depositCurrency}
+                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] f-body break-all text-muted-foreground flex-1 min-w-0">{depositUrl}</p>
+                  <button
+                    type="button"
+                    onClick={() => { void navigator.clipboard.writeText(depositUrl) }}
+                    className="shrink-0 text-[10px] f-body px-2 py-1 rounded border border-border text-muted-foreground hover:bg-muted cursor-pointer"
+                  >
+                    Copy
+                  </button>
+                </div>
               </div>
             )}
             {/* Show create button when no link or D2 mismatch */}

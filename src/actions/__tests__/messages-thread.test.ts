@@ -509,5 +509,63 @@ describe('createPaymentLink — FA-1.29', () => {
       expect.objectContaining({ currency: 'isk', unit_amount: 50000 }),
     )
   })
+
+  it('deactivation fails: returns error, no prices.create or paymentLinks.create called', async () => {
+    mockAdmin()
+    const oldLinkId = 'plink_old'
+    vi.mocked(stripe.paymentLinks.update).mockRejectedValue(new Error('Stripe network error'))
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-1', angler_name: 'Bob', angler_email: 'b@x.com', party_size: 1,
+                    deposit_amount_cents: 25000, deposit_currency: 'EUR',
+                    deposit_payment_link_id: oldLinkId,
+                    deposit_payment_link_url: 'https://buy.stripe.com/old',
+                  }, error: null,
+                }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        if (table === 'inquiry_events') {
+          // Old event has different amount → triggers deactivation path
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({
+                        data: { payload: { link_id: oldLinkId, amount_cents: 20000, currency: 'EUR' } },
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }
+        }
+        return {
+          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-x' }, error: null }) }) }),
+          update: () => ({ eq: () => ({ error: null }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-1')
+
+    expect(result).toEqual({ success: false, error: expect.stringContaining('deactivate') })
+    expect(vi.mocked(stripe.prices.create)).not.toHaveBeenCalled()
+    expect(vi.mocked(stripe.paymentLinks.create)).not.toHaveBeenCalled()
+  })
 })
 

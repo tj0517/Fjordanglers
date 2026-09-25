@@ -653,11 +653,12 @@ export async function createPaymentLink(
       return { success: true, url: inq.deposit_payment_link_url! }
     }
 
-    // Amount or currency changed — deactivate the old link (best effort)
+    // Amount or currency changed — must deactivate the old link before creating a new one
     try {
       await stripe.paymentLinks.update(inq.deposit_payment_link_id, { active: false })
     } catch (err) {
       console.error('[createPaymentLink] Could not deactivate old link:', err)
+      return { success: false, error: `Could not deactivate old payment link — retry or contact support. (${err instanceof Error ? err.message : 'Stripe error'})` }
     }
   }
 

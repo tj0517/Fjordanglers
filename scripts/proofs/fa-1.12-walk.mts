@@ -9,8 +9,9 @@
  *   markAsGuideOffer               → guide.offer_received
  *   markOfferPresented             → offer.presented + status offer_presented
  *   inbound acceptance from angler (simulates email-inbound webhook → message.received)
- *   markClientAccepted             → offer.accepted + status awaiting_payment
- *   createPaymentLink              → payment.link_sent (Stripe test mode)
+ *   markClientAccepted             → offer.accepted + status offer_presented (FA-1.29 D1)
+ *   setDepositAmount               → deposit.amount_set (required before createPaymentLink)
+ *   createPaymentLink              → payment.link_sent + status awaiting_payment (Stripe test mode)
  *   Stripe deposit webhook         → paid
  *   markContactsExchanged          → contacts.exchanged + status handed_over
  *
@@ -308,7 +309,7 @@ console.log(`   angler acceptance message ${acceptMsg!.id}`)
 
 // ── 11. Mark client accepted ──────────────────────────────────────────────────
 
-step(11, 'markClientAccepted → offer.accepted + awaiting_payment')
+step(11, 'markClientAccepted → offer.accepted (stays offer_presented per FA-1.29 D1)')
 const { data: options } = await svc
   .from('offer_options')
   .select('id')
@@ -320,19 +321,27 @@ if (options == null) throw new Error('no offer options found')
 const { markClientAccepted } = await import('@/actions/messages')
 const acceptResult = await markClientAccepted(offerId, options.id, acceptMsg!.id)
 if (!acceptResult.success) throw new Error(`markClientAccepted: ${acceptResult.error}`)
-console.log('   ok → offer.accepted + awaiting_payment')
+console.log('   ok → offer.accepted (status stays offer_presented)')
 
-// ── 12. Create payment link (Stripe test mode) ────────────────────────────────
+// ── 11b. Set deposit amount (FA-1.29 D1: link is the only path to awaiting_payment) ──
 
-step(12, 'createPaymentLink → payment.link_sent (Stripe test)')
+step(12, 'setDepositAmount → deposit.amount_set (24000 EUR)')
+const { setDepositAmount } = await import('@/actions/inquiries')
+const amountResult = await setDepositAmount(inquiryId, 24000)
+if (!amountResult.success) throw new Error(`setDepositAmount: ${amountResult.error}`)
+console.log('   ok → deposit_amount_cents=24000, deposit_currency=EUR')
+
+// ── 13. Create payment link (Stripe test mode) ────────────────────────────────
+
+step(13, 'createPaymentLink → payment.link_sent + awaiting_payment (Stripe test)')
 const { createPaymentLink } = await import('@/actions/messages')
 const linkResult = await createPaymentLink(inquiryId)
 if (!linkResult.success) throw new Error(`createPaymentLink: ${linkResult.error}`)
 console.log(`   payment link: ${linkResult.url}`)
 
-// ── 13. Stripe deposit webhook (signed) ───────────────────────────────────────
+// ── 14. Stripe deposit webhook (signed) ───────────────────────────────────────
 
-step(13, 'POST /api/webhooks/stripe-deposit → paid')
+step(14, 'POST /api/webhooks/stripe-deposit → paid')
 const eventBody = JSON.stringify({
   id: `evt_fa112_proof_${Date.now()}`, object: 'event', type: 'checkout.session.completed',
   data: {
@@ -357,9 +366,9 @@ const webhookResp = await stripeWebhook(new NextRequest(
 ))
 console.log(`   ${webhookResp.status} ${await webhookResp.text()}`)
 
-// ── 14. markContactsExchanged → handed_over ───────────────────────────────────
+// ── 15. markContactsExchanged → handed_over ───────────────────────────────────
 
-step(14, 'markContactsExchanged → contacts.exchanged + handed_over')
+step(15, 'markContactsExchanged → contacts.exchanged + handed_over')
 const { data: contactMsg } = await svc.from('messages').insert({
   inquiry_id:  inquiryId,
   channel:     'email',
@@ -376,9 +385,9 @@ const contactResult = await markContactsExchanged(contactMsg!.id)
 if (!contactResult.success) throw new Error(`markContactsExchanged: ${contactResult.error}`)
 console.log('   ok → contacts.exchanged + handed_over')
 
-// ── 15. Results ───────────────────────────────────────────────────────────────
+// ── 16. Results ───────────────────────────────────────────────────────────────
 
-step(15, 'result')
+step(16, 'result')
 const { data: finalRow } = await svc
   .from('inquiries')
   .select('status, stage_reached, deposit_paid_at')
