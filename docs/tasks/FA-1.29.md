@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/deposit-link
+pr: 104
 depends_on: [FA-1.28]
 blocked_by_questions: []
 touches_db: true
@@ -143,3 +144,4 @@ Currency uppercase confirmed (synthetic event uses USD, stored as "USD" not "usd
 - 2026-09-24 tj (wf-plan): zadanie z wiersza FA-1.18 w `docs/deferred-tasks.md`; wydanie przez `stage-1`.
 - 2026-09-25 tj: decyzje D1 i D2 + poprawki preflight dopisane do zadania w pierwszym commicie (in_progress).
 - 2026-09-25 Claude: implementacja kompletna — 7 plików, 378 testów zielonych, pełna pętla lokalna zweryfikowana.
+- 2026-09-25 Claude: pełna pętla 4242 przez buy.stripe.com (nie stripe trigger) — status paid, deposit_paid_at ustawione, payment.received z EUR/24000. ISK screenshot: .playwright-mcp/fa129-isk-payment-page.png (ISK 500.00 = 50000/100). PR #104 otwarty.
