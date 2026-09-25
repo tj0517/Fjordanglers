@@ -43,17 +43,21 @@ export function StatusStepper({ current }: { current: InquiryStatus }) {
       </div>
       <div className="grid gap-1 text-xs f-body" style={{ gridTemplateColumns: `repeat(${STEP_STATUSES.length}, minmax(0, 1fr))` }}>
         {STEP_STATUSES.map((s, i) => (
-          <span
-            key={s}
-            title={STATUS_MEANINGS[s]}
-            className={cn(
-              'truncate',
-              i < currentIndex && 'text-primary',
-              i === currentIndex && 'text-primary font-bold',
-              i > currentIndex && 'text-muted-foreground/80',
+          <span key={s} className="flex flex-col gap-0.5 min-w-0">
+            <span
+              className={cn(
+                'truncate',
+                i < currentIndex && 'text-primary',
+                i === currentIndex && 'text-primary font-bold',
+                i > currentIndex && 'text-muted-foreground/80',
+              )}
+            >
+              {STATUS_LABELS[s]}
+            </span>
+            {/* Current stage's one-line meaning — small muted text under the label (tj, review 2026-09-25) */}
+            {i === currentIndex && (
+              <span className="text-xs font-normal text-muted-foreground leading-snug">{STATUS_MEANINGS[s]}</span>
             )}
-          >
-            {STATUS_LABELS[s]}
           </span>
         ))}
       </div>
