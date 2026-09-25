@@ -21,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="min-h-screen lg:flex" style={{ background: '#F3EDE4' }}>
+    <div className="min-h-screen lg:flex bg-background">
       <AdminSidenav />
       <main className="flex-1 min-w-0">
         {children}

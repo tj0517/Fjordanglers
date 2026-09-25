@@ -36,8 +36,6 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 
 | id | title | diff | model | status | depends |
 |---|---|---|---|---|---|
-| id | title | diff | model | status | depends |
-|---|---|---|---|---|---|
 | FA-1.01 | Baseline: `db pull` produkcji, archiwizacja 61 migracji, pogodzenie historii (`migration repair`) | L | opus | done | FA-0.08 |
 | FA-1.02 | `drop_marketplace_leftovers` — schemat `archive` + martwe tabele `public` bez danych | M | opus | done | FA-1.01 |
 | FA-1.03 | Maszyna stanów §4 + `inquiry_events` + `transition()` — statusy „na kogo czekamy" (przepisane 16 IX) | L | opus | done | FA-1.01 |
@@ -52,12 +50,32 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.12 | `messages` — jeden wątek na zapytanie; e-mail w obie strony z karty; `offers` z opcjami; link Stripe z aplikacji | L | opus | done | FA-1.03 |
 | FA-1.13 | WhatsApp w obie strony (Meta Cloud API, szablony 24 h) + adapter Instagram bez kluczy | L | opus | blocked | FA-1.12 |
 | FA-1.14 | Agent w wątku — instalacja: „zaproponuj” w kompozytorze, loader `docs/knowledge/`, prompt-zaślepka, auto-wysyłka off (zawężone 21 IX: treść i logika → FA-1.17) | M | sonnet | done | FA-1.12 |
-| FA-1.15 | Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly` | L | opus | todo | FA-1.10, FA-1.12, FA-1.13 (kod w stage-1; kryterium E2E czeka na O-16), FA-1.14 |
-| FA-1.16 | Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja | M | sonnet | in_progress | FA-1.12 |
-| FA-1.17 | Treść i logika agenta — baza wiedzy (pliki) i graf działania; robi tj | M | — (człowiek) | todo | FA-1.14 |
+| FA-1.15 | Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly` | L | opus | done | FA-1.10, FA-1.12, FA-1.13 (kod w stage-1; kryterium E2E czeka na O-16), FA-1.14 |
+| FA-1.16 | Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja | M | sonnet | done | FA-1.12 |
+| FA-1.17 | Treść agenta cz. 1 — graf, instrukcje, ton, NZ przez panel; ocena na 3 wątkach na prod (przepisane 22 IX: wiedza w bazie) | M | — (człowiek) | todo | FA-1.21, FA-1.22, FA-1.23, FA-1.24 |
+| FA-1.21 | Agent wie, do kogo i na jakim etapie pisze — adresat, kanał, status w prompcie; strony wątku podpisane | M | sonnet | done | FA-1.14 |
+| FA-1.22 | Baza wiedzy agenta w bazie — tabela `agent_knowledge`, reguły, RLS tylko admin | L | opus | done | FA-1.14 |
+| FA-1.23 | Agent czyta wiedzę i instrukcje z bazy; `docs/knowledge/` znika | M | sonnet | done | FA-1.21, FA-1.22 |
+| FA-1.24 | Panel `/admin/knowledge` — lista, edycja, wyłączanie, braki, odnośnik z karty przewodnika | M | sonnet | done | FA-1.22, FA-1.15, FA-1.23 |
+| FA-1.25 | Stary agent bez rund — tylko klasyfikacja; bez `AgentToggle` | M | sonnet | done | FA-1.14 |
+| FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | todo | FA-1.17 |
+| FA-1.27 | Hybrydowa auto-wysyłka do klienta — sędzia ≥ 0.9, stany „nigdy auto”, tylko e-mail | L | opus | done | FA-1.23, FA-1.25 |
+| FA-1.28 | Kwota depozytu w danych — grosze + waluta opcji + kurs do EUR zamrożony; pole kwoty na karcie z podpowiedzią 20% (bloker: ścieżka depozytu zepsuta na prod od 19 IX) | L | opus | done | — |
+| FA-1.29 | Link depozytu działa — „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie, pętla 4242 lokalnie | L | opus | done | FA-1.28 |
+| FA-1.30 | Wiadomość z linkiem depozytu — nazwa i opis wyprawy w Stripe; szkic od agenta AI, kwotę i link wstawia kod | M | sonnet | todo | FA-1.29 |
+| FA-1.31 | Panel admina reaguje — stan ładowania przy nawigacji, „trwa” i blokada podwójnego kliknięcia na wszystkich akcjach | M | sonnet | todo | FA-1.29 |
+| FA-1.32 | Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa | L | opus | todo | FA-1.31 + makieta (O-24) |
+| FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
+| FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
+| FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
+| FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | done | — |
 ## Stages 2–8
 
 Tasks are written when the preceding stage reaches `review`. Stage outlines: `REBUILD_PLAN.md` §8.
 Stage-1 files written: FA-1.01–1.16 (complete). FA-1.05, 1.07, 1.08, 1.10 written 19 IX 2026 after FA-1.12 landed.
 FA-1.15 (UI panelu admina) dopisane 20 IX 2026 — decyzje tj D1–D5 w pliku zadania; otwarte O-17.
 FA-1.16 (domknięcie pętli depozytu) dopisane 20 IX 2026 — decyzje tj D1–D3 w pliku zadania.
+FA-1.21–1.26 dopisane 22 IX 2026 (/wf-plan fa 17): wiedza agenta w bazie (decyzja tj, opcja C), O-18–O-22 rozstrzygnięte. FA-1.20 zajęte w innym wątku.
+FA-1.18, FA-1.19 dopisane 22 IX 2026 — luki z audytu agent-workflow (środowisko dev, skan sekretów); rozpisane ponownie przez wf-plan tego samego dnia (+ FA-1.20, FA-1.75), decyzje tj D1–D4 w plikach zadań.
+FA-1.27 dopisane 22 IX 2026 (/wf-plan) — hybryda auto-wysyłki, decyzje tj D1–D5 w pliku zadania; plik trafił na stage-1 23 IX razem z archiwum `AGENT_RULES`.
+FA-1.28–1.32 dopisane 24 IX 2026 (wf-plan) z wierszy FA-1.18 w `docs/deferred-tasks.md`; decyzje tj w plikach zadań. Ścieżka krytyczna przed wydaniem paczki `stage-1`: FA-1.28 → FA-1.29.

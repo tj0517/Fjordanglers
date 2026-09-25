@@ -96,7 +96,7 @@ export default async function FinancesPage() {
   ] = await Promise.all([
     // Inquiries where deposit is paid — revenue source
     supabase.from('inquiries')
-      .select('deposit_paid_at, updated_at, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency')
+      .select('deposit_paid_at, updated_at, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, deposit_amount_cents, deposit_currency, deposit_eur_rate')
       .in('status', ['deposit_paid', 'completed']),
 
     // Ad spend by date
@@ -121,7 +121,7 @@ export default async function FinancesPage() {
 
     // Open deals — all active (non-terminal) statuses
     supabase.from('inquiries')
-      .select('id, angler_name, angler_email, offer_sent_at, updated_at, offer_total_eur, internal_deal_total_eur, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, created_at, status')
+      .select('id, angler_name, angler_email, offer_sent_at, updated_at, offer_total_eur, internal_deal_total_eur, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, created_at, status, deposit_amount_cents, deposit_currency, deposit_eur_rate')
       .in('status', ['pending', 'in_negotiation', 'waiting_for_guide_offer', 'offer_sent', 'waiting_for_deposit', 'deposit_sent'])
       .order('updated_at', { ascending: false }),
   ])
@@ -149,6 +149,9 @@ export default async function FinancesPage() {
     deposit_amount: number | null
     internal_commission_eur: number | null
     deal_currency: string | null
+    deposit_amount_cents: number | null
+    deposit_currency: string | null
+    deposit_eur_rate: number | null
   }[]
   const revenueByMonth: Record<string, { eur: number; deals: number }> = {}
   for (const row of revenueRows) {

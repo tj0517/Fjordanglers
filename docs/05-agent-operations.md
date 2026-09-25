@@ -6,17 +6,23 @@ the founders and the agents. Read it once per session.
 ## 1. The loop
 
 ```
-docs/tasks/FA-x.yy.md ──▶ /fa-task (Claude Code) or fa-task (Cowork) builds the prompt
+docs/tasks/FA-x.yy.md ──▶ wf-task (Claude app, repo agent-workflow) builds a self-contained prompt
         │
         ▼
 agent works on branch ──▶ report (format §5) ──▶ PR
         │
         ▼
-/fa-review or fa-review (Cowork) ──▶ coverage table: proven / declared / uncovered
+wf-review (Claude app) ──▶ coverage table: proven / declared / uncovered
         │
         ▼
 founder merges ──▶ task status → done in the task file + INDEX.md
 ```
+
+Since 2026-09-22 prompts and reviews come from the shared `wf-*` skills (tj's
+`agent-workflow` repo, project context `projects/fa/project.md`), the same for every
+project. The prompt carries branch and status housekeeping itself — the agent does **not**
+run `/fa-task`. `/fa-task`, `/fa-review` and `.claude/agents/fa-reviewer.md` stay in the
+repo: the reviewer checklist (§5 of that file) is still read by every review.
 
 One task = one branch = one PR. The agent never starts a second task in the same
 session without being told to. The agent never pushes to `main` directly and never
@@ -124,6 +130,17 @@ and say so; do not silently widen the scope.
 The agent never prints an env value, key or token, even to "check it is set" — check
 with `test -n "$VAR"`. Service-role keys do not belong in local env files (O-11). If a
 tool output contains a secret, the agent does not repeat it in the report.
+
+### MCP servers (`.mcp.json`, committed — no secrets inside)
+
+The agent's MCP servers are pinned to this repo in `.mcp.json` (generated from tj's
+`agent-workflow/projects/fa/project.md`). Values live only in your shell (`~/.zshrc`):
+
+- `GITHUB_TOKEN` — fine-grained PAT, this repo only (server `github`)
+- `STRIPE_RESTRICTED_KEY` — Stripe **restricted key, Read only** (server `stripe`); never `sk_live`
+- Supabase (`supabase-prod`, read-only) uses OAuth: in Claude Code run `/mcp` → Authenticate once.
+
+Check: `bash ~/Documents/agent-workflow/bin/mcp-doctor.sh fa`.
 
 ## 8. Subagents
 
@@ -261,3 +278,88 @@ wiadomość trafiła na `piotr@example.invalid` przez prawdziwe konto Resend.
 
 Bramka STOP dla agenta: **jakakolwiek wysyłka z `.fa-proofs/` bez odpowiedniej flagi fake
 → STOP** (tak samo jak zapis na prod).
+
+## 11. Środowisko dev (`fjordanglers-dev`)
+
+Projekt Supabase `fjordanglers-dev` (plan Free, **osobna organizacja Supabase**, ten sam region co prod) jest
+odizolowaną bazą dla Vercel Preview. Preview wskazuje na dev, nie na produkcję —
+wszystkie kliknięcia testowe są bezpieczne.
+
+**Drabina środowisk:** local → dev → prod.
+
+### Odtworzenie środowiska dev
+
+Jeśli projekt dev zostanie usunięty lub uśpiony:
+
+1. Utwórz nowy projekt `fjordanglers-dev` w Supabase Dashboard (plan Free, **osobna organizacja**,
+   ten sam region co prod `uwxrstbplaoxfghrchcy` — organizacja prod jest na planie płatnym, Free tam niemożliwy).
+2. Wejdź w Settings → Database → Connection string → **Session pooler** (port 5432) → skopiuj URL.
+   Zapisz do `~/.config/fa/dev.env` (poza repo, `chmod 600`):
+   ```
+   DEV_DB_URL='postgresql://...'
+   ```
+   Cudzysłów pojedynczy wymagany — hasło może zawierać `$`, `&`, `!`, które bez cudzysłowów rozwinęłyby się przez shell przy `source`.
+   W każdej komendzie używaj: `set -a; . ~/.config/fa/dev.env; set +a; <command>`.
+   Nigdy nie echuj, nie commituj, nie pisz nigdzie indziej.
+3. Zastosuj migracje bez zmiany linku repo (pełna forma z env-file):
+   ```
+   set -a; . ~/.config/fa/dev.env; set +a
+   supabase db push --db-url "$DEV_DB_URL"
+   ```
+   (guard blokuje to polecenie agentowi — robi człowiek)
+4. Upewnij się, że `psql` jest zainstalowany (`psql --version`); jeśli nie:
+   ```
+   sudo apt install -y postgresql-client
+   ```
+   (pakiet `postgresql-client`, nie `postgresql-client-common`)
+   Następnie zaaplikuj seed (jeden raz, all-or-nothing):
+   ```
+   set -a; . ~/.config/fa/dev.env; set +a
+   psql "$DEV_DB_URL" -v ON_ERROR_STOP=1 -1 -f supabase/seed.sql
+   ```
+   **Backfill `inquiry_events` NIE jest uruchamiany na dev.** Seed tworzy zapytania bez historii zdarzeń — oś czasu na karcie zapytania jest pusta (tak samo jak lokalnie po `db reset` bez ręcznego backfillu).
+5. W Supabase Dashboard → Authentication → URL Configuration ustaw:
+   - Site URL: główny alias Preview projektu Vercel (`https://<project>.vercel.app`)
+   - Allowed Redirect URLs — **zawęzione do tego projektu** (nie `*.vercel.app` — zbyt szerokie):
+     ```
+     https://fjordanglers-*-tymon-jezionek.vercel.app/**
+     https://fjordanglers-git-*-tymon-jezionek.vercel.app/**
+     ```
+     (scope `tymon-jezionek`, projekt `fjordanglers` — z `vercel ls`, 24 IX 2026)
+6. W Vercel zaktualizuj zmienne Preview (`NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) na nowy projekt.
+
+**Plan Free usypia projekt po ~1 tygodniu bez ruchu.** Aby obudzić: wejdź na
+`app.supabase.com`, kliknij projekt, Restore. Kilka sekund i jest gotowy.
+
+**`db push` na dev** robi człowiek (nie CI) do czasu FA-1.20, który to automatyzuje.
+Agent przygotowuje komendę i czeka na potwierdzenie — guard ją blokuje.
+
+### Zmienne Preview po FA-1.18
+
+Klucz | Wartość
+`NEXT_PUBLIC_SUPABASE_URL` | dev projekt
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` | dev projekt
+`SUPABASE_SERVICE_ROLE_KEY` | dev projekt (server-only!)
+`STRIPE_SECRET_KEY` | `sk_test_…` (test mode)
+`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_…` (test mode)
+`STRIPE_WEBHOOK_SECRET` | placeholder (brak endpointu Stripe dla Preview — D3)
+`RESEND_DEV_FAKE` | `1` (kanał email.ts omija Resend)
+`RESEND_API_KEY` | placeholder (nie-działający) — `src/lib/email.ts` ignoruje
+`RESEND_DEV_FAKE`; wysyłki transakcyjne (confirmation, deposit-link, password-reset)
+padają przechwyconym błędem na Preview. Reset hasła nie wysyła na Preview.
+
+Pozostałe zmienne — decyzje tj z FA-1.18 (data + co zrobić przy każdej).
+
+### Gałęzie `chore/*` i buildy Preview
+
+Od FA-1.18 `chore/*` jest usunięte z `git.deploymentEnabled` w `vercel.json`.
+Gałęzie `chore/*` dostają Preview tak samo jak `fix/*` i `feat/*`.
+Gałęzie, które wciąż nie dostają Preview: `docs/*`, `staging`, `preview`.
+Commity docs-only (tylko `docs/**`, `.claude/**`, `*.md`) nie budują Preview — Ignored
+Build Step ustawiony inline (2026-09-24, FA-1.18):
+```
+git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/**' ':(exclude).claude/**' ':(exclude)*.md'
+```
+`scripts/vercel-ignore-build.sh` zawiera tę samą logikę, ale IBS jest ustawiony bezpośrednio
+w Vercelu (Settings → Git → Ignored Build Step), nie przez skrypt.

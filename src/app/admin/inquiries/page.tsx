@@ -19,7 +19,7 @@ export default async function AdminInquiriesPage() {
   // ── Fetch all inquiries ─────────────────────────────────────────────────────
   const { data: rawAll } = await svc
     .from('inquiries')
-    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, experience_page_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action, assigned_guide_id, guide_acceptance, guide_decline_reason, external_offer_sent, offer_sent_at')
+    .select('id, status, angler_name, angler_email, angler_phone, requested_dates, party_size, created_at, trip_id, experience_page_id, internal_commission_eur, deal_currency, lost_reason, last_contact_at, next_action, assigned_guide_id, guide_acceptance, guide_decline_reason, external_offer_sent, offer_sent_at, source, qualified, trip_country')
     .order('created_at', { ascending: false })
 
   const allRows = (rawAll ?? []) as InquiryRow[]

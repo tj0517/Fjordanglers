@@ -38,8 +38,11 @@
  *   Admin marks the step where contacts were exchanged.
  *   Emits contacts.exchanged + proposes handed_over.
  *
- * createPaymentLink(inquiryId, amountCents, currency)
- *   Creates a Stripe Payment Link, inserts a draft message, emits payment.link_sent.
+ * createPaymentLink(inquiryId)
+ *   Reads deposit amount + currency from the inquiry row (FA-1.28), creates (or re-uses)
+ *   a Stripe Payment Link, inserts a draft message, emits payment.link_sent.
+ *   One active link per inquiry: same amount/currency → returns existing link; changed
+ *   amount/currency → deactivates old link, creates new one.
  */
 
 import { revalidatePath } from 'next/cache'
@@ -481,16 +484,8 @@ export async function markClientAccepted(
     payload:   { offer_id: offerId, option_id: optionId },
   })
 
-  try {
-    await transition(svc, inquiryId, 'awaiting_payment', {
-      actor:  { kind: 'admin', id: userId },
-      reason: 'Client accepted the offer',
-    })
-  } catch (err) {
-    if (!(err instanceof TransitionError && err.message.includes('already'))) {
-      console.warn('[markClientAccepted] transition warn:', err)
-    }
-  }
+  // Status stays offer_presented — awaiting_payment is reached only via createPaymentLink
+  // (FA-1.29 D1). The public acceptOffer path is handled separately (deferred-tasks.md D1).
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   return { success: true }
@@ -614,30 +609,70 @@ export type CreatePaymentLinkResult =
   | { success: false; error: string }
 
 export async function createPaymentLink(
-  inquiryId:   string,
-  amountCents: number,
-  currency:    string,
+  inquiryId: string,
 ): Promise<CreatePaymentLinkResult> {
   const { userId } = await requireAdmin()
-  if (amountCents < 50) return { success: false, error: 'Amount must be at least 50 cents' }
-
   const svc = createServiceClient()
 
   const { data: inq } = await svc
     .from('inquiries')
-    .select('id, angler_name, angler_email, party_size')
+    .select('id, angler_name, angler_email, party_size, deposit_amount_cents, deposit_currency, deposit_payment_link_id, deposit_payment_link_url')
     .eq('id', inquiryId)
     .single()
   if (inq == null) return { success: false, error: 'Inquiry not found' }
 
+  if (inq.deposit_amount_cents == null || inq.deposit_currency == null) {
+    return { success: false, error: 'Deposit amount not set — save an amount before creating a link' }
+  }
+
+  const amountCents = inq.deposit_amount_cents
+  const currency    = inq.deposit_currency  // uppercase per FA-1.28 (EUR, USD, ISK, NZD)
+
+  // ── One active link per inquiry ───────────────────────────────────────────
+  // If a link already exists, check the amount/currency it was created for.
+  // The payload of the latest payment.link_sent event for that link_id carries
+  // { amount_cents, currency, link_id } — no new column needed.
+  if (inq.deposit_payment_link_id != null) {
+    const { data: evtRow } = await svc
+      .from('inquiry_events')
+      .select('payload')
+      .eq('inquiry_id', inquiryId)
+      .eq('type', 'payment.link_sent')
+      .order('occurred_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const evt = evtRow?.payload as { link_id?: string; amount_cents?: number; currency?: string } | null
+    if (
+      evt?.link_id    === inq.deposit_payment_link_id &&
+      evt?.amount_cents === amountCents &&
+      evt?.currency    === currency
+    ) {
+      // Same amount and currency — re-use the existing Stripe link
+      revalidatePath('/admin/inquiries/' + inquiryId)
+      return { success: true, url: inq.deposit_payment_link_url! }
+    }
+
+    // Amount or currency changed — must deactivate the old link before creating a new one
+    try {
+      await stripe.paymentLinks.update(inq.deposit_payment_link_id, { active: false })
+    } catch (err) {
+      console.error('[createPaymentLink] Could not deactivate old link:', err)
+      return { success: false, error: `Could not deactivate old payment link — retry or contact support. (${err instanceof Error ? err.message : 'Stripe error'})` }
+    }
+  }
+
+  // ── Create new Stripe link ────────────────────────────────────────────────
+  // All four deposit currencies (EUR, USD, ISK, NZD) use ×100 storage — which matches
+  // Stripe's unit_amount convention for these currencies (Stripe docs: ISK requires
+  // a two-decimal representation ending in 00, e.g. 500 for 5 ISK — same ×100 as EUR).
   let paymentLink: { url: string; id: string }
   try {
-    // Create a Payment Link (not a Checkout Session) so the admin can paste it manually
     const price = await stripe.prices.create({
       currency:     currency.toLowerCase(),
       unit_amount:  amountCents,
       product_data: {
-        name: `Booking & Curation Fee — FjordAnglers`,
+        name:     'Booking & Curation Fee — FjordAnglers',
         metadata: { inquiry_id: inquiryId },
       },
     })
@@ -645,7 +680,7 @@ export async function createPaymentLink(
       line_items: [{ price: price.id, quantity: 1 }],
       metadata:   { inquiry_id: inquiryId, payment_type: 'inquiry_deposit' },
       after_completion: {
-        type: 'redirect',
+        type:     'redirect',
         redirect: { url: `${env.NEXT_PUBLIC_APP_URL}/inquiry/${inquiryId}/confirmed` },
       },
     })
@@ -654,6 +689,12 @@ export async function createPaymentLink(
     console.error('[createPaymentLink] Stripe error:', err)
     return { success: false, error: err instanceof Error ? err.message : 'Stripe error' }
   }
+
+  // Persist link id and URL on the inquiry row
+  await svc
+    .from('inquiries')
+    .update({ deposit_payment_link_id: paymentLink.id, deposit_payment_link_url: paymentLink.url })
+    .eq('id', inquiryId)
 
   // Insert a draft message row with the link as body — admin will paste and send
   await svc.from('messages').insert({
@@ -694,7 +735,7 @@ export async function createPaymentLink(
 // ─── proposeDraft — FA-1.14 ───────────────────────────────────────────────────
 
 export type ProposeDraftResult =
-  | { success: true;  draftId: string; text: string; subject: string | null; usedFiles: string[] }
+  | { success: true;  draftId: string; text: string; subject: string | null; usedIds: string[] }
   | { success: false; error: string }
 
 /**

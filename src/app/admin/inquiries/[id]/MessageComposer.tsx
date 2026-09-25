@@ -3,7 +3,11 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check, MessageSquare, Mail, Sparkles } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { sendMessageFromThread, proposeDraft } from '@/actions/messages'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 
 type Channel = 'email' | 'whatsapp' | 'instagram'
 
@@ -90,10 +94,9 @@ export function MessageComposer({
 
   if (sent) {
     return (
-      <div className="flex items-center gap-2 px-4 py-3 rounded-xl"
-        style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-        <Check size={14} style={{ color: '#6EE7B7', flexShrink: 0 }} />
-        <p className="text-sm font-semibold f-body" style={{ color: '#6EE7B7' }}>
+      <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200">
+        <Check size={14} className="text-emerald-700 flex-shrink-0" />
+        <p className="text-sm font-semibold f-body text-emerald-700">
           Message sent to {counterpart}
         </p>
       </div>
@@ -112,7 +115,7 @@ export function MessageComposer({
     { id: 'whatsapp',  label: 'WhatsApp',  icon: <MessageSquare size={12} />,
       disabled: counterpart === 'angler' ? !anglerHasPhone : !guideHasPhone,
       reason: 'No phone number on record' },
-    { id: 'instagram', label: 'Instagram', icon: <span style={{ fontSize: 11, fontWeight: 700 }}>IG</span>,
+    { id: 'instagram', label: 'Instagram', icon: <span className="text-[11px] font-bold">IG</span>,
       disabled: !igEnabled, reason: 'Instagram not configured' },
   ]
 
@@ -121,23 +124,24 @@ export function MessageComposer({
       {/* Channel selector */}
       <div className="flex gap-1.5">
         {CHANNELS.map(ch => (
-          <button
+          <Button
             key={ch.id}
             type="button"
             disabled={ch.disabled}
             title={ch.disabled ? ch.reason : undefined}
             onClick={() => { if (!ch.disabled) { setChannel(ch.id); setDraftId(null) } }}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-semibold f-body"
-            style={{
-              background: channel === ch.id ? '#E67E50'              : 'rgba(255,255,255,0.07)',
-              color:      channel === ch.id ? '#fff'                  : ch.disabled ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.45)',
-              border:     channel === ch.id ? '1px solid transparent' : '1px solid rgba(255,255,255,0.1)',
-              cursor:     ch.disabled ? 'not-allowed' : 'pointer',
-            }}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 py-1.5 h-auto rounded-lg text-xs font-semibold f-body border',
+              channel === ch.id
+                ? 'bg-accent text-white border-transparent'
+                : ch.disabled
+                  ? 'bg-muted text-muted-foreground/40 border-border cursor-not-allowed'
+                  : 'bg-muted text-muted-foreground border-border cursor-pointer',
+            )}
           >
             {ch.icon}
             {ch.label}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -145,39 +149,38 @@ export function MessageComposer({
       {guideAssigned && (
         <div className="flex gap-1.5">
           {(['angler', 'guide'] as const).map(cp => (
-            <button
+            <Button
               key={cp}
               type="button"
               onClick={() => { setCounterpart(cp); setDraftId(null) }}
-              className="flex-1 py-1.5 rounded-lg text-xs font-semibold f-body capitalize"
-              style={{
-                background: counterpart === cp ? '#0A2E4D'             : 'rgba(255,255,255,0.07)',
-                color:      counterpart === cp ? '#fff'                 : 'rgba(255,255,255,0.45)',
-                border:     counterpart === cp ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.1)',
-              }}
+              className={cn(
+                'flex-1 h-auto py-1.5 rounded-lg text-xs font-semibold f-body capitalize border',
+                counterpart === cp
+                  ? 'bg-primary text-white border-transparent'
+                  : 'bg-muted text-muted-foreground border-border',
+              )}
             >
               {cp}
-            </button>
+            </Button>
           ))}
         </div>
       )}
 
       {/* WhatsApp window-closed notice */}
       {channel === 'whatsapp' && !waAvailable && (
-        <p className="text-xs f-body" style={{ color: '#FCA5A5' }}>
+        <p className="text-xs f-body text-destructive">
           No phone number on record for this {counterpart}.
         </p>
       )}
       {channel === 'whatsapp' && waAvailable && isTemplatePath && (
-        <div className="px-3 py-2.5 rounded-xl text-xs f-body"
-          style={{ background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.25)', color: 'rgba(253,224,71,0.85)' }}>
+        <div className="px-3 py-2.5 rounded-xl text-xs f-body bg-amber-50 border border-amber-200 text-amber-700">
           24-hour window closed. Sending a pre-approved template.
         </div>
       )}
 
       {/* Instagram disabled notice */}
       {channel === 'instagram' && !igEnabled && (
-        <p className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.38)' }}>
+        <p className="text-xs f-body text-muted-foreground">
           Instagram channel inactive — set INSTAGRAM_ACCESS_TOKEN to enable.
         </p>
       )}
@@ -185,19 +188,14 @@ export function MessageComposer({
       {/* Email subject (email only) */}
       {channel === 'email' && (
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block"
-            style={{ color: 'rgba(255,255,255,0.38)' }}>Subject</label>
-          <input
+          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-muted-foreground">
+            Subject
+          </label>
+          <Input
             type="text"
             value={subject}
             onChange={e => setSubject(e.target.value)}
             placeholder="Re: your inquiry…"
-            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none placeholder:opacity-30"
-            style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#FFFFFF',
-            }}
           />
         </div>
       )}
@@ -205,23 +203,17 @@ export function MessageComposer({
       {/* Propose draft */}
       {!isTemplatePath && (
         <div>
-          <button
+          <Button
             type="button"
             onClick={handlePropose}
             disabled={draftPending}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold f-body"
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              color:      'rgba(255,255,255,0.55)',
-              border:     '1px solid rgba(255,255,255,0.1)',
-              cursor:     draftPending ? 'not-allowed' : 'pointer',
-            }}
+            className="w-full flex items-center justify-center gap-1.5 h-auto py-2 rounded-xl text-xs font-semibold f-body bg-muted text-muted-foreground border border-border disabled:cursor-not-allowed"
           >
             {draftPending ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
             {draftPending ? 'Drafting…' : 'Zaproponuj'}
-          </button>
+          </Button>
           {draftError != null && (
-            <p className="text-[11px] f-body mt-1" style={{ color: '#FCA5A5' }}>{draftError}</p>
+            <p className="text-[11px] f-body mt-1 text-destructive">{draftError}</p>
           )}
         </div>
       )}
@@ -229,23 +221,20 @@ export function MessageComposer({
       {/* Message body — hidden for WA template path */}
       {!isTemplatePath && (
         <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block"
-            style={{ color: 'rgba(255,255,255,0.38)' }}>Message</label>
-          <textarea
+          <label className="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5 block text-muted-foreground">
+            Message
+          </label>
+          <Textarea
             value={body}
             onChange={e => setBody(e.target.value)}
             placeholder={'Hi Jan,\n\nThanks for your inquiry…'}
-            rows={4}
-            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none resize-none placeholder:opacity-30"
-            style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#FFFFFF',
-            }}
+            className="min-h-[300px] resize-y"
           />
           {channel === 'whatsapp' && (
-            <p className="text-[10px] f-body mt-1 text-right"
-              style={{ color: body.length > 4096 ? '#FCA5A5' : 'rgba(255,255,255,0.3)' }}>
+            <p className={cn(
+              'text-[10px] f-body mt-1 text-right',
+              body.length > 4096 ? 'text-destructive' : 'text-muted-foreground/50',
+            )}>
               {body.length}/4096
             </p>
           )}
@@ -253,21 +242,14 @@ export function MessageComposer({
       )}
 
       {error != null && (
-        <p className="text-xs f-body" style={{ color: '#FCA5A5' }}>{error}</p>
+        <p className="text-xs f-body text-destructive">{error}</p>
       )}
 
-      <button
+      <Button
         type="button"
         onClick={handleSend}
         disabled={isPending || !canSend}
-        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body"
-        style={{
-          background: 'rgba(255,255,255,0.1)',
-          color:      '#FFFFFF',
-          border:     '1px solid rgba(255,255,255,0.12)',
-          cursor:     isPending || !canSend ? 'not-allowed' : 'pointer',
-          opacity:    !canSend ? 0.4 : 1,
-        }}
+        className="w-full flex items-center justify-center gap-2 h-auto py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border disabled:cursor-not-allowed disabled:opacity-40"
       >
         {isPending && <Loader2 size={12} className="animate-spin" />}
         {isPending
@@ -275,7 +257,7 @@ export function MessageComposer({
           : isTemplatePath
             ? 'Send Template →'
             : 'Send Message →'}
-      </button>
+      </Button>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   markAsGuideOffer,
   markOfferPresented,
@@ -12,6 +13,8 @@ import {
   markContactsExchanged,
   createPaymentLink,
 } from '@/actions/messages'
+import { setDepositAmount, type SetDepositAmountResult } from '@/actions/inquiries'
+import { DEPOSIT_PERCENT, depositHintCents } from '@/lib/inquiries/deposit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,7 +22,7 @@ export interface OfferForPanel {
   id:               string
   status:           string
   source_message_id: string | null
-  options:          Array<{ id: string; label: string; price_cents: number; currency: string }>
+  options:          Array<{ id: string; label: string; price_cents: number; currency: string; is_accepted: boolean }>
 }
 
 export interface ThreadActionsPanelProps {
@@ -33,9 +36,28 @@ export interface ThreadActionsPanelProps {
   /** ID of the latest outbound message to guide — used for markGuideNotifiedPaid / markContactsExchanged */
   latestOutboundGuideId:  string | null
   guideId:                string | null
-  /** Deposit amount in euros — converted to cents for createPaymentLink */
-  depositAmountEur:       number | null
+  /** FA-1.28: deposit amount in minor units ×100 (null = not yet set) */
+  depositAmountCents:     number | null
+  /** FA-1.28: deposit currency uppercase ISO (null = not yet set) */
+  depositCurrency:        string | null
+  /** FA-1.29: active Stripe Payment Link id stored on the inquiry row */
+  depositPaymentLinkId:   string | null
+  /** FA-1.29: active Stripe Payment Link URL stored on the inquiry row */
+  depositPaymentLinkUrl:  string | null
+  /** FA-1.29: amount_cents the active link was created for (from payment.link_sent event payload) */
+  depositPaymentLinkAmountCents: number | null
+  /** FA-1.29: currency the active link was created for (from payment.link_sent event payload) */
+  depositPaymentLinkCurrency:    string | null
   guideNotifiedPaid:      boolean
+}
+
+function FlashBanner({ message }: { message: string }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2 bg-emerald-50 border border-emerald-200">
+      <Check size={12} className="text-emerald-700" />
+      <p className="text-xs font-semibold f-body text-emerald-700">{message}</p>
+    </div>
+  )
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -48,7 +70,12 @@ export function ThreadActionsPanel({
   latestOutboundAnglerId,
   latestOutboundGuideId,
   guideId,
-  depositAmountEur,
+  depositAmountCents,
+  depositCurrency,
+  depositPaymentLinkId,
+  depositPaymentLinkUrl,
+  depositPaymentLinkAmountCents,
+  depositPaymentLinkCurrency,
   guideNotifiedPaid: initialGuideNotifiedPaid,
 }: ThreadActionsPanelProps) {
   const router  = useRouter()
@@ -72,10 +99,25 @@ export function ThreadActionsPanel({
   const [acceptFlash,    setAcceptFlash] = useState(false)
   const [acceptError,    setAcceptError] = useState<string | null>(null)
 
+  // ── Deposit amount state ──────────────────────────────────────────────────
+  const acceptedOption  = offer?.options.find(o => o.is_accepted) ?? null
+  const hintCents       = acceptedOption != null ? depositHintCents(acceptedOption.price_cents) : null
+  const hintDisplay     = hintCents != null && acceptedOption != null
+    ? `${DEPOSIT_PERCENT}% = ${(hintCents / 100).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${acceptedOption.currency.toUpperCase()}`
+    : null
+  const initialInput    = depositAmountCents != null
+    ? (depositAmountCents / 100).toFixed(2)
+    : hintCents != null ? (hintCents / 100).toFixed(2) : ''
+  const [depositInput,        setDepositInput]        = useState(initialInput)
+  const [setAmountPending,    startSetAmount]          = useTransition()
+  const [setAmountError,      setSetAmountError]       = useState<string | null>(null)
+  const [setAmountFlash,      setSetAmountFlash]       = useState(false)
+
   // ── Deposit link state ────────────────────────────────────────────────────
   const [depositPending, startDeposit]  = useTransition()
   const [depositFlash,   setDepositFlash] = useState(false)
-  const [depositUrl,     setDepositUrl]  = useState<string | null>(null)
+  // Initialise from the stored URL so the link is visible after a page reload
+  const [depositUrl,     setDepositUrl]  = useState<string | null>(depositPaymentLinkUrl ?? null)
   const [depositError,   setDepositError] = useState<string | null>(null)
 
   // ── Guide notified state ──────────────────────────────────────────────────
@@ -152,12 +194,29 @@ export function ThreadActionsPanel({
     })
   }
 
+  function handleSetDepositAmount() {
+    const parsed = parseFloat(depositInput)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setSetAmountError('Enter a positive amount')
+      return
+    }
+    const amountCents = Math.round(parsed * 100)
+    setSetAmountError(null)
+    startSetAmount(async () => {
+      const res: SetDepositAmountResult = await setDepositAmount(inquiryId, amountCents)
+      if (res.success) {
+        flash(setSetAmountFlash)
+        router.refresh()
+      } else {
+        setSetAmountError(res.error)
+      }
+    })
+  }
+
   function handleCreateDepositLink() {
-    if (depositAmountEur == null || depositAmountEur <= 0) return
     setDepositError(null)
     startDeposit(async () => {
-      const amountCents = Math.round(depositAmountEur * 100)
-      const res = await createPaymentLink(inquiryId, amountCents, 'eur')
+      const res = await createPaymentLink(inquiryId)
       if (res.success) {
         setDepositUrl(res.url)
         flash(setDepositFlash)
@@ -209,12 +268,12 @@ export function ThreadActionsPanel({
   if (isHandedOver) return null
 
   return (
-    <div className="rounded-[20px] overflow-hidden space-y-0"
-      style={{ background: 'rgba(10,46,77,0.75)', border: '1px solid rgba(255,255,255,0.07)' }}>
+    <div className="rounded-[20px] overflow-hidden bg-card border border-border">
 
-      <div className="px-5 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body"
-          style={{ color: 'rgba(255,255,255,0.28)' }}>Thread actions</p>
+      <div className="px-5 py-4 border-b border-border">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-muted-foreground">
+          Thread actions
+        </p>
       </div>
 
       <div className="px-5 py-4 space-y-4">
@@ -222,34 +281,27 @@ export function ThreadActionsPanel({
         {/* ── 1. Mark as Guide Offer ──────────────────────────────────────── */}
         {noOffer && latestInboundMsgId != null && !isPaid && (
           <div>
-            {offerFlash && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <Check size={12} style={{ color: '#6EE7B7' }} />
-                <p className="text-xs font-semibold f-body" style={{ color: '#6EE7B7' }}>Guide offer created</p>
-              </div>
-            )}
+            {offerFlash && <FlashBanner message="Guide offer created" />}
             {!showOfferForm ? (
               <button
                 type="button"
                 onClick={() => setShowOfferForm(true)}
-                className="w-full py-2.5 rounded-xl text-xs font-bold f-body"
-                style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.12)' }}
+                className="w-full py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border"
               >
                 Mark as Guide Offer
               </button>
             ) : (
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body"
-                  style={{ color: 'rgba(255,255,255,0.35)' }}>Guide offer — option 1</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] f-body text-muted-foreground">
+                  Guide offer — option 1
+                </p>
 
                 <input
                   type="text"
                   value={optionLabel}
                   onChange={e => setOptionLabel(e.target.value)}
                   placeholder="e.g. Trout fly fishing — 3 days"
-                  className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:opacity-30"
-                  style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                  className="w-full px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:text-muted-foreground/50 bg-muted/40 border border-input text-foreground"
                 />
 
                 <div className="flex gap-2">
@@ -260,14 +312,12 @@ export function ThreadActionsPanel({
                     value={optionPrice}
                     onChange={e => setOptionPrice(e.target.value)}
                     placeholder="Price (EUR)"
-                    className="flex-1 px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:opacity-30"
-                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                    className="flex-1 px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:text-muted-foreground/50 bg-muted/40 border border-input text-foreground"
                   />
                   <select
                     value={optionCurrency}
                     onChange={e => setOptionCurrency(e.target.value)}
-                    className="px-3 py-2 rounded-xl text-xs f-body outline-none"
-                    style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
+                    className="px-3 py-2 rounded-xl text-xs f-body outline-none bg-muted/40 border border-input text-foreground"
                   >
                     <option value="eur">EUR</option>
                     <option value="usd">USD</option>
@@ -276,15 +326,14 @@ export function ThreadActionsPanel({
                 </div>
 
                 {offerError != null && (
-                  <p className="text-[11px] f-body" style={{ color: '#FCA5A5' }}>{offerError}</p>
+                  <p className="text-[11px] f-body text-destructive">{offerError}</p>
                 )}
 
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => { setShowOfferForm(false); setOfferError(null) }}
-                    className="flex-1 py-2 rounded-xl text-xs font-semibold f-body"
-                    style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    className="flex-1 py-2 rounded-xl text-xs font-semibold f-body bg-muted text-muted-foreground border border-border"
                   >
                     Cancel
                   </button>
@@ -292,12 +341,10 @@ export function ThreadActionsPanel({
                     type="button"
                     onClick={handleCreateGuideOffer}
                     disabled={offerPending || !optionLabel.trim() || !optionPrice}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold f-body"
-                    style={{
-                      background: offerPending ? 'rgba(230,126,80,0.5)' : '#E67E50',
-                      color: '#fff',
-                      cursor: offerPending ? 'not-allowed' : 'pointer',
-                    }}
+                    className={cn(
+                      'flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold f-body text-white',
+                      offerPending ? 'bg-accent/50 cursor-not-allowed' : 'bg-accent cursor-pointer',
+                    )}
                   >
                     {offerPending && <Loader2 size={11} className="animate-spin" />}
                     Create Guide Offer
@@ -311,27 +358,20 @@ export function ThreadActionsPanel({
         {/* ── 2. Present Offer ───────────────────────────────────────────── */}
         {offerPending2 && !isPaid && (
           <div>
-            {presentFlash && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <Check size={12} style={{ color: '#6EE7B7' }} />
-                <p className="text-xs font-semibold f-body" style={{ color: '#6EE7B7' }}>Offer presented</p>
-              </div>
-            )}
+            {presentFlash && <FlashBanner message="Offer presented" />}
             {presentError != null && (
-              <p className="text-[11px] f-body mb-1" style={{ color: '#FCA5A5' }}>{presentError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{presentError}</p>
             )}
             <button
               type="button"
               onClick={handlePresentOffer}
               disabled={presentPending}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body"
-              style={{
-                background: presentPending ? 'rgba(230,126,80,0.5)' : '#E67E50',
-                color: '#fff',
-                cursor: presentPending ? 'not-allowed' : 'pointer',
-                boxShadow: presentPending ? 'none' : '0 4px 12px rgba(230,126,80,0.3)',
-              }}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body text-white',
+                presentPending
+                  ? 'bg-accent/50 cursor-not-allowed shadow-none'
+                  : 'bg-accent cursor-pointer shadow-[0_4px_12px_rgba(230,126,80,0.3)]',
+              )}
             >
               {presentPending && <Loader2 size={11} className="animate-spin" />}
               Present Offer to Angler
@@ -342,15 +382,9 @@ export function ThreadActionsPanel({
         {/* ── 3. Accept / Decline ────────────────────────────────────────── */}
         {offerPresented && !isPaid && (
           <div className="space-y-2">
-            {acceptFlash && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <Check size={12} style={{ color: '#6EE7B7' }} />
-                <p className="text-xs font-semibold f-body" style={{ color: '#6EE7B7' }}>Done</p>
-              </div>
-            )}
+            {acceptFlash && <FlashBanner message="Done" />}
             {acceptError != null && (
-              <p className="text-[11px] f-body" style={{ color: '#FCA5A5' }}>{acceptError}</p>
+              <p className="text-[11px] f-body text-destructive">{acceptError}</p>
             )}
             {offer!.options.map(opt => (
               <button
@@ -358,12 +392,12 @@ export function ThreadActionsPanel({
                 type="button"
                 onClick={() => handleClientAccepted(opt.id)}
                 disabled={acceptPending}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body"
-                style={{
-                  background: acceptPending ? 'rgba(16,185,129,0.4)' : 'rgba(16,185,129,0.8)',
-                  color: '#fff',
-                  cursor: acceptPending ? 'not-allowed' : 'pointer',
-                }}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body text-white',
+                  acceptPending
+                    ? 'bg-emerald-500/40 cursor-not-allowed'
+                    : 'bg-emerald-500/80 cursor-pointer',
+                )}
               >
                 {acceptPending && <Loader2 size={11} className="animate-spin" />}
                 Client Accepted — {opt.label}
@@ -373,50 +407,119 @@ export function ThreadActionsPanel({
               type="button"
               onClick={handleClientDeclined}
               disabled={acceptPending}
-              className="w-full py-2 rounded-xl text-xs font-semibold f-body"
-              style={{
-                background: 'rgba(239,68,68,0.15)',
-                color: '#FCA5A5',
-                border: '1px solid rgba(239,68,68,0.25)',
-                cursor: acceptPending ? 'not-allowed' : 'pointer',
-              }}
+              className="w-full py-2 rounded-xl text-xs font-semibold f-body bg-red-50 text-red-700 border border-red-200 disabled:cursor-not-allowed"
             >
               Client Declined
             </button>
           </div>
         )}
 
+        {/* ── 3b. Set Deposit Amount ─────────────────────────────────────── */}
+        {offer?.status === 'accepted' && !isPaid && acceptedOption != null && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-muted-foreground">
+              Deposit amount
+            </p>
+            {setAmountFlash && <FlashBanner message="Deposit amount saved" />}
+            {setAmountError != null && (
+              <p className="text-[11px] f-body text-destructive">{setAmountError}</p>
+            )}
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={depositInput}
+                onChange={e => setDepositInput(e.target.value)}
+                disabled={setAmountPending}
+                className="flex-1 px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:text-muted-foreground/50 bg-muted/40 border border-input text-foreground disabled:opacity-50"
+                placeholder="Amount"
+              />
+              <span className="text-xs font-semibold f-body text-muted-foreground shrink-0">
+                {acceptedOption.currency.toUpperCase()}
+              </span>
+            </div>
+            {hintDisplay != null && (
+              <p className="text-[10px] f-body text-muted-foreground">{hintDisplay}</p>
+            )}
+            {depositCurrency != null && depositAmountCents != null && (
+              <p className="text-[10px] f-body text-emerald-700">
+                Saved: {(depositAmountCents / 100).toLocaleString('en', { minimumFractionDigits: 2 })} {depositCurrency}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleSetDepositAmount}
+              disabled={setAmountPending}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold f-body text-white',
+                setAmountPending
+                  ? 'bg-accent/50 cursor-not-allowed shadow-none'
+                  : 'bg-accent cursor-pointer',
+              )}
+            >
+              {setAmountPending && <Loader2 size={11} className="animate-spin" />}
+              Save deposit amount
+            </button>
+          </div>
+        )}
+
         {/* ── 4. Create Deposit Link ─────────────────────────────────────── */}
-        {offer?.status === 'accepted' && !isPaid && depositAmountEur != null && (
+        {offer?.status === 'accepted' && !isPaid && depositAmountCents != null && depositCurrency != null && (
           <div>
+            {/* D2: warn when saved amount/currency differs from link's amount/currency */}
+            {depositPaymentLinkId != null &&
+              (depositPaymentLinkAmountCents !== depositAmountCents ||
+               depositPaymentLinkCurrency !== depositCurrency) && (
+              <p className="text-[11px] f-body mb-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                Amount changed — create a new link
+              </p>
+            )}
             {depositFlash && depositUrl != null && (
               <div className="space-y-2 mb-2">
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                  style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                  <Check size={12} style={{ color: '#6EE7B7' }} />
-                  <p className="text-xs font-semibold f-body" style={{ color: '#6EE7B7' }}>Deposit link created</p>
-                </div>
-                <p className="text-[10px] f-body break-all" style={{ color: 'rgba(255,255,255,0.45)' }}>{depositUrl}</p>
+                <FlashBanner message="Deposit link created" />
               </div>
             )}
             {depositError != null && (
-              <p className="text-[11px] f-body mb-1" style={{ color: '#FCA5A5' }}>{depositError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{depositError}</p>
             )}
-            {depositUrl == null && (
+            {/* Show existing link (no D2 mismatch) with amount, currency, and copy button */}
+            {depositUrl != null &&
+              depositPaymentLinkAmountCents === depositAmountCents &&
+              depositPaymentLinkCurrency === depositCurrency && (
+              <div className="space-y-1 mb-2">
+                <p className="text-[10px] font-semibold f-body text-muted-foreground">
+                  {(depositAmountCents / 100).toLocaleString('en', { minimumFractionDigits: 2 })} {depositCurrency}
+                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] f-body break-all text-muted-foreground flex-1 min-w-0">{depositUrl}</p>
+                  <button
+                    type="button"
+                    onClick={() => { void navigator.clipboard.writeText(depositUrl) }}
+                    className="shrink-0 text-[10px] f-body px-2 py-1 rounded border border-border text-muted-foreground hover:bg-muted cursor-pointer"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+            )}
+            {/* Show create button when no link or D2 mismatch */}
+            {(depositUrl == null ||
+              depositPaymentLinkAmountCents !== depositAmountCents ||
+              depositPaymentLinkCurrency !== depositCurrency) && (
               <button
                 type="button"
                 onClick={handleCreateDepositLink}
                 disabled={depositPending}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body"
-                style={{
-                  background: depositPending ? 'rgba(230,126,80,0.5)' : '#E67E50',
-                  color: '#fff',
-                  cursor: depositPending ? 'not-allowed' : 'pointer',
-                  boxShadow: depositPending ? 'none' : '0 4px 12px rgba(230,126,80,0.3)',
-                }}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body text-white',
+                  depositPending
+                    ? 'bg-accent/50 cursor-not-allowed shadow-none'
+                    : 'bg-accent cursor-pointer shadow-[0_4px_12px_rgba(230,126,80,0.3)]',
+                )}
               >
                 {depositPending && <Loader2 size={11} className="animate-spin" />}
-                Create Deposit Link — €{depositAmountEur.toFixed(2)}
+                Create Deposit Link — {(depositAmountCents / 100).toLocaleString('en', { minimumFractionDigits: 2 })} {depositCurrency}
               </button>
             )}
           </div>
@@ -425,27 +528,15 @@ export function ThreadActionsPanel({
         {/* ── 5. Guide Notified Paid ─────────────────────────────────────── */}
         {isPaid && !guideNotifiedPaid && latestOutboundGuideId != null && !isHandedOver && (
           <div>
-            {notifyFlash && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <Check size={12} style={{ color: '#6EE7B7' }} />
-                <p className="text-xs font-semibold f-body" style={{ color: '#6EE7B7' }}>Guide notified</p>
-              </div>
-            )}
+            {notifyFlash && <FlashBanner message="Guide notified" />}
             {notifyError != null && (
-              <p className="text-[11px] f-body mb-1" style={{ color: '#FCA5A5' }}>{notifyError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{notifyError}</p>
             )}
             <button
               type="button"
               onClick={handleGuideNotifiedPaid}
               disabled={notifyPending}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body"
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.12)',
-                cursor: notifyPending ? 'not-allowed' : 'pointer',
-              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border disabled:cursor-not-allowed"
             >
               {notifyPending && <Loader2 size={11} className="animate-spin" />}
               Guide Notified Paid
@@ -456,27 +547,15 @@ export function ThreadActionsPanel({
         {/* ── 6. Contacts Exchanged ──────────────────────────────────────── */}
         {isPaid && guideNotifiedPaid && latestOutboundGuideId != null && !isHandedOver && (
           <div>
-            {contactsFlash && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-2"
-                style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
-                <Check size={12} style={{ color: '#6EE7B7' }} />
-                <p className="text-xs font-semibold f-body" style={{ color: '#6EE7B7' }}>Contacts exchanged</p>
-              </div>
-            )}
+            {contactsFlash && <FlashBanner message="Contacts exchanged" />}
             {contactsError != null && (
-              <p className="text-[11px] f-body mb-1" style={{ color: '#FCA5A5' }}>{contactsError}</p>
+              <p className="text-[11px] f-body mb-1 text-destructive">{contactsError}</p>
             )}
             <button
               type="button"
               onClick={handleContactsExchanged}
               disabled={contactsPending}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body"
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.12)',
-                cursor: contactsPending ? 'not-allowed' : 'pointer',
-              }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold f-body bg-muted text-foreground border border-border disabled:cursor-not-allowed"
             >
               {contactsPending && <Loader2 size={11} className="animate-spin" />}
               Contacts Exchanged
@@ -486,7 +565,7 @@ export function ThreadActionsPanel({
 
         {/* ── Empty state ────────────────────────────────────────────────── */}
         {noOffer && latestInboundMsgId == null && !isPaid && (
-          <p className="text-xs f-body" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p className="text-xs f-body text-muted-foreground">
             Send a message to the guide, then mark their reply as the guide offer.
           </p>
         )}

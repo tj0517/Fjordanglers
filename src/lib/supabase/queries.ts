@@ -9,7 +9,7 @@
  */
 
 import { unstable_cache } from 'next/cache'
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 import { COUNTRIES } from '@/lib/countries'
 
@@ -390,4 +390,70 @@ export async function getActiveDestinationCountries(): Promise<string[]> {
     ['active-destination-countries'],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
+}
+
+// ─── Service-client helpers (no ISR caching) ─────────────────────────────────
+// Accept a caller-supplied service-role client so the caller controls connection
+// lifetime. Do not cache — these read mutable operational data.
+// Used by the AI pipeline (auto-send.ts) and webhooks.
+
+type ServiceClient = SupabaseClient<Database>
+
+export type InquiryForAutoSend = {
+  id:           string
+  status:       string
+  trip_country: string | null
+  angler_email: string | null
+}
+
+export async function getInquiryForAutoSend(
+  client: ServiceClient,
+  inquiryId: string,
+): Promise<InquiryForAutoSend | null> {
+  const { data } = await client
+    .from('inquiries')
+    .select('id, status, trip_country, angler_email')
+    .eq('id', inquiryId)
+    .maybeSingle()
+  return (data ?? null) as InquiryForAutoSend | null
+}
+
+export async function hasAgentSentReplyToAngler(
+  client: ServiceClient,
+  inquiryId: string,
+): Promise<boolean> {
+  const { count } = await client
+    .from('messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('inquiry_id', inquiryId)
+    .eq('direction', 'outbound')
+    .eq('counterpart', 'angler')
+    .eq('drafted_by', 'agent')
+    .in('status', ['sent', 'queued'])
+  return (count ?? 0) > 0
+}
+
+export async function getConversationForJudge(
+  client: ServiceClient,
+  inquiryId: string,
+): Promise<{ direction: string; body: string }[]> {
+  const { data } = await client
+    .from('messages')
+    .select('direction, body, occurred_at')
+    .eq('inquiry_id', inquiryId)
+    .neq('status', 'draft')
+    .order('occurred_at', { ascending: true })
+  return (data ?? []) as { direction: string; body: string }[]
+}
+
+export async function getInquiryStatusForD2(
+  client: ServiceClient,
+  inquiryId: string,
+): Promise<{ status: string } | null> {
+  const { data } = await client
+    .from('inquiries')
+    .select('status')
+    .eq('id', inquiryId)
+    .maybeSingle()
+  return data ? { status: (data as { status: string }).status } : null
 }

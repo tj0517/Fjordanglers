@@ -103,6 +103,53 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_knowledge: {
+        Row: {
+          active: boolean
+          body: string
+          country: string | null
+          created_at: string
+          guide_id: string | null
+          id: string
+          kind: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          body: string
+          country?: string | null
+          created_at?: string
+          guide_id?: string | null
+          id?: string
+          kind: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          body?: string
+          country?: string | null
+          created_at?: string
+          guide_id?: string | null
+          id?: string
+          kind?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_knowledge_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           changed_at: string | null
@@ -1366,7 +1413,13 @@ export type Database = {
           created_at: string
           deal_currency: string
           deposit_amount: number | null
+          deposit_amount_cents: number | null
+          deposit_currency: string | null
+          deposit_eur_rate: number | null
+          deposit_eur_rate_at: string | null
           deposit_paid_at: string | null
+          deposit_payment_link_id: string | null
+          deposit_payment_link_url: string | null
           deposit_stripe_session_id: string | null
           email_thread_message_id: string | null
           experience_page_id: string | null
@@ -1439,7 +1492,13 @@ export type Database = {
           created_at?: string
           deal_currency?: string
           deposit_amount?: number | null
+          deposit_amount_cents?: number | null
+          deposit_currency?: string | null
+          deposit_eur_rate?: number | null
+          deposit_eur_rate_at?: string | null
           deposit_paid_at?: string | null
+          deposit_payment_link_id?: string | null
+          deposit_payment_link_url?: string | null
           deposit_stripe_session_id?: string | null
           email_thread_message_id?: string | null
           experience_page_id?: string | null
@@ -1512,7 +1571,13 @@ export type Database = {
           created_at?: string
           deal_currency?: string
           deposit_amount?: number | null
+          deposit_amount_cents?: number | null
+          deposit_currency?: string | null
+          deposit_eur_rate?: number | null
+          deposit_eur_rate_at?: string | null
           deposit_paid_at?: string | null
+          deposit_payment_link_id?: string | null
+          deposit_payment_link_url?: string | null
           deposit_stripe_session_id?: string | null
           email_thread_message_id?: string | null
           experience_page_id?: string | null

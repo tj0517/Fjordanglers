@@ -624,3 +624,122 @@ describe('stripe-deposit webhook — trip title in the confirmation emails (FA-1
     )
   })
 })
+
+// ─── FA-1.28: depositAmountEur calculation ───────────────────────────────────
+
+describe('stripe-deposit webhook — depositAmountEur (FA-1.28)', () => {
+  function buildMockWithRow(row: typeof INQUIRY_ROW & {
+    deposit_amount_cents?: number | null
+    deposit_currency?:     string | null
+    deposit_eur_rate?:     number | null
+  }) {
+    return {
+      from: (table: string) => {
+        if (table === 'inquiries') {
+          return {
+            update: () => ({
+              eq: () => ({
+                is: () => ({
+                  select: async () => ({ data: [row], error: null }),
+                }),
+              }),
+            }),
+          }
+        }
+        return {
+          select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>
+  }
+
+  it('EUR row: uses deposit_amount_cents / deposit_eur_rate / 100', async () => {
+    // 20 000 cents, EUR, rate 1 → 200.00 EUR
+    vi.mocked(createServiceClient).mockReturnValue(
+      buildMockWithRow({ ...INQUIRY_ROW, deposit_amount_cents: 20000, deposit_currency: 'EUR', deposit_eur_rate: 1 }),
+    )
+
+    const session: Partial<Stripe.Checkout.Session> = {
+      id: 'cs_eur_fa128', object: 'checkout.session', payment_status: 'paid',
+      metadata: { payment_type: 'inquiry_deposit', inquiry_id: 'inq-test' },
+    }
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    await POST(makeReq(mockEvent(session)))
+    await new Promise(r => setTimeout(r, 0))
+
+    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountEur: 200 }),
+    )
+    expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountEur: 200 }),
+    )
+  })
+
+  it('ISK row: uses deposit_amount_cents / deposit_eur_rate / 100', async () => {
+    // 3 000 000 cents (30 000 ISK display), EUR rate 138 → 3000000/138/100 ≈ 217.39
+    vi.mocked(createServiceClient).mockReturnValue(
+      buildMockWithRow({ ...INQUIRY_ROW, deposit_amount_cents: 3_000_000, deposit_currency: 'ISK', deposit_eur_rate: 138 }),
+    )
+
+    const session: Partial<Stripe.Checkout.Session> = {
+      id: 'cs_isk_fa128', object: 'checkout.session', payment_status: 'paid',
+      metadata: { payment_type: 'inquiry_deposit', inquiry_id: 'inq-test' },
+    }
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    await POST(makeReq(mockEvent(session)))
+    await new Promise(r => setTimeout(r, 0))
+
+    const expected = 3_000_000 / 138 / 100
+    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountEur: expected }),
+    )
+    expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountEur: expected }),
+    )
+  })
+
+  it('legacy row (deposit_amount_cents NULL): falls back to deposit_amount', async () => {
+    // Pre-FA-1.28 row: deposit_amount = 360, new fields all null
+    vi.mocked(createServiceClient).mockReturnValue(
+      buildMockWithRow({ ...INQUIRY_ROW, deposit_amount_cents: null, deposit_currency: null, deposit_eur_rate: null }),
+    )
+
+    const session: Partial<Stripe.Checkout.Session> = {
+      id: 'cs_legacy_fa128', object: 'checkout.session', payment_status: 'paid',
+      metadata: { payment_type: 'inquiry_deposit', inquiry_id: 'inq-test' },
+    }
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    await POST(makeReq(mockEvent(session)))
+    await new Promise(r => setTimeout(r, 0))
+
+    // INQUIRY_ROW.deposit_amount = 360 → falls back to that
+    expect(sendDepositConfirmedAnglerEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountEur: 360 }),
+    )
+    expect(sendDepositConfirmedFaEmail).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmountEur: 360 }),
+    )
+  })
+})
+
+// ─── FA-1.29: payment.received currency is uppercase ─────────────────────────
+
+describe('stripe-deposit webhook — payment.received currency uppercase (FA-1.29)', () => {
+  it('emits payment.received with uppercase currency when session.currency is lowercase', async () => {
+    vi.mocked(createServiceClient).mockReturnValue(buildHappyMock())
+    const session: Partial<Stripe.Checkout.Session> = {
+      id:             'cs_isk_currency',
+      object:         'checkout.session',
+      payment_status: 'paid',
+      metadata:       { payment_type: 'inquiry_deposit', inquiry_id: 'inq-test' },
+      currency:       'isk',  // Stripe returns lowercase
+      amount_total:   50000,
+    }
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    await POST(makeReq(mockEvent(session)))
+
+    const call = vi.mocked(emitEvent).mock.calls.find(([, params]) => params.type === 'payment.received')
+    expect(call).toBeDefined()
+    expect(call![1].payload).toMatchObject({ currency: 'ISK' })
+  })
+})

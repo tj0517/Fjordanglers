@@ -526,6 +526,8 @@ produkcji zostaje etap 0. `stage-1` idzie na produkcję jako paczka, gdy FA-1.03
 
 **Dopisek 20 IX.** Ekran „przegląd tygodniowy” z tego punktu: zrobione w FA-1.10, `/admin/weekly`, do usunięcia w etapie 6.
 
+**Dopisek 21 IX.** Paczka 2 etapu 1 (FA-1.07, 1.08, 1.09, 1.10, 1.16 + fix FA-1.13 guide_contacts) na produkcji 21 IX przez merge PR #74 do main (SHA `f08de24d`). Migracja `20261004000000_guide_contacts` zastosowana przez tj `db push` po checkliście (backup `backups/20260921-1323`, Local=Remote, `guide_contacts` z RLS, `guides.phone_e164` usunięta). Smoke test prod ok. FA-1.14 zostaje.
+
 ---
 
 ## 10. Zasady na przyszłość
@@ -633,6 +635,8 @@ w aplikacji — nigdy jako osobny krok „dopisz".
 | `status.changed` | admin / system | app | `transition()` | lejek, `stage_reached` |
 | `inquiry.lost` | admin | app | `transition(lost)` z `lost_reason_code` | powody przegranych |
 | `trip.completed` | admin / system | app | data zakończenia | M14–M16 |
+| `agent.auto_send_decided` | agent | email | `autoSendReply()` po każdej próbie auto-wysyłki (FA-1.27); `payload.sent`, `payload.score`, `payload.reasons`, `payload.draft_message_id` | M11 (nie liczy się jako ręczne dotknięcie) |
+| `deposit.amount_set` | admin | app | admin ustawia kwotę depozytu na karcie zapytania (FA-1.28); `payload.amount_cents`, `payload.currency`, `payload.eur_rate`, `payload.eur_rate_at` | M1, M3 |
 
 Zarezerwowane, bez emisji w etapie 1 (w `types.ts` z komentarzem `// stage N`):
 `agent.round_completed`, `inquiry.brief_completed`, `guide.assigned`/`unassigned`,

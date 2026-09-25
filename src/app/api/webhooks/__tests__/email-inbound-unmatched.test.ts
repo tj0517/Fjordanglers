@@ -24,10 +24,6 @@ vi.mock('@/lib/inquiry-matcher', () => ({
   matchInquiryByEmail: vi.fn().mockResolvedValue(null), // no match
 }))
 
-vi.mock('@/lib/ai/inquiry-agent', () => ({
-  runAgentRound2: vi.fn(),
-}))
-
 vi.mock('@/lib/events/emit', () => ({
   emitEvent: vi.fn().mockResolvedValue('evt-1'),
   EventError: class EventError extends Error {},

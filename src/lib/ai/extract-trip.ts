@@ -33,6 +33,30 @@ export interface ConversationMessage {
   channel:     string
   body:        string
   occurred_at: string
+  /**
+   * Who the message is with — 'angler' or 'guide'. Optional: callers that
+   * don't select it (inquiry-agent.ts, src/actions/ai.ts) get today's plain
+   * Angler/FA labelling unchanged. FA-1.21.
+   */
+  counterpart?: 'angler' | 'guide'
+}
+
+/**
+ * Speaker label for one message. counterpart absent → today's plain
+ * Angler/FA labelling, byte-identical for callers that don't select it.
+ * A guide message with no resolved guideName (e.g. FA wrote to a guide
+ * before one was assigned) is labelled "Guide (unassigned)" rather than
+ * guessed a name — review decision, 2026-09-22 (see FA-1.21 task notes).
+ */
+function speakerLabel(msg: ConversationMessage, guideName: string | null | undefined): string {
+  if (msg.counterpart === undefined) {
+    return msg.direction === 'inbound' ? 'Angler' : 'FA'
+  }
+  if (msg.direction === 'inbound') {
+    if (msg.counterpart === 'angler') return 'Angler'
+    return guideName ? `Guide ${guideName}` : 'Guide (unassigned)'
+  }
+  return msg.counterpart === 'guide' ? 'FA → guide' : 'FA → angler'
 }
 
 export function assembleConversation(
@@ -42,6 +66,7 @@ export function assembleConversation(
   partySize:      number,
   experienceTitle: string | null,
   messages:       ConversationMessage[],
+  guideName?:     string | null,
 ): string {
   const lines: string[] = []
 
@@ -61,9 +86,10 @@ export function assembleConversation(
       const dateStr = new Date(msg.occurred_at).toLocaleDateString('en-GB', {
         day: 'numeric', month: 'short', year: 'numeric',
       })
+      const label = speakerLabel(msg, guideName)
       const who = msg.direction === 'inbound'
-        ? `[${dateStr}] Angler (inbound via ${msg.channel}):`
-        : `[${dateStr}] FA (outbound via ${msg.channel}):`
+        ? `[${dateStr}] ${label} (inbound via ${msg.channel}):`
+        : `[${dateStr}] ${label} (outbound via ${msg.channel}):`
       lines.push('')
       lines.push(who)
       lines.push(msg.body.trim())

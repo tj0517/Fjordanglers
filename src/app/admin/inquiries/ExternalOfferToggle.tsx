@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { setExternalOffer } from '@/actions/inquiries'
+import { cn } from '@/lib/utils'
 
 export function ExternalOfferToggle({
   inquiryId,
@@ -29,21 +30,18 @@ export function ExternalOfferToggle({
       type="button"
       onClick={toggle}
       disabled={pending}
-      className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold f-body transition-all mt-0.5"
-      style={{
-        background: active ? 'rgba(16,185,129,0.1)'           : 'rgba(10,46,77,0.05)',
-        color:      active ? '#065F46'                         : 'rgba(10,46,77,0.45)',
-        border:     active ? '1px solid rgba(16,185,129,0.28)' : '1px solid rgba(10,46,77,0.1)',
-        cursor:     pending ? 'default' : 'pointer',
-        opacity:    pending ? 0.6 : 1,
-      }}
+      className={cn(
+        'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold f-body transition-all mt-0.5 border',
+        active
+          ? 'bg-emerald-500/10 text-emerald-900 border-emerald-500/[28%]'
+          : 'bg-primary/5 text-primary/45 border-primary/10',
+        pending && 'opacity-60 cursor-default',
+      )}
     >
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: 12, height: 12, borderRadius: 3, flexShrink: 0,
-        background: active ? '#10B981' : 'rgba(10,46,77,0.15)',
-        color: '#fff', fontSize: 8, fontWeight: 800,
-      }}>
+      <span className={cn(
+        'inline-flex items-center justify-center w-3 h-3 rounded-[3px] flex-shrink-0 text-white text-[8px] font-extrabold',
+        active ? 'bg-emerald-500' : 'bg-primary/15',
+      )}>
         {active ? '✓' : ''}
       </span>
       {active ? 'Ext. offer sent' : 'Offer done externally?'}

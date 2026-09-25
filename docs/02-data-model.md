@@ -69,6 +69,43 @@ with `requireAdmin()` / `requireToken()` / `requireGuide()` which use service_ro
 counterparts; a counterpart-scoped policy would risk leaking mistagged messages.
 Decision: tj 2026-09-17. To revisit when building the client or guide portal.
 
+### Added in FA-1.22 — `agent_knowledge` (agent knowledge base)
+Migration `20261005000000_add_agent_knowledge.sql`. One row = one knowledge entry the
+draft-reply agent can load. Replaces `docs/knowledge/*.md`, which FA-1.23 deletes:
+editing in the panel instead of git + deploy, and one source of truth (tj, 2026-09-22).
+
+```
+agent_knowledge (id, kind, country, guide_id, title, body, active,
+                 updated_by → auth.users, created_at, updated_at)
+```
+
+`kind ∈ instructions | tone | destination | guide` (CHECK, not an enum). The database
+guarantees an entry is loadable rather than trusting the writer:
+
+| Rule | Enforced by |
+|---|---|
+| `country` only from `COUNTRIES` (`src/lib/countries.ts`), full names | `agent_knowledge_country_check` |
+| `destination` ⇒ has `country`, no `guide_id` | `agent_knowledge_destination_shape` |
+| `guide` ⇒ has `guide_id`, no `country` | `agent_knowledge_guide_shape` |
+| `instructions`/`tone` ⇒ neither | `agent_knowledge_global_shape` |
+| at most one **active** `instructions` entry | partial unique index `agent_knowledge_one_active_instructions` |
+| `title`/`body` not blank | `agent_knowledge_title_not_blank`, `…_body_not_blank` |
+| `updated_at` on every UPDATE | trigger on `public.set_updated_at()` |
+
+The guide is referenced by `guide_id`, not by surname — the old file format matched
+`guides.full_name` case-insensitively, so a typo silently dropped the entry.
+`guide_id` is `ON DELETE RESTRICT`: there is no change history (O-22, only
+`updated_by`/`updated_at`), so a cascade would destroy hand-typed rate notes for good.
+Guide rates are prose inside `body`; structured fields wait for stage 4 (O-21).
+
+**RLS:** admin only — one `FOR ALL TO authenticated` policy gated on
+`profiles.role = 'admin'`, the baseline pattern. No policy for anon, guides or anglers,
+plus `REVOKE ALL … FROM anon` because the baseline's `ALTER DEFAULT PRIVILEGES` grants
+anon `ALL` on every new `public` table. No policy for `service_role` either — it has
+`rolbypassrls`, so `GRANT ALL … TO service_role` is what actually opens the table to the
+FA-1.23 loader. A sync test (`src/lib/__tests__/agentKnowledgeCountries.test.ts`) keeps
+the country list in the CHECK equal to `COUNTRIES`.
+
 ### Still in `public`, dead or near-dead (candidates for later tasks)
 `guide_images` (admin insert + guide profile read — FA-1.07/1.08),
 `guide_submissions` (read-only archive; writer component unrendered — FA-1.07),
@@ -114,6 +151,7 @@ offers           (inquiry_id, version, status, token, totals in cents, options, 
 payments         (inquiry_id, offer_id, kind ∈ deposit|balance|refund, provider ids, amount_cents, currency, status, paid_at)
 deals            (inquiry_id PK, offer_id, total_cents, commission_cents, currency, fx_rate_pln, recognized_at)
 inquiry_events   (see 01-architecture.md §3)
+agent_knowledge  (kind, country, guide_id, title, body, active, updated_by) — unchanged from FA-1.22
 messages         (= lead_messages + external_id UNIQUE + thread_id)
 unmatched_messages (+ resolved_inquiry_id, resolved_at)
 reviews          (+ guide_id, inquiry_id explicit)
