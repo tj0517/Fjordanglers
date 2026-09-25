@@ -45,7 +45,7 @@ export function EventTimeline({ events }: Props) {
               <span className="text-muted-foreground ml-auto">{fmtDateTime(evt.occurred_at)}</span>
             </div>
             {Object.keys(evt.payload).length > 0 && (
-              <p className="text-muted-foreground mt-0.5 truncate">
+              <p className="text-muted-foreground mt-0.5 break-words [overflow-wrap:anywhere]">
                 {Object.entries(evt.payload)
                   .map(([k, v]) => `${k}: ${String(v)}`)
                   .join(' · ')}
