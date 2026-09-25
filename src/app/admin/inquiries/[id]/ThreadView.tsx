@@ -83,7 +83,7 @@ export function ThreadView({ thread, anglerName }: Props) {
                   <span className="text-[10px] f-body text-muted-foreground">{fmtDateTime(item.sentAt)}</span>
                   <span className="text-[9px] font-bold uppercase tracking-[0.12em] px-1.5 py-0.5 rounded f-body bg-muted text-muted-foreground">Inquiry</span>
                 </div>
-                <div className="px-3 py-2.5 rounded-xl text-sm f-body leading-relaxed italic bg-muted/40 border border-border/50 text-foreground/80 whitespace-pre-wrap">
+                <div className="px-3 py-2.5 rounded-xl text-sm f-body leading-relaxed italic bg-muted/40 border border-border/50 text-foreground/80 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                   &ldquo;{body}&rdquo;
                 </div>
                 {shouldCollapse(item, i, thread) && (
@@ -152,7 +152,7 @@ export function ThreadView({ thread, anglerName }: Props) {
                   {item.subject != null && item.subject.trim() !== '' && (
                     <p className="text-xs font-bold f-body mb-1 text-foreground">{item.subject}</p>
                   )}
-                  <p className="text-sm f-body leading-relaxed text-foreground/85 whitespace-pre-wrap">{body}</p>
+                  <p className="text-sm f-body leading-relaxed text-foreground/85 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{body}</p>
                 </div>
                 {shouldCollapse(item, i, thread) && (
                   <Button variant="ghost" size="xs" onClick={() => toggleExpand(item.id)} className="mt-1 text-muted-foreground">
