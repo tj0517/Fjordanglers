@@ -65,7 +65,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.30 | Wiadomość z linkiem depozytu — nazwa i opis wyprawy w Stripe; szkic od agenta AI, kwotę i link wstawia kod | M | sonnet | done | FA-1.29 |
 | FA-1.31 | Panel admina reaguje — stan ładowania przy nawigacji, „trwa” i blokada podwójnego kliknięcia na wszystkich akcjach | M | sonnet | done | FA-1.29 |
 | FA-1.32 | Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa | L | opus | done | FA-1.31 + makieta (O-24) |
-| FA-1.33 | Karta zapytania — zakładki natychmiast i jako pigułki; Overview nie wychodzi poza ekran | S | sonnet | in_progress | FA-1.32 |
+| FA-1.33 | Karta zapytania — zakładki natychmiast i jako pigułki; Overview nie wychodzi poza ekran | S | sonnet | review | FA-1.32 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |

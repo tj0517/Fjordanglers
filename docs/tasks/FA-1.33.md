@@ -2,7 +2,7 @@
 id: FA-1.33
 title: Karta zapytania — zakładki natychmiast i jako pigułki; Overview nie wychodzi poza ekran
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
