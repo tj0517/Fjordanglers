@@ -2,13 +2,14 @@
 id: FA-1.29
 title: Link depozytu działa — kwota i waluta z FA-1.28, „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie
 stage: 1
-status: todo
+status: done
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/deposit-link
+pr: 104
 depends_on: [FA-1.28]
 blocked_by_questions: []
 touches_db: true
@@ -78,5 +79,70 @@ psql "$LOCAL_DB_URL" -c "select status, deposit_paid_at from inquiries where id 
 pnpm typecheck && pnpm lint && pnpm test run
 ```
 
+## Decyzje tj (25 IX 2026)
+
+- **D1 — `markClientAccepted` nie zmienia statusu.** Publiczna ścieżka `acceptOffer` w `src/actions/inquiries.ts` (strona `/offers/[token]`) pozostaje bez zmian; jej zachowanie wobec statusu odroczone do osobnego zadania — wiersz w `docs/deferred-tasks.md` (D1, 25 IX).
+- **D2 — widoczność kwoty i ostrzeżenie na karcie.** Obok aktywnego linku pokazana kwota i waluta, dla których go utworzono (z payloadu ostatniego zdarzenia `payment.link_sent` dla tego `link_id`). Gdy zapisana kwota lub waluta różni się od tych z linku — ostrzeżenie „amount changed — create a new link"; przycisk tworzenia zastępuje wtedy link. Wyłącznie wyświetlanie; akcja ustawiania kwoty z FA-1.28 bez zmian.
+
+## Preflight (poprawki tj, 25 IX 2026)
+
+- Serwer MCP `stripe` nie jest wymagany w tym zadaniu. Wszystkie odczyty Stripe przez Stripe CLI w trybie testowym (bez `--live`), np. `stripe payment_links retrieve <id>`.
+- Sprawdzenie klucza przez `grep -q '^STRIPE_SECRET_KEY=sk_test_' .env.local && echo test-key-ok` (nie w shellu). Klucz: test-key-ok. Stripe CLI: zalogowany w sandboxie „Fjordanglers" (`acct_1TDnzbCkrtMjTevh`) — ten sam, z którego korzysta lokalna aplikacja.
+
+## Odczyt bieżącego stanu (25 IX 2026)
+
+- Prod: **2** zapytania w `awaiting_payment` bez zdarzenia `payment.link_sent` — utknęły przez błąd w `markClientAccepted` (query: `SELECT count(*) FROM inquiries i WHERE i.status = 'awaiting_payment' AND NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.inquiry_id = i.id AND e.type = 'payment.link_sent')`).
+- Lokalnie: `markClientAccepted` wywołuje `transition(svc, inquiryId, 'awaiting_payment', ...)` (linia 485) mimo braku linku. `createPaymentLink` bierze kwotę i walutę od wywołującego, tworzy nowy obiekt Stripe przy każdym wywołaniu, nie zapisuje id/URL linku w kolumnach FA-1.28.
+
+## Wyniki weryfikacji (2026-09-25)
+
+### Client Accepted → status stays offer_presented
+```
+ id                                   | status
+--------------------------------------+-----------------
+ a9a9a9a9-a9a9-4a9a-8a9a-a9a9a9a9a901 | offer_presented
+```
+
+### After createPaymentLink → status, events, columns
+```
+ status           | deposit_amount_cents | deposit_currency | deposit_payment_link_id        | deposit_payment_link_url
+------------------+----------------------+------------------+--------------------------------+-----------------------------------------------------
+ awaiting_payment |                24000 | EUR              | plink_1UJWRjCkrtMjTevhKZymEIec | https://buy.stripe.com/test_5kQ4gy5aj3miePVbJk0co08
+
+type               | payload
+--------------------+-------------------------------------------------
+ offer.accepted     | {offer_id, option_id}
+ deposit.amount_set | {currency: EUR, eur_rate: 1, amount_cents: 24000}
+ payment.link_sent  | {link_id, currency: EUR, amount_cents: 24000}
+ status.changed     | {reason: Payment link created}
+```
+Link visible after page reload — screenshot taken. Copy button present.
+
+### Amount change → old link deactivated
+```
+stripe payment_links retrieve plink_1UJWRjCkrtMjTevhKZymEIec
+"active": false
+```
+New link created: plink_1UJWSbCkrtMjTevhiSpRa0tn
+
+### Full loop (stripe trigger → webhook → paid)
+```
+stripe listen → checkout.session.completed [evt_1UJWVICkrtMjTevhuUJFPRgq] → 200
+ status | deposit_paid_at            | deposit_stripe_session_id
+--------+----------------------------+-------------------------------------------------------------------
+ paid   | 2026-09-25 10:37:19.074+00 | cs_test_a19kcDd0w8fmGeNfK6EDzP0ZkDGNVaSX1kAnQjyKYQaFAueyuKmSDzdEfv
+
+payment.received payload: {currency: USD, amount_cents: 3000, stripe_session_id: ...}
+```
+Currency uppercase confirmed (synthetic event uses USD, stored as "USD" not "usd").
+
+### Tests: pnpm typecheck && pnpm lint && pnpm test run
+- 43 test files, 378 tests — all pass
+- 0 typecheck errors, 0 lint errors
+
 ## Notatki z realizacji
 - 2026-09-24 tj (wf-plan): zadanie z wiersza FA-1.18 w `docs/deferred-tasks.md`; wydanie przez `stage-1`.
+- 2026-09-25 tj: decyzje D1 i D2 + poprawki preflight dopisane do zadania w pierwszym commicie (in_progress).
+- 2026-09-25 Claude: implementacja kompletna — 7 plików, 378 testów zielonych, pełna pętla lokalna zweryfikowana.
+- 2026-09-25 Claude: pełna pętla 4242 przez buy.stripe.com (nie stripe trigger) — status paid, deposit_paid_at ustawione, payment.received z EUR/24000. ISK screenshot: .playwright-mcp/fa129-isk-payment-page.png (ISK 500.00 = 50000/100). PR #104 otwarty.
+- 2026-09-25 tj (wf-review): accepted after 2 rounds, PR #104. Proven: markClientAccepted keeps offer_presented (test + SELECT); link creation sets awaiting_payment + payment.link_sent + link columns (SELECT); idempotency, no-amount error and failed-deactivation abort (tests, no Stripe calls); amount change old link active:false / new active:true (Stripe CLI); full 4242 loop through buy.stripe.com → paid, payment.received EUR 24000 = link; ISK ×100 = Stripe two-decimal (docs + test + screenshot, ISK 500 checked by tj); prod: 2 inquiries stuck in awaiting_payment without a link (count only, fix is tj's decision). UI screenshots in .playwright-mcp on PC, checked by tj. Agent ran on Sonnet 4.6 (task recommended Opus). Deferred: D1 — acceptOffer and the Checkout paths still set awaiting_payment on their own.
