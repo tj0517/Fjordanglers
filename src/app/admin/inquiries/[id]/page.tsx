@@ -139,6 +139,25 @@ export default async function AdminInquiryDetailPage({
     // Table not yet migrated — graceful fallback
   }
 
+  // Latest agent draft for the composer — pre-fills body after deposit link creation (FA-1.30)
+  let latestAnglerDraft: { id: string; body: string } | null = null
+  try {
+    const { data: draftRow } = await svc
+      .from('messages')
+      .select('id, body')
+      .eq('inquiry_id', id)
+      .eq('status', 'draft')
+      .eq('direction', 'outbound')
+      .eq('counterpart', 'angler')
+      .eq('drafted_by', 'agent')
+      .order('occurred_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (draftRow != null) latestAnglerDraft = draftRow as { id: string; body: string }
+  } catch {
+    // graceful fallback
+  }
+
   // ── Fetch inquiry events ──────────────────────────────────────────────────
   let inquiryEvents: Array<{
     id:          string
@@ -495,12 +514,15 @@ export default async function AdminInquiryDetailPage({
         </div>
         <div className="px-5 py-4">
           <MessageComposer
+            key={latestAnglerDraft?.id ?? 'no-draft'}
             inquiryId={inquiry.id}
             guideAssigned={inquiry.assigned_guide_id != null}
             anglerHasPhone={anglerHasPhone}
             guideHasPhone={guideHasPhone}
             waLastInboundAt={waLastInboundAt}
             igEnabled={igEnabled}
+            initialDraftId={latestAnglerDraft?.id ?? null}
+            initialDraftText={latestAnglerDraft?.body ?? null}
           />
         </div>
       </div>

@@ -2,13 +2,14 @@
 id: FA-1.30
 title: Wiadomość z linkiem depozytu — nazwa i opis wyprawy w Stripe; szkic od agenta AI, kwotę i link wstawia kod
 stage: 1
-status: todo
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/deposit-message
+pr: https://github.com/TymonJezionek/fjordanglers/pull/105
 depends_on: [FA-1.29]
 blocked_by_questions: []
 touches_db: false
@@ -46,11 +47,11 @@ Dziś klient na stronie płatności widzi stały napis „Booking & Curation Fee
 - [ ] Po utworzeniu linku kompozytor w „Conversation” otwiera się ze szkicem; admin edytuje i wysyła zwykłą ścieżką.
 
 ## Gotowe, gdy
-- [ ] Nazwa i opis produktu: test sprawdza argumenty `prices.create`/`paymentLinks.create` (wyprawa, termin, liczba osób); w trybie testowym Stripe strona płatności pokazuje nową nazwę — **zrzut**.
-- [ ] Szkic zawiera dokładną kwotę z walutą i URL aktywnego linku — test na wyjściu z zamockowanym modelem.
-- [ ] Red proof: model zwraca tekst bez linku albo ze zmienioną kwotą → szkic nie trafia do kompozytora, admin widzi komunikat o błędzie (test); to samo przy braku klucza AI.
-- [ ] Kompozytor po utworzeniu linku pokazuje szkic — **zrzut Playwright**.
-- [ ] `pnpm typecheck && pnpm lint && pnpm test run` zielone.
+- [x] Nazwa i opis produktu: test sprawdza argumenty `prices.create`/`paymentLinks.create` (wyprawa, termin, liczba osób); w trybie testowym Stripe strona płatności pokazuje nową nazwę — **zrzut**.
+- [x] Szkic zawiera dokładną kwotę z walutą i URL aktywnego linku — test na wyjściu z zamockowanym modelem.
+- [x] Red proof: model zwraca tekst bez linku albo ze zmienioną kwotą → szkic nie trafia do kompozytora, admin widzi komunikat o błędzie (test); to samo przy braku klucza AI.
+- [x] Kompozytor po utworzeniu linku pokazuje szkic — **zrzut Playwright**.
+- [x] `pnpm typecheck && pnpm lint && pnpm test run` zielone.
 
 ## Poza zakresem
 - Logika linku (kwota, status, jeden aktywny link) → FA-1.29
@@ -71,3 +72,5 @@ pnpm typecheck && pnpm lint && pnpm test run
 
 ## Notatki z realizacji
 - 2026-09-24 tj (wf-plan): zadanie z wiersza FA-1.18 w `docs/deferred-tasks.md`.
+- 2026-09-25 tj (wf-task): D1 — description via a separately created Stripe product with name + description (price_data.product_data has no description field); D2 — AI draft only when a new link is created; the same-amount reuse branch creates no draft. D3 — Stripe evidence via Stripe CLI in test mode; the stripe MCP server is not configured.
+- 2026-09-25 tj (implementation complete): 14 test files, 123 tests pass. Stripe CLI verification (test mode, prod_VKDoE5chuTkdzI): `"livemode": false`, `"name": "Your trip — 15–18 Jul 2026 · 2 people"`, `"description": "FjordAnglers booking & curation fee. The trip balance is paid directly to your guide after arrival."`. Playwright screenshots: Stripe page (.playwright-mcp/page-2026-09-25T13-42-05-753Z.png), composer pre-filled (.playwright-mcp/page-2026-09-25T13-41-24-676Z.png), offer card with link (.playwright-mcp/page-2026-09-25T13-41-03-044Z.png).

@@ -20,9 +20,19 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/stripe/client', () => ({
   stripe: {
+    products:     { create: vi.fn() },
     prices:       { create: vi.fn() },
     paymentLinks: { create: vi.fn(), update: vi.fn() },
   },
+}))
+
+vi.mock('@/lib/ai/draft-deposit-link', () => ({
+  draftDepositLinkMessage:     vi.fn().mockResolvedValue({ draftId: 'draft-ai-1', text: 'Here is your link.' }),
+  buildStripeProductName:      vi.fn().mockReturnValue('Test Trip · 1 person'),
+  buildStripeProductDescription: vi.fn().mockReturnValue('FjordAnglers booking & curation fee.'),
+  AMOUNT_PLACEHOLDER:          '{{DEPOSIT_AMOUNT}}',
+  LINK_PLACEHOLDER:            '{{PAYMENT_LINK}}',
+  DraftDepositLinkError:       class DraftDepositLinkError extends Error {},
 }))
 
 vi.mock('@/lib/env', () => ({
@@ -335,6 +345,7 @@ describe('markClientAccepted — FA-1.29 D1: no awaiting_payment transition', ()
 // ─── FA-1.29: createPaymentLink ───────────────────────────────────────────────
 
 import { stripe } from '@/lib/stripe/client'
+import { draftDepositLinkMessage } from '@/lib/ai/draft-deposit-link'
 
 describe('createPaymentLink — FA-1.29', () => {
   it('returns error when deposit_amount_cents is null, no Stripe call', async () => {
@@ -411,6 +422,7 @@ describe('createPaymentLink — FA-1.29', () => {
   it('amount changed: deactivates old link and creates a new one', async () => {
     mockAdmin()
     const oldLinkId = 'plink_old'
+    vi.mocked(stripe.products.create).mockResolvedValue({ id: 'prod_new' } as never)
     vi.mocked(stripe.prices.create).mockResolvedValue({ id: 'price_new' } as never)
     vi.mocked(stripe.paymentLinks.create).mockResolvedValue({ id: 'plink_new', url: 'https://buy.stripe.com/new' } as never)
     vi.mocked(stripe.paymentLinks.update).mockResolvedValue({} as never)
@@ -465,13 +477,14 @@ describe('createPaymentLink — FA-1.29', () => {
     const { createPaymentLink } = await import('@/actions/messages')
     const result = await createPaymentLink('inq-1')
 
-    expect(result).toEqual({ success: true, url: 'https://buy.stripe.com/new' })
+    expect(result).toMatchObject({ success: true, url: 'https://buy.stripe.com/new' })
     expect(vi.mocked(stripe.paymentLinks.update)).toHaveBeenCalledWith(oldLinkId, { active: false })
     expect(vi.mocked(stripe.paymentLinks.create)).toHaveBeenCalledTimes(1)
   })
 
   it('ISK: passes deposit_amount_cents directly to Stripe unit_amount (no ÷100)', async () => {
     mockAdmin()
+    vi.mocked(stripe.products.create).mockResolvedValue({ id: 'prod_isk' } as never)
     vi.mocked(stripe.prices.create).mockResolvedValue({ id: 'price_isk' } as never)
     vi.mocked(stripe.paymentLinks.create).mockResolvedValue({ id: 'plink_isk', url: 'https://buy.stripe.com/isk' } as never)
 
@@ -506,13 +519,156 @@ describe('createPaymentLink — FA-1.29', () => {
     await createPaymentLink('inq-isk')
 
     expect(vi.mocked(stripe.prices.create)).toHaveBeenCalledWith(
-      expect.objectContaining({ currency: 'isk', unit_amount: 50000 }),
+      expect.objectContaining({ currency: 'isk', unit_amount: 50000, product: 'prod_isk' }),
     )
+  })
+
+  it('FA-1.30: product.create called with name/description, price.create uses that product id', async () => {
+    mockAdmin()
+    vi.mocked(stripe.products.create).mockResolvedValue({ id: 'prod_named' } as never)
+    vi.mocked(stripe.prices.create).mockResolvedValue({ id: 'price_named' } as never)
+    vi.mocked(stripe.paymentLinks.create).mockResolvedValue({ id: 'plink_named', url: 'https://buy.stripe.com/named' } as never)
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-new', angler_name: 'Gunnar', angler_email: 'g@is.is', party_size: 2,
+                    deposit_amount_cents: 30000, deposit_currency: 'EUR',
+                    deposit_payment_link_id: null, deposit_payment_link_url: null,
+                  }, error: null,
+                }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        return {
+          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-y' }, error: null }) }) }),
+          update: () => ({ eq: () => ({ error: null }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-new')
+
+    expect(result).toMatchObject({ success: true, url: 'https://buy.stripe.com/named' })
+    // product.create must be called with name and description
+    expect(vi.mocked(stripe.products.create)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name:        expect.any(String),
+        description: expect.any(String),
+        metadata:    { inquiry_id: 'inq-new' },
+      }),
+    )
+    // price.create must reference the product id, not product_data
+    expect(vi.mocked(stripe.prices.create)).toHaveBeenCalledWith(
+      expect.objectContaining({ product: 'prod_named', currency: 'eur', unit_amount: 30000 }),
+    )
+  })
+
+  it('FA-1.30: same-amount reuse — no products.create, no prices.create, no AI draft call', async () => {
+    mockAdmin()
+    const existingLinkId  = 'plink_existing'
+    const existingLinkUrl = 'https://buy.stripe.com/existing'
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-1', angler_name: 'Alice', angler_email: 'a@x.com', party_size: 2,
+                    deposit_amount_cents: 20000, deposit_currency: 'EUR',
+                    deposit_payment_link_id: existingLinkId,
+                    deposit_payment_link_url: existingLinkUrl,
+                  }, error: null,
+                }),
+              }),
+            }),
+          }
+        }
+        if (table === 'inquiry_events') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({
+                        data: { payload: { link_id: existingLinkId, amount_cents: 20000, currency: 'EUR' } },
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }
+        }
+        return { select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }) }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-1')
+
+    expect(result).toEqual({ success: true, url: existingLinkUrl })
+    expect(vi.mocked(stripe.products.create)).not.toHaveBeenCalled()
+    expect(vi.mocked(stripe.paymentLinks.create)).not.toHaveBeenCalled()
+    expect(vi.mocked(draftDepositLinkMessage)).not.toHaveBeenCalled()
+  })
+
+  it('FA-1.30: draft fails — link still created, draftError returned, no throw', async () => {
+    mockAdmin()
+    vi.mocked(stripe.products.create).mockResolvedValue({ id: 'prod_df' } as never)
+    vi.mocked(stripe.prices.create).mockResolvedValue({ id: 'price_df' } as never)
+    vi.mocked(stripe.paymentLinks.create).mockResolvedValue({ id: 'plink_df', url: 'https://buy.stripe.com/df' } as never)
+    vi.mocked(draftDepositLinkMessage).mockRejectedValue(new Error('AI unavailable'))
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-df', angler_name: 'Lars', angler_email: 'l@no.no', party_size: 1,
+                    deposit_amount_cents: 10000, deposit_currency: 'EUR',
+                    deposit_payment_link_id: null, deposit_payment_link_url: null,
+                  }, error: null,
+                }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        return {
+          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-df' }, error: null }) }) }),
+          update: () => ({ eq: () => ({ error: null }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-df')
+
+    // Link is still created despite draft failure
+    expect(result).toMatchObject({ success: true, url: 'https://buy.stripe.com/df' })
+    expect((result as { draftError?: string }).draftError).toContain('AI unavailable')
   })
 
   it('deactivation fails: returns error, no prices.create or paymentLinks.create called', async () => {
     mockAdmin()
     const oldLinkId = 'plink_old'
+    vi.mocked(stripe.products.create).mockResolvedValue({ id: 'prod_x' } as never)
     vi.mocked(stripe.paymentLinks.update).mockRejectedValue(new Error('Stripe network error'))
 
     vi.mocked(createServiceClient).mockReturnValue({

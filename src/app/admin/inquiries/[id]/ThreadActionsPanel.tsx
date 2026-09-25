@@ -219,7 +219,11 @@ export function ThreadActionsPanel({
       const res = await createPaymentLink(inquiryId)
       if (res.success) {
         setDepositUrl(res.url)
-        flash(setDepositFlash)
+        if (res.draftError) {
+          setDepositError(`Link created — draft failed: ${res.draftError}`)
+        } else {
+          flash(setDepositFlash)
+        }
         router.refresh()
       } else {
         setDepositError(res.error)

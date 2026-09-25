@@ -54,6 +54,13 @@ import { transition, TransitionError } from '@/lib/inquiries/state'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
+import { formatDepositAmount } from '@/lib/inquiries/deposit'
+import { getInquiryExperience, tripTitleOf, TRIP_TITLE_FALLBACK } from '@/lib/inquiries/experience-lookup'
+import {
+  draftDepositLinkMessage,
+  buildStripeProductName,
+  buildStripeProductDescription,
+} from '@/lib/ai/draft-deposit-link'
 
 // ─── matchUnmatchedMessage ────────────────────────────────────────────────────
 
@@ -605,7 +612,7 @@ export async function markContactsExchanged(messageId: string): Promise<ActionRe
 // ─── createPaymentLink ────────────────────────────────────────────────────────
 
 export type CreatePaymentLinkResult =
-  | { success: true;  url: string }
+  | { success: true;  url: string; draftId?: string; draftText?: string; draftError?: string }
   | { success: false; error: string }
 
 export async function createPaymentLink(
@@ -616,7 +623,7 @@ export async function createPaymentLink(
 
   const { data: inq } = await svc
     .from('inquiries')
-    .select('id, angler_name, angler_email, party_size, deposit_amount_cents, deposit_currency, deposit_payment_link_id, deposit_payment_link_url')
+    .select('id, angler_name, angler_email, party_size, deposit_amount_cents, deposit_currency, deposit_payment_link_id, deposit_payment_link_url, trip_id, experience_page_id, requested_dates')
     .eq('id', inquiryId)
     .single()
   if (inq == null) return { success: false, error: 'Inquiry not found' }
@@ -663,18 +670,30 @@ export async function createPaymentLink(
   }
 
   // ── Create new Stripe link ────────────────────────────────────────────────
+  // Product is created explicitly so we can set both name and description
+  // (prices.create product_data has no description field — decision tj 2026-09-25).
   // All four deposit currencies (EUR, USD, ISK, NZD) use ×100 storage — which matches
   // Stripe's unit_amount convention for these currencies (Stripe docs: ISK requires
   // a two-decimal representation ending in 00, e.g. 500 for 5 ISK — same ×100 as EUR).
   let paymentLink: { url: string; id: string }
   try {
+    const experience = await getInquiryExperience({
+      experience_page_id: (inq as typeof inq & { experience_page_id?: string | null }).experience_page_id ?? null,
+      trip_id:            (inq as typeof inq & { trip_id?: string | null }).trip_id ?? null,
+    })
+    const tripTitle    = tripTitleOf(experience) ?? TRIP_TITLE_FALLBACK
+    const requestedDates = ((inq as typeof inq & { requested_dates?: string[] | null }).requested_dates ?? []) as string[]
+    const partySize    = (inq.party_size as number | null) ?? 1
+
+    const product = await stripe.products.create({
+      name:        buildStripeProductName(tripTitle, requestedDates, partySize),
+      description: buildStripeProductDescription(),
+      metadata:    { inquiry_id: inquiryId },
+    })
     const price = await stripe.prices.create({
-      currency:     currency.toLowerCase(),
-      unit_amount:  amountCents,
-      product_data: {
-        name:     'Booking & Curation Fee — FjordAnglers',
-        metadata: { inquiry_id: inquiryId },
-      },
+      currency:    currency.toLowerCase(),
+      unit_amount: amountCents,
+      product:     product.id,
     })
     const link = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
@@ -696,17 +715,24 @@ export async function createPaymentLink(
     .update({ deposit_payment_link_id: paymentLink.id, deposit_payment_link_url: paymentLink.url })
     .eq('id', inquiryId)
 
-  // Insert a draft message row with the link as body — admin will paste and send
-  await svc.from('messages').insert({
-    inquiry_id:  inquiryId,
-    channel:     'email',
-    direction:   'outbound',
-    counterpart: 'angler',
-    body:        `Payment link: ${paymentLink.url}`,
-    status:      'draft',
-    drafted_by:  'admin',
-    occurred_at: new Date().toISOString(),
-  })
+  // AI draft — replace the old static "Payment link: <url>" draft row (FA-1.30).
+  // If the draft fails, the link is still valid and visible on the card (O-23).
+  let draftId:    string | undefined
+  let draftText:  string | undefined
+  let draftError: string | undefined
+  try {
+    const amountString = formatDepositAmount(amountCents, currency)
+    const draft = await draftDepositLinkMessage({
+      inquiryId,
+      amountString,
+      linkUrl: paymentLink.url,
+    })
+    draftId   = draft.draftId
+    draftText = draft.text
+  } catch (err) {
+    console.error('[createPaymentLink] draft error:', err)
+    draftError = err instanceof Error ? err.message : 'Draft failed'
+  }
 
   await emitEvent(svc, {
     inquiryId,
@@ -729,7 +755,7 @@ export async function createPaymentLink(
   }
 
   revalidatePath('/admin/inquiries/' + inquiryId)
-  return { success: true, url: paymentLink.url }
+  return { success: true, url: paymentLink.url, draftId, draftText, draftError }
 }
 
 // ─── proposeDraft — FA-1.14 ───────────────────────────────────────────────────
