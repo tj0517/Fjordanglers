@@ -46,6 +46,7 @@ const EMITTED_EVENT_TYPES = [
   'inquiry.lost',             // transition('lost') with a lost_reason_code
   'trip.completed',           // trip finished
   'agent.auto_send_decided',  // hybrid auto-send decision: score, send, reasons (FA-1.27)
+  'deposit.amount_set',       // admin sets deposit amount (FA-1.28); payload: amount_cents, currency, eur_rate, eur_rate_at
 ] as const
 
 // ─── Reserved — no emitter yet ────────────────────────────────────────────────

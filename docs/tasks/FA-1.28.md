@@ -2,7 +2,7 @@
 id: FA-1.28
 title: Kwota depozytu w danych — kwota w groszach, waluta opcji, kurs do EUR zamrożony; pole kwoty na karcie z podpowiedzią 20%
 stage: 1
-status: todo
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -13,6 +13,7 @@ depends_on: []
 blocked_by_questions: []
 touches_db: true
 touches_prod: true
+pr: 103
 estimate_h: 6
 owner: tj
 ---
@@ -50,7 +51,7 @@ Dziś panel nie ma jak ustawić kwoty depozytu, więc przycisk „Create Deposit
 - [ ] Regeneracja typów (`pnpm supabase:types`).
 - [ ] Jedna stała `DEPOSIT_PERCENT = 20` w jednym miejscu w kodzie.
 - [ ] Akcja serwerowa ustawiająca kwotę: `requireAdmin()`, walidacja (kwota > 0, waluta = waluta zaakceptowanej opcji, kurs pobrany — brak kursu = błąd bez zapisu), zapis kwoty + waluty + kursu, zdarzenie w `inquiry_events` (np. `deposit.amount_set` z kwotą, walutą i kursem w payloadzie).
-- [ ] Karta zapytania: przy zaakceptowanej opcji pole kwoty z podpowiedzią `20% × cena opcji` w walucie opcji, edytowalne, zapis przyciskiem ze stanem „trwa” i blokadą podwójnego kliknięcia. Warunek pokazania „Create Deposit Link” opiera się na nowych polach.
+- [ ] Karta zapytania: przy zaakceptowanej opcji pole kwoty z podpowiedzią `20% × cena opcji` w walucie opcji, edytowalne, zapis przyciskiem ze stanem „trwa” i blokadą podwójnego kliknięcia.
 - [ ] Webhook depozytu i metryki prowizji (`commission.ts`, `pipeline-utils.ts`, `/admin/weekly`, `/admin/finances`) czytają nowe pola; EUR liczone przez zamrożony kurs. Stare wiersze bez nowych pól liczone dokładnie jak przed zmianą.
 - [ ] Testy jednostkowe: podpowiedź (20% ceny za grupę, zaokrąglenie do pełnych groszy / jednostek waluty — także ISK); walidacja akcji; przeliczenie w metrykach; webhook na nowych polach i na starym wierszu.
 
@@ -82,10 +83,14 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 ## Weryfikacja
 ```
 supabase db reset
-psql "$LOCAL_DB_URL" -c "select column_name, data_type from information_schema.columns where table_name='inquiries' and column_name like 'deposit%'"
+psql "postgresql://postgres:postgres@127.0.0.1:54422/postgres" -c "select column_name, data_type from information_schema.columns where table_name='inquiries' and column_name like 'deposit%'"
 git diff --stat stage-1...HEAD -- src/lib/supabase/database.types.ts
 pnpm typecheck && pnpm lint && pnpm test run
 ```
+(Wpisz `pnpm supabase:types:local` zamiast `pnpm supabase:types`, które nie istnieje.)
 
 ## Notatki z realizacji
 - 2026-09-24 tj (wf-plan): zadanie powstało z wiersza FA-1.18 w `docs/deferred-tasks.md` (bloker na żywej ścieżce, kod na produkcji od 19 IX); decyzje w sekcji „Decyzje tj”.
+- 2026-09-24 tj (wf-task): przycisk „Create Deposit Link” (warunek pokazania i działanie) w całości w FA-1.29; 1.28 tylko ustawia i zapisuje kwotę.
+- 2026-09-24 tj (STOP migracji): waluty depozytu tylko EUR/USD/ISK/NZD (CHECK w bazie; oferta w innej walucie, np. NOK/SEK, nie dostanie depozytu do czasu migracji rozszerzającej listę); baza pilnuje „wszystko albo nic” i kwoty > 0; ISK w groszach (×100) jak offer_options.price_cents.
+- 2026-09-24 tj (wf-review): przyjęte po 2 rundach, PR #103. Udowodnione: migracja (db reset + information_schema + CI db), 3 red proofy bazy (all_or_nothing / positive / currency_check), zapis przez UI + zdarzenie deposit.amount_set (SELECT), metryki i webhook na nowych polach i starym wierszu (testy), kurs ISK na żywo z frankfurter (138.0). UI: zrzuty wg konwencji (ścieżki + ls, .playwright-mcp w .gitignore). Deferred: blokada edycji po wpłacie, zdarzenie łykane po UPDATE.

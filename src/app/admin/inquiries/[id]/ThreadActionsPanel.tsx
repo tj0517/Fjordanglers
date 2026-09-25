@@ -13,6 +13,8 @@ import {
   markContactsExchanged,
   createPaymentLink,
 } from '@/actions/messages'
+import { setDepositAmount, type SetDepositAmountResult } from '@/actions/inquiries'
+import { DEPOSIT_PERCENT, depositHintCents } from '@/lib/inquiries/deposit'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -20,7 +22,7 @@ export interface OfferForPanel {
   id:               string
   status:           string
   source_message_id: string | null
-  options:          Array<{ id: string; label: string; price_cents: number; currency: string }>
+  options:          Array<{ id: string; label: string; price_cents: number; currency: string; is_accepted: boolean }>
 }
 
 export interface ThreadActionsPanelProps {
@@ -36,6 +38,10 @@ export interface ThreadActionsPanelProps {
   guideId:                string | null
   /** Deposit amount in euros — converted to cents for createPaymentLink */
   depositAmountEur:       number | null
+  /** FA-1.28: deposit amount in minor units ×100 (null = not yet set) */
+  depositAmountCents:     number | null
+  /** FA-1.28: deposit currency (null = not yet set) */
+  depositCurrency:        string | null
   guideNotifiedPaid:      boolean
 }
 
@@ -59,6 +65,8 @@ export function ThreadActionsPanel({
   latestOutboundGuideId,
   guideId,
   depositAmountEur,
+  depositAmountCents,
+  depositCurrency,
   guideNotifiedPaid: initialGuideNotifiedPaid,
 }: ThreadActionsPanelProps) {
   const router  = useRouter()
@@ -81,6 +89,20 @@ export function ThreadActionsPanel({
   const [acceptPending,  startAccept]   = useTransition()
   const [acceptFlash,    setAcceptFlash] = useState(false)
   const [acceptError,    setAcceptError] = useState<string | null>(null)
+
+  // ── Deposit amount state ──────────────────────────────────────────────────
+  const acceptedOption  = offer?.options.find(o => o.is_accepted) ?? null
+  const hintCents       = acceptedOption != null ? depositHintCents(acceptedOption.price_cents) : null
+  const hintDisplay     = hintCents != null && acceptedOption != null
+    ? `${DEPOSIT_PERCENT}% = ${(hintCents / 100).toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${acceptedOption.currency.toUpperCase()}`
+    : null
+  const initialInput    = depositAmountCents != null
+    ? (depositAmountCents / 100).toFixed(2)
+    : hintCents != null ? (hintCents / 100).toFixed(2) : ''
+  const [depositInput,        setDepositInput]        = useState(initialInput)
+  const [setAmountPending,    startSetAmount]          = useTransition()
+  const [setAmountError,      setSetAmountError]       = useState<string | null>(null)
+  const [setAmountFlash,      setSetAmountFlash]       = useState(false)
 
   // ── Deposit link state ────────────────────────────────────────────────────
   const [depositPending, startDeposit]  = useTransition()
@@ -159,6 +181,25 @@ export function ThreadActionsPanel({
       const res = await markClientDeclined(offer.id)
       if (res.success) { flash(setAcceptFlash); router.refresh() }
       else setAcceptError(res.error)
+    })
+  }
+
+  function handleSetDepositAmount() {
+    const parsed = parseFloat(depositInput)
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setSetAmountError('Enter a positive amount')
+      return
+    }
+    const amountCents = Math.round(parsed * 100)
+    setSetAmountError(null)
+    startSetAmount(async () => {
+      const res: SetDepositAmountResult = await setDepositAmount(inquiryId, amountCents)
+      if (res.success) {
+        flash(setSetAmountFlash)
+        router.refresh()
+      } else {
+        setSetAmountError(res.error)
+      }
     })
   }
 
@@ -361,6 +402,56 @@ export function ThreadActionsPanel({
               className="w-full py-2 rounded-xl text-xs font-semibold f-body bg-red-50 text-red-700 border border-red-200 disabled:cursor-not-allowed"
             >
               Client Declined
+            </button>
+          </div>
+        )}
+
+        {/* ── 3b. Set Deposit Amount ─────────────────────────────────────── */}
+        {offer?.status === 'accepted' && !isPaid && acceptedOption != null && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] f-body text-muted-foreground">
+              Deposit amount
+            </p>
+            {setAmountFlash && <FlashBanner message="Deposit amount saved" />}
+            {setAmountError != null && (
+              <p className="text-[11px] f-body text-destructive">{setAmountError}</p>
+            )}
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={depositInput}
+                onChange={e => setDepositInput(e.target.value)}
+                disabled={setAmountPending}
+                className="flex-1 px-3 py-2 rounded-xl text-xs f-body outline-none placeholder:text-muted-foreground/50 bg-muted/40 border border-input text-foreground disabled:opacity-50"
+                placeholder="Amount"
+              />
+              <span className="text-xs font-semibold f-body text-muted-foreground shrink-0">
+                {acceptedOption.currency.toUpperCase()}
+              </span>
+            </div>
+            {hintDisplay != null && (
+              <p className="text-[10px] f-body text-muted-foreground">{hintDisplay}</p>
+            )}
+            {depositCurrency != null && depositAmountCents != null && (
+              <p className="text-[10px] f-body text-emerald-700">
+                Saved: {(depositAmountCents / 100).toLocaleString('en', { minimumFractionDigits: 2 })} {depositCurrency}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleSetDepositAmount}
+              disabled={setAmountPending}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold f-body text-white',
+                setAmountPending
+                  ? 'bg-accent/50 cursor-not-allowed shadow-none'
+                  : 'bg-accent cursor-pointer',
+              )}
+            >
+              {setAmountPending && <Loader2 size={11} className="animate-spin" />}
+              Save deposit amount
             </button>
           </div>
         )}

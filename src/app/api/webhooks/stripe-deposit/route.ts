@@ -128,7 +128,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     })
     .eq('id', inquiryId)
     .is('deposit_paid_at', null)
-    .select('id, angler_email, angler_name, angler_country, requested_dates, party_size, deposit_amount, trip_id, experience_page_id, guide_id')
+    .select('id, angler_email, angler_name, angler_country, requested_dates, party_size, deposit_amount, deposit_amount_cents, deposit_currency, deposit_eur_rate, trip_id, experience_page_id, guide_id')
 
   if (!updated || updated.length === 0) {
     // Idempotency guard: already processed, or inquiry_id not found.
@@ -183,7 +183,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   }))
   const guideName        = guide?.full_name     ?? 'the guide'
   const guideEmail       = guide?.invite_email  ?? null
-  const depositAmountEur = existing.deposit_amount ?? 0
+  // FA-1.28: prefer frozen-rate calculation; fall back to legacy deposit_amount (EUR).
+  const depositAmountEur =
+    existing.deposit_amount_cents != null && existing.deposit_eur_rate != null
+      ? existing.deposit_amount_cents / existing.deposit_eur_rate / 100
+      : existing.deposit_amount ?? 0
   const requestedDates   = existing.requested_dates ?? []
 
   // Fire all three confirmation emails (fire-and-forget)
