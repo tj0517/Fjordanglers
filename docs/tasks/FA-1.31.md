@@ -9,6 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: feat/admin-pending-states
+pr: 107
 depends_on: [FA-1.29]
 blocked_by_questions: []
 touches_db: false
