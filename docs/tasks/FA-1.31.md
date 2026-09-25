@@ -2,7 +2,7 @@
 id: FA-1.31
 title: Panel admina reaguje — stan ładowania przy nawigacji, „trwa” i blokada podwójnego kliknięcia na wszystkich akcjach
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
