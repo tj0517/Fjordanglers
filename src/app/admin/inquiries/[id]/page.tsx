@@ -565,7 +565,6 @@ export default async function AdminInquiryDetailPage({
         latestOutboundAnglerId={latestOutboundAnglerId}
         latestOutboundGuideId={latestOutboundGuideId}
         guideId={inquiry.assigned_guide_id ?? null}
-        depositAmountEur={inquiry.deposit_amount ?? null}
         depositAmountCents={inquiry.deposit_amount_cents ?? null}
         depositCurrency={inquiry.deposit_currency ?? null}
         depositPaymentLinkId={activeLinkId}

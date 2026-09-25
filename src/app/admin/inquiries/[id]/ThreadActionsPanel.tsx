@@ -36,8 +36,6 @@ export interface ThreadActionsPanelProps {
   /** ID of the latest outbound message to guide — used for markGuideNotifiedPaid / markContactsExchanged */
   latestOutboundGuideId:  string | null
   guideId:                string | null
-  /** @deprecated legacy EUR amount; kept for backward compat — FA-1.29 uses depositAmountCents */
-  depositAmountEur:       number | null
   /** FA-1.28: deposit amount in minor units ×100 (null = not yet set) */
   depositAmountCents:     number | null
   /** FA-1.28: deposit currency uppercase ISO (null = not yet set) */
@@ -72,7 +70,6 @@ export function ThreadActionsPanel({
   latestOutboundAnglerId,
   latestOutboundGuideId,
   guideId,
-  depositAmountEur: _depositAmountEur,
   depositAmountCents,
   depositCurrency,
   depositPaymentLinkId,

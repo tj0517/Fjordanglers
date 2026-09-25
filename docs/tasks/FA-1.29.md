@@ -2,7 +2,7 @@
 id: FA-1.29
 title: Link depozytu działa — kwota i waluta z FA-1.28, „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -145,3 +145,4 @@ Currency uppercase confirmed (synthetic event uses USD, stored as "USD" not "usd
 - 2026-09-25 tj: decyzje D1 i D2 + poprawki preflight dopisane do zadania w pierwszym commicie (in_progress).
 - 2026-09-25 Claude: implementacja kompletna — 7 plików, 378 testów zielonych, pełna pętla lokalna zweryfikowana.
 - 2026-09-25 Claude: pełna pętla 4242 przez buy.stripe.com (nie stripe trigger) — status paid, deposit_paid_at ustawione, payment.received z EUR/24000. ISK screenshot: .playwright-mcp/fa129-isk-payment-page.png (ISK 500.00 = 50000/100). PR #104 otwarty.
+- 2026-09-25 tj (wf-review): accepted after 2 rounds, PR #104. Proven: markClientAccepted keeps offer_presented (test + SELECT); link creation sets awaiting_payment + payment.link_sent + link columns (SELECT); idempotency, no-amount error and failed-deactivation abort (tests, no Stripe calls); amount change old link active:false / new active:true (Stripe CLI); full 4242 loop through buy.stripe.com → paid, payment.received EUR 24000 = link; ISK ×100 = Stripe two-decimal (docs + test + screenshot, ISK 500 checked by tj); prod: 2 inquiries stuck in awaiting_payment without a link (count only, fix is tj's decision). UI screenshots in .playwright-mcp on PC, checked by tj. Agent ran on Sonnet 4.6 (task recommended Opus). Deferred: D1 — acceptOffer and the Checkout paths still set awaiting_payment on their own.
