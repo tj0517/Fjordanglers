@@ -358,7 +358,7 @@ export function NextStepCard({
           {!showOfferForm ? (
             <>
               <div className="flex flex-wrap gap-3">
-                <Button render={<Link href="?tab=guide" scroll={false} />} className={SECONDARY}>
+                <Button nativeButton={false} render={<Link href="?tab=guide" scroll={false} />} className={SECONDARY}>
                   Go to Guide tab
                 </Button>
                 <Button
@@ -629,7 +629,7 @@ export function NextStepCard({
                 </button>
               ) : <span />}
               {linkMatches ? (
-                <Button render={<Link href="?tab=conversation" scroll={false} />} className={PRIMARY}>
+                <Button nativeButton={false} render={<Link href="?tab=conversation" scroll={false} />} className={PRIMARY}>
                   {hasDepositDraft ? 'Open draft in Conversation' : 'Open Conversation'}
                 </Button>
               ) : (
