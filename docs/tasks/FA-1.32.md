@@ -2,7 +2,7 @@
 id: FA-1.32
 title: Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
