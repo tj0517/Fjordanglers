@@ -1,25 +1,24 @@
 /**
- * Draft a deposit-link announcement message. FA-1.30.
+ * Deposit-link draft helpers. FA-1.30.
  *
- * draftDepositLinkMessage({ inquiryId, amountString, linkUrl })
- *   - Loads inquiry context, thread, and knowledge (same as draftReply).
- *   - Calls Anthropic with a prompt that instructs the model to include
- *     AMOUNT_PLACEHOLDER and LINK_PLACEHOLDER in its reply.
- *   - Validates the raw model output contains both placeholders.
- *   - Substitutes them with amountString and linkUrl.
- *   - Verifies both exact strings appear in the final text.
- *   - Upserts a messages draft row (status='draft', drafted_by='agent').
- *   - Returns { draftId, text }.
+ * draftDepositLinkMessage(params)
+ *   Pure function — receives all data as arguments, no DB access.
+ *   Calls Anthropic with a prompt that instructs the model to include
+ *   AMOUNT_PLACEHOLDER and LINK_PLACEHOLDER in its reply.
+ *   Validates: each placeholder appears exactly once; raw text contains
+ *   no freeform URL or amount pattern.
+ *   Substitutes placeholders with amountString and linkUrl.
+ *   Returns the final draft text. Throws DraftDepositLinkError on failure.
  *
  * SERVER-ONLY. Caller: src/actions/messages.ts createPaymentLink.
+ * Saving the draft row and all DB access belong in the caller (data layer).
  */
 
 import Anthropic from '@anthropic-ai/sdk'
-import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
-import { assembleConversation, type ConversationMessage } from './extract-trip'
-import { loadKnowledge } from './knowledge'
-import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
+import { assembleConversation } from './extract-trip'
+import type { ConversationMessage } from './extract-trip'
+import type { KnowledgeEntry } from './knowledge'
 
 export const AMOUNT_PLACEHOLDER = '{{DEPOSIT_AMOUNT}}'
 export const LINK_PLACEHOLDER   = '{{PAYMENT_LINK}}'
@@ -51,99 +50,75 @@ export function buildStripeProductDescription(): string {
 }
 
 export interface DraftDepositLinkParams {
-  inquiryId:    string
-  amountString: string  // pre-formatted, e.g. "200.00 EUR" — injected verbatim
-  linkUrl:      string  // active Stripe Payment Link URL — injected verbatim
+  // Used in error messages only — no DB queries in this function
+  inquiryId:       string
+  // Inquiry context
+  anglerName:      string
+  anglerMessage:   string | null
+  requestedDates:  string[]
+  partySize:       number
+  status:          string
+  // Guide
+  guideName:       string | null
+  // Knowledge — caller is responsible for loading and passing these
+  instructions:    { body: string }
+  knowledgeEntries: KnowledgeEntry[]
+  // Trip
+  tripTitle:       string
+  // Payment — injected verbatim after validation; NOT passed to model
+  amountString:    string
+  linkUrl:         string
+  // Thread messages
+  threadMessages:  ConversationMessage[]
 }
 
-export interface DraftDepositLinkResult {
-  draftId: string
-  text:    string
-}
-
+/**
+ * Draft a deposit-link message. Pure — no DB access.
+ *
+ * Returns the final draft text with {{DEPOSIT_AMOUNT}} replaced by amountString
+ * and {{PAYMENT_LINK}} replaced by linkUrl.
+ *
+ * Throws DraftDepositLinkError when:
+ *  - ANTHROPIC_API_KEY is not set
+ *  - either placeholder is missing or appears more than once
+ *  - raw model output contains a URL or an amount pattern
+ *  - post-substitution safety check fails
+ */
 export async function draftDepositLinkMessage(
   params: DraftDepositLinkParams,
-): Promise<DraftDepositLinkResult> {
-  const { inquiryId, amountString, linkUrl } = params
+): Promise<string> {
+  const {
+    inquiryId, anglerName, anglerMessage, requestedDates, partySize, status,
+    guideName, instructions, knowledgeEntries, tripTitle,
+    amountString, linkUrl, threadMessages,
+  } = params
 
   const apiKey = env.ANTHROPIC_API_KEY
   if (!apiKey) throw new DraftDepositLinkError('ANTHROPIC_API_KEY not set')
 
-  const supabase = createServiceClient()
-
-  const { data: inquiry, error: inquiryErr } = await supabase
-    .from('inquiries')
-    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id, status')
-    .eq('id', inquiryId)
-    .single()
-
-  if (inquiryErr != null || inquiry == null) {
-    throw new DraftDepositLinkError(`Inquiry ${inquiryId} not found`)
-  }
-
-  const { data: messages } = await supabase
-    .from('messages')
-    .select('direction, channel, body, occurred_at, counterpart')
-    .eq('inquiry_id', inquiryId)
-    .neq('status', 'draft')
-    .order('occurred_at', { ascending: true })
-
-  const thread = (messages ?? []) as ConversationMessage[]
-
-  let guideName: string | null = null
-  if (inquiry.assigned_guide_id) {
-    const { data: guide } = await supabase
-      .from('guides')
-      .select('full_name')
-      .eq('id', inquiry.assigned_guide_id)
-      .single()
-    guideName = guide?.full_name ?? null
-  }
-
-  const { instructions, entries } = await loadKnowledge({
-    country: inquiry.trip_country,
-    guideId: inquiry.assigned_guide_id,
-  })
-
-  if (instructions == null) {
-    throw new DraftDepositLinkError(
-      'No active instructions entry found in agent_knowledge. ' +
-      'Add one in the admin panel before drafting.',
-    )
-  }
-
-  const tripTitle = tripTitleOf(
-    await getInquiryExperience({
-      experience_page_id: inquiry.experience_page_id,
-      trip_id:            inquiry.trip_id,
-    }),
-  )
-
   const conversation = assembleConversation(
-    inquiry.angler_name,
-    inquiry.message ?? null,
-    inquiry.requested_dates ?? [],
-    inquiry.party_size ?? 1,
+    anglerName,
+    anglerMessage ?? null,
+    requestedDates,
+    partySize,
     tripTitle,
-    thread,
+    threadMessages,
     guideName,
   )
 
-  const depositInstructions = buildDepositDraftInstructions(amountString)
-
   const fullPrompt = [
-    depositInstructions,
+    buildDepositDraftInstructions(instructions.body),
     '',
     '=== DRAFT CONTEXT ===',
     'Addressee: angler',
     'Channel: email',
-    `Inquiry status: ${inquiry.status}`,
+    `Inquiry status: ${status}`,
     `Assigned guide: ${guideName ?? 'none'}`,
     '',
-    ...(entries.length > 0
+    ...(knowledgeEntries.length > 0
       ? [
           '=== KNOWLEDGE ===',
-          ...entries.flatMap(e => {
+          ...knowledgeEntries.flatMap(e => {
             const label =
               e.kind === 'guide'       ? `Guide (${e.guide_id ?? 'unknown'})` :
               e.kind === 'destination' ? `Destination: ${e.country ?? 'unknown'}` :
@@ -171,14 +146,31 @@ export async function draftDepositLinkMessage(
 
   const rawText = block.text.trim()
 
-  if (!rawText.includes(AMOUNT_PLACEHOLDER)) {
+  // Each placeholder must appear exactly once
+  const amountCount = countOccurrences(rawText, AMOUNT_PLACEHOLDER)
+  if (amountCount !== 1) {
     throw new DraftDepositLinkError(
-      `Draft validation failed: model did not include the amount placeholder (${AMOUNT_PLACEHOLDER}).`,
+      `Draft validation failed: ${AMOUNT_PLACEHOLDER} must appear exactly once (found ${amountCount}).`,
     )
   }
-  if (!rawText.includes(LINK_PLACEHOLDER)) {
+  const linkCount = countOccurrences(rawText, LINK_PLACEHOLDER)
+  if (linkCount !== 1) {
     throw new DraftDepositLinkError(
-      `Draft validation failed: model did not include the link placeholder (${LINK_PLACEHOLDER}).`,
+      `Draft validation failed: ${LINK_PLACEHOLDER} must appear exactly once (found ${linkCount}).`,
+    )
+  }
+
+  // Raw model output must not contain a URL — only the placeholder is allowed
+  if (/https?:\/\//.test(rawText)) {
+    throw new DraftDepositLinkError(
+      'Draft validation failed: model included a URL in the prose. Use the {{PAYMENT_LINK}} placeholder only.',
+    )
+  }
+
+  // Raw model output must not contain a freeform amount — only the placeholder is allowed
+  if (/(?:\d+(?:[.,]\d+)?\s*(?:EUR|USD|ISK|NZD|GBP)|[€$£]\s*\d+)/.test(rawText)) {
+    throw new DraftDepositLinkError(
+      'Draft validation failed: model wrote an amount in the prose. Use the {{DEPOSIT_AMOUNT}} placeholder only.',
     )
   }
 
@@ -186,7 +178,7 @@ export async function draftDepositLinkMessage(
     .replace(AMOUNT_PLACEHOLDER, amountString)
     .replace(LINK_PLACEHOLDER, linkUrl)
 
-  // Post-substitution safety check
+  // Post-substitution safety checks
   if (!draftText.includes(amountString)) {
     throw new DraftDepositLinkError(
       'Draft validation failed: amount string not found in draft after substitution.',
@@ -198,68 +190,29 @@ export async function draftDepositLinkMessage(
     )
   }
 
-  // Upsert: overwrite existing angler/email draft if present
-  const { data: existingDraft } = await supabase
-    .from('messages')
-    .select('id')
-    .eq('inquiry_id', inquiryId)
-    .eq('counterpart', 'angler')
-    .eq('channel', 'email')
-    .eq('status', 'draft')
-    .maybeSingle()
-
-  let draftId: string
-
-  if (existingDraft != null) {
-    const { error: updateErr } = await supabase
-      .from('messages')
-      .update({ body: draftText, status: 'draft', occurred_at: new Date().toISOString() })
-      .eq('id', existingDraft.id)
-    if (updateErr != null) {
-      throw new DraftDepositLinkError(`Failed to update draft: ${updateErr.message}`)
-    }
-    draftId = existingDraft.id
-  } else {
-    const { data: inserted, error: insertErr } = await supabase
-      .from('messages')
-      .insert({
-        inquiry_id:  inquiryId,
-        channel:     'email',
-        direction:   'outbound',
-        counterpart: 'angler',
-        body:        draftText,
-        status:      'draft',
-        drafted_by:  'agent',
-        occurred_at: new Date().toISOString(),
-      })
-      .select('id')
-      .single()
-
-    if (insertErr != null || inserted == null) {
-      throw new DraftDepositLinkError(`Failed to save draft: ${insertErr?.message ?? 'no row returned'}`)
-    }
-    draftId = inserted.id
-  }
-
-  return { draftId, text: draftText }
+  void inquiryId  // referenced only for error context at call site
+  return draftText
 }
 
-function buildDepositDraftInstructions(amountString: string): string {
+function countOccurrences(text: string, needle: string): number {
+  let count = 0
+  let pos   = 0
+  while ((pos = text.indexOf(needle, pos)) !== -1) {
+    count++
+    pos += needle.length
+  }
+  return count
+}
+
+function buildDepositDraftInstructions(instructionsBody: string): string {
   return [
-    instructions_prefix,
+    instructionsBody,
     '',
-    `The purpose of this draft is to send the angler their deposit payment link.`,
-    `The deposit amount is ${amountString}.`,
-    '',
-    'IMPORTANT RULES FOR THIS DRAFT:',
-    `1. You MUST include the exact placeholder token "${AMOUNT_PLACEHOLDER}" (without quotes) exactly once where you want to display the deposit amount. Do not write the amount yourself.`,
-    `2. You MUST include the exact placeholder token "${LINK_PLACEHOLDER}" (without quotes) exactly once where you want to place the payment link URL. Do not write a URL yourself.`,
-    '3. Keep the message warm, direct, and brief — one short paragraph introducing the deposit, then the amount and link.',
-    '4. Do not include a subject line — body only.',
+    'DEPOSIT-LINK MESSAGE RULES (these override the above for this specific message):',
+    `1. Include the token "${AMOUNT_PLACEHOLDER}" exactly once where the deposit amount should appear. Do NOT write any numerical amount — the correct figure will be inserted by code.`,
+    `2. Include the token "${LINK_PLACEHOLDER}" exactly once where the payment link URL should appear. Do NOT write any URL — the link will be inserted by code.`,
+    '3. Message body only — no subject line, no meta-commentary.',
+    '4. Keep the message warm, direct, and brief.',
     '5. Match the tone of the existing conversation.',
   ].join('\n')
 }
-
-const instructions_prefix =
-  'You are drafting a message on behalf of FjordAnglers to send to an angler. ' +
-  'Write the message body only — no subject line, no meta-commentary, no explanation of what you are doing.'

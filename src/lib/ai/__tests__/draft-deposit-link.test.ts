@@ -1,15 +1,14 @@
 /**
  * FA-1.30 unit tests for draftDepositLinkMessage, buildStripeProductName,
- * buildStripeProductDescription, and formatDepositAmount.
+ * buildStripeProductDescription.
  *
- * All tests are pure — no network, no external services.
- * Supabase and Anthropic are mocked following the pattern in draft-reply.test.ts.
+ * draftDepositLinkMessage is now a pure function — no Supabase access.
+ * All tests use makeParams() to build the input and check the returned string.
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 // ── Anthropic mock ────────────────────────────────────────────────────────────
-// Must be a class so `new Anthropic()` works (arrow functions can't be constructors).
 const anthropicCreate = vi.fn()
 
 vi.mock('@anthropic-ai/sdk', () => ({
@@ -32,80 +31,30 @@ vi.mock('@/lib/env', () => ({
   },
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient:        vi.fn(),
-  createServiceClient: vi.fn(),
+vi.mock('@/lib/ai/extract-trip', () => ({
+  assembleConversation: vi.fn().mockReturnValue('Assembled conversation text.'),
 }))
 
-vi.mock('@/lib/ai/knowledge', () => ({
-  loadKnowledge: vi.fn().mockResolvedValue({
-    instructions: { body: 'Write warmly and directly.' },
-    entries: [],
-    usedIds: [],
-  }),
-}))
+// ─── makeParams helper ────────────────────────────────────────────────────────
 
-vi.mock('@/lib/inquiries/experience-lookup', () => ({
-  getInquiryExperience: vi.fn().mockResolvedValue(null),
-  tripTitleOf:          vi.fn().mockReturnValue('Trout fishing, Iceland'),
-  TRIP_TITLE_FALLBACK:  'Your trip',
-  GUIDE_NAME_FALLBACK:  'Your guide',
-}))
+import type { DraftDepositLinkParams } from '@/lib/ai/draft-deposit-link'
 
-import { createServiceClient } from '@/lib/supabase/server'
-
-// ─── DB helper ────────────────────────────────────────────────────────────────
-
-function makeDb(opts?: { draftId?: string; insertSpy?: ReturnType<typeof vi.fn> }) {
-  const draftId   = opts?.draftId   ?? 'draft-deposit-1'
-  const insertSpy = opts?.insertSpy ?? vi.fn().mockReturnValue({
-    select: () => ({
-      single: async () => ({ data: { id: draftId }, error: null }),
-    }),
-  })
-
+function makeParams(overrides?: Partial<DraftDepositLinkParams>): DraftDepositLinkParams {
   return {
-    from(table: string) {
-      if (table === 'inquiries') {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: async () => ({
-                data: {
-                  id: 'inq-1', angler_name: 'Jan', message: 'Hi', requested_dates: ['12–15 Jun 2026'],
-                  party_size: 2, trip_country: 'IS', assigned_guide_id: null,
-                  trip_id: null, experience_page_id: null, status: 'awaiting_payment',
-                }, error: null,
-              }),
-            }),
-          }),
-        }
-      }
-      if (table === 'messages') {
-        return {
-          select: () => ({
-            eq: () => ({
-              neq: () => ({
-                order: async () => ({ data: [], error: null }),
-              }),
-              // chained eq calls for draft lookup
-              eq: () => ({
-                eq: () => ({
-                  eq: () => ({
-                    maybeSingle: async () => ({ data: null, error: null }),
-                  }),
-                }),
-              }),
-            }),
-          }),
-          insert: insertSpy,
-          update: () => ({ eq: () => ({ error: null }) }),
-        }
-      }
-      return {
-        select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
-      }
-    },
+    inquiryId:        'inq-1',
+    anglerName:       'Jan',
+    anglerMessage:    'Hi, interested in Iceland fishing.',
+    requestedDates:   ['12–15 Jun 2026'],
+    partySize:        2,
+    status:           'awaiting_payment',
+    guideName:        null,
+    instructions:     { body: 'Write warmly and directly.' },
+    knowledgeEntries: [],
+    tripTitle:        'Trout fishing, Iceland',
+    amountString:     '200.00 EUR',
+    linkUrl:          'https://buy.stripe.com/test123',
+    threadMessages:   [],
+    ...overrides,
   }
 }
 
@@ -142,23 +91,18 @@ describe('buildStripeProductName', () => {
 // ─── draftDepositLinkMessage — happy path (EUR) ───────────────────────────────
 
 describe('draftDepositLinkMessage — happy path (EUR)', () => {
-  it('substitutes amount and link, saves draft row, returns draftId and text', async () => {
+  it('substitutes amount and link, returns final text as string', async () => {
     const aiText = `Dear Jan,\n\nTo confirm your booking please pay {{DEPOSIT_AMOUNT}}.\n\nPay here: {{PAYMENT_LINK}}\n\nBest,\nFA`
     anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
-    vi.mocked(createServiceClient).mockReturnValue(makeDb() as unknown as ReturnType<typeof createServiceClient>)
 
     const { draftDepositLinkMessage } = await import('@/lib/ai/draft-deposit-link')
-    const result = await draftDepositLinkMessage({
-      inquiryId:    'inq-1',
-      amountString: '200.00 EUR',
-      linkUrl:      'https://buy.stripe.com/test123',
-    })
+    const result = await draftDepositLinkMessage(makeParams())
 
-    expect(result.draftId).toBe('draft-deposit-1')
-    expect(result.text).toContain('200.00 EUR')
-    expect(result.text).toContain('https://buy.stripe.com/test123')
-    expect(result.text).not.toContain('{{DEPOSIT_AMOUNT}}')
-    expect(result.text).not.toContain('{{PAYMENT_LINK}}')
+    expect(typeof result).toBe('string')
+    expect(result).toContain('200.00 EUR')
+    expect(result).toContain('https://buy.stripe.com/test123')
+    expect(result).not.toContain('{{DEPOSIT_AMOUNT}}')
+    expect(result).not.toContain('{{PAYMENT_LINK}}')
   })
 })
 
@@ -168,58 +112,104 @@ describe('draftDepositLinkMessage — happy path (ISK)', () => {
   it('substitutes ISK amount and link correctly', async () => {
     const aiText = `Hi Jan,\n\nDeposit: {{DEPOSIT_AMOUNT}}\n\nPay here: {{PAYMENT_LINK}}\n\nFA`
     anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
-    vi.mocked(createServiceClient).mockReturnValue(makeDb({ draftId: 'draft-isk-1' }) as unknown as ReturnType<typeof createServiceClient>)
 
     const { draftDepositLinkMessage } = await import('@/lib/ai/draft-deposit-link')
-    const result = await draftDepositLinkMessage({
-      inquiryId:    'inq-1',
-      amountString: '500.00 ISK',
-      linkUrl:      'https://buy.stripe.com/isk99',
-    })
+    const result = await draftDepositLinkMessage(makeParams({ amountString: '500.00 ISK', linkUrl: 'https://buy.stripe.com/isk99' }))
 
-    expect(result.draftId).toBe('draft-isk-1')
-    expect(result.text).toContain('500.00 ISK')
-    expect(result.text).toContain('https://buy.stripe.com/isk99')
+    expect(result).toContain('500.00 ISK')
+    expect(result).toContain('https://buy.stripe.com/isk99')
+  })
+})
+
+// ─── Fix 4: instructions body in prompt ──────────────────────────────────────
+
+describe('draftDepositLinkMessage — Fix 4: instructions body in prompt', () => {
+  it('includes the instructions body in the prompt sent to the model', async () => {
+    const aiText = `Hi Jan,\n\nDeposit: {{DEPOSIT_AMOUNT}}\n\nPay here: {{PAYMENT_LINK}}\n\nFA`
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
+
+    const { draftDepositLinkMessage } = await import('@/lib/ai/draft-deposit-link')
+    await draftDepositLinkMessage(makeParams({ instructions: { body: 'Write warmly and directly.' } }))
+
+    const call = anthropicCreate.mock.calls[0][0]
+    const prompt: string = call.messages[0].content
+    expect(prompt).toContain('Write warmly and directly.')
   })
 })
 
 // ─── Red proof: missing link placeholder ─────────────────────────────────────
 
 describe('draftDepositLinkMessage — red proof: missing link placeholder', () => {
-  it('throws DraftDepositLinkError and does not save a draft', async () => {
+  it('throws DraftDepositLinkError when PAYMENT_LINK placeholder is absent', async () => {
     const aiTextNoLink = `Hi Jan, please pay {{DEPOSIT_AMOUNT}} and contact us for the link.`
     anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiTextNoLink }] })
-    const insertSpy = vi.fn()
-    vi.mocked(createServiceClient).mockReturnValue(
-      makeDb({ insertSpy }) as unknown as ReturnType<typeof createServiceClient>,
-    )
 
     const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
-    await expect(
-      draftDepositLinkMessage({ inquiryId: 'inq-1', amountString: '200.00 EUR', linkUrl: 'https://buy.stripe.com/x' }),
-    ).rejects.toBeInstanceOf(DraftDepositLinkError)
-
-    expect(insertSpy).not.toHaveBeenCalled()
+    await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
   })
 })
 
 // ─── Red proof: missing amount placeholder ────────────────────────────────────
 
 describe('draftDepositLinkMessage — red proof: missing amount placeholder', () => {
-  it('throws DraftDepositLinkError and does not save a draft', async () => {
+  it('throws DraftDepositLinkError when DEPOSIT_AMOUNT placeholder is absent', async () => {
     const aiTextNoAmount = `Hi Jan, please pay at: {{PAYMENT_LINK}}`
     anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiTextNoAmount }] })
-    const insertSpy = vi.fn()
-    vi.mocked(createServiceClient).mockReturnValue(
-      makeDb({ insertSpy }) as unknown as ReturnType<typeof createServiceClient>,
-    )
 
     const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
-    await expect(
-      draftDepositLinkMessage({ inquiryId: 'inq-1', amountString: '200.00 EUR', linkUrl: 'https://buy.stripe.com/x' }),
-    ).rejects.toBeInstanceOf(DraftDepositLinkError)
+    await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
+  })
+})
 
-    expect(insertSpy).not.toHaveBeenCalled()
+// ─── Red proof (Fix 3): model writes freeform amount in prose ─────────────────
+
+describe('draftDepositLinkMessage — red proof: freeform amount in prose', () => {
+  it('throws when model writes "200 EUR" alongside the placeholder (Fix 3)', async () => {
+    const aiText = `Hi Jan,\n\nThe deposit is 200 EUR (see {{DEPOSIT_AMOUNT}}).\n\nPay here: {{PAYMENT_LINK}}\n\nFA`
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
+
+    const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
+    await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
+  })
+
+  it('throws when model writes a € amount alongside the placeholder (Fix 3)', async () => {
+    const aiText = `Hi Jan,\n\nPlease pay €200 using {{DEPOSIT_AMOUNT}} at {{PAYMENT_LINK}}.`
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
+
+    const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
+    await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
+  })
+})
+
+// ─── Red proof (Fix 3): model writes freeform URL in prose ────────────────────
+
+describe('draftDepositLinkMessage — red proof: freeform URL in prose', () => {
+  it('throws when model writes a URL alongside the placeholder (Fix 3)', async () => {
+    const aiText = `Hi Jan,\n\nDeposit: {{DEPOSIT_AMOUNT}}\n\nPay here https://buy.stripe.com/evil or {{PAYMENT_LINK}}\n\nFA`
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
+
+    const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
+    await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
+  })
+})
+
+// ─── Red proof (Fix 3): placeholder appears twice ────────────────────────────
+
+describe('draftDepositLinkMessage — red proof: placeholder appears twice', () => {
+  it('throws when DEPOSIT_AMOUNT appears twice (Fix 3)', async () => {
+    const aiText = `Hi Jan,\n\nDeposit: {{DEPOSIT_AMOUNT}} (total {{DEPOSIT_AMOUNT}}).\n\nPay here: {{PAYMENT_LINK}}\n\nFA`
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
+
+    const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
+    await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
+  })
+
+  it('throws when PAYMENT_LINK appears twice (Fix 3)', async () => {
+    const aiText = `Hi Jan,\n\nDeposit: {{DEPOSIT_AMOUNT}}\n\nPay here: {{PAYMENT_LINK}} or {{PAYMENT_LINK}}\n\nFA`
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: aiText }] })
+
+    const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
+    await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
   })
 })
 
@@ -227,16 +217,13 @@ describe('draftDepositLinkMessage — red proof: missing amount placeholder', ()
 
 describe('draftDepositLinkMessage — red proof: no AI key', () => {
   it('throws DraftDepositLinkError when ANTHROPIC_API_KEY is empty', async () => {
-    // patch env directly in this test
     const envModule = await import('@/lib/env')
     const original = envModule.env.ANTHROPIC_API_KEY ?? ''
     ;(envModule.env as { ANTHROPIC_API_KEY: string }).ANTHROPIC_API_KEY = ''
 
     try {
       const { draftDepositLinkMessage, DraftDepositLinkError } = await import('@/lib/ai/draft-deposit-link')
-      await expect(
-        draftDepositLinkMessage({ inquiryId: 'inq-1', amountString: '200.00 EUR', linkUrl: 'https://buy.stripe.com/x' }),
-      ).rejects.toBeInstanceOf(DraftDepositLinkError)
+      await expect(draftDepositLinkMessage(makeParams())).rejects.toBeInstanceOf(DraftDepositLinkError)
     } finally {
       ;(envModule.env as { ANTHROPIC_API_KEY: string }).ANTHROPIC_API_KEY = original
     }

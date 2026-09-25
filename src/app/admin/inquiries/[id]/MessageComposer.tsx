@@ -25,7 +25,6 @@ export function MessageComposer({
   igEnabled        = false,
   initialDraftId   = null,
   initialDraftText = null,
-  initialDraftError = null,
 }: {
   inquiryId:        string
   guideAssigned?:   boolean
@@ -40,8 +39,6 @@ export function MessageComposer({
   initialDraftId?:   string | null
   /** Draft body text pre-filled into the composer after deposit link creation. */
   initialDraftText?: string | null
-  /** Error from the deposit link draft, shown in the composer if the link was created but the draft failed. */
-  initialDraftError?: string | null
 }) {
   const router = useRouter()
 
@@ -53,7 +50,7 @@ export function MessageComposer({
   const [error,         setError]         = useState<string | null>(null)
   const [sent,          setSent]          = useState(false)
   const [draftPending,  startDraft]       = useTransition()
-  const [draftError,    setDraftError]    = useState<string | null>(initialDraftError ?? null)
+  const [draftError,    setDraftError]    = useState<string | null>(null)
   const [draftId,       setDraftId]       = useState<string | null>(initialDraftId ?? null)
 
   const waOpen = isWaWindowOpen(waLastInboundAt ?? null)

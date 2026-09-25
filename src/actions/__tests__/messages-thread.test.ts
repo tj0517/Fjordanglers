@@ -27,12 +27,27 @@ vi.mock('@/lib/stripe/client', () => ({
 }))
 
 vi.mock('@/lib/ai/draft-deposit-link', () => ({
-  draftDepositLinkMessage:     vi.fn().mockResolvedValue({ draftId: 'draft-ai-1', text: 'Here is your link.' }),
+  draftDepositLinkMessage:     vi.fn().mockResolvedValue('Here is your link.'),
   buildStripeProductName:      vi.fn().mockReturnValue('Test Trip · 1 person'),
   buildStripeProductDescription: vi.fn().mockReturnValue('FjordAnglers booking & curation fee.'),
   AMOUNT_PLACEHOLDER:          '{{DEPOSIT_AMOUNT}}',
   LINK_PLACEHOLDER:            '{{PAYMENT_LINK}}',
   DraftDepositLinkError:       class DraftDepositLinkError extends Error {},
+}))
+
+vi.mock('@/lib/ai/knowledge', () => ({
+  loadKnowledge: vi.fn().mockResolvedValue({
+    instructions: { id: 'k1', kind: 'instructions', country: null, guide_id: null, title: 'Instructions', body: 'Be helpful.' },
+    entries:  [],
+    usedIds:  [],
+  }),
+}))
+
+vi.mock('@/lib/inquiries/experience-lookup', () => ({
+  getInquiryExperience: vi.fn().mockResolvedValue(null),
+  tripTitleOf:          vi.fn().mockReturnValue('Test trip'),
+  TRIP_TITLE_FALLBACK:  'Your trip',
+  GUIDE_NAME_FALLBACK:  'Your guide',
 }))
 
 vi.mock('@/lib/env', () => ({
@@ -650,6 +665,20 @@ describe('createPaymentLink — FA-1.29', () => {
             update: () => ({ eq: () => ({ error: null }) }),
           }
         }
+        if (table === 'messages') {
+          return {
+            // Thread fetch: .select().eq().neq().order()
+            select: () => ({
+              eq: () => ({
+                neq: () => ({
+                  order: async () => ({ data: [], error: null }),
+                }),
+              }),
+            }),
+            insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-df' }, error: null }) }) }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
         return {
           insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-df' }, error: null }) }) }),
           update: () => ({ eq: () => ({ error: null }) }),
@@ -663,6 +692,69 @@ describe('createPaymentLink — FA-1.29', () => {
     // Link is still created despite draft failure
     expect(result).toMatchObject({ success: true, url: 'https://buy.stripe.com/df' })
     expect((result as { draftError?: string }).draftError).toContain('AI unavailable')
+  })
+
+  it('FA-1.30: createPaymentLink always INSERTs a new draft — never overwrites existing drafts', async () => {
+    mockAdmin()
+    vi.mocked(stripe.products.create).mockResolvedValue({ id: 'prod_no' } as never)
+    vi.mocked(stripe.prices.create).mockResolvedValue({ id: 'price_no' } as never)
+    vi.mocked(stripe.paymentLinks.create).mockResolvedValue({ id: 'plink_no', url: 'https://buy.stripe.com/no' } as never)
+    // Default mock returns string; we track inserts vs updates
+    vi.mocked(draftDepositLinkMessage).mockResolvedValue('Here is your link.')
+
+    const messagesUpdateSpy = vi.fn().mockReturnValue({ eq: () => ({ error: null }) })
+    const messagesInsertSpy = vi.fn().mockReturnValue({
+      select: () => ({ single: async () => ({ data: { id: 'draft-new' }, error: null }) }),
+    })
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-no', angler_name: 'Gunnar', angler_email: 'g@is.is', party_size: 1,
+                    deposit_amount_cents: 10000, deposit_currency: 'EUR',
+                    deposit_payment_link_id: null, deposit_payment_link_url: null,
+                  }, error: null,
+                }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        if (table === 'messages') {
+          return {
+            select: () => ({
+              eq: () => ({
+                neq: () => ({
+                  order: async () => ({ data: [], error: null }),
+                }),
+              }),
+            }),
+            update: messagesUpdateSpy,
+            insert: messagesInsertSpy,
+          }
+        }
+        return {
+          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-x' }, error: null }) }) }),
+          update: () => ({ eq: () => ({ error: null }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-no')
+
+    expect(result).toMatchObject({ success: true })
+    // messages table must never be updated — only inserted
+    expect(messagesUpdateSpy).not.toHaveBeenCalled()
+    expect(messagesInsertSpy).toHaveBeenCalledTimes(1)
+    expect(messagesInsertSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'draft', drafted_by: 'agent', direction: 'outbound' }),
+    )
   })
 
   it('deactivation fails: returns error, no prices.create or paymentLinks.create called', async () => {

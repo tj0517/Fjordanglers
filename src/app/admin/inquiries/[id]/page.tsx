@@ -12,6 +12,7 @@ import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
 import { MessageComposer } from './MessageComposer'
+import { getDepositLinkDraft } from '@/actions/messages'
 import { ThreadActionsPanel } from './ThreadActionsPanel'
 import type { OfferForPanel } from './ThreadActionsPanel'
 import { StatusChanger } from './StatusChanger'
@@ -139,21 +140,10 @@ export default async function AdminInquiryDetailPage({
     // Table not yet migrated — graceful fallback
   }
 
-  // Latest agent draft for the composer — pre-fills body after deposit link creation (FA-1.30)
+  // Latest agent draft for the composer — pre-filled only when body contains the active link URL (FA-1.30 Fix 5)
   let latestAnglerDraft: { id: string; body: string } | null = null
   try {
-    const { data: draftRow } = await svc
-      .from('messages')
-      .select('id, body')
-      .eq('inquiry_id', id)
-      .eq('status', 'draft')
-      .eq('direction', 'outbound')
-      .eq('counterpart', 'angler')
-      .eq('drafted_by', 'agent')
-      .order('occurred_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (draftRow != null) latestAnglerDraft = draftRow as { id: string; body: string }
+    latestAnglerDraft = await getDepositLinkDraft(id, rawInquiry.deposit_payment_link_url ?? null)
   } catch {
     // graceful fallback
   }
