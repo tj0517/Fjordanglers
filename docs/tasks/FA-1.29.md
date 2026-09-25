@@ -2,7 +2,7 @@
 id: FA-1.29
 title: Link depozytu działa — kwota i waluta z FA-1.28, „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -78,5 +78,21 @@ psql "$LOCAL_DB_URL" -c "select status, deposit_paid_at from inquiries where id 
 pnpm typecheck && pnpm lint && pnpm test run
 ```
 
+## Decyzje tj (25 IX 2026)
+
+- **D1 — `markClientAccepted` nie zmienia statusu.** Publiczna ścieżka `acceptOffer` w `src/actions/inquiries.ts` (strona `/offers/[token]`) pozostaje bez zmian; jej zachowanie wobec statusu odroczone do osobnego zadania — wiersz w `docs/deferred-tasks.md` (D1, 25 IX).
+- **D2 — widoczność kwoty i ostrzeżenie na karcie.** Obok aktywnego linku pokazana kwota i waluta, dla których go utworzono (z payloadu ostatniego zdarzenia `payment.link_sent` dla tego `link_id`). Gdy zapisana kwota lub waluta różni się od tych z linku — ostrzeżenie „amount changed — create a new link"; przycisk tworzenia zastępuje wtedy link. Wyłącznie wyświetlanie; akcja ustawiania kwoty z FA-1.28 bez zmian.
+
+## Preflight (poprawki tj, 25 IX 2026)
+
+- Serwer MCP `stripe` nie jest wymagany w tym zadaniu. Wszystkie odczyty Stripe przez Stripe CLI w trybie testowym (bez `--live`), np. `stripe payment_links retrieve <id>`.
+- Sprawdzenie klucza przez `grep -q '^STRIPE_SECRET_KEY=sk_test_' .env.local && echo test-key-ok` (nie w shellu). Klucz: test-key-ok. Stripe CLI: zalogowany w sandboxie „Fjordanglers" (`acct_1TDnzbCkrtMjTevh`) — ten sam, z którego korzysta lokalna aplikacja.
+
+## Odczyt bieżącego stanu (25 IX 2026)
+
+- Prod: **2** zapytania w `awaiting_payment` bez zdarzenia `payment.link_sent` — utknęły przez błąd w `markClientAccepted` (query: `SELECT count(*) FROM inquiries i WHERE i.status = 'awaiting_payment' AND NOT EXISTS (SELECT 1 FROM inquiry_events e WHERE e.inquiry_id = i.id AND e.type = 'payment.link_sent')`).
+- Lokalnie: `markClientAccepted` wywołuje `transition(svc, inquiryId, 'awaiting_payment', ...)` (linia 485) mimo braku linku. `createPaymentLink` bierze kwotę i walutę od wywołującego, tworzy nowy obiekt Stripe przy każdym wywołaniu, nie zapisuje id/URL linku w kolumnach FA-1.28.
+
 ## Notatki z realizacji
 - 2026-09-24 tj (wf-plan): zadanie z wiersza FA-1.18 w `docs/deferred-tasks.md`; wydanie przez `stage-1`.
+- 2026-09-25 tj: decyzje D1 i D2 + poprawki preflight dopisane do zadania w pierwszym commicie (in_progress).

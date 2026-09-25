@@ -61,7 +61,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | todo | FA-1.17 |
 | FA-1.27 | Hybrydowa auto-wysyłka do klienta — sędzia ≥ 0.9, stany „nigdy auto”, tylko e-mail | L | opus | done | FA-1.23, FA-1.25 |
 | FA-1.28 | Kwota depozytu w danych — grosze + waluta opcji + kurs do EUR zamrożony; pole kwoty na karcie z podpowiedzią 20% (bloker: ścieżka depozytu zepsuta na prod od 19 IX) | L | opus | done | — |
-| FA-1.29 | Link depozytu działa — „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie, pętla 4242 lokalnie | L | opus | todo | FA-1.28 |
+| FA-1.29 | Link depozytu działa — „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie, pętla 4242 lokalnie | L | opus | in_progress | FA-1.28 |
 | FA-1.30 | Wiadomość z linkiem depozytu — nazwa i opis wyprawy w Stripe; szkic od agenta AI, kwotę i link wstawia kod | M | sonnet | todo | FA-1.29 |
 | FA-1.31 | Panel admina reaguje — stan ładowania przy nawigacji, „trwa” i blokada podwójnego kliknięcia na wszystkich akcjach | M | sonnet | todo | FA-1.29 |
 | FA-1.32 | Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa | L | opus | todo | FA-1.31 + makieta (O-24) |
