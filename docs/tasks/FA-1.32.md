@@ -2,7 +2,7 @@
 id: FA-1.32
 title: Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -66,3 +66,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 
 ## Notatki z realizacji
 - 2026-09-24 tj (wf-plan): zadanie z wiersza FA-1.18 w `docs/deferred-tasks.md`; runda 2 panelu rozdzielona na FA-1.31 i FA-1.32. O-24 = tak: najpierw makieta karty, zatwierdzona przez tj.
+- 2026-09-25 tj: makieta zatwierdzona — docs/design/fa-1.32/ (kanwa claude.ai, prywatna tj). Stały układ: README w tym folderze.
