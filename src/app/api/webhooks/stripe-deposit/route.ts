@@ -150,7 +150,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       payload: {
         stripe_session_id: session.id,
         amount_cents:      session.amount_total ?? 0,
-        currency:          session.currency    ?? 'eur',
+        currency:          (session.currency ?? 'eur').toUpperCase(),
       },
     })
   } catch (err) {

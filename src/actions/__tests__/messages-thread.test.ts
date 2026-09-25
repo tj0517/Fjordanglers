@@ -7,6 +7,12 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('@/lib/inquiries/state', () => ({
+  transition:  vi.fn().mockResolvedValue(undefined),
+  TransitionError: class TransitionError extends Error {},
+}))
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient:        vi.fn(),
   createServiceClient: vi.fn(),
@@ -14,8 +20,8 @@ vi.mock('@/lib/supabase/server', () => ({
 
 vi.mock('@/lib/stripe/client', () => ({
   stripe: {
-    prices:      { create: vi.fn() },
-    paymentLinks: { create: vi.fn() },
+    prices:       { create: vi.fn() },
+    paymentLinks: { create: vi.fn(), update: vi.fn() },
   },
 }))
 
@@ -277,6 +283,231 @@ describe('sendMessage', () => {
     expect(eventTypes).toContain('message.sent')
     expect(eventTypes).toContain('guide.contacted')
     expect(eventTypes).toHaveLength(2)
+  })
+})
+
+// ─── FA-1.29: markClientAccepted does NOT transition to awaiting_payment ──────
+
+describe('markClientAccepted — FA-1.29 D1: no awaiting_payment transition', () => {
+  it('succeeds without ever calling transition()', async () => {
+    mockAdmin()
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'offer_options') {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({ single: async () => ({ data: { id: 'opt-1', offer_id: 'off-1' }, error: null }) }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        if (table === 'offers') {
+          return {
+            select: () => ({
+              eq: () => ({ single: async () => ({ data: { id: 'off-1', inquiry_id: 'inq-1' }, error: null }) }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        // inquiry_events
+        return {
+          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'evt-1' }, error: null }) }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { transition } = await import('@/lib/inquiries/state')
+    const { markClientAccepted } = await import('@/actions/messages')
+    const result = await markClientAccepted('off-1', 'opt-1')
+
+    expect(result.success).toBe(true)
+    expect(vi.mocked(transition)).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      'awaiting_payment',
+      expect.anything(),
+    )
+  })
+})
+
+// ─── FA-1.29: createPaymentLink ───────────────────────────────────────────────
+
+import { stripe } from '@/lib/stripe/client'
+
+describe('createPaymentLink — FA-1.29', () => {
+  it('returns error when deposit_amount_cents is null, no Stripe call', async () => {
+    mockAdmin()
+    vi.mocked(createServiceClient).mockReturnValue({
+      from() {
+        return {
+          select: () => ({
+            eq: () => ({ single: async () => ({ data: { id: 'inq-1', deposit_amount_cents: null, deposit_currency: null, deposit_payment_link_id: null, deposit_payment_link_url: null }, error: null }) }),
+          }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-1')
+
+    expect(result).toEqual({ success: false, error: expect.stringContaining('Deposit amount not set') })
+    expect(vi.mocked(stripe.paymentLinks.create)).not.toHaveBeenCalled()
+  })
+
+  it('idempotency: same amount/currency returns existing link without creating a new one', async () => {
+    mockAdmin()
+    const existingLinkId  = 'plink_existing'
+    const existingLinkUrl = 'https://buy.stripe.com/existing'
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-1', angler_name: 'Alice', angler_email: 'a@x.com', party_size: 2,
+                    deposit_amount_cents: 20000, deposit_currency: 'EUR',
+                    deposit_payment_link_id: existingLinkId,
+                    deposit_payment_link_url: existingLinkUrl,
+                  }, error: null,
+                }),
+              }),
+            }),
+          }
+        }
+        if (table === 'inquiry_events') {
+          // Return event with matching link_id, amount_cents, currency
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({
+                        data: { payload: { link_id: existingLinkId, amount_cents: 20000, currency: 'EUR' } },
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+          }
+        }
+        return { select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }) }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-1')
+
+    expect(result).toEqual({ success: true, url: existingLinkUrl })
+    expect(vi.mocked(stripe.paymentLinks.create)).not.toHaveBeenCalled()
+  })
+
+  it('amount changed: deactivates old link and creates a new one', async () => {
+    mockAdmin()
+    const oldLinkId = 'plink_old'
+    vi.mocked(stripe.prices.create).mockResolvedValue({ id: 'price_new' } as never)
+    vi.mocked(stripe.paymentLinks.create).mockResolvedValue({ id: 'plink_new', url: 'https://buy.stripe.com/new' } as never)
+    vi.mocked(stripe.paymentLinks.update).mockResolvedValue({} as never)
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-1', angler_name: 'Bob', angler_email: 'b@x.com', party_size: 1,
+                    deposit_amount_cents: 25000, deposit_currency: 'EUR',
+                    deposit_payment_link_id: oldLinkId,
+                    deposit_payment_link_url: 'https://buy.stripe.com/old',
+                  }, error: null,
+                }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        if (table === 'inquiry_events') {
+          // Event has different amount (old 20000 vs new 25000)
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => ({
+                    limit: () => ({
+                      maybeSingle: async () => ({
+                        data: { payload: { link_id: oldLinkId, amount_cents: 20000, currency: 'EUR' } },
+                        error: null,
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            }),
+            insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'evt-2' }, error: null }) }) }),
+          }
+        }
+        // messages insert + inquiry_events insert
+        return {
+          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-x' }, error: null }) }) }),
+          update: () => ({ eq: () => ({ error: null }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    const result = await createPaymentLink('inq-1')
+
+    expect(result).toEqual({ success: true, url: 'https://buy.stripe.com/new' })
+    expect(vi.mocked(stripe.paymentLinks.update)).toHaveBeenCalledWith(oldLinkId, { active: false })
+    expect(vi.mocked(stripe.paymentLinks.create)).toHaveBeenCalledTimes(1)
+  })
+
+  it('ISK: passes deposit_amount_cents directly to Stripe unit_amount (no ÷100)', async () => {
+    mockAdmin()
+    vi.mocked(stripe.prices.create).mockResolvedValue({ id: 'price_isk' } as never)
+    vi.mocked(stripe.paymentLinks.create).mockResolvedValue({ id: 'plink_isk', url: 'https://buy.stripe.com/isk' } as never)
+
+    vi.mocked(createServiceClient).mockReturnValue({
+      from(table: string) {
+        if (table === 'inquiries') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: {
+                    id: 'inq-isk', angler_name: 'Gunnar', angler_email: 'g@is.is', party_size: 2,
+                    deposit_amount_cents: 50000,  // 500 ISK stored as 50000 (×100)
+                    deposit_currency: 'ISK',
+                    deposit_payment_link_id: null,
+                    deposit_payment_link_url: null,
+                  }, error: null,
+                }),
+              }),
+            }),
+            update: () => ({ eq: () => ({ error: null }) }),
+          }
+        }
+        return {
+          insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-x' }, error: null }) }) }),
+          update: () => ({ eq: () => ({ error: null }) }),
+        }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const { createPaymentLink } = await import('@/actions/messages')
+    await createPaymentLink('inq-isk')
+
+    expect(vi.mocked(stripe.prices.create)).toHaveBeenCalledWith(
+      expect.objectContaining({ currency: 'isk', unit_amount: 50000 }),
+    )
   })
 })
 

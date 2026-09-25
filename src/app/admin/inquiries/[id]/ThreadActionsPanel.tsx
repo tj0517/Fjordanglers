@@ -36,12 +36,20 @@ export interface ThreadActionsPanelProps {
   /** ID of the latest outbound message to guide — used for markGuideNotifiedPaid / markContactsExchanged */
   latestOutboundGuideId:  string | null
   guideId:                string | null
-  /** Deposit amount in euros — converted to cents for createPaymentLink */
+  /** @deprecated legacy EUR amount; kept for backward compat — FA-1.29 uses depositAmountCents */
   depositAmountEur:       number | null
   /** FA-1.28: deposit amount in minor units ×100 (null = not yet set) */
   depositAmountCents:     number | null
-  /** FA-1.28: deposit currency (null = not yet set) */
+  /** FA-1.28: deposit currency uppercase ISO (null = not yet set) */
   depositCurrency:        string | null
+  /** FA-1.29: active Stripe Payment Link id stored on the inquiry row */
+  depositPaymentLinkId:   string | null
+  /** FA-1.29: active Stripe Payment Link URL stored on the inquiry row */
+  depositPaymentLinkUrl:  string | null
+  /** FA-1.29: amount_cents the active link was created for (from payment.link_sent event payload) */
+  depositPaymentLinkAmountCents: number | null
+  /** FA-1.29: currency the active link was created for (from payment.link_sent event payload) */
+  depositPaymentLinkCurrency:    string | null
   guideNotifiedPaid:      boolean
 }
 
@@ -64,9 +72,13 @@ export function ThreadActionsPanel({
   latestOutboundAnglerId,
   latestOutboundGuideId,
   guideId,
-  depositAmountEur,
+  depositAmountEur: _depositAmountEur,
   depositAmountCents,
   depositCurrency,
+  depositPaymentLinkId,
+  depositPaymentLinkUrl,
+  depositPaymentLinkAmountCents,
+  depositPaymentLinkCurrency,
   guideNotifiedPaid: initialGuideNotifiedPaid,
 }: ThreadActionsPanelProps) {
   const router  = useRouter()
@@ -107,7 +119,8 @@ export function ThreadActionsPanel({
   // ── Deposit link state ────────────────────────────────────────────────────
   const [depositPending, startDeposit]  = useTransition()
   const [depositFlash,   setDepositFlash] = useState(false)
-  const [depositUrl,     setDepositUrl]  = useState<string | null>(null)
+  // Initialise from the stored URL so the link is visible after a page reload
+  const [depositUrl,     setDepositUrl]  = useState<string | null>(depositPaymentLinkUrl ?? null)
   const [depositError,   setDepositError] = useState<string | null>(null)
 
   // ── Guide notified state ──────────────────────────────────────────────────
@@ -204,11 +217,9 @@ export function ThreadActionsPanel({
   }
 
   function handleCreateDepositLink() {
-    if (depositAmountEur == null || depositAmountEur <= 0) return
     setDepositError(null)
     startDeposit(async () => {
-      const amountCents = Math.round(depositAmountEur * 100)
-      const res = await createPaymentLink(inquiryId, amountCents, 'eur')
+      const res = await createPaymentLink(inquiryId)
       if (res.success) {
         setDepositUrl(res.url)
         flash(setDepositFlash)
@@ -457,18 +468,43 @@ export function ThreadActionsPanel({
         )}
 
         {/* ── 4. Create Deposit Link ─────────────────────────────────────── */}
-        {offer?.status === 'accepted' && !isPaid && depositAmountEur != null && (
+        {offer?.status === 'accepted' && !isPaid && depositAmountCents != null && depositCurrency != null && (
           <div>
+            {/* D2: warn when saved amount/currency differs from link's amount/currency */}
+            {depositPaymentLinkId != null &&
+              (depositPaymentLinkAmountCents !== depositAmountCents ||
+               depositPaymentLinkCurrency !== depositCurrency) && (
+              <p className="text-[11px] f-body mb-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
+                Amount changed — create a new link
+              </p>
+            )}
             {depositFlash && depositUrl != null && (
               <div className="space-y-2 mb-2">
                 <FlashBanner message="Deposit link created" />
-                <p className="text-[10px] f-body break-all text-muted-foreground">{depositUrl}</p>
               </div>
             )}
             {depositError != null && (
               <p className="text-[11px] f-body mb-1 text-destructive">{depositError}</p>
             )}
-            {depositUrl == null && (
+            {/* Show existing link (no D2 mismatch) with copy button */}
+            {depositUrl != null &&
+              depositPaymentLinkAmountCents === depositAmountCents &&
+              depositPaymentLinkCurrency === depositCurrency && (
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-[10px] f-body break-all text-muted-foreground flex-1 min-w-0">{depositUrl}</p>
+                <button
+                  type="button"
+                  onClick={() => { void navigator.clipboard.writeText(depositUrl) }}
+                  className="shrink-0 text-[10px] f-body px-2 py-1 rounded border border-border text-muted-foreground hover:bg-muted cursor-pointer"
+                >
+                  Copy
+                </button>
+              </div>
+            )}
+            {/* Show create button when no link or D2 mismatch */}
+            {(depositUrl == null ||
+              depositPaymentLinkAmountCents !== depositAmountCents ||
+              depositPaymentLinkCurrency !== depositCurrency) && (
               <button
                 type="button"
                 onClick={handleCreateDepositLink}
@@ -481,7 +517,7 @@ export function ThreadActionsPanel({
                 )}
               >
                 {depositPending && <Loader2 size={11} className="animate-spin" />}
-                Create Deposit Link — €{depositAmountEur.toFixed(2)}
+                Create Deposit Link — {(depositAmountCents / 100).toLocaleString('en', { minimumFractionDigits: 2 })} {depositCurrency}
               </button>
             )}
           </div>

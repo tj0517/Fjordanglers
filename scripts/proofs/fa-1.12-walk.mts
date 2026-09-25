@@ -326,7 +326,7 @@ console.log('   ok → offer.accepted + awaiting_payment')
 
 step(12, 'createPaymentLink → payment.link_sent (Stripe test)')
 const { createPaymentLink } = await import('@/actions/messages')
-const linkResult = await createPaymentLink(inquiryId, 36000, 'eur')
+const linkResult = await createPaymentLink(inquiryId)
 if (!linkResult.success) throw new Error(`createPaymentLink: ${linkResult.error}`)
 console.log(`   payment link: ${linkResult.url}`)
 

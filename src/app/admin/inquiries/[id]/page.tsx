@@ -537,6 +537,23 @@ export default async function AdminInquiryDetailPage({
     />
   )
 
+  // ── FA-1.29: extract active link event for D2 warning ───────────────────
+  // Find the latest payment.link_sent event whose payload.link_id matches the stored link id
+  const activeLinkId = (inquiry as typeof inquiry & { deposit_payment_link_id?: string | null }).deposit_payment_link_id ?? null
+  const activeLinkUrl = (inquiry as typeof inquiry & { deposit_payment_link_url?: string | null }).deposit_payment_link_url ?? null
+  let activeLinkAmountCents: number | null = null
+  let activeLinkCurrency:    string | null = null
+  if (activeLinkId != null) {
+    const linkEvt = [...inquiryEvents]
+      .reverse()
+      .find(e => e.type === 'payment.link_sent' && (e.payload as { link_id?: string }).link_id === activeLinkId)
+    if (linkEvt != null) {
+      const p = linkEvt.payload as { amount_cents?: number; currency?: string }
+      activeLinkAmountCents = p.amount_cents ?? null
+      activeLinkCurrency    = p.currency    ?? null
+    }
+  }
+
   // ── Tab: Offer & payment ──────────────────────────────────────────────────
   const offerContent = (
     <div className="flex flex-col gap-4 max-w-xl">
@@ -551,6 +568,10 @@ export default async function AdminInquiryDetailPage({
         depositAmountEur={inquiry.deposit_amount ?? null}
         depositAmountCents={inquiry.deposit_amount_cents ?? null}
         depositCurrency={inquiry.deposit_currency ?? null}
+        depositPaymentLinkId={activeLinkId}
+        depositPaymentLinkUrl={activeLinkUrl}
+        depositPaymentLinkAmountCents={activeLinkAmountCents}
+        depositPaymentLinkCurrency={activeLinkCurrency}
         guideNotifiedPaid={guideNotifiedPaid}
       />
 

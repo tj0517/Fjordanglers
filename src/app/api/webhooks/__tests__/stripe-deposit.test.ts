@@ -721,3 +721,25 @@ describe('stripe-deposit webhook — depositAmountEur (FA-1.28)', () => {
     )
   })
 })
+
+// ─── FA-1.29: payment.received currency is uppercase ─────────────────────────
+
+describe('stripe-deposit webhook — payment.received currency uppercase (FA-1.29)', () => {
+  it('emits payment.received with uppercase currency when session.currency is lowercase', async () => {
+    vi.mocked(createServiceClient).mockReturnValue(buildHappyMock())
+    const session: Partial<Stripe.Checkout.Session> = {
+      id:             'cs_isk_currency',
+      object:         'checkout.session',
+      payment_status: 'paid',
+      metadata:       { payment_type: 'inquiry_deposit', inquiry_id: 'inq-test' },
+      currency:       'isk',  // Stripe returns lowercase
+      amount_total:   50000,
+    }
+    const { POST } = await import('@/app/api/webhooks/stripe-deposit/route')
+    await POST(makeReq(mockEvent(session)))
+
+    const call = vi.mocked(emitEvent).mock.calls.find(([, params]) => params.type === 'payment.received')
+    expect(call).toBeDefined()
+    expect(call![1].payload).toMatchObject({ currency: 'ISK' })
+  })
+})
