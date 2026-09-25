@@ -2,13 +2,14 @@
 id: FA-1.31
 title: Panel admina reaguje — stan ładowania przy nawigacji, „trwa” i blokada podwójnego kliknięcia na wszystkich akcjach
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/admin-pending-states
+pr: 107
 depends_on: [FA-1.29]
 blocked_by_questions: []
 touches_db: false
@@ -62,3 +63,7 @@ pnpm typecheck && pnpm lint && pnpm test run
 
 ## Notatki z realizacji
 - 2026-09-24 tj (wf-plan): zadanie z wiersza FA-1.18 w `docs/deferred-tasks.md`; runda 2 panelu rozdzielona na FA-1.31 (reakcja) i FA-1.32 (wygląd).
+- 2026-09-25 tj (wf-task): red proof via jsdom + @testing-library/react as devDependencies, DOM environment scoped to component tests only (option A; alternatives were Playwright e2e and a DOM-less helper test). Run on the Mac, minimal setup.
+- 2026-09-25 tj (preflight): obcy stack Supabase `hydra-arms` działa na Macu — nie zatrzymywać go; implementacja i testy jsdom bez bazy; przed fazą zrzutów STOP — tj sam zatrzyma hydra-arms i da znać. Nie startować stacku tego repo, gdy hydra-arms działa.
+- 2026-09-25 tj (preflight): `.env.local` na Macu wskazuje na produkcję (`uwxrstbplaoxfghrchcy`) — plik zostaje nietknięty. Na tej maszynie NIGDY `pnpm build` / `pnpm start` / tryb produkcyjny ani skrypty ładujące `.env.local` (build robi CI; zastępuje regułę „build tylko przy zatrzymanym stacku”). Przy `pnpm dev` do zrzutów najpierw dowód, że aplikacja łączy się z 127.0.0.1/localhost (host z logu dev / requestów Playwright); inny host → natychmiastowy STOP.
+- 2026-09-25 tj (wf-review): accepted. PR #107. Proven: 25/25 admin page dirs have loading.tsx; nav pending indicator + route skeleton (screenshots a1, a2); finances Save pending/disabled/aria-busy (screenshot b); red proof on the real FinancesClient component (two clicks → one call); no .from/as any/eslint-disable in diff; only jsdom 29.1.1 + @testing-library/react added (Node 20 in CI). 49 actions already disabled keep no extra ref-lock — accepted, server-side idempotency tracked in deferred.

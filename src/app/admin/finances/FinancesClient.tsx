@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Pencil, Trash2, Plus, Check, X } from 'lucide-react'
+import { useState } from 'react'
+import { Pencil, Trash2, Plus, Check, X, Loader2 } from 'lucide-react'
+import { useLockedAction } from '@/components/admin/use-locked-action'
 import {
   addFixedCost,
   updateFixedCost,
@@ -61,10 +62,12 @@ const emptyForm = (): FixedCostInput => ({
 
 function InlineForm({
   initial,
+  saving,
   onSave,
   onCancel,
 }: {
   initial: FixedCostInput
+  saving: boolean
   onSave: (data: FixedCostInput) => void
   onCancel: () => void
 }) {
@@ -75,7 +78,7 @@ function InlineForm({
   }
 
   function handleSave() {
-    if (!form.name.trim()) return
+    if (saving || !form.name.trim()) return
     onSave(form)
   }
 
@@ -147,15 +150,20 @@ function InlineForm({
         <div className="flex items-center gap-2">
           <button
             onClick={handleSave}
-            className="p-1.5 rounded-lg transition-colors"
+            disabled={saving}
+            aria-busy={saving}
+            className="p-1.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-progress"
             style={{ background: 'rgba(22,163,74,0.1)', color: '#16A34A' }}
-            title="Save"
+            title={saving ? 'Saving…' : 'Save'}
           >
-            <Check size={14} strokeWidth={2} />
+            {saving
+              ? <Loader2 size={14} strokeWidth={2} className="animate-spin" aria-hidden />
+              : <Check size={14} strokeWidth={2} />}
           </button>
           <button
             onClick={onCancel}
-            className="p-1.5 rounded-lg transition-colors"
+            disabled={saving}
+            className="p-1.5 rounded-lg transition-colors disabled:opacity-60"
             style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
             title="Cancel"
           >
@@ -173,10 +181,10 @@ export function FinancesClient({ rows }: { rows: FixedCostRow[] }) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [isPending, run] = useLockedAction()
 
   function handleAdd(data: FixedCostInput) {
-    startTransition(async () => {
+    run(async () => {
       const res = await addFixedCost(data)
       if (!res.success) { setError(res.error ?? 'Failed'); return }
       setAdding(false)
@@ -185,7 +193,7 @@ export function FinancesClient({ rows }: { rows: FixedCostRow[] }) {
   }
 
   function handleUpdate(id: string, data: FixedCostInput) {
-    startTransition(async () => {
+    run(async () => {
       const res = await updateFixedCost(id, data)
       if (!res.success) { setError(res.error ?? 'Failed'); return }
       setEditingId(null)
@@ -194,7 +202,7 @@ export function FinancesClient({ rows }: { rows: FixedCostRow[] }) {
   }
 
   function handleDelete(id: string) {
-    startTransition(async () => {
+    run(async () => {
       const res = await deleteFixedCost(id)
       if (!res.success) setError(res.error ?? 'Failed')
     })
@@ -239,6 +247,7 @@ export function FinancesClient({ rows }: { rows: FixedCostRow[] }) {
                     category:      row.category,
                     notes:         row.notes,
                   }}
+                  saving={isPending}
                   onSave={data => handleUpdate(row.id, data)}
                   onCancel={() => setEditingId(null)}
                 />
@@ -287,7 +296,9 @@ export function FinancesClient({ rows }: { rows: FixedCostRow[] }) {
                       </button>
                       <button
                         onClick={() => handleDelete(row.id)}
-                        className="p-1.5 rounded-lg transition-colors"
+                        disabled={isPending}
+                        aria-busy={isPending}
+                        className="p-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-progress"
                         style={{ color: 'rgba(220,38,38,0.5)' }}
                         title="Archive"
                       >
@@ -302,6 +313,7 @@ export function FinancesClient({ rows }: { rows: FixedCostRow[] }) {
             {adding && (
               <InlineForm
                 initial={emptyForm()}
+                saving={isPending}
                 onSave={handleAdd}
                 onCancel={() => setAdding(false)}
               />
