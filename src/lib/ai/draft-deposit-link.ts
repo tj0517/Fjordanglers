@@ -20,8 +20,8 @@ import { assembleConversation } from './extract-trip'
 import type { ConversationMessage } from './extract-trip'
 import type { KnowledgeEntry } from './knowledge'
 
-export const AMOUNT_PLACEHOLDER = '{{DEPOSIT_AMOUNT}}'
-export const LINK_PLACEHOLDER   = '{{PAYMENT_LINK}}'
+const AMOUNT_PLACEHOLDER = '{{DEPOSIT_AMOUNT}}'
+const LINK_PLACEHOLDER   = '{{PAYMENT_LINK}}'
 
 export class DraftDepositLinkError extends Error {
   constructor(message: string) {
