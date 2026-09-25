@@ -23,29 +23,35 @@ export function MessageComposer({
   guideHasPhone    = false,
   waLastInboundAt  = null,
   igEnabled        = false,
+  initialDraftId   = null,
+  initialDraftText = null,
 }: {
-  inquiryId:       string
-  guideAssigned?:  boolean
-  anglerHasPhone?: boolean
-  guideHasPhone?:  boolean
+  inquiryId:        string
+  guideAssigned?:   boolean
+  anglerHasPhone?:  boolean
+  guideHasPhone?:   boolean
   /** ISO timestamp of last inbound WA message on this inquiry — determines 24-h window. */
   waLastInboundAt?: string | null
-  igEnabled?:      boolean
+  igEnabled?:       boolean
   /** WA character limit for display (160 for template, 4096 for freeform). */
-  _waCharLimit?:   number
+  _waCharLimit?:    number
+  /** Draft row id from the latest agent-drafted message — pre-fills the composer. */
+  initialDraftId?:   string | null
+  /** Draft body text pre-filled into the composer after deposit link creation. */
+  initialDraftText?: string | null
 }) {
   const router = useRouter()
 
   const [channel,       setChannel]       = useState<Channel>('email')
   const [counterpart,   setCounterpart]   = useState<'angler' | 'guide'>('angler')
   const [subject,       setSubject]       = useState('')
-  const [body,          setBody]          = useState('')
+  const [body,          setBody]          = useState(initialDraftText ?? '')
   const [isPending,     startTransition]  = useTransition()
   const [error,         setError]         = useState<string | null>(null)
   const [sent,          setSent]          = useState(false)
   const [draftPending,  startDraft]       = useTransition()
   const [draftError,    setDraftError]    = useState<string | null>(null)
-  const [draftId,       setDraftId]       = useState<string | null>(null)
+  const [draftId,       setDraftId]       = useState<string | null>(initialDraftId ?? null)
 
   const waOpen = isWaWindowOpen(waLastInboundAt ?? null)
 

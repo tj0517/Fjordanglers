@@ -12,6 +12,7 @@ import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
 import { MessageComposer } from './MessageComposer'
+import { getDepositLinkDraft } from '@/actions/messages'
 import { ThreadActionsPanel } from './ThreadActionsPanel'
 import type { OfferForPanel } from './ThreadActionsPanel'
 import { StatusChanger } from './StatusChanger'
@@ -137,6 +138,14 @@ export default async function AdminInquiryDetailPage({
     if (!error && data != null) threadMessages = data as MessageRow[]
   } catch {
     // Table not yet migrated — graceful fallback
+  }
+
+  // Latest agent draft for the composer — pre-filled only when body contains the active link URL (FA-1.30 Fix 5)
+  let latestAnglerDraft: { id: string; body: string } | null = null
+  try {
+    latestAnglerDraft = await getDepositLinkDraft(id, rawInquiry.deposit_payment_link_url ?? null)
+  } catch {
+    // graceful fallback
   }
 
   // ── Fetch inquiry events ──────────────────────────────────────────────────
@@ -495,12 +504,15 @@ export default async function AdminInquiryDetailPage({
         </div>
         <div className="px-5 py-4">
           <MessageComposer
+            key={latestAnglerDraft?.id ?? 'no-draft'}
             inquiryId={inquiry.id}
             guideAssigned={inquiry.assigned_guide_id != null}
             anglerHasPhone={anglerHasPhone}
             guideHasPhone={guideHasPhone}
             waLastInboundAt={waLastInboundAt}
             igEnabled={igEnabled}
+            initialDraftId={latestAnglerDraft?.id ?? null}
+            initialDraftText={latestAnglerDraft?.body ?? null}
           />
         </div>
       </div>
