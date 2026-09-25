@@ -614,7 +614,7 @@ export default async function AdminInquiryDetailPage({
         hasDepositDraft={latestAnglerDraft != null}
       />
 
-      <aside className="flex flex-col gap-5">
+      <aside className="flex flex-col gap-5 lg:col-start-2">
         <DealCard
           offer={panelOffer}
           depositAmountCents={inquiry.deposit_amount_cents ?? null}
