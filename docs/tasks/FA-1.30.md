@@ -9,7 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: feat/deposit-message
-pr: https://github.com/TymonJezionek/fjordanglers/pull/105
+pr: https://github.com/tj0517/Fjordanglers/pull/105
 depends_on: [FA-1.29]
 blocked_by_questions: []
 touches_db: false
