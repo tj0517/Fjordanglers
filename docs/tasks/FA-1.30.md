@@ -2,7 +2,7 @@
 id: FA-1.30
 title: Wiadomość z linkiem depozytu — nazwa i opis wyprawy w Stripe; szkic od agenta AI, kwotę i link wstawia kod
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -76,3 +76,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-25 claude (implementation complete): 14 test files, 123 tests pass. Stripe CLI verification (test mode, prod_VKDoE5chuTkdzI): `"livemode": false`, `"name": "Your trip — 15–18 Jul 2026 · 2 people"`, `"description": "FjordAnglers booking & curation fee. The trip balance is paid directly to your guide after arrival."`. Playwright screenshots: Stripe page (.playwright-mcp/page-2026-09-25T13-42-05-753Z.png), composer pre-filled (.playwright-mcp/page-2026-09-25T13-41-24-676Z.png), offer card with link (.playwright-mcp/page-2026-09-25T13-41-03-044Z.png).
 - 2026-09-25 tj (wf-review): Stripe product name `'<trip title> — <dates> · <N> people'` and description `'FjordAnglers booking & curation fee. The trip balance is paid directly to your guide after arrival.'` approved. Round 2 requested: 8 fixes (data-layer isolation, INSERT-only draft, exact-once placeholder + no-URL/no-amount validation, instructions in prompt, link-scoped pre-fill, dead prop removal, real trip title evidence, cast cleanup).
 - 2026-09-25 claude (round 2 complete): All 8 fixes implemented (commit d0e16ef + docs). Stripe CLI evidence (test mode, prod_VKEjo2wMFjIneb): `"livemode": false`, `"name": "Arctic Char Fishing, Iceland — 10–13 Aug 2026 · 2 people"`. 44 test files, 397 tests green. Fix 1 proof: `git diff origin/stage-1...HEAD -- 'src/app/**' 'src/lib/ai/**' | grep -n '^+.*\.from('` → empty. Playwright screenshots: Stripe payment page (.playwright-mcp/fix7-stripe-real-trip-title.png), composer with draft (.playwright-mcp/fix7-composer-with-draft.png), composer error state (.playwright-mcp/fix6-composer-error-state.png).
+- 2026-09-25 tj (wf-review round 3): accepted with additions — 4 rows in docs/deferred-tasks.md (AI ordering, amount-regex gap, 'Your trip' fallback, Invalid Date header), corrected error screenshot (fix6 now shows ThreadActionsPanel error, not old inline MessageComposer error). Status → done.
