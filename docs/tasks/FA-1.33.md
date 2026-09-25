@@ -2,7 +2,7 @@
 id: FA-1.33
 title: Karta zapytania — zakładki natychmiast i jako pigułki; Overview nie wychodzi poza ekran
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -58,3 +58,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ## Notatki z realizacji
 - 2026-09-26 tj: zgłoszone na prod po FA-1.32 (zrzut: Overview ucięty po prawej, zakładki wolne i słabo widoczne). Decyzja tj: zakładki jako pigułki jak w FA-1.15. Plik zadania zakłada agent, bo stage-1 jest chronione.
 - 2026-09-26 (impl): PR 110 (`--base stage-1`) — raport w opisie PR-a. Zrzuty: `docs/screenshots/fa-1.33/{before,after}/` (overflow repro 1440/1024, pigułki na dwóch etapach). Test jsdom: `InquiryDetailTabs.test.tsx` (red na starym komponencie → green). Status: review.
+- 2026-09-26 tj (wf-review): accepted — close it. PR #110.
