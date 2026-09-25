@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/inquiry-card-layout
+pr: https://github.com/tj0517/Fjordanglers/pull/108
 depends_on: [FA-1.31]
 blocked_by_questions: []
 touches_db: false
@@ -68,3 +69,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-24 tj (wf-plan): zadanie z wiersza FA-1.18 w `docs/deferred-tasks.md`; runda 2 panelu rozdzielona na FA-1.31 i FA-1.32. O-24 = tak: najpierw makieta karty, zatwierdzona przez tj.
 - 2026-09-25 tj: makieta zatwierdzona — docs/design/fa-1.32/ (kanwa claude.ai, prywatna tj). Stały układ: README w tym folderze.
 - 2026-09-25 tj (decyzje po implementacji): (1) Docker/OrbStack uruchomiony, hydra-arms zatrzymany — zrzuty „before" z czystego checkoutu origin/stage-1, „after" z gałęzi, per etap. (2) „View payment in Stripe" — opcja A: pominąć; opcja C (payment intent id zapisany w webhooku, link do płatności) → wiersz w deferred. (3) Paid bez wiadomości do przewodnika — opcja A: „Notify guide" wyłączony + podpowiedź. (4) Cztery etapy bez ekranu w makiecie (offer drafted, accepted bez kwoty, accepted bez linku, guide notified) — wersje z implementacji, akceptacja/korekta na zrzutach; wszystkie w zestawie before/after. (5) Restyling kompozytora — słusznie nie zrobiony; Conversation bez zmian wizualnych poza placeholderem i przyciskiem AI.
+- 2026-09-25 (impl): PR #108 (`--base stage-1`) — raport w opisie PR-a. Zrzuty przed/po: `docs/screenshots/fa-1.32/{before,after}/` (15 stanów). Testy jsdom: `NextStepCard.test.tsx`, `MessageComposer.test.tsx` (red na starym komponencie → green). Status: review — czeka na akceptację wizualną tj.
