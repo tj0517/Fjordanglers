@@ -25,8 +25,16 @@ export function MessageComposer({
   igEnabled        = false,
   initialDraftId   = null,
   initialDraftText = null,
+  aiEnabled,
+  anglerFirstName,
+  guideFirstName   = null,
 }: {
   inquiryId:        string
+  /** Server-computed: ANTHROPIC_API_KEY is set. Never derived from client-side env (FA-1.32). */
+  aiEnabled:        boolean
+  /** Used in the neutral placeholder "Write your message to <first name>…" */
+  anglerFirstName:  string
+  guideFirstName?:  string | null
   guideAssigned?:   boolean
   anglerHasPhone?:  boolean
   guideHasPhone?:   boolean
@@ -206,8 +214,8 @@ export function MessageComposer({
         </div>
       )}
 
-      {/* Propose draft */}
-      {!isTemplatePath && (
+      {/* Propose draft — only when AI is available (server flag) */}
+      {aiEnabled && !isTemplatePath && (
         <div>
           <Button
             type="button"
@@ -233,7 +241,7 @@ export function MessageComposer({
           <Textarea
             value={body}
             onChange={e => setBody(e.target.value)}
-            placeholder={'Hi Jan,\n\nThanks for your inquiry…'}
+            placeholder={`Write your message to ${counterpart === 'guide' ? (guideFirstName ?? 'the guide') : anglerFirstName}…`}
             className="min-h-[300px] resize-y"
           />
           {channel === 'whatsapp' && (

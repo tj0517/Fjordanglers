@@ -1,5 +1,6 @@
 'use client'
 import { STATUSES, STATUS_LABELS, STATUS_MEANINGS, type InquiryStatus } from '@/lib/inquiries/state'
+import { cn } from '@/lib/utils'
 
 // Steps are all non-terminal statuses in order — derived from STATUSES, never hardcoded
 const STEP_STATUSES = STATUSES.filter(
@@ -7,96 +8,54 @@ const STEP_STATUSES = STATUSES.filter(
     s !== 'lost' && s !== 'cancelled',
 )
 
+/** Segmented stage bar (FA-1.32 mockup): one segment per non-terminal status, filled up to the current one. */
 export function StatusStepper({ current }: { current: InquiryStatus }) {
   const isTerminal = current === 'lost' || current === 'cancelled'
   const currentIndex = STEP_STATUSES.indexOf(current as Exclude<InquiryStatus, 'lost' | 'cancelled'>)
 
   if (isTerminal) {
     return (
-      <div className="mb-6">
-        <div
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
-          style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.25)',
-            color: '#991B1B',
-          }}
-          data-status={current}
-          aria-label={STATUS_LABELS[current]}
-        >
-          <span style={{ fontSize: 8 }}>●</span>
-          {STATUS_LABELS[current]}
-          <span className="text-xs font-normal opacity-70">— {STATUS_MEANINGS[current]}</span>
-        </div>
+      <div
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold f-body bg-destructive/10 border border-destructive/25 text-destructive self-start"
+        data-status={current}
+        aria-label={STATUS_LABELS[current]}
+      >
+        <span className="text-[8px]" aria-hidden="true">●</span>
+        {STATUS_LABELS[current]}
+        <span className="text-xs font-normal opacity-70">— {STATUS_MEANINGS[current]}</span>
       </div>
     )
   }
 
   return (
-    <div className="mb-6 overflow-x-auto">
-      <div className="flex items-start gap-0 min-w-max">
-        {STEP_STATUSES.map((s, i) => {
-          const isCurrent  = s === current
-          const isComplete = i < currentIndex
-
-          return (
-            <div key={s} className="flex items-start">
-              {/* Step */}
-              <div
-                className="flex flex-col items-center gap-1.5"
-                style={{ minWidth: 80, maxWidth: 100 }}
-                data-status={s}
-              >
-                {/* Dot */}
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0 mt-0.5"
-                  style={{
-                    background: isCurrent
-                      ? '#E67E50'
-                      : isComplete
-                        ? '#0A2E4D'
-                        : 'rgba(10,46,77,0.15)',
-                    outline: isCurrent ? '3px solid rgba(230,126,80,0.25)' : undefined,
-                    outlineOffset: isCurrent ? '2px' : undefined,
-                  }}
-                  aria-label={`${isCurrent ? 'Current: ' : isComplete ? 'Done: ' : ''}${STATUS_LABELS[s]}`}
-                />
-                {/* Label */}
-                <span
-                  className="text-[10px] text-center leading-tight px-1"
-                  style={{
-                    color: isCurrent ? '#E67E50' : isComplete ? '#0A2E4D' : 'rgba(10,46,77,0.35)',
-                    fontWeight: isCurrent ? 700 : isComplete ? 500 : 400,
-                  }}
-                >
-                  {STATUS_LABELS[s]}
-                </span>
-                {/* Meaning (current only) */}
-                {isCurrent && (
-                  <span
-                    className="text-[9px] text-center leading-tight px-1"
-                    style={{ color: 'rgba(230,126,80,0.7)' }}
-                  >
-                    {STATUS_MEANINGS[s]}
-                  </span>
-                )}
-              </div>
-
-              {/* Connector line (not after last item) */}
-              {i < STEP_STATUSES.length - 1 && (
-                <div
-                  className="h-px mt-2 flex-shrink-0"
-                  style={{
-                    width: 24,
-                    background: i < currentIndex
-                      ? '#0A2E4D'
-                      : 'rgba(10,46,77,0.15)',
-                  }}
-                />
-              )}
-            </div>
-          )
-        })}
+    <div className="flex flex-col gap-2" role="list" aria-label="Stage">
+      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${STEP_STATUSES.length}, minmax(0, 1fr))` }}>
+        {STEP_STATUSES.map((s, i) => (
+          <div
+            key={s}
+            role="listitem"
+            data-status={s}
+            aria-current={s === current ? 'step' : undefined}
+            aria-label={`${s === current ? 'Current: ' : i < currentIndex ? 'Done: ' : ''}${STATUS_LABELS[s]}`}
+            className={cn('h-1 rounded-sm', i <= currentIndex ? 'bg-primary' : 'bg-primary/15')}
+          />
+        ))}
+      </div>
+      <div className="grid gap-1 text-xs f-body" style={{ gridTemplateColumns: `repeat(${STEP_STATUSES.length}, minmax(0, 1fr))` }}>
+        {STEP_STATUSES.map((s, i) => (
+          <span
+            key={s}
+            title={STATUS_MEANINGS[s]}
+            className={cn(
+              'truncate',
+              i < currentIndex && 'text-primary',
+              i === currentIndex && 'text-primary font-bold',
+              i > currentIndex && 'text-muted-foreground/80',
+            )}
+          >
+            {STATUS_LABELS[s]}
+          </span>
+        ))}
       </div>
     </div>
   )
