@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inquiry card — conversation, AI off</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F8FAFB;font-family:'DM Sans',system-ui,sans-serif;color:#0A2E4D}
+a{color:#0A2E4D}a:hover{color:#E67E50}
+textarea::placeholder,input::placeholder{color:#7A8894}
+</style>
+</helmet>
+<div style="width: 1200px; height: 1060px; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; background: #F8FAFB">
+
+  <nav aria-label="Breadcrumb" style="display: flex; gap: 8px; font-size: 12px; color: #5B6B7A">
+    <a href="#" style="color: #5B6B7A; text-decoration: none">Admin</a><span>›</span>
+    <a href="#" style="color: #5B6B7A; text-decoration: none">Inquiries</a><span>›</span>
+    <span style="color: #0A2E4D; font-weight: 600">Erik Bjornsson</span>
+  </nav>
+
+  <section style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px">
+      <div style="display: flex; align-items: center; gap: 14px">
+        <div style="width: 48px; height: 48px; border-radius: 24px; background: #0A2E4D; color: #F8FAFB; display: flex; align-items: center; justify-content: center; font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 700">E</div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15">Erik Bjornsson</h1>
+          <div style="font-size: 14px; color: #5B6B7A">erik@test.fa · +354 555 0199</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="font-size: 12px; color: #5B6B7A">Offer sent 26 Sep, 10:05</span>
+        <span style="padding: 6px 12px; border-radius: 999px; background: #E7EEF4; color: #0A2E4D; font-size: 13px; font-weight: 600">Offer presented</span>
+      </div>
+    </div>
+
+    <dl style="margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; padding-top: 18px; border-top: 1px solid #EDF1F4">
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Trip</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">Arctic Char Fishing</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Country</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">Iceland</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Group</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">2 people</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Dates</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">10–13 Aug 2026</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Guide</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">Jon Seed</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Commission</dt><dd style="margin: 0; font-size: 14px; font-weight: 600; color: #5B6B7A">—</dd></div>
+    </dl>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px">
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #D5DEE6"></div>
+        <div style="height: 4px; border-radius: 2px; background: #D5DEE6"></div>
+        <div style="height: 4px; border-radius: 2px; background: #D5DEE6"></div>
+        <div style="height: 4px; border-radius: 2px; background: #D5DEE6"></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; font-size: 12px; color: #7A8894">
+        <span style="color: #0A2E4D">New</span><span style="color: #0A2E4D">Qualifying</span><span style="color: #0A2E4D">Waiting guide</span><span style="color: #0A2E4D; font-weight: 700">Offer presented</span><span>Awaiting payment</span><span>Paid</span><span>Handed over</span><span>Completed</span>
+      </div>
+    </div>
+  </section>
+
+  <div role="tablist" aria-label="Inquiry sections" style="display: flex; gap: 28px; border-bottom: 1px solid #DCE3E9; padding: 0 4px">
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Overview</button>
+    <button role="tab" aria-selected="true" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 700; color: #0A2E4D; border-bottom: 2px solid #0A2E4D; cursor: pointer">Conversation <span style="margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: #E7EEF4; font-size: 11px; font-weight: 600; color: #0A2E4D">4</span></button>
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Brief</button>
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Guide</button>
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Offer &amp; payment</button>
+  </div>
+
+  <section style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; display: flex; flex-direction: column">
+    <div style="padding: 16px 24px; border-bottom: 1px solid #EDF1F4; font-family: Fraunces, Georgia, serif; font-size: 16px; font-weight: 600">Correspondence</div>
+    <div style="padding: 16px 24px; display: flex; gap: 12px">
+      <div style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 16px; background: #E7EEF4; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700">E</div>
+      <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1">
+        <div style="font-size: 13px"><strong>Erik Bjornsson</strong> <span style="color: #5B6B7A">25 Sep 2026, 16:32 · inquiry</span></div>
+        <div style="padding: 10px 14px; border-radius: 12px; background: #F4F7F9; font-size: 14px; font-style: italic">“I would like to fish for Arctic Char in Iceland.”</div>
+      </div>
+    </div>
+    <div style="padding: 0 24px 16px; font-size: 12px; color: #7A8894">3 more messages · unchanged from today's view</div>
+  </section>
+
+  <section style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px">
+    <div style="font-family: Fraunces, Georgia, serif; font-size: 16px; font-weight: 600">Send message</div>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+      <button aria-pressed="true" style="height: 44px; border-radius: 12px; border: 0; background: #0A2E4D; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 600">Email</button>
+      <button disabled style="height: 44px; border-radius: 12px; border: 1px solid #E3E9EE; background: #F4F7F9; color: #7A8894; font: inherit; font-size: 14px">WhatsApp</button>
+      <button disabled style="height: 44px; border-radius: 12px; border: 1px solid #E3E9EE; background: #F4F7F9; color: #7A8894; font: inherit; font-size: 14px">Instagram</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="subj" style="font-size: 13px; font-weight: 600">Subject</label>
+      <input id="subj" value="Re: your inquiry" style="height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #C9D4DD; font: inherit; font-size: 14px; color: #0A2E4D">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <label for="msg" style="font-size: 13px; font-weight: 600">Message</label>
+      <textarea id="msg" placeholder="Write your message to Erik…" style="height: 120px; box-sizing: border-box; padding: 12px 14px; border-radius: 12px; border: 1px solid #C9D4DD; font: inherit; font-size: 14px; color: #0A2E4D; resize: vertical"></textarea>
+    </div>
+    <div style="display: flex; justify-content: flex-end">
+      <button style="height: 44px; padding: 0 22px; border-radius: 12px; border: 0; background: #E67E50; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer">Send email</button>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1060}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
