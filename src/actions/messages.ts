@@ -54,6 +54,15 @@ import { transition, TransitionError } from '@/lib/inquiries/state'
 import { stripe } from '@/lib/stripe/client'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
+import { formatDepositAmount } from '@/lib/inquiries/deposit'
+import { getInquiryExperience, tripTitleOf, TRIP_TITLE_FALLBACK } from '@/lib/inquiries/experience-lookup'
+import {
+  draftDepositLinkMessage,
+  buildStripeProductName,
+  buildStripeProductDescription,
+} from '@/lib/ai/draft-deposit-link'
+import { loadKnowledge } from '@/lib/ai/knowledge'
+import type { ConversationMessage } from '@/lib/ai/extract-trip'
 
 // ─── matchUnmatchedMessage ────────────────────────────────────────────────────
 
@@ -605,7 +614,7 @@ export async function markContactsExchanged(messageId: string): Promise<ActionRe
 // ─── createPaymentLink ────────────────────────────────────────────────────────
 
 export type CreatePaymentLinkResult =
-  | { success: true;  url: string }
+  | { success: true;  url: string; draftId?: string; draftError?: string }
   | { success: false; error: string }
 
 export async function createPaymentLink(
@@ -616,7 +625,7 @@ export async function createPaymentLink(
 
   const { data: inq } = await svc
     .from('inquiries')
-    .select('id, angler_name, angler_email, party_size, deposit_amount_cents, deposit_currency, deposit_payment_link_id, deposit_payment_link_url')
+    .select('id, angler_name, angler_email, party_size, deposit_amount_cents, deposit_currency, deposit_payment_link_id, deposit_payment_link_url, trip_id, experience_page_id, requested_dates, message, trip_country, assigned_guide_id, status')
     .eq('id', inquiryId)
     .single()
   if (inq == null) return { success: false, error: 'Inquiry not found' }
@@ -662,19 +671,32 @@ export async function createPaymentLink(
     }
   }
 
+  // ── Fetch experience / trip title (reused for product name and draft) ─────
+  const experience   = await getInquiryExperience({
+    experience_page_id: inq.experience_page_id ?? null,
+    trip_id:            inq.trip_id ?? null,
+  }).catch(() => null)
+  const tripTitle      = tripTitleOf(experience) ?? TRIP_TITLE_FALLBACK
+  const requestedDates = (inq.requested_dates ?? []) as string[]
+  const partySize      = inq.party_size ?? 1
+
   // ── Create new Stripe link ────────────────────────────────────────────────
+  // Product is created explicitly so we can set both name and description
+  // (prices.create product_data has no description field — decision tj 2026-09-25).
   // All four deposit currencies (EUR, USD, ISK, NZD) use ×100 storage — which matches
   // Stripe's unit_amount convention for these currencies (Stripe docs: ISK requires
   // a two-decimal representation ending in 00, e.g. 500 for 5 ISK — same ×100 as EUR).
   let paymentLink: { url: string; id: string }
   try {
+    const product = await stripe.products.create({
+      name:        buildStripeProductName(tripTitle, requestedDates, partySize),
+      description: buildStripeProductDescription(),
+      metadata:    { inquiry_id: inquiryId },
+    })
     const price = await stripe.prices.create({
-      currency:     currency.toLowerCase(),
-      unit_amount:  amountCents,
-      product_data: {
-        name:     'Booking & Curation Fee — FjordAnglers',
-        metadata: { inquiry_id: inquiryId },
-      },
+      currency:    currency.toLowerCase(),
+      unit_amount: amountCents,
+      product:     product.id,
     })
     const link = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
@@ -696,17 +718,79 @@ export async function createPaymentLink(
     .update({ deposit_payment_link_id: paymentLink.id, deposit_payment_link_url: paymentLink.url })
     .eq('id', inquiryId)
 
-  // Insert a draft message row with the link as body — admin will paste and send
-  await svc.from('messages').insert({
-    inquiry_id:  inquiryId,
-    channel:     'email',
-    direction:   'outbound',
-    counterpart: 'angler',
-    body:        `Payment link: ${paymentLink.url}`,
-    status:      'draft',
-    drafted_by:  'admin',
-    occurred_at: new Date().toISOString(),
-  })
+  // AI draft — always inserts a new row (never overwrites an existing draft).
+  // If the draft fails, the link is still valid and visible on the card (O-23).
+  let draftId:    string | undefined
+  let draftError: string | undefined
+  try {
+    const amountString = formatDepositAmount(amountCents, currency)
+
+    // Fetch thread messages for context
+    const { data: threadData } = await svc
+      .from('messages')
+      .select('direction, channel, body, occurred_at, counterpart')
+      .eq('inquiry_id', inquiryId)
+      .neq('status', 'draft')
+      .order('occurred_at', { ascending: true })
+    const threadMessages = (threadData ?? []) as ConversationMessage[]
+
+    // Fetch guide name
+    let guideName: string | null = null
+    if (inq.assigned_guide_id != null) {
+      const { data: g } = await svc
+        .from('guides')
+        .select('full_name')
+        .eq('id', inq.assigned_guide_id)
+        .single()
+      guideName = g?.full_name ?? null
+    }
+
+    // Load knowledge
+    const { instructions, entries } = await loadKnowledge({
+      country: inq.trip_country,
+      guideId: inq.assigned_guide_id,
+    })
+    if (instructions == null) {
+      throw new Error('No active instructions in agent_knowledge — add one before drafting.')
+    }
+
+    const draftText = await draftDepositLinkMessage({
+      inquiryId,
+      anglerName:      inq.angler_name,
+      anglerMessage:   inq.message ?? null,
+      requestedDates,
+      partySize,
+      status:          inq.status,
+      guideName,
+      instructions,
+      knowledgeEntries: entries,
+      tripTitle,
+      amountString,
+      linkUrl:         paymentLink.url,
+      threadMessages,
+    })
+
+    // Always INSERT — never overwrite an existing draft
+    const { data: inserted, error: insertErr } = await svc
+      .from('messages')
+      .insert({
+        inquiry_id:  inquiryId,
+        channel:     'email',
+        direction:   'outbound',
+        counterpart: 'angler',
+        body:        draftText,
+        status:      'draft',
+        drafted_by:  'agent',
+        occurred_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+    if (insertErr != null) throw insertErr
+    draftId = inserted.id
+  } catch (err) {
+    console.error('[createPaymentLink] draft error:', err)
+    draftError = err instanceof Error ? err.message : 'Draft failed'
+  }
 
   await emitEvent(svc, {
     inquiryId,
@@ -729,7 +813,36 @@ export async function createPaymentLink(
   }
 
   revalidatePath('/admin/inquiries/' + inquiryId)
-  return { success: true, url: paymentLink.url }
+  return { success: true, url: paymentLink.url, draftId, draftError }
+}
+
+// ─── getDepositLinkDraft — FA-1.30 ───────────────────────────────────────────
+
+/**
+ * Returns the latest agent draft for an inquiry if its body contains the
+ * active deposit payment link URL. Older drafts (or drafts for a different link)
+ * return null so they don't pre-fill the composer. Fix 5, FA-1.30.
+ */
+export async function getDepositLinkDraft(
+  inquiryId: string,
+  linkUrl:   string | null,
+): Promise<{ id: string; body: string } | null> {
+  if (linkUrl == null) return null
+  await requireAdmin()
+  const svc = createServiceClient()
+  const { data } = await svc
+    .from('messages')
+    .select('id, body')
+    .eq('inquiry_id', inquiryId)
+    .eq('status', 'draft')
+    .eq('direction', 'outbound')
+    .eq('counterpart', 'angler')
+    .eq('drafted_by', 'agent')
+    .order('occurred_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (data == null || !data.body.includes(linkUrl)) return null
+  return data as { id: string; body: string }
 }
 
 // ─── proposeDraft — FA-1.14 ───────────────────────────────────────────────────

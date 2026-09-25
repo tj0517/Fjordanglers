@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inquiry card — awaiting payment</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F8FAFB;font-family:'DM Sans',system-ui,sans-serif;color:#0A2E4D}
+a{color:#0A2E4D}a:hover{color:#E67E50}
+</style>
+</helmet>
+<div style="width: 1200px; height: 980px; box-sizing: border-box; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; background: #F8FAFB">
+
+  <nav aria-label="Breadcrumb" style="display: flex; gap: 8px; font-size: 12px; color: #5B6B7A">
+    <a href="#" style="color: #5B6B7A; text-decoration: none">Admin</a><span>›</span>
+    <a href="#" style="color: #5B6B7A; text-decoration: none">Inquiries</a><span>›</span>
+    <span style="color: #0A2E4D; font-weight: 600">Erik Bjornsson</span>
+  </nav>
+
+  <section style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px">
+      <div style="display: flex; align-items: center; gap: 14px">
+        <div style="width: 48px; height: 48px; border-radius: 24px; background: #0A2E4D; color: #F8FAFB; display: flex; align-items: center; justify-content: center; font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 700">E</div>
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <h1 style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 28px; font-weight: 700; line-height: 1.15">Erik Bjornsson</h1>
+          <div style="font-size: 14px; color: #5B6B7A">erik@test.fa · +354 555 0199</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span style="font-size: 12px; color: #5B6B7A">Link created 26 Sep, 14:20</span>
+        <span style="padding: 6px 12px; border-radius: 999px; background: #FBEBDD; color: #8A3B14; font-size: 13px; font-weight: 600">Awaiting payment</span>
+      </div>
+    </div>
+
+    <dl style="margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; padding-top: 18px; border-top: 1px solid #EDF1F4">
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Trip</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">Arctic Char Fishing</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Country</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">Iceland</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Group</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">2 people</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Dates</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">10–13 Aug 2026</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Guide</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">Jon Seed</dd></div>
+      <div style="display: flex; flex-direction: column; gap: 4px"><dt style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Commission</dt><dd style="margin: 0; font-size: 14px; font-weight: 600">400.00 EUR</dd></div>
+    </dl>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px">
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #0A2E4D"></div>
+        <div style="height: 4px; border-radius: 2px; background: #D5DEE6"></div>
+        <div style="height: 4px; border-radius: 2px; background: #D5DEE6"></div>
+        <div style="height: 4px; border-radius: 2px; background: #D5DEE6"></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; font-size: 12px; color: #7A8894">
+        <span style="color: #0A2E4D">New</span><span style="color: #0A2E4D">Qualifying</span><span style="color: #0A2E4D">Waiting guide</span><span style="color: #0A2E4D">Offer presented</span><span style="color: #0A2E4D; font-weight: 700">Awaiting payment</span><span>Paid</span><span>Handed over</span><span>Completed</span>
+      </div>
+    </div>
+  </section>
+
+  <div role="tablist" aria-label="Inquiry sections" style="display: flex; gap: 28px; border-bottom: 1px solid #DCE3E9; padding: 0 4px">
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Overview</button>
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Conversation <span style="margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: #FBEBDD; font-size: 11px; font-weight: 600; color: #8A3B14">1 draft</span></button>
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Brief</button>
+    <button role="tab" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 500; color: #5B6B7A; border-bottom: 2px solid transparent; cursor: pointer">Guide</button>
+    <button role="tab" aria-selected="true" style="background: none; border: 0; padding: 12px 0; font: inherit; font-size: 14px; font-weight: 700; color: #0A2E4D; border-bottom: 2px solid #0A2E4D; cursor: pointer">Offer &amp; payment</button>
+  </div>
+
+  <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; align-items: start">
+    <section style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Next step</div>
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <h2 style="margin: 0; font-family: Fraunces, Georgia, serif; font-size: 22px; font-weight: 600">Send the deposit link to Erik</h2>
+        <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5B6B7A">A draft with this link is ready in Conversation. The status moves to Paid on its own when Stripe confirms the payment.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+        <div style="border: 1px solid #E3E9EE; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Deposit</span>
+          <span style="font-size: 20px; font-weight: 700">400.00 EUR</span>
+          <span style="font-size: 12px; color: #5B6B7A">20% of 2,000.00 EUR</span>
+        </div>
+        <div style="border: 1px solid #E3E9EE; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Link</span>
+          <span style="font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px"><span style="width: 8px; height: 8px; border-radius: 4px; background: #1E6B3F"></span>Active</span>
+          <span style="font-size: 12px; color: #5B6B7A">Stripe · not paid yet</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <label for="plink" style="font-size: 13px; font-weight: 600">Payment link</label>
+        <div style="display: flex; gap: 8px">
+          <input id="plink" readonly value="https://buy.stripe.com/test_00wcN446f4qm5fleVw0co0d" style="flex-grow: 1; height: 44px; box-sizing: border-box; padding: 0 14px; border-radius: 12px; border: 1px solid #C9D4DD; background: #F4F7F9; font: inherit; font-size: 13px; color: #0A2E4D">
+          <button style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #C9D4DD; background: #FFFFFF; color: #0A2E4D; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer">Copy</button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 4px">
+        <button style="height: 44px; padding: 0 16px; border-radius: 12px; border: 0; background: none; color: #0A2E4D; font: inherit; font-size: 14px; font-weight: 600; text-decoration: underline; cursor: pointer">Change amount</button>
+        <a href="Conversation.dc.html" style="height: 44px; display: inline-flex; align-items: center; padding: 0 20px; border-radius: 12px; background: #E67E50; color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none">Open draft in Conversation</a>
+      </div>
+    </section>
+
+    <aside style="display: flex; flex-direction: column; gap: 20px">
+      <section style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 20px 24px; display: flex; flex-direction: column; gap: 12px">
+        <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Deal</div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px"><span style="color: #5B6B7A">Offer</span><span style="font-weight: 600">Accepted · option 1</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px"><span style="color: #5B6B7A">Trip price</span><span style="font-weight: 600">2,000.00 EUR</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px"><span style="color: #5B6B7A">Deposit to FA</span><span style="font-weight: 600">400.00 EUR</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 14px"><span style="color: #5B6B7A">Balance to guide</span><span style="font-weight: 600">1,600.00 EUR</span></div>
+      </section>
+      <section style="background: #FFFFFF; border: 1px solid #E3E9EE; border-radius: 16px; padding: 8px 0; display: flex; flex-direction: column">
+        <div style="padding: 12px 24px 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #5B6B7A">Internal</div>
+        <button style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 24px; background: none; border: 0; font: inherit; font-size: 14px; color: #0A2E4D; cursor: pointer">Deal tracker <span style="font-size: 12px; color: #7A8894">400 EUR ›</span></button>
+        <label style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 24px; font-size: 14px">External offer sent <input type="checkbox" style="width: 18px; height: 18px"></label>
+        <button style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 24px; background: none; border: 0; font: inherit; font-size: 14px; color: #7A8894">Review link <span style="font-size: 12px">after the trip</span></button>
+      </section>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

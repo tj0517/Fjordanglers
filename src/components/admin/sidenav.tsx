@@ -1,11 +1,12 @@
 'use client'
 
-import Link from 'next/link'
+import Link, { useLinkStatus } from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { useFormStatus } from 'react-dom'
 import {
   LayoutDashboard, Users, Map, MessageSquare, CalendarDays,
-  Menu, X, ShieldCheck, BarChart2, Wallet, LogOut, TrendingUp, ClipboardList, BookOpen,
+  Menu, X, ShieldCheck, BarChart2, Wallet, LogOut, TrendingUp, ClipboardList, BookOpen, Loader2,
 } from 'lucide-react'
 import { signOut } from '@/actions/auth'
 
@@ -32,6 +33,53 @@ const navItems: NavItem[] = [
   { label: 'Forms',        href: '/admin/forms',       icon: <ClipboardList size={16} strokeWidth={1.6} /> },
   { label: 'Knowledge',    href: '/admin/knowledge',   icon: <BookOpen size={16} strokeWidth={1.6} /> },
 ]
+
+// ─── Pending indicators (FA-1.31) ─────────────────────────────────────────────
+
+/**
+ * Must be rendered *inside* a <Link>: `useLinkStatus` reads the pending state
+ * of the enclosing link's navigation. While the new route is still rendering
+ * on the server it swaps the item icon for a spinner and paints a thin
+ * progress bar across the top of the viewport.
+ */
+function NavIcon({ icon, active }: { icon: React.ReactNode; active: boolean }) {
+  const { pending } = useLinkStatus()
+  return (
+    <>
+      <span className={active ? 'text-accent flex-shrink-0' : 'text-white/30 flex-shrink-0'}>
+        {pending
+          ? <Loader2 size={16} strokeWidth={1.8} className="animate-spin text-accent" aria-hidden />
+          : icon}
+      </span>
+      {pending && (
+        <span
+          role="progressbar"
+          aria-label="Loading page"
+          data-testid="nav-progress"
+          className="fixed top-0 left-0 right-0 h-0.5 z-[60] bg-accent animate-pulse pointer-events-none"
+        />
+      )}
+    </>
+  )
+}
+
+/** Submit button for the sign-out form: disabled + spinner while the action runs. */
+function LogoutButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-busy={pending}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm f-body text-white/35 bg-transparent cursor-pointer transition-colors hover:text-white/60 disabled:cursor-progress disabled:opacity-60"
+    >
+      {pending
+        ? <Loader2 size={14} strokeWidth={1.6} className="animate-spin flex-shrink-0" aria-hidden />
+        : <LogOut size={14} strokeWidth={1.6} className="text-white/25 flex-shrink-0" />}
+      {pending ? 'Logging out…' : 'Log out'}
+    </button>
+  )
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -60,9 +108,7 @@ export function AdminSidenav() {
         ].join(' ')}
         aria-current={active ? 'page' : undefined}
       >
-        <span className={active ? 'text-accent flex-shrink-0' : 'text-white/30 flex-shrink-0'}>
-          {item.icon}
-        </span>
+        <NavIcon icon={item.icon} active={active} />
         {item.label}
       </Link>
     )
@@ -106,13 +152,7 @@ export function AdminSidenav() {
             ← Back to site
           </Link>
           <form action={signOut}>
-            <button
-              type="submit"
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm f-body text-white/35 bg-transparent cursor-pointer transition-colors hover:text-white/60"
-            >
-              <LogOut size={14} strokeWidth={1.6} className="text-white/25 flex-shrink-0" />
-              Log out
-            </button>
+            <LogoutButton />
           </form>
         </div>
       </div>

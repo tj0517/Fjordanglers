@@ -12,6 +12,8 @@ interface Props {
   briefContent:        React.ReactNode
   guideContent:        React.ReactNode
   offerContent:        React.ReactNode
+  /** Messages in the Correspondence thread — shown as a count on the Conversation tab */
+  conversationCount:   number
 }
 
 const TABS: { id: TabId; label: string }[] = [
@@ -29,6 +31,7 @@ export function InquiryDetailTabs({
   briefContent,
   guideContent,
   offerContent,
+  conversationCount,
 }: Props) {
   const searchParams = useSearchParams()
   const router       = useRouter()
@@ -46,14 +49,23 @@ export function InquiryDetailTabs({
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange}>
-      <TabsList className="mb-6 h-auto flex-wrap gap-1 bg-muted/70 p-1">
+      <TabsList
+        variant="line"
+        aria-label="Inquiry sections"
+        className="mb-5 h-auto w-full justify-start flex-wrap gap-7 rounded-none border-b border-border px-1 p-0"
+      >
         {TABS.map(tab => (
           <TabsTrigger
             key={tab.id}
             value={tab.id}
-            className="px-4 py-2 text-sm font-semibold rounded-lg data-active:bg-primary data-active:text-primary-foreground"
+            className="flex-none h-auto rounded-none px-0 py-3 text-sm font-medium f-body text-muted-foreground border-0 border-b-2 border-transparent -mb-px data-active:border-primary data-active:font-bold data-active:text-foreground after:hidden"
           >
             {tab.label}
+            {tab.id === 'conversation' && conversationCount > 0 && (
+              <span className="ml-1 px-[7px] py-px rounded-full bg-muted text-[11px] font-semibold text-foreground">
+                {conversationCount}
+              </span>
+            )}
           </TabsTrigger>
         ))}
       </TabsList>

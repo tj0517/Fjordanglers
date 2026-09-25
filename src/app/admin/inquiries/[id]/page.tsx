@@ -12,8 +12,12 @@ import { getInquiryExperience } from '@/lib/inquiries/experience-lookup'
 import { env } from '@/lib/env'
 import { getGuidePhone } from '@/lib/guide-contacts'
 import { MessageComposer } from './MessageComposer'
-import { ThreadActionsPanel } from './ThreadActionsPanel'
-import type { OfferForPanel } from './ThreadActionsPanel'
+import { getDepositLinkDraft } from '@/actions/messages'
+import { NextStepCard } from './NextStepCard'
+import type { OfferForPanel } from './NextStepCard'
+import { DealCard } from './DealCard'
+import { InternalRows } from './InternalRows'
+import { InquiryHeader, type HeaderFacts } from './InquiryHeader'
 import { StatusChanger } from './StatusChanger'
 import { InternalDealTracker } from './InternalDealTracker'
 import { NextActionEditor } from './NextActionEditor'
@@ -28,12 +32,9 @@ import { DeleteInquiryButton } from './DeleteInquiryButton'
 import type { TripDetails } from '@/actions/inquiries'
 import { availabilityWindow } from '@/lib/availability-window'
 import { ExternalOfferToggle } from '../ExternalOfferToggle'
-import { StatusStepper } from '@/components/admin/inquiry/StatusStepper'
 import { EventTimeline } from '@/components/admin/inquiry/EventTimeline'
 import { STATUS_LABELS, isInquiryStatus, type InquiryStatus } from '@/lib/inquiries/state'
 import { ThreadView } from './ThreadView'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
 
 export const metadata = { title: 'Inquiry Detail — Admin' }
 
@@ -137,6 +138,14 @@ export default async function AdminInquiryDetailPage({
     if (!error && data != null) threadMessages = data as MessageRow[]
   } catch {
     // Table not yet migrated — graceful fallback
+  }
+
+  // Latest agent draft for the composer — pre-filled only when body contains the active link URL (FA-1.30 Fix 5)
+  let latestAnglerDraft: { id: string; body: string } | null = null
+  try {
+    latestAnglerDraft = await getDepositLinkDraft(id, rawInquiry.deposit_payment_link_url ?? null)
+  } catch {
+    // graceful fallback
   }
 
   // ── Fetch inquiry events ──────────────────────────────────────────────────
@@ -310,6 +319,12 @@ export default async function AdminInquiryDetailPage({
   }
 
   const igEnabled = Boolean(env.INSTAGRAM_ACCESS_TOKEN)
+  // FA-1.32: AI draft button exists only when the key is set — computed here, passed as a boolean.
+  const aiEnabled = Boolean(env.ANTHROPIC_API_KEY)
+  const anglerFirstName = inquiry.angler_name.trim().split(/\s+/)[0] || inquiry.angler_name
+  const guideFirstName  = guide?.full_name != null && guide.full_name.trim() !== ''
+    ? guide.full_name.trim().split(/\s+/)[0]
+    : null
 
   const requestedDates = inquiry.requested_dates as string[] | null
 
@@ -495,12 +510,18 @@ export default async function AdminInquiryDetailPage({
         </div>
         <div className="px-5 py-4">
           <MessageComposer
+            key={latestAnglerDraft?.id ?? 'no-draft'}
             inquiryId={inquiry.id}
             guideAssigned={inquiry.assigned_guide_id != null}
             anglerHasPhone={anglerHasPhone}
             guideHasPhone={guideHasPhone}
             waLastInboundAt={waLastInboundAt}
             igEnabled={igEnabled}
+            initialDraftId={latestAnglerDraft?.id ?? null}
+            initialDraftText={latestAnglerDraft?.body ?? null}
+            aiEnabled={aiEnabled}
+            anglerFirstName={anglerFirstName}
+            guideFirstName={guideFirstName}
           />
         </div>
       </div>
@@ -543,6 +564,7 @@ export default async function AdminInquiryDetailPage({
   const activeLinkUrl = (inquiry as typeof inquiry & { deposit_payment_link_url?: string | null }).deposit_payment_link_url ?? null
   let activeLinkAmountCents: number | null = null
   let activeLinkCurrency:    string | null = null
+  let activeLinkSentAt:      string | null = null
   if (activeLinkId != null) {
     const linkEvt = [...inquiryEvents]
       .reverse()
@@ -551,13 +573,27 @@ export default async function AdminInquiryDetailPage({
       const p = linkEvt.payload as { amount_cents?: number; currency?: string }
       activeLinkAmountCents = p.amount_cents ?? null
       activeLinkCurrency    = p.currency    ?? null
+      activeLinkSentAt      = linkEvt.occurred_at
     }
   }
 
-  // ── Tab: Offer & payment ──────────────────────────────────────────────────
+  // ── Tab: Offer & payment (FA-1.32 mockup: Next step | Deal + Internal) ──
+  const isPaidStage = ['paid', 'handed_over', 'completed'].includes(safeStatus)
+  const dealTrackerSummary = inquiry.internal_commission_eur != null
+    ? `${Number(inquiry.internal_commission_eur).toFixed(0)} ${inquiry.deal_currency ?? 'EUR'}`
+    : inquiry.internal_deal_total_eur != null
+      ? `${Number(inquiry.internal_deal_total_eur).toFixed(0)} ${inquiry.deal_currency ?? 'EUR'} total`
+      : 'empty'
+  const reviewEnabled = isPaidStage || existingReview != null
+  const reviewSummary = existingReview?.submitted_at != null
+    ? 'received'
+    : existingReview != null
+      ? 'created'
+      : reviewEnabled ? 'generate' : 'after the trip'
+
   const offerContent = (
-    <div className="flex flex-col gap-4 max-w-xl">
-      <ThreadActionsPanel
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5 items-start">
+      <NextStepCard
         inquiryId={inquiry.id}
         inquiryStatus={inquiry.status}
         offer={panelOffer}
@@ -572,29 +608,81 @@ export default async function AdminInquiryDetailPage({
         depositPaymentLinkAmountCents={activeLinkAmountCents}
         depositPaymentLinkCurrency={activeLinkCurrency}
         guideNotifiedPaid={guideNotifiedPaid}
+        anglerFirstName={anglerFirstName}
+        guideName={guide?.full_name ?? null}
+        depositPaidAt={inquiry.deposit_paid_at}
+        hasDepositDraft={latestAnglerDraft != null}
       />
 
-      <InternalDealTracker
-        inquiryId={inquiry.id}
-        initialTotal={inquiry.internal_deal_total_eur}
-        initialCommission={inquiry.internal_commission_eur}
-        initialNotes={inquiry.internal_notes}
-        initialCurrency={(inquiry.deal_currency ?? 'EUR') as 'EUR' | 'USD'}
-      />
-
-      <ExternalOfferToggle
-        inquiryId={inquiry.id}
-        initial={inquiry.external_offer_sent ?? false}
-      />
-
-      <ReviewLinkGenerator
-        inquiryId={inquiry.id}
-        existingToken={existingReview?.token ?? null}
-        existingBaseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
-        submittedAt={existingReview?.submitted_at ?? null}
-      />
+      <aside className="flex flex-col gap-5 lg:col-start-2">
+        <DealCard
+          offer={panelOffer}
+          depositAmountCents={inquiry.deposit_amount_cents ?? null}
+          depositCurrency={inquiry.deposit_currency ?? null}
+          depositPaidAt={inquiry.deposit_paid_at}
+        />
+        <InternalRows
+          dealTrackerSummary={dealTrackerSummary}
+          dealTracker={
+            <InternalDealTracker
+              inquiryId={inquiry.id}
+              initialTotal={inquiry.internal_deal_total_eur}
+              initialCommission={inquiry.internal_commission_eur}
+              initialNotes={inquiry.internal_notes}
+              initialCurrency={(inquiry.deal_currency ?? 'EUR') as 'EUR' | 'USD'}
+            />
+          }
+          externalOffer={
+            <ExternalOfferToggle
+              inquiryId={inquiry.id}
+              initial={inquiry.external_offer_sent ?? false}
+            />
+          }
+          reviewSummary={reviewSummary}
+          reviewEnabled={reviewEnabled}
+          reviewLink={
+            <ReviewLinkGenerator
+              inquiryId={inquiry.id}
+              existingToken={existingReview?.token ?? null}
+              existingBaseUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'https://fjordanglers.com'}
+              submittedAt={existingReview?.submitted_at ?? null}
+            />
+          }
+        />
+      </aside>
     </div>
   )
+
+  // ── Header: status line + facts (FA-1.32) ─────────────────────────────────
+  const angler_phone = (inquiry as typeof inquiry & { angler_phone?: string | null }).angler_phone ?? null
+
+  let statusLine: { label: string; at: string } | null = { label: 'Received', at: inquiry.created_at }
+  if (inquiry.deposit_paid_at != null) {
+    statusLine = { label: 'Paid', at: inquiry.deposit_paid_at }
+  } else if (safeStatus === 'awaiting_payment' && activeLinkSentAt != null) {
+    statusLine = { label: 'Link created', at: activeLinkSentAt }
+  } else if (safeStatus === 'offer_presented') {
+    const presentedEvt = [...inquiryEvents].reverse().find(e => e.type === 'offer.presented')
+    const at = presentedEvt?.occurred_at ?? inquiry.offer_sent_at
+    if (at != null) statusLine = { label: 'Offer sent', at }
+  }
+
+  const facts: HeaderFacts = {
+    trip:    tripTitle,
+    country: tripLocationCountry,
+    group:   inquiry.party_size > 0 ? `${inquiry.party_size} ${inquiry.party_size === 1 ? 'person' : 'people'}` : null,
+    // Date parsing deliberately unchanged (deferred row from FA-1.30) — renders whatever today's value renders.
+    dates:   requestedDates != null && requestedDates.length > 0
+      ? new Date(requestedDates[0] + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        + (requestedDates.length > 1 ? ` +${requestedDates.length - 1}` : '')
+      : null,
+    guide:   guide?.full_name ?? null,
+    commission: inquiry.internal_commission_eur != null
+      ? `${inquiry.deal_currency === 'USD' ? '$' : '€'}${Number(inquiry.internal_commission_eur).toFixed(0)}`
+      : null,
+  }
+
+  const conversationCount = thread.filter(t => t.kind === 'message' || t.kind === 'angler_inquiry').length
 
   return (
     <div className="px-6 lg:px-10 py-8 lg:py-10 max-w-[1200px]">
@@ -608,53 +696,17 @@ export default async function AdminInquiryDetailPage({
         <span className="text-xs f-body font-semibold text-accent">{inquiry.angler_name}</span>
       </div>
 
-      {/* Key facts card */}
-      <Card className="mb-4">
-        <CardContent className="py-4">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg f-display flex-shrink-0">
-                {inquiry.angler_name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h1 className="text-xl font-bold f-display text-foreground leading-tight">{inquiry.angler_name}</h1>
-                <p className="text-sm f-body text-muted-foreground mt-0.5">
-                  {inquiry.angler_email}
-                  {(inquiry as typeof inquiry & { angler_phone?: string | null }).angler_phone && (
-                    <> · {(inquiry as typeof inquiry & { angler_phone?: string | null }).angler_phone}</>
-                  )}
-                </p>
-              </div>
-            </div>
-            <Badge data-status={safeStatus} className="status-badge text-sm px-3 py-1 flex-shrink-0" variant="outline">
-              {STATUS_LABELS[safeStatus]}
-            </Badge>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-border/40 flex flex-wrap gap-x-6 gap-y-1 text-sm f-body text-muted-foreground">
-            {tripTitle && <span>🎣 {tripTitle}</span>}
-            {tripLocationCountry && <span>📍 {tripLocationCountry}</span>}
-            {inquiry.party_size > 0 && (
-              <span>👥 {inquiry.party_size} {inquiry.party_size === 1 ? 'person' : 'people'}</span>
-            )}
-            {requestedDates != null && requestedDates.length > 0 && (
-              <span>
-                📅 {new Date(requestedDates[0] + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                {requestedDates.length > 1 ? ` +${requestedDates.length - 1}` : ''}
-              </span>
-            )}
-            {guide?.full_name && <span>🗺 {guide.full_name}</span>}
-            {inquiry.internal_commission_eur != null && (
-              <span className="text-accent font-semibold">
-                💰 {inquiry.deal_currency === 'USD' ? '$' : '€'}{Number(inquiry.internal_commission_eur).toFixed(0)}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Status stepper */}
-      <StatusStepper current={safeStatus} />
+      {/* Header — name + contact, status, facts grid, stage bar */}
+      <div className="mb-5">
+        <InquiryHeader
+          name={inquiry.angler_name}
+          email={inquiry.angler_email}
+          phone={angler_phone}
+          status={safeStatus}
+          statusLine={statusLine}
+          facts={facts}
+        />
+      </div>
 
       {/* Tabbed layout */}
       <InquiryDetailTabs
@@ -664,6 +716,7 @@ export default async function AdminInquiryDetailPage({
         briefContent={briefContent}
         guideContent={guideContent}
         offerContent={offerContent}
+        conversationCount={conversationCount}
       />
 
     </div>
