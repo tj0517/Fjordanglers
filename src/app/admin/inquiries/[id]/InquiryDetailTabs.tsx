@@ -1,6 +1,7 @@
 'use client'
 
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { defaultTabForStatus, type TabId } from '@/lib/ui/defaultTabForStatus'
 import type { InquiryStatus } from '@/lib/inquiries/state'
@@ -33,36 +34,36 @@ export function InquiryDetailTabs({
   offerContent,
   conversationCount,
 }: Props) {
+  // FA-1.33: the initial tab comes from the URL (deep link / reload); after that the tab is client
+  // state. Switching never navigates — all five panels are already in the browser — the URL is
+  // updated with history.replaceState so ?tab= links and reloads keep working.
   const searchParams = useSearchParams()
-  const router       = useRouter()
-
   const tabParam = searchParams.get('tab') as TabId | null
   const validTab = TABS.some(t => t.id === tabParam)
-  const activeTab: TabId = validTab && tabParam != null ? tabParam : defaultTabForStatus[status]
+  const initialTab: TabId = validTab && tabParam != null ? tabParam : defaultTabForStatus[status]
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab)
 
   function handleTabChange(value: unknown) {
     const id = value as TabId
-    const params = new URLSearchParams(searchParams.toString())
+    setActiveTab(id)
+    const params = new URLSearchParams(window.location.search)
     params.set('tab', id)
-    router.replace(`?${params.toString()}`, { scroll: false })
+    window.history.replaceState(window.history.state, '', `?${params.toString()}`)
   }
 
   return (
     <Tabs value={activeTab} onValueChange={handleTabChange}>
-      <TabsList
-        variant="line"
-        aria-label="Inquiry sections"
-        className="mb-5 h-auto w-full justify-start flex-wrap gap-7 rounded-none border-b border-border px-1 p-0"
-      >
+      {/* FA-1.15 pill style (tj decision, FA-1.33): muted bar, active tab filled Fjord Navy */}
+      <TabsList aria-label="Inquiry sections" className="mb-6 h-auto flex-wrap gap-1 bg-muted/70 p-1">
         {TABS.map(tab => (
           <TabsTrigger
             key={tab.id}
             value={tab.id}
-            className="flex-none h-auto rounded-none px-0 py-3 text-sm font-medium f-body text-muted-foreground border-0 border-b-2 border-transparent -mb-px data-active:border-primary data-active:font-bold data-active:text-foreground after:hidden"
+            className="flex-none h-auto px-4 py-2 text-sm font-semibold f-body rounded-lg text-muted-foreground data-active:bg-primary data-active:text-primary-foreground"
           >
             {tab.label}
             {tab.id === 'conversation' && conversationCount > 0 && (
-              <span className="ml-1 px-[7px] py-px rounded-full bg-muted text-[11px] font-semibold text-foreground">
+              <span className="ml-1.5 px-[7px] py-px rounded-full text-[11px] font-semibold bg-primary/10 text-foreground in-data-active:bg-primary-foreground/20 in-data-active:text-primary-foreground">
                 {conversationCount}
               </span>
             )}

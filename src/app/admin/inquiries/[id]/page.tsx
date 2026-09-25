@@ -47,7 +47,7 @@ function Row({ label, value }: { label: string; value: string | null | undefined
       <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground flex-shrink-0 f-body min-w-[110px]">
         {label}
       </span>
-      <span className="text-sm text-foreground text-right f-body">{value}</span>
+      <span className="text-sm text-foreground text-right f-body min-w-0 break-words [overflow-wrap:anywhere]">{value}</span>
     </div>
   )
 }
@@ -380,9 +380,9 @@ export default async function AdminInquiryDetailPage({
 
   // ── Tab: Overview ─────────────────────────────────────────────────────────
   const overviewContent = (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
-      {/* Left: contact info */}
-      <div className="flex flex-col gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
+      {/* Left: contact info — min-w-0 so long unbroken values cannot widen the column (FA-1.33) */}
+      <div className="flex flex-col gap-4 min-w-0">
 
         {/* Angler */}
         <div className="rounded-xl overflow-hidden border border-border bg-card">
@@ -462,14 +462,14 @@ export default async function AdminInquiryDetailPage({
 
         {/* Metadata */}
         <div className="px-4 py-3 rounded-xl border border-border/50 bg-muted/20">
-          <p className="text-[10px] f-body text-muted-foreground">
+          <p className="text-[10px] f-body text-muted-foreground break-words [overflow-wrap:anywhere]">
             ID: {inquiry.id} · Submitted: {new Date(inquiry.created_at).toLocaleString('en-GB')}
           </p>
         </div>
       </div>
 
       {/* Right: actions sidebar */}
-      <div className="lg:sticky lg:top-6 space-y-3">
+      <div className="lg:sticky lg:top-6 space-y-3 min-w-0">
         <StatusChanger inquiryId={inquiry.id} currentStatus={inquiry.status} />
 
         <QualifiedChanger
