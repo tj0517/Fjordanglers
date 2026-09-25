@@ -2,7 +2,7 @@
 id: FA-1.32
 title: Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -70,3 +70,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-25 tj: makieta zatwierdzona — docs/design/fa-1.32/ (kanwa claude.ai, prywatna tj). Stały układ: README w tym folderze.
 - 2026-09-25 tj (decyzje po implementacji): (1) Docker/OrbStack uruchomiony, hydra-arms zatrzymany — zrzuty „before" z czystego checkoutu origin/stage-1, „after" z gałęzi, per etap. (2) „View payment in Stripe" — opcja A: pominąć; opcja C (payment intent id zapisany w webhooku, link do płatności) → wiersz w deferred. (3) Paid bez wiadomości do przewodnika — opcja A: „Notify guide" wyłączony + podpowiedź. (4) Cztery etapy bez ekranu w makiecie (offer drafted, accepted bez kwoty, accepted bez linku, guide notified) — wersje z implementacji, akceptacja/korekta na zrzutach; wszystkie w zestawie before/after. (5) Restyling kompozytora — słusznie nie zrobiony; Conversation bez zmian wizualnych poza placeholderem i przyciskiem AI.
 - 2026-09-25 (impl): PR #108 (`--base stage-1`) — raport w opisie PR-a. Zrzuty przed/po: `docs/screenshots/fa-1.32/{before,after}/` (15 stanów). Testy jsdom: `NextStepCard.test.tsx`, `MessageComposer.test.tsx` (red na starym komponencie → green). Status: review — czeka na akceptację wizualną tj.
+- 2026-09-25 tj (wf-review): accepted. PR #108. Proven: before/after screenshots for 15 states; Overview/Correspondence content unchanged; Next step frame absent without an action and 'Zaproponuj' absent without the AI key (jsdom, red→green); AI flag server-side; ThreadActionsPanel removed; no .from/as any/eslint-disable; no new deps. Added in review: stage description restored under the stage bar.
