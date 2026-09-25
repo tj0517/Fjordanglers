@@ -210,6 +210,7 @@ export default function EditGuideForm({ guide }: Props) {
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (isPending) return
     setError(null)
 
     if (fullName.trim() === '') { setError('Full name is required.'); return }

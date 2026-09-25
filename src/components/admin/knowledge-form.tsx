@@ -90,6 +90,7 @@ export function KnowledgeForm({ mode, entryId, initialValues, guides }: Knowledg
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (isPending) return
     setError(null)
 
     const payload: KnowledgePayload = {

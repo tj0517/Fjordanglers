@@ -1,7 +1,8 @@
 'use client'
 
-import { Fragment, useState, useMemo, useTransition } from 'react'
-import { Plus, X, Trash2, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { Fragment, useState, useMemo } from 'react'
+import { Plus, X, Trash2, Check, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { useLockedAction } from '@/components/admin/use-locked-action'
 import {
   addManualCostEntry,
   deleteManualCostEntry,
@@ -65,7 +66,7 @@ export function MonthlyPLClient({
   const [addAmt,     setAddAmt]     = useState('')
   const [addCat,     setAddCat]     = useState<CostCategory>('other')
   const [error,      setError]      = useState<string | null>(null)
-  const [isPending,  startTransition] = useTransition()
+  const [isPending,  run]  = useLockedAction()
 
   // ── Derived data ────────────────────────────────────────────────────────────
 
@@ -95,7 +96,7 @@ export function MonthlyPLClient({
     const n = parseFloat(rateInput)
     if (!isNaN(n) && n > 0) {
       setEurRate(n)
-      startTransition(() => { updateEurRate(n) })
+      run(async () => { await updateEurRate(n) })
     }
   }
 
@@ -111,7 +112,7 @@ export function MonthlyPLClient({
     if (!addName.trim() || !addAmt) return
     const amount = parseFloat(addAmt)
     if (isNaN(amount) || amount <= 0) return
-    startTransition(async () => {
+    run(async () => {
       const res = await addManualCostEntry({ month, name: addName.trim(), amount_pln: amount, category: addCat })
       if (!res.success) { setError(res.error ?? 'Failed'); return }
       setAddingTo(null)
@@ -120,7 +121,7 @@ export function MonthlyPLClient({
   }
 
   function handleDelete(id: string) {
-    startTransition(async () => {
+    run(async () => {
       const res = await deleteManualCostEntry(id)
       if (!res.success) setError(res.error ?? 'Failed')
     })
@@ -150,10 +151,13 @@ export function MonthlyPLClient({
         <span className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.5)' }}>PLN</span>
         <button
           onClick={applyRate}
-          className="text-xs f-body px-3 py-1.5 rounded-lg font-semibold"
+          disabled={isPending}
+          aria-busy={isPending}
+          className="text-xs f-body px-3 py-1.5 rounded-lg font-semibold inline-flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-progress"
           style={{ background: 'rgba(10,46,77,0.08)', color: '#0A2E4D' }}
         >
-          Apply
+          {isPending && <Loader2 size={12} strokeWidth={2} className="animate-spin" aria-hidden />}
+          {isPending ? 'Saving…' : 'Apply'}
         </button>
         <span className="text-xs f-body ml-auto hidden md:block" style={{ color: 'rgba(10,46,77,0.3)' }}>
           Revenue converted at this rate · saved automatically
@@ -325,7 +329,10 @@ export function MonthlyPLClient({
                                     </span>
                                     <button
                                       onClick={() => handleDelete(e.id)}
-                                      className="p-1 rounded transition-colors"
+                                      disabled={isPending}
+                                      aria-busy={isPending}
+                                      title="Delete"
+                                      className="p-1 rounded transition-colors disabled:opacity-50 disabled:cursor-progress"
                                       style={{ color: 'rgba(220,38,38,0.45)' }}
                                     >
                                       <Trash2 size={12} strokeWidth={1.8} />
@@ -382,14 +389,20 @@ export function MonthlyPLClient({
                               </select>
                               <button
                                 onClick={() => handleAdd(m.month)}
-                                className="p-1.5 rounded-lg"
+                                disabled={isPending}
+                                aria-busy={isPending}
+                                title={isPending ? 'Saving…' : 'Save'}
+                                className="p-1.5 rounded-lg disabled:opacity-60 disabled:cursor-progress"
                                 style={{ background: 'rgba(22,163,74,0.1)', color: '#16A34A' }}
                               >
-                                <Check size={13} strokeWidth={2} />
+                                {isPending
+                                  ? <Loader2 size={13} strokeWidth={2} className="animate-spin" aria-hidden />
+                                  : <Check size={13} strokeWidth={2} />}
                               </button>
                               <button
                                 onClick={() => setAddingTo(null)}
-                                className="p-1.5 rounded-lg"
+                                disabled={isPending}
+                                className="p-1.5 rounded-lg disabled:opacity-60"
                                 style={{ background: 'rgba(220,38,38,0.08)', color: '#DC2626' }}
                               >
                                 <X size={13} strokeWidth={2} />

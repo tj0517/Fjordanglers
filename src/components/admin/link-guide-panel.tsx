@@ -34,7 +34,7 @@ export default function LinkGuidePanel({ guideId }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!value.trim()) return
+    if (isPending || !value.trim()) return
     setResult('idle')
 
     startTransition(async () => {
