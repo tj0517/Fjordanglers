@@ -2,7 +2,7 @@
 id: FA-1.26
 title: Treść i logika agenta, część 2 — Islandia, Norwegia i wszyscy aktywni przewodnicy (wpis albo świadome „pomijam”)
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: — (człowiek)
 model_approved:
@@ -51,3 +51,4 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 - Lista przewodników z INDEX ↔ wpisy w panelu (zrzut sekcji „braki”).
 
 ## Notatki z realizacji
+- 2026-09-26 tj (odbiór w wf-next): `destination` Iceland, Norway. `guide`: Andri Fannberg; Brynjar Arnarsson (przeniesiony 26 IX z błędnego wpisu `destination`/Iceland, który tj wyłączył); Toni (w bazie „Toni Corenius” = Toni Karuvaara z `guides/INDEX.md`, potwierdzone przez tj); Øystein Davidsen; Inge Rønning; Lucky Lure; SouthEast. Pomijam (decyzja tj): Dan Bjurshammar, Piotr Wawrzyniuk. Pomijam — brak w `guides`: Gummi, Ari D. Agnarsson, Emanuel Cosic, Tomi Zerhat. Ponad zakres: `destination` Sweden, Finland, Argentina, Chile; `guide` Alex Prior, Juan Leobono, Natales. Szkic IS: zapytanie `a47ddc70` (robert caetano), szkic `7522c31d` — OK. Szkic NO: ocena tj „zaliczam”, bez id w odczycie.
