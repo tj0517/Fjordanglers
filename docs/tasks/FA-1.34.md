@@ -2,7 +2,7 @@
 id: FA-1.34
 title: Agent pisze pierwszą odpowiedź na zapytanie z formularza — pusty wątek nie blokuje „Zaproponuj”
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -60,3 +60,4 @@ git diff stage-1...HEAD --stat -- src/lib/ai/auto-send.ts   # puste
 ## Notatki z realizacji
 - 2026-09-26 tj (wf-next): luka wykryta przy odbiorze FA-1.17 (błąd „conversation thread is empty” na zapytaniu z formularza). Decyzja tj: FA-1.17 zamknięte z zawężonym kryterium, luka jako osobne zadanie. Plik zadania, statusy FA-1.17/1.26 i dwa wiersze deferred zakłada agent w pierwszym commicie, bo stage-1 jest chronione.
 - 2026-09-26 tj: konflikt zauważony podczas implementacji — bezwarunkowa zmiana `draftReply` naprawia „Zaproponuj”, ale też odblokowuje `auto-send.ts` (FA-1.27) dla świeżych leadów z formularza (wcześniej pusty wątek blokował auto-wysyłkę), co jest poza zakresem tego zadania. Decyzja tj: opcja A — `draftReply` dostaje flagę `allowFormOnly` (domyślnie `false`); ustawia ją tylko `proposeDraft` („Zaproponuj”); `auto-send.ts` wywołuje bez flagi i zachowuje się identycznie jak dziś.
+- 2026-09-26 tj (wf-review): accepted, PR #112. Proven by code/test read: form-message draft on empty thread (angler + guide), readable error without thread and message, auto-send.ts unchanged and still bails on an empty thread, no new as any/eslint-disable/.from(. CI checked by tj on the PR. UI screenshot and red run declared in the agent report. Side effect noted: the original-message label (by inquiries.source) now also reaches auto-send prompts — accepted.
