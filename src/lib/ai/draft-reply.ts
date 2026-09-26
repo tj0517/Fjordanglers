@@ -23,6 +23,15 @@ export interface DraftReplyParams {
   inquiryId:   string
   counterpart: 'angler' | 'guide'
   channel:     'email' | 'whatsapp' | 'instagram'
+  /**
+   * When true, an empty message thread is not an error as long as the inquiry
+   * has a form message (inquiries.message) — the agent drafts from that as the
+   * client's first message. Default false: only the admin's manual "Zaproponuj"
+   * (src/actions/messages.ts proposeDraft) opts in. autoSendReply (FA-1.27) does
+   * NOT pass this — auto-send must keep bailing on an empty thread, unchanged
+   * (FA-1.34 decision 2026-09-26, see docs/tasks/FA-1.34.md).
+   */
+  allowFormOnly?: boolean
 }
 
 export interface DraftReplyResult {
@@ -41,7 +50,7 @@ export class DraftReplyError extends Error {
 }
 
 export async function draftReply(params: DraftReplyParams): Promise<DraftReplyResult> {
-  const { inquiryId, counterpart, channel } = params
+  const { inquiryId, counterpart, channel, allowFormOnly = false } = params
 
   const apiKey = env.ANTHROPIC_API_KEY
   if (!apiKey) throw new DraftReplyError('ANTHROPIC_API_KEY not set')
@@ -51,7 +60,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   // Fetch inquiry context
   const { data: inquiry, error: inquiryErr } = await supabase
     .from('inquiries')
-    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id, status')
+    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id, status, source')
     .eq('id', inquiryId)
     .single()
 
@@ -70,7 +79,12 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   const thread = (messages ?? []) as ConversationMessage[]
 
   if (thread.length === 0) {
-    throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
+    if (!allowFormOnly) {
+      throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
+    }
+    if (!inquiry.message?.trim()) {
+      throw new DraftReplyError('Cannot draft a reply: there is no message thread and no form message on this inquiry.')
+    }
   }
 
   // Resolve guide name for conversation context
@@ -114,6 +128,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     tripTitle,
     thread,
     guideName,
+    inquiry.source,
   )
 
   // Build prompt + call model
