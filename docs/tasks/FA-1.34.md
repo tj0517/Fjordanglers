@@ -2,13 +2,14 @@
 id: FA-1.34
 title: Agent pisze pierwszą odpowiedź na zapytanie z formularza — pusty wątek nie blokuje „Zaproponuj”
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: fix/agent-draft-empty-thread
+pr: 112
 depends_on: []
 blocked_by_questions: []
 touches_db: false
