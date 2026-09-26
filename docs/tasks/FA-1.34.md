@@ -58,3 +58,4 @@ git diff stage-1...HEAD --stat -- src/lib/ai/auto-send.ts   # puste
 
 ## Notatki z realizacji
 - 2026-09-26 tj (wf-next): luka wykryta przy odbiorze FA-1.17 (błąd „conversation thread is empty” na zapytaniu z formularza). Decyzja tj: FA-1.17 zamknięte z zawężonym kryterium, luka jako osobne zadanie. Plik zadania, statusy FA-1.17/1.26 i dwa wiersze deferred zakłada agent w pierwszym commicie, bo stage-1 jest chronione.
+- 2026-09-26 tj: konflikt zauważony podczas implementacji — bezwarunkowa zmiana `draftReply` naprawia „Zaproponuj”, ale też odblokowuje `auto-send.ts` (FA-1.27) dla świeżych leadów z formularza (wcześniej pusty wątek blokował auto-wysyłkę), co jest poza zakresem tego zadania. Decyzja tj: opcja A — `draftReply` dostaje flagę `allowFormOnly` (domyślnie `false`); ustawia ją tylko `proposeDraft` („Zaproponuj”); `auto-send.ts` wywołuje bez flagi i zachowuje się identycznie jak dziś.
