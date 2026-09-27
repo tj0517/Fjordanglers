@@ -2,7 +2,7 @@
 id: FA-1.35
 title: Jedna definicja faktów dla wykresów — booking = `deposit_paid_at`, prowizja z helpera; `/admin/finances` bez statusów sprzed FA-1.03, `/admin/pipeline` na tym samym helperze
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -76,3 +76,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build   # build przy zatrzymany
 - 2026-09-27 tj (wf-task): kryterium 4 zmienione z „ta sama liczba na trzech ekranach" na osobne sprawdzenie weekly/finances (data płatności) vs pipeline (kohorta po `created_at`) — pipeline zostaje widokiem kohortowym, nie zmienia się na okresy wg daty płatności.
 - 2026-09-27 tj: `docker ps` pokazał już działający pełny stack Supabase innego projektu („Seaclouds_management_system") na domyślnych portach 54321–54327; tj potwierdził kontynuację — fjordanglers ma własny zakres portów w `supabase/config.toml` (54420–54429), więc bez konfliktu.
 - 2026-09-27 tj: pamięć sesji zabraniała `pnpm dev`/`pnpm start` (`.env.local` wskazuje na zdalny testowy projekt Supabase). Dla weryfikacji UI tj wybrał uruchomienie `pnpm dev` z nadpisanymi zmiennymi środowiskowymi (`NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` wskazującymi na lokalny stack, port 54421) zamiast edycji `.env.local`.
+- 2026-09-27 tj: accepted after review round 2 (PR #116) — criteria 1–6 proven; round 2: revenue bucketed by the Warsaw month via `bookedMonthWarsaw` (red proof 2026-08-31T22:30Z → 2026-09), cohort SELECT for 4b = 2 matching /admin/pipeline, flaky test identified (getInquiryConfirmation.test.ts) and full suite 441/441 green.
