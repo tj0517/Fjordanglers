@@ -4,7 +4,9 @@ import type { FixedCostRow, ManualCostEntryRow } from '@/actions/finances'
 import type { MonthRaw } from './MonthlyPLClient'
 import type { PipelineDeal } from './PipelineClient'
 import { dealOurCut } from './pipeline-utils'
-import { commissionPln, parseFxRates, rowCommissionEur } from '@/lib/metrics/commission'
+import { commissionPln, parseFxRates } from '@/lib/metrics/commission'
+import { OPEN_DEAL_STATUSES } from '@/lib/metrics/facts'
+import { revenueByMonth, type RevenueRow } from './revenue'
 
 export const metadata = {
   title: 'Finances — FjordAnglers Admin',
@@ -94,10 +96,11 @@ export default async function FinancesPage() {
     { data: settingsData },
     { data: pipelineData },
   ] = await Promise.all([
-    // Inquiries where deposit is paid — revenue source
+    // Inquiries where deposit is paid — revenue source. Booking = deposit_paid_at is
+    // set (CLAUDE.md rule 7), regardless of status.
     supabase.from('inquiries')
       .select('deposit_paid_at, updated_at, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, deposit_amount_cents, deposit_currency, deposit_eur_rate')
-      .in('status', ['deposit_paid', 'completed']),
+      .not('deposit_paid_at', 'is', null),
 
     // Ad spend by date
     supabase.from('ad_campaigns')
@@ -119,10 +122,10 @@ export default async function FinancesPage() {
     supabase.from('finance_settings')
       .select('key, value'),
 
-    // Open deals — all active (non-terminal) statuses
+    // Open deals — statuses that are neither paid nor terminal (facts.ts).
     supabase.from('inquiries')
       .select('id, angler_name, angler_email, offer_sent_at, updated_at, offer_total_eur, internal_deal_total_eur, offer_deposit_eur, deposit_amount, internal_commission_eur, deal_currency, created_at, status, deposit_amount_cents, deposit_currency, deposit_eur_rate')
-      .in('status', ['pending', 'in_negotiation', 'waiting_for_guide_offer', 'offer_sent', 'waiting_for_deposit', 'deposit_sent'])
+      .in('status', [...OPEN_DEAL_STATUSES])
       .order('updated_at', { ascending: false }),
   ])
 
@@ -141,28 +144,9 @@ export default async function FinancesPage() {
 
   // ── Aggregate revenue by month ────────────────────────────────────────────────
 
-  // Same formula as /admin/weekly — src/lib/metrics/commission.ts is the one place it lives.
-  const revenueRows = (inquiryData ?? []) as {
-    deposit_paid_at: string | null
-    updated_at: string
-    offer_deposit_eur: number | null
-    deposit_amount: number | null
-    internal_commission_eur: number | null
-    deal_currency: string | null
-    deposit_amount_cents: number | null
-    deposit_currency: string | null
-    deposit_eur_rate: number | null
-  }[]
-  const revenueByMonth: Record<string, { eur: number; deals: number }> = {}
-  for (const row of revenueRows) {
-    const month = (row.deposit_paid_at ?? row.updated_at)?.slice(0, 7)
-    if (!month) continue
-    const amtEur = rowCommissionEur(row, usdEurRate)
-    revenueByMonth[month] = {
-      eur:   (revenueByMonth[month]?.eur   ?? 0) + amtEur,
-      deals: (revenueByMonth[month]?.deals ?? 0) + 1,
-    }
-  }
+  // Booking = deposit_paid_at is set; commission from the one formula in commission.ts.
+  const revenueRows = (inquiryData ?? []) as RevenueRow[]
+  const revenueByMonthMap = revenueByMonth(revenueRows, usdEurRate)
 
   // ── Aggregate ad spend by month ───────────────────────────────────────────────
 
@@ -198,7 +182,7 @@ export default async function FinancesPage() {
   const now          = new Date()
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const allKeys      = [
-    ...Object.keys(revenueByMonth),
+    ...Object.keys(revenueByMonthMap),
     ...Object.keys(adByMonth),
     ...Object.keys(manualByMonth),
     '2026-04',   // company founding month
@@ -214,8 +198,8 @@ export default async function FinancesPage() {
     return {
       month,
       label:            monthLabel(month),
-      deals:            revenueByMonth[month]?.deals ?? 0,
-      revenue_eur:      revenueByMonth[month]?.eur   ?? 0,
+      deals:            revenueByMonthMap[month]?.deals ?? 0,
+      revenue_eur:      revenueByMonthMap[month]?.eur   ?? 0,
       potential_eur:    potentialByMonth[month] ?? 0,
       ad_spend_pln:     adByMonth[month] ?? 0,
       fixed_costs_pln:  fixedMonthly,

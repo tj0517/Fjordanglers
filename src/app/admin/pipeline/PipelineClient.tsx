@@ -2,19 +2,19 @@
 
 import { useState, useMemo } from 'react'
 import { PipelineBarChart, CloseRateLineChart, type ChartPeriod } from './PipelineCharts'
+import { isBooked } from '@/lib/metrics/facts'
+import { commissionPln, type CommissionRow } from '@/lib/metrics/commission'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
-interface PipelineRow {
+export interface PipelineRow extends CommissionRow {
   id: string
   created_at: string
   status: string
   stage_reached: string  // 'inquiry' | 'offer_sent' | 'deposit_paid' | 'completed'
   offer_sent_at: string | null
   deposit_paid_at: string | null
-  internal_commission_eur: number | null
   offer_total_eur: number | null
-  deal_currency: string | null
 }
 
 interface AdDay {
@@ -49,7 +49,6 @@ const LOST_STATUSES   = new Set(['lost', 'cancelled'])
 const ACTIVE_STATUSES = new Set([
   'new', 'qualifying', 'waiting_guide', 'offer_presented', 'awaiting_payment',
 ])
-const DEPOSIT_STATUSES = new Set(['paid', 'handed_over', 'completed'])
 
 // stage_reached ordering — used to express "reached at least this stage"
 const STAGE_ORDER = ['inquiry', 'offer_sent', 'deposit_paid', 'completed'] as const
@@ -128,7 +127,7 @@ function generatePeriods(mode: Mode, earliest: string, today: Date): string[] {
 
 // ─── Aggregation ──────────────────────────────────────────────────────────────
 
-function aggregate(
+export function aggregate(
   inquiries: PipelineRow[],
   adDays: AdDay[],
   key: string,
@@ -141,11 +140,13 @@ function aggregate(
 
   const total    = inqs.length
 
-  // ── Funnel stages — based solely on stage_reached ───────────────────────────
-  // stage_reached is the definitive record of the furthest stage reached,
-  // set by DB at each transition. No inference from status needed.
+  // ── Funnel stages ────────────────────────────────────────────────────────────
+  // Offers sent: "how far it got" — stage_reached is the definitive record of the
+  // furthest stage reached, set by DB at each transition (a different measure than
+  // booking, and it stays here — FA-1.35).
+  // Deposits: booking = deposit_paid_at is set (CLAUDE.md rule 7 / lib/metrics/facts).
   const offersSent = inqs.filter(i => stageGte(i.stage_reached, 'offer_sent')).length
-  const deposits   = inqs.filter(i => stageGte(i.stage_reached, 'deposit_paid')).length
+  const deposits   = inqs.filter(isBooked).length
   const completed  = inqs.filter(i => i.stage_reached === 'completed').length
 
   // ── Lost — split by stage reached when they left ────────────────────────────
@@ -160,14 +161,8 @@ function aggregate(
   const clicks = ads.reduce((s, d) => s + (d.clicks ?? 0), 0)
   const spend  = ads.reduce((s, d) => s + Number(d.spend ?? 0), 0)
 
-  // ── Commission — convert to PLN (handle USD deals) ───────────────────────────
-  const commission = inqs
-    .filter(i => DEPOSIT_STATUSES.has(i.status))
-    .reduce((s, i) => {
-      const raw = Number(i.internal_commission_eur ?? 0)
-      const eur = i.deal_currency === 'USD' ? raw * usdEurRate : raw
-      return s + eur * eurRate
-    }, 0)
+  // ── Commission — one formula, src/lib/metrics/commission.ts ──────────────────
+  const commission = commissionPln(inqs.filter(isBooked), { eurPln: eurRate, usdEur: usdEurRate })
 
   return {
     key,
@@ -309,12 +304,8 @@ export function PipelineClient({
 
   // ── Forecast calculations (all-time averages, in PLN) ────────────────────────
 
-  const totalClosed = inquiries.filter(i => DEPOSIT_STATUSES.has(i.status))
-  const totalCommissionPln = totalClosed.reduce((s, i) => {
-    const raw = Number(i.internal_commission_eur ?? 0)
-    const eur = i.deal_currency === 'USD' ? raw * usdEurRate : raw
-    return s + eur * eurRate
-  }, 0)
+  const totalClosed = inquiries.filter(isBooked)
+  const totalCommissionPln = commissionPln(totalClosed, { eurPln: eurRate, usdEur: usdEurRate })
   const avgCommission = totalClosed.length > 0 ? totalCommissionPln / totalClosed.length : 0
   const overallClose  = inquiries.length > 0
     ? Math.round((totalClosed.length / inquiries.length) * 100)

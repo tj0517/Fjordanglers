@@ -8,7 +8,7 @@ export default async function PipelinePage() {
 
   const [{ data: rawInquiries }, { data: rawAdDays }, { data: rawSettings }] = await Promise.all([
     supabase.from('inquiries')
-      .select('id, created_at, status, stage_reached, offer_sent_at, deposit_paid_at, internal_commission_eur, offer_total_eur, deal_currency')
+      .select('id, created_at, status, stage_reached, offer_sent_at, deposit_paid_at, offer_deposit_eur, deposit_amount, internal_commission_eur, offer_total_eur, deal_currency, deposit_amount_cents, deposit_currency, deposit_eur_rate')
       .order('created_at', { ascending: true }),
     supabase.from('ad_campaigns')
       .select('date, clicks, spend')
