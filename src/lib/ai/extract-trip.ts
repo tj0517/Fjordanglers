@@ -59,6 +59,21 @@ function speakerLabel(msg: ConversationMessage, guideName: string | null | undef
   return msg.counterpart === 'guide' ? 'FA → guide' : 'FA → angler'
 }
 
+/**
+ * Label for the angler's original inquiry message, by acquisition source
+ * (inquiries.source). Absent/unrecognised source → today's plain label,
+ * byte-identical for existing callers that don't pass one.
+ */
+function inquiryMessageLabel(source: string | null | undefined): string {
+  switch (source) {
+    case 'web_form': return "Angler's message (submitted via the website inquiry form, not an email)"
+    case 'manual':   return "Angler's message (logged by FA from another channel, not written by the angler)"
+    case 'email':    return "Angler's message (received by email)"
+    case 'whatsapp': return "Angler's message (received via WhatsApp)"
+    default:         return "Angler's message"
+  }
+}
+
 export function assembleConversation(
   anglerName:     string,
   anglerMessage:  string | null,
@@ -67,6 +82,7 @@ export function assembleConversation(
   experienceTitle: string | null,
   messages:       ConversationMessage[],
   guideName?:     string | null,
+  source?:        string | null,
 ): string {
   const lines: string[] = []
 
@@ -76,7 +92,7 @@ export function assembleConversation(
   if (requestedDates.length > 0) lines.push(`Requested dates: ${requestedDates.join(', ')}`)
   lines.push(`Party size: ${partySize}`)
   if (anglerMessage?.trim()) {
-    lines.push(`Angler's message: "${anglerMessage.trim()}"`)
+    lines.push(`${inquiryMessageLabel(source)}: "${anglerMessage.trim()}"`)
   }
 
   if (messages.length > 0) {

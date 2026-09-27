@@ -2,7 +2,7 @@
 id: FA-1.17
 title: Treść i logika agenta, część 1 — graf działania, instrukcje, ton i Nowa Zelandia, wpisane przez panel; ocena na 3 wątkach
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: — (człowiek)
 model_approved:
@@ -49,7 +49,7 @@ przez panel, na produkcji po wdrożeniu paczki z FA-1.21–1.24.
 - [ ] Ocena na 3 prawdziwych zapytaniach na prod.
 
 ## Gotowe, gdy
-- [ ] Na 3 zapytaniach na prod (nowe zapytanie od klienta, prośba o cenę do przewodnika, follow-up po ofercie) draft nie wymaga przepisywania od zera — ocena tj; w notatkach: id zapytań, id draftów, ocena i co poprawiono we wpisach.
+- [x] Na 3 zapytaniach na prod (nowe zapytanie od klienta z wiadomością w wątku, prośba o cenę do przewodnika, follow-up po ofercie) draft nie wymaga przepisywania od zera — ocena tj; w notatkach: id zapytań, id draftów, ocena i co poprawiono we wpisach. (Zawężone 26 IX decyzją tj: zapytanie z pustym wątkiem, czyli z formularza → FA-1.34.)
 - [ ] Draft do przewodnika jest pisany do przewodnika, a draft do klienta do klienta — widać w tych 3 draftach.
 - [ ] `/admin/knowledge` sekcja „braki” nie pokazuje braku instrukcji, tonu ani New Zealand.
 
@@ -72,3 +72,4 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 - 2026-09-22 tj: cena „od” z wpisu przewodnika tylko z jednostką; brak faktu → zdanie do klienta „potwierdzę i wrócę”; zawsze angielski.
 - 2026-09-22 tj: reguły starego agenta (`AGENT_RULES`) zostają jako fundament instrukcji, rozszerzone o ton i zasady komunikacji.
 - Otwarte na 23 IX: (1) budżet przy NO/IS/FI — przyjęta roboczo reguła starego agenta (pytamy; multi-day obowiązkowo; odmowa → widełki); (2) co pisze agent przy ofercie od przewodnika z kompletem danych; (3) podpis w mailu; (4) przegląd wpisów NZ + Josh, Dustin, Kristina (marża 20% na transferze Kristiny, nazwa firmy Kristiny, nazwisko Dustina).
+- 2026-09-26 tj (odbiór w wf-next): wpisy odczytane SQL-em na prod 26 IX — `instructions`, `tone`, `destination` New Zealand, `guide` Josh Hart, Dustin Haberner, Kristina Placko, wszystkie aktywne. Szkice ocenione przez tj na kilku wątkach prod: „zaliczam”. Id udowodnione odczytem: follow-up po ofercie — zapytanie `9759c20a` (James Martin, NZ), szkic `1892fadd`. Szkic do przewodnika i szkic na nowe zapytanie — ocena tj, bez id w odczycie. Kryterium 1 zawężone: agent odmawia przy pustym wątku (`src/lib/ai/draft-reply.ts:72`) → FA-1.34. Punkty otwarte 23 IX nie odnotowane osobno.

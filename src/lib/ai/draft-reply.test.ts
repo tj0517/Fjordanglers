@@ -58,7 +58,10 @@ const INQUIRY_DATA = {
   trip_id:            null,
   experience_page_id: null,
   status:             'qualifying',
+  source:             'web_form',
 }
+
+let currentInquiryData: Record<string, unknown> = INQUIRY_DATA
 
 const DEFAULT_KNOWLEDGE_ROWS = [
   { id: 'k-inst',    kind: 'instructions', country: null,      guide_id: null, title: 'Instructions (stub)', body: 'You are the FA assistant.' },
@@ -78,10 +81,12 @@ function mockDb(
   messages: unknown[] = [],
   existingDraft: { id: string } | null = null,
   knowledgeRows: unknown[] = DEFAULT_KNOWLEDGE_ROWS,
+  inquiryData: Record<string, unknown> = INQUIRY_DATA,
 ) {
-  insertedMessages = []
-  insertedEvents   = []
-  updatedMessages  = []
+  insertedMessages  = []
+  insertedEvents    = []
+  updatedMessages   = []
+  currentInquiryData = inquiryData
 
   vi.mocked(createServiceClient).mockReturnValue({
     from: (table: string) => {
@@ -110,7 +115,7 @@ function mockDb(
               return Promise.resolve({ data: filtered, error: null })
             },
             async single() {
-              if (table === 'inquiries') return { data: INQUIRY_DATA, error: null }
+              if (table === 'inquiries') return { data: currentInquiryData, error: null }
               return { data: null, error: null }
             },
             async maybeSingle() {
@@ -194,8 +199,9 @@ describe('draftReply', () => {
     expect(result.usedIds).toContain('k-iceland')
   })
 
-  it('throws a readable DraftReplyError when thread is empty', async () => {
-    mockDb([]) // no messages
+  it('throws a readable DraftReplyError when thread is empty (default: allowFormOnly not set)', async () => {
+    mockDb([]) // no messages; INQUIRY_DATA has a form message, but allowFormOnly defaults to false —
+               // this is the path autoSendReply (FA-1.27) relies on staying unchanged.
 
     await expect(
       draftReply({ inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email' }),
@@ -225,6 +231,66 @@ describe('draftReply', () => {
     await expect(
       draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email' }),
     ).rejects.toThrow('No active instructions entry')
+  })
+})
+
+// ─── FA-1.34 — empty thread + form message (allowFormOnly) ──────────────────
+
+describe('draftReply — allowFormOnly (FA-1.34)', () => {
+  beforeEach(() => {
+    anthropicCreate.mockClear()
+    anthropicCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Draft reply text from stub.' }],
+    })
+  })
+
+  it('drafts from the form message when the thread is empty and allowFormOnly is true', async () => {
+    mockDb([]) // no messages; INQUIRY_DATA has a form message
+
+    const result = await draftReply({
+      inquiryId:     'inquiry-empty',
+      counterpart:   'angler',
+      channel:       'email',
+      allowFormOnly: true,
+    })
+
+    expect(result.draftId).toBe('draft-msg-id-1')
+    expect(insertedMessages).toHaveLength(1)
+    expect(insertedMessages[0].status).toBe('draft')
+    expect(insertedMessages[0].drafted_by).toBe('agent')
+
+    expect(anthropicCreate).toHaveBeenCalledOnce()
+    const prompt = (anthropicCreate.mock.calls[0][0] as { messages: { content: string }[] }).messages[0].content
+    expect(prompt).toContain(INQUIRY_DATA.message)
+    expect(prompt).toContain('submitted via the website inquiry form')
+  })
+
+  it('drafts a guide message from the form data too, with an empty thread and allowFormOnly', async () => {
+    mockDb([]) // no messages
+
+    const result = await draftReply({
+      inquiryId:     'inquiry-empty',
+      counterpart:   'guide',
+      channel:       'email',
+      allowFormOnly: true,
+    })
+
+    expect(result.draftId).toBe('draft-msg-id-1')
+    expect(insertedMessages[0].counterpart).toBe('guide')
+  })
+
+  it('throws a readable DraftReplyError when there is neither a thread nor a form message', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, message: null })
+
+    await expect(
+      draftReply({ inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email', allowFormOnly: true }),
+    ).rejects.toThrow(DraftReplyError)
+
+    await expect(
+      draftReply({ inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email', allowFormOnly: true }),
+    ).rejects.toThrow('no message thread and no form message')
+
+    expect(anthropicCreate).not.toHaveBeenCalled()
   })
 })
 

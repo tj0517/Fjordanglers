@@ -52,13 +52,13 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.14 | Agent w wątku — instalacja: „zaproponuj” w kompozytorze, loader `docs/knowledge/`, prompt-zaślepka, auto-wysyłka off (zawężone 21 IX: treść i logika → FA-1.17) | M | sonnet | done | FA-1.12 |
 | FA-1.15 | Panel admina czytelny — design system na shadcn/ui w barwach FA; lista zapytań, karta wg etapów flow, `/admin/weekly` | L | opus | done | FA-1.10, FA-1.12, FA-1.13 (kod w stage-1; kryterium E2E czeka na O-16), FA-1.14 |
 | FA-1.16 | Domknięcie pętli depozytu — endpoint webhooka w Stripe, sesje `payment_link`, atomowa idempotencja | M | sonnet | done | FA-1.12 |
-| FA-1.17 | Treść agenta cz. 1 — graf, instrukcje, ton, NZ przez panel; ocena na 3 wątkach na prod (przepisane 22 IX: wiedza w bazie) | M | — (człowiek) | todo | FA-1.21, FA-1.22, FA-1.23, FA-1.24 |
+| FA-1.17 | Treść agenta cz. 1 — graf, instrukcje, ton, NZ przez panel; ocena na 3 wątkach na prod (przepisane 22 IX: wiedza w bazie) | M | — (człowiek) | done | FA-1.21, FA-1.22, FA-1.23, FA-1.24 |
 | FA-1.21 | Agent wie, do kogo i na jakim etapie pisze — adresat, kanał, status w prompcie; strony wątku podpisane | M | sonnet | done | FA-1.14 |
 | FA-1.22 | Baza wiedzy agenta w bazie — tabela `agent_knowledge`, reguły, RLS tylko admin | L | opus | done | FA-1.14 |
 | FA-1.23 | Agent czyta wiedzę i instrukcje z bazy; `docs/knowledge/` znika | M | sonnet | done | FA-1.21, FA-1.22 |
 | FA-1.24 | Panel `/admin/knowledge` — lista, edycja, wyłączanie, braki, odnośnik z karty przewodnika | M | sonnet | done | FA-1.22, FA-1.15, FA-1.23 |
 | FA-1.25 | Stary agent bez rund — tylko klasyfikacja; bez `AgentToggle` | M | sonnet | done | FA-1.14 |
-| FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | todo | FA-1.17 |
+| FA-1.26 | Treść agenta cz. 2 — IS, NO, wszyscy aktywni przewodnicy | M | — (człowiek) | done | FA-1.17 |
 | FA-1.27 | Hybrydowa auto-wysyłka do klienta — sędzia ≥ 0.9, stany „nigdy auto”, tylko e-mail | L | opus | done | FA-1.23, FA-1.25 |
 | FA-1.28 | Kwota depozytu w danych — grosze + waluta opcji + kurs do EUR zamrożony; pole kwoty na karcie z podpowiedzią 20% (bloker: ścieżka depozytu zepsuta na prod od 19 IX) | L | opus | done | — |
 | FA-1.29 | Link depozytu działa — „czeka na płatność” dopiero po linku, jeden aktywny link, link widoczny na karcie, pętla 4242 lokalnie | L | opus | done | FA-1.28 |
@@ -66,6 +66,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.31 | Panel admina reaguje — stan ładowania przy nawigacji, „trwa” i blokada podwójnego kliknięcia na wszystkich akcjach | M | sonnet | done | FA-1.29 |
 | FA-1.32 | Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa | L | opus | done | FA-1.31 + makieta (O-24) |
 | FA-1.33 | Karta zapytania — zakładki natychmiast i jako pigułki; Overview nie wychodzi poza ekran | S | sonnet | done | FA-1.32 |
+| FA-1.34 | Agent pisze pierwszą odpowiedź na zapytanie z formularza — pusty wątek nie blokuje „Zaproponuj” | S | sonnet | done | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |

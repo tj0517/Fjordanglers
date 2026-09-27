@@ -863,7 +863,7 @@ export async function proposeDraft(
   await requireAdmin()
   const { draftReply } = await import('@/lib/ai/draft-reply')
   try {
-    const result = await draftReply({ inquiryId, counterpart, channel })
+    const result = await draftReply({ inquiryId, counterpart, channel, allowFormOnly: true })
     revalidatePath('/admin/inquiries/' + inquiryId)
     return { success: true, ...result }
   } catch (err) {
