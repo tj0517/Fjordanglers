@@ -73,7 +73,7 @@ export function warsawToday(): string {
 }
 
 /** Strict 'YYYY-MM-DD' parse — rejects both malformed strings and non-existent dates (e.g. Feb 30). */
-export function parseIsoDateStrict(value: string): boolean {
+function parseIsoDateStrict(value: string): boolean {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (m == null) return false
   const year = Number(m[1])
