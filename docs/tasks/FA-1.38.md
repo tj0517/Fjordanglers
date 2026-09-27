@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/record-past-dates
+pr: 117
 depends_on: [FA-1.37]
 blocked_by_questions: []
 touches_db: true
