@@ -62,14 +62,18 @@ const liveDeps: RecordPastPaymentDeps = {
 }
 
 // ─── Date helpers ───────────────────────────────────────────────────────────────
+//
+// Exported so every caller that stamps a historical date — recordPastPayment/Offer/Loss,
+// correctReceivedDate, and createInquiry's optional receivedOn (FA-1.38) — shares one
+// notion of "today" and one instant-of-a-calendar-day, instead of five reimplementations.
 
 /** Today's calendar date in Europe/Warsaw, 'YYYY-MM-DD'. */
-function warsawToday(): string {
+export function warsawToday(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' })
 }
 
 /** Strict 'YYYY-MM-DD' parse — rejects both malformed strings and non-existent dates (e.g. Feb 30). */
-function parseIsoDateStrict(value: string): boolean {
+export function parseIsoDateStrict(value: string): boolean {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (m == null) return false
   const year = Number(m[1])
@@ -80,8 +84,19 @@ function parseIsoDateStrict(value: string): boolean {
 }
 
 /** UTC noon on the given calendar date — always lands on the same Warsaw calendar day (offset ≤ +2). */
-function instantOf(paidOn: string): string {
+export function instantOf(paidOn: string): string {
   return new Date(`${paidOn}T12:00:00.000Z`).toISOString()
+}
+
+/** Throws HistoryError unless `dateStr` is a real calendar date not later than today (Warsaw). */
+export function assertNotFutureDate(dateStr: string, label: string): void {
+  if (!parseIsoDateStrict(dateStr)) {
+    throw new HistoryError(`Invalid date ${JSON.stringify(dateStr)} — expected YYYY-MM-DD`)
+  }
+  const today = warsawToday()
+  if (dateStr > today) {
+    throw new HistoryError(`${label} ${dateStr} is in the future (today is ${today} in Europe/Warsaw)`)
+  }
 }
 
 // ─── recordPastPayment ────────────────────────────────────────────────────────
@@ -256,4 +271,337 @@ export async function recordPastPayment(
   }
 
   return { from: fromStatus, to: finalStatus }
+}
+
+// ─── recordPastOffer — FA-1.38 ─────────────────────────────────────────────────
+
+export interface RecordPastOfferInput {
+  /** Warsaw calendar date the offer was actually sent, 'YYYY-MM-DD'. Never in the future. */
+  sentOn: string
+  actor:  EventActor
+}
+
+export interface RecordPastOfferResult {
+  sentAt: string
+}
+
+/**
+ * Admin tells the app a real offer date that the app never recorded (FA-1.05 audit:
+ * 24 rows with `external_offer_sent=true` and `offer_sent_at IS NULL` — nothing in the
+ * app writes this column today). `offer_sent_at IS NULL` is the idempotency gate;
+ * correcting an already-recorded date is out of scope (separate task).
+ */
+export async function recordPastOffer(
+  client: EventClient,
+  inquiryId: string,
+  input: RecordPastOfferInput,
+): Promise<RecordPastOfferResult> {
+  const { sentOn, actor } = input
+  assertNotFutureDate(sentOn, 'Offer date')
+
+  const { data: current, error: readError } = await client
+    .from('inquiries')
+    .select('id, offer_sent_at')
+    .eq('id', inquiryId)
+    .maybeSingle()
+
+  if (readError != null) {
+    throw new HistoryError(`Could not read inquiry ${inquiryId}: ${readError.message}`)
+  }
+  if (current == null) {
+    throw new HistoryError(`Inquiry ${inquiryId} not found`)
+  }
+  if (current.offer_sent_at != null) {
+    throw new HistoryError(
+      `Inquiry ${inquiryId} already has an offer date recorded (${current.offer_sent_at}) — correcting an existing date is out of scope`,
+    )
+  }
+
+  const sentAt = instantOf(sentOn)
+
+  const { data: updated, error: updateError } = await client
+    .from('inquiries')
+    .update({ offer_sent_at: sentAt })
+    .eq('id', inquiryId)
+    .is('offer_sent_at', null)
+    .select('id')
+    .maybeSingle()
+
+  if (updateError != null) {
+    throw new HistoryError(`Could not record the offer date on ${inquiryId}: ${updateError.message}`)
+  }
+  if (updated == null) {
+    throw new HistoryError(
+      `Inquiry ${inquiryId} already has an offer date recorded — it changed underneath us. Reload and try again.`,
+    )
+  }
+
+  try {
+    await emitEvent(client, {
+      inquiryId,
+      type:       'offer.presented',
+      actor,
+      source:     'backfill',
+      channel:    'app',
+      payload:    { historical: true },
+      occurredAt: sentAt,
+    })
+  } catch (eventError) {
+    await client
+      .from('inquiries')
+      .update({ offer_sent_at: null })
+      .eq('id', inquiryId)
+      .eq('offer_sent_at', sentAt)
+    throw new HistoryError(
+      `Could not record the offer-presented event, so it was rolled back: ${(eventError as Error).message}`,
+    )
+  }
+
+  // The event is durably written — now it is safe to advance the legacy stage_reached
+  // cache. Best-effort, same reasoning as recordPastPayment: the trigger only ever lets
+  // it move forward, so a failure here cannot undo the durable event above.
+  const { error: stageError } = await client
+    .from('inquiries')
+    .update({ stage_reached: 'offer_sent' })
+    .eq('id', inquiryId)
+  if (stageError != null) {
+    console.error(`[recordPastOffer] Could not advance stage_reached for ${inquiryId}:`, stageError.message)
+  }
+
+  return { sentAt }
+}
+
+// ─── recordPastLoss — FA-1.38 ──────────────────────────────────────────────────
+
+/**
+ * Mirrors the CHECK constraint in
+ * supabase/migrations/20260910111336_inquiries_lost_reason_code.sql — kept in one
+ * place there (the DB truth) and validated here so a bad code never reaches the write.
+ */
+const LOST_REASON_CODES = [
+  'client_silent',
+  'no_guide',
+  'guide_slow',
+  'price',
+  'changed_plans',
+  'went_elsewhere',
+  'other',
+] as const
+
+export interface RecordPastLossInput {
+  /** Warsaw calendar date the deal was actually lost, 'YYYY-MM-DD'. Never in the future. */
+  lostOn:         string
+  lostReasonCode: string
+  note?:          string | null
+  actor:          EventActor
+}
+
+export interface RecordPastLossResult {
+  from: string
+  to:   'lost'
+}
+
+/**
+ * Admin marks a past loss with its real date, jumping straight to `lost` from any
+ * status — bypassing `transition()` and `ALLOWED_TRANSITIONS` on purpose, same as
+ * `recordPastPayment`: a past loss did not travel through the app's own state machine
+ * either. Blocked once a deposit is already recorded (a paid deal cannot retroactively
+ * become lost) or the inquiry is already lost.
+ */
+export async function recordPastLoss(
+  client: EventClient,
+  inquiryId: string,
+  input: RecordPastLossInput,
+): Promise<RecordPastLossResult> {
+  const { lostOn, lostReasonCode, actor } = input
+  const note = input.note?.trim() ?? ''
+
+  assertNotFutureDate(lostOn, 'Loss date')
+  if (!LOST_REASON_CODES.includes(lostReasonCode as typeof LOST_REASON_CODES[number])) {
+    throw new HistoryError(
+      `Unknown loss reason ${JSON.stringify(lostReasonCode)} — must be one of ${LOST_REASON_CODES.join(', ')}`,
+    )
+  }
+
+  const { data: current, error: readError } = await client
+    .from('inquiries')
+    .select('id, status, deposit_paid_at, lost_reason_code, lost_reason')
+    .eq('id', inquiryId)
+    .maybeSingle()
+
+  if (readError != null) {
+    throw new HistoryError(`Could not read inquiry ${inquiryId}: ${readError.message}`)
+  }
+  if (current == null) {
+    throw new HistoryError(`Inquiry ${inquiryId} not found`)
+  }
+  if (current.deposit_paid_at != null) {
+    throw new HistoryError(
+      `Inquiry ${inquiryId} already has a deposit recorded (${current.deposit_paid_at}) — cannot mark it lost`,
+    )
+  }
+  if (current.status === 'lost') {
+    throw new HistoryError(`Inquiry ${inquiryId} is already lost`)
+  }
+
+  const fromStatus         = current.status
+  const originalReasonCode = current.lost_reason_code
+  const originalReason     = current.lost_reason
+  const lostAt             = instantOf(lostOn)
+
+  const { data: updated, error: updateError } = await client
+    .from('inquiries')
+    .update({
+      status:           'lost',
+      lost_reason_code: lostReasonCode,
+      lost_reason:      note !== '' ? note : null,
+    })
+    .eq('id', inquiryId)
+    .eq('status', fromStatus)
+    .is('deposit_paid_at', null)
+    .select('id')
+    .maybeSingle()
+
+  if (updateError != null) {
+    throw new HistoryError(`Could not mark ${inquiryId} lost: ${updateError.message}`)
+  }
+  if (updated == null) {
+    throw new HistoryError(
+      `Inquiry ${inquiryId} changed underneath us — it is no longer ${fromStatus}, or a deposit landed. Reload and try again.`,
+    )
+  }
+
+  try {
+    await emitEvent(client, {
+      inquiryId,
+      type:       'status.changed',
+      actor,
+      source:     'backfill',
+      channel:    'app',
+      fromStatus,
+      toStatus:   'lost',
+      payload:    { historical: true, ...(note !== '' ? { note } : {}) },
+      occurredAt: lostAt,
+    })
+    await emitEvent(client, {
+      inquiryId,
+      type:       'inquiry.lost',
+      actor,
+      source:     'backfill',
+      channel:    'app',
+      payload:    { lost_reason_code: lostReasonCode, historical: true, ...(note !== '' ? { note } : {}) },
+      occurredAt: lostAt,
+    })
+  } catch (eventError) {
+    // Put the status and loss reason back exactly as they were — an unlogged loss would
+    // quietly corrupt the loss-reason breakdown (CLAUDE.md rule 5).
+    await client
+      .from('inquiries')
+      .update({
+        status:           fromStatus,
+        lost_reason_code: originalReasonCode,
+        lost_reason:      originalReason,
+      })
+      .eq('id', inquiryId)
+      .eq('status', 'lost')
+    throw new HistoryError(
+      `Could not record the loss events, so it was rolled back: ${(eventError as Error).message}`,
+    )
+  }
+
+  // stage_reached is deliberately left untouched: lost/cancelled keep the funnel cache
+  // where it was (state.ts STAGE_BY_STATUS), same as transition('lost').
+  return { from: fromStatus, to: 'lost' }
+}
+
+// ─── correctReceivedDate — FA-1.38 ─────────────────────────────────────────────
+
+export interface CorrectReceivedDateInput {
+  /** Warsaw calendar date the inquiry actually arrived, 'YYYY-MM-DD'. Never in the
+   *  future, and must be earlier than the current `created_at`. */
+  receivedOn: string
+  actor:      EventActor
+}
+
+export interface CorrectReceivedDateResult {
+  from: string
+  to:   string
+}
+
+/**
+ * Corrects `created_at` to an earlier real date (FA-1.05 audit: 7 rows where the record
+ * was typed in after the first message, so `created_at` reads later than the angler
+ * actually arrived). Only allowed earlier than the current value — this is a one-way
+ * correction toward the truth, not a general edit; moving it later is a different
+ * mistake and out of scope.
+ */
+export async function correctReceivedDate(
+  client: EventClient,
+  inquiryId: string,
+  input: CorrectReceivedDateInput,
+): Promise<CorrectReceivedDateResult> {
+  const { receivedOn, actor } = input
+  assertNotFutureDate(receivedOn, 'Received date')
+
+  const { data: current, error: readError } = await client
+    .from('inquiries')
+    .select('id, created_at')
+    .eq('id', inquiryId)
+    .maybeSingle()
+
+  if (readError != null) {
+    throw new HistoryError(`Could not read inquiry ${inquiryId}: ${readError.message}`)
+  }
+  if (current == null) {
+    throw new HistoryError(`Inquiry ${inquiryId} not found`)
+  }
+
+  const originalCreatedAt = current.created_at
+  const newCreatedAt      = instantOf(receivedOn)
+
+  if (new Date(newCreatedAt).getTime() >= new Date(originalCreatedAt).getTime()) {
+    throw new HistoryError(
+      `Received date ${receivedOn} is not earlier than the current received date (${originalCreatedAt})`,
+    )
+  }
+
+  const { data: updated, error: updateError } = await client
+    .from('inquiries')
+    .update({ created_at: newCreatedAt })
+    .eq('id', inquiryId)
+    .eq('created_at', originalCreatedAt)
+    .select('id')
+    .maybeSingle()
+
+  if (updateError != null) {
+    throw new HistoryError(`Could not correct the received date on ${inquiryId}: ${updateError.message}`)
+  }
+  if (updated == null) {
+    throw new HistoryError(
+      `Inquiry ${inquiryId} changed underneath us — it is no longer at ${originalCreatedAt}. Reload and try again.`,
+    )
+  }
+
+  try {
+    await emitEvent(client, {
+      inquiryId,
+      type:       'inquiry.history_corrected',
+      actor,
+      source:     'backfill',
+      channel:    'app',
+      payload:    { field: 'created_at', from: originalCreatedAt, to: newCreatedAt },
+      occurredAt: newCreatedAt,
+    })
+  } catch (eventError) {
+    await client
+      .from('inquiries')
+      .update({ created_at: originalCreatedAt })
+      .eq('id', inquiryId)
+      .eq('created_at', newCreatedAt)
+    throw new HistoryError(
+      `Could not record the correction event, so it was rolled back: ${(eventError as Error).message}`,
+    )
+  }
+
+  return { from: originalCreatedAt, to: newCreatedAt }
 }

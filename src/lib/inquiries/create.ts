@@ -15,6 +15,7 @@
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEvent, type EventActor } from '@/lib/events/emit'
+import { assertNotFutureDate, instantOf } from '@/lib/inquiries/history'
 import type { UtmParams } from '@/lib/utm'
 
 /**
@@ -103,6 +104,10 @@ export interface CreateInquiryParams {
   gclid?:             string | null
   utm?:               UtmParams | null
   internalNotes?:     string | null
+  /** FA-1.38: admin backdates a manually created inquiry to the day it actually arrived
+   *  (e.g. an Instagram DM from two months ago). 'YYYY-MM-DD', never in the future.
+   *  Sets both `created_at` and the `inquiry.created` event's `occurred_at`. */
+  receivedOn?:        string | null
 }
 
 export interface CreateInquiryResult {
@@ -113,9 +118,15 @@ export interface CreateInquiryResult {
 export async function createInquiry(params: CreateInquiryParams): Promise<CreateInquiryResult> {
   const svc = createServiceClient()
 
+  const receivedAt = params.receivedOn ?? null
+  if (receivedAt != null) {
+    assertNotFutureDate(receivedAt, 'Received date')
+  }
+
   const { data, error } = await svc
     .from('inquiries')
     .insert({
+      ...(receivedAt != null ? { created_at: instantOf(receivedAt) } : {}),
       trip_id:            params.tripId ?? null,
       experience_page_id: params.experiencePageId ?? null,
       guide_id:            params.guideId ?? null,
@@ -158,6 +169,7 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       guide_id:           params.guideId ?? null,
       trip_country:       params.tripCountry ?? null,
     },
+    ...(receivedAt != null ? { occurredAt: instantOf(receivedAt) } : {}),
   })
 
   return { id: data.id, status: data.status }

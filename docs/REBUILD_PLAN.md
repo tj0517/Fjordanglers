@@ -626,17 +626,18 @@ w aplikacji — nigdy jako osobny krok „dopisz".
 | `message.received` | angler / guide | email / whatsapp / instagram | webhooki + dopasowanie z `unmatched_messages` | czas odpowiedzi, M10 |
 | `guide.contacted` | admin | j.w. | pierwsza wiadomość wychodząca do danego przewodnika w tym zapytaniu (pochodna `message.sent`) | M10 (start zegara przewodnika) |
 | `guide.offer_received` | guide | j.w. | admin oznacza wiadomość przychodzącą od przewodnika jako „to jest oferta" (jedno kliknięcie w wątku, zapisuje cenę/termin) | M10 odcinek 2 |
-| `offer.presented` | admin | j.w. | wiadomość wychodząca do klienta oznaczona „przedstawia ofertę" | M7, M10 |
+| `offer.presented` | admin | j.w. | wiadomość wychodząca do klienta oznaczona „przedstawia ofertę"; także `source='backfill'` z FA-1.38 (`recordPastOffer()`, `channel='app'`, `occurred_at` = data wysłania oferty — jedyny writer `inquiries.offer_sent_at` w kodzie) | M7, M10 |
 | `offer.accepted` / `offer.declined` | angler | j.w. | admin oznacza odpowiedź klienta; `declined` → `inquiry.lost` | M7 |
 | `payment.link_sent` | admin | stripe | link generowany **z aplikacji** (Stripe Payment Link API z `metadata.inquiry_id`) i wklejany do wiadomości w wątku | M11 |
 | `payment.received` | system | stripe | webhook `checkout.session.completed` / `payment_link` z `metadata.inquiry_id`; awaryjnie `UnmatchedLinker` (source=app); także `source='backfill'` z FA-1.37 (`recordPastPayment()`, `channel='app'`, `occurred_at` = data wpłaty) | M1, M2, M3, M7 |
 | `guide.notified_paid` | admin | j.w. | wiadomość do przewodnika oznaczona „poinformowano o wpłacie" | M11 |
 | `contacts.exchanged` | admin | j.w. | wiadomości z numerami do obu stron (jedna akcja w wątku) | hand-over |
-| `status.changed` | admin / system | app | `transition()` | lejek, `stage_reached` |
-| `inquiry.lost` | admin | app | `transition(lost)` z `lost_reason_code` | powody przegranych |
+| `status.changed` | admin / system | app | `transition()`; także `source='backfill'` z FA-1.38 (`recordPastLoss()`, jedno z dwóch zdarzeń przy przeskoku do `lost` z przeszłą datą) | lejek, `stage_reached` |
+| `inquiry.lost` | admin | app | `transition(lost)` z `lost_reason_code`; także `source='backfill'` z FA-1.38 (`recordPastLoss()`, `channel='app'`, `occurred_at` = data przegranej) | powody przegranych |
 | `trip.completed` | admin / system | app | data zakończenia | M14–M16 |
 | `agent.auto_send_decided` | agent | email | `autoSendReply()` po każdej próbie auto-wysyłki (FA-1.27); `payload.sent`, `payload.score`, `payload.reasons`, `payload.draft_message_id` | M11 (nie liczy się jako ręczne dotknięcie) |
 | `deposit.amount_set` | admin | app | admin ustawia kwotę depozytu na karcie zapytania (FA-1.28); `payload.amount_cents`, `payload.currency`, `payload.eur_rate`, `payload.eur_rate_at` | M1, M3 |
+| `inquiry.history_corrected` | admin | app | admin koryguje `inquiries.created_at` na wcześniejszą datę (FA-1.38, `correctReceivedDate()`, zawsze `source='backfill'`); `payload.field='created_at'`, `payload.from`, `payload.to` | M5, M7, M9b (baza kohorty po `created_at`) |
 
 Zarezerwowane, bez emisji w etapie 1 (w `types.ts` z komentarzem `// stage N`):
 `agent.round_completed`, `inquiry.brief_completed`, `guide.assigned`/`unassigned`,

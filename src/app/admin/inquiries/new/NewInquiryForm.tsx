@@ -62,6 +62,7 @@ export function NewInquiryForm({ trips }: { trips: Trip[] }) {
   const [status, setStatus] = useState<'qualifying' | 'new'>('qualifying')
   const [dates,  setDates]  = useState<string[]>([])
   const [message, setMessage] = useState('')
+  const [receivedOn, setReceivedOn] = useState(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' }))
 
   function addDate() {
     setDates(d => [...d, ''])
@@ -88,6 +89,7 @@ export function NewInquiryForm({ trips }: { trips: Trip[] }) {
         message:        message.trim() || null,
         channel,
         status,
+        receivedOn:     receivedOn || null,
       })
       if (res.success && res.inquiryId != null) {
         router.push(`/admin/inquiries/${res.inquiryId}`)
@@ -206,6 +208,18 @@ export function NewInquiryForm({ trips }: { trips: Trip[] }) {
             Add date
           </button>
         </div>
+      </Field>
+
+      {/* ── Received on — backdate for a lead that came in a while ago ── */}
+      <Field label="Received on">
+        <input
+          type="date"
+          value={receivedOn}
+          max={new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' })}
+          onChange={e => setReceivedOn(e.target.value)}
+          className={inputCls}
+          style={inputStyle}
+        />
       </Field>
 
       {/* ── Notes from conversation ── */}
