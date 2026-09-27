@@ -15,9 +15,11 @@
  *   Public — no auth required; token IS the authentication.
  */
 
+import { z } from 'zod'
 import type { Json } from '@/lib/supabase/database.types'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
+import { recordPastPayment, HistoryError } from '@/lib/inquiries/history'
 import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
 import { computeFallbackDepositCents } from '@/lib/inquiries/deposit-fallback'
 import {
@@ -767,6 +769,59 @@ export async function setDepositAmount(
 
   revalidatePath('/admin/inquiries/' + inquiryId)
   console.log(`[setDepositAmount] Inquiry ${inquiryId} — ${amountCents} ${currency} @ ${eurRate}`)
+  return { success: true }
+}
+
+// ─── recordPastPaymentAction ────────────────────────────────────────────────────
+
+const RecordPastPaymentSchema = z.object({
+  paidOn:      z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  amountCents: z.number().int().positive('Amount must be a positive integer (minor units)'),
+  currency:    z.enum(['EUR', 'USD', 'ISK', 'NZD']),
+  finalStatus: z.enum(['paid', 'completed']),
+  note:        z.string().trim().max(2000).nullable().optional(),
+})
+
+export type RecordPastPaymentPayload = z.infer<typeof RecordPastPaymentSchema>
+
+export type RecordPastPaymentActionResult =
+  | { success: true }
+  | { success: false; error: string }
+
+/**
+ * Admin records a booking that already happened — a real payment date, amount and
+ * currency, jumping straight to `paid`/`completed` (FA-1.37, O-25). Bypasses
+ * `transition()` by design; see src/lib/inquiries/history.ts.
+ */
+export async function recordPastPaymentAction(
+  inquiryId: string,
+  payload: RecordPastPaymentPayload,
+): Promise<RecordPastPaymentActionResult> {
+  const { userId } = await requireAdmin()
+
+  const parsed = RecordPastPaymentSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Validation error' }
+  }
+
+  const svc = createServiceClient()
+
+  try {
+    await recordPastPayment(svc, inquiryId, {
+      ...parsed.data,
+      actor: { kind: 'admin', id: userId },
+    })
+  } catch (err) {
+    if (err instanceof HistoryError) return { success: false, error: err.message }
+    console.error('[recordPastPaymentAction] error:', err)
+    return { success: false, error: 'Could not record the payment' }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/weekly')
+  revalidatePath('/admin/finances')
+  revalidatePath('/admin/pipeline')
+  console.log(`[recordPastPaymentAction] Inquiry ${inquiryId} — backfilled ${parsed.data.finalStatus} on ${parsed.data.paidOn}`)
   return { success: true }
 }
 

@@ -67,6 +67,23 @@ export async function fetchEurRate(toCurrency: string): Promise<number | null> {
   }
 }
 
+/**
+ * Fetches the EUR → toCurrency exchange rate for a specific past date (ECB reference
+ * rate, 'YYYY-MM-DD'). Used to freeze a rate at the moment a historical payment was
+ * actually made (CLAUDE.md rule 6), never "today's" rate. Not cached — each date is
+ * looked up once and the result is frozen into the row. Returns null on any error.
+ */
+export async function fetchEurRateOn(date: string, toCurrency: string): Promise<number | null> {
+  try {
+    const res = await fetch(`https://api.frankfurter.app/${date}?from=EUR&to=${toCurrency}`)
+    if (!res.ok) return null
+    const data = (await res.json()) as FrankfurterResponse
+    return data.rates[toCurrency] ?? null
+  } catch {
+    return null
+  }
+}
+
 // ─── Formatting ───────────────────────────────────────────────────────────────
 
 /**
