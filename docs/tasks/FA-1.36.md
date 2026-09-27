@@ -9,6 +9,7 @@ model_approved:
 effort: medium
 agent: fa-admin
 branch: feat/admin-data-gaps
+pr: 118
 depends_on: [FA-1.35]
 blocked_by_questions: []
 touches_db: false
