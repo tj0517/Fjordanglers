@@ -57,11 +57,11 @@ Szablon: `_template.md`. Tablica: `INDEX.md`.
 w pliku, w tym samym PR co kod (agent może zaproponować zmianę, nie robi jej sam).
 `blocked` zawsze z powodem w notatkach.
 
-**PR zawsze z jawnym `--base`** (w etapie 1: `stage-1`). PR do `main` wyłącznie dla
-hotfixów etapu 0. Domyślna baza w GitHubie to `main`, więc PR bez `--base` celuje w
-produkcję — 16 IX FA-1.03 zostało tak zmergowane do `main` i wymagało reverta
-`1505c7f3` (kod maszyny stanów poszedł na produkcję bez migracji, które ta baza ma
-dopiero dostać w paczce `stage-1`).
+**PR zawsze z jawnym `--base main`.** Od 27 IX 2026 (decyzja tj) `main` jest jedyną
+gałęzią bazową — `stage-1` zamknięty po wydaniu FA-1.34. Merge do `main` = deploy na
+produkcję. Historia: w etapie 1 bazą był `stage-1`; 16 IX FA-1.03 zmergowane do `main`
+wymagało reverta `1505c7f3` (kod maszyny stanów poszedł na produkcję bez migracji) —
+przy bazie `main` kolejność migracja → kod pilnuje bramka STOP z `docs/05-agent-operations.md` §3.
 
 **Kryteria „Gotowe, gdy" zmienia człowiek.** Agent, który uważa kryterium za złe,
 niewykonalne albo nieaktualne, opisuje to w „Notatkach z realizacji" razem z powodem —
