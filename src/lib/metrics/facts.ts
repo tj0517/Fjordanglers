@@ -21,6 +21,20 @@ export function bookedAt(row: BookingRow): string | null {
   return row.deposit_paid_at
 }
 
+const WARSAW = 'Europe/Warsaw'
+
+/**
+ * The booking's calendar month in Europe/Warsaw, 'YYYY-MM' — or null when unbooked.
+ * `deposit_paid_at` is an instant (UTC ISO string); slicing it directly gives the UTC
+ * month, which disagrees with Warsaw around midnight CET/CEST (e.g. 22:30 UTC on the
+ * last day of the month is already the 1st in Warsaw). Every screen bucketing a
+ * booking by month must go through this, not a raw `.slice(0, 7)`.
+ */
+export function bookedMonthWarsaw(row: BookingRow): string | null {
+  if (row.deposit_paid_at === null) return null
+  return new Date(row.deposit_paid_at).toLocaleDateString('en-CA', { timeZone: WARSAW }).slice(0, 7)
+}
+
 // Statuses reached only once money has moved, or the deal is over — never "open".
 const CLOSED_OR_TERMINAL: readonly InquiryStatus[] = ['paid', 'handed_over', 'completed', 'lost', 'cancelled']
 

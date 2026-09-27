@@ -35,4 +35,13 @@ describe('revenueByMonth (FA-1.35 acceptance criterion 2)', () => {
     const result = revenueByMonth(rows, 0.5)
     expect(result['2026-06']).toEqual({ eur: 200, deals: 2 })
   })
+
+  // Round 2 (tj 2026-09-27): revenue must bucket by the Warsaw month, same as
+  // /admin/weekly, not the UTC month of the raw ISO string.
+  it('a deposit at 22:30 UTC on the last day of the month lands in the next month (Warsaw)', () => {
+    // 2026-08-31T22:30:00Z = 2026-09-01T00:30 in Warsaw (CEST, UTC+2).
+    const result = revenueByMonth([row({ deposit_paid_at: '2026-08-31T22:30:00Z', offer_deposit_eur: 50 })], 0.92)
+    expect(Object.keys(result)).toEqual(['2026-09'])
+    expect(result['2026-08']).toBeUndefined()
+  })
 })
