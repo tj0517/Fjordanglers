@@ -2,7 +2,7 @@
 id: FA-1.38
 title: Pozostałe daty z przeszłości — kiedy przyszło zapytanie, kiedy wysłano ofertę, kiedy przegrane; także pole daty w ręcznie tworzonym zapytaniu
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -73,3 +73,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 ## Notatki z realizacji
 - 2026-09-27 tj (wf-plan): pełny zakres (D3); O-25 obejmuje też przegraną z datą.
+- 2026-09-27 tj (wf-task): serwer MCP `supabase-prod` odrzuca OAuth (`{"message":"Unrecognized client_id"}`) — naprawa po stronie tj, nie agenta. Decyzja: fakty o bazie dla tego zadania ustalane na stosie lokalnym (psql, port z `supabase/config.toml`) i z `supabase/migrations/`; żadne twierdzenie o produkcji bez weryfikacji — oznaczone „not verified on prod”. Konfiguracji MCP nie dotykać.
