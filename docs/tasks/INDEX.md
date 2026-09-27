@@ -67,7 +67,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.32 | Wygląd karty zapytania — nagłówek, zakładki, „Offer & payment”; przycisk AI tylko gdy AI działa | L | opus | done | FA-1.31 + makieta (O-24) |
 | FA-1.33 | Karta zapytania — zakładki natychmiast i jako pigułki; Overview nie wychodzi poza ekran | S | sonnet | done | FA-1.32 |
 | FA-1.34 | Agent pisze pierwszą odpowiedź na zapytanie z formularza — pusty wątek nie blokuje „Zaproponuj” | S | sonnet | done | — |
-| FA-1.35 | Jedna definicja faktów dla wykresów — booking = `deposit_paid_at`, prowizja z helpera; `/admin/finances` bez statusów sprzed FA-1.03, `/admin/pipeline` na helperze | M | sonnet | todo | — |
+| FA-1.35 | Jedna definicja faktów dla wykresów — booking = `deposit_paid_at`, prowizja z helpera; `/admin/finances` bez statusów sprzed FA-1.03, `/admin/pipeline` na helperze | M | sonnet | done (PR #116) | — |
 | FA-1.36 | Lista braków w danych — `/admin/data-gaps` (wpłata bez daty/kwoty, oferta bez daty, przegrana bez kodu) | S | sonnet | todo | FA-1.35 |
 | FA-1.37 | „Zapisz wpłatę z przeszłości” na karcie — data, grosze, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` (O-25) | L | opus | done (PR #115) | — |
 | FA-1.38 | Daty z przeszłości — wpływ zapytania, wysłanie oferty, przegrana; data w ręcznym zapytaniu | M | sonnet | todo | FA-1.37 |

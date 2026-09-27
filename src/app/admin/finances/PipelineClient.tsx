@@ -71,7 +71,7 @@ export function PipelineClient({
         style={{ background: '#FDFAF7', border: '1px solid rgba(10,46,77,0.07)' }}
       >
         <p className="text-sm f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
-          No open deals right now. Offers in <code>deposit_sent</code> status will appear here.
+          No open deals right now. Inquiries that are not yet booked and not lost or cancelled will appear here.
         </p>
       </div>
     )
@@ -137,12 +137,11 @@ export function PipelineClient({
               const waitColor   = urgencyColor(days)
 
               const statusStyle: Record<string, { label: string; color: string; bg: string }> = {
-                pending:                 { label: 'Pending',         color: '#92400E', bg: 'rgba(251,191,36,0.15)'  },
-                in_negotiation:          { label: 'Negotiating',     color: '#5B21B6', bg: 'rgba(139,92,246,0.15)' },
-                waiting_for_guide_offer: { label: 'Waiting Guide',   color: '#C2410C', bg: 'rgba(234,88,12,0.12)'  },
-                offer_sent:              { label: 'Offer Sent',      color: '#0E7490', bg: 'rgba(6,182,212,0.12)'  },
-                waiting_for_deposit:     { label: 'Waiting Deposit', color: '#3730A3', bg: 'rgba(99,102,241,0.12)' },
-                deposit_sent:            { label: 'Deposit Sent',    color: '#1E40AF', bg: 'rgba(59,130,246,0.12)' },
+                new:              { label: 'New',              color: '#92400E', bg: 'rgba(251,191,36,0.15)' },
+                qualifying:       { label: 'Qualifying',       color: '#5B21B6', bg: 'rgba(139,92,246,0.15)' },
+                waiting_guide:    { label: 'Waiting Guide',    color: '#C2410C', bg: 'rgba(234,88,12,0.12)'  },
+                offer_presented:  { label: 'Offer Presented',  color: '#0E7490', bg: 'rgba(6,182,212,0.12)'  },
+                awaiting_payment: { label: 'Awaiting Payment', color: '#3730A3', bg: 'rgba(99,102,241,0.12)' },
               }
               const ss = statusStyle[d.status] ?? { label: d.status, color: '#374151', bg: 'rgba(107,114,128,0.10)' }
 
