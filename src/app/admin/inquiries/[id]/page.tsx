@@ -16,6 +16,7 @@ import { getDepositLinkDraft } from '@/actions/messages'
 import { NextStepCard } from './NextStepCard'
 import type { OfferForPanel } from './NextStepCard'
 import { DealCard } from './DealCard'
+import { RecordPastPaymentForm } from './RecordPastPaymentForm'
 import { InternalRows } from './InternalRows'
 import { InquiryHeader, type HeaderFacts } from './InquiryHeader'
 import { StatusChanger } from './StatusChanger'
@@ -621,6 +622,7 @@ export default async function AdminInquiryDetailPage({
           depositCurrency={inquiry.deposit_currency ?? null}
           depositPaidAt={inquiry.deposit_paid_at}
         />
+        <RecordPastPaymentForm inquiryId={inquiry.id} depositPaidAt={inquiry.deposit_paid_at} />
         <InternalRows
           dealTrackerSummary={dealTrackerSummary}
           dealTracker={
