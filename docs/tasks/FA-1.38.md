@@ -2,7 +2,7 @@
 id: FA-1.38
 title: Pozostałe daty z przeszłości — kiedy przyszło zapytanie, kiedy wysłano ofertę, kiedy przegrane; także pole daty w ręcznie tworzonym zapytaniu
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -76,3 +76,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - 2026-09-27 tj (wf-plan): pełny zakres (D3); O-25 obejmuje też przegraną z datą.
 - 2026-09-27 tj (wf-task): serwer MCP `supabase-prod` odrzuca OAuth (`{“message”:”Unrecognized client_id”}`) — naprawa po stronie tj, nie agenta. Decyzja: fakty o bazie dla tego zadania ustalane na stosie lokalnym (psql, port z `supabase/config.toml`) i z `supabase/migrations/`; żadne twierdzenie o produkcji bez weryfikacji — oznaczone „not verified on prod”. Konfiguracji MCP nie dotykać.
 - 2026-09-27 tj (wf-task): kryterium 2 zmienione — patrz wersja poniżej w sekcji „Gotowe, gdy” (`/admin/weekly` pokazuje tylko ostatnie 5 tygodni, więc dowód przez miesiąc na pipeline + YTD conversion, nie przez tydzień na weekly).
+- 2026-09-27 tj: accepted after review round 2 (PR #117) — criteria 1–6 proven (criterion 2 via /admin/pipeline month + YTD conversion; DB facts on the local stack because Supabase MCP OAuth is broken); round 2: "received today" keeps now() instead of 12:00 UTC (red proof pasted), loss reason codes unified in state.ts and pinned to the DB CHECK by a test; two event-log caveats recorded in deferred for stage 5.
