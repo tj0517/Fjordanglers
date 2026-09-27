@@ -138,6 +138,40 @@ export function stageReachedFor(status: InquiryStatus): string | null {
   return STAGE_BY_STATUS[status]
 }
 
+// ─── Loss reason codes ────────────────────────────────────────────────────────
+
+/**
+ * The one place this list lives (FA-1.38 round 2 — was duplicated in `history.ts`,
+ * `RecordPastLossForm.tsx` and `StatusChanger.tsx`). Order and values must match the
+ * CHECK constraint exactly: `supabase/migrations/20260910111336_inquiries_lost_reason_code.sql`.
+ */
+export const LOST_REASON_CODE_KEYS = [
+  'client_silent',
+  'no_guide',
+  'guide_slow',
+  'price',
+  'changed_plans',
+  'went_elsewhere',
+  'other',
+] as const
+
+export type LostReasonCode = typeof LOST_REASON_CODE_KEYS[number]
+
+export function isLostReasonCode(value: string): value is LostReasonCode {
+  return (LOST_REASON_CODE_KEYS as readonly string[]).includes(value)
+}
+
+/** What the admin UI shows for each code. */
+export const LOST_REASON_LABELS: Record<LostReasonCode, string> = {
+  client_silent:  'Client went silent',
+  no_guide:       'No guide available',
+  guide_slow:     'Guide too slow',
+  price:          'Price too high',
+  changed_plans:  'Client changed plans',
+  went_elsewhere: 'Went to another operator',
+  other:          'Other',
+}
+
 // ─── transition ───────────────────────────────────────────────────────────────
 
 export class TransitionError extends Error {

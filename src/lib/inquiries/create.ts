@@ -15,7 +15,7 @@
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEvent, type EventActor } from '@/lib/events/emit'
-import { assertNotFutureDate, instantOf } from '@/lib/inquiries/history'
+import { assertNotFutureDate, instantOf, warsawToday } from '@/lib/inquiries/history'
 import type { UtmParams } from '@/lib/utm'
 
 /**
@@ -118,15 +118,21 @@ export interface CreateInquiryResult {
 export async function createInquiry(params: CreateInquiryParams): Promise<CreateInquiryResult> {
   const svc = createServiceClient()
 
-  const receivedAt = params.receivedOn ?? null
-  if (receivedAt != null) {
-    assertNotFutureDate(receivedAt, 'Received date')
+  const receivedOn = params.receivedOn ?? null
+  if (receivedOn != null) {
+    assertNotFutureDate(receivedOn, 'Received date')
   }
+  // "Today" is not a backdate — it is what `now()` already gives, down to the second.
+  // Stamping it to noon UTC would move a lead entered at 10:00 into the future and one
+  // entered at 20:00 six hours into the past, corrupting the 48h SLA counter and
+  // ordering for every manually created inquiry, not just genuine backfills.
+  const isBackdated = receivedOn != null && receivedOn !== warsawToday()
+  const receivedAt  = isBackdated ? instantOf(receivedOn) : null
 
   const { data, error } = await svc
     .from('inquiries')
     .insert({
-      ...(receivedAt != null ? { created_at: instantOf(receivedAt) } : {}),
+      ...(receivedAt != null ? { created_at: receivedAt } : {}),
       trip_id:            params.tripId ?? null,
       experience_page_id: params.experiencePageId ?? null,
       guide_id:            params.guideId ?? null,
@@ -169,7 +175,7 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       guide_id:           params.guideId ?? null,
       trip_country:       params.tripCountry ?? null,
     },
-    ...(receivedAt != null ? { occurredAt: instantOf(receivedAt) } : {}),
+    ...(receivedAt != null ? { occurredAt: receivedAt } : {}),
   })
 
   return { id: data.id, status: data.status }

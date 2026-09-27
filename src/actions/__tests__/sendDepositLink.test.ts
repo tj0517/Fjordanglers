@@ -41,6 +41,11 @@ vi.mock('@/lib/inquiries/state', () => ({
   transition:       vi.fn(),
   TransitionError:  class TransitionError extends Error {},
   isInquiryStatus:  vi.fn(),
+  // Module-scope in src/actions/inquiries.ts (RecordPastLossSchema) reads this at
+  // import time, so a full mock must still provide it (FA-1.38 round 2).
+  LOST_REASON_CODE_KEYS: [
+    'client_silent', 'no_guide', 'guide_slow', 'price', 'changed_plans', 'went_elsewhere', 'other',
+  ],
 }))
 
 vi.mock('@/lib/inquiries/experience-lookup', async importOriginal => ({

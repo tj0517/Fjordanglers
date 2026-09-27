@@ -47,6 +47,7 @@ import {
   transition,
   TransitionError,
   isInquiryStatus,
+  LOST_REASON_CODE_KEYS,
 } from '@/lib/inquiries/state'
 import { setQualified, QualifiedError, type QualifiedValue } from '@/lib/inquiries/qualified'
 import { emitEvent } from '@/lib/events/emit'
@@ -876,9 +877,7 @@ export async function recordPastOfferAction(
 
 const RecordPastLossSchema = z.object({
   lostOn:         z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  lostReasonCode: z.enum([
-    'client_silent', 'no_guide', 'guide_slow', 'price', 'changed_plans', 'went_elsewhere', 'other',
-  ]),
+  lostReasonCode: z.enum(LOST_REASON_CODE_KEYS),
   note: z.string().trim().max(2000).nullable().optional(),
 })
 

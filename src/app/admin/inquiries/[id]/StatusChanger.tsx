@@ -11,6 +11,8 @@ import {
   STATUS_MEANINGS,
   canTransition,
   isInquiryStatus,
+  LOST_REASON_CODE_KEYS,
+  LOST_REASON_LABELS,
   type InquiryStatus,
 } from '@/lib/inquiries/state'
 
@@ -20,16 +22,6 @@ const STATUSES = MACHINE_STATUSES.map(key => ({
   label:   STATUS_LABELS[key],
   meaning: STATUS_MEANINGS[key],
 }))
-
-const LOST_REASON_CODES: { key: string; label: string }[] = [
-  { key: 'client_silent',  label: 'Client went silent'       },
-  { key: 'no_guide',       label: 'No guide available'       },
-  { key: 'guide_slow',     label: 'Guide too slow'           },
-  { key: 'price',          label: 'Price too high'           },
-  { key: 'changed_plans',  label: 'Client changed plans'     },
-  { key: 'went_elsewhere', label: 'Went to another operator' },
-  { key: 'other',          label: 'Other'                    },
-]
 
 type StatusKey = InquiryStatus
 
@@ -162,9 +154,9 @@ export function StatusChanger({
               )}
             >
               <option value="" disabled>Select reason (required)</option>
-              {LOST_REASON_CODES.map(r => (
-                <option key={r.key} value={r.key}>
-                  {r.label}
+              {LOST_REASON_CODE_KEYS.map(key => (
+                <option key={key} value={key}>
+                  {LOST_REASON_LABELS[key]}
                 </option>
               ))}
             </select>

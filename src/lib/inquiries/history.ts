@@ -16,7 +16,7 @@
 import { emitEvent, type EventActor, type EventClient } from '@/lib/events/emit'
 import { fetchEurRateOn } from '@/lib/fx'
 import { isDepositCurrency } from '@/lib/inquiries/deposit'
-import { stageReachedFor } from '@/lib/inquiries/state'
+import { stageReachedFor, isLostReasonCode, LOST_REASON_CODE_KEYS } from '@/lib/inquiries/state'
 
 type PastPaymentFinalStatus = 'paid' | 'completed'
 
@@ -373,21 +373,6 @@ export async function recordPastOffer(
 
 // ─── recordPastLoss — FA-1.38 ──────────────────────────────────────────────────
 
-/**
- * Mirrors the CHECK constraint in
- * supabase/migrations/20260910111336_inquiries_lost_reason_code.sql — kept in one
- * place there (the DB truth) and validated here so a bad code never reaches the write.
- */
-const LOST_REASON_CODES = [
-  'client_silent',
-  'no_guide',
-  'guide_slow',
-  'price',
-  'changed_plans',
-  'went_elsewhere',
-  'other',
-] as const
-
 export interface RecordPastLossInput {
   /** Warsaw calendar date the deal was actually lost, 'YYYY-MM-DD'. Never in the future. */
   lostOn:         string
@@ -417,9 +402,9 @@ export async function recordPastLoss(
   const note = input.note?.trim() ?? ''
 
   assertNotFutureDate(lostOn, 'Loss date')
-  if (!LOST_REASON_CODES.includes(lostReasonCode as typeof LOST_REASON_CODES[number])) {
+  if (!isLostReasonCode(lostReasonCode)) {
     throw new HistoryError(
-      `Unknown loss reason ${JSON.stringify(lostReasonCode)} — must be one of ${LOST_REASON_CODES.join(', ')}`,
+      `Unknown loss reason ${JSON.stringify(lostReasonCode)} — must be one of ${LOST_REASON_CODE_KEYS.join(', ')}`,
     )
   }
 

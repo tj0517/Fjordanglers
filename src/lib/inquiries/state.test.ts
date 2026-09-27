@@ -6,6 +6,9 @@ import {
   TransitionError,
   canTransition,
   isInquiryStatus,
+  isLostReasonCode,
+  LOST_REASON_CODE_KEYS,
+  LOST_REASON_LABELS,
   nextStatuses,
   stageReachedFor,
   transition,
@@ -259,5 +262,39 @@ describe('transition()', () => {
       .rejects.toThrow(/already/i)
 
     expect(state.events).toHaveLength(0)
+  })
+})
+
+// ─── Loss reason codes — FA-1.38 round 2 ──────────────────────────────────────
+//
+// One constant now backs history.ts (recordPastLoss), the RecordPastLossForm and
+// StatusChanger UIs, and the Zod schema in src/actions/inquiries.ts — this pins it to
+// the DB CHECK constraint exactly so the four never drift apart again.
+
+describe('LOST_REASON_CODE_KEYS', () => {
+  it('matches the CHECK constraint in 20260910111336_inquiries_lost_reason_code.sql exactly', () => {
+    expect(LOST_REASON_CODE_KEYS).toEqual([
+      'client_silent',
+      'no_guide',
+      'guide_slow',
+      'price',
+      'changed_plans',
+      'went_elsewhere',
+      'other',
+    ])
+  })
+
+  it('has a label for every code', () => {
+    for (const key of LOST_REASON_CODE_KEYS) {
+      expect(LOST_REASON_LABELS[key]).toBeTruthy()
+    }
+  })
+
+  it('isLostReasonCode accepts only the known codes', () => {
+    for (const key of LOST_REASON_CODE_KEYS) {
+      expect(isLostReasonCode(key)).toBe(true)
+    }
+    expect(isLostReasonCode('')).toBe(false)
+    expect(isLostReasonCode('bogus')).toBe(false)
   })
 })
