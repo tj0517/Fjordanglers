@@ -310,3 +310,23 @@ content — the real text arrives with FA-1.17 / FA-1.26, typed by tj in the pan
 Fishes the south-west rivers. Fictional seed content.',
    true, '9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a01')
 ON CONFLICT (id) DO NOTHING;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- FA-1.36 — category A coverage for /admin/data-gaps ("booking without a payment date")
+--
+-- Every other gap category (B: zero amount, C: offer without a date, D: loss without a
+-- code) already has at least one row above (Kari Weekly / f6…, Alice Seed / a1…, Mats
+-- Weekly / f8…). Category A had none: no seed row reached a booked state with
+-- deposit_paid_at left null. `stage_reached` is settable directly on INSERT — the
+-- "must advance" trigger only fires on UPDATE OF stage_reached (baseline line 2634) — so
+-- this row also doubles as the round-2 red proof case: `status` alone (still
+-- 'awaiting_payment') would miss it; `stage_reached` already reads 'deposit_paid'.
+-- ═════════════════════════════════════════════════════════════════════════════
+
+INSERT INTO inquiries (
+  id, angler_name, angler_email, status, stage_reached, deposit_paid_at, created_at, updated_at
+) VALUES (
+  'f0f0f0f0-f0f0-4f0f-8f0f-f0f0f0f0f010', 'Otto Gap', 'otto@seed.test',
+  'awaiting_payment', 'deposit_paid', NULL,
+  '2026-07-05 10:00:00+00', '2026-07-05 10:00:00+00'
+) ON CONFLICT (id) DO NOTHING;

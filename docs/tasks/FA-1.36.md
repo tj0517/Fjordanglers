@@ -2,13 +2,14 @@
 id: FA-1.36
 title: Lista braków w danych — `/admin/data-gaps`: zapytania bez daty wpłaty, kwoty, daty oferty, kodu przegranej, z linkiem do karty
 stage: 1
-status: todo
+status: done
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-admin
 branch: feat/admin-data-gaps
+pr: 118
 depends_on: [FA-1.35]
 blocked_by_questions: []
 touches_db: false
@@ -70,3 +71,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 ## Notatki z realizacji
 - 2026-09-27 tj (wf-plan): pełny zakres (D3); liczniki A–D = 0 są miarą ukończenia FA-1.39.
+- 2026-09-27 tj: accepted (PR #118) — criteria 1–5 proven: categories A–F reuse isBooked/rowCommissionEur and the card's category-E rule; red proof for A (status-only misses stage_reached='deposit_paid'); counters match 4 SELECTs on the seed (A=1, B=1, C=2, D=2); zero state renders; knip green.

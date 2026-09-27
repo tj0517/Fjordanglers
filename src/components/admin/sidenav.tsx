@@ -7,6 +7,7 @@ import { useFormStatus } from 'react-dom'
 import {
   LayoutDashboard, Users, Map, MessageSquare, CalendarDays,
   Menu, X, ShieldCheck, BarChart2, Wallet, LogOut, TrendingUp, ClipboardList, BookOpen, Loader2,
+  AlertTriangle,
 } from 'lucide-react'
 import { signOut } from '@/actions/auth'
 
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { label: 'Pipeline',     href: '/admin/pipeline',    icon: <TrendingUp size={16} strokeWidth={1.6} /> },
   { label: 'Ads',          href: '/admin/ads',         icon: <BarChart2 size={16} strokeWidth={1.6} /> },
   { label: 'Finances',     href: '/admin/finances',    icon: <Wallet size={16} strokeWidth={1.6} /> },
+  { label: 'Data gaps',    href: '/admin/data-gaps',   icon: <AlertTriangle size={16} strokeWidth={1.6} /> },
   { label: 'Forms',        href: '/admin/forms',       icon: <ClipboardList size={16} strokeWidth={1.6} /> },
   { label: 'Knowledge',    href: '/admin/knowledge',   icon: <BookOpen size={16} strokeWidth={1.6} /> },
 ]
