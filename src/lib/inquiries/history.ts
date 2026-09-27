@@ -18,7 +18,7 @@ import { fetchEurRateOn } from '@/lib/fx'
 import { isDepositCurrency } from '@/lib/inquiries/deposit'
 import { stageReachedFor } from '@/lib/inquiries/state'
 
-export type PastPaymentFinalStatus = 'paid' | 'completed'
+type PastPaymentFinalStatus = 'paid' | 'completed'
 
 export interface RecordPastPaymentInput {
   /** Warsaw calendar date the payment actually landed, 'YYYY-MM-DD'. Never in the future. */
