@@ -19,7 +19,13 @@ import { z } from 'zod'
 import type { Json } from '@/lib/supabase/database.types'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
-import { recordPastPayment, HistoryError } from '@/lib/inquiries/history'
+import {
+  recordPastPayment,
+  recordPastOffer,
+  recordPastLoss,
+  correctReceivedDate,
+  HistoryError,
+} from '@/lib/inquiries/history'
 import { tripCountryPatchFromGuide } from '@/lib/inquiries/trip-country'
 import { computeFallbackDepositCents } from '@/lib/inquiries/deposit-fallback'
 import {
@@ -41,6 +47,7 @@ import {
   transition,
   TransitionError,
   isInquiryStatus,
+  LOST_REASON_CODE_KEYS,
 } from '@/lib/inquiries/state'
 import { setQualified, QualifiedError, type QualifiedValue } from '@/lib/inquiries/qualified'
 import { emitEvent } from '@/lib/events/emit'
@@ -144,6 +151,8 @@ export async function createManualInquiry(params: {
   channel:        string | null
   /** Where the admin wants it to start: `new` (nobody replied yet) or `qualifying`. */
   status:         'new' | 'qualifying'
+  /** FA-1.38: optional backdate — 'YYYY-MM-DD', never in the future. Null/omitted means "now". */
+  receivedOn?:    string | null
 }): Promise<ActionResult & { inquiryId?: string }> {
   const { userId } = await requireAdmin()
   if (params.anglerName.trim() === '') return { success: false, error: 'Name is required' }
@@ -181,6 +190,7 @@ export async function createManualInquiry(params: {
       message:          params.message != null && params.message.trim() !== '' ? params.message.trim() : null,
       internalNotes,
       source:           'manual',
+      receivedOn:       params.receivedOn != null && params.receivedOn !== '' ? params.receivedOn : null,
     })
   } catch (error) {
     console.error('[createManualInquiry] DB error:', error)
@@ -822,6 +832,123 @@ export async function recordPastPaymentAction(
   revalidatePath('/admin/finances')
   revalidatePath('/admin/pipeline')
   console.log(`[recordPastPaymentAction] Inquiry ${inquiryId} — backfilled ${parsed.data.finalStatus} on ${parsed.data.paidOn}`)
+  return { success: true }
+}
+
+// ─── recordPastOfferAction — FA-1.38 ───────────────────────────────────────────
+
+const RecordPastOfferSchema = z.object({
+  sentOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+})
+
+export type RecordPastOfferPayload = z.infer<typeof RecordPastOfferSchema>
+
+/** Admin records the real date an offer was sent, when the app never captured it. */
+export async function recordPastOfferAction(
+  inquiryId: string,
+  payload: RecordPastOfferPayload,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+
+  const parsed = RecordPastOfferSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Validation error' }
+  }
+
+  try {
+    await recordPastOffer(createServiceClient(), inquiryId, {
+      ...parsed.data,
+      actor: { kind: 'admin', id: userId },
+    })
+  } catch (err) {
+    if (err instanceof HistoryError) return { success: false, error: err.message }
+    console.error('[recordPastOfferAction] error:', err)
+    return { success: false, error: 'Could not record the offer date' }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/weekly')
+  revalidatePath('/admin/pipeline')
+  console.log(`[recordPastOfferAction] Inquiry ${inquiryId} — backfilled offer date ${parsed.data.sentOn}`)
+  return { success: true }
+}
+
+// ─── recordPastLossAction — FA-1.38 ────────────────────────────────────────────
+
+const RecordPastLossSchema = z.object({
+  lostOn:         z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  lostReasonCode: z.enum(LOST_REASON_CODE_KEYS),
+  note: z.string().trim().max(2000).nullable().optional(),
+})
+
+export type RecordPastLossPayload = z.infer<typeof RecordPastLossSchema>
+
+/** Admin marks a past loss with its real date — jumps straight to `lost`, bypassing `transition()`. */
+export async function recordPastLossAction(
+  inquiryId: string,
+  payload: RecordPastLossPayload,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+
+  const parsed = RecordPastLossSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Validation error' }
+  }
+
+  try {
+    await recordPastLoss(createServiceClient(), inquiryId, {
+      ...parsed.data,
+      actor: { kind: 'admin', id: userId },
+    })
+  } catch (err) {
+    if (err instanceof HistoryError) return { success: false, error: err.message }
+    console.error('[recordPastLossAction] error:', err)
+    return { success: false, error: 'Could not record the loss' }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/weekly')
+  revalidatePath('/admin/pipeline')
+  console.log(`[recordPastLossAction] Inquiry ${inquiryId} — backfilled loss on ${parsed.data.lostOn}`)
+  return { success: true }
+}
+
+// ─── correctReceivedDateAction — FA-1.38 ───────────────────────────────────────
+
+const CorrectReceivedDateSchema = z.object({
+  receivedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+})
+
+export type CorrectReceivedDatePayload = z.infer<typeof CorrectReceivedDateSchema>
+
+/** Admin corrects `created_at` to an earlier real date — e.g. the record was typed in
+ *  hours after the angler's first message. Only allowed strictly earlier than today's value. */
+export async function correctReceivedDateAction(
+  inquiryId: string,
+  payload: CorrectReceivedDatePayload,
+): Promise<ActionResult> {
+  const { userId } = await requireAdmin()
+
+  const parsed = CorrectReceivedDateSchema.safeParse(payload)
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? 'Validation error' }
+  }
+
+  try {
+    await correctReceivedDate(createServiceClient(), inquiryId, {
+      ...parsed.data,
+      actor: { kind: 'admin', id: userId },
+    })
+  } catch (err) {
+    if (err instanceof HistoryError) return { success: false, error: err.message }
+    console.error('[correctReceivedDateAction] error:', err)
+    return { success: false, error: 'Could not correct the received date' }
+  }
+
+  revalidatePath('/admin/inquiries/' + inquiryId)
+  revalidatePath('/admin/weekly')
+  revalidatePath('/admin/pipeline')
+  console.log(`[correctReceivedDateAction] Inquiry ${inquiryId} — corrected received date to ${parsed.data.receivedOn}`)
   return { success: true }
 }
 

@@ -17,6 +17,9 @@ import { NextStepCard } from './NextStepCard'
 import type { OfferForPanel } from './NextStepCard'
 import { DealCard } from './DealCard'
 import { RecordPastPaymentForm } from './RecordPastPaymentForm'
+import { RecordPastOfferForm } from './RecordPastOfferForm'
+import { RecordPastLossForm } from './RecordPastLossForm'
+import { CorrectReceivedDateForm } from './CorrectReceivedDateForm'
 import { InternalRows } from './InternalRows'
 import { InquiryHeader, type HeaderFacts } from './InquiryHeader'
 import { StatusChanger } from './StatusChanger'
@@ -140,6 +143,11 @@ export default async function AdminInquiryDetailPage({
   } catch {
     // Table not yet migrated — graceful fallback
   }
+
+  // FA-1.05 audit: 7 rows where the record was typed in after the angler's first
+  // message — created_at reads later than the conversation actually started.
+  const receivedDateGapDetected = threadMessages.length > 0
+    && new Date(threadMessages[0].occurred_at).getTime() < new Date(rawInquiry.created_at).getTime()
 
   // Latest agent draft for the composer — pre-filled only when body contains the active link URL (FA-1.30 Fix 5)
   let latestAnglerDraft: { id: string; body: string } | null = null
@@ -462,16 +470,23 @@ export default async function AdminInquiryDetailPage({
         </div>
 
         {/* Metadata */}
-        <div className="px-4 py-3 rounded-xl border border-border/50 bg-muted/20">
+        <div className="px-4 py-3 rounded-xl border border-border/50 bg-muted/20 space-y-1.5">
           <p className="text-[10px] f-body text-muted-foreground break-words [overflow-wrap:anywhere]">
             ID: {inquiry.id} · Submitted: {new Date(inquiry.created_at).toLocaleString('en-GB')}
           </p>
+          <CorrectReceivedDateForm inquiryId={inquiry.id} show={receivedDateGapDetected} />
         </div>
       </div>
 
       {/* Right: actions sidebar */}
       <div className="lg:sticky lg:top-6 space-y-3 min-w-0">
         <StatusChanger inquiryId={inquiry.id} currentStatus={inquiry.status} />
+
+        <RecordPastLossForm
+          inquiryId={inquiry.id}
+          currentStatus={inquiry.status}
+          depositPaidAt={inquiry.deposit_paid_at}
+        />
 
         <QualifiedChanger
           inquiryId={inquiry.id}
@@ -622,6 +637,7 @@ export default async function AdminInquiryDetailPage({
           depositCurrency={inquiry.deposit_currency ?? null}
           depositPaidAt={inquiry.deposit_paid_at}
         />
+        <RecordPastOfferForm inquiryId={inquiry.id} offerSentAt={inquiry.offer_sent_at} />
         <RecordPastPaymentForm inquiryId={inquiry.id} depositPaidAt={inquiry.deposit_paid_at} />
         <InternalRows
           dealTrackerSummary={dealTrackerSummary}

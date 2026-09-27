@@ -2,13 +2,14 @@
 id: FA-1.38
 title: Pozostałe daty z przeszłości — kiedy przyszło zapytanie, kiedy wysłano ofertę, kiedy przegrane; także pole daty w ręcznie tworzonym zapytaniu
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/record-past-dates
+pr: 117
 depends_on: [FA-1.37]
 blocked_by_questions: []
 touches_db: true
@@ -47,7 +48,7 @@ Po FA-1.37 bookingi mają prawdziwe daty, ale metryki czasu i lejka dalej kłami
 
 ## Gotowe, gdy
 - [ ] Lokalnie: każda z trzech akcji na zapytaniu z seeda → SELECT kolumny + wiersz `inquiry_events` z `source='backfill'` i właściwym `occurred_at` (3 pary w raporcie).
-- [ ] Zapytanie utworzone ręcznie z datą sprzed 2 miesięcy: `created_at` i `inquiry.created.occurred_at` = ta data; na `/admin/weekly`/`/admin/pipeline` liczy się w tamtym tygodniu/miesiącu (zrzut).
+- [ ] Zapytanie utworzone ręcznie z datą sprzed 2 miesięcy: `created_at` i `inquiry.created.occurred_at` = ta data (SELECT); `/admin/pipeline` (widok miesięczny, tamten miesiąc) pokazuje +1 zapytanie; `/admin/weekly` „Conversion (YTD)” pokazuje +1 w mianowniku — wartości przed/po i zrzuty ekranu. *(Zmienione z „liczy się w tamtym tygodniu na /admin/weekly/pipeline” przez tj 2026-09-27: `/admin/weekly` pokazuje tylko ostatnie 5 tygodni, więc zapytanie sprzed 2 miesięcy dowodzi się przez miesiąc na pipeline i konwersję YTD.)*
 - [ ] **Na czerwono:** data w przyszłości odrzucona dla każdej z 3 akcji (test).
 - [ ] **Na czerwono:** `recordPastOffer` na zapytaniu z ustawionym `offer_sent_at` i `correctReceivedDate` z datą późniejszą niż obecna → błąd, zero zmian (testy).
 - [ ] **Na czerwono:** `recordPastLoss` bez kodu i na zapytaniu z `deposit_paid_at` → błąd (testy).
@@ -73,3 +74,6 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 ## Notatki z realizacji
 - 2026-09-27 tj (wf-plan): pełny zakres (D3); O-25 obejmuje też przegraną z datą.
+- 2026-09-27 tj (wf-task): serwer MCP `supabase-prod` odrzuca OAuth (`{“message”:”Unrecognized client_id”}`) — naprawa po stronie tj, nie agenta. Decyzja: fakty o bazie dla tego zadania ustalane na stosie lokalnym (psql, port z `supabase/config.toml`) i z `supabase/migrations/`; żadne twierdzenie o produkcji bez weryfikacji — oznaczone „not verified on prod”. Konfiguracji MCP nie dotykać.
+- 2026-09-27 tj (wf-task): kryterium 2 zmienione — patrz wersja poniżej w sekcji „Gotowe, gdy” (`/admin/weekly` pokazuje tylko ostatnie 5 tygodni, więc dowód przez miesiąc na pipeline + YTD conversion, nie przez tydzień na weekly).
+- 2026-09-27 tj: accepted after review round 2 (PR #117) — criteria 1–6 proven (criterion 2 via /admin/pipeline month + YTD conversion; DB facts on the local stack because Supabase MCP OAuth is broken); round 2: "received today" keeps now() instead of 12:00 UTC (red proof pasted), loss reason codes unified in state.ts and pinned to the DB CHECK by a test; two event-log caveats recorded in deferred for stage 5.
