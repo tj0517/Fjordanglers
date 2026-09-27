@@ -2,13 +2,14 @@
 id: FA-1.37
 title: „Zapisz wpłatę z przeszłości” na karcie — data, kwota w groszach, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` z prawdziwą datą
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/record-past-payment
+pr: 115
 depends_on: []
 blocked_by_questions: []
 touches_db: true
