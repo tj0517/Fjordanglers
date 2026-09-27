@@ -629,7 +629,7 @@ w aplikacji — nigdy jako osobny krok „dopisz".
 | `offer.presented` | admin | j.w. | wiadomość wychodząca do klienta oznaczona „przedstawia ofertę" | M7, M10 |
 | `offer.accepted` / `offer.declined` | angler | j.w. | admin oznacza odpowiedź klienta; `declined` → `inquiry.lost` | M7 |
 | `payment.link_sent` | admin | stripe | link generowany **z aplikacji** (Stripe Payment Link API z `metadata.inquiry_id`) i wklejany do wiadomości w wątku | M11 |
-| `payment.received` | system | stripe | webhook `checkout.session.completed` / `payment_link` z `metadata.inquiry_id`; awaryjnie `UnmatchedLinker` (source=app) | M1, M2, M3, M7 |
+| `payment.received` | system | stripe | webhook `checkout.session.completed` / `payment_link` z `metadata.inquiry_id`; awaryjnie `UnmatchedLinker` (source=app); także `source='backfill'` z FA-1.37 (`recordPastPayment()`, `channel='app'`, `occurred_at` = data wpłaty) | M1, M2, M3, M7 |
 | `guide.notified_paid` | admin | j.w. | wiadomość do przewodnika oznaczona „poinformowano o wpłacie" | M11 |
 | `contacts.exchanged` | admin | j.w. | wiadomości z numerami do obu stron (jedna akcja w wątku) | hand-over |
 | `status.changed` | admin / system | app | `transition()` | lejek, `stage_reached` |
