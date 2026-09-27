@@ -105,7 +105,7 @@ export function RecordPastPaymentForm({ inquiryId, depositPaidAt }: Props) {
           <input
             type="date"
             value={paidOn}
-            max={new Date().toISOString().slice(0, 10)}
+            max={new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Warsaw' })}
             onChange={e => setPaidOn(e.target.value)}
             className={INPUT}
             disabled={isPending}

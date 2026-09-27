@@ -42,6 +42,25 @@ export class HistoryError extends Error {
   }
 }
 
+// ─── Stripe dependency (injected, never imported at module scope) ─────────────
+//
+// A live payment link (FA-1.29) surviving a backfilled payment would let the angler
+// also pay through Stripe with nobody noticing (the webhook silently no-ops on an
+// already-set deposit_paid_at). The Stripe call is a constructor parameter, not a
+// top-level import, so a test can never reach the real network by omission — only by
+// deliberately wiring the real implementation in.
+
+export interface RecordPastPaymentDeps {
+  deactivatePaymentLink: (linkId: string) => Promise<void>
+}
+
+const liveDeps: RecordPastPaymentDeps = {
+  async deactivatePaymentLink(linkId) {
+    const { stripe } = await import('@/lib/stripe/client')
+    await stripe.paymentLinks.update(linkId, { active: false })
+  },
+}
+
 // ─── Date helpers ───────────────────────────────────────────────────────────────
 
 /** Today's calendar date in Europe/Warsaw, 'YYYY-MM-DD'. */
@@ -71,6 +90,7 @@ export async function recordPastPayment(
   client: EventClient,
   inquiryId: string,
   input: RecordPastPaymentInput,
+  deps: RecordPastPaymentDeps = liveDeps,
 ): Promise<RecordPastPaymentResult> {
   const { paidOn, amountCents, finalStatus, actor } = input
   const note = input.note?.trim() ?? ''
@@ -95,7 +115,7 @@ export async function recordPastPayment(
 
   const { data: current, error: readError } = await client
     .from('inquiries')
-    .select('id, status, deposit_paid_at')
+    .select('id, status, deposit_paid_at, deposit_payment_link_id, deposit_amount_cents, deposit_currency, deposit_eur_rate, deposit_eur_rate_at')
     .eq('id', inquiryId)
     .maybeSingle()
 
@@ -112,6 +132,10 @@ export async function recordPastPayment(
   }
 
   const fromStatus = current.status
+  const originalAmountCents = current.deposit_amount_cents
+  const originalCurrency    = current.deposit_currency
+  const originalEurRate     = current.deposit_eur_rate
+  const originalEurRateAt   = current.deposit_eur_rate_at
 
   let eurRate: number
   if (currency === 'EUR') {
@@ -124,20 +148,39 @@ export async function recordPastPayment(
     eurRate = rate
   }
 
+  // A live Stripe link must die before the DB write: once deposit_paid_at is set, the
+  // stripe-deposit webhook silently no-ops on a real Stripe payment, so a still-active
+  // link would let the angler pay twice with nobody noticing. If Stripe refuses, refuse
+  // too — nothing has been written yet, so there is nothing to roll back.
+  if (current.deposit_payment_link_id != null) {
+    try {
+      await deps.deactivatePaymentLink(current.deposit_payment_link_id)
+    } catch (linkError) {
+      throw new HistoryError(
+        `Could not deactivate the active payment link — refusing to record the payment: ${(linkError as Error).message}`,
+      )
+    }
+  }
+
   const paidOnInstant = instantOf(paidOn)
   const stage = stageReachedFor(finalStatus)
 
   // Compare-and-set on deposit_paid_at, same idempotency gate as the Stripe webhook.
+  // stage_reached is deliberately NOT set here — it only advances (trigger
+  // inquiries_stage_must_advance) so it cannot be undone if the events below fail;
+  // it is written only once the events are safely in inquiry_events.
   const { data: updated, error: updateError } = await client
     .from('inquiries')
     .update({
-      status:               finalStatus,
-      deposit_paid_at:      paidOnInstant,
-      deposit_amount_cents: amountCents,
-      deposit_currency:     currency,
-      deposit_eur_rate:     eurRate,
-      deposit_eur_rate_at:  paidOnInstant,
-      ...(stage != null ? { stage_reached: stage } : {}),
+      status:                    finalStatus,
+      deposit_paid_at:           paidOnInstant,
+      deposit_amount_cents:      amountCents,
+      deposit_currency:          currency,
+      deposit_eur_rate:          eurRate,
+      deposit_eur_rate_at:       paidOnInstant,
+      // The link (if any) is already dead in Stripe by this point — never restored.
+      deposit_payment_link_id:   null,
+      deposit_payment_link_url:  null,
     })
     .eq('id', inquiryId)
     .is('deposit_paid_at', null)
@@ -175,23 +218,41 @@ export async function recordPastPayment(
       occurredAt: paidOnInstant,
     })
   } catch (eventError) {
-    // Put everything back; an unlogged payment would quietly corrupt every commission
-    // and booking metric (CLAUDE.md rule 5).
+    // Put the payment columns back exactly as they were — an awaiting_payment inquiry
+    // often already has FA-1.28 amount columns set (setDepositAmount), so "back to
+    // null" would destroy real data. The Stripe deactivation above is not undone: it
+    // already happened for real, so leaving the link columns null still matches
+    // reality. An unlogged payment would quietly corrupt every commission and booking
+    // metric (CLAUDE.md rule 5), so the status/deposit_paid_at change cannot stand.
     await client
       .from('inquiries')
       .update({
         status:               fromStatus,
         deposit_paid_at:      null,
-        deposit_amount_cents: null,
-        deposit_currency:     null,
-        deposit_eur_rate:     null,
-        deposit_eur_rate_at:  null,
+        deposit_amount_cents: originalAmountCents,
+        deposit_currency:     originalCurrency,
+        deposit_eur_rate:     originalEurRate,
+        deposit_eur_rate_at:  originalEurRateAt,
       })
       .eq('id', inquiryId)
       .eq('status', finalStatus)
     throw new HistoryError(
       `Could not record the payment events, so it was rolled back: ${(eventError as Error).message}`,
     )
+  }
+
+  // Both events are durably written — now it is safe to advance the legacy
+  // stage_reached cache. Best-effort: it is a read-only funnel cache (state.ts), not
+  // part of the domain state the events above already made durable, so a failure here
+  // is logged, not thrown.
+  if (stage != null) {
+    const { error: stageError } = await client
+      .from('inquiries')
+      .update({ stage_reached: stage })
+      .eq('id', inquiryId)
+    if (stageError != null) {
+      console.error(`[recordPastPayment] Could not advance stage_reached for ${inquiryId}:`, stageError.message)
+    }
   }
 
   return { from: fromStatus, to: finalStatus }
