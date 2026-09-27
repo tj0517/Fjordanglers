@@ -2,13 +2,14 @@
 id: FA-1.35
 title: Jedna definicja faktów dla wykresów — booking = `deposit_paid_at`, prowizja z helpera; `/admin/finances` bez statusów sprzed FA-1.03, `/admin/pipeline` na tym samym helperze
 stage: 1
-status: todo
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-admin
 branch: fix/metric-facts-one-definition
+pr: 116
 depends_on: []
 blocked_by_questions: []
 touches_db: false
