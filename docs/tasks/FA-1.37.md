@@ -2,7 +2,7 @@
 id: FA-1.37
 title: „Zapisz wpłatę z przeszłości” na karcie — data, kwota w groszach, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` z prawdziwą datą
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -89,3 +89,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - 2026-09-27 tj (wf-plan): O-25 rozstrzygnięte — przeskok z datą dla każdego zapytania, `source='backfill'`.
 - 2026-09-27 tj (wf-task): acceptance criterion 2 narrowed to `/admin/weekly` only — `/admin/finances` and `/admin/pipeline` still use pre-FA-1.03 definitions until FA-1.35; the three-screen check belongs to FA-1.35 and FA-1.39.
 - 2026-09-27 tj (PR #115 review round 2): when `recordPastPayment` deactivates an active Stripe payment link, `deposit_payment_link_id`/`deposit_payment_link_url` are cleared to null (not kept for audit) — the `payment.link_sent` event already carries the audit trail immutably in `inquiry_events`.
+- 2026-09-27 tj: accepted after review round 2 (PR #115) — criteria 1–6 proven (criterion 2 narrowed to /admin/weekly); round 2 proven with red proofs: live Stripe link deactivated before the write (refuses if Stripe fails), rollback restores the original FA-1.28 amount columns, stage_reached advanced only after both events.

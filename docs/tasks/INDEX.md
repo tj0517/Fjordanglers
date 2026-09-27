@@ -69,7 +69,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.34 | Agent pisze pierwszą odpowiedź na zapytanie z formularza — pusty wątek nie blokuje „Zaproponuj” | S | sonnet | done | — |
 | FA-1.35 | Jedna definicja faktów dla wykresów — booking = `deposit_paid_at`, prowizja z helpera; `/admin/finances` bez statusów sprzed FA-1.03, `/admin/pipeline` na helperze | M | sonnet | todo | — |
 | FA-1.36 | Lista braków w danych — `/admin/data-gaps` (wpłata bez daty/kwoty, oferta bez daty, przegrana bez kodu) | S | sonnet | todo | FA-1.35 |
-| FA-1.37 | „Zapisz wpłatę z przeszłości” na karcie — data, grosze, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` (O-25) | L | opus | review (PR #115) | — |
+| FA-1.37 | „Zapisz wpłatę z przeszłości” na karcie — data, grosze, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` (O-25) | L | opus | done (PR #115) | — |
 | FA-1.38 | Daty z przeszłości — wpływ zapytania, wysłanie oferty, przegrana; data w ręcznym zapytaniu | M | sonnet | todo | FA-1.37 |
 | FA-1.39 | Uzupełnienie historii na prod wg `/admin/data-gaps`; sumy vs Stripe/księgowość; robi tj | M | — (człowiek) | todo | FA-1.35, FA-1.36, FA-1.37, FA-1.38 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
