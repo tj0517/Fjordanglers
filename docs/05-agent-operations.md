@@ -29,9 +29,9 @@ session without being told to. The agent never pushes to `main` directly and nev
 merges a PR — merges are done by the founder (tj). Tasks are files in `docs/tasks/`; there is no other
 backlog. Notion holds the business plan, not the engineering tasks.
 
-**Sync rule:** Po każdym merge stage-1 → main natychmiast PR zwrotny main → stage-1
-(bramka `sync` w CI wymaga, żeby stage-1 zawierał HEAD main — bez tego check jest
-czerwony dla każdej gałęzi opartej na stage-1).
+**Sync rule** — nieaktualne od 27 IX 2026: `stage-1` zamknięty, jedyną bazą jest `main`
+(job `sync` w CI dotyczy tylko PR-ów do `stage-1`). Do 27 IX: po każdym merge stage-1 → main
+natychmiast PR zwrotny main → stage-1.
 
 **Bramka martwego kodu i lintu:** `pnpm knip` i `pnpm lint` blokują PR od FA-1.08 —
 oba kroki w `ci.yml` straciły `continue-on-error`, bo oba zeszły do zera. Nowy
