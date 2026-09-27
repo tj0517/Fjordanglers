@@ -2,7 +2,7 @@
 id: FA-1.37
 title: „Zapisz wpłatę z przeszłości” na karcie — data, kwota w groszach, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` z prawdziwą datą
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -56,7 +56,7 @@ Dziś nie da się zapisać bookingu, który się wydarzył, z jego prawdziwą da
 
 ## Gotowe, gdy
 - [ ] Na lokalnym stacku: zapis wpłaty z datą sprzed 3 miesięcy na zapytaniu z seeda → SELECT w raporcie pokazuje `deposit_paid_at` = ta data, `deposit_amount_cents`, `deposit_currency`, `deposit_eur_rate` (kurs z tamtego dnia), `status='paid'`; oraz dwa wiersze `inquiry_events` z `source='backfill'` i `occurred_at` = ta data.
-- [ ] Ten booking pojawia się na `/admin/weekly`, `/admin/finances` i `/admin/pipeline` w miesiącu/tygodniu **wpłaty**, nie w bieżącym — liczby przed/po + zrzut Playwright.
+- [ ] On `/admin/weekly` the payment moves "Commission to date" up by its amount while "Bookings this month" does not change (payment is ~3 months old) — before/after values plus a Playwright screenshot, and the SELECT from criterion 1. *(Narrowed from "all three screens" by tj on 2026-09-27: `/admin/finances` and `/admin/pipeline` still use pre-FA-1.03 definitions until FA-1.35; the three-screen check belongs to FA-1.35 and FA-1.39.)*
 - [ ] **Na czerwono:** data w przyszłości → błąd, zero zmian w `inquiries` i `inquiry_events` (test).
 - [ ] **Na czerwono:** zapytanie z ustawionym `deposit_paid_at` (np. przez webhook) → błąd, wartości nie nadpisane (test).
 - [ ] **Na czerwono:** nieudany zapis zdarzenia → `status`, `deposit_paid_at` i kwoty wycofane (test z klientem, który rzuca przy `inquiry_events`).
@@ -86,3 +86,4 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 ## Notatki z realizacji
 - 2026-09-27 tj (wf-plan): O-25 rozstrzygnięte — przeskok z datą dla każdego zapytania, `source='backfill'`.
+- 2026-09-27 tj (wf-task): acceptance criterion 2 narrowed to `/admin/weekly` only — `/admin/finances` and `/admin/pipeline` still use pre-FA-1.03 definitions until FA-1.35; the three-screen check belongs to FA-1.35 and FA-1.39.
