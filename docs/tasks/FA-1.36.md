@@ -2,7 +2,7 @@
 id: FA-1.36
 title: Lista braków w danych — `/admin/data-gaps`: zapytania bez daty wpłaty, kwoty, daty oferty, kodu przegranej, z linkiem do karty
 stage: 1
-status: todo
+status: review
 difficulty: S
 model: sonnet
 model_approved:
