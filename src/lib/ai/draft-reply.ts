@@ -26,10 +26,9 @@ export interface DraftReplyParams {
   /**
    * When true, an empty message thread is not an error as long as the inquiry
    * has a form message (inquiries.message) — the agent drafts from that as the
-   * client's first message. Default false: only the admin's manual "Zaproponuj"
-   * (src/actions/messages.ts proposeDraft) opts in. autoSendReply (FA-1.27) does
-   * NOT pass this — auto-send must keep bailing on an empty thread, unchanged
-   * (FA-1.34 decision 2026-09-26, see docs/tasks/FA-1.34.md).
+   * client's first message. Default false. Callers that opt in: the admin's manual
+   * "Zaproponuj" (src/actions/messages.ts proposeDraft, FA-1.34) and autoSendReply
+   * for the first reply to a form inquiry (FA-1.40, tj decision D1 2026-10-01).
    */
   allowFormOnly?: boolean
 }
