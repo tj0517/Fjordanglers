@@ -2,13 +2,14 @@
 id: FA-1.40
 title: Auto-wysyłka odpowiada na pierwsze zapytanie z formularza — draft z treści formularza, sędzia widzi formularz, porażka zostawia ślad
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: fix/auto-send-form-first-reply
+pr: 120
 depends_on: []
 blocked_by_questions: []
 touches_db: false
