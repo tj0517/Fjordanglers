@@ -2,7 +2,7 @@
 id: FA-1.41
 title: Limit żądań POST /api/inquiries — per IP i per e-mail, współdzielony między instancjami; odrzucone żądanie nie zapisuje, nie woła AI i nie wysyła maili
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -49,6 +49,7 @@ Trasa `POST /api/inquiries` jest publiczna i po włączeniu `AI_AUTO_REPLY_ENABL
 - [ ] Test: żądania poniżej progu przechodzą jak dziś, istniejące testy trasy zielone bez zmian.
 - [ ] Test awarii limitera: adapter rzuca wyjątek → żądanie przechodzi jak bez limitu (201), błąd zalogowany bez jawnego IP i e-maila (fail-open, O-29).
 - [ ] Klucze licznika i logi nie zawierają jawnego IP ani adresu e-mail — **jak sprawdzić:** test, że klucz przekazany adapterowi nie zawiera `@` ani wzorca IPv4/IPv6, oraz `git diff main...HEAD | grep -nE '^\+.*console\.(log|error).*(ip|email)'` bez trafień.
+- [ ] `.env.example` istnieje i zawiera same nazwy zmiennych (istniejące z nagłówka `env.ts` + nowe) — **jak sprawdzić:** `git diff main...HEAD -- .env.example | grep -nE '=\S'` bez trafień.
 - [ ] `pnpm typecheck && pnpm lint && pnpm exec vitest run && pnpm knip` zielone; brak nowych `as any`, `eslint-disable` i `.from(` poza warstwą danych.
 
 ## Poza zakresem
@@ -76,4 +77,8 @@ pnpm exec vitest run
 ## Notatki z realizacji
 - 2026-10-02 tj: O-26 → Upstash Redis (współdzielone liczniki).
 - 2026-10-02 tj: O-29 → a: fail-open przy awarii limitera.
-- Do potwierdzenia przez tj przed startem: progi startowe (IP 5/10 min, e-mail 3/godz.) oraz zgoda na przetwarzanie IP wyłącznie jako hash z solą, z TTL równym oknu.
+- 2026-10-02 tj: progi startowe potwierdzone — IP 5 żądań / 10 min, e-mail 3 żądania / godzinę.
+- 2026-10-02 tj: zgoda na przetwarzanie IP wyłącznie jako hash z solą (`RATE_LIMIT_SALT`), z TTL równym oknu.
+- 2026-10-02 tj: zakres rozszerzony o utworzenie `.env.example` (na `main` nie istnieje) — same nazwy zmiennych, bez wartości; do „Gotowe, gdy” dochodzi sprawdzenie `git diff main...HEAD -- .env.example | grep -nE '=\S'` bez trafień.
+- 2026-10-02 agent: `.env.example` jest dziś ignorowany przez git (`.gitignore:34`, wzorzec `.env*`; wyjątek jest tylko dla `.env.test`) — potrzebna linia `!.env.example` w `.gitignore`, inaczej plik nie wejdzie do PR.
+- 2026-10-02 agent: odczyt dokumentacji Vercel (context7, vercel.com/docs/headers/request-headers): `x-forwarded-for` jest na Vercelu nadpisywane i nie przekazuje IP z zewnątrz (brak podrabiania, chyba że klient Enterprise włączy trusted proxy); `x-real-ip` to IP wyliczone przez proxy Vercela (to je czyta `ipAddress()` z `@vercel/functions`); `x-vercel-forwarded-for` jest takie samo jak `x-forwarded-for`, ale nie jest nadpisywane, gdy przed Vercelem stoi własny proxy. Repo nie wspomina o proxy przed Vercelem (grep: brak `cloudflare`/`x-forwarded-for` poza `docs/04-open-questions.md`).
