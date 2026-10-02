@@ -72,6 +72,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.37 | „Zapisz wpłatę z przeszłości” na karcie — data, grosze, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` (O-25) | L | opus | done (PR #115) | — |
 | FA-1.38 | Daty z przeszłości — wpływ zapytania, wysłanie oferty, przegrana; data w ręcznym zapytaniu | M | sonnet | done (PR #117) | FA-1.37 |
 | FA-1.39 | Uzupełnienie historii na prod wg `/admin/data-gaps`; sumy vs Stripe/księgowość; robi tj | M | — (człowiek) | todo | FA-1.35, FA-1.36, FA-1.37, FA-1.38 |
+| FA-1.40 | Auto-wysyłka odpowiada na pierwsze zapytanie z formularza — draft z treści formularza, sędzia widzi formularz, porażka zostawia zdarzenie | S | sonnet | todo | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
@@ -87,3 +88,4 @@ FA-1.18, FA-1.19 dopisane 22 IX 2026 — luki z audytu agent-workflow (środowis
 FA-1.27 dopisane 22 IX 2026 (/wf-plan) — hybryda auto-wysyłki, decyzje tj D1–D5 w pliku zadania; plik trafił na stage-1 23 IX razem z archiwum `AGENT_RULES`.
 FA-1.28–1.32 dopisane 24 IX 2026 (wf-plan) z wierszy FA-1.18 w `docs/deferred-tasks.md`; decyzje tj w plikach zadań. Ścieżka krytyczna przed wydaniem paczki `stage-1`: FA-1.28 → FA-1.29.
 FA-1.35–1.39 dopisane 27 IX 2026 (/wf-plan fa „wykresy pokazują prawdę”) — decyzje tj: D1 każdy rekord osobno, D3 pełny zakres; O-25 rozstrzygnięte. Od 27 IX bazą PR-ów jest `main` (`stage-1` zamknięty po FA-1.34). Ścieżka krytyczna: FA-1.37 → FA-1.38 → merge do `main` → FA-1.39.
+FA-1.40 dopisane 1 X 2026 (/wf-plan fa „fixing this”) — luka FA-1.34: auto-wysyłka nie obsługiwała pustego wątku; decyzje tj D1 (auto-wysyłka), D2 (formularz z zapytania).
