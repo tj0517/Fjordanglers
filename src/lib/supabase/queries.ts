@@ -404,6 +404,8 @@ export type InquiryForAutoSend = {
   status:       string
   trip_country: string | null
   angler_email: string | null
+  /** Form text. On a form inquiry this is the client's first message; the thread stays empty. */
+  message:      string | null
 }
 
 export async function getInquiryForAutoSend(
@@ -412,7 +414,7 @@ export async function getInquiryForAutoSend(
 ): Promise<InquiryForAutoSend | null> {
   const { data } = await client
     .from('inquiries')
-    .select('id, status, trip_country, angler_email')
+    .select('id, status, trip_country, angler_email, message')
     .eq('id', inquiryId)
     .maybeSingle()
   return (data ?? null) as InquiryForAutoSend | null

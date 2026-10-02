@@ -50,7 +50,7 @@ vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { ANTHROPIC_API_KEY: 'test-key' } }))
 
 import { createServiceClient } from '@/lib/supabase/server'
-import { draftReply } from '@/lib/ai/draft-reply'
+import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
 import { judgeReply } from '@/lib/ai/judge-reply'
 import { sendMessage } from '@/lib/messages/send'
 import { autoSendReply, hasAgentAutoReply } from './auto-send'
@@ -68,6 +68,7 @@ interface MockOptions {
   knowledgeRows?:   Row[]
   priorAgentMsgs?:  Row[]
   conversationMsgs?: Row[]
+  message?:         string | null
 }
 
 const DEFAULT_KNOWLEDGE = [
@@ -91,9 +92,10 @@ function setupMockDb(opts: MockOptions = {}) {
     knowledgeRows   = DEFAULT_KNOWLEDGE,
     priorAgentMsgs  = [],
     conversationMsgs = DEFAULT_CONVERSATION,
+    message          = null,
   } = opts
 
-  const inquiry = { id: 'inq-1', status, trip_country, angler_email }
+  const inquiry = { id: 'inq-1', status, trip_country, angler_email, message }
 
   vi.mocked(createServiceClient).mockReturnValue({
     from: (table: string) => {
@@ -389,6 +391,99 @@ describe('autoSendReply — happy path', () => {
     expect(payload.sent).toBe(true)
     expect(payload.score).toBe(0.93)
     expect(payload.draft_message_id).toBe('draft-3')
+  })
+})
+
+// ─── FA-1.40 — first reply to a form inquiry (empty thread, text in inquiries.message) ───
+
+const FORM_TEXT = 'Hi, two of us want to fly-fish Iceland in July. Any guide for 3 days?'
+
+/** Behaves like the real draftReply: an empty thread is an error unless allowFormOnly is passed. */
+function mockDraftReplyLikeReal(threadIsEmpty: boolean) {
+  vi.mocked(draftReply).mockImplementation(async (params) => {
+    if (threadIsEmpty && params.allowFormOnly !== true) {
+      throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
+    }
+    return { draftId: 'draft-form', text: 'Thanks for your inquiry!', subject: 'Re: Iceland', usedIds: ['k-inst'] }
+  })
+}
+
+describe('autoSendReply — form inquiry, empty thread (FA-1.40)', () => {
+  beforeEach(() => {
+    vi.mocked(sendMessage).mockReset()
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-form', threadKey: null })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
+  })
+
+  it('drafts from the form, judges, and sends at 0.93 — RED on main: draftReply throws "thread is empty"', async () => {
+    setupMockDb({ message: FORM_TEXT, conversationMsgs: [] })
+    mockDraftReplyLikeReal(true)
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(vi.mocked(draftReply)).toHaveBeenCalledWith(expect.objectContaining({ allowFormOnly: true }))
+    expect(result).not.toBeNull()
+    expect(result!.sent).toBe(true)
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1)
+    const sendCall = vi.mocked(sendMessage).mock.calls[0][1] as unknown as Record<string, unknown>
+    expect(sendCall.draftId).toBe('draft-form')
+    expect(sendCall.draftedBy).toBe('agent')
+
+    expect(emittedEvents).toHaveLength(1)
+    const payload = emittedEvents[0].payload as Record<string, unknown>
+    expect(payload.sent).toBe(true)
+    expect(payload.draft_message_id).toBe('draft-form')
+  })
+
+  it('passes the form text to the judge as the first [ANGLER] message — RED on main', async () => {
+    setupMockDb({ message: FORM_TEXT, conversationMsgs: [] })
+    mockDraftReplyLikeReal(false)
+
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(conversationArg).toBe(`[ANGLER] ${FORM_TEXT}`)
+  })
+
+  it('leaves the judge conversation unchanged when the thread is not empty, even if the inquiry has a form message', async () => {
+    setupMockDb({ message: FORM_TEXT })
+    mockDraftReplyLikeReal(false)
+
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(conversationArg).toBe('[ANGLER] I want to fish NZ rivers.\n\n[AGENT] Great, we can arrange that.')
+    expect(conversationArg).not.toContain(FORM_TEXT)
+  })
+
+  it.each([null, '   '])('no thread and message=%j → event with a reason, no draft, no send — RED on main', async (message) => {
+    setupMockDb({ message, conversationMsgs: [] })
+    mockDraftReplyLikeReal(false)
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result).not.toBeNull()
+    expect(result!.sent).toBe(false)
+    expect(result!.draftMessageId).toBeNull()
+    expect(vi.mocked(draftReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
+    assertPreDraftGateEvent('no message')
+  })
+
+  it('missing active instructions entry (DraftReplyError) still returns null with no event — FA-1.27 behaviour kept', async () => {
+    setupMockDb({ message: FORM_TEXT, conversationMsgs: [] })
+    vi.mocked(draftReply).mockRejectedValue(new DraftReplyError('No active instructions entry found in agent_knowledge.'))
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    errSpy.mockRestore()
+
+    expect(result).toBeNull()
+    expect(emittedEvents).toHaveLength(0)
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
   })
 })
 
