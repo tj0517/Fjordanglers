@@ -2,7 +2,7 @@
 id: FA-1.40
 title: Auto-wysyłka odpowiada na pierwsze zapytanie z formularza — draft z treści formularza, sędzia widzi formularz, porażka zostawia ślad
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:

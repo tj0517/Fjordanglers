@@ -72,7 +72,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.37 | „Zapisz wpłatę z przeszłości” na karcie — data, grosze, waluta, kurs z dnia wpłaty; status od razu `paid`/`completed`; zdarzenia `backfill` (O-25) | L | opus | done (PR #115) | — |
 | FA-1.38 | Daty z przeszłości — wpływ zapytania, wysłanie oferty, przegrana; data w ręcznym zapytaniu | M | sonnet | done (PR #117) | FA-1.37 |
 | FA-1.39 | Uzupełnienie historii na prod wg `/admin/data-gaps`; sumy vs Stripe/księgowość; robi tj | M | — (człowiek) | todo | FA-1.35, FA-1.36, FA-1.37, FA-1.38 |
-| FA-1.40 | Auto-wysyłka odpowiada na pierwsze zapytanie z formularza — draft z treści formularza, sędzia widzi formularz, porażka zostawia zdarzenie | S | sonnet | todo | — |
+| FA-1.40 | Auto-wysyłka odpowiada na pierwsze zapytanie z formularza — draft z treści formularza, sędzia widzi formularz, porażka zostawia zdarzenie | S | sonnet | in_progress | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
