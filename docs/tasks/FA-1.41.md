@@ -2,7 +2,7 @@
 id: FA-1.41
 title: Limit żądań POST /api/inquiries — per IP i per e-mail, współdzielony między instancjami; odrzucone żądanie nie zapisuje, nie woła AI i nie wysyła maili
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -101,3 +101,4 @@ pnpm exec vitest run
 - 2026-10-02 tj: nazwy zmiennych `UPSTASH_REDIS_REST_URL` i `UPSTASH_REDIS_REST_TOKEN` zostają; bazę tj zakłada ręcznie w konsoli Upstash w FA-1.45. Bez zmian w kodzie.
 - 2026-10-02 tj: PR #122 zaakceptowany z uzupełnieniami (jedna krótka runda): (1) luka fail-open — nieudane utworzenie limitera nie może dawać 500; (2) dowody w opisie PR; (3) wiersz w `docs/deferred-tasks.md` o opóźnieniu przy awarii Upstasha + uwaga do FA-1.45 o adresie REST `https://`. Poza rundą: okno przesuwne, async klasyfikacja, obejście `*.vercel.app`, skracanie timeoutu.
 - 2026-10-02 agent (uzupełnienie 1): sprawdzone na bibliotece — `@upstash/redis` 1.39.0 rzuca `UrlError` w konstruktorze dla `rediss://…`, spacji na początku/końcu i braku schematu (`http://` przechodzi); komunikat zawiera cały otrzymany adres, więc dla `rediss://default:<hasło>@…` także hasło. Przed poprawką `getRateLimiter()` wywoływane poza try/catch wyrzucało to z `POST /api/inquiries` (500). Poprawka w `factory.ts`: `try/catch` wokół utworzenia, jedna stała linia w logu bez tekstu błędu, wynik (null) zapamiętany. Czerwone na `8d22a70`: 7 testów (5 jednostkowych, 2 trasy: `UrlError` wyrzucony z `POST`), po poprawce 10/10 zielone. Błędy czasu wykonania (`UpstashError`) zawierają treść polecenia (nasz klucz-hash), nie adres ani token — bez zmian.
+- 2026-10-02 tj: accepted after review of PR #122 — fail-open on client-creation failure fixed and covered (red on 8d22a70, green after b8dbf37); dependencies, .env.example (names only), .gitignore exception and deferred rows verified by reading the branch; the rest from the PR description.
