@@ -1,0 +1,79 @@
+---
+id: FA-1.41
+title: Limit żądań POST /api/inquiries — per IP i per e-mail, współdzielony między instancjami; odrzucone żądanie nie zapisuje, nie woła AI i nie wysyła maili
+stage: 1
+status: todo
+difficulty: M
+model: sonnet
+model_approved:
+effort: medium
+agent: fa-core
+branch: feat/inquiries-rate-limit
+depends_on: []
+blocked_by_questions: []
+touches_db: false
+touches_prod: false
+estimate_h: 4
+owner: tj
+---
+
+# FA-1.41 — Limit żądań na publicznym formularzu zapytań
+
+## Kontekst — przeczytaj przed startem
+- `CLAUDE.md`, `docs/03-conventions.md` — reguły i konwencje
+- `docs/05-agent-operations.md` §3, §7 — bramki STOP, sekrety
+- `docs/04-open-questions.md` — O-26 (Upstash) i O-29 (fail-open przy awarii limitera), oba rozstrzygnięte
+- `src/app/api/inquiries/route.ts` — trasa publiczna, bez logowania; limit idzie na samym początku
+- `src/app/api/events/route.ts` (~linie 21–40, 109) — dotychczasowy limit w pamięci procesu, celowo bez czytania IP; NIE jest wzorem (nie jest współdzielony między instancjami)
+- `src/lib/env.ts` — deklaracje zmiennych środowiskowych
+- `docs/tasks/FA-1.40.md` — dlaczego trasa po zmianie uruchamia pełną auto-wysyłkę
+
+Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
+
+## Cel
+Trasa `POST /api/inquiries` jest publiczna i po włączeniu `AI_AUTO_REPLY_ENABLED` każde żądanie kosztuje trzy wywołania Anthropic i kilka maili, w tym mail na adres wpisany w formularzu. Dziś nic nie ogranicza liczby żądań. Po zadaniu seria żądań ponad próg z jednego IP albo na jeden adres e-mail dostaje 429 z `Retry-After` i nie powoduje zapisu, wywołania AI ani maila. Liczniki są wspólne dla wszystkich instancji (O-26: Upstash Redis). Decyzja tj z 2 X 2026.
+
+## Zakres
+- [ ] Odczyt bieżącego stanu: trasa, `/api/events` i `env.ts`; sprawdź w dokumentacji Vercel (context7 / docs), z którego nagłówka bierze się adres IP klienta na Vercelu i czy da się go podrobić.
+- [ ] Limit w trasie, **przed** zapytaniami do bazy o stronę wyprawy: per IP i per e-mail (adres po `trim` i `toLowerCase`). Progi startowe w jednym miejscu jako stałe: IP 5 żądań / 10 min, e-mail 3 żądania / godzinę. *Progi do potwierdzenia przez tj przed startem agenta, patrz notatki.*
+- [ ] Biblioteki: `@upstash/ratelimit` i `@upstash/redis`. Logika limitera za małym interfejsem, żeby testy używały adaptera w pamięci, a nie prawdziwego Upstasha.
+- [ ] Prywatność: adres IP nie jest zapisywany w postaci jawnej ani w logach. Klucz licznika to hash z solą (`RATE_LIMIT_SALT`), TTL równy oknu. E-mail w kluczu także tylko jako hash.
+- [ ] Odpowiedź 429: `{ error: ... }` bez szczegółów o progach, nagłówek `Retry-After`.
+- [ ] Awaria limitera (Upstash niedostępny, brak zmiennych): fail-open (O-29 a): formularz działa bez limitu, błąd trafia do logu bez jawnego IP i e-maila. Lokalnie bez zmiennych limiter jest wyłączony i trasa działa jak dziś.
+- [ ] STOP — przed dodaniem zależności pokaż diff `package.json` i `pnpm-lock.yaml` (tylko te dwie biblioteki i ich tranzytywne) i czekaj na akceptację.
+- [ ] STOP — nie ustawiasz żadnych zmiennych w Vercelu ani nie zakładasz bazy w Upstashu; to robi tj w FA-1.45. Dopisz zmienne do `src/lib/env.ts` i do `.env.example`.
+
+## Gotowe, gdy
+- [ ] Test trasy: 6. żądanie z tego samego IP w oknie → 429 z `Retry-After`; `createInquiry`, `classifyInquiry`, `autoSendReply` i wysyłka maili nie są wywołane (asercje na mockach). **Pokazany na czerwono na kodzie z `main`** (tam odpowiedź to 201), potem zielony. Sprawdzenie: `pnpm exec vitest run src/app/api/inquiries`.
+- [ ] Test: 4. żądanie na ten sam e-mail z różnych IP → 429 z tymi samymi asercjami; czerwony, potem zielony.
+- [ ] Test: żądania poniżej progu przechodzą jak dziś, istniejące testy trasy zielone bez zmian.
+- [ ] Test awarii limitera: adapter rzuca wyjątek → żądanie przechodzi jak bez limitu (201), błąd zalogowany bez jawnego IP i e-maila (fail-open, O-29).
+- [ ] Klucze licznika i logi nie zawierają jawnego IP ani adresu e-mail — **jak sprawdzić:** test, że klucz przekazany adapterowi nie zawiera `@` ani wzorca IPv4/IPv6, oraz `git diff main...HEAD | grep -nE '^\+.*console\.(log|error).*(ip|email)'` bez trafień.
+- [ ] `pnpm typecheck && pnpm lint && pnpm exec vitest run && pnpm knip` zielone; brak nowych `as any`, `eslint-disable` i `.from(` poza warstwą danych.
+
+## Poza zakresem
+- Limit na `/api/events`, webhookach (`email-inbound`, Stripe) i pozostałych trasach → osobne zadanie, jeśli tj zdecyduje; webhook `email-inbound` woła `autoSendReply`, jego autoryzacji tu nie oceniamy → deferred.
+- Powtórki z tego samego e-maila w oknie, dzienny sufit auto-wysyłek → FA-1.42.
+- Honeypot i czas wypełnienia → FA-1.43.
+- Przeniesienie klasyfikacji i auto-wysyłki poza żądanie (asynchronicznie, żeby formularz nie czekał na modele) → deferred, osobne zadanie.
+- Reguły WAF w Vercelu → nie robimy (O-26: a).
+- Zakładanie bazy Upstash i ustawianie zmiennych w Vercelu → FA-1.45, robi tj.
+Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
+
+## Bramki STOP
+- Dodanie zależności (`package.json`, lockfile) — pokaż diff i czekaj.
+- Jakakolwiek zmiana zmiennych środowiskowych w Vercelu lub konfiguracji Upstasha — STOP, robi tj.
+- Prawdziwe wywołania Upstasha z lokalnych testów — STOP; testy tylko na adapterze w pamięci.
+- Merge do `main` = deploy na prod; PR otwarty z `--base main`.
+
+## Weryfikacja
+```
+pnpm exec vitest run src/app/api/inquiries
+pnpm typecheck && pnpm lint && pnpm knip
+pnpm exec vitest run
+```
+
+## Notatki z realizacji
+- 2026-10-02 tj: O-26 → Upstash Redis (współdzielone liczniki).
+- 2026-10-02 tj: O-29 → a: fail-open przy awarii limitera.
+- Do potwierdzenia przez tj przed startem: progi startowe (IP 5/10 min, e-mail 3/godz.) oraz zgoda na przetwarzanie IP wyłącznie jako hash z solą, z TTL równym oknu.

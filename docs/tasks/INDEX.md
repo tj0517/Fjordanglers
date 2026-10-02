@@ -73,6 +73,11 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.38 | Daty z przeszłości — wpływ zapytania, wysłanie oferty, przegrana; data w ręcznym zapytaniu | M | sonnet | done (PR #117) | FA-1.37 |
 | FA-1.39 | Uzupełnienie historii na prod wg `/admin/data-gaps`; sumy vs Stripe/księgowość; robi tj | M | — (człowiek) | todo | FA-1.35, FA-1.36, FA-1.37, FA-1.38 |
 | FA-1.40 | Auto-wysyłka odpowiada na pierwsze zapytanie z formularza — draft z treści formularza, sędzia widzi formularz, porażka zostawia zdarzenie | S | sonnet | done | — |
+| FA-1.41 | Limit żądań `POST /api/inquiries` — per IP i per e-mail (Upstash), odrzucone żądanie bez zapisu, AI i maili | M | sonnet | todo | — |
+| FA-1.42 | Kontrola kosztów auto-odpowiedzi — powtórki z tego samego e-maila bez AI i maili do klienta; dzienny sufit auto-wysyłek | M | sonnet | todo | FA-1.40 |
+| FA-1.43 | Formularz — honeypot i minimalny czas; podejrzane zapytanie zapisane, ale bez AI i maili | S | sonnet | todo | FA-1.42 |
+| FA-1.44 | Bateria testów sędziego — rozkład ocen, przypadki brzegowe, wrogi tekst formularza | M | sonnet | todo | FA-1.40 |
+| FA-1.45 | Włączenie auto-odpowiedzi — lista kontrolna: dev, pierwsza wysyłka na własny adres, flaga na prod, monitoring, wyłączenie; robi tj | S | — (człowiek) | todo | FA-1.41, FA-1.42, FA-1.43, FA-1.44 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
@@ -89,3 +94,4 @@ FA-1.27 dopisane 22 IX 2026 (/wf-plan) — hybryda auto-wysyłki, decyzje tj D1�
 FA-1.28–1.32 dopisane 24 IX 2026 (wf-plan) z wierszy FA-1.18 w `docs/deferred-tasks.md`; decyzje tj w plikach zadań. Ścieżka krytyczna przed wydaniem paczki `stage-1`: FA-1.28 → FA-1.29.
 FA-1.35–1.39 dopisane 27 IX 2026 (/wf-plan fa „wykresy pokazują prawdę”) — decyzje tj: D1 każdy rekord osobno, D3 pełny zakres; O-25 rozstrzygnięte. Od 27 IX bazą PR-ów jest `main` (`stage-1` zamknięty po FA-1.34). Ścieżka krytyczna: FA-1.37 → FA-1.38 → merge do `main` → FA-1.39.
 FA-1.40 dopisane 1 X 2026 (/wf-plan fa „fixing this”) — luka FA-1.34: auto-wysyłka nie obsługiwała pustego wątku; decyzje tj D1 (auto-wysyłka), D2 (formularz z zapytania).
+FA-1.41–1.45 dopisane 2 X 2026 (/wf-plan fa „ochrona formularza przed włączeniem auto-odpowiedzi”) — luka: `POST /api/inquiries` bez limitu i ochrony przed botami, a po FA-1.40 każde żądanie uruchamia AI i maile. Decyzje tj: O-26 Upstash, O-27 honeypot + czas, O-28 zapis zawsze + pominięcie AI i maili dla powtórek, O-29 fail-open, O-30 sufit 5 auto-wysyłek dziennie na start; pakiet pełny. Ścieżka krytyczna: FA-1.41 ∥ FA-1.42 → FA-1.43; FA-1.44 równolegle → FA-1.45.
