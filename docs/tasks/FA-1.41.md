@@ -2,13 +2,14 @@
 id: FA-1.41
 title: Limit żądań POST /api/inquiries — per IP i per e-mail, współdzielony między instancjami; odrzucone żądanie nie zapisuje, nie woła AI i nie wysyła maili
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/inquiries-rate-limit
+pr: 122
 depends_on: []
 blocked_by_questions: []
 touches_db: false
