@@ -13,7 +13,7 @@ export interface RateLimitRule {
   windowSec: number
 }
 
-export interface RateLimitResult {
+interface RateLimitResult {
   allowed:       boolean
   /** Whole seconds until the counter resets; at least 1. */
   retryAfterSec: number
