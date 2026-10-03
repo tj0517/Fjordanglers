@@ -2,13 +2,14 @@
 id: FA-1.42
 title: Kontrola kosztów auto-odpowiedzi — powtórki z tego samego e-maila nie uruchamiają AI ani maili do klienta; dzienny sufit auto-wysyłek
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/auto-reply-cost-guards
+pr: 123
 depends_on: [FA-1.40]
 blocked_by_questions: []
 touches_db: false
