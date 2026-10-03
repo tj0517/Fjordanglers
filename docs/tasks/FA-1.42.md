@@ -77,3 +77,8 @@ git diff main...HEAD --stat -- src/lib/ai/judge-reply.ts   # puste
 - Gorąca ścieżka: `inquiries`, wysyłka maili, `autoSendReply` — przy review ocenić skutki dla ścieżki zapytanie → oferta → depozyt.
 - 2026-10-03 tj: (A) bez `.env.example` w tym zadaniu — pliku nie ma w repo; luka trafia do `docs/deferred-tasks.md`, nie do tego PR.
 - 2026-10-03 tj: (B) pominięcie powtórki używa istniejącego `agent.auto_send_decided` z `sent=false` i powodem — katalog zdarzeń bez zmian.
+- 2026-10-03 tj: D1 = (a) — „wcześniejsze zapytanie" to każde zapytanie z tym e-mailem w ostatnich 24 h, z dowolnego źródła, także powtórka sama pominięta.
+- 2026-10-03 tj: D2 = (a) — zdarzenie pominięcia powtórki zawsze, niezależnie od `AI_AUTO_REPLY_ENABLED`.
+- 2026-10-03 tj: D3 = (a) — sufit sprawdzany tuż przed wysyłką, po sędzim; wstrzymany szkic zachowuje wynik sędziego.
+- 2026-10-03 tj: D4 = (a) — gdy zliczenie dzisiejszych auto-wysyłek się nie uda, szkic wstrzymany do ręcznej oceny (zdarzenie z powodem).
+- 2026-10-03 tj: wyszukiwanie powtórki fail-open — błąd = zapytanie traktowane jako nowe.
