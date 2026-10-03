@@ -1,0 +1,12 @@
+     × the 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request 2ms
+     × empty trap and 2 s or more: behaves as today — classify, auto-send, both e-mails, no event 1ms
+     × a trap value that is not a non-blank string (number) is not "filled" 1ms
+     × a trap value that is not a non-blank string (null) is not "filled" 1ms
+     × a trap value that is not a non-blank string (object) is not "filled" 1ms
+     × a trap value that is not a non-blank string (blank) is not "filled" 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > the 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > empty trap and 2 s or more: behaves as today — classify, auto-send, both e-mails, no event
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > a trap value that is not a non-blank string (number) is not "filled"
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > a trap value that is not a non-blank string (null) is not "filled"
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > a trap value that is not a non-blank string (object) is not "filled"

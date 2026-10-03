@@ -1,0 +1,12 @@
+     × trap filled: saves the inquiry, no AI, no auto-reply, no e-mail to anyone, event with the reason — RED on main: everything is called 4ms
+     × the skip is recorded even when the auto-reply flag is off 1ms
+     × suspicious wins over repeat: no repeat lookup, one event, reason is the trap 1ms
+     × both signals at once: one event, trap reason only 3ms
+     × a failed event write does not turn into a 500 and the skip still applies 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > trap filled: saves the inquiry, no AI, no auto-reply, no e-mail to anyone, event with the reason — RED on main: everything is called
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > the skip is recorded even when the auto-reply flag is off
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > suspicious wins over repeat: no repeat lookup, one event, reason is the trap
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > both signals at once: one event, trap reason only
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > a failed event write does not turn into a 500 and the skip still applies
+      Tests  5 failed | 28 passed (33)

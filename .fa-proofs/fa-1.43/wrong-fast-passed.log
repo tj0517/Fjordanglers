@@ -1,0 +1,10 @@
+     × submitted in under 2 s with an empty trap: same path — RED on main 3ms
+     × a fractional duration is usable (performance.now deltas are fractional): 400.5 ms is suspicious 1ms
+     × zero ms is a valid duration and suspicious 1ms
+     × the 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > submitted in under 2 s with an empty trap: same path — RED on main
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > a fractional duration is usable (performance.now deltas are fractional): 400.5 ms is suspicious
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > zero ms is a valid duration and suspicious
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > the 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request
+      Tests  4 failed | 29 passed (33)
