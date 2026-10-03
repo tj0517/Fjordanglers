@@ -6,6 +6,10 @@
  *   - api/inquiries/route.ts  — a repeat submission from the same e-mail is skipped
  *   - ai/auto-send.ts         — the daily cap holds the draft; every pipeline outcome
  *
+ * FA-1.43 adds a third skip: a hidden trap field that was filled, or a form submitted
+ * faster than a person can fill it. Both signals are supplied by the browser and are
+ * trivially forgeable — they filter out simple bots, nothing more.
+ *
  * A skip is recorded as `agent.auto_send_decided` with sent=false and the reason
  * (decision tj, 2026-10-03): the event catalog stays unchanged.
  *
@@ -26,9 +30,31 @@ export const AUTO_SEND_CAP_WINDOW_MS = 24 * HOUR_MS
 /** Used when AI_AUTO_SEND_DAILY_CAP is not set (O-30: 5 per day to start). */
 const DEFAULT_AUTO_SEND_DAILY_CAP = 5
 
+/** The browser reports how long the form was on screen (O-27 a); under this is treated as automated. */
+export const MIN_FILL_MS = 2000
+
 export const REPEAT_SKIP_REASON  = 'repeat submission from same e-mail within 24 h'
+export const TRAP_SKIP_REASON    = 'trap field filled'
+export const FAST_SKIP_REASON    = 'form submitted less than 2 s after it was shown'
 export const CAP_REACHED_REASON  = 'daily auto-send cap reached'
 export const CAP_UNCHECKED_REASON = 'daily auto-send cap could not be checked'
+
+/**
+ * Why this submission looks automated, or null when it does not.
+ *
+ * Both inputs are client-supplied and untrusted. The trap counts only as a non-blank
+ * string. The duration (decision tj 2026-10-03: a duration, not a clock timestamp, so
+ * client clock drift cannot flag a real person) counts only as a finite number >= 0;
+ * anything else — missing, negative, text, NaN, an object — is "no information" and
+ * never suspicious. A large value is likewise just a normal request.
+ */
+export function suspicionReason(trap: unknown, elapsedMs: unknown): string | null {
+  if (typeof trap === 'string' && trap.trim() !== '') return TRAP_SKIP_REASON
+  if (typeof elapsedMs === 'number' && Number.isFinite(elapsedMs) && elapsedMs >= 0 && elapsedMs < MIN_FILL_MS) {
+    return FAST_SKIP_REASON
+  }
+  return null
+}
 
 export function dailyAutoSendCap(): number {
   return env.AI_AUTO_SEND_DAILY_CAP ?? DEFAULT_AUTO_SEND_DAILY_CAP

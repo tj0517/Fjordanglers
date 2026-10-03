@@ -12,6 +12,12 @@
  * AI pipeline (classify, auto-reply) does not run. The skip is an
  * `agent.auto_send_decided` event with sent=false and the reason.
  *
+ * Suspicious (FA-1.43): when the hidden trap field is filled or the form was submitted
+ * less than 2 s after it was shown, the inquiry is still saved, but nothing is sent to
+ * anyone (no angler e-mail, no FA e-mail, no AI) and the reason is recorded as an event.
+ * The response is identical to a normal one. The signals come from the browser and are
+ * forgeable: they stop simple bots only.
+ *
  * Accepts either:
  *   - trip_id (UUID) — experience linked to a guide via `experiences` table
  *   - experience_page_id (UUID) — editorial page without a linked guide yet
@@ -32,7 +38,7 @@ import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/li
 import { env } from '@/lib/env'
 import { classifyInquiry } from '@/lib/ai/inquiry-agent'
 import { autoSendReply } from '@/lib/ai/auto-send'
-import { REPEAT_SKIP_REASON, REPEAT_WINDOW_MS, emitAutoSendDecision } from '@/lib/ai/auto-send-guards'
+import { REPEAT_SKIP_REASON, REPEAT_WINDOW_MS, emitAutoSendDecision, suspicionReason } from '@/lib/ai/auto-send-guards'
 import { hasRecentInquiryFromEmail } from '@/lib/supabase/queries'
 import { addBusinessDays, formatBusinessDay } from '@/lib/business-days'
 import { checkEmailLimit, checkIpLimit, clientIpFromHeaders } from '@/lib/rate-limit/inquiries'
@@ -62,6 +68,10 @@ const InquirySchema = z.object({
   angler_phone_country: z.string().min(2).max(2).optional().nullable(),
   trip_length:          z.enum(['1', '2-3', '4-7', '7+']).optional().nullable(),
   gclid:           z.string().max(200).optional().nullable(),
+  // FA-1.43 — anything is accepted here on purpose: an odd value is "no information",
+  // never a 400 (a 400 would tell a bot which field it got wrong). See suspicionReason.
+  trip_notes_extra: z.unknown().optional(),
+  form_elapsed_ms:  z.unknown().optional(),
   utm: z.object({
     utm_source:   z.string().max(200).optional(),
     utm_medium:   z.string().max(200).optional(),
@@ -180,26 +190,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to save inquiry' }, { status: 500 })
   }
 
+  // Suspicious (trap filled / filled too fast) wins over repeat: one event, no repeat lookup.
+  const suspicion = suspicionReason(parsed.data.trip_notes_extra, parsed.data.form_elapsed_ms)
+  const isSuspicious = suspicion != null
+
   // Repeat from the same e-mail within the window? The address in the form may belong to
   // someone else, so a repeat costs no AI call and no e-mail to the customer. A failed
   // lookup means "treat as new" — the behaviour from before this guard.
   let isRepeat = false
-  try {
-    isRepeat = await hasRecentInquiryFromEmail(svc, {
-      email:            parsed.data.angler_email,
-      excludeInquiryId: inquiry.id,
-      since:            new Date(Date.now() - REPEAT_WINDOW_MS),
-    })
-  } catch (err) {
-    console.error(`[inquiries/POST] Repeat lookup failed for ${inquiry.id}, treating as new:`, err)
+  if (!isSuspicious) {
+    try {
+      isRepeat = await hasRecentInquiryFromEmail(svc, {
+        email:            parsed.data.angler_email,
+        excludeInquiryId: inquiry.id,
+        since:            new Date(Date.now() - REPEAT_WINDOW_MS),
+      })
+    } catch (err) {
+      console.error(`[inquiries/POST] Repeat lookup failed for ${inquiry.id}, treating as new:`, err)
+    }
   }
 
-  if (isRepeat) {
+  const skipReason = suspicion ?? (isRepeat ? REPEAT_SKIP_REASON : null)
+  if (skipReason != null) {
     try {
-      await emitAutoSendDecision(svc, inquiry.id, null, false, null, [REPEAT_SKIP_REASON])
+      await emitAutoSendDecision(svc, inquiry.id, null, false, null, [skipReason])
     } catch (err) {
       // The inquiry is saved and the skip still applies; losing the event is logged, not a 500.
-      console.error(`[inquiries/POST] Repeat skip event failed for ${inquiry.id}:`, err)
+      console.error(`[inquiries/POST] Skip event failed for ${inquiry.id}:`, err)
     }
   }
 
@@ -210,19 +227,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     await Promise.all([
-      sendInquiryReceivedFaEmail({
-        to:             env.FA_EMAIL ?? 'contact@fjordanglers.com',
-        anglerName:     parsed.data.angler_name,
-        anglerEmail:    parsed.data.angler_email,
-        tripTitle,
-        requestedDates: sortedDates,
-        partySize:      parsed.data.party_size,
-        message:        parsed.data.message ?? null,
-        selectedOption: parsed.data.selected_option ?? null,
-        inquiryId:      inquiry.id,
-        dashboardUrl,
-      }),
-      isRepeat
+      isSuspicious
+        ? Promise.resolve()
+        : sendInquiryReceivedFaEmail({
+            to:             env.FA_EMAIL ?? 'contact@fjordanglers.com',
+            anglerName:     parsed.data.angler_name,
+            anglerEmail:    parsed.data.angler_email,
+            tripTitle,
+            requestedDates: sortedDates,
+            partySize:      parsed.data.party_size,
+            message:        parsed.data.message ?? null,
+            selectedOption: parsed.data.selected_option ?? null,
+            inquiryId:      inquiry.id,
+            dashboardUrl,
+          }),
+      isSuspicious || isRepeat
         ? Promise.resolve()
         : sendInquiryReceivedAnglerEmail({
             to:             parsed.data.angler_email,
@@ -241,7 +260,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   console.log(`[inquiries/POST] Created inquiry ${inquiry.id} (${parsed.data.trip_id ? `trip ${parsed.data.trip_id}` : `page ${parsed.data.experience_page_id}`})`)
 
-  if (env.AI_AUTO_REPLY_ENABLED && !isRepeat) {
+  if (env.AI_AUTO_REPLY_ENABLED && !isRepeat && !isSuspicious) {
     try {
       await classifyInquiry({
         inquiryId:      inquiry.id,
