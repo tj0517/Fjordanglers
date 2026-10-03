@@ -1,0 +1,25 @@
+ RUN  v4.0.18 /home/tj/Fjordanglers
+=== hasRecentInquiryFromEmail (real function, real PostgREST) ===
+OK   expected true  got true  — stored "Jan_Kowalski@Example.com", looked up as " jan_kowalski@example.com " (mixed case + underscore + spaces)
+OK   expected false got false — stored "janXkowalski@example.com" ALONE (the Jan_Kowalski row is excluded) vs "jan_kowalski@example.com"
+OK   expected false got false — address with "%" ("jan%@example.com") while "janzzzz@example.com" and others exist
+OK   expected false got false — address with "*" ("jan*kowalski@example.com") — PostgREST reads * as a wildcard; "janXkowalski" exists
+OK   expected false got false — stored row is 25 h old ("old.angler@example.com")
+OK   expected false got false — only matching row excluded by id ("only.one@example.com", excludeInquiryId = that row)
+OK   expected true  got true  — control: same address, nothing excluded
+=== red proof for the escape: what the database returns for the UNESCAPED pattern ===
+ilike jan_kowalski@example.com   (unescaped) → ["Jan_Kowalski@Example.com","janXkowalski@example.com"]
+ilike jan\_kowalski@example.com  (escaped)   → ["Jan_Kowalski@Example.com"]
+ilike jan%@example.com           (unescaped) → ["Jan_Kowalski@Example.com","janXkowalski@example.com","janzzzz@example.com"]
+ilike jan\%@example.com          (escaped)   → []
+ilike jan*kowalski@example.com   (escaped by us, * left alone) → ["Jan_Kowalski@Example.com","janXkowalski@example.com"] ← DB-level false positive; the second comparison in code rejects it (case 4 above is false)
+=== countAutoSendsSince (real function, real PostgREST) ===
+events inserted: sent=true @-1h, sent=true @-2h, sent=false @-1h, sent=true @-25h
+baseline before insert: 0   count after insert: 2   (expected baseline + 2)
+OK   count is 2 (no error)
+cleanup: deleted 5 inquiries (no error); rows left: inquiries=0, inquiry_events=0
+ ✓ .fa-proofs/fa-1.42/proof-guard-queries.mts (1 test) 246ms
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  17:14:11
+   Duration  547ms (transform 75ms, setup 0ms, import 176ms, tests 246ms, environment 0ms)
