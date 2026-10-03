@@ -2,7 +2,7 @@
 id: FA-1.42
 title: Kontrola kosztów auto-odpowiedzi — powtórki z tego samego e-maila nie uruchamiają AI ani maili do klienta; dzienny sufit auto-wysyłek
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -75,3 +75,5 @@ git diff main...HEAD --stat -- src/lib/ai/judge-reply.ts   # puste
 - 2026-10-02 tj: O-28 → b: zapytanie zapisane zawsze; powtórki pomijają AI i maile do klienta.
 - 2026-10-02 tj: O-30 → dzienny sufit 5 auto-wysyłek „na razie”; zmieniany przez `AI_AUTO_SEND_DAILY_CAP` bez zmiany kodu. Szósta i kolejne odpowiedzi danego dnia czekają jako szkice na ręczną ocenę.
 - Gorąca ścieżka: `inquiries`, wysyłka maili, `autoSendReply` — przy review ocenić skutki dla ścieżki zapytanie → oferta → depozyt.
+- 2026-10-03 tj: (A) bez `.env.example` w tym zadaniu — pliku nie ma w repo; luka trafia do `docs/deferred-tasks.md`, nie do tego PR.
+- 2026-10-03 tj: (B) pominięcie powtórki używa istniejącego `agent.auto_send_decided` z `sent=false` i powodem — katalog zdarzeń bez zmian.
