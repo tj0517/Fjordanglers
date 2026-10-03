@@ -31,11 +31,11 @@ export const AUTO_SEND_CAP_WINDOW_MS = 24 * HOUR_MS
 const DEFAULT_AUTO_SEND_DAILY_CAP = 5
 
 /** The browser reports how long the form was on screen (O-27 a); under this is treated as automated. */
-export const MIN_FILL_MS = 2000
+const MIN_FILL_MS = 2000
 
 export const REPEAT_SKIP_REASON  = 'repeat submission from same e-mail within 24 h'
-export const TRAP_SKIP_REASON    = 'trap field filled'
-export const FAST_SKIP_REASON    = 'form submitted less than 2 s after it was shown'
+const TRAP_SKIP_REASON    = 'trap field filled'
+const FAST_SKIP_REASON    = 'form submitted less than 2 s after it was shown'
 export const CAP_REACHED_REASON  = 'daily auto-send cap reached'
 export const CAP_UNCHECKED_REASON = 'daily auto-send cap could not be checked'
 

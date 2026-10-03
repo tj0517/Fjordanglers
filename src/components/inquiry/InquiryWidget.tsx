@@ -28,6 +28,7 @@ import { getStoredGclid } from '@/lib/gclid'
 import { getStoredUtm } from '@/lib/utm'
 import { currencySymbol } from '@/lib/format-price'
 import { sendWebEvent } from '@/lib/web-events'
+import { InquiryTrapField, TRAP_FIELD_NAME, elapsedSinceShown } from './InquiryTrapField'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
 const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
@@ -241,6 +242,10 @@ function InquiryModal({
   const [errorMsg,     setErrorMsg]     = useState<string | null>(null)
   const [hasAttempted, setHasAttempted] = useState(false)
   const submittingRef = useRef(false)
+  // FA-1.43 — trap field (read from the DOM at submit, so autofill that skips onChange still counts)
+  // and the moment the details step first appeared, on the browser's own stopwatch.
+  const trapRef       = useRef<HTMLInputElement>(null)
+  const formShownAt   = useRef<number | null>(null)
 
   const blockedSet = useMemo(() => new Set(blockedDates), [blockedDates])
 
@@ -272,6 +277,8 @@ function InquiryModal({
   useEffect(() => {
     if (step === 'form') {
       trackFormStart({ form_id: 'inquiry_modal', form_name: 'Trip Inquiry' })
+      // Set once: going back to the calendar and returning does not restart the clock.
+      formShownAt.current ??= performance.now()
     }
   }, [step])
 
@@ -326,6 +333,8 @@ function InquiryModal({
           angler_phone_country: phoneCountry || null,
           gclid:           gclid ?? null,
           utm:             utm ?? null,
+          [TRAP_FIELD_NAME]: trapRef.current?.value ?? '',
+          form_elapsed_ms:   elapsedSinceShown(formShownAt.current, performance.now()),
         }),
       })
 
@@ -530,6 +539,7 @@ function InquiryModal({
               ) : (
                 /* ── Step 2: Form ── */
                 <form id="inquiry-form" onSubmit={handleSubmit} noValidate>
+                  <InquiryTrapField inputRef={trapRef} />
                   <div className="px-5 pt-4 pb-6 space-y-0">
 
                     {/* Trip name + selected option + selected dates summary */}
