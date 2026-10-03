@@ -2,13 +2,14 @@
 id: FA-1.43
 title: Formularz zapytań — honeypot i minimalny czas wypełnienia; podejrzane zapytanie zapisane, ale bez AI i maili do klienta
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: low
 agent: fa-web
 branch: feat/inquiry-form-bot-trap
+pr: 124
 depends_on: [FA-1.42]
 blocked_by_questions: []
 touches_db: false
