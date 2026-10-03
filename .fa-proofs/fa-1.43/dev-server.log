@@ -1,0 +1,58 @@
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.255.255.254:3000
+- Environments: .env.development.local, .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+✓ Starting...
+○ Compiling proxy ...
+✓ Ready in 22.4s
+○ Compiling /experiences/[slug] ...
+ GET /experiences/fa-143-test-river 200 in 7.6s (compile: 4.6s, proxy.ts: 164ms, render: 2.8s)
+ GET /experiences/fa-143-test-river 200 in 390ms (compile: 101ms, proxy.ts: 8ms, render: 280ms)
+ POST /api/events 204 in 1016ms (compile: 953ms, proxy.ts: 13ms, render: 51ms)
+ POST /api/events 204 in 37ms (compile: 7ms, proxy.ts: 11ms, render: 18ms)
+ POST /api/events 204 in 40ms (compile: 14ms, proxy.ts: 11ms, render: 15ms)
+[inquiries/POST] Email error: Error: [email] Resend HTTP 401: {"message":"API key is invalid","name":"validation_error","statusCode":401}
+    at sendEmail (src/lib/email.ts:87:11)
+    at async sendInquiryReceivedAnglerEmail (src/lib/email.ts:133:3)
+    at async POST (src/app/api/inquiries/route.ts:229:5)
+  85 |   if (!response.ok) {
+  86 |     const bodyText = await response.text().catch(() => '(no body)')
+> 87 |     throw new Error(`[email] Resend HTTP ${response.status}: ${bodyText}`)
+     |           ^
+  88 |   }
+  89 | }
+  90 |
+[inquiries/POST] Created inquiry 6309de28-cd01-4017-bab7-4d2bbe78e1a9 (page 11111111-1111-4111-8111-111111111143)
+ POST /api/inquiries 201 in 2.5s (compile: 1690ms, proxy.ts: 10ms, render: 849ms)
+ POST /api/events 204 in 23ms (compile: 4ms, proxy.ts: 6ms, render: 13ms)
+ GET /experiences/fa-143-test-river 200 in 447ms (compile: 123ms, proxy.ts: 6ms, render: 318ms)
+ POST /api/events 204 in 23ms (compile: 4ms, proxy.ts: 6ms, render: 12ms)
+ POST /api/events 204 in 36ms (compile: 10ms, proxy.ts: 14ms, render: 13ms)
+ POST /api/events 204 in 40ms (compile: 10ms, proxy.ts: 9ms, render: 21ms)
+[inquiries/POST] Created inquiry 3e391f66-9638-4081-b27a-3e1833bb90b5 (page 11111111-1111-4111-8111-111111111143)
+ POST /api/inquiries 201 in 77ms (compile: 4ms, proxy.ts: 5ms, render: 69ms)
+ POST /api/events 204 in 23ms (compile: 5ms, proxy.ts: 5ms, render: 13ms)
+ GET /experiences/fa-143-test-river 200 in 389ms (compile: 108ms, proxy.ts: 17ms, render: 264ms)
+ POST /api/events 204 in 63ms (compile: 4ms, proxy.ts: 5ms, render: 54ms)
+ POST /api/events 204 in 74ms (compile: 6ms, proxy.ts: 6ms, render: 62ms)
+ POST /api/events 204 in 97ms (compile: 9ms, proxy.ts: 7ms, render: 80ms)
+[inquiries/POST] Email error: Error: [email] Resend HTTP 401: {"message":"API key is invalid","name":"validation_error","statusCode":401}
+    at sendEmail (src/lib/email.ts:87:11)
+    at async sendInquiryReceivedAnglerEmail (src/lib/email.ts:133:3)
+    at async POST (src/app/api/inquiries/route.ts:229:5)
+  85 |   if (!response.ok) {
+  86 |     const bodyText = await response.text().catch(() => '(no body)')
+> 87 |     throw new Error(`[email] Resend HTTP ${response.status}: ${bodyText}`)
+     |           ^
+  88 |   }
+  89 | }
+  90 |
+[inquiries/POST] Created inquiry f01ad834-28cb-4c95-b28c-3a6412d40c8b (page 11111111-1111-4111-8111-111111111143)
+ POST /api/inquiries 201 in 454ms (compile: 6ms, proxy.ts: 5ms, render: 443ms)
+ POST /api/events 204 in 61ms (compile: 5ms, proxy.ts: 5ms, render: 51ms)
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+[?25h

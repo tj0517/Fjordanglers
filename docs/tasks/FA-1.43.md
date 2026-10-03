@@ -2,13 +2,14 @@
 id: FA-1.43
 title: Formularz zapytań — honeypot i minimalny czas wypełnienia; podejrzane zapytanie zapisane, ale bez AI i maili do klienta
 stage: 1
-status: todo
+status: done
 difficulty: S
 model: sonnet
 model_approved:
 effort: low
 agent: fa-web
 branch: feat/inquiry-form-bot-trap
+pr: 124
 depends_on: [FA-1.42]
 blocked_by_questions: []
 touches_db: false
@@ -66,3 +67,6 @@ UI: uruchom aplikację lokalnie (http://localhost:3000), przejdź formularz z Pl
 ## Notatki z realizacji
 - 2026-10-02 tj: O-27 → a: honeypot + czas; Turnstile odroczony.
 - Próg 2 s i podejście „zapisz, ale podejrzane” to propozycja planu — tj może zmienić przy review.
+- 2026-10-03 tj: decyzja (Option 2) — przeglądarka mierzy czas wypełnienia własnym stoperem i wysyła **czas trwania w milisekundach** (`form_elapsed_ms`), a nie znacznik czasu zegara; odchyłka od treści zadania („znacznik czasu"), bo zegar klienta może się rozjeżdżać z serwerem i fałszywie oflagować prawdziwego klienta. Brak, ujemna, nienumeryczna albo absurdalnie duża wartość = „brak informacji" → żądanie traktowane normalnie; żadna zniekształcona wartość nie jest podejrzana.
+- 2026-10-03 tj: pole-pułapka `trip_notes_extra` (z wyłączeniem autouzupełniania i menedżerów haseł; w PR zaznaczyć, że nie testowane w prawdziwych przeglądarkach); zegar startuje przy pierwszym pokazaniu kroku z danymi i nie resetuje się po powrocie; „podejrzane" wygrywa z „powtórką" (bez zapytania o powtórkę, jedno zdarzenie); odpowiedź bez zmian: 201 `{ id, status }`.
+- 2026-10-03 tj: odbiór PR #124 — udowodnione: testy trasy czerwone na `main` (9 z 33 nie przechodzi), potem zielone; cztery celowo błędne strażniki — każdy wywala testy; atrybuty pola-pułapki sprawdzone w `InquiryTrapField.test.tsx`; przebiegi Playwright człowiek i bot z listami żądań (człowiek: pusta pułapka, 6517 ms, zapisane, bez zdarzenia podejrzenia; bot: pułapka wypełniona, 331 ms, zapisane, zdarzenie „trap field filled", bez próby wysłania maila); hosty śledzące Google zablokowane w obu przebiegach, zero odpowiedzi; zrzut pola-pułapki sprawdzony przez tj. Nie udowodnione osobno: próba wysłania maila do FA w przebiegu człowieka (`Promise.all` loguje tylko pierwszy błąd; w deferred). Uwaga: pułapka i czas trwania łapią tylko boty sterujące stroną; boty wysyłające JSON prosto na `/api/inquiries` pomijają oba pola i przechodzą jako zwykłe żądania (pokrywają je tylko limity z FA-1.41).

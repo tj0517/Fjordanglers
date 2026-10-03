@@ -75,7 +75,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.40 | Auto-wysyłka odpowiada na pierwsze zapytanie z formularza — draft z treści formularza, sędzia widzi formularz, porażka zostawia zdarzenie | S | sonnet | done | — |
 | FA-1.41 | Limit żądań `POST /api/inquiries` — per IP i per e-mail (Upstash), odrzucone żądanie bez zapisu, AI i maili | M | sonnet | done (PR #122) | — |
 | FA-1.42 | Kontrola kosztów auto-odpowiedzi — powtórki z tego samego e-maila bez AI i maili do klienta; dzienny sufit auto-wysyłek | M | sonnet | done | FA-1.40 |
-| FA-1.43 | Formularz — honeypot i minimalny czas; podejrzane zapytanie zapisane, ale bez AI i maili | S | sonnet | todo | FA-1.42 |
+| FA-1.43 | Formularz — honeypot i minimalny czas; podejrzane zapytanie zapisane, ale bez AI i maili | S | sonnet | done | FA-1.42 |
 | FA-1.44 | Bateria testów sędziego — rozkład ocen, przypadki brzegowe, wrogi tekst formularza | M | sonnet | todo | FA-1.40 |
 | FA-1.45 | Włączenie auto-odpowiedzi — lista kontrolna: dev, pierwsza wysyłka na własny adres, flaga na prod, monitoring, wyłączenie; robi tj | S | — (człowiek) | todo | FA-1.41, FA-1.42, FA-1.43, FA-1.44 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |

@@ -254,3 +254,210 @@ describe('/api/inquiries POST — repeat from the same e-mail, FA-1.42', () => {
     expect(emittedEvents).toHaveLength(0)
   })
 })
+
+// ─── FA-1.43 — hidden trap field and minimum fill time ────────────────────────
+//
+// Client-supplied and forgeable: these stop simple bots only, they are not a security boundary.
+
+const TRAP_REASON = 'trap field filled'
+const FAST_REASON = 'form submitted less than 2 s after it was shown'
+
+describe('/api/inquiries POST — trap field and fill time, FA-1.43', () => {
+  it('trap filled: saves the inquiry, no AI, no auto-reply, no e-mail to anyone, event with the reason — RED on main: everything is called', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post({ ...TEST_BODY, trip_notes_extra: 'http://spam.example', form_elapsed_ms: 15000 })
+
+    expect(response.status).toBe(201)
+    expect(createInquiryMock).toHaveBeenCalledTimes(1)
+    expect(classifyInquiryMock).not.toHaveBeenCalled()
+    expect(autoSendReplyMock).not.toHaveBeenCalled()
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).not.toHaveBeenCalled()
+
+    expect(emittedEvents).toHaveLength(1)
+    expect(emittedEvents[0]).toMatchObject({
+      inquiry_id: 'inq-flag-off',
+      type:       'agent.auto_send_decided',
+      payload:    { sent: false, score: null, reasons: [TRAP_REASON], draft_message_id: null },
+    })
+  })
+
+  it('submitted in under 2 s with an empty trap: same path — RED on main', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post({ ...TEST_BODY, trip_notes_extra: '', form_elapsed_ms: 400 })
+
+    expect(response.status).toBe(201)
+    expect(createInquiryMock).toHaveBeenCalledTimes(1)
+    expect(classifyInquiryMock).not.toHaveBeenCalled()
+    expect(autoSendReplyMock).not.toHaveBeenCalled()
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).not.toHaveBeenCalled()
+    expect(emittedEvents).toHaveLength(1)
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([FAST_REASON])
+  })
+
+  it('the skip is recorded even when the auto-reply flag is off', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = false
+
+    await post({ ...TEST_BODY, trip_notes_extra: 'x' })
+
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).not.toHaveBeenCalled()
+    expect(emittedEvents).toHaveLength(1)
+  })
+
+  it('a fractional duration is usable (performance.now deltas are fractional): 400.5 ms is suspicious', async () => {
+    await post({ ...TEST_BODY, form_elapsed_ms: 400.5 })
+
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(emittedEvents).toHaveLength(1)
+  })
+
+  it('zero ms is a valid duration and suspicious', async () => {
+    await post({ ...TEST_BODY, form_elapsed_ms: 0 })
+
+    expect(sendFaEmailMock).not.toHaveBeenCalled()
+    expect(emittedEvents).toHaveLength(1)
+  })
+
+  it('the 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request', async () => {
+    await post({ ...TEST_BODY, form_elapsed_ms: 1999 })
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(emittedEvents).toHaveLength(1)
+
+    vi.clearAllMocks()
+    emittedEvents = []
+    createInquiryMock.mockResolvedValue({ id: 'inq-flag-off', status: 'new' })
+    hasRecentInquiryMock.mockResolvedValue(false)
+
+    await post({ ...TEST_BODY, form_elapsed_ms: 2000 })
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
+  })
+
+  it('empty trap and 2 s or more: behaves as today — classify, auto-send, both e-mails, no event', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post({ ...TEST_BODY, trip_notes_extra: '', form_elapsed_ms: 12000 })
+
+    expect(response.status).toBe(201)
+    expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
+    expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
+  })
+
+  it('neither field sent: a missing field alone is not suspicious', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post()
+
+    expect(response.status).toBe(201)
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
+  })
+
+  it.each([
+    ['negative',        -5],
+    ['text',            'fast'],
+    ['numeric string',  '300'],
+    ['null',            null],
+    ['NaN-like object', {}],
+    ['array',           [1]],
+    ['boolean',         true],
+    ['absurdly large',  1e15],
+  ])('unusable form_elapsed_ms (%s) means "no information": normal request, never a 400', async (_label, value) => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post({ ...TEST_BODY, form_elapsed_ms: value })
+
+    expect(response.status).toBe(201)
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
+  })
+
+  it.each([
+    ['number', 1],
+    ['null',   null],
+    ['object', { a: 1 }],
+    ['blank',  '   '],
+  ])('a trap value that is not a non-blank string (%s) is not "filled"', async (_label, value) => {
+    const response = await post({ ...TEST_BODY, trip_notes_extra: value, form_elapsed_ms: 9000 })
+
+    expect(response.status).toBe(201)
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
+  })
+
+  it('suspicious wins over repeat: no repeat lookup, one event, reason is the trap', async () => {
+    hasRecentInquiryMock.mockResolvedValue(true)
+
+    await post({ ...TEST_BODY, trip_notes_extra: 'x' })
+
+    expect(hasRecentInquiryMock).not.toHaveBeenCalled()
+    expect(emittedEvents).toHaveLength(1)
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([TRAP_REASON])
+  })
+
+  it('both signals at once: one event, trap reason only', async () => {
+    await post({ ...TEST_BODY, trip_notes_extra: 'x', form_elapsed_ms: 100 })
+
+    expect(emittedEvents).toHaveLength(1)
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([TRAP_REASON])
+  })
+
+  it('the response is identical to a normal one — status, body keys and headers', async () => {
+    const normal     = await post({ ...TEST_BODY, form_elapsed_ms: 9000 })
+    const normalBody = await normal.json() as Record<string, unknown>
+
+    const trapped     = await post({ ...TEST_BODY, trip_notes_extra: 'x', form_elapsed_ms: 100 })
+    const trappedBody = await trapped.json() as Record<string, unknown>
+
+    expect(trapped.status).toBe(normal.status)
+    expect(Object.keys(trappedBody).sort()).toEqual(Object.keys(normalBody).sort())
+    expect(trappedBody).toEqual(normalBody)
+    expect([...trapped.headers.entries()]).toEqual([...normal.headers.entries()])
+  })
+
+  it('writes no angler e-mail address into the event and does not log the detection', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await post({ ...TEST_BODY, trip_notes_extra: 'x' })
+
+    expect(JSON.stringify(emittedEvents)).not.toMatch(/angler\.com/i)
+    const logged = JSON.stringify([...log.mock.calls, ...err.mock.calls])
+    expect(logged).not.toMatch(/trap|suspicious|honeypot|fast/i)
+    log.mockRestore()
+    err.mockRestore()
+  })
+
+  it('a failed event write does not turn into a 500 and the skip still applies', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(createServiceClient).mockReturnValue({
+      from: (table: string) => {
+        if (table === 'experience_pages') {
+          const b = {
+            select: () => b,
+            eq:     () => b,
+            single: async () => ({ data: { id: 'p', guide_id: 'g', experience_name: 'NZ', country: 'NZ' }, error: null }),
+          }
+          return b
+        }
+        return { insert: () => { throw new Error('events table down') } }
+      },
+    } as unknown as ReturnType<typeof createServiceClient>)
+
+    const response = await post({ ...TEST_BODY, trip_notes_extra: 'x' })
+
+    expect(response.status).toBe(201)
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).not.toHaveBeenCalled()
+  })
+})

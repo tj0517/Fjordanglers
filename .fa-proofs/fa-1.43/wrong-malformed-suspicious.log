@@ -1,0 +1,4 @@
+     × unusable form_elapsed_ms (negative) means "no information": normal request, never a 400 2ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/app/api/inquiries/__tests__/route.test.ts > /api/inquiries POST — trap field and fill time, FA-1.43 > unusable form_elapsed_ms (negative) means "no information": normal request, never a 400
+      Tests  1 failed | 32 passed (33)

@@ -1,0 +1,193 @@
+$ tsc --noEmit
+$ eslint --report-unused-disable-directives
+
+/home/tj/Fjordanglers/scripts/proofs/fa-1.12-ui-walk.spec.ts
+  43:7  warning  'LOCAL_ANON_KEY' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/scripts/proofs/stubs/next-cache.mts
+  1:32  warning  '_path' is defined but never used  @typescript-eslint/no-unused-vars
+  1:47  warning  '_type' is defined but never used  @typescript-eslint/no-unused-vars
+  2:31  warning  '_tag' is defined but never used   @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/actions/__tests__/messages-thread.test.ts
+   78:23  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+  211:18  warning  '_data' is defined but never used           @typescript-eslint/no-unused-vars
+  215:18  warning  '_cols' is defined but never used           @typescript-eslint/no-unused-vars
+  215:33  warning  '_opts' is defined but never used           @typescript-eslint/no-unused-vars
+  273:18  warning  '_data' is defined but never used           @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/(public)/blog/page.tsx
+  14:7  warning  'CATEGORY_COLORS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/(public)/guides/[id]/page.tsx
+  7:10  warning  'heroFull' is defined but never used   @typescript-eslint/no-unused-vars
+  7:31  warning  'cardThumb' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/admin/ads/AdsCharts.tsx
+  27:10  warning  'plnFormatter' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/admin/finances/FinancesClient.tsx
+  16:10  warning  'toMonthlyPln' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/admin/forms/[id]/page.tsx
+  3:21  warning  'Copy' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/admin/guides/[id]/page.tsx
+  22:10  warning  'SectionCard' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/admin/inquiries/InquiriesClient.tsx
+  287:84  warning  'offerSentIds' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/admin/inquiries/[id]/page.tsx
+  40:10  warning  'STATUS_LABELS' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/admin/inquiries/unmatched/UnmatchedPageClient.tsx
+  61:7  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+/home/tj/Fjordanglers/src/app/api/webhooks/__tests__/email-inbound-unmatched.test.ts
+  44:18  warning  '_row' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/api/webhooks/__tests__/stripe-deposit.test.ts
+  101:20  warning  '_data' is defined but never used   @typescript-eslint/no-unused-vars
+  102:18  warning  '_col' is defined but never used    @typescript-eslint/no-unused-vars
+  102:32  warning  '_val' is defined but never used    @typescript-eslint/no-unused-vars
+  103:20  warning  '_col2' is defined but never used   @typescript-eslint/no-unused-vars
+  103:35  warning  '_val2' is defined but never used   @typescript-eslint/no-unused-vars
+  136:18  warning  '_col' is defined but never used    @typescript-eslint/no-unused-vars
+  136:32  warning  '_val' is defined but never used    @typescript-eslint/no-unused-vars
+  152:20  warning  '_cols' is defined but never used   @typescript-eslint/no-unused-vars
+  153:18  warning  '_col' is defined but never used    @typescript-eslint/no-unused-vars
+  153:32  warning  '_val' is defined but never used    @typescript-eslint/no-unused-vars
+  225:14  warning  '_table' is defined but never used  @typescript-eslint/no-unused-vars
+  394:14  warning  '_table' is defined but never used  @typescript-eslint/no-unused-vars
+  461:22  warning  '_data' is defined but never used   @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/guide-intake/[token]/IntakeFormClient.tsx
+  176:3  warning  'idx' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/legal/cookie-policy/page.tsx
+   3:8   warning  'Image' is defined but never used       @typescript-eslint/no-unused-vars
+  51:10  warning  'BulletList' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/legal/legal-notice/page.tsx
+  2:8  warning  'Link' is defined but never used   @typescript-eslint/no-unused-vars
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/legal/privacy-policy/page.tsx
+  2:8  warning  'Link' is defined but never used   @typescript-eslint/no-unused-vars
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/legal/terms-of-service/page.tsx
+  3:8  warning  'Image' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/trips/exp-page-map-section.tsx
+  165:3  warning  'hovered' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/app/trips/exp-page-map-view.tsx
+  300:9  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/home/tj/Fjordanglers/src/components/admin/link-guide-button.tsx
+  21:52  warning  'inviteEmail' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/dashboard/TripBriefCard.tsx
+  39:33  warning  'anglerName' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/dashboard/availability-calendar.tsx
+  85:9  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  93:5  warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+/home/tj/Fjordanglers/src/components/dashboard/profile-edit-form.tsx
+  200:29  warning  'setGoogleUrl' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  201:29  warning  'setGoogleRating' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  202:29  warning  'setGoogleReviewCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/dashboard/sidenav.tsx
+  29:7  warning  'contentItems' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/dashboard/terms-gate.tsx
+  16:44  warning  'initialMarketingConsent' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/inquiry/InquiryWidget.tsx
+  357:6   warning  React Hook useCallback has missing dependencies: 'country' and 'tripTitle'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  963:44  warning  '_tripId' is defined but never used                                                                                             @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/trips/location-picker-map.tsx
+  133:6  warning  React Hook useEffect has missing dependencies: 'existingArea', 'map', and 'onAreaChange'. Either include them or remove the dependency array. If 'onAreaChange' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+/home/tj/Fjordanglers/src/components/ui/card.tsx
+  35:10  warning  'CardTitle' is defined but never used        @typescript-eslint/no-unused-vars
+  48:10  warning  'CardDescription' is defined but never used  @typescript-eslint/no-unused-vars
+  58:10  warning  'CardAction' is defined but never used       @typescript-eslint/no-unused-vars
+  81:10  warning  'CardFooter' is defined but never used       @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/ui/cookie-banner.tsx
+  64:39  warning  '_gtmId' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/ui/dialog.tsx
+  22:10  warning  'DialogClose' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/ui/select.tsx
+   10:10  warning  'SelectGroup' is defined but never used      @typescript-eslint/no-unused-vars
+   97:10  warning  'SelectLabel' is defined but never used      @typescript-eslint/no-unused-vars
+  138:10  warning  'SelectSeparator' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/components/ui/table.tsx
+  41:10  warning  'TableFooter' is defined but never used   @typescript-eslint/no-unused-vars
+  93:10  warning  'TableCaption' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/emails/booking-confirmed-guide.tsx
+  2:56  warning  'labelCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:94  warning  'successBox' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/emails/deposit-confirmed-angler.tsx
+  2:56  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/emails/deposit-confirmed-fa.tsx
+  2:56  warning  'labelCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used   @typescript-eslint/no-unused-vars
+  2:94  warning  'successBox' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/emails/deposit-link-angler.tsx
+  2:76  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:87  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/emails/inquiry-received-angler.tsx
+  2:56  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:67  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/emails/inquiry-received-fa.tsx
+  2:76  warning  'labelCell' is defined but never used  @typescript-eslint/no-unused-vars
+  2:87  warning  'valueCell' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/lib/channels/email.ts
+  55:19  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/lib/channels/instagram.ts
+  20:19  warning  '_lastInboundAt' is defined but never used  @typescript-eslint/no-unused-vars
+  24:14  warning  '_params' is defined but never used         @typescript-eslint/no-unused-vars
+  31:16  warning  '_raw' is defined but never used            @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/lib/events/emit.test.ts
+  9:10  warning  '_table' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/lib/inquiries/history.test.ts
+  103:16  warning  '_col' is defined but never used  @typescript-eslint/no-unused-vars
+  103:30  warning  '_val' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/lib/inquiries/qualified.test.ts
+  1:10  warning  'vi' is defined but never used  @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/lib/inquiries/state.test.ts
+  58:16  warning  '_col' is defined but never used    @typescript-eslint/no-unused-vars
+  58:30  warning  '_val' is defined but never used    @typescript-eslint/no-unused-vars
+  63:16  warning  '_idCol' is defined but never used  @typescript-eslint/no-unused-vars
+  63:32  warning  '_id' is defined but never used     @typescript-eslint/no-unused-vars
+
+/home/tj/Fjordanglers/src/lib/ui/contrast.test.ts
+  20:7  warning  'BORDER_PAIRS_PASS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 93 problems (0 errors, 93 warnings)
+
+$ knip
