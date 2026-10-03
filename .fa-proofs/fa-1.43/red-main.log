@@ -1,0 +1,460 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/tj/Fjordanglers[39m
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — flag off, FA-1.27[2m > [22m[2mcalls 0 AI model invocations when AI_AUTO_REPLY_ENABLED=false
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — autoSendReply throws, FA-1.27[2m > [22m[2mreturns 201 even when autoSendReply throws
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — autoSendReply throws, FA-1.27[2m > [22m[2mreturns 201 even when autoSendReply throws
+[22m[39m[inquiries/POST] Auto-send error: Error: auto-send pipeline crashed
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/route.test.ts:145:45
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2msaves the inquiry, skips AI, auto-reply and the customer e-mail, still mails FA, and leaves an event with the reason — RED on main: everything is called
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mdoes not write the angler e-mail address into the event
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mtreats a repeat the same way when the auto-reply flag is off (D2): no customer e-mail, event still saved
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mleaves behaviour unchanged for a first inquiry from an e-mail: classify, auto-send, customer e-mail, no skip event
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2masks the data layer about this e-mail, excluding the new inquiry, over the last 24 h
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mfails open when the lookup throws: the inquiry is treated as new and gets the usual flow
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-flag-off, treating as new: Error: connection reset
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/route.test.ts:246:44
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mfails open when the lookup throws: the inquiry is treated as new and gets the usual flow
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mtrap filled: saves the inquiry, no AI, no auto-reply, no e-mail to anyone, event with the reason — RED on main: everything is called
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2msubmitted in under 2 s with an empty trap: same path — RED on main
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe skip is recorded even when the auto-reply flag is off
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma fractional duration is usable (performance.now deltas are fractional): 400.5 ms is suspicious
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mzero ms is a valid duration and suspicious
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mempty trap and 2 s or more: behaves as today — classify, auto-send, both e-mails, no event
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mneither field sent: a missing field alone is not suspicious
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (negative) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (text) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (numeric string) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (null) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (NaN-like object) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (array) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (boolean) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (absurdly large) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (number) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (null) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (object) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (blank) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2msuspicious wins over repeat: no repeat lookup, one event, reason is the trap
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mboth signals at once: one event, trap reason only
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe response is identical to a normal one — status, body keys and headers
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe response is identical to a normal one — status, body keys and headers
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma failed event write does not turn into a 500 and the skip still applies
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+ [31m❯[39m src/app/api/inquiries/__tests__/route.test.ts [2m([22m[2m33 tests[22m[2m | [22m[31m9 failed[39m[2m)[22m[32m 238[2mms[22m[39m
+     [32m✓[39m calls 0 AI model invocations when AI_AUTO_REPLY_ENABLED=false[32m 188[2mms[22m[39m
+     [32m✓[39m returns 201 even when autoSendReply throws[32m 6[2mms[22m[39m
+     [32m✓[39m saves the inquiry, skips AI, auto-reply and the customer e-mail, still mails FA, and leaves an event with the reason — RED on main: everything is called[32m 4[2mms[22m[39m
+     [32m✓[39m does not write the angler e-mail address into the event[32m 1[2mms[22m[39m
+     [32m✓[39m treats a repeat the same way when the auto-reply flag is off (D2): no customer e-mail, event still saved[32m 2[2mms[22m[39m
+     [32m✓[39m leaves behaviour unchanged for a first inquiry from an e-mail: classify, auto-send, customer e-mail, no skip event[32m 1[2mms[22m[39m
+     [32m✓[39m asks the data layer about this e-mail, excluding the new inquiry, over the last 24 h[32m 1[2mms[22m[39m
+     [32m✓[39m fails open when the lookup throws: the inquiry is treated as new and gets the usual flow[32m 2[2mms[22m[39m
+[31m     [31m×[31m trap filled: saves the inquiry, no AI, no auto-reply, no e-mail to anyone, event with the reason — RED on main: everything is called[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m submitted in under 2 s with an empty trap: same path — RED on main[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m the skip is recorded even when the auto-reply flag is off[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m a fractional duration is usable (performance.now deltas are fractional): 400.5 ms is suspicious[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m zero ms is a valid duration and suspicious[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m the 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request[39m[32m 1[2mms[22m[39m
+     [32m✓[39m empty trap and 2 s or more: behaves as today — classify, auto-send, both e-mails, no event[32m 1[2mms[22m[39m
+     [32m✓[39m neither field sent: a missing field alone is not suspicious[32m 1[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (negative) means "no information": normal request, never a 400[32m 1[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (text) means "no information": normal request, never a 400[32m 1[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (numeric string) means "no information": normal request, never a 400[32m 1[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (null) means "no information": normal request, never a 400[32m 1[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (NaN-like object) means "no information": normal request, never a 400[32m 3[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (array) means "no information": normal request, never a 400[32m 1[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (boolean) means "no information": normal request, never a 400[32m 1[2mms[22m[39m
+     [32m✓[39m unusable form_elapsed_ms (absurdly large) means "no information": normal request, never a 400[32m 1[2mms[22m[39m
+     [32m✓[39m a trap value that is not a non-blank string (number) is not "filled"[32m 1[2mms[22m[39m
+     [32m✓[39m a trap value that is not a non-blank string (null) is not "filled"[32m 1[2mms[22m[39m
+     [32m✓[39m a trap value that is not a non-blank string (object) is not "filled"[32m 1[2mms[22m[39m
+     [32m✓[39m a trap value that is not a non-blank string (blank) is not "filled"[32m 1[2mms[22m[39m
+[31m     [31m×[31m suspicious wins over repeat: no repeat lookup, one event, reason is the trap[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m both signals at once: one event, trap reason only[39m[32m 3[2mms[22m[39m
+     [32m✓[39m the response is identical to a normal one — status, body keys and headers[32m 1[2mms[22m[39m
+     [32m✓[39m writes no angler e-mail address into the event and does not log the detection[32m 1[2mms[22m[39m
+[31m     [31m×[31m a failed event write does not turn into a 500 and the skip still applies[39m[32m 1[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 9 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22mtrap filled: saves the inquiry, no AI, no auto-reply, no e-mail to anyone, event with the reason — RED on main: everything is called
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "anglerName": "Test Angler",
+        "inquiryId": "inq-flag-off",
+        "message": "I want to fish New Zealand rivers.",
+        "partySize": 2,
+        "requestedDates": Array [
+          "2026-08-01",
+        ],
+        "tripTitle": "NZ Trout Fly Fishing",
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m273:37[22m[39m
+    [90m271| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)
+    [90m272| [39m    [34mexpect[39m(createInquiryMock)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m1[39m)
+    [90m273| [39m    [34mexpect[39m(classifyInquiryMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                    [31m^[39m
+    [90m274| [39m    [34mexpect[39m(autoSendReplyMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m275| [39m    [34mexpect[39m(sendAnglerEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22msubmitted in under 2 s with an empty trap: same path — RED on main
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "anglerName": "Test Angler",
+        "inquiryId": "inq-flag-off",
+        "message": "I want to fish New Zealand rivers.",
+        "partySize": 2,
+        "requestedDates": Array [
+          "2026-08-01",
+        ],
+        "tripTitle": "NZ Trout Fly Fishing",
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m293:37[22m[39m
+    [90m291| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)
+    [90m292| [39m    [34mexpect[39m(createInquiryMock)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m1[39m)
+    [90m293| [39m    [34mexpect[39m(classifyInquiryMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                    [31m^[39m
+    [90m294| [39m    [34mexpect[39m(autoSendReplyMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m295| [39m    [34mexpect[39m(sendAnglerEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22mthe skip is recorded even when the auto-reply flag is off
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "anglerName": "Test Angler",
+        "inquiryId": "inq-flag-off",
+        "partySize": 2,
+        "replyByDate": "2026-10-01",
+        "requestedDates": Array [
+          "2026-08-01",
+        ],
+        "to": "test@angler.com",
+        "tripTitle": "NZ Trout Fly Fishing",
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m306:37[22m[39m
+    [90m304| [39m    [35mawait[39m [34mpost[39m({ [33m...[39m[33mTEST_BODY[39m[33m,[39m trip_notes_extra[33m:[39m [32m'x'[39m })
+    [90m305| [39m
+    [90m306| [39m    [34mexpect[39m(sendAnglerEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                    [31m^[39m
+    [90m307| [39m    [34mexpect[39m(sendFaEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m308| [39m    [34mexpect[39m(emittedEvents)[33m.[39m[34mtoHaveLength[39m([34m1[39m)
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22ma fractional duration is usable (performance.now deltas are fractional): 400.5 ms is suspicious
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "anglerName": "Test Angler",
+        "inquiryId": "inq-flag-off",
+        "partySize": 2,
+        "replyByDate": "2026-10-01",
+        "requestedDates": Array [
+          "2026-08-01",
+        ],
+        "to": "test@angler.com",
+        "tripTitle": "NZ Trout Fly Fishing",
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m314:37[22m[39m
+    [90m312| [39m    [35mawait[39m [34mpost[39m({ [33m...[39m[33mTEST_BODY[39m[33m,[39m form_elapsed_ms[33m:[39m [34m400.5[39m })
+    [90m313| [39m
+    [90m314| [39m    [34mexpect[39m(sendAnglerEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                    [31m^[39m
+    [90m315| [39m    [34mexpect[39m(emittedEvents)[33m.[39m[34mtoHaveLength[39m([34m1[39m)
+    [90m316| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22mzero ms is a valid duration and suspicious
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "anglerEmail": "test@angler.com",
+        "anglerName": "Test Angler",
+        "dashboardUrl": "https://test.example.com/admin/inquiries/inq-flag-off",
+        "inquiryId": "inq-flag-off",
+        "message": "I want to fish New Zealand rivers.",
+        "partySize": 2,
+        "requestedDates": Array [
+          "2026-08-01",
+        ],
+        "selectedOption": null,
+        "to": "test@fjordanglers.com",
+        "tripTitle": "NZ Trout Fly Fishing",
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m321:33[22m[39m
+    [90m319| [39m    [35mawait[39m [34mpost[39m({ [33m...[39m[33mTEST_BODY[39m[33m,[39m form_elapsed_ms[33m:[39m [34m0[39m })
+    [90m320| [39m
+    [90m321| [39m    [34mexpect[39m(sendFaEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                [31m^[39m
+    [90m322| [39m    [34mexpect[39m(emittedEvents)[33m.[39m[34mtoHaveLength[39m([34m1[39m)
+    [90m323| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22mthe 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "anglerName": "Test Angler",
+        "inquiryId": "inq-flag-off",
+        "partySize": 2,
+        "replyByDate": "2026-10-01",
+        "requestedDates": Array [
+          "2026-08-01",
+        ],
+        "to": "test@angler.com",
+        "tripTitle": "NZ Trout Fly Fishing",
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m327:37[22m[39m
+    [90m325| [39m  it('the 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal req…
+    [90m326| [39m    [35mawait[39m [34mpost[39m({ [33m...[39m[33mTEST_BODY[39m[33m,[39m form_elapsed_ms[33m:[39m [34m1999[39m })
+    [90m327| [39m    [34mexpect[39m(sendAnglerEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                    [31m^[39m
+    [90m328| [39m    [34mexpect[39m(emittedEvents)[33m.[39m[34mtoHaveLength[39m([34m1[39m)
+    [90m329| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22msuspicious wins over repeat: no repeat lookup, one event, reason is the trap
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "from": [Function from],
+      },
+      Object {
+        "email": "test@angler.com",
+        "excludeInquiryId": "inq-flag-off",
+        "since": 2026-10-02T16:03:02.243Z,
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m403:38[22m[39m
+    [90m401| [39m    [35mawait[39m [34mpost[39m({ [33m...[39m[33mTEST_BODY[39m[33m,[39m trip_notes_extra[33m:[39m [32m'x'[39m })
+    [90m402| [39m
+    [90m403| [39m    [34mexpect[39m(hasRecentInquiryMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                     [31m^[39m
+    [90m404| [39m    [34mexpect[39m(emittedEvents)[33m.[39m[34mtoHaveLength[39m([34m1[39m)
+    [90m405| [39m    expect((emittedEvents[0].payload as Record<string, unknown>).reaso…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22mboth signals at once: one event, trap reason only
+[31m[1mAssertionError[22m: expected [] to have a length of 1 but got +0[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m411:27[22m[39m
+    [90m409| [39m    await post({ ...TEST_BODY, trip_notes_extra: 'x', form_elapsed_ms:…
+    [90m410| [39m
+    [90m411| [39m    [34mexpect[39m(emittedEvents)[33m.[39m[34mtoHaveLength[39m([34m1[39m)
+    [90m   | [39m                          [31m^[39m
+    [90m412| [39m    expect((emittedEvents[0].payload as Record<string, unknown>).reaso…
+    [90m413| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/9]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route.test.ts[2m > [22m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22ma failed event write does not turn into a 500 and the skip still applies
+[31m[1mAssertionError[22m: expected "vi.fn()" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st vi.fn() call:
+
+[22m    Array [
+      Object {
+        "anglerName": "Test Angler",
+        "inquiryId": "inq-flag-off",
+        "partySize": 2,
+        "replyByDate": "2026-10-01",
+        "requestedDates": Array [
+          "2026-08-01",
+        ],
+        "to": "test@angler.com",
+        "tripTitle": "NZ",
+      },
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route.test.ts:[2m460:37[22m[39m
+    [90m458| [39m
+    [90m459| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)
+    [90m460| [39m    [34mexpect[39m(sendAnglerEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                                    [31m^[39m
+    [90m461| [39m    [34mexpect[39m(sendFaEmailMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m462| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/9]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m9 failed[39m[22m[2m | [22m[1m[32m24 passed[39m[22m[90m (33)[39m
+[2m   Start at [22m 18:03:01
+[2m   Duration [22m 517ms[2m (transform 202ms, setup 31ms, import 126ms, tests 238ms, environment 0ms)[22m
+

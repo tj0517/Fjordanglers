@@ -66,3 +66,5 @@ UI: uruchom aplikację lokalnie (http://localhost:3000), przejdź formularz z Pl
 ## Notatki z realizacji
 - 2026-10-02 tj: O-27 → a: honeypot + czas; Turnstile odroczony.
 - Próg 2 s i podejście „zapisz, ale podejrzane” to propozycja planu — tj może zmienić przy review.
+- 2026-10-03 tj: decyzja (Option 2) — przeglądarka mierzy czas wypełnienia własnym stoperem i wysyła **czas trwania w milisekundach** (`form_elapsed_ms`), a nie znacznik czasu zegara; odchyłka od treści zadania („znacznik czasu"), bo zegar klienta może się rozjeżdżać z serwerem i fałszywie oflagować prawdziwego klienta. Brak, ujemna, nienumeryczna albo absurdalnie duża wartość = „brak informacji" → żądanie traktowane normalnie; żadna zniekształcona wartość nie jest podejrzana.
+- 2026-10-03 tj: pole-pułapka `trip_notes_extra` (z wyłączeniem autouzupełniania i menedżerów haseł; w PR zaznaczyć, że nie testowane w prawdziwych przeglądarkach); zegar startuje przy pierwszym pokazaniu kroku z danymi i nie resetuje się po powrocie; „podejrzane" wygrywa z „powtórką" (bez zapytania o powtórkę, jedno zdarzenie); odpowiedź bez zmian: 201 `{ id, status }`.
