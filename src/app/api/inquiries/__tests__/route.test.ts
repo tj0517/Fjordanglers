@@ -45,13 +45,22 @@ vi.mock('@/lib/ai/auto-send', () => ({
   hasAgentAutoReply: vi.fn().mockResolvedValue(false),
 }))
 
+const sendFaEmailMock     = vi.fn()
+const sendAnglerEmailMock = vi.fn()
 vi.mock('@/lib/email', () => ({
-  sendInquiryReceivedFaEmail:     vi.fn().mockResolvedValue(undefined),
-  sendInquiryReceivedAnglerEmail: vi.fn().mockResolvedValue(undefined),
+  sendInquiryReceivedFaEmail:     sendFaEmailMock,
+  sendInquiryReceivedAnglerEmail: sendAnglerEmailMock,
 }))
 
+// FA-1.42 — data-layer lookup for "same e-mail within 24 h"
+const hasRecentInquiryMock = vi.fn()
+vi.mock('@/lib/supabase/queries', () => ({
+  hasRecentInquiryFromEmail: hasRecentInquiryMock,
+}))
+
+const createInquiryMock = vi.fn()
 vi.mock('@/lib/inquiries/create', () => ({
-  createInquiry: vi.fn().mockResolvedValue({ id: 'inq-flag-off', status: 'new' }),
+  createInquiry: createInquiryMock,
 }))
 
 vi.mock('@/lib/business-days', () => ({
@@ -61,9 +70,17 @@ vi.mock('@/lib/business-days', () => ({
 
 import { createServiceClient } from '@/lib/supabase/server'
 
+/** Rows the route itself writes to inquiry_events (createInquiry is mocked, so only FA-1.42 skips land here). */
+let emittedEvents: Record<string, unknown>[] = []
+
 beforeEach(() => {
   vi.clearAllMocks()
   mockEnv.AI_AUTO_REPLY_ENABLED = false
+  emittedEvents = []
+  createInquiryMock.mockResolvedValue({ id: 'inq-flag-off', status: 'new' })
+  sendFaEmailMock.mockResolvedValue(undefined)
+  sendAnglerEmailMock.mockResolvedValue(undefined)
+  hasRecentInquiryMock.mockResolvedValue(false)
 
   vi.mocked(createServiceClient).mockReturnValue({
     from: (table: string) => {
@@ -85,7 +102,10 @@ beforeEach(() => {
       }
       return {
         select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
-        insert: () => ({ select: () => ({ single: async () => ({ data: { id: 'row-1' }, error: null }) }) }),
+        insert: (row: Record<string, unknown>) => {
+          if (table === 'inquiry_events') emittedEvents.push(row)
+          return { select: () => ({ single: async () => ({ data: { id: 'row-1' }, error: null }) }) }
+        },
       }
     },
   } as unknown as ReturnType<typeof createServiceClient>)
@@ -134,5 +154,103 @@ describe('/api/inquiries POST — autoSendReply throws, FA-1.27', () => {
 
     expect(response.status).toBe(201)
     expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ─── FA-1.42 — repeat submissions from the same e-mail ───────────────────────
+
+const REPEAT_REASON = 'repeat submission from same e-mail within 24 h'
+
+function post(body: Record<string, unknown> = TEST_BODY) {
+  return import('@/app/api/inquiries/route').then(({ POST }) => POST(new NextRequest('http://localhost/api/inquiries', {
+    method:  'POST',
+    headers: { 'content-type': 'application/json' },
+    body:    JSON.stringify(body),
+  })))
+}
+
+describe('/api/inquiries POST — repeat from the same e-mail, FA-1.42', () => {
+  it('saves the inquiry, skips AI, auto-reply and the customer e-mail, still mails FA, and leaves an event with the reason — RED on main: everything is called', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+    hasRecentInquiryMock.mockResolvedValue(true)
+
+    const response = await post()
+
+    expect(response.status).toBe(201)
+    expect(createInquiryMock).toHaveBeenCalledTimes(1)
+    expect(classifyInquiryMock).not.toHaveBeenCalled()
+    expect(autoSendReplyMock).not.toHaveBeenCalled()
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
+
+    expect(emittedEvents).toHaveLength(1)
+    expect(emittedEvents[0]).toMatchObject({
+      inquiry_id: 'inq-flag-off',
+      type:       'agent.auto_send_decided',
+      payload:    { sent: false, score: null, reasons: [REPEAT_REASON], draft_message_id: null },
+    })
+  })
+
+  it('does not write the angler e-mail address into the event', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+    hasRecentInquiryMock.mockResolvedValue(true)
+
+    await post()
+
+    expect(JSON.stringify(emittedEvents)).not.toMatch(/angler\.com/i)
+  })
+
+  it('treats a repeat the same way when the auto-reply flag is off (D2): no customer e-mail, event still saved', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = false
+    hasRecentInquiryMock.mockResolvedValue(true)
+
+    const response = await post()
+
+    expect(response.status).toBe(201)
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(1)
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([REPEAT_REASON])
+  })
+
+  it('leaves behaviour unchanged for a first inquiry from an e-mail: classify, auto-send, customer e-mail, no skip event', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+    hasRecentInquiryMock.mockResolvedValue(false)
+
+    const response = await post()
+
+    expect(response.status).toBe(201)
+    expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
+    expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
+  })
+
+  it('asks the data layer about this e-mail, excluding the new inquiry, over the last 24 h', async () => {
+    const before = Date.now()
+    await post({ ...TEST_BODY, angler_email: 'Test@Angler.COM' })
+    const after = Date.now()
+
+    expect(hasRecentInquiryMock).toHaveBeenCalledTimes(1)
+    const params = hasRecentInquiryMock.mock.calls[0][1] as { email: string; excludeInquiryId: string; since: Date }
+    expect(params.email).toBe('Test@Angler.COM')
+    expect(params.excludeInquiryId).toBe('inq-flag-off')
+    const DAY = 24 * 60 * 60 * 1000
+    expect(params.since.getTime()).toBeGreaterThanOrEqual(before - DAY)
+    expect(params.since.getTime()).toBeLessThanOrEqual(after - DAY)
+  })
+
+  it('fails open when the lookup throws: the inquiry is treated as new and gets the usual flow', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+    hasRecentInquiryMock.mockRejectedValue(new Error('connection reset'))
+
+    const response = await post()
+
+    expect(response.status).toBe(201)
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
+    expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
   })
 })

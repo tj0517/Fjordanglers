@@ -2,13 +2,14 @@
 id: FA-1.42
 title: Kontrola kosztów auto-odpowiedzi — powtórki z tego samego e-maila nie uruchamiają AI ani maili do klienta; dzienny sufit auto-wysyłek
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/auto-reply-cost-guards
+pr: 123
 depends_on: [FA-1.40]
 blocked_by_questions: []
 touches_db: false
@@ -75,3 +76,11 @@ git diff main...HEAD --stat -- src/lib/ai/judge-reply.ts   # puste
 - 2026-10-02 tj: O-28 → b: zapytanie zapisane zawsze; powtórki pomijają AI i maile do klienta.
 - 2026-10-02 tj: O-30 → dzienny sufit 5 auto-wysyłek „na razie”; zmieniany przez `AI_AUTO_SEND_DAILY_CAP` bez zmiany kodu. Szósta i kolejne odpowiedzi danego dnia czekają jako szkice na ręczną ocenę.
 - Gorąca ścieżka: `inquiries`, wysyłka maili, `autoSendReply` — przy review ocenić skutki dla ścieżki zapytanie → oferta → depozyt.
+- 2026-10-03 tj: (A) bez `.env.example` w tym zadaniu — pliku nie ma w repo; luka trafia do `docs/deferred-tasks.md`, nie do tego PR.
+- 2026-10-03 tj: (B) pominięcie powtórki używa istniejącego `agent.auto_send_decided` z `sent=false` i powodem — katalog zdarzeń bez zmian.
+- 2026-10-03 tj: D1 = (a) — „wcześniejsze zapytanie" to każde zapytanie z tym e-mailem w ostatnich 24 h, z dowolnego źródła, także powtórka sama pominięta.
+- 2026-10-03 tj: D2 = (a) — zdarzenie pominięcia powtórki zawsze, niezależnie od `AI_AUTO_REPLY_ENABLED`.
+- 2026-10-03 tj: D3 = (a) — sufit sprawdzany tuż przed wysyłką, po sędzim; wstrzymany szkic zachowuje wynik sędziego.
+- 2026-10-03 tj: D4 = (a) — gdy zliczenie dzisiejszych auto-wysyłek się nie uda, szkic wstrzymany do ręcznej oceny (zdarzenie z powodem).
+- 2026-10-03 tj: wyszukiwanie powtórki fail-open — błąd = zapytanie traktowane jako nowe.
+- 2026-10-03 tj: odbiór PR #123 — kryteria udowodnione (red/green testów, greps, judge-reply.ts bez zmian, oba zapytania przez prawdziwy PostgREST lokalnie); bez uruchomienia całej trasy na żywym stosie — do sprawdzenia w FA-1.45.

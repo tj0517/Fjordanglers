@@ -7,6 +7,11 @@
  *   • FA: new inquiry notification (with dashboard link)
  *   • Angler: inquiry received confirmation
  *
+ * Repeat (FA-1.42): when the same e-mail already has an inquiry from the last 24 h, the
+ * new one is still saved and FA is still notified, but the angler gets no e-mail and the
+ * AI pipeline (classify, auto-reply) does not run. The skip is an
+ * `agent.auto_send_decided` event with sent=false and the reason.
+ *
  * Accepts either:
  *   - trip_id (UUID) — experience linked to a guide via `experiences` table
  *   - experience_page_id (UUID) — editorial page without a linked guide yet
@@ -27,6 +32,8 @@ import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/li
 import { env } from '@/lib/env'
 import { classifyInquiry } from '@/lib/ai/inquiry-agent'
 import { autoSendReply } from '@/lib/ai/auto-send'
+import { REPEAT_SKIP_REASON, REPEAT_WINDOW_MS, emitAutoSendDecision } from '@/lib/ai/auto-send-guards'
+import { hasRecentInquiryFromEmail } from '@/lib/supabase/queries'
 import { addBusinessDays, formatBusinessDay } from '@/lib/business-days'
 import { checkEmailLimit, checkIpLimit, clientIpFromHeaders } from '@/lib/rate-limit/inquiries'
 
@@ -173,6 +180,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Failed to save inquiry' }, { status: 500 })
   }
 
+  // Repeat from the same e-mail within the window? The address in the form may belong to
+  // someone else, so a repeat costs no AI call and no e-mail to the customer. A failed
+  // lookup means "treat as new" — the behaviour from before this guard.
+  let isRepeat = false
+  try {
+    isRepeat = await hasRecentInquiryFromEmail(svc, {
+      email:            parsed.data.angler_email,
+      excludeInquiryId: inquiry.id,
+      since:            new Date(Date.now() - REPEAT_WINDOW_MS),
+    })
+  } catch (err) {
+    console.error(`[inquiries/POST] Repeat lookup failed for ${inquiry.id}, treating as new:`, err)
+  }
+
+  if (isRepeat) {
+    try {
+      await emitAutoSendDecision(svc, inquiry.id, null, false, null, [REPEAT_SKIP_REASON])
+    } catch (err) {
+      // The inquiry is saved and the skip still applies; losing the event is logged, not a 500.
+      console.error(`[inquiries/POST] Repeat skip event failed for ${inquiry.id}:`, err)
+    }
+  }
+
   // Await both emails before responding — on Vercel serverless, unawaited promises
   // are silently dropped once the response is returned and the function freezes.
   const baseUrl      = env.NEXT_PUBLIC_APP_URL
@@ -192,15 +222,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         inquiryId:      inquiry.id,
         dashboardUrl,
       }),
-      sendInquiryReceivedAnglerEmail({
-        to:             parsed.data.angler_email,
-        anglerName:     parsed.data.angler_name,
-        tripTitle,
-        requestedDates: sortedDates,
-        partySize:      parsed.data.party_size,
-        inquiryId:      inquiry.id,
-        replyByDate:    formatBusinessDay(addBusinessDays(new Date(), 2, 'Europe/Warsaw')),
-      }),
+      isRepeat
+        ? Promise.resolve()
+        : sendInquiryReceivedAnglerEmail({
+            to:             parsed.data.angler_email,
+            anglerName:     parsed.data.angler_name,
+            tripTitle,
+            requestedDates: sortedDates,
+            partySize:      parsed.data.party_size,
+            inquiryId:      inquiry.id,
+            replyByDate:    formatBusinessDay(addBusinessDays(new Date(), 2, 'Europe/Warsaw')),
+          }),
     ])
   } catch (err) {
     // Log but don't fail the request — inquiry is already saved
@@ -209,7 +241,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   console.log(`[inquiries/POST] Created inquiry ${inquiry.id} (${parsed.data.trip_id ? `trip ${parsed.data.trip_id}` : `page ${parsed.data.experience_page_id}`})`)
 
-  if (env.AI_AUTO_REPLY_ENABLED) {
+  if (env.AI_AUTO_REPLY_ENABLED && !isRepeat) {
     try {
       await classifyInquiry({
         inquiryId:      inquiry.id,
