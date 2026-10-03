@@ -47,7 +47,12 @@ vi.mock('@/lib/messages/send', () => ({
 }))
 
 vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
-vi.mock('@/lib/env', () => ({ env: { ANTHROPIC_API_KEY: 'test-key' } }))
+// Mutable env so the cap tests can set AI_AUTO_SEND_DAILY_CAP (undefined → default 5, FA-1.42)
+const mockEnv = vi.hoisted(() => ({
+  ANTHROPIC_API_KEY:       'test-key',
+  AI_AUTO_SEND_DAILY_CAP:  undefined as number | undefined,
+}))
+vi.mock('@/lib/env', () => ({ env: mockEnv }))
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
@@ -69,6 +74,10 @@ interface MockOptions {
   priorAgentMsgs?:  Row[]
   conversationMsgs?: Row[]
   message?:         string | null
+  /** FA-1.42: agent.auto_send_decided events with sent=true in the last 24 h. */
+  sentInWindow?:    number
+  /** FA-1.42: the count query on inquiry_events fails. */
+  capCountError?:   boolean
 }
 
 const DEFAULT_KNOWLEDGE = [
@@ -93,6 +102,8 @@ function setupMockDb(opts: MockOptions = {}) {
     priorAgentMsgs  = [],
     conversationMsgs = DEFAULT_CONVERSATION,
     message          = null,
+    sentInWindow     = 0,
+    capCountError    = false,
   } = opts
 
   const inquiry = { id: 'inq-1', status, trip_country, angler_email, message }
@@ -109,6 +120,18 @@ function setupMockDb(opts: MockOptions = {}) {
 
       if (table === 'inquiry_events') {
         return {
+          // FA-1.42 cap count: .select('id', {count, head}).eq('type').eq('payload->>sent').gte('occurred_at')
+          select: () => {
+            const builder = {
+              eq:  () => builder,
+              gte: () => Promise.resolve(
+                capCountError
+                  ? { count: null, error: { message: 'connection reset' } }
+                  : { count: sentInWindow, error: null },
+              ),
+            }
+            return builder
+          },
           insert: (row: Row) => {
             emittedEvents.push(row)
             return {
@@ -391,6 +414,98 @@ describe('autoSendReply — happy path', () => {
     expect(payload.sent).toBe(true)
     expect(payload.score).toBe(0.93)
     expect(payload.draft_message_id).toBe('draft-3')
+  })
+})
+
+// ─── FA-1.42 — daily cap on auto-sends ───────────────────────────────────────
+
+describe('autoSendReply — daily cap (FA-1.42)', () => {
+  beforeEach(() => {
+    mockEnv.AI_AUTO_SEND_DAILY_CAP = undefined
+    vi.mocked(sendMessage).mockReset()
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockResolvedValue({
+      draftId: 'draft-cap',
+      text:    'Looking forward to your NZ trip!',
+      subject: 'Re: New Zealand inquiry',
+      usedIds: ['k-inst', 'k-dest'],
+    })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
+    vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
+  })
+
+  it('holds the draft when 5 auto-sends already went out in 24 h (default cap) — RED on main: sendMessage is called', async () => {
+    setupMockDb({ sentInWindow: 5 })
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result).toEqual({
+      sent:           false,
+      score:          0.93,
+      reasons:        ['daily auto-send cap reached'],
+      draftMessageId: 'draft-cap',
+    })
+    expect(vi.mocked(draftReply)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+
+    expect(emittedEvents).toHaveLength(1)
+    expect(emittedEvents[0].type).toBe('agent.auto_send_decided')
+    expect(emittedEvents[0].payload).toEqual({
+      sent:             false,
+      score:            0.93,
+      reasons:          ['daily auto-send cap reached'],
+      draft_message_id: 'draft-cap',
+    })
+  })
+
+  it('still sends with 4 auto-sends in the window (below the default cap)', async () => {
+    setupMockDb({ sentInWindow: 4 })
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.sent).toBe(true)
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1)
+    expect((emittedEvents[0].payload as Record<string, unknown>).sent).toBe(true)
+  })
+
+  it('takes the cap from AI_AUTO_SEND_DAILY_CAP: 2 sent with cap 2 holds, 1 sent with cap 2 sends', async () => {
+    mockEnv.AI_AUTO_SEND_DAILY_CAP = 2
+
+    setupMockDb({ sentInWindow: 2 })
+    const held = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    expect(held!.sent).toBe(false)
+    expect(held!.reasons).toEqual(['daily auto-send cap reached'])
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+
+    setupMockDb({ sentInWindow: 1 })
+    const sent = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    expect(sent!.sent).toBe(true)
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the judge reasons when the judge already said no — the cap only holds what would have gone out', async () => {
+    setupMockDb({ sentInWindow: 5 })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.5, send: false, reasons: ['promises a price'] })
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.reasons).toEqual(['promises a price'])
+    expect(emittedEvents).toHaveLength(1)
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual(['promises a price'])
+  })
+
+  it('holds the draft with a reason when the count query fails (D4) — nothing is sent', async () => {
+    setupMockDb({ capCountError: true })
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.sent).toBe(false)
+    expect(result!.draftMessageId).toBe('draft-cap')
+    expect(result!.reasons).toEqual(['daily auto-send cap could not be checked'])
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    expect(emittedEvents).toHaveLength(1)
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual(['daily auto-send cap could not be checked'])
   })
 })
 
