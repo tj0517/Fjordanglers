@@ -2,7 +2,7 @@
 id: FA-1.42
 title: Kontrola kosztów auto-odpowiedzi — powtórki z tego samego e-maila nie uruchamiają AI ani maili do klienta; dzienny sufit auto-wysyłek
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -83,3 +83,4 @@ git diff main...HEAD --stat -- src/lib/ai/judge-reply.ts   # puste
 - 2026-10-03 tj: D3 = (a) — sufit sprawdzany tuż przed wysyłką, po sędzim; wstrzymany szkic zachowuje wynik sędziego.
 - 2026-10-03 tj: D4 = (a) — gdy zliczenie dzisiejszych auto-wysyłek się nie uda, szkic wstrzymany do ręcznej oceny (zdarzenie z powodem).
 - 2026-10-03 tj: wyszukiwanie powtórki fail-open — błąd = zapytanie traktowane jako nowe.
+- 2026-10-03 tj: odbiór PR #123 — kryteria udowodnione (red/green testów, greps, judge-reply.ts bez zmian, oba zapytania przez prawdziwy PostgREST lokalnie); bez uruchomienia całej trasy na żywym stosie — do sprawdzenia w FA-1.45.
