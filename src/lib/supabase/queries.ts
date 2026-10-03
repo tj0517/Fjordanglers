@@ -448,6 +448,63 @@ export async function getConversationForJudge(
   return (data ?? []) as { direction: string; body: string }[]
 }
 
+/** Trim + lower-case: how an e-mail is compared. `angler_email` is stored as typed. */
+function normaliseEmailForMatch(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+/** Makes `\`, `%` and `_` literal in an ILIKE pattern. */
+function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, ch => `\\${ch}`)
+}
+
+/**
+ * FA-1.42 — does this e-mail (trimmed, case-insensitive) already have an inquiry created
+ * at or after `since`, other than `excludeInquiryId`? Any source counts.
+ *
+ * The address is untrusted: wildcards are escaped, and the rows the database returns are
+ * compared again in code, so `a_b@x.com` can never suppress a reply to `axb@x.com`.
+ * (PostgREST also reads `*` as a wildcard in ILIKE; the second comparison covers that too.)
+ *
+ * Throws on a database error — the caller chooses whether to fail open.
+ */
+export async function hasRecentInquiryFromEmail(
+  client: ServiceClient,
+  params: { email: string; excludeInquiryId: string; since: Date },
+): Promise<boolean> {
+  const wanted = normaliseEmailForMatch(params.email)
+  const { data, error } = await client
+    .from('inquiries')
+    .select('angler_email')
+    .ilike('angler_email', escapeLikePattern(wanted))
+    .neq('id', params.excludeInquiryId)
+    .gte('created_at', params.since.toISOString())
+    .limit(50)
+  if (error != null) throw new Error(error.message)
+  return (data ?? []).some(
+    row => row.angler_email != null && normaliseEmailForMatch(row.angler_email) === wanted,
+  )
+}
+
+/**
+ * FA-1.42 — how many auto-sends went out since `since`: `agent.auto_send_decided`
+ * events with `sent=true`. Throws on a database error — the caller must not read a
+ * failed count as "zero sent".
+ */
+export async function countAutoSendsSince(
+  client: ServiceClient,
+  since: Date,
+): Promise<number> {
+  const { count, error } = await client
+    .from('inquiry_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('type', 'agent.auto_send_decided')
+    .eq('payload->>sent', 'true')
+    .gte('occurred_at', since.toISOString())
+  if (error != null) throw new Error(error.message)
+  return count ?? 0
+}
+
 export async function getInquiryStatusForD2(
   client: ServiceClient,
   inquiryId: string,

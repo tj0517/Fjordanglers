@@ -2,7 +2,7 @@
  * Hybrid auto-send pipeline. FA-1.27.
  *
  * autoSendReply({ inquiryId, counterpart, channel })
- *   Pre-draft gates → draftReply (always saves draft) → destination gate → judge → send or hold.
+ *   Pre-draft gates → draftReply (always saves draft) → destination gate → judge → daily cap → send or hold.
  *   Emits `agent.auto_send_decided` for EVERY invocation that gets past the hard errors below:
  *     - pre-draft gate failures: sent=false, score=null, draft_message_id=null + reason
  *       (includes FA-1.40: no thread and no form message — nothing to answer)
@@ -21,12 +21,19 @@ import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
 import { judgeReply, JUDGE_THRESHOLD } from '@/lib/ai/judge-reply'
 import { loadKnowledge } from '@/lib/ai/knowledge'
 import { sendMessage } from '@/lib/messages/send'
-import { emitEvent } from '@/lib/events/emit'
 import {
   getInquiryForAutoSend,
   hasAgentSentReplyToAngler,
   getConversationForJudge,
+  countAutoSendsSince,
 } from '@/lib/supabase/queries'
+import {
+  AUTO_SEND_CAP_WINDOW_MS,
+  CAP_REACHED_REASON,
+  CAP_UNCHECKED_REASON,
+  dailyAutoSendCap,
+  emitAutoSendDecision as emitDecision,
+} from '@/lib/ai/auto-send-guards'
 
 export interface AutoSendResult {
   sent:           boolean
@@ -147,7 +154,15 @@ export async function autoSendReply(params: {
 
   const shouldSend = judged.score >= JUDGE_THRESHOLD && judged.send
 
+  // Daily cap (FA-1.42): checked last, so only a draft that would really have gone out is
+  // held for it, and the judge's score stays on the event. The draft is already saved.
   if (shouldSend) {
+    const holdReason = await dailyCapHoldReason(supabase)
+    if (holdReason != null) {
+      await emitDecision(supabase, inquiryId, draft.draftId, false, judged.score, [holdReason])
+      return { sent: false, score: judged.score, reasons: [holdReason], draftMessageId: draft.draftId }
+    }
+
     await sendMessage(supabase, {
       inquiryId,
       channel:     'email',
@@ -173,20 +188,18 @@ export async function autoSendReply(params: {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-async function emitDecision(
-  supabase:       ReturnType<typeof createServiceClient>,
-  inquiryId:      string,
-  draftMessageId: string | null,
-  sent:           boolean,
-  score:          number | null,
-  reasons:        string[],
-): Promise<void> {
-  await emitEvent(supabase, {
-    inquiryId,
-    type:    'agent.auto_send_decided',
-    actor:   { kind: 'agent' },
-    source:  'app',
-    channel: 'email',
-    payload: { sent, score, reasons, draft_message_id: draftMessageId },
-  })
+/**
+ * Null when another auto-send fits under today's cap; otherwise the reason to hold.
+ * A failed count holds too: a sent e-mail cannot be taken back, a held draft can be sent later.
+ */
+async function dailyCapHoldReason(
+  supabase: ReturnType<typeof createServiceClient>,
+): Promise<string | null> {
+  try {
+    const sentRecently = await countAutoSendsSince(supabase, new Date(Date.now() - AUTO_SEND_CAP_WINDOW_MS))
+    return sentRecently >= dailyAutoSendCap() ? CAP_REACHED_REASON : null
+  } catch (err) {
+    console.error('[autoSendReply] daily cap count failed:', err)
+    return CAP_UNCHECKED_REASON
+  }
 }
