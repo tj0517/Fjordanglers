@@ -38,6 +38,11 @@ vi.mock('@/lib/ai/auto-send', () => ({
   autoSendReply:     mocks.autoSendReply,
   hasAgentAutoReply: vi.fn().mockResolvedValue(false),
 }))
+// FA-1.42: the route asks the data layer whether this e-mail is a repeat. Not under test here —
+// without this mock the fake client above has no .ilike and the lookup logs a failure per request.
+vi.mock('@/lib/supabase/queries', () => ({
+  hasRecentInquiryFromEmail: vi.fn().mockResolvedValue(false),
+}))
 vi.mock('@/lib/email', () => ({
   sendInquiryReceivedFaEmail:     mocks.sendFaEmail,
   sendInquiryReceivedAnglerEmail: mocks.sendAnglerEmail,
