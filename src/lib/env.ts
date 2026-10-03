@@ -125,6 +125,8 @@ export const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1).optional(),
   // Feature flag: auto-reply agent on new inquiries. Off by default.
   AI_AUTO_REPLY_ENABLED: z.enum(['true', 'false']).optional().default('false').transform(v => v === 'true'),
+  // Daily cap on auto-sends (rolling 24 h). Unset = default of 5, defined in src/lib/ai/auto-send-guards.ts.
+  AI_AUTO_SEND_DAILY_CAP: z.coerce.number().int().positive().optional(),
 
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`

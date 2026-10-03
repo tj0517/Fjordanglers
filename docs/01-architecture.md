@@ -199,7 +199,7 @@ Supabase project; `apps/admin` refuses any session whose role is not `admin`.
 | Stripe Checkout (deposit) | `apps/web/api/webhooks/stripe` | `core/payments/webhook.ts` | Idempotent on `payments.provider_session_id`; idempotency key must not include `Date.now()` |
 | Resend inbound e-mail | `apps/web/api/webhooks/resend` | `core/messaging/inbound.ts` | Dedupe on `messages.external_id` |
 | Meta WhatsApp Cloud | `apps/web/api/webhooks/whatsapp` | same | same |
-| Anthropic inquiry agent | called from `core/agent/` | — | Gated by `AI_AUTO_REPLY_ENABLED` (strict `'true'`/`'false'` enum, not `z.coerce.boolean`) |
+| Anthropic inquiry agent | called from `core/agent/` | — | Gated by `AI_AUTO_REPLY_ENABLED` (strict `'true'`/`'false'` enum, not `z.coerce.boolean`). Daily auto-send cap: `AI_AUTO_SEND_DAILY_CAP` (default 5, default defined in `src/lib/ai/auto-send-guards.ts`) |
 | Google Ads API | `apps/admin/api/cron/sync-google-ads` (GET) | `core/ads/sync.ts` | Vercel cron sends GET |
 | GA4 Data API | `apps/admin/api/cron/sync-ga4` | `core/metrics/snapshots.ts` | stage 5 |
 | NBP/ECB FX | `apps/admin/api/cron/fx-rates` | `core/finance/fx.ts` | stage 5 |
