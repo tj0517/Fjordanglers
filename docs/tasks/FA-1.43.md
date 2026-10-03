@@ -2,7 +2,7 @@
 id: FA-1.43
 title: Formularz zapytań — honeypot i minimalny czas wypełnienia; podejrzane zapytanie zapisane, ale bez AI i maili do klienta
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
