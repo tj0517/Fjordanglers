@@ -23,6 +23,13 @@
  *  RESEND_API_KEY                     re_...
  *  SENTRY_DSN                         https://...@sentry.io/... (optional)
  *  IBAN_ENCRYPTION_KEY                64-char hex (optional, required in prod)
+ *  UPSTASH_REDIS_REST_URL             https://<name>.upstash.io (optional — rate limit on POST /api/inquiries)
+ *  UPSTASH_REDIS_REST_TOKEN           server-only secret (optional — rate limit)
+ *  RATE_LIMIT_SALT                    random secret salting the rate-limit counter keys (optional — rate limit)
+ *
+ * The three rate-limit variables are all-or-nothing: with any of them missing the
+ * limiter is off and the inquiries route behaves as if it had no limit (O-29 a).
+ * Server-only — never NEXT_PUBLIC_*, never imported from client code.
  * ─────────────────────────────────────────────────────────────────────
  */
 
@@ -78,6 +85,15 @@ export const envSchema = z.object({
   // AES-256-GCM key for IBAN field encryption — 64 hex chars (32 bytes).
   // If not set, encryption is disabled (passthrough). Required in production.
   IBAN_ENCRYPTION_KEY: z.string().min(64).optional(),
+
+  // ── Rate limit (POST /api/inquiries) ───────────────────────────────────────
+  // Deliberately lenient (plain optional strings): a malformed value must switch the
+  // limiter off (src/lib/rate-limit/factory.ts), never crash env validation at boot
+  // and take the whole site down. Server-only secrets.
+  UPSTASH_REDIS_REST_URL: z.string().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+  // Salt for the counter keys (HMAC) — without it the IP/e-mail hashes would be reversible.
+  RATE_LIMIT_SALT: z.string().optional(),
 
   // ── WhatsApp (Meta Cloud API) ───────────────────────────────────────────────
   // Random secret string used to verify Meta's hub.challenge GET request.

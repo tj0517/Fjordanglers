@@ -17,6 +17,11 @@
  *   - experience_page_id (UUID) — editorial page without a linked guide yet
  *
  * No auth required — anglers do not need an account to submit an inquiry.
+ *
+ * Rate limited (FA-1.41) per client IP (checked first, before the body is read) and
+ * per e-mail (checked once the body is valid). A rejected request gets 429 with
+ * Retry-After and causes no database lookup, no save, no AI call and no e-mail.
+ * Limits and fail-open rules: src/lib/rate-limit/inquiries.ts.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -30,6 +35,7 @@ import { autoSendReply } from '@/lib/ai/auto-send'
 import { REPEAT_SKIP_REASON, REPEAT_WINDOW_MS, emitAutoSendDecision } from '@/lib/ai/auto-send-guards'
 import { hasRecentInquiryFromEmail } from '@/lib/supabase/queries'
 import { addBusinessDays, formatBusinessDay } from '@/lib/business-days'
+import { checkEmailLimit, checkIpLimit, clientIpFromHeaders } from '@/lib/rate-limit/inquiries'
 
 export const runtime  = 'nodejs'
 export const dynamic  = 'force-dynamic'
@@ -68,9 +74,22 @@ const InquirySchema = z.object({
   { message: 'Either trip_id or experience_page_id is required' },
 )
 
+// ─── 429 response ─────────────────────────────────────────────────────────────
+
+// No detail about thresholds or which limit was hit.
+function tooManyRequests(retryAfterSec: number): NextResponse {
+  return NextResponse.json(
+    { error: 'Too many requests' },
+    { status: 429, headers: { 'Retry-After': String(retryAfterSec) } },
+  )
+}
+
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const ipLimit = await checkIpLimit(clientIpFromHeaders(req.headers))
+  if (ipLimit.blocked) return tooManyRequests(ipLimit.retryAfterSec)
+
   let body: unknown
   try {
     body = await req.json()
@@ -85,6 +104,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       { status: 400 },
     )
   }
+
+  const emailLimit = await checkEmailLimit(parsed.data.angler_email)
+  if (emailLimit.blocked) return tooManyRequests(emailLimit.retryAfterSec)
 
   const svc = createServiceClient()
 
