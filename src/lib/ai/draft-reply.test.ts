@@ -292,6 +292,41 @@ describe('draftReply — allowFormOnly (FA-1.34)', () => {
 
     expect(anthropicCreate).not.toHaveBeenCalled()
   })
+
+  // FA-1.46: a form without client text is answerable when it points at a trip.
+  it.each([
+    ['trip_id',            { trip_id: 'trip-1' }],
+    ['experience_page_id', { experience_page_id: 'exp-1' }],
+  ])('drafts from the form data when message is empty but %s is set', async (_label, tripRef) => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, message: null, ...tripRef })
+
+    const result = await draftReply({
+      inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email', allowFormOnly: true,
+    })
+
+    expect(result.draftId).toBe('draft-msg-id-1')
+    expect(anthropicCreate).toHaveBeenCalledOnce()
+    const prompt = (anthropicCreate.mock.calls[0][0] as { messages: { content: string }[] }).messages[0].content
+    expect(prompt).toContain('Party size: 2')
+    expect(prompt).toContain('Requested dates: 2026-07-15')
+  })
+
+  it('still refuses without allowFormOnly, even when the inquiry has a trip', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, message: null, trip_id: 'trip-1' })
+
+    await expect(
+      draftReply({ inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email' }),
+    ).rejects.toThrow('the conversation thread is empty')
+    expect(anthropicCreate).not.toHaveBeenCalled()
+  })
+
+  it('the no-trip error says why: no form message and no trip to write from', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, message: '  ' })
+
+    await expect(
+      draftReply({ inquiryId: 'inquiry-empty', counterpart: 'angler', channel: 'email', allowFormOnly: true }),
+    ).rejects.toThrow('no trip or experience page to write from')
+  })
 })
 
 // ─── FA-1.14 round 2 — draft lifecycle ───────────────────────────────────────

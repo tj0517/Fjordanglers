@@ -406,6 +406,13 @@ export type InquiryForAutoSend = {
   angler_email: string | null
   /** Form text. On a form inquiry this is the client's first message; the thread stays empty. */
   message:      string | null
+  /** FA-1.46: trip reference and form data — a form without text is answered from these. */
+  trip_id:            string | null
+  experience_page_id: string | null
+  angler_name:        string
+  requested_dates:    string[] | null
+  party_size:         number | null
+  source:             string | null
 }
 
 export async function getInquiryForAutoSend(
@@ -414,7 +421,7 @@ export async function getInquiryForAutoSend(
 ): Promise<InquiryForAutoSend | null> {
   const { data } = await client
     .from('inquiries')
-    .select('id, status, trip_country, angler_email, message')
+    .select('id, status, trip_country, angler_email, message, trip_id, experience_page_id, angler_name, requested_dates, party_size, source')
     .eq('id', inquiryId)
     .maybeSingle()
   return (data ?? null) as InquiryForAutoSend | null

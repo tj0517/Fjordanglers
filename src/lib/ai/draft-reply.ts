@@ -81,8 +81,13 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     if (!allowFormOnly) {
       throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
     }
-    if (!inquiry.message?.trim()) {
-      throw new DraftReplyError('Cannot draft a reply: there is no message thread and no form message on this inquiry.')
+    // FA-1.46: a form without client text is still answerable when it points at a trip.
+    const hasTrip = inquiry.trip_id != null || inquiry.experience_page_id != null
+    if (!inquiry.message?.trim() && !hasTrip) {
+      throw new DraftReplyError(
+        'Cannot draft a reply: there is no message thread and no form message on this inquiry, ' +
+        'and it has no trip or experience page to write from.',
+      )
     }
   }
 
