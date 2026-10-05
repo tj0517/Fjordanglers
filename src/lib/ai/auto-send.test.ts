@@ -47,6 +47,12 @@ vi.mock('@/lib/messages/send', () => ({
 }))
 
 vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
+
+// FA-1.46: the judge block carries the trip title; the lookup itself is not under test here.
+vi.mock('@/lib/inquiries/experience-lookup', () => ({
+  getInquiryExperience: vi.fn(async () => ({ name: 'Iceland Salmon Week' })),
+  tripTitleOf: (exp: { name: string } | null) => exp?.name ?? 'Your trip',
+}))
 // Mutable env so the cap tests can set AI_AUTO_SEND_DAILY_CAP (undefined → default 5, FA-1.42)
 const mockEnv = vi.hoisted(() => ({
   ANTHROPIC_API_KEY:       'test-key',
@@ -74,6 +80,14 @@ interface MockOptions {
   priorAgentMsgs?:  Row[]
   conversationMsgs?: Row[]
   message?:         string | null
+  /** FA-1.46: inquiry points at a trip / experience page (form without client text is answered from these). */
+  trip_id?:         string | null
+  experience_page_id?: string | null
+  /** FA-1.46: form data the judge block is built from. */
+  angler_name?:     string
+  requested_dates?: string[]
+  party_size?:      number
+  source?:          string | null
   /** FA-1.42: agent.auto_send_decided events with sent=true in the last 24 h. */
   sentInWindow?:    number
   /** FA-1.42: the count query on inquiry_events fails. */
@@ -102,11 +116,20 @@ function setupMockDb(opts: MockOptions = {}) {
     priorAgentMsgs  = [],
     conversationMsgs = DEFAULT_CONVERSATION,
     message          = null,
+    trip_id          = null,
+    experience_page_id = null,
+    angler_name      = 'Anna Angler',
+    requested_dates  = ['2026-07-10', '2026-07-13'],
+    party_size       = 2,
+    source           = 'web_form',
     sentInWindow     = 0,
     capCountError    = false,
   } = opts
 
-  const inquiry = { id: 'inq-1', status, trip_country, angler_email, message }
+  const inquiry = {
+    id: 'inq-1', status, trip_country, angler_email, message,
+    trip_id, experience_page_id, angler_name, requested_dates, party_size, source,
+  }
 
   vi.mocked(createServiceClient).mockReturnValue({
     from: (table: string) => {
@@ -599,6 +622,109 @@ describe('autoSendReply — form inquiry, empty thread (FA-1.40)', () => {
     expect(result).toBeNull()
     expect(emittedEvents).toHaveLength(0)
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+  })
+})
+
+// ─── FA-1.46 — form inquiry without client text (empty thread, message=null, trip set) ───
+
+describe('autoSendReply — form inquiry without message (FA-1.46)', () => {
+  beforeEach(() => {
+    vi.mocked(sendMessage).mockReset()
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-form', threadKey: null })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
+  })
+
+  it('drafts from the trip data, judges, and sends at 0.93 — RED on main: "no message thread and no form message to answer"', async () => {
+    setupMockDb({ message: null, conversationMsgs: [], trip_id: 'trip-1' })
+    mockDraftReplyLikeReal(true)
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result).not.toBeNull()
+    expect(result!.reasons, `decision reasons: ${JSON.stringify(result!.reasons)}`).not.toContain('no message thread and no form message to answer')
+    expect(result!.sent).toBe(true)
+    expect(vi.mocked(draftReply)).toHaveBeenCalledWith(expect.objectContaining({ allowFormOnly: true }))
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1)
+    const sendCall = vi.mocked(sendMessage).mock.calls[0][1] as unknown as Record<string, unknown>
+    expect(sendCall.draftId).toBe('draft-form')
+    expect(sendCall.draftedBy).toBe('agent')
+
+    expect(emittedEvents).toHaveLength(1)
+    const payload = emittedEvents[0].payload as Record<string, unknown>
+    expect(payload.sent).toBe(true)
+    expect(payload.draft_message_id).toBe('draft-form')
+  })
+
+  it('also runs for an experience_page_id (no legacy trip_id) — RED on main', async () => {
+    setupMockDb({ message: null, conversationMsgs: [], experience_page_id: 'exp-1' })
+    mockDraftReplyLikeReal(true)
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.sent).toBe(true)
+    expect(vi.mocked(draftReply)).toHaveBeenCalledTimes(1)
+  })
+
+  it('gives the judge the trip/dates/party-size block as the first [ANGLER] message — RED on main', async () => {
+    setupMockDb({ message: null, conversationMsgs: [], trip_id: 'trip-1' })
+    mockDraftReplyLikeReal(false)
+
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(vi.mocked(judgeReply)).toHaveBeenCalledTimes(1)
+    const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(conversationArg.startsWith('[ANGLER] === ORIGINAL INQUIRY ===')).toBe(true)
+    expect(conversationArg).toContain('Angler: Anna Angler')
+    expect(conversationArg).toContain('Experience requested: Iceland Salmon Week')
+    expect(conversationArg).toContain('Requested dates: 2026-07-10, 2026-07-13')
+    expect(conversationArg).toContain('Party size: 2')
+  })
+
+  it('whitespace-only message counts as no message — judge sees the block, not the blanks', async () => {
+    setupMockDb({ message: '   ', conversationMsgs: [], trip_id: 'trip-1' })
+    mockDraftReplyLikeReal(false)
+
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(conversationArg).toContain('=== ORIGINAL INQUIRY ===')
+  })
+
+  it('judge argument is unchanged with a non-empty message (trip set)', async () => {
+    setupMockDb({ message: FORM_TEXT, conversationMsgs: [], trip_id: 'trip-1' })
+    mockDraftReplyLikeReal(false)
+
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(conversationArg).toBe(`[ANGLER] ${FORM_TEXT}`)
+  })
+
+  it('judge argument is unchanged with a non-empty thread (trip set, no message)', async () => {
+    setupMockDb({ message: null, trip_id: 'trip-1' })
+    mockDraftReplyLikeReal(false)
+
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(conversationArg).toBe('[ANGLER] I want to fish NZ rivers.\n\n[AGENT] Great, we can arrange that.')
+  })
+
+  it('no thread, no message and no trip → event with the reason, no draft, no send', async () => {
+    setupMockDb({ message: null, conversationMsgs: [], trip_id: null, experience_page_id: null })
+    mockDraftReplyLikeReal(false)
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.sent).toBe(false)
+    expect(result!.draftMessageId).toBeNull()
+    expect(result!.reasons).toEqual(['no message thread and no form message to answer'])
+    expect(vi.mocked(draftReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
+    assertPreDraftGateEvent('no message thread and no form message')
   })
 })
 
