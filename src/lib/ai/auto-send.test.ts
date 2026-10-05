@@ -63,6 +63,7 @@ vi.mock('@/lib/env', () => ({ env: mockEnv }))
 import { createServiceClient } from '@/lib/supabase/server'
 import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
 import { judgeReply } from '@/lib/ai/judge-reply'
+import type { KnowledgeEntry } from '@/lib/ai/knowledge'
 import { sendMessage } from '@/lib/messages/send'
 import { autoSendReply, hasAgentAutoReply } from './auto-send'
 
@@ -265,7 +266,7 @@ describe('autoSendReply — pre-draft gate failures (event emitted, 0 model call
 describe('autoSendReply — destination gate (post-draft, RED guard)', () => {
   beforeEach(() => {
     vi.mocked(sendMessage).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'] })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [] })
     vi.mocked(judgeReply).mockResolvedValue({ score: 0.95, send: true, reasons: ['looks good'] })
   })
 
@@ -297,7 +298,7 @@ describe('autoSendReply — judge gate failures', () => {
     setupMockDb()
     vi.mocked(sendMessage).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-2', text: 'Hello angler!', subject: 'Re: trip', usedIds: [] })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-2', text: 'Hello angler!', subject: 'Re: trip', usedIds: [], usedEntries: [] })
   })
 
   it('does NOT send when judge score=0.89 and emits sent=false with score', async () => {
@@ -379,7 +380,7 @@ describe('autoSendReply — prompt injection', () => {
     })
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-inject', text: 'Here is your guide...', subject: null, usedIds: [] })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-inject', text: 'Here is your guide...', subject: null, usedIds: [], usedEntries: [] })
     vi.mocked(judgeReply).mockResolvedValue({
       score:   0,
       send:    false,
@@ -410,6 +411,7 @@ describe('autoSendReply — happy path', () => {
       text:    'Looking forward to your NZ trip!',
       subject: 'Re: New Zealand inquiry',
       usedIds: ['k-inst', 'k-dest'],
+      usedEntries: [],
     })
     vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
@@ -440,6 +442,37 @@ describe('autoSendReply — happy path', () => {
   })
 })
 
+// ─── FA-1.47 — the judge sees the knowledge the draft was built from ─────────
+
+describe('autoSendReply — judge receives the draft\'s knowledge (FA-1.47)', () => {
+  const DRAFT_ENTRIES: KnowledgeEntry[] = [
+    { id: 'k-inst', kind: 'instructions', country: null,          guide_id: null, title: 'Instructions', body: 'Be helpful.' },
+    { id: 'k-dest', kind: 'destination',  country: 'New Zealand', guide_id: null, title: 'NZ',           body: 'Great rivers.' },
+  ]
+
+  beforeEach(() => {
+    // The DB holds a tone entry too (see DEFAULT_KNOWLEDGE) — the judge must NOT get a set of its own.
+    setupMockDb({ status: 'new', trip_country: 'New Zealand' })
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(draftReply).mockResolvedValue({
+      draftId: 'draft-k', text: 'NZ draft', subject: null,
+      usedIds: ['k-inst', 'k-dest'], usedEntries: DRAFT_ENTRIES,
+    })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: false, reasons: ['hold'] })
+  })
+
+  it('passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument', async () => {
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(vi.mocked(judgeReply)).toHaveBeenCalledTimes(1)
+    const [, draftTextArg, knowledgeArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(draftTextArg).toBe('NZ draft')
+    expect(knowledgeArg?.map(e => e.id)).toEqual(['k-inst', 'k-dest'])
+    expect(knowledgeArg).toBe(DRAFT_ENTRIES)
+  })
+})
+
 // ─── FA-1.42 — daily cap on auto-sends ───────────────────────────────────────
 
 describe('autoSendReply — daily cap (FA-1.42)', () => {
@@ -453,6 +486,7 @@ describe('autoSendReply — daily cap (FA-1.42)', () => {
       text:    'Looking forward to your NZ trip!',
       subject: 'Re: New Zealand inquiry',
       usedIds: ['k-inst', 'k-dest'],
+      usedEntries: [],
     })
     vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
@@ -542,7 +576,7 @@ function mockDraftReplyLikeReal(threadIsEmpty: boolean) {
     if (threadIsEmpty && params.allowFormOnly !== true) {
       throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
     }
-    return { draftId: 'draft-form', text: 'Thanks for your inquiry!', subject: 'Re: Iceland', usedIds: ['k-inst'] }
+    return { draftId: 'draft-form', text: 'Thanks for your inquiry!', subject: 'Re: Iceland', usedIds: ['k-inst'], usedEntries: [] }
   })
 }
 

@@ -6,7 +6,8 @@
  *   - Loads active knowledge entries from agent_knowledge (instructions, tone, destination, guide).
  *   - Calls the Anthropic API with the assembled prompt.
  *   - Saves the result as a messages row with status='draft', drafted_by='agent'.
- *   - Returns { draftId, text, subject, usedIds } — does NOT send the message.
+ *   - Returns { draftId, text, subject, usedIds, usedEntries } — does NOT send the message.
+ *     usedEntries are the knowledge entries the prompt was built from (FA-1.47: the judge gets the same set).
  *
  * SERVER-ONLY. Callers: src/actions/messages.ts.
  */
@@ -15,7 +16,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { assembleConversation, type ConversationMessage } from './extract-trip'
-import { loadKnowledge } from './knowledge'
+import { loadKnowledge, type KnowledgeEntry } from './knowledge'
 import { buildDraftPrompt, buildDraftSubject, type DraftContext } from './draft-reply-prompt'
 import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 
@@ -39,6 +40,8 @@ export interface DraftReplyResult {
   /** Suggested email subject (email channel only; null for other channels). */
   subject:  string | null
   usedIds:  string[]
+  /** The entries behind usedIds, in the same order (instructions first). */
+  usedEntries: KnowledgeEntry[]
 }
 
 export class DraftReplyError extends Error {
@@ -205,5 +208,6 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     text:    draftText,
     subject,
     usedIds,
+    usedEntries: [instructions, ...entries],
   }
 }
