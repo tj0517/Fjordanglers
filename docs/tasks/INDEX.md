@@ -78,7 +78,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.43 | Formularz — honeypot i minimalny czas; podejrzane zapytanie zapisane, ale bez AI i maili | S | sonnet | done | FA-1.42 |
 | FA-1.44 | Bateria testów sędziego — rozkład ocen, przypadki brzegowe, wrogi tekst formularza | M | sonnet | todo | FA-1.40 |
 | FA-1.45 | Włączenie auto-odpowiedzi — lista kontrolna: dev, pierwsza wysyłka na własny adres, flaga na prod, monitoring, wyłączenie; robi tj | S | — (człowiek) | todo | FA-1.41, FA-1.42, FA-1.43, FA-1.44 |
-| FA-1.46 | Auto-wysyłka odpowiada na zapytanie z formularza bez tekstu klienta — dane formularza jako wejście, sędzia widzi ten sam blok | S | sonnet | in_progress | FA-1.40 |
+| FA-1.46 | Auto-wysyłka odpowiada na zapytanie z formularza bez tekstu klienta — dane formularza jako wejście, sędzia widzi ten sam blok | S | sonnet | review (PR #126) | FA-1.40 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |

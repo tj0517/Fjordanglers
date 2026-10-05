@@ -2,13 +2,14 @@
 id: FA-1.46
 title: Auto-wysyłka odpowiada na zapytanie z formularza bez tekstu klienta — wejściem są dane formularza (wyprawa, daty, liczba osób), sędzia widzi ten sam blok
 stage: 1
-status: in_progress
+status: review
 difficulty: S
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: fix/auto-send-form-without-message
+pr: 126
 depends_on: [FA-1.40]
 blocked_by_questions: []
 touches_db: false
