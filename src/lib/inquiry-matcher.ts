@@ -134,3 +134,34 @@ export async function matchInquiryByEmail(email: string): Promise<string | null>
   if (error || !data) return null
   return data.id
 }
+
+// ─── matchInquiryByRecipient ──────────────────────────────────────────────────
+
+/**
+ * Find the most recent non-cancelled inquiry where angler_email matches any of the
+ * given recipient addresses. Used for outbound mail copied to the inbound address:
+ * the client is the *recipient*, not the sender.
+ *
+ * Returns the first matching inquiry id, or null.
+ */
+export async function matchInquiryByRecipient(toAddresses: string[]): Promise<string | null> {
+  const supabase = createServiceClient()
+
+  for (const addr of toAddresses) {
+    const normalised = addr.trim().toLowerCase()
+    if (!normalised) continue
+
+    const { data, error } = await supabase
+      .from('inquiries')
+      .select('id')
+      .ilike('angler_email', normalised)
+      .not('status', 'in', '("cancelled","refunded")')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!error && data) return data.id
+  }
+
+  return null
+}
