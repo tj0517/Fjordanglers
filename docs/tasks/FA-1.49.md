@@ -2,13 +2,14 @@
 id: FA-1.49
 title: Maile wychodzące wysłane ze skrzynki Zoho trafiają do wątku zapytania — kopia BCC na adres inbound, rozpoznana jako wiadomość wychodząca człowieka
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/import-outbound-zoho-mail
+pr:
 depends_on: [FA-1.40]
 blocked_by_questions: []
 touches_db: false
