@@ -2,7 +2,7 @@
 id: FA-1.47
 title: Sędzia auto-wysyłki dostaje wiedzę, z której powstał szkic — instrukcje, wpis kraju i guide'a jako źródło prawdy o cenach i zasadach
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:

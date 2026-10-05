@@ -79,7 +79,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.44 | Bateria testów sędziego — rozkład ocen, przypadki brzegowe, wrogi tekst formularza | M | sonnet | todo | FA-1.40, FA-1.47 |
 | FA-1.45 | Włączenie auto-odpowiedzi — lista kontrolna: dev, pierwsza wysyłka na własny adres, flaga na prod, monitoring, wyłączenie; robi tj | S | — (człowiek) | todo | FA-1.41, FA-1.42, FA-1.43, FA-1.44 |
 | FA-1.46 | Auto-wysyłka odpowiada na zapytanie z formularza bez tekstu klienta — dane formularza jako wejście, sędzia widzi ten sam blok | S | sonnet | done | FA-1.40 |
-| FA-1.47 | Sędzia auto-wysyłki dostaje wiedzę, z której powstał szkic — ceny i zasady jako źródło prawdy | M | sonnet | in_progress | FA-1.40 |
+| FA-1.47 | Sędzia auto-wysyłki dostaje wiedzę, z której powstał szkic — ceny i zasady jako źródło prawdy | M | sonnet | review | FA-1.40 |
 | FA-1.49 | Maile wychodzące ze skrzynki Zoho trafiają do wątku zapytania — kopia na adres inbound, rozpoznana jako wiadomość człowieka | M | sonnet | todo | FA-1.40 |
 | FA-1.48 | Auto-wysyłka prowadzi wątek tylko do przejęcia przez człowieka — po ręcznej odpowiedzi agent milczy | M | sonnet | todo | FA-1.40, FA-1.49 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |

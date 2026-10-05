@@ -1,0 +1,48 @@
+
+ RUN  v4.0.18 /home/tj/Fjordanglers
+
+ ✓ src/lib/ai/draft-reply-prompt.test.ts (3 tests) 3ms
+ ✓ src/lib/ai/judge-reply.test.ts (6 tests) 6ms
+ ✓ src/lib/ai/draft-reply.test.ts (19 tests) 30ms
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (API error)
+[autoSendReply] judgeReply failed: Error: Anthropic API timeout
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:333:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (malformed JSON)
+[autoSendReply] judgeReply failed: SyntaxError: Unexpected token < in JSON at position 0
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:353:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — daily cap (FA-1.42) > holds the draft with a reason when the count query fails (D4) — nothing is sent
+[autoSendReply] daily cap count failed: Error: connection reset
+    at countAutoSendsSince (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:511:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at dailyCapHoldReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:224:26)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:185:24)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:558:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+ ✓ src/lib/ai/auto-send.test.ts (31 tests) 30ms
+
+ Test Files  4 passed (4)
+      Tests  59 passed (59)
+   Start at  14:31:56
+   Duration  556ms (transform 725ms, setup 89ms, import 872ms, tests 68ms, environment 0ms)
+

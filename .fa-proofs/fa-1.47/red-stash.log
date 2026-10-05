@@ -1,0 +1,199 @@
+
+ RUN  v4.0.18 /home/tj/Fjordanglers
+
+ ✓ src/lib/ai/draft-reply-prompt.test.ts (3 tests) 4ms
+ ❯ src/lib/ai/judge-reply.test.ts (6 tests | 2 failed) 19ms
+     × puts every knowledge entry (kind label, title, body) in a "KNOWLEDGE BASE (source of truth)" section — RED on main 15ms
+     × places the knowledge before the conversation and the draft, and states the new rule 1ms
+     ✓ keeps every existing "never auto" rule when knowledge is passed 1ms
+     ✓ without knowledge the input is the pre-change format — no knowledge section, no new rule 1ms
+     ✓ an empty knowledge array gives the same input as no argument 0ms
+     ✓ still returns the parsed verdict and keeps the threshold at 0.9 1ms
+ ❯ src/lib/ai/draft-reply.test.ts (19 tests | 1 failed) 36ms
+     ✓ saves a draft row with status=draft and drafted_by=agent 20ms
+     ✓ does NOT insert an inquiry_events row 1ms
+     ✓ returns the ids of used knowledge entries 1ms
+     × returns the used knowledge entries with the same ids as usedIds (FA-1.47) — RED on main: no usedEntries 5ms
+     ✓ throws a readable DraftReplyError when thread is empty (default: allowFormOnly not set) 1ms
+     ✓ throws DraftReplyError when no active instructions entry exists 1ms
+     ✓ drafts from the form message when the thread is empty and allowFormOnly is true 1ms
+     ✓ drafts a guide message from the form data too, with an empty thread and allowFormOnly 0ms
+     ✓ throws a readable DraftReplyError when there is neither a thread nor a form message 1ms
+     ✓ drafts from the form data when message is empty but trip_id is set 0ms
+     ✓ drafts from the form data when message is empty but experience_page_id is set 0ms
+     ✓ still refuses without allowFormOnly, even when the inquiry has a trip 0ms
+     ✓ the no-trip error says why: no form message and no trip to write from 0ms
+     ✓ (b) second call with existing draft updates the row — no duplicate insert 2ms
+     ✓ (c) draft messages are excluded from the conversation context sent to AI 0ms
+     ✓ email → non-empty subject containing country and name 0ms
+     ✓ whatsapp → null 0ms
+     ✓ instagram → null 0ms
+     ✓ email with null country → uses fallback 0ms
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (API error)
+[autoSendReply] judgeReply failed: Error: Anthropic API timeout
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:333:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (malformed JSON)
+[autoSendReply] judgeReply failed: SyntaxError: Unexpected token < in JSON at position 0
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:353:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — daily cap (FA-1.42) > holds the draft with a reason when the count query fails (D4) — nothing is sent
+[autoSendReply] daily cap count failed: Error: connection reset
+    at countAutoSendsSince (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:511:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at dailyCapHoldReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:224:26)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:185:24)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:558:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+ ❯ src/lib/ai/auto-send.test.ts (31 tests | 1 failed) 35ms
+     ✓ returns AutoSendResult{sent=false} for counterpart=guide and emits agent.auto_send_decided 3ms
+     ✓ returns AutoSendResult{sent=false} for channel=whatsapp and emits agent.auto_send_decided 1ms
+     ✓ returns AutoSendResult{sent=false} for status=waiting_guide and emits agent.auto_send_decided 1ms
+     ✓ does NOT send and emits sent=false when no destination entry exists — RED: remove destination gate and this test fails 2ms
+     ✓ does NOT send when judge score=0.89 and emits sent=false with score 1ms
+     ✓ does NOT send when judge send=false (complaint) even if score=0.97 0ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (API error) 7ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (malformed JSON) 1ms
+     ✓ passes injection text to judgeReply as conversation data, not as instructions 1ms
+     ✓ calls sendMessage with agent actor and emits agent.auto_send_decided sent=true; status stays new 2ms
+     × passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument 3ms
+     ✓ holds the draft when 5 auto-sends already went out in 24 h (default cap) — RED on main: sendMessage is called 1ms
+     ✓ still sends with 4 auto-sends in the window (below the default cap) 0ms
+     ✓ takes the cap from AI_AUTO_SEND_DAILY_CAP: 2 sent with cap 2 holds, 1 sent with cap 2 sends 1ms
+     ✓ keeps the judge reasons when the judge already said no — the cap only holds what would have gone out 0ms
+     ✓ holds the draft with a reason when the count query fails (D4) — nothing is sent 2ms
+     ✓ drafts from the form, judges, and sends at 0.93 — RED on main: draftReply throws "thread is empty" 1ms
+     ✓ passes the form text to the judge as the first [ANGLER] message — RED on main 0ms
+     ✓ leaves the judge conversation unchanged when the thread is not empty, even if the inquiry has a form message 0ms
+     ✓ no thread and message=null → event with a reason, no draft, no send — RED on main 1ms
+     ✓ no thread and message="   " → event with a reason, no draft, no send — RED on main 0ms
+     ✓ missing active instructions entry (DraftReplyError) still returns null with no event — FA-1.27 behaviour kept 1ms
+     ✓ drafts from the trip data, judges, and sends at 0.93 — RED on main: "no message thread and no form message to answer" 1ms
+     ✓ also runs for an experience_page_id (no legacy trip_id) — RED on main 0ms
+     ✓ gives the judge the trip/dates/party-size block as the first [ANGLER] message — RED on main 0ms
+     ✓ whitespace-only message counts as no message — judge sees the block, not the blanks 0ms
+     ✓ judge argument is unchanged with a non-empty message (trip set) 0ms
+     ✓ judge argument is unchanged with a non-empty thread (trip set, no message) 0ms
+     ✓ no thread, no message and no trip → event with the reason, no draft, no send 1ms
+     ✓ returns true when a prior agent-sent message exists 0ms
+     ✓ returns false when no prior agent-sent message exists 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — judge receives the draft's knowledge (FA-1.47) > passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument
+AssertionError: expected undefined to deeply equal [ 'k-inst', 'k-dest' ]
+
+- Expected: 
+[
+  "k-inst",
+  "k-dest",
+]
+
++ Received: 
+undefined
+
+ ❯ src/lib/ai/auto-send.test.ts:471:42
+    469|     const [, draftTextArg, knowledgeArg] = vi.mocked(judgeReply).mock.…
+    470|     expect(draftTextArg).toBe('NZ draft')
+    471|     expect(knowledgeArg?.map(e => e.id)).toEqual(['k-inst', 'k-dest'])
+       |                                          ^
+    472|     expect(knowledgeArg).toBe(DRAFT_ENTRIES)
+    473|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply > returns the used knowledge entries with the same ids as usedIds (FA-1.47) — RED on main: no usedEntries
+TypeError: Cannot read properties of undefined (reading 'map')
+ ❯ src/lib/ai/draft-reply.test.ts:209:31
+    207|     })
+    208| 
+    209|     expect(result.usedEntries.map(e => e.id)).toEqual(result.usedIds)
+       |                               ^
+    210|     expect(result.usedEntries[0]).toMatchObject({ id: 'k-inst', kind: …
+    211|     expect(result.usedEntries.map(e => e.id)).toContain('k-iceland')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — knowledge in the input (FA-1.47) > puts every knowledge entry (kind label, title, body) in a "KNOWLEDGE BASE (source of truth)" section — RED on main
+AssertionError: expected 'You are a quality judge for a fishing…' to contain '=== KNOWLEDGE BASE (source of truth) …'
+
+- Expected
++ Received
+
+- === KNOWLEDGE BASE (source of truth) ===
++ You are a quality judge for a fishing-trip agency's (FjordAnglers) auto-reply system.
++ You will receive a conversation thread and a draft reply the AI has prepared.
++
++ Your task: decide whether the draft is safe to send automatically.
++
++ Return ONLY valid JSON — no other text, no markdown fences:
++ {"score": 0.0, "send": false, "reasons": ["reason"]}
++
++ RULES — set "send" to false (regardless of score) when ANY of these apply:
++ - The message contains a complaint, accusation or negative sentiment toward the agency
++ - The message compares FjordAnglers with a competitor
++ - The message asks for a guide's direct contact, phone or email
++ - Something has gone wrong (booking issue, refund, error, overcharge)
++ - The angler's question cannot be answered from the knowledge provided in the draft
++ - The message is vague, unclear or doesn't fit any known stage of the booking process
++ - The draft breaks any rules from the instructions (e.g. asks again for party size already given, promises dates that may not be available, speculates about guide availability)
++ - The draft proposes something that needs admin review before committing (pricing, exceptions, custom terms)
++ - The draft addresses the wrong person or makes a factual claim that could be wrong
++
++ Score (0.0–1.0) = your confidence that the draft is accurate, appropriate and complete.
++ Threshold for auto-send is 0.9 — be strict; when in doubt, score below the threshold.
++
++
++ === CONVERSATION ===
++ [ANGLER] Hi, two of us want to fish NZ rivers in February.
++
++ === DRAFT REPLY ===
++ Thanks! The guided day is 1 440 NZD plus 60 NZD for the licence.
+
+ ❯ src/lib/ai/judge-reply.test.ts:60:21
+     58| 
+     59|     const content = sentUserContent()
+     60|     expect(content).toContain('=== KNOWLEDGE BASE (source of truth) ==…
+       |                     ^
+     61|     for (const e of KNOWLEDGE) {
+     62|       expect(content).toContain(e.title)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — knowledge in the input (FA-1.47) > places the knowledge before the conversation and the draft, and states the new rule
+AssertionError: expected -1 to be greater than -1
+ ❯ src/lib/ai/judge-reply.test.ts:76:16
+     74|     const conv = content.indexOf('=== CONVERSATION ===')
+     75|     const draft = content.indexOf('=== DRAFT REPLY ===')
+     76|     expect(kb).toBeGreaterThan(-1)
+       |                ^
+     77|     expect(kb).toBeLessThan(conv)
+     78|     expect(conv).toBeLessThan(draft)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  3 failed | 1 passed (4)
+      Tests  4 failed | 55 passed (59)
+   Start at  14:31:55
+   Duration  562ms (transform 704ms, setup 101ms, import 836ms, tests 93ms, environment 1ms)
+
