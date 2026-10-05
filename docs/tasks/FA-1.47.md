@@ -2,7 +2,7 @@
 id: FA-1.47
 title: Sędzia auto-wysyłki dostaje wiedzę, z której powstał szkic — instrukcje, wpis kraju i guide'a jako źródło prawdy o cenach i zasadach
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -79,3 +79,4 @@ git diff main...HEAD -- src/lib/ai/judge-reply.ts
 - 2026-10-05 tj, D1: `draftReply` zwraca także wpisy wiedzy, których użył (obok `usedIds`) — źródło dla sędziego bez drugiego zapytania; do zakresu dodany punkt i test `draftReply`.
 - 2026-10-05 tj, D2: z zakresu usunięty punkt o edycji `depends_on` w FA-1.44 i wiersza INDEX — FA-1.47 jest tam już od PR #127.
 - 2026-10-05 tj, D3: przypadek zachowania z prawdziwym modelem używa `ANTHROPIC_API_KEY` z `.env.local` (osobnego klucza dev nie ma), jak `.fa-proofs/demo-auto-send-form.mts`; skrypt woła tylko `judgeReply`, bez bazy i bez maila, ze strażnikiem flagi fake (§10).
+- 2026-10-05 tj: accepted, PR #128. Proved: judge test and autoSendReply test red on main then green (4 red / 55 green, 59 green after), draftReply returns usedEntries with ids equal to usedIds, real-model run on synthetic NZ fixtures 0.95 / 0.30 / 0.20, diff of judge-reply.ts limited to input and the added knowledge section, JUDGE_THRESHOLD unchanged, typecheck/lint/test run/knip green. Rule-clash decision (a): older rules left verbatim, measured in FA-1.44. Not proven: behaviour on production knowledge entries (synthetic instructions in the proof).
