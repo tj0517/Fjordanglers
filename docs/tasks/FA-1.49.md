@@ -9,7 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: feat/import-outbound-zoho-mail
-pr:
+pr: 129
 depends_on: [FA-1.40]
 blocked_by_questions: []
 touches_db: false
