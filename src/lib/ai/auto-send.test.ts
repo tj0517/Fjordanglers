@@ -47,6 +47,12 @@ vi.mock('@/lib/messages/send', () => ({
 }))
 
 vi.mock('@/lib/supabase/server', () => ({ createServiceClient: vi.fn() }))
+
+// FA-1.46: the judge block carries the trip title; the lookup itself is not under test here.
+vi.mock('@/lib/inquiries/experience-lookup', () => ({
+  getInquiryExperience: vi.fn(async () => ({ name: 'Iceland Salmon Week' })),
+  tripTitleOf: (exp: { name: string } | null) => exp?.name ?? 'Your trip',
+}))
 // Mutable env so the cap tests can set AI_AUTO_SEND_DAILY_CAP (undefined → default 5, FA-1.42)
 const mockEnv = vi.hoisted(() => ({
   ANTHROPIC_API_KEY:       'test-key',
@@ -671,6 +677,7 @@ describe('autoSendReply — form inquiry without message (FA-1.46)', () => {
     const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
     expect(conversationArg.startsWith('[ANGLER] === ORIGINAL INQUIRY ===')).toBe(true)
     expect(conversationArg).toContain('Angler: Anna Angler')
+    expect(conversationArg).toContain('Experience requested: Iceland Salmon Week')
     expect(conversationArg).toContain('Requested dates: 2026-07-10, 2026-07-13')
     expect(conversationArg).toContain('Party size: 2')
   })

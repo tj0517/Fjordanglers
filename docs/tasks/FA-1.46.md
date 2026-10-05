@@ -2,7 +2,7 @@
 id: FA-1.46
 title: Auto-wysyłka odpowiada na zapytanie z formularza bez tekstu klienta — wejściem są dane formularza (wyprawa, daty, liczba osób), sędzia widzi ten sam blok
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
@@ -77,3 +77,5 @@ git diff main...HEAD --stat -- src/lib/ai/judge-reply.ts   # puste
 
 ## Notatki z realizacji
 - 2026-10-04 tj: dowód z prod — zapytanie 5b5c0418-dca7-4369-aa63-eb86be4a4d0e: `inquiry.created` 02:22:06, `agent.auto_send_decided` 02:22:08 (`sent=false`, `score=null`, powód „no message thread and no form message to answer”). Wybór A (pisać z danych formularza), D1 = a.
+- 2026-10-05 tj: trzecie kryterium „Gotowe, gdy” (brak wątku, `message`, wyprawy) jest zielone już na `main`, więc czerwień pokazujemy na celowo zepsutej bramce: tymczasowo usunąć nowy warunek wyprawy, wkleić porażkę testu, przywrócić, wkleić zielony. Tymczasowa zmiana nigdy nie trafia do commita.
+- 2026-10-05 tj: bramka `draftReply` z `allowFormOnly` używa warunku „zapytanie ma wyprawę” (`trip_id` lub `experience_page_id`) — tego samego co `autoSendReply`. „Dowolne z wyprawa/daty/liczba osób” odrzucone: liczba osób zawsze ma wartość, więc bramka nigdy by nie odrzuciła.

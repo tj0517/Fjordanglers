@@ -5,7 +5,7 @@
  *   Pre-draft gates → draftReply (always saves draft) → destination gate → judge → daily cap → send or hold.
  *   Emits `agent.auto_send_decided` for EVERY invocation that gets past the hard errors below:
  *     - pre-draft gate failures: sent=false, score=null, draft_message_id=null + reason
- *       (includes FA-1.40: no thread and no form message — nothing to answer)
+ *       (includes FA-1.40/1.46: no thread, no form message and no trip — nothing to answer)
  *     - all post-draft outcomes: sent, score, draft_message_id from the saved draft
  *   Exception: flag-off is the CALLER's responsibility — no call → no event.
  *
@@ -20,6 +20,8 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
 import { judgeReply, JUDGE_THRESHOLD } from '@/lib/ai/judge-reply'
 import { loadKnowledge } from '@/lib/ai/knowledge'
+import { assembleConversation } from '@/lib/ai/extract-trip'
+import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 import { sendMessage } from '@/lib/messages/send'
 import {
   getInquiryForAutoSend,
@@ -59,14 +61,16 @@ export async function hasAgentAutoReply(inquiryId: string): Promise<boolean> {
  * Runs the full auto-send pipeline for one inquiry.
  *
  * Emits `agent.auto_send_decided` for every invocation, including pre-draft gate
- * failures and an inquiry with neither a thread nor a form message. Returns null ONLY
+ * failures and an inquiry with no thread, no form message and no trip. Returns null ONLY
  * for hard errors (inquiry not found, no angler email, draftReply failed — e.g. no
  * active instructions entry; logged, no event). Returns AutoSendResult for gate
  * failures and post-draft outcomes.
  *
  * A form inquiry keeps the client's text in inquiries.message with an empty thread
  * (FA-1.40): the draft is written from it (allowFormOnly) and the judge sees it as
- * the first [ANGLER] message. A non-empty thread is judged exactly as before.
+ * the first [ANGLER] message. A form without text but with a trip (FA-1.46) is drafted
+ * from the form data, and the judge sees the ORIGINAL INQUIRY block as the first [ANGLER]
+ * message. A non-empty thread is judged exactly as before.
  * Flag-off is the caller's responsibility — do not call this when the flag is off.
  */
 export async function autoSendReply(params: {
@@ -102,19 +106,40 @@ export async function autoSendReply(params: {
   if (!inquiry.angler_email) return null
 
   // Conversation for the judge: sent/received messages (no drafts). On a form inquiry
-  // the thread is empty and the client's text lives in inquiries.message (FA-1.40).
+  // the thread is empty and the client's text lives in inquiries.message (FA-1.40). A form
+  // without text is answered from its trip data (FA-1.46) — same condition as draftReply.
   const msgs = await getConversationForJudge(supabase, inquiryId)
   const formText = inquiry.message?.trim() ?? ''
+  const hasTrip = inquiry.trip_id != null || inquiry.experience_page_id != null
 
-  if (msgs.length === 0 && formText === '') {
+  if (msgs.length === 0 && formText === '' && !hasTrip) {
     const reason = 'no message thread and no form message to answer'
     await emitDecision(supabase, inquiryId, null, false, null, [reason])
     return { sent: false, score: null, reasons: [reason], draftMessageId: null }
   }
 
-  const conversationText = msgs.length === 0
-    ? `[ANGLER] ${formText}`
-    : msgs.map(m => `[${m.direction === 'inbound' ? 'ANGLER' : 'AGENT'}] ${m.body}`).join('\n\n')
+  let conversationText: string
+  if (msgs.length > 0) {
+    conversationText = msgs.map(m => `[${m.direction === 'inbound' ? 'ANGLER' : 'AGENT'}] ${m.body}`).join('\n\n')
+  } else if (formText !== '') {
+    conversationText = `[ANGLER] ${formText}`
+  } else {
+    // Same facts and same assembler call as draftReply, so judge and draft see one block.
+    const tripTitle = tripTitleOf(await getInquiryExperience({
+      experience_page_id: inquiry.experience_page_id,
+      trip_id:            inquiry.trip_id,
+    }))
+    conversationText = `[ANGLER] ${assembleConversation(
+      inquiry.angler_name,
+      null,
+      inquiry.requested_dates ?? [],
+      inquiry.party_size ?? 1,
+      tripTitle,
+      [],
+      null,
+      inquiry.source,
+    )}`
+  }
 
   // Draft — saved here regardless of gate 4 or judge, so admin always has it to edit.
   let draft: Awaited<ReturnType<typeof draftReply>>
