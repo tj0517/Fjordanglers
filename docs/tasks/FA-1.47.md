@@ -9,6 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: fix/judge-sees-knowledge
+pr: 128
 depends_on: [FA-1.40]
 blocked_by_questions: []
 touches_db: false
