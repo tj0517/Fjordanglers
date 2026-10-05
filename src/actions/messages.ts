@@ -865,7 +865,8 @@ export async function proposeDraft(
   try {
     const result = await draftReply({ inquiryId, counterpart, channel, allowFormOnly: true })
     revalidatePath('/admin/inquiries/' + inquiryId)
-    return { success: true, ...result }
+    // Not a spread: usedEntries carries the knowledge bodies, which the client has no use for.
+    return { success: true, draftId: result.draftId, text: result.text, subject: result.subject, usedIds: result.usedIds }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return { success: false, error: msg }

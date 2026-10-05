@@ -1,0 +1,42 @@
+
+ RUN  v4.0.18 /home/tj/Fjordanglers
+
+stdout | .fa-proofs/fa-1.47/judge-knowledge.mts > FA-1.47 proof — judge with knowledge
+JUDGE_THRESHOLD = 0.9
+
+stdout | .fa-proofs/fa-1.47/judge-knowledge.mts > FA-1.47 proof — judge with knowledge
+
+=== Draft 1 consistent with the entry (expect: score >= 0.9) ===
+score=0.95 send=true → would auto-send: true
+  - Message is warm and direct, appropriate for first contact
+  - Pricing quoted accurately per knowledge base (1440 NZD + 60 NZD)
+  - Correctly states full-day-only policy
+  - Accurately lists what angler must bring and what guide supplies
+  - Does not promise specific dates or guide availability; correctly defers to founders
+  - Does not re-ask for party size (already given as two)
+  - Tone matches instructions: warm, first person plural, short paragraphs, no excessive punctuation
+  - Appropriate next step (asking for specific dates) to move booking forward
+
+stdout | .fa-proofs/fa-1.47/judge-knowledge.mts > FA-1.47 proof — judge with knowledge
+
+=== Draft 2 contradicting the entry (expect: score < 0.9 or send=false) ===
+score=0.3 send=false → would auto-send: false
+  - Price quote is incorrect: draft states 900 NZD but knowledge base specifies 1,440 NZD per day for up to two anglers, plus 60 NZD for licence and fees (total 1,500 NZD). This is a factual error that contradicts the knowledge base.
+  - Draft offers half-day option, but knowledge base explicitly states 'The guide works full days only (no half days).' This contradicts the instructions.
+  - Draft promises guide availability ('the guide is happy to do a half day') which violates the instruction: 'Never promise availability of a specific day or guide: availability is confirmed by the founders after the angler replies.'
+
+stdout | .fa-proofs/fa-1.47/judge-knowledge.mts > FA-1.47 proof — judge with knowledge
+
+=== Draft 3 promise outside the knowledge (expect: score < 0.9 or send=false) ===
+score=0.2 send=false → would auto-send: false
+  - The draft promises a specific date (18 February) and guide availability, which violates the instruction: 'Never promise availability of a specific day or guide: availability is confirmed by the founders after the angler replies.' The draft should not confirm a booking before the founders have reviewed the request.
+  - The draft makes a factual claim about guide availability ('the guide is free on 18 February') that is not in the knowledge base and cannot be verified by the AI system.
+
+ ✓ .fa-proofs/fa-1.47/judge-knowledge.mts (1 test) 5787ms
+   ✓ FA-1.47 proof — judge with knowledge  5786ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  14:32:25
+   Duration  6.07s (transform 63ms, setup 0ms, import 159ms, tests 5.79s, environment 0ms)
+

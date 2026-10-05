@@ -1,8 +1,10 @@
 /**
  * Judge for the hybrid auto-send pipeline. FA-1.27.
  *
- * judgeReply(conversation, draftText)
- *   Sends the conversation thread + draft + "never auto" rules to Haiku.
+ * judgeReply(conversation, draftText, knowledge?)
+ *   Sends the conversation thread + draft + "never auto" rules to Haiku. When `knowledge` is
+ *   given (the entries the draft was built from, FA-1.47) they go in as the source of truth
+ *   for prices, guide rules and instructions.
  *   Returns { score (0–1), send (bool), reasons (string[]) }.
  *   Caller decides whether to send based on JUDGE_THRESHOLD.
  *
@@ -11,6 +13,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import { env } from '@/lib/env'
+import type { KnowledgeEntry } from './knowledge'
 
 export const JUDGE_THRESHOLD = 0.9
 
@@ -44,15 +47,45 @@ Score (0.0–1.0) = your confidence that the draft is accurate, appropriate and 
 Threshold for auto-send is 0.9 — be strict; when in doubt, score below the threshold.
 `
 
-export async function judgeReply(conversation: string, draftText: string): Promise<JudgeResult> {
+// Added to the input only when knowledge is passed (FA-1.47); the rules above stay as they were.
+const KNOWLEDGE_RULE = `\
+KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly what the drafting agent was given. They are the source of truth for prices, guide rules and instructions.
+- A claim in the draft that is consistent with the knowledge base is verified. Do not treat it as unverified and do not lower the score for it.
+- Set "send" to false, and score below the threshold, when the draft contradicts the knowledge base, states a fact that is not in the knowledge base, or promises something the "Instructions" entry forbids.
+`
+
+function formatKnowledge(entries: KnowledgeEntry[]): string {
+  return entries.map(entry => {
+    const label =
+      entry.kind === 'instructions' ? 'Instructions' :
+      entry.kind === 'guide'        ? `Guide (${entry.guide_id ?? 'unknown'})` :
+      entry.kind === 'destination'  ? `Destination: ${entry.country ?? 'unknown'}` :
+      'Tone'
+    return `--- ${label} (${entry.title}) ---\n${entry.body}`
+  }).join('\n\n')
+}
+
+export async function judgeReply(
+  conversation: string,
+  draftText:    string,
+  knowledge:    KnowledgeEntry[] = [],
+): Promise<JudgeResult> {
   const apiKey = env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('[judgeReply] ANTHROPIC_API_KEY not set')
 
   const client = new Anthropic({ apiKey })
 
+  const knowledgeSection = knowledge.length === 0 ? [] : [
+    KNOWLEDGE_RULE,
+    '=== KNOWLEDGE BASE (source of truth) ===',
+    formatKnowledge(knowledge),
+    '',
+  ]
+
   const userContent = [
     JUDGE_PROMPT,
     '',
+    ...knowledgeSection,
     '=== CONVERSATION ===',
     conversation,
     '',

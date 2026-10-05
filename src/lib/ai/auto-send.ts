@@ -169,7 +169,7 @@ export async function autoSendReply(params: {
   // Judge
   let judged: Awaited<ReturnType<typeof judgeReply>>
   try {
-    judged = await judgeReply(conversationText, draft.text)
+    judged = await judgeReply(conversationText, draft.text, draft.usedEntries)
   } catch (err) {
     const reason = `judge error: ${err instanceof Error ? err.message : String(err)}`
     console.error('[autoSendReply] judgeReply failed:', err)
