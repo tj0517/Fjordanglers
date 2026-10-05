@@ -82,6 +82,14 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.47 | Sędzia auto-wysyłki dostaje wiedzę, z której powstał szkic — ceny i zasady jako źródło prawdy | M | sonnet | todo | FA-1.40 |
 | FA-1.49 | Maile wychodzące ze skrzynki Zoho trafiają do wątku zapytania — kopia na adres inbound, rozpoznana jako wiadomość człowieka | M | sonnet | todo | FA-1.40 |
 | FA-1.48 | Auto-wysyłka prowadzi wątek tylko do przejęcia przez człowieka — po ręcznej odpowiedzi agent milczy | M | sonnet | todo | FA-1.40, FA-1.49 |
+| FA-1.50 | EXPAND — oferta zamiast przewodnika w schemacie: `experience_guides`, `experience_prices`, aliasy slugów, pola treści, `inquiries.brief`; backfill; nic nie usuwa | L | opus | todo | — |
+| FA-1.51 | SYNC — triggery `guide_id` ↔ `experience_guides`, `price_from` ↔ centy; testy w obie strony z red proofem | M | sonnet | todo | FA-1.50 |
+| FA-1.52 | Dwa szablony na `/experiences/[slug]` — `_v1/` bez zmian, router po fladze × `page_version`, `?preview=v2` dla admina, 301 z aliasów | M | sonnet | todo | FA-1.50 |
+| FA-1.53 | Szablon v2 S0–S2 — hero, chipy, 3 linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; `getExperienceV2()` | L | opus | todo | FA-1.52 |
+| FA-1.54 | Szablon v2 S3–S9 — w skrócie, w cenie / poza ceną, dla kogo / nie, przebieg dnia, przewodnicy, 4 kroki, cena i depozyt | M | sonnet | todo | FA-1.53 |
+| FA-1.55 | Szablon v2 S10–S14 + formularz 3-krokowy → `inquiries` + `brief`; recenzje z linkiem, mapa, sezon, FAQ | L | opus | todo | FA-1.54 |
+| FA-1.56 | Admin — zakładka v2: przewodnicy (wielu), tryb, cennik, pola treści, `page_version`, aliasy slugów | L | opus | todo | FA-1.50 |
+| FA-1.57 | Pilot v2 — jedna strona NZ na `page_version=2` (prod), 14 dni pomiaru v1 vs v2; robi tj | S | — (człowiek) | todo | FA-1.53, FA-1.54, FA-1.55, FA-1.56 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
@@ -99,3 +107,4 @@ FA-1.28–1.32 dopisane 24 IX 2026 (wf-plan) z wierszy FA-1.18 w `docs/deferred-
 FA-1.35–1.39 dopisane 27 IX 2026 (/wf-plan fa „wykresy pokazują prawdę”) — decyzje tj: D1 każdy rekord osobno, D3 pełny zakres; O-25 rozstrzygnięte. Od 27 IX bazą PR-ów jest `main` (`stage-1` zamknięty po FA-1.34). Ścieżka krytyczna: FA-1.37 → FA-1.38 → merge do `main` → FA-1.39.
 FA-1.40 dopisane 1 X 2026 (/wf-plan fa „fixing this”) — luka FA-1.34: auto-wysyłka nie obsługiwała pustego wątku; decyzje tj D1 (auto-wysyłka), D2 (formularz z zapytania).
 FA-1.41–1.45 dopisane 2 X 2026 (/wf-plan fa „ochrona formularza przed włączeniem auto-odpowiedzi”) — luka: `POST /api/inquiries` bez limitu i ochrony przed botami, a po FA-1.40 każde żądanie uruchamia AI i maile. Decyzje tj: O-26 Upstash, O-27 honeypot + czas, O-28 zapis zawsze + pominięcie AI i maili dla powtórek, O-29 fail-open, O-30 sufit 5 auto-wysyłek dziennie na start; pakiet pełny. Ścieżka krytyczna: FA-1.41 ∥ FA-1.42 → FA-1.43; FA-1.44 równolegle → FA-1.45.
+FA-1.50–1.57 dopisane 5 X 2026 (/wf-plan fa „strona ofertowa = oferta, nie przewodnik”, `docs/proposals/2026-10-05-experience-offer-centric.md`) — expand → sync → switch → pilot; CONTRACT (drop + rename) odłożony do etapu 4 (`docs/deferred-tasks.md`). Decyzje tj: O-31 cena całkowita, O-32 nadpisanie do ~15%, O-33 warianty = osobna strona, O-34 wszyscy przypięci przewodnicy, O-35 zwrot depozytu globalny FA + pogoda per oferta, O-36 SLA per oferta; `brief` już w EXPAND; numeracja ciągła (etapy 2–3 odłożone). Ścieżka krytyczna: FA-1.50 → FA-1.52 → FA-1.53 → FA-1.54 → FA-1.55 → FA-1.57; FA-1.51 ∥ FA-1.56 po FA-1.50.
