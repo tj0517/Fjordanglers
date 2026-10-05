@@ -78,3 +78,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ## Notatki z realizacji
 - 2026-10-05 tj: odpowiada klientom bezpośrednio z Zoho Mail; te maile nie są w `messages`, więc agent (FA-1.48) nie wie o przejęciu wątku. Wybrana droga A (kopia na adres inbound w Resend). Dowód stanu: audyt `docs/audit/rebuild-audit-app-aug-2026.md` §4.5 — druga ścieżka mailowa to poller Zoho IMAP z `whatsapp-bridge`, piszący do starych tabel; nie jest reużywany.
 - Nie wiadomo (do ustalenia przez tj, nie przez agenta): czy plan Zoho pozwala na regułę kopii wychodzących i jak dziś maile klientów docierają do Resend inbound (przekierowanie czy MX).
+- 2026-10-05 decyzja tj (D3 potwierdzona): wychodząca wiadomość bez dopasowanego zapytania → cichy drop. `unmatched_messages` nie jest zapisywany. Maile do zewnętrznych kontaktów (księgowa, dostawcy) nie są wątkami zapytań i nie powinny tworzyć wierszy.

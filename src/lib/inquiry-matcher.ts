@@ -5,8 +5,19 @@
  * to the most recent active inquiry for a given phone or email.
  */
 
+import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { findGuideIdsByPhone } from '@/lib/guide-contacts'
+
+const emailSchema = z.string().email()
+
+/**
+ * Escape PostgreSQL ILIKE wildcard characters (`%`, `_`, `\`) in a pattern.
+ * Prevents a user-controlled address like `anna_k@x` from matching `annaXk@x`.
+ */
+function escapeLikePattern(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
 
 /**
  * Normalise a phone number to a consistent format for comparison.
@@ -142,6 +153,10 @@ export async function matchInquiryByEmail(email: string): Promise<string | null>
  * given recipient addresses. Used for outbound mail copied to the inbound address:
  * the client is the *recipient*, not the sender.
  *
+ * Each address is validated (must be a well-formed email) and wildcards (`%`, `_`)
+ * are escaped before the ILIKE comparison so an attacker-controlled address cannot
+ * broaden the match.
+ *
  * Returns the first matching inquiry id, or null.
  */
 export async function matchInquiryByRecipient(toAddresses: string[]): Promise<string | null> {
@@ -151,10 +166,13 @@ export async function matchInquiryByRecipient(toAddresses: string[]): Promise<st
     const normalised = addr.trim().toLowerCase()
     if (!normalised) continue
 
+    // Validate address shape — reject wildcards-as-globs or malformed strings
+    if (!emailSchema.safeParse(normalised).success) continue
+
     const { data, error } = await supabase
       .from('inquiries')
       .select('id')
-      .ilike('angler_email', normalised)
+      .ilike('angler_email', escapeLikePattern(normalised))
       .not('status', 'in', '("cancelled","refunded")')
       .order('created_at', { ascending: false })
       .limit(1)

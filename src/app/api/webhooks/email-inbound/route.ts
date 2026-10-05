@@ -43,10 +43,14 @@ function getFaOutboundAddresses(): Set<string> {
 }
 
 // ─── Payload schema ───────────────────────────────────────────────────────────
+//
+// All fields are optional at the schema level so that malformed payloads (e.g.
+// missing email_id) still parse and are handled with 200 OK instead of 400,
+// preserving the original inbound behaviour. Fields are checked manually below.
 
 const emailDataSchema = z.object({
-  email_id: z.string().min(1),
-  from:     z.string().min(1),
+  email_id: z.string().optional(),
+  from:     z.string().optional(),
   to:       z.array(z.string()).optional(),
   subject:  z.string().optional(),
   text:     z.string().optional(),
@@ -56,6 +60,8 @@ const payloadSchema = z.object({
   type: z.string().optional(),
   data: emailDataSchema.optional(),
 })
+
+type ParsedEmailData = z.infer<typeof emailDataSchema>
 
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
@@ -88,12 +94,20 @@ export async function POST(req: Request) {
     }
   }
 
-  let parsed: z.infer<typeof payloadSchema>
+  // Parse JSON first — keep the original object for raw_payload storage.
+  let rawPayload: unknown
   try {
-    parsed = payloadSchema.parse(JSON.parse(rawBody))
+    rawPayload = JSON.parse(rawBody)
   } catch {
     return new Response('Bad JSON', { status: 400 })
   }
+
+  // Schema validation is lenient (all optional); unknown shape → treat as not email.received
+  const parseResult = payloadSchema.safeParse(rawPayload)
+  if (!parseResult.success) {
+    return new Response('OK', { status: 200 })
+  }
+  const parsed = parseResult.data
 
   if (parsed.type !== 'email.received') {
     return new Response('OK', { status: 200 })
@@ -119,7 +133,8 @@ export async function POST(req: Request) {
   // If the sender is a known FA address, this is a copy of a Zoho outbound mail.
   // Match by recipient (to), not by sender.
   if (getFaOutboundAddresses().has(fromEmail)) {
-    return handleOutbound(emailData, subject)
+    // emailData.email_id is guaranteed non-null — checked above
+    return handleOutbound(emailData as ParsedEmailData & { email_id: string }, subject)
   }
 
   // ── Inbound path ────────────────────────────────────────────────────────────
@@ -233,7 +248,7 @@ export async function POST(req: Request) {
       from_identifier: fromEmail,
       sender_name:     senderName,
       content,
-      raw_payload:     parsed as unknown as Json,
+      raw_payload:     rawPayload as Json,
     })
 
     if (error) {
@@ -255,7 +270,7 @@ export async function POST(req: Request) {
  * No unmatched_messages entry — unmatched outbound mail (accountant etc.) is silently dropped.
  */
 async function handleOutbound(
-  emailData: z.infer<typeof emailDataSchema>,
+  emailData: ParsedEmailData & { email_id: string },
   subject:   string,
 ): Promise<Response> {
   const toAddresses = (emailData.to ?? [])
