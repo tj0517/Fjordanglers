@@ -2,7 +2,7 @@
 id: FA-1.46
 title: Auto-wysyłka odpowiada na zapytanie z formularza bez tekstu klienta — wejściem są dane formularza (wyprawa, daty, liczba osób), sędzia widzi ten sam blok
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -82,3 +82,4 @@ git diff main...HEAD --stat -- src/lib/ai/judge-reply.ts   # puste
 - 2026-10-05 tj: bramka `draftReply` z `allowFormOnly` używa warunku „zapytanie ma wyprawę” (`trip_id` lub `experience_page_id`) — tego samego co `autoSendReply`. „Dowolne z wyprawa/daty/liczba osób” odrzucone: liczba osób zawsze ma wartość, więc bramka nigdy by nie odrzuciła.
 - 2026-10-05 tj: lokalny dowód end-to-end opcją D — bez czytania `.env.local`; serwer dev startuje z jawnymi lokalnymi zmiennymi w środowisku procesu (mają pierwszeństwo przed `.env.local`): URL i klucze Supabase z `supabase status` (127.0.0.1), `RESEND_DEV_FAKE=1`, `AI_AUTO_REPLY_ENABLED` włączone. Przed pierwszym żądaniem log startu z adresem bazy (inny niż 127.0.0.1/localhost = stop); lista zmiennych nadal pochodzących z `.env.local` na ścieżce żądania (same nazwy) — jeśli któraś sięga prawdziwej usługi poza modelem, stop. Wynik sędziego poniżej 0.9 bez wysyłki to poprawny wynik, bez strojenia. `.fa-proofs/` nie jest commitowany.
 - 2026-10-05 tj: Upstash opcja A — na czas lokalnego dowodu `UPSTASH_REDIS_REST_URL` i `UPSTASH_REDIS_REST_TOKEN` ustawione na puste w wierszu poleceń serwera dev, więc `getRateLimiter()` zwraca `null` (brak limitera). Limit FA-1.41 nie jest w tym przebiegu sprawdzany; strażnicy FA-1.42/1.43 działają na lokalnej bazie. Lokalna baza nie ma wiersza w `experience_pages` (seed.sql go nie tworzy) — jednorazowy wiersz Islandii wstawiony zwykłym lokalnym `INSERT`, bez migracji i bez zmian w seed.sql.
+- 2026-10-05 tj: przyjęte (PR #126). Udowodnione: czerwone testy na main (wysyłka, argument sędziego, bramka draftReply), czerwień „bez wyprawy” na celowo zepsutej bramce, judge-reply.ts bez zmian, brak nowych as any / eslint-disable / .from(; lokalny przebieg dał szkic 0.85 bez wysyłki (ścieżka wysyłki ≥ 0.9 tylko testem z mockiem). Poza zakresem zostają: Resend fake w src/lib/email.ts (deferred), ocena 0.85 (pomiar w FA-1.44).
