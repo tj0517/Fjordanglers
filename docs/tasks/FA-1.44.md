@@ -9,7 +9,7 @@ model_approved:
 effort: medium
 agent: fa-core
 branch: test/auto-reply-judge-battery
-depends_on: [FA-1.40]
+depends_on: [FA-1.40, FA-1.47]
 blocked_by_questions: []
 touches_db: false
 touches_prod: false
