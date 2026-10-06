@@ -2,7 +2,7 @@
 id: FA-1.50
 title: EXPAND — oferta zamiast przewodnika w schemacie: `experience_guides`, `experience_prices`, aliasy slugów, nowe kolumny treści, `inquiries.brief`; backfill; nic nie usuwa
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -91,3 +91,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 
 ## Notatki z realizacji
 - 2026-10-05 tj (/wf-plan): O-31 cena całkowita (schemat trzyma cenę przewodnika + `fee_pct`, total liczony); O-32 nadpisanie per przewodnik do ~15%; O-33 warianty = osobna strona, cennik bez `option_id`; P2 `inquiries.brief` wchodzi tutaj, nie w etapie 4.
+- 2026-10-06 tj (prompt zadania, zmiany względem tego pliku): (1) `experience_prices` **nie** jest backfillowana — cennik wpisuje admin w FA-1.56; kryterium „każda strona `fixed` ma wiersz w `experience_prices`” zastąpione przez „`experience_prices` zostaje puste”; czy `price_from` jest netto względem opłaty FA i czy jest za osobę czy ryczałt — nierozstrzygnięte, do sprawdzenia przed pilotażem (FA-1.57). (2) Reguła nadpisania ceny (O-32) jako trigger `BEFORE INSERT OR UPDATE`, baza = wiersz `days=1, anglers=max_anglers_per_guide`, ważny dziś, najpóźniejszy `valid_from`; brak wiersza bazowego = odrzucenie; sprawdzane tylko przy zapisie nadpisania, nie przy zmianie cen (znana luka → FA-1.56). (3) RLS: odczyt publiczny tylko wierszy stron `status='active'`, zapis tylko admin — **nie** kopiować polityki `experience_page_options` (otwarta dla wszystkich). (4) `offer_mode='custom'` dla Iceland/Norway/Finland bez względu na wielkość liter. (5) Seed: trzy strony + drugi fikcyjny przewodnik; tabel `experience_guides/prices/slug_aliases` nie seedować.

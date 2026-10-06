@@ -82,7 +82,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
  FA-1.47 | Sędzia auto-wysyłki dostaje wiedzę, z której powstał szkic — ceny i zasady jako źródło prawdy | M | sonnet | done | FA-1.40 |
 | FA-1.49 | Maile wychodzące ze skrzynki Zoho trafiają do wątku zapytania — kopia na adres inbound, rozpoznana jako wiadomość człowieka | M | sonnet | review | FA-1.40 |
 | FA-1.48 | Auto-wysyłka prowadzi wątek tylko do przejęcia przez człowieka — po ręcznej odpowiedzi agent milczy | M | sonnet | done | FA-1.40, FA-1.49 |
-| FA-1.50 | EXPAND — oferta zamiast przewodnika w schemacie: `experience_guides`, `experience_prices`, aliasy slugów, pola treści, `inquiries.brief`; backfill; nic nie usuwa | L | opus | todo | — |
+| FA-1.50 | EXPAND — oferta zamiast przewodnika w schemacie: `experience_guides`, `experience_prices`, aliasy slugów, pola treści, `inquiries.brief`; backfill; nic nie usuwa | L | opus | in_progress | — |
 | FA-1.51 | SYNC — triggery `guide_id` ↔ `experience_guides`, `price_from` ↔ centy; testy w obie strony z red proofem | M | sonnet | todo | FA-1.50 |
 | FA-1.52 | Dwa szablony na `/experiences/[slug]` — `_v1/` bez zmian, router po fladze × `page_version`, `?preview=v2` dla admina, 301 z aliasów | M | sonnet | todo | FA-1.50 |
 | FA-1.53 | Szablon v2 S0–S2 — hero, chipy, 3 linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; `getExperienceV2()` | L | opus | todo | FA-1.52 |
