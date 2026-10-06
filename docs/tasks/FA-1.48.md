@@ -2,7 +2,7 @@
 id: FA-1.48
 title: Auto-wysyłka prowadzi wątek tylko do przejęcia przez człowieka — po ręcznej odpowiedzi kolejne wiadomości klienta nie uruchamiają agenta
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -81,3 +81,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 - 2026-10-06 tj: FA-1.48 złożone, gdy FA-1.49 miało status `review` (zmergowane, nie zaakceptowane) — z wyboru tj.
 - 2026-10-06 decyzja tj: gdy sprawdzenie przejęcia nie może się wykonać (błąd bazy), bramka milczy: emituje decyzję z powodem „could not check whether a human has taken over the thread” i nie wysyła automatycznie.
 - 2026-10-06 decyzja tj: status FA-1.49 nie jest ruszany w tym PR; decyduje o nim tj po osobnym review.
+- 2026-10-06 tj: accepted — PR #130; gate, takeover query (human-sent agent draft detected by message.sent actor; guide-only outbound ignored) and red proofs reproduced by reviewer; delivered/read count as sent.
