@@ -442,6 +442,48 @@ export async function hasAgentSentReplyToAngler(
   return (count ?? 0) > 0
 }
 
+/**
+ * FA-1.48 — has a human taken over this inquiry's thread with the angler?
+ *
+ * True when the thread holds a SENT outbound message to the angler (any channel) written
+ * by a human:
+ *   - `drafted_by` is not 'agent' (panel messages and the FA-1.49 Zoho import are 'admin'), or
+ *   - `drafted_by='agent'` but its `message.sent` event has an actor other than 'agent'
+ *     (an agent draft a human sent — the panel keeps `drafted_by='agent'` on promotion).
+ * A message the agent auto-sent (actor 'agent') and any message to a guide do not count.
+ *
+ * Throws on a database error — the caller chooses what an unknown answer means.
+ */
+export async function hasHumanTakenOverThread(
+  client: ServiceClient,
+  inquiryId: string,
+): Promise<boolean> {
+  const { data: sent, error } = await client
+    .from('messages')
+    .select('id, drafted_by')
+    .eq('inquiry_id', inquiryId)
+    .eq('direction', 'outbound')
+    .eq('counterpart', 'angler')
+    .in('status', ['sent', 'delivered', 'read'])
+  if (error != null) throw new Error(error.message)
+
+  const rows = sent ?? []
+  if (rows.some(m => m.drafted_by !== 'agent')) return true
+
+  const agentMessageIds = rows.map(m => m.id)
+  if (agentMessageIds.length === 0) return false
+
+  const { count, error: eventError } = await client
+    .from('inquiry_events')
+    .select('id', { count: 'exact', head: true })
+    .eq('inquiry_id', inquiryId)
+    .eq('type', 'message.sent')
+    .in('message_id', agentMessageIds)
+    .neq('actor_kind', 'agent')
+  if (eventError != null) throw new Error(eventError.message)
+  return (count ?? 0) > 0
+}
+
 export async function getConversationForJudge(
   client: ServiceClient,
   inquiryId: string,

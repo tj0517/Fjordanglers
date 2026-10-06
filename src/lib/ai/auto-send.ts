@@ -5,7 +5,8 @@
  *   Pre-draft gates → draftReply (always saves draft) → destination gate → judge → daily cap → send or hold.
  *   Emits `agent.auto_send_decided` for EVERY invocation that gets past the hard errors below:
  *     - pre-draft gate failures: sent=false, score=null, draft_message_id=null + reason
- *       (includes FA-1.40/1.46: no thread, no form message and no trip — nothing to answer)
+ *       (includes FA-1.40/1.46: no thread, no form message and no trip — nothing to answer;
+ *       and FA-1.48: a human has taken over the thread — the agent leads only until then)
  *     - all post-draft outcomes: sent, score, draft_message_id from the saved draft
  *   Exception: flag-off is the CALLER's responsibility — no call → no event.
  *
@@ -28,11 +29,14 @@ import {
   hasAgentSentReplyToAngler,
   getConversationForJudge,
   countAutoSendsSince,
+  hasHumanTakenOverThread,
 } from '@/lib/supabase/queries'
 import {
   AUTO_SEND_CAP_WINDOW_MS,
   CAP_REACHED_REASON,
   CAP_UNCHECKED_REASON,
+  HUMAN_TAKEOVER_REASON,
+  TAKEOVER_UNCHECKED_REASON,
   dailyAutoSendCap,
   emitAutoSendDecision as emitDecision,
 } from '@/lib/ai/auto-send-guards'
@@ -104,6 +108,14 @@ export async function autoSendReply(params: {
     return { sent: false, score: null, reasons: [reason], draftMessageId: null }
   }
   if (!inquiry.angler_email) return null
+
+  // Gate 3b (FA-1.48): the agent leads the thread only until a human takes it over.
+  // Checked before any model call — no draft, no judge, no cost.
+  const takeoverReason = await humanTakeoverReason(supabase, inquiryId)
+  if (takeoverReason != null) {
+    await emitDecision(supabase, inquiryId, null, false, null, [takeoverReason])
+    return { sent: false, score: null, reasons: [takeoverReason], draftMessageId: null }
+  }
 
   // Conversation for the judge: sent/received messages (no drafts). On a form inquiry
   // the thread is empty and the client's text lives in inquiries.message (FA-1.40). A form
@@ -212,6 +224,23 @@ export async function autoSendReply(params: {
 }
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Null when no human has taken over the thread; otherwise the reason to stay silent.
+ * A failed check stays silent too: a sent e-mail cannot be taken back, a missing reply can
+ * be written later (same rule as the daily cap).
+ */
+async function humanTakeoverReason(
+  supabase:  ReturnType<typeof createServiceClient>,
+  inquiryId: string,
+): Promise<string | null> {
+  try {
+    return (await hasHumanTakenOverThread(supabase, inquiryId)) ? HUMAN_TAKEOVER_REASON : null
+  } catch (err) {
+    console.error('[autoSendReply] takeover check failed:', err)
+    return TAKEOVER_UNCHECKED_REASON
+  }
+}
 
 /**
  * Null when another auto-send fits under today's cap; otherwise the reason to hold.

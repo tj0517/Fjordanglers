@@ -38,6 +38,8 @@ const TRAP_SKIP_REASON    = 'trap field filled'
 const FAST_SKIP_REASON    = 'form submitted less than 2 s after it was shown'
 export const CAP_REACHED_REASON  = 'daily auto-send cap reached'
 export const CAP_UNCHECKED_REASON = 'daily auto-send cap could not be checked'
+export const HUMAN_TAKEOVER_REASON = 'human has taken over the thread'
+export const TAKEOVER_UNCHECKED_REASON = 'could not check whether a human has taken over the thread'
 
 /**
  * Why this submission looks automated, or null when it does not.
