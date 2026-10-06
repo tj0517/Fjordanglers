@@ -2,13 +2,14 @@
 id: FA-1.48
 title: Auto-wysyłka prowadzi wątek tylko do przejęcia przez człowieka — po ręcznej odpowiedzi kolejne wiadomości klienta nie uruchamiają agenta
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: fix/auto-send-stops-after-human
+pr: 130
 depends_on: [FA-1.40, FA-1.49]
 blocked_by_questions: []
 touches_db: false
