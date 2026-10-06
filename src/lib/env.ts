@@ -119,6 +119,11 @@ export const envSchema = z.object({
   // ── Resend Inbound (email webhook) ─────────────────────────────────────────
   // Signing secret provided by Resend for inbound email webhooks.
   RESEND_INBOUND_SECRET: z.string().optional(),
+  // Comma-separated list of FA-owned addresses whose mail is treated as outbound
+  // when it arrives via BCC/rule copy to the inbound address.
+  // Default: hello@fjordanglers.com plus FA_EMAIL.
+  // STOP: adding or changing this in Vercel is tj's responsibility; the default works without it.
+  FA_OUTBOUND_ADDRESSES: z.string().optional(),
 
   // ── Cron ───────────────────────────────────────────────────────────────────
   // Bearer token used to authenticate Vercel cron job requests.
