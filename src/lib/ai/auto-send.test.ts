@@ -94,7 +94,7 @@ interface MockOptions {
   /** FA-1.42: the count query on inquiry_events fails. */
   capCountError?:   boolean
   /** FA-1.48: SENT outbound messages to the angler, as the takeover query reads them. */
-  sentToAngler?:    { id: string; drafted_by: string | null }[]
+  sentToAngler?:    { id: string; drafted_by: string | null; counterpart?: string }[]
   /** FA-1.48: message.sent events (message id + actor) the takeover query reads. */
   sentEvents?:      { message_id: string; actor_kind: string }[]
   /** FA-1.48: the takeover query on messages fails. */
@@ -197,14 +197,19 @@ function setupMockDb(opts: MockOptions = {}) {
               return builder
             }
             // Conversation query: .select(...).eq(...).neq(...).order(...)
+            const eqFilters: Record<string, unknown> = {}
             const builder = {
-              eq:    () => builder,
+              eq:    (col: string, val: unknown) => { eqFilters[col] = val; return builder },
               neq:   () => builder,
-              // FA-1.48 takeover: .select('id, drafted_by').eq()x3.in('status', [...])
+              // FA-1.48 takeover: .select('id, drafted_by').eq()x3.in('status', [...]) — honours the
+              // counterpart filter, so a message to a guide is not returned for counterpart='angler'.
               in:    () => Promise.resolve(
                 takeoverError
                   ? { data: null, error: { message: 'connection reset' } }
-                  : { data: sentToAngler, error: null },
+                  : {
+                      data: sentToAngler.filter(m => eqFilters.counterpart == null || (m.counterpart ?? 'angler') === eqFilters.counterpart),
+                      error: null,
+                    },
               ),
               order: () => Promise.resolve({ data: conversationMsgs, error: null }),
             }
@@ -859,9 +864,11 @@ describe('autoSendReply — the agent leads only until a human takes over (FA-1.
     expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
   })
 
-  it('a human message to a guide is not a takeover (the query only sees counterpart=angler rows)', async () => {
-    // The mock returns exactly what the query would select: nothing to the angler.
-    setupMockDb({ sentToAngler: [] })
+  it('outbound to a guide only (counterpart=guide, drafted_by admin, sent) is not a takeover — path as today', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-guide', drafted_by: 'admin', counterpart: 'guide' }],
+    })
     expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
   })
 

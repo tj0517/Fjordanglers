@@ -121,6 +121,11 @@ const AUTO_REPLY = {
   status: 'sent', drafted_by: 'agent', body: 'Thanks for your inquiry.', occurred_at: T(1),
 }
 
+const GUIDE_MESSAGE = {
+  id: 'm-g', inquiry_id: 'inq-1', direction: 'outbound', counterpart: 'guide',
+  status: 'sent', drafted_by: 'admin', body: 'Are you free on 20 June?', occurred_at: T(2),
+}
+
 function makeRequest() {
   return new NextRequest('http://localhost/api/webhooks/email-inbound', {
     method:  'POST',
@@ -200,5 +205,15 @@ describe('email-inbound webhook — client message after a human reply (FA-1.48)
     expect(vi.mocked(draftReply)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1)
     expect(eventsOfType('agent.auto_send_decided')[0].payload).toMatchObject({ sent: true, score: 0.95 })
+  })
+
+  it('a human message to a guide is not a takeover — the agent keeps leading', async () => {
+    setupDb({ status: 'new', messages: [FIRST_CLIENT_MSG, AUTO_REPLY, GUIDE_MESSAGE] })
+
+    const { POST } = await import('@/app/api/webhooks/email-inbound/route')
+    await POST(makeRequest())
+
+    expect(vi.mocked(draftReply)).toHaveBeenCalledTimes(1)
+    expect(eventsOfType('agent.auto_send_decided')[0].payload).toMatchObject({ sent: true })
   })
 })
