@@ -106,6 +106,62 @@ anon `ALL` on every new `public` table. No policy for `service_role` either — 
 FA-1.23 loader. A sync test (`src/lib/__tests__/agentKnowledgeCountries.test.ts`) keeps
 the country list in the CHECK equal to `COUNTRIES`.
 
+### Added in FA-1.50 — offer-centric schema (live, transitional until stage 4)
+Migration `20261007000000_experience_offer_centric_expand.sql`. An offer page can now have
+several guides, a "days × anglers" price table, a fixed or custom mode and the content of
+the new template. Fully additive: `experience_pages.guide_id`, `price_from`, `boat_*`,
+`rod_setup` and the rest keep working and are dropped in stage 4 (CONTRACT, together with
+the rename to `experiences`). Design and decisions:
+`docs/proposals/2026-10-05-experience-offer-centric.md` §2–§3, §7 step 1; O-31, O-32, O-33.
+
+New tables (all `ON DELETE CASCADE` from the page; RLS on, see below):
+
+```
+experience_guides      (experience_id → experience_pages, guide_id → guides ON DELETE RESTRICT,
+                        role primary|backup, status active|paused, show_on_page, sort_order,
+                        guide_price_override_cents, created_at)           PK (experience_id, guide_id)
+experience_prices      (id, experience_id, days, anglers, guide_price_cents, currency,
+                        valid_from, valid_to)    UNIQUE NULLS NOT DISTINCT (experience_id, days, anglers, valid_from)
+experience_slug_aliases(slug PK, experience_id)
+```
+
+| Rule | Enforced by |
+|---|---|
+| at most one `primary` + `active` guide per page | partial unique index `experience_guides_one_primary` |
+| override ≤ 115% of the base price; NULL always allowed; no base price ⇒ rejected (O-32) | trigger `experience_guides_check_override` (SECURITY INVOKER) |
+| base price = `days = 1`, `anglers = max_anglers_per_guide`, valid today, latest `valid_from` | same trigger |
+| two undated rows for one (page, days, anglers) | `NULLS NOT DISTINCT` on the unique constraint |
+
+The override is checked **only when it is written**; it is not re-validated when prices
+change (known gap → FA-1.56 shows a warning). `experience_prices` is **empty** after the
+migration — the admin enters prices in FA-1.56 (whether `price_from` is net of the FA fee,
+and per person or flat, is unresolved; check before FA-1.57). The angler-facing total is
+`guide_price_cents × (1 + fee_pct)`, computed, never stored.
+
+New columns:
+- `experience_pages`: `offer_mode fixed|custom`, `price_from_cents`, `price_to_cents`,
+  `fee_pct` (0.20), `max_anglers_per_guide` (2), `min_days`, `max_days`, `page_version 1|2`
+  (1), `suited_for`, `not_suited_for`, `expectations_text`, `skill_level 1–5`,
+  `walking_km_min/max`, `day_schedule`, `nearest_airport`, `suggested_lodging`,
+  `license_info`, `tip_guidance_text`, `weather_policy_text`, `response_sla_hours` (24),
+  `offer_eta_text`.
+- `experience_page_options`: `kind variant|archetype|addon`, `price_from_cents`,
+  `price_to_cents`, `currency`, `duration_days_min/max`, `sample_itinerary`.
+- `guides`: `association`, `response_time_hours`, `gear_text`.
+- `reviews`: `experience_id → experience_pages ON DELETE SET NULL` (no backfill).
+- `inquiries`: `brief jsonb` — shape validated in code, not in the DB.
+
+Backfill (in the migration, idempotent): current `guide_id` → `experience_guides` as
+`primary`; `offer_mode = 'custom'` for Iceland/Norway/Finland (case-insensitive);
+`price_from_cents = round(price_from × 100)` on pages and options; option `kind`
+(`archetype` on custom pages, `variant` otherwise) and `currency` copied from the page.
+
+**RLS:** public reads rows of the three new tables only when their page has
+`status = 'active'`; writes are admin only (`FOR ALL TO authenticated`, `profiles.role =
+'admin'`). Unlike `experience_page_options`, whose policy is open to everyone. As with
+`agent_knowledge`, `REVOKE ALL … FROM anon, authenticated` first, then `SELECT` back to
+both and `INSERT/UPDATE/DELETE` to `authenticated`; `service_role` gets `ALL`.
+
 ### Still in `public`, dead or near-dead (candidates for later tasks)
 `guide_images` (admin insert + guide profile read — FA-1.07/1.08),
 `guide_submissions` (read-only archive; writer component unrendered — FA-1.07),
