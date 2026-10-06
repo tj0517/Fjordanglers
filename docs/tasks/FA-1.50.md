@@ -2,7 +2,7 @@
 id: FA-1.50
 title: EXPAND — oferta zamiast przewodnika w schemacie: `experience_guides`, `experience_prices`, aliasy slugów, nowe kolumny treści, `inquiries.brief`; backfill; nic nie usuwa
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -94,3 +94,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 - 2026-10-05 tj (/wf-plan): O-31 cena całkowita (schemat trzyma cenę przewodnika + `fee_pct`, total liczony); O-32 nadpisanie per przewodnik do ~15%; O-33 warianty = osobna strona, cennik bez `option_id`; P2 `inquiries.brief` wchodzi tutaj, nie w etapie 4.
 - 2026-10-06 tj (prompt zadania, zmiany względem tego pliku): (1) `experience_prices` **nie** jest backfillowana — cennik wpisuje admin w FA-1.56; kryterium „każda strona `fixed` ma wiersz w `experience_prices`” zastąpione przez „`experience_prices` zostaje puste”; czy `price_from` jest netto względem opłaty FA i czy jest za osobę czy ryczałt — nierozstrzygnięte, do sprawdzenia przed pilotażem (FA-1.57). (2) Reguła nadpisania ceny (O-32) jako trigger `BEFORE INSERT OR UPDATE`, baza = wiersz `days=1, anglers=max_anglers_per_guide`, ważny dziś, najpóźniejszy `valid_from`; brak wiersza bazowego = odrzucenie; sprawdzane tylko przy zapisie nadpisania, nie przy zmianie cen (znana luka → FA-1.56). (3) RLS: odczyt publiczny tylko wierszy stron `status='active'`, zapis tylko admin — **nie** kopiować polityki `experience_page_options` (otwarta dla wszystkich). (4) `offer_mode='custom'` dla Iceland/Norway/Finland bez względu na wielkość liter. (5) Seed: trzy strony + drugi fikcyjny przewodnik; tabel `experience_guides/prices/slug_aliases` nie seedować.
 - 2026-10-06 tj (review PR #132, accepted with additions): cztery decyzje agenta w zakresie specyfikacji — accepted by tj: (1) `UNIQUE NULLS NOT DISTINCT` na `(experience_id, days, anglers, valid_from)`; (2) trigger nadpisania pomija UPDATE, który nie zmienia nadpisania ani `experience_id`; (3) dodatkowe CHECK-i (`fee_pct` 0–1, `guide_price_cents > 0`, `max_days ≥ min_days`, `valid_to ≥ valid_from`, waluta `^[A-Z]{3}$`, nadpisanie > 0, `max_anglers_per_guide ≥ 1`, `min_days ≥ 1`); (4) trzy indeksy (`reviews(experience_id)`, `experience_guides(guide_id)`, `experience_slug_aliases(experience_id)`). Push na prod dopiero po zielonym jobie `db` i osobnej zgodzie tj. Poza tą rundą (zostają w deferred): zawężenie polityki odczytu `experience_guides`, lokalny skrypt typów, semantyka `price_from`.
+- 2026-10-06 tj (/wf-review): FA-1.50 accepted. Migration 20261007000000 applied to prod (migration list: Local and Remote match); counts on prod: experience_guides 28, custom pages 11, price_from_cents 29, options 86, experience_prices 0.
