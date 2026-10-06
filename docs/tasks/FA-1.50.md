@@ -2,13 +2,14 @@
 id: FA-1.50
 title: EXPAND — oferta zamiast przewodnika w schemacie: `experience_guides`, `experience_prices`, aliasy slugów, nowe kolumny treści, `inquiries.brief`; backfill; nic nie usuwa
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: db/experience-offer-centric-expand
+pr: 132
 depends_on: []
 blocked_by_questions: []
 touches_db: true
