@@ -2,7 +2,7 @@
 id: FA-1.52
 title: Dwa szablony na jednej trasie — `_v1/` bez zmian, router po fladze i `page_version`, podgląd `?preview=v2` dla admina
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
@@ -14,6 +14,7 @@ blocked_by_questions: []
 touches_db: false
 touches_prod: false
 estimate_h: 4
+pr: 133
 owner: tj
 ---
 
