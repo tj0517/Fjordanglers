@@ -84,7 +84,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.48 | Auto-wysyłka prowadzi wątek tylko do przejęcia przez człowieka — po ręcznej odpowiedzi agent milczy | M | sonnet | done | FA-1.40, FA-1.49 |
 | FA-1.50 | EXPAND — oferta zamiast przewodnika w schemacie: `experience_guides`, `experience_prices`, aliasy slugów, pola treści, `inquiries.brief`; backfill; nic nie usuwa | L | opus | done | — |
 | FA-1.51 | SYNC — triggery `guide_id` ↔ `experience_guides`, `price_from` ↔ centy; testy w obie strony z red proofem | M | sonnet | todo | FA-1.50 |
-| FA-1.52 | Dwa szablony na `/experiences/[slug]` — `_v1/` bez zmian, router po fladze × `page_version`, `?preview=v2` dla admina, 301 z aliasów | M | sonnet | todo | FA-1.50 |
+| FA-1.52 | Dwa szablony na `/experiences/[slug]` — `_v1/` bez zmian, router po fladze × `page_version`, `?preview=v2` dla admina, 301 z aliasów | M | sonnet | in_progress | FA-1.50 |
 | FA-1.53 | Szablon v2 S0–S2 — hero, chipy, 3 linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; `getExperienceV2()` | L | opus | todo | FA-1.52 |
 | FA-1.54 | Szablon v2 S3–S9 — w skrócie, w cenie / poza ceną, dla kogo / nie, przebieg dnia, przewodnicy, 4 kroki, cena i depozyt | M | sonnet | todo | FA-1.53 |
 | FA-1.55 | Szablon v2 S10–S14 + formularz 3-krokowy → `inquiries` + `brief`; recenzje z linkiem, mapa, sezon, FAQ | L | opus | todo | FA-1.54 |

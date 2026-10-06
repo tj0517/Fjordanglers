@@ -392,6 +392,72 @@ export async function getActiveDestinationCountries(): Promise<string[]> {
   )()
 }
 
+// ─── Experience page routing (FA-1.52) ───────────────────────────────────────
+
+export type ExperienceRouting = {
+  /** experience_pages.page_version — 1 = editorial template, 2 = offer-centric. */
+  pageVersion:   1 | 2
+  /** The slug the page lives at today. Differs from the asked slug for aliases. */
+  canonicalSlug: string
+}
+
+/**
+ * Which template a slug should render, and where the slug really lives.
+ *
+ * Returns null when the slug matches neither an active page nor an alias of
+ * one — the caller renders v1, which 404s. A retired slug (experience_slug_aliases)
+ * resolves to its current page, so the router can 308 to canonicalSlug; the
+ * redirect target therefore always comes from the database, never the request.
+ */
+export async function getExperienceRouting(slug: string): Promise<ExperienceRouting | null> {
+  return unstable_cache(
+    async () => {
+      const db = createPublicClient()
+
+      const { data: page, error } = await db
+        .from('experience_pages')
+        .select('slug, page_version')
+        .eq('slug', slug)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (error != null) {
+        console.error('[getExperienceRouting]', error.message)
+        return null
+      }
+
+      if (page != null) {
+        return { pageVersion: page.page_version === 2 ? 2 : 1, canonicalSlug: page.slug } as const
+      }
+
+      const { data: alias, error: aliasError } = await db
+        .from('experience_slug_aliases')
+        .select('experience_id')
+        .eq('slug', slug)
+        .maybeSingle()
+
+      if (aliasError != null) {
+        console.error('[getExperienceRouting] alias', aliasError.message)
+        return null
+      }
+      if (alias == null) return null
+
+      const { data: target } = await db
+        .from('experience_pages')
+        .select('slug, page_version')
+        .eq('id', alias.experience_id)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (target == null) return null
+
+      return { pageVersion: target.page_version === 2 ? 2 : 1, canonicalSlug: target.slug } as const
+    },
+    ['experience-routing', slug],
+    { revalidate: 3600, tags: [CACHE_TAG_EXPERIENCES] },
+  )()
+}
+
 // ─── Service-client helpers (no ISR caching) ─────────────────────────────────
 // Accept a caller-supplied service-role client so the caller controls connection
 // lifetime. Do not cache — these read mutable operational data.
@@ -564,4 +630,26 @@ export async function getInquiryStatusForD2(
     .eq('id', inquiryId)
     .maybeSingle()
   return data ? { status: (data as { status: string }).status } : null
+}
+
+// ─── Request-scoped role read (FA-1.52) ──────────────────────────────────────
+
+/**
+ * profiles.role === 'admin' for the given user, read through a caller-supplied
+ * request-scoped client (so RLS applies). Used by src/proxy.ts to decide whether
+ * ?preview=v2 may be rewritten to the preview route — the preview route itself
+ * re-checks with requireAdmin()-grade auth, this only avoids a pointless 404 for
+ * ordinary logged-in users. Never cached: a role change must take effect at once.
+ */
+export async function isAdminUser(
+  client: SupabaseClient<Database>,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await client
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+
+  return data?.role === 'admin'
 }

@@ -46,6 +46,24 @@ export async function requireAdmin(): Promise<{ userId: string }> {
   return { userId: user.id }
 }
 
+// ─── isAdminRequest ───────────────────────────────────────────────────────────
+
+/**
+ * Non-throwing counterpart of requireAdmin(), for routes that must *decide what
+ * to render* instead of failing — e.g. the admin-only v2 preview (FA-1.52).
+ *
+ * Fails closed: any error (no session, wrong role, auth call failing) is false.
+ * Never use it in place of requireAdmin() on a mutation — a guard must throw.
+ */
+export async function isAdminRequest(): Promise<boolean> {
+  try {
+    await requireAdmin()
+    return true
+  } catch {
+    return false
+  }
+}
+
 // ─── requireGuide ─────────────────────────────────────────────────────────────
 
 /**

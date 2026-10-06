@@ -42,3 +42,35 @@ describe('AI_AUTO_REPLY_ENABLED', () => {
     expect(result.success).toBe(false)
   })
 })
+
+// EXPERIENCE_V2_ENABLED follows the same 'true' | 'false' → boolean shape (FA-1.52):
+// an unset or malformed flag must never turn the v2 template on.
+describe('EXPERIENCE_V2_ENABLED', () => {
+  it('"true" → true', () => {
+    const result = envSchema.shape.EXPERIENCE_V2_ENABLED.safeParse('true')
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toBe(true)
+  })
+
+  it('"false" → false', () => {
+    const result = envSchema.shape.EXPERIENCE_V2_ENABLED.safeParse('false')
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toBe(false)
+  })
+
+  it('undefined → false (default)', () => {
+    const result = envSchema.shape.EXPERIENCE_V2_ENABLED.safeParse(undefined)
+    expect(result.success).toBe(true)
+    if (result.success) expect(result.data).toBe(false)
+  })
+
+  it('"on" → validation error (the flag is "true" | "false", not on|off)', () => {
+    const result = envSchema.shape.EXPERIENCE_V2_ENABLED.safeParse('on')
+    expect(result.success).toBe(false)
+  })
+
+  it('"" → validation error', () => {
+    const result = envSchema.shape.EXPERIENCE_V2_ENABLED.safeParse('')
+    expect(result.success).toBe(false)
+  })
+})

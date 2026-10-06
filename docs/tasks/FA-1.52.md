@@ -2,7 +2,7 @@
 id: FA-1.52
 title: Dwa szablony na jednej trasie — `_v1/` bez zmian, router po fladze i `page_version`, podgląd `?preview=v2` dla admina
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -69,3 +69,5 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ```
 
 ## Notatki z realizacji
+
+2026-10-06 tj (/wf-task): admin preview via proxy rewrite to a hidden dynamic route, public page stays ISR (revalidate 3600); alias redirect = permanentRedirect (308); flag = 'true'|'false' like AI_AUTO_REPLY_ENABLED; snapshot criterion compares visible text; v1 has 8 `.from(` calls, not 6.
