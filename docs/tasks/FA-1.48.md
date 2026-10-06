@@ -2,7 +2,7 @@
 id: FA-1.48
 title: Auto-wysyłka prowadzi wątek tylko do przejęcia przez człowieka — po ręcznej odpowiedzi kolejne wiadomości klienta nie uruchamiają agenta
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -74,3 +74,9 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 - 2026-10-05 tj: zadanie idzie po FA-1.49 — odpowiedzi wysyłane ze skrzynki Zoho muszą być w `messages`, inaczej agent ich nie widzi. Weryfikacja FA-1.48 testami nie obejmuje maili spoza aplikacji; pokrywa je dopiero FA-1.49.
 - 2026-10-05 tj: dowód z prod — zapytanie 2640acd6-4fe6-47a1-a7a5-6d057208998d (NZ, 4 X): `message.received` 18:02 i 18:20 UTC, po każdym `agent.auto_send_decided` (sent=false, score 0,72 i 0,75); status zapytania nadal `new`. Sędzia w powodach cytuje wcześniejszą ręczną wiadomość tj z innymi cenami (1 600 / 1 500 NZD).
 - Interpretacja do potwierdzenia przy odbiorze: „przejęcie” = pierwsza wysłana wiadomość człowieka w wątku. Alternatywy (np. zmiana statusu albo wyłączenie agenta przełącznikiem w panelu) wymagają osobnej decyzji tj.
+- 2026-10-06 decyzja tj: definicja przejęcia = wysłana wiadomość wychodząca do klienta (`counterpart='angler'`, dowolny kanał) napisana przez człowieka: `drafted_by` ≠ `'agent'` (panel i import Zoho z FA-1.49 mają `'admin'`) ALBO `drafted_by='agent'`, ale jej zdarzenie `message.sent` ma aktora innego niż `agent`. Wiadomość wysłana automatycznie przez agenta (aktor `agent`) nie jest przejęciem.
+- 2026-10-06 decyzja tj: szkic agenta wysłany przez człowieka liczy się jako przejęcie (wykrywany aktorem zdarzenia `message.sent`).
+- 2026-10-06 decyzja tj: wiadomości wychodzące do przewodników (`counterpart='guide'`) nie są przejęciem.
+- 2026-10-06 tj: FA-1.48 złożone, gdy FA-1.49 miało status `review` (zmergowane, nie zaakceptowane) — z wyboru tj.
+- 2026-10-06 decyzja tj: gdy sprawdzenie przejęcia nie może się wykonać (błąd bazy), bramka milczy: emituje decyzję z powodem „could not check whether a human has taken over the thread” i nie wysyła automatycznie.
+- 2026-10-06 decyzja tj: status FA-1.49 nie jest ruszany w tym PR; decyduje o nim tj po osobnym review.
