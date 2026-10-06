@@ -93,6 +93,12 @@ interface MockOptions {
   sentInWindow?:    number
   /** FA-1.42: the count query on inquiry_events fails. */
   capCountError?:   boolean
+  /** FA-1.48: SENT outbound messages to the angler, as the takeover query reads them. */
+  sentToAngler?:    { id: string; drafted_by: string | null }[]
+  /** FA-1.48: message.sent events (message id + actor) the takeover query reads. */
+  sentEvents?:      { message_id: string; actor_kind: string }[]
+  /** FA-1.48: the takeover query on messages fails. */
+  takeoverError?:   boolean
 }
 
 const DEFAULT_KNOWLEDGE = [
@@ -125,6 +131,9 @@ function setupMockDb(opts: MockOptions = {}) {
     source           = 'web_form',
     sentInWindow     = 0,
     capCountError    = false,
+    sentToAngler     = [],
+    sentEvents       = [],
+    takeoverError    = false,
   } = opts
 
   const inquiry = {
@@ -146,8 +155,16 @@ function setupMockDb(opts: MockOptions = {}) {
         return {
           // FA-1.42 cap count: .select('id', {count, head}).eq('type').eq('payload->>sent').gte('occurred_at')
           select: () => {
+            // FA-1.48 takeover: .select('id', {count, head}).eq().eq().in('message_id', ids).neq('actor_kind', 'agent')
+            let ids: string[] = []
             const builder = {
               eq:  () => builder,
+              in:  (_col: string, values: string[]) => { ids = values; return builder },
+              neq: (_col: string, actor: string) => Promise.resolve(
+                takeoverError
+                  ? { count: null, error: { message: 'connection reset' } }
+                  : { count: sentEvents.filter(e => ids.includes(e.message_id) && e.actor_kind !== actor).length, error: null },
+              ),
               gte: () => Promise.resolve(
                 capCountError
                   ? { count: null, error: { message: 'connection reset' } }
@@ -183,6 +200,12 @@ function setupMockDb(opts: MockOptions = {}) {
             const builder = {
               eq:    () => builder,
               neq:   () => builder,
+              // FA-1.48 takeover: .select('id, drafted_by').eq()x3.in('status', [...])
+              in:    () => Promise.resolve(
+                takeoverError
+                  ? { data: null, error: { message: 'connection reset' } }
+                  : { data: sentToAngler, error: null },
+              ),
               order: () => Promise.resolve({ data: conversationMsgs, error: null }),
             }
             return builder
@@ -759,6 +782,102 @@ describe('autoSendReply — form inquiry without message (FA-1.46)', () => {
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
     expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
     assertPreDraftGateEvent('no message thread and no form message')
+  })
+})
+
+describe('autoSendReply — the agent leads only until a human takes over (FA-1.48)', () => {
+  const CLIENT_MSG = { direction: 'inbound', body: 'And what about 20 June?', status: 'received', occurred_at: '2026-09-02T10:00:00Z' }
+  const MANUAL_MSG = { direction: 'outbound', body: 'Hi, here is the price.', status: 'sent', occurred_at: '2026-09-01T11:00:00Z' }
+
+  function expectSilentTakeover(result: Awaited<ReturnType<typeof autoSendReply>>) {
+    expect(result).toEqual({ sent: false, score: null, reasons: ['human has taken over the thread'], draftMessageId: null })
+    expect(vi.mocked(draftReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    assertPreDraftGateEvent('human has taken over')
+  }
+
+  function expectAgentLeads(result: Awaited<ReturnType<typeof autoSendReply>>) {
+    expect(vi.mocked(draftReply)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(judgeReply)).toHaveBeenCalledTimes(1)
+    expect(result!.sent).toBe(true)
+  }
+
+  beforeEach(() => {
+    vi.mocked(sendMessage).mockReset()
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [] })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.95, send: true, reasons: ['looks good'] })
+  })
+
+  it('stays silent after a manual reply from the panel (drafted_by admin) — RED on main: the model is called', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-manual', drafted_by: 'admin' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('recognises an outbound stored the way the FA-1.49 Zoho import stores it (drafted_by admin, event actor admin, source webhook)', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-zoho', drafted_by: 'admin' }],
+      sentEvents:       [{ message_id: 'm-zoho', actor_kind: 'admin' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('recognises an agent draft sent by a human (drafted_by agent, message.sent actor admin) — RED on main', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-draft', drafted_by: 'agent' }],
+      sentEvents:       [{ message_id: 'm-draft', actor_kind: 'admin' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('keeps leading when the only outbound is an auto-sent agent message (drafted_by agent, actor agent)', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-auto', drafted_by: 'agent' }],
+      sentEvents:       [{ message_id: 'm-auto', actor_kind: 'agent' }],
+    })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('keeps leading when an agent message has no message.sent event at all', async () => {
+    setupMockDb({ sentToAngler: [{ id: 'm-auto', drafted_by: 'agent' }] })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('takes over on a human message even when an auto-sent agent message sits beside it', async () => {
+    setupMockDb({
+      sentToAngler: [{ id: 'm-auto', drafted_by: 'agent' }, { id: 'm-manual', drafted_by: 'admin' }],
+      sentEvents:   [{ message_id: 'm-auto', actor_kind: 'agent' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('a human message to a guide is not a takeover (the query only sees counterpart=angler rows)', async () => {
+    // The mock returns exactly what the query would select: nothing to the angler.
+    setupMockDb({ sentToAngler: [] })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('first form inquiry with an empty thread keeps the first-reply path', async () => {
+    setupMockDb({ conversationMsgs: [], message: 'Hello, planning a trip.' })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('holds with a reason when the takeover check fails — no model call, nothing sent', async () => {
+    setupMockDb({ takeoverError: true })
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    expect(result!.sent).toBe(false)
+    expect(result!.reasons[0]).toMatch(/could not check/)
+    expect(vi.mocked(draftReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    assertPreDraftGateEvent('could not check')
   })
 })
 
