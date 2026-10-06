@@ -330,3 +330,44 @@ INSERT INTO inquiries (
   'awaiting_payment', 'deposit_paid', NULL,
   '2026-07-05 10:00:00+00', '2026-07-05 10:00:00+00'
 ) ON CONFLICT (id) DO NOTHING;
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- FA-1.50 — offer pages for the offer-centric schema (fictional, synthetic)
+--
+-- Three pages: NZ (active, guide), Iceland (active, guide), a draft with no guide — each
+-- with at least one option — and a second fictional guide, so a second `primary` can be
+-- attempted in a red proof. experience_guides / experience_prices / experience_slug_aliases
+-- are deliberately NOT seeded: on `supabase db reset` the migration runs BEFORE this file,
+-- so its backfill never sees these rows. The proof re-runs the backfill statements
+-- (the BACKFILL-BEGIN … BACKFILL-END block of 20261007000000_experience_offer_centric_expand.sql)
+-- by hand after the seed. All UUIDs are v4.
+-- ════════════════════════════════════════════════════════════════════════════
+
+INSERT INTO guides (id, full_name, country, city, status, languages, fish_expertise, years_experience, bio)
+VALUES (
+  '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04',
+  'Hana Seed', 'New Zealand', 'Queenstown', 'active',
+  ARRAY['en'], ARRAY['brown trout', 'rainbow trout'], 9,
+  'Fictional seed guide. Not a real person, not real content.'
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO experience_pages (id, guide_id, experience_name, slug, country, region, status, price_from, currency)
+VALUES
+  ('e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04',
+   'Seed Backcountry Day, South Island', 'seed-backcountry-day-nz', 'New Zealand', 'Otago',
+   'active', 650, 'NZD'),
+  ('e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e202', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03',
+   'Seed Salmon Week, South-West Iceland', 'seed-salmon-week-iceland', 'Iceland', 'South-West',
+   'active', 450.50, 'EUR'),
+  ('e3e3e3e3-e3e3-4e3e-8e3e-e3e3e3e3e303', NULL,
+   'Seed Draft Page, Finland', 'seed-draft-finland', 'finland', 'Lapland',
+   'draft', 300, 'EUR')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO experience_page_options (id, experience_page_id, sort_order, label, price_from)
+VALUES
+  ('e4e4e4e4-e4e4-4e4e-8e4e-e4e4e4e4e401', 'e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', 0, 'Full day, two anglers', 650),
+  ('e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e502', 'e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e202', 0, 'Day trip from Reykjavik', 450.50),
+  ('e6e6e6e6-e6e6-4e6e-8e6e-e6e6e6e6e603', 'e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e202', 1, 'Lodge week', 3200),
+  ('e7e7e7e7-e7e7-4e7e-8e7e-e7e7e7e7e704', 'e3e3e3e3-e3e3-4e3e-8e3e-e3e3e3e3e303', 0, 'Draft option', 300)
+ON CONFLICT (id) DO NOTHING;

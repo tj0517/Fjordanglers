@@ -574,6 +574,54 @@ export type Database = {
           },
         ]
       }
+      experience_guides: {
+        Row: {
+          created_at: string
+          experience_id: string
+          guide_id: string
+          guide_price_override_cents: number | null
+          role: string
+          show_on_page: boolean
+          sort_order: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          experience_id: string
+          guide_id: string
+          guide_price_override_cents?: number | null
+          role?: string
+          show_on_page?: boolean
+          sort_order?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          experience_id?: string
+          guide_id?: string
+          guide_price_override_cents?: number | null
+          role?: string
+          show_on_page?: boolean
+          sort_order?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_guides_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experience_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "experience_guides_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       experience_page_options: {
         Row: {
           boat_description: string | null
@@ -582,11 +630,15 @@ export type Database = {
           catches_text: string | null
           content_blocks: Json
           created_at: string
+          currency: string | null
           description: string | null
+          duration_days_max: number | null
+          duration_days_min: number | null
           excludes: string[]
           experience_page_id: string
           id: string
           includes: string[]
+          kind: string
           label: string
           location_lat: number | null
           location_lng: number | null
@@ -594,7 +646,10 @@ export type Database = {
           meeting_point_name: string | null
           peak_months: number[] | null
           price_from: number
+          price_from_cents: number | null
+          price_to_cents: number | null
           price_type: string
+          sample_itinerary: Json
           season_months: number[] | null
           sort_order: number
           special_attractions: Json
@@ -609,11 +664,15 @@ export type Database = {
           catches_text?: string | null
           content_blocks?: Json
           created_at?: string
+          currency?: string | null
           description?: string | null
+          duration_days_max?: number | null
+          duration_days_min?: number | null
           excludes?: string[]
           experience_page_id: string
           id?: string
           includes?: string[]
+          kind?: string
           label?: string
           location_lat?: number | null
           location_lng?: number | null
@@ -621,7 +680,10 @@ export type Database = {
           meeting_point_name?: string | null
           peak_months?: number[] | null
           price_from?: number
+          price_from_cents?: number | null
+          price_to_cents?: number | null
           price_type?: string
+          sample_itinerary?: Json
           season_months?: number[] | null
           sort_order?: number
           special_attractions?: Json
@@ -636,11 +698,15 @@ export type Database = {
           catches_text?: string | null
           content_blocks?: Json
           created_at?: string
+          currency?: string | null
           description?: string | null
+          duration_days_max?: number | null
+          duration_days_min?: number | null
           excludes?: string[]
           experience_page_id?: string
           id?: string
           includes?: string[]
+          kind?: string
           label?: string
           location_lat?: number | null
           location_lng?: number | null
@@ -648,7 +714,10 @@ export type Database = {
           meeting_point_name?: string | null
           peak_months?: number[] | null
           price_from?: number
+          price_from_cents?: number | null
+          price_to_cents?: number | null
           price_type?: string
+          sample_itinerary?: Json
           season_months?: number[] | null
           sort_order?: number
           special_attractions?: Json
@@ -679,36 +748,52 @@ export type Database = {
           country: string
           created_at: string
           currency: string
+          day_schedule: Json
           difficulty: string | null
           environment: string[]
           excludes: string[]
+          expectations_text: string | null
           experience_name: string
           faq: Json
+          fee_pct: number
           gallery_image_urls: string[]
           guide_id: string | null
           hero_image_url: string | null
           id: string
           includes: string[]
           intro_text: string | null
+          license_info: Json | null
           location_area: Json | null
           location_lat: number | null
           location_lng: number | null
           location_spots: Json | null
+          max_anglers_per_guide: number
+          max_days: number | null
           meeting_point_description: string | null
           meeting_point_name: string | null
           meta_description: string | null
           meta_title: string | null
+          min_days: number
+          nearest_airport: string | null
           non_angler_friendly: boolean
+          not_suited_for: string[]
+          offer_eta_text: string | null
+          offer_mode: string
           og_image_url: string | null
+          page_version: number
           peak_months: number[]
           physical_effort: string | null
           price_from: number
+          price_from_cents: number | null
+          price_to_cents: number | null
           price_type: string
           region: string
+          response_sla_hours: number
           rod_setup: string | null
           season_end: string | null
           season_months: number[]
           season_start: string | null
+          skill_level: number | null
           slug: string
           special_attraction_image_url: string | null
           special_attraction_text: string | null
@@ -716,11 +801,17 @@ export type Database = {
           species_details: Json
           status: string
           story_text: string | null
+          suggested_lodging: Json
+          suited_for: string[]
           target_species: string[]
           technique: string[]
+          tip_guidance_text: string | null
           trip_id: string | null
           updated_at: string
           views_image_urls: string[] | null
+          walking_km_max: number | null
+          walking_km_min: number | null
+          weather_policy_text: string | null
           what_to_bring: string[]
         }
         Insert: {
@@ -735,36 +826,52 @@ export type Database = {
           country: string
           created_at?: string
           currency?: string
+          day_schedule?: Json
           difficulty?: string | null
           environment?: string[]
           excludes?: string[]
+          expectations_text?: string | null
           experience_name: string
           faq?: Json
+          fee_pct?: number
           gallery_image_urls?: string[]
           guide_id?: string | null
           hero_image_url?: string | null
           id?: string
           includes?: string[]
           intro_text?: string | null
+          license_info?: Json | null
           location_area?: Json | null
           location_lat?: number | null
           location_lng?: number | null
           location_spots?: Json | null
+          max_anglers_per_guide?: number
+          max_days?: number | null
           meeting_point_description?: string | null
           meeting_point_name?: string | null
           meta_description?: string | null
           meta_title?: string | null
+          min_days?: number
+          nearest_airport?: string | null
           non_angler_friendly?: boolean
+          not_suited_for?: string[]
+          offer_eta_text?: string | null
+          offer_mode?: string
           og_image_url?: string | null
+          page_version?: number
           peak_months?: number[]
           physical_effort?: string | null
           price_from?: number
+          price_from_cents?: number | null
+          price_to_cents?: number | null
           price_type?: string
           region?: string
+          response_sla_hours?: number
           rod_setup?: string | null
           season_end?: string | null
           season_months?: number[]
           season_start?: string | null
+          skill_level?: number | null
           slug: string
           special_attraction_image_url?: string | null
           special_attraction_text?: string | null
@@ -772,11 +879,17 @@ export type Database = {
           species_details?: Json
           status?: string
           story_text?: string | null
+          suggested_lodging?: Json
+          suited_for?: string[]
           target_species?: string[]
           technique?: string[]
+          tip_guidance_text?: string | null
           trip_id?: string | null
           updated_at?: string
           views_image_urls?: string[] | null
+          walking_km_max?: number | null
+          walking_km_min?: number | null
+          weather_policy_text?: string | null
           what_to_bring?: string[]
         }
         Update: {
@@ -791,36 +904,52 @@ export type Database = {
           country?: string
           created_at?: string
           currency?: string
+          day_schedule?: Json
           difficulty?: string | null
           environment?: string[]
           excludes?: string[]
+          expectations_text?: string | null
           experience_name?: string
           faq?: Json
+          fee_pct?: number
           gallery_image_urls?: string[]
           guide_id?: string | null
           hero_image_url?: string | null
           id?: string
           includes?: string[]
           intro_text?: string | null
+          license_info?: Json | null
           location_area?: Json | null
           location_lat?: number | null
           location_lng?: number | null
           location_spots?: Json | null
+          max_anglers_per_guide?: number
+          max_days?: number | null
           meeting_point_description?: string | null
           meeting_point_name?: string | null
           meta_description?: string | null
           meta_title?: string | null
+          min_days?: number
+          nearest_airport?: string | null
           non_angler_friendly?: boolean
+          not_suited_for?: string[]
+          offer_eta_text?: string | null
+          offer_mode?: string
           og_image_url?: string | null
+          page_version?: number
           peak_months?: number[]
           physical_effort?: string | null
           price_from?: number
+          price_from_cents?: number | null
+          price_to_cents?: number | null
           price_type?: string
           region?: string
+          response_sla_hours?: number
           rod_setup?: string | null
           season_end?: string | null
           season_months?: number[]
           season_start?: string | null
+          skill_level?: number | null
           slug?: string
           special_attraction_image_url?: string | null
           special_attraction_text?: string | null
@@ -828,11 +957,17 @@ export type Database = {
           species_details?: Json
           status?: string
           story_text?: string | null
+          suggested_lodging?: Json
+          suited_for?: string[]
           target_species?: string[]
           technique?: string[]
+          tip_guidance_text?: string | null
           trip_id?: string | null
           updated_at?: string
           views_image_urls?: string[] | null
+          walking_km_max?: number | null
+          walking_km_min?: number | null
+          weather_policy_text?: string | null
           what_to_bring?: string[]
         }
         Relationships: [
@@ -841,6 +976,70 @@ export type Database = {
             columns: ["guide_id"]
             isOneToOne: false
             referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      experience_prices: {
+        Row: {
+          anglers: number
+          currency: string
+          days: number
+          experience_id: string
+          guide_price_cents: number
+          id: string
+          valid_from: string | null
+          valid_to: string | null
+        }
+        Insert: {
+          anglers: number
+          currency: string
+          days: number
+          experience_id: string
+          guide_price_cents: number
+          id?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Update: {
+          anglers?: number
+          currency?: string
+          days?: number
+          experience_id?: string
+          guide_price_cents?: number
+          id?: string
+          valid_from?: string | null
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_prices_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experience_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      experience_slug_aliases: {
+        Row: {
+          experience_id: string
+          slug: string
+        }
+        Insert: {
+          experience_id: string
+          slug: string
+        }
+        Update: {
+          experience_id?: string
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_slug_aliases_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experience_pages"
             referencedColumns: ["id"]
           },
         ]
@@ -1226,6 +1425,7 @@ export type Database = {
       guides: {
         Row: {
           accepted_payment_methods: string[] | null
+          association: string | null
           avatar_url: string | null
           average_rating: number | null
           bio: string | null
@@ -1249,6 +1449,7 @@ export type Database = {
           fish_expertise: string[]
           founding_guide_until: string | null
           full_name: string
+          gear_text: string | null
           google_profile_url: string | null
           google_rating: number | null
           google_review_count: number | null
@@ -1266,6 +1467,7 @@ export type Database = {
           payment_ready: boolean | null
           photo_marketing_consent: boolean
           pricing_model: Database["public"]["Enums"]["pricing_model"]
+          response_time_hours: number | null
           slug: string | null
           specialties: string[] | null
           status: Database["public"]["Enums"]["guide_status"]
@@ -1284,6 +1486,7 @@ export type Database = {
         }
         Insert: {
           accepted_payment_methods?: string[] | null
+          association?: string | null
           avatar_url?: string | null
           average_rating?: number | null
           bio?: string | null
@@ -1307,6 +1510,7 @@ export type Database = {
           fish_expertise?: string[]
           founding_guide_until?: string | null
           full_name: string
+          gear_text?: string | null
           google_profile_url?: string | null
           google_rating?: number | null
           google_review_count?: number | null
@@ -1324,6 +1528,7 @@ export type Database = {
           payment_ready?: boolean | null
           photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
+          response_time_hours?: number | null
           slug?: string | null
           specialties?: string[] | null
           status?: Database["public"]["Enums"]["guide_status"]
@@ -1342,6 +1547,7 @@ export type Database = {
         }
         Update: {
           accepted_payment_methods?: string[] | null
+          association?: string | null
           avatar_url?: string | null
           average_rating?: number | null
           bio?: string | null
@@ -1365,6 +1571,7 @@ export type Database = {
           fish_expertise?: string[]
           founding_guide_until?: string | null
           full_name?: string
+          gear_text?: string | null
           google_profile_url?: string | null
           google_rating?: number | null
           google_review_count?: number | null
@@ -1382,6 +1589,7 @@ export type Database = {
           payment_ready?: boolean | null
           photo_marketing_consent?: boolean
           pricing_model?: Database["public"]["Enums"]["pricing_model"]
+          response_time_hours?: number | null
           slug?: string | null
           specialties?: string[] | null
           status?: Database["public"]["Enums"]["guide_status"]
@@ -1410,6 +1618,7 @@ export type Database = {
           angler_phone: string | null
           assigned_at: string | null
           assigned_guide_id: string | null
+          brief: Json | null
           created_at: string
           deal_currency: string
           deposit_amount: number | null
@@ -1489,6 +1698,7 @@ export type Database = {
           angler_phone?: string | null
           assigned_at?: string | null
           assigned_guide_id?: string | null
+          brief?: Json | null
           created_at?: string
           deal_currency?: string
           deposit_amount?: number | null
@@ -1568,6 +1778,7 @@ export type Database = {
           angler_phone?: string | null
           assigned_at?: string | null
           assigned_guide_id?: string | null
+          brief?: Json | null
           created_at?: string
           deal_currency?: string
           deposit_amount?: number | null
@@ -2260,6 +2471,7 @@ export type Database = {
         Row: {
           comment: string | null
           created_at: string | null
+          experience_id: string | null
           id: string
           inquiry_id: string
           media_urls: Json | null
@@ -2273,6 +2485,7 @@ export type Database = {
         Insert: {
           comment?: string | null
           created_at?: string | null
+          experience_id?: string | null
           id?: string
           inquiry_id: string
           media_urls?: Json | null
@@ -2286,6 +2499,7 @@ export type Database = {
         Update: {
           comment?: string | null
           created_at?: string | null
+          experience_id?: string | null
           id?: string
           inquiry_id?: string
           media_urls?: Json | null
@@ -2297,6 +2511,13 @@ export type Database = {
           would_recommend?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reviews_experience_id_fkey"
+            columns: ["experience_id"]
+            isOneToOne: false
+            referencedRelation: "experience_pages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reviews_inquiry_id_fkey"
             columns: ["inquiry_id"]
