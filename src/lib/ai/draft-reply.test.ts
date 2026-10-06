@@ -199,6 +199,18 @@ describe('draftReply', () => {
     expect(result.usedIds).toContain('k-iceland')
   })
 
+  it('returns the used knowledge entries with the same ids as usedIds (FA-1.47) — RED on main: no usedEntries', async () => {
+    const result = await draftReply({
+      inquiryId:   'inquiry-1',
+      counterpart: 'angler',
+      channel:     'email',
+    })
+
+    expect(result.usedEntries.map(e => e.id)).toEqual(result.usedIds)
+    expect(result.usedEntries[0]).toMatchObject({ id: 'k-inst', kind: 'instructions', body: 'You are the FA assistant.' })
+    expect(result.usedEntries.map(e => e.id)).toContain('k-iceland')
+  })
+
   it('throws a readable DraftReplyError when thread is empty (default: allowFormOnly not set)', async () => {
     mockDb([]) // no messages; INQUIRY_DATA has a form message, but allowFormOnly defaults to false —
                // this is the path autoSendReply (FA-1.27) relies on staying unchanged.

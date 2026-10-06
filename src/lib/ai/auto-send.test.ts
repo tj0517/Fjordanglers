@@ -63,6 +63,7 @@ vi.mock('@/lib/env', () => ({ env: mockEnv }))
 import { createServiceClient } from '@/lib/supabase/server'
 import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
 import { judgeReply } from '@/lib/ai/judge-reply'
+import type { KnowledgeEntry } from '@/lib/ai/knowledge'
 import { sendMessage } from '@/lib/messages/send'
 import { autoSendReply, hasAgentAutoReply } from './auto-send'
 
@@ -92,6 +93,12 @@ interface MockOptions {
   sentInWindow?:    number
   /** FA-1.42: the count query on inquiry_events fails. */
   capCountError?:   boolean
+  /** FA-1.48: SENT outbound messages to the angler, as the takeover query reads them. */
+  sentToAngler?:    { id: string; drafted_by: string | null; counterpart?: string }[]
+  /** FA-1.48: message.sent events (message id + actor) the takeover query reads. */
+  sentEvents?:      { message_id: string; actor_kind: string }[]
+  /** FA-1.48: the takeover query on messages fails. */
+  takeoverError?:   boolean
 }
 
 const DEFAULT_KNOWLEDGE = [
@@ -124,6 +131,9 @@ function setupMockDb(opts: MockOptions = {}) {
     source           = 'web_form',
     sentInWindow     = 0,
     capCountError    = false,
+    sentToAngler     = [],
+    sentEvents       = [],
+    takeoverError    = false,
   } = opts
 
   const inquiry = {
@@ -145,8 +155,16 @@ function setupMockDb(opts: MockOptions = {}) {
         return {
           // FA-1.42 cap count: .select('id', {count, head}).eq('type').eq('payload->>sent').gte('occurred_at')
           select: () => {
+            // FA-1.48 takeover: .select('id', {count, head}).eq().eq().in('message_id', ids).neq('actor_kind', 'agent')
+            let ids: string[] = []
             const builder = {
               eq:  () => builder,
+              in:  (_col: string, values: string[]) => { ids = values; return builder },
+              neq: (_col: string, actor: string) => Promise.resolve(
+                takeoverError
+                  ? { count: null, error: { message: 'connection reset' } }
+                  : { count: sentEvents.filter(e => ids.includes(e.message_id) && e.actor_kind !== actor).length, error: null },
+              ),
               gte: () => Promise.resolve(
                 capCountError
                   ? { count: null, error: { message: 'connection reset' } }
@@ -179,9 +197,20 @@ function setupMockDb(opts: MockOptions = {}) {
               return builder
             }
             // Conversation query: .select(...).eq(...).neq(...).order(...)
+            const eqFilters: Record<string, unknown> = {}
             const builder = {
-              eq:    () => builder,
+              eq:    (col: string, val: unknown) => { eqFilters[col] = val; return builder },
               neq:   () => builder,
+              // FA-1.48 takeover: .select('id, drafted_by').eq()x3.in('status', [...]) — honours the
+              // counterpart filter, so a message to a guide is not returned for counterpart='angler'.
+              in:    () => Promise.resolve(
+                takeoverError
+                  ? { data: null, error: { message: 'connection reset' } }
+                  : {
+                      data: sentToAngler.filter(m => eqFilters.counterpart == null || (m.counterpart ?? 'angler') === eqFilters.counterpart),
+                      error: null,
+                    },
+              ),
               order: () => Promise.resolve({ data: conversationMsgs, error: null }),
             }
             return builder
@@ -265,7 +294,7 @@ describe('autoSendReply — pre-draft gate failures (event emitted, 0 model call
 describe('autoSendReply — destination gate (post-draft, RED guard)', () => {
   beforeEach(() => {
     vi.mocked(sendMessage).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'] })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [] })
     vi.mocked(judgeReply).mockResolvedValue({ score: 0.95, send: true, reasons: ['looks good'] })
   })
 
@@ -297,7 +326,7 @@ describe('autoSendReply — judge gate failures', () => {
     setupMockDb()
     vi.mocked(sendMessage).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-2', text: 'Hello angler!', subject: 'Re: trip', usedIds: [] })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-2', text: 'Hello angler!', subject: 'Re: trip', usedIds: [], usedEntries: [] })
   })
 
   it('does NOT send when judge score=0.89 and emits sent=false with score', async () => {
@@ -379,7 +408,7 @@ describe('autoSendReply — prompt injection', () => {
     })
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-inject', text: 'Here is your guide...', subject: null, usedIds: [] })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-inject', text: 'Here is your guide...', subject: null, usedIds: [], usedEntries: [] })
     vi.mocked(judgeReply).mockResolvedValue({
       score:   0,
       send:    false,
@@ -410,6 +439,7 @@ describe('autoSendReply — happy path', () => {
       text:    'Looking forward to your NZ trip!',
       subject: 'Re: New Zealand inquiry',
       usedIds: ['k-inst', 'k-dest'],
+      usedEntries: [],
     })
     vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
@@ -440,6 +470,37 @@ describe('autoSendReply — happy path', () => {
   })
 })
 
+// ─── FA-1.47 — the judge sees the knowledge the draft was built from ─────────
+
+describe('autoSendReply — judge receives the draft\'s knowledge (FA-1.47)', () => {
+  const DRAFT_ENTRIES: KnowledgeEntry[] = [
+    { id: 'k-inst', kind: 'instructions', country: null,          guide_id: null, title: 'Instructions', body: 'Be helpful.' },
+    { id: 'k-dest', kind: 'destination',  country: 'New Zealand', guide_id: null, title: 'NZ',           body: 'Great rivers.' },
+  ]
+
+  beforeEach(() => {
+    // The DB holds a tone entry too (see DEFAULT_KNOWLEDGE) — the judge must NOT get a set of its own.
+    setupMockDb({ status: 'new', trip_country: 'New Zealand' })
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(draftReply).mockResolvedValue({
+      draftId: 'draft-k', text: 'NZ draft', subject: null,
+      usedIds: ['k-inst', 'k-dest'], usedEntries: DRAFT_ENTRIES,
+    })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: false, reasons: ['hold'] })
+  })
+
+  it('passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument', async () => {
+    await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(vi.mocked(judgeReply)).toHaveBeenCalledTimes(1)
+    const [, draftTextArg, knowledgeArg] = vi.mocked(judgeReply).mock.calls[0]
+    expect(draftTextArg).toBe('NZ draft')
+    expect(knowledgeArg?.map(e => e.id)).toEqual(['k-inst', 'k-dest'])
+    expect(knowledgeArg).toBe(DRAFT_ENTRIES)
+  })
+})
+
 // ─── FA-1.42 — daily cap on auto-sends ───────────────────────────────────────
 
 describe('autoSendReply — daily cap (FA-1.42)', () => {
@@ -453,6 +514,7 @@ describe('autoSendReply — daily cap (FA-1.42)', () => {
       text:    'Looking forward to your NZ trip!',
       subject: 'Re: New Zealand inquiry',
       usedIds: ['k-inst', 'k-dest'],
+      usedEntries: [],
     })
     vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
@@ -542,7 +604,7 @@ function mockDraftReplyLikeReal(threadIsEmpty: boolean) {
     if (threadIsEmpty && params.allowFormOnly !== true) {
       throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
     }
-    return { draftId: 'draft-form', text: 'Thanks for your inquiry!', subject: 'Re: Iceland', usedIds: ['k-inst'] }
+    return { draftId: 'draft-form', text: 'Thanks for your inquiry!', subject: 'Re: Iceland', usedIds: ['k-inst'], usedEntries: [] }
   })
 }
 
@@ -725,6 +787,104 @@ describe('autoSendReply — form inquiry without message (FA-1.46)', () => {
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
     expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
     assertPreDraftGateEvent('no message thread and no form message')
+  })
+})
+
+describe('autoSendReply — the agent leads only until a human takes over (FA-1.48)', () => {
+  const CLIENT_MSG = { direction: 'inbound', body: 'And what about 20 June?', status: 'received', occurred_at: '2026-09-02T10:00:00Z' }
+  const MANUAL_MSG = { direction: 'outbound', body: 'Hi, here is the price.', status: 'sent', occurred_at: '2026-09-01T11:00:00Z' }
+
+  function expectSilentTakeover(result: Awaited<ReturnType<typeof autoSendReply>>) {
+    expect(result).toEqual({ sent: false, score: null, reasons: ['human has taken over the thread'], draftMessageId: null })
+    expect(vi.mocked(draftReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    assertPreDraftGateEvent('human has taken over')
+  }
+
+  function expectAgentLeads(result: Awaited<ReturnType<typeof autoSendReply>>) {
+    expect(vi.mocked(draftReply)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(judgeReply)).toHaveBeenCalledTimes(1)
+    expect(result!.sent).toBe(true)
+  }
+
+  beforeEach(() => {
+    vi.mocked(sendMessage).mockReset()
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [] })
+    vi.mocked(judgeReply).mockResolvedValue({ score: 0.95, send: true, reasons: ['looks good'] })
+  })
+
+  it('stays silent after a manual reply from the panel (drafted_by admin) — RED on main: the model is called', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-manual', drafted_by: 'admin' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('recognises an outbound stored the way the FA-1.49 Zoho import stores it (drafted_by admin, event actor admin, source webhook)', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-zoho', drafted_by: 'admin' }],
+      sentEvents:       [{ message_id: 'm-zoho', actor_kind: 'admin' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('recognises an agent draft sent by a human (drafted_by agent, message.sent actor admin) — RED on main', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-draft', drafted_by: 'agent' }],
+      sentEvents:       [{ message_id: 'm-draft', actor_kind: 'admin' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('keeps leading when the only outbound is an auto-sent agent message (drafted_by agent, actor agent)', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], MANUAL_MSG, CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-auto', drafted_by: 'agent' }],
+      sentEvents:       [{ message_id: 'm-auto', actor_kind: 'agent' }],
+    })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('keeps leading when an agent message has no message.sent event at all', async () => {
+    setupMockDb({ sentToAngler: [{ id: 'm-auto', drafted_by: 'agent' }] })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('takes over on a human message even when an auto-sent agent message sits beside it', async () => {
+    setupMockDb({
+      sentToAngler: [{ id: 'm-auto', drafted_by: 'agent' }, { id: 'm-manual', drafted_by: 'admin' }],
+      sentEvents:   [{ message_id: 'm-auto', actor_kind: 'agent' }],
+    })
+    expectSilentTakeover(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('outbound to a guide only (counterpart=guide, drafted_by admin, sent) is not a takeover — path as today', async () => {
+    setupMockDb({
+      conversationMsgs: [DEFAULT_CONVERSATION[0], CLIENT_MSG],
+      sentToAngler:     [{ id: 'm-guide', drafted_by: 'admin', counterpart: 'guide' }],
+    })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('first form inquiry with an empty thread keeps the first-reply path', async () => {
+    setupMockDb({ conversationMsgs: [], message: 'Hello, planning a trip.' })
+    expectAgentLeads(await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' }))
+  })
+
+  it('holds with a reason when the takeover check fails — no model call, nothing sent', async () => {
+    setupMockDb({ takeoverError: true })
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    expect(result!.sent).toBe(false)
+    expect(result!.reasons[0]).toMatch(/could not check/)
+    expect(vi.mocked(draftReply)).not.toHaveBeenCalled()
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    assertPreDraftGateEvent('could not check')
   })
 })
 
