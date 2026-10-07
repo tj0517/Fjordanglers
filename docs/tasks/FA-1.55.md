@@ -2,7 +2,7 @@
 id: FA-1.55
 title: Szablon v2 — dół strony (S10–S14) i formularz 3-krokowy: recenzje z linkiem zewnętrznym, mapa i sezon, co zabrać, FAQ, zapytanie z `brief`; aliasy slugów
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -79,3 +79,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ```
 
 ## Notatki z realizacji
+- 2026-10-07 tj: S13 — stałe pytanie „FA vs bezpośrednio" jako placeholder, treść od tj przed FA-1.57; spacer w przeglądarce z RESEND_DEV_FAKE=1 i prawdziwym Claude API (kilka wywołań, liczba w raporcie); praca na Macu, db reset dozwolony.
