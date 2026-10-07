@@ -189,7 +189,7 @@ export default function OfferWidget({
       <GuideLine guide={guide} />
 
       {/* ── when / anglers / days ── */}
-      <div className="mt-4 flex flex-col gap-2">
+      <div className="mt-3.5 flex flex-col gap-2">
         <div className="rounded-lg border p-2.5" style={fieldStyle}>
           <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-medium">When?</span>
@@ -256,7 +256,7 @@ export default function OfferWidget({
       </div>
 
       {/* ── the three numbers ── */}
-      <div className="mt-4" data-testid="offer-totals">
+      <div className="mt-3.5" data-testid="offer-totals">
         {q.priced ? (
           <>
             <Row label="Total" value={formatCents(q.totalCents, q.currency)} strong />
@@ -295,11 +295,11 @@ export default function OfferWidget({
 
 // ─── small pieces, local on purpose: nothing outside this widget uses them ───
 
-const cardClass  = 'rounded-xl border-2 bg-white p-5'
+const cardClass  = 'rounded-xl border-2 bg-white p-4'
 const cardStyle  = { borderColor: 'var(--fa-navy)', boxShadow: '0 8px 24px rgba(10,46,77,0.08)', color: 'var(--fa-navy)' }
 const mutedStyle = { color: 'rgba(10,46,77,0.62)' }
 const fieldStyle = { borderColor: 'rgba(10,46,77,0.20)', color: 'var(--fa-navy)' }
-const ctaClass   = 'mt-4 block w-full rounded-lg px-4 py-3.5 text-center text-base font-semibold'
+const ctaClass   = 'mt-3.5 block w-full rounded-lg px-4 py-3 text-center text-base font-semibold'
 const ctaStyle   = { background: 'var(--fa-navy)', color: '#fff' }
 const compactCtaClass = 'flex-none rounded-lg px-4 py-3 text-sm font-bold'
 const compactCtaStyle = { background: '#fff', color: 'var(--fa-navy)', minHeight: 44 }

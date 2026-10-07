@@ -20,6 +20,7 @@ import { CurrencyProvider } from '@/components/experience-v2/currency-context'
 import OfferTopBar from '@/components/experience-v2/offer-top-bar'
 import OfferGallery from '@/components/experience-v2/offer-gallery'
 import OfferChips from '@/components/experience-v2/offer-chips'
+import OfferPriceLead from '@/components/experience-v2/offer-price-lead'
 import OfferWidget, { type OfferWidgetProps } from '@/components/experience-v2/offer-widget'
 import OfferMobileBar from '@/components/experience-v2/offer-mobile-bar'
 
@@ -94,10 +95,10 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
       <main style={{ background: 'var(--fa-white)', color: 'var(--fa-navy)' }} className="pb-24 sm:pb-10">
         <div className="mx-auto max-w-[1200px] sm:px-8">
           {/* ── S1 gallery ── */}
-          <nav aria-label="Breadcrumb" className="hidden px-4 pt-5 text-xs sm:block sm:px-0" style={{ color: 'rgba(10,46,77,0.6)' }}>
+          <nav aria-label="Breadcrumb" className="hidden px-4 pt-3 text-xs sm:block sm:px-0" style={{ color: 'rgba(10,46,77,0.6)' }}>
             {page.country} › {page.region} › {page.experienceName}
           </nav>
-          <div className="sm:mt-4">
+          <div className="sm:mt-2.5">
             <OfferGallery heroUrl={page.heroImageUrl} galleryUrls={page.galleryImageUrls} alt={page.experienceName} />
           </div>
 
@@ -106,12 +107,12 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                  the sticky card is meant to travel. ── */}
           <div className="flex items-start gap-10 px-4 sm:px-0">
             <div className="min-w-0 flex-1">
-              <h1 className="f-display mt-6 text-3xl font-bold leading-[1.15] sm:text-[40px]">
+              <h1 className="f-display mt-5 text-3xl font-bold leading-[1.15] sm:text-[34px]">
                 {page.experienceName}
               </h1>
 
               {page.introText != null && (
-                <p className="mt-3 text-base sm:text-lg" style={{ color: 'rgba(10,46,77,0.7)' }}>
+                <p className="mt-2.5 text-base sm:text-[17px]" style={{ color: 'rgba(10,46,77,0.7)' }}>
                   {page.introText}
                 </p>
               )}
@@ -136,6 +137,21 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 </p>
               )}
 
+              {/* Mobile keeps the wireframe's order: the price sits above the chips, and the
+                  full calculator is further down. Desktop shows the same numbers in the
+                  sticky card instead. */}
+              <div className="mt-3 sm:hidden">
+                <OfferPriceLead
+                  offerMode={page.offerMode}
+                  prices={page.prices}
+                  feePct={page.feePct}
+                  currency={page.currency}
+                  maxAnglersPerGuide={page.maxAnglersPerGuide}
+                  priceFromCents={page.priceFromCents}
+                  priceToCents={page.priceToCents}
+                />
+              </div>
+
               <div className="mt-4">
                 <OfferChips
                   region={page.region}
@@ -150,7 +166,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
 
               {/* The three lines that make sending an inquiry cost nothing. */}
               <ul
-                className="mt-5 flex flex-col gap-1.5 border-y py-3.5 text-sm sm:flex-row sm:gap-6"
+                className="mt-4 flex flex-col gap-1.5 border-y py-3 text-sm sm:flex-row sm:gap-6"
                 style={{ borderColor: 'rgba(10,46,77,0.14)' }}
                 data-testid="offer-assurances"
               >
@@ -159,8 +175,18 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 <li>✓ We answer within {page.responseSlaHours} h</li>
               </ul>
 
-              {/* Mobile: the price sits directly under the assurances, as in the wireframe —
-                  the bottom bar only takes over once the hero is scrolled past. */}
+              {/* Mobile: the CTA is above the fold on its own, so the first screen ends on
+                  an action rather than on a form the visitor has to scroll to find. The
+                  bottom bar repeats it once the hero is scrolled past. */}
+              <a
+                href={INQUIRY_ANCHOR}
+                className="mt-4 block w-full rounded-lg px-4 py-3 text-center text-base font-semibold sm:hidden"
+                style={{ background: 'var(--fa-navy)', color: '#fff' }}
+              >
+                {page.offerMode === 'custom' ? 'Plan your trip' : 'Check availability'}
+              </a>
+
+              {/* The full calculator, for the visitor who wants the three numbers. */}
               <div className="mt-6 sm:hidden">
                 <OfferWidget {...widget} />
               </div>

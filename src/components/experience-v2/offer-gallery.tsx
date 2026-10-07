@@ -30,7 +30,7 @@ export default function OfferGallery({
   if (all.length === 0) {
     return (
       <div
-        className="flex h-[220px] items-center justify-center rounded-xl text-sm sm:h-[450px]"
+        className="flex h-[212px] items-center justify-center rounded-xl text-sm sm:h-[312px]"
         style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)' }}
       >
         No photos yet
@@ -62,7 +62,7 @@ export default function OfferGallery({
           aria-label={`${all.length} photos of ${alt}`}
         >
           {all.map((url, i) => (
-            <div key={url} className="relative h-[260px] w-full flex-none snap-center">
+            <div key={url} className="relative h-[212px] w-full flex-none snap-center">
               <Image
                 src={url}
                 alt={i === 0 ? alt : `${alt} — photo ${i + 1}`}
@@ -82,8 +82,11 @@ export default function OfferGallery({
         </p>
       </div>
 
-      {/* Desktop — hero 2×2 plus up to four thumbnails. */}
-      <div className="hidden gap-2.5 sm:grid sm:grid-cols-4 sm:grid-rows-2" style={{ height: 450 }}>
+      {/* Desktop — hero 2×2 plus up to four thumbnails.
+          Shorter than the wireframe's 2 × 220: at 1440 × 900 those 450 px pushed the
+          widget's CTA under the fold, and a CTA that needs scrolling is the one thing
+          S0–S2 exists to prevent. */}
+      <div className="hidden gap-2.5 sm:grid sm:grid-cols-4 sm:grid-rows-2" style={{ height: 312 }}>
         <div className="relative col-span-2 row-span-2 overflow-hidden rounded-xl">
           <Image src={hero} alt={alt} fill sizes="(min-width: 640px) 50vw, 100vw" className="object-cover" priority />
         </div>
@@ -98,7 +101,7 @@ export default function OfferGallery({
                   className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-white"
                   style={{ background: 'rgba(10,46,77,0.55)' }}
                 >
-                  +{extra} photos
+                  +{extra} {extra === 1 ? 'photo' : 'photos'}
                 </div>
               )}
             </div>
