@@ -2,13 +2,14 @@
 id: FA-1.55
 title: Szablon v2 — dół strony (S10–S14) i formularz 3-krokowy: recenzje z linkiem zewnętrznym, mapa i sezon, co zabrać, FAQ, zapytanie z `brief`; aliasy slugów
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/experience-v2-form
+pr: 137
 depends_on: [FA-1.54]
 blocked_by_questions: []
 touches_db: false
