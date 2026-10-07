@@ -80,3 +80,17 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 
 ## Notatki z realizacji
 - 2026-10-07 tj: S13 — stałe pytanie „FA vs bezpośrednio" jako placeholder, treść od tj przed FA-1.57; spacer w przeglądarce z RESEND_DEV_FAKE=1 i prawdziwym Claude API (kilka wywołań, liczba w raporcie); praca na Macu, db reset dozwolony.
+- 2026-10-07 tj (decyzje w trakcie realizacji, zadane przed budową S10 i kroku 2):
+  1. **S10 — źródło recenzji: opcja A**, wyłącznie `reviews.experience_id`. Bez awaryjnego
+     przejścia przez `inquiries.experience_page_id` i bez recenzji „po przewodniku”. Skutek
+     zapisany w `docs/deferred-tasks.md`: nic w `src/` nie zapisuje tej kolumny, więc sekcja
+     jest pusta na produkcji, dopóki `generateReviewLink` jej nie wypełni (blokuje część
+     zaufaniową FA-1.57).
+  2. **S10 — imię recenzenta: opcja C**, samo imię (pierwszy wyraz `inquiries.angler_name`)
+     plus kraj i miesiąc. Formularz recenzji nie zbiera zgody na publikację — osobny wiersz
+     w `deferred-tasks.md`.
+  3. **Krok 2 — `budget_band` na stronach `custom`: opcja A**, cztery widełki wycięte z
+     własnego zakresu strony (`price_from_cents`/`price_to_cents`), w walucie strony,
+     zaokrąglone do pełnych setek. Strona bez użytecznego zakresu nie pyta o budżet.
+     Zapis: `"EUR:140000-230000"` / `"EUR:320000+"` — waluta w wartości, bez dodatkowego
+     klucza poza listą z propozycji §2.
