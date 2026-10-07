@@ -30,7 +30,7 @@ export default function OfferGallery({
   if (all.length === 0) {
     return (
       <div
-        className="flex h-[212px] items-center justify-center rounded-xl text-sm sm:h-[312px]"
+        className="flex h-[212px] items-center justify-center rounded-xl text-sm sm:h-[304px]"
         style={{ background: 'rgba(10,46,77,0.06)', color: 'rgba(10,46,77,0.5)' }}
       >
         No photos yet
@@ -99,7 +99,7 @@ export default function OfferGallery({
           Shorter than the wireframe's 2 × 220: at 1440 × 900 those 450 px pushed the
           widget's CTA under the fold, and a CTA that needs scrolling is the one thing
           S0–S2 exists to prevent. */}
-      <div className="hidden gap-2.5 sm:grid sm:grid-cols-4 sm:grid-rows-2" style={{ height: 312 }}>
+      <div className="hidden gap-2.5 sm:grid sm:grid-cols-4 sm:grid-rows-2" style={{ height: 304 }}>
         <div className="relative col-span-2 row-span-2 overflow-hidden rounded-xl">
           <Image src={hero} alt={alt} fill sizes="(min-width: 640px) 50vw, 100vw" className="object-cover" priority />
         </div>

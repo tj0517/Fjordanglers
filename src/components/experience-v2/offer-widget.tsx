@@ -4,8 +4,14 @@
  * S2 — the widget that turns the price table into three numbers (FA-1.53).
  *
  *   Total                 what the angler pays, all in (O-31: one number, no "+ fee" line)
- *   Deposit now · 20%     paid to FjordAnglers; the FA fee *is* the deposit (ADR-0001)
+ *   Deposit now           paid to FjordAnglers; the FA fee *is* the deposit (ADR-0001)
  *   Balance to the guide  paid to the guide directly, later
+ *
+ * The deposit line carries no percentage in its label (tj, 2026-10-07): the fee is 20% of
+ * the *guide's* price, so next to a total that already includes it, "20%" invites the
+ * reader to divide 250 by 1 500 and get 16.7% — a number we never claimed and cannot
+ * explain. The percentage moves to a note underneath, where it can say what it is a
+ * percentage of.
  *
  * All three come from `quote()` in src/lib/pricing/experience-price.ts, the same function
  * the tests and the data-layer proof use, so the screen cannot drift from the rule. The
@@ -260,7 +266,11 @@ export default function OfferWidget({
         {q.priced ? (
           <>
             <Row label="Total" value={formatCents(q.totalCents, q.currency)} strong />
-            <Row label={`Deposit now · ${Math.round(feePct * 100)}%`} value={formatCents(q.feeCents, q.currency)} />
+            <Row
+              label="Deposit now"
+              value={formatCents(q.feeCents, q.currency)}
+              note={`${Math.round(feePct * 100)}% of the guide price`}
+            />
             <Row label="Balance to the guide" value={formatCents(q.guideCents, q.currency)} />
             {indicative(q.totalCents) != null && (
               <p className="mt-1.5 text-xs" style={mutedStyle} data-testid="offer-indicative">
@@ -325,13 +335,24 @@ function GuideLine({ guide }: { guide: OfferWidgetGuide | null }) {
   )
 }
 
-function Row({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
+function Row({
+  label, value, strong = false, note,
+}: {
+  label: string; value: string; strong?: boolean
+  /** Small print under the label — what the number is a share of, when that is not obvious. */
+  note?: string
+}) {
   return (
     <div
-      className="flex items-center justify-between gap-3 border-t py-2 text-sm"
+      className="flex items-baseline justify-between gap-3 border-t py-1.5 text-sm"
       style={{ borderColor: 'rgba(10,46,77,0.10)' }}
     >
-      <span>{label}</span>
+      <span>
+        {label}
+        {note != null && (
+          <span className="mt-0.5 block text-xs" style={mutedStyle}>{note}</span>
+        )}
+      </span>
       <b className={strong ? 'text-base' : undefined}>{value}</b>
     </div>
   )

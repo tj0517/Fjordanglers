@@ -106,4 +106,16 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
      Deposit now 20% / Balance to the guide", „free inquiry", „deposit only after you accept
      the offer", „answer within {n} h", „on request", „indicative rate"). Bez zmian atrybutu
      `lang`, bez mechanizmu i18n.
+- 2026-10-07 tj (review PR #134, runda 1):
+  8. **Etykieta depozytu** — „Deposit now · 20%" przy NZ$250 na sumie NZ$1 500 czyta się jak
+     16,7%. Etykieta to teraz „Deposit now", a procent zszedł do przypisu „20% of the guide
+     price", który mówi, czego jest procentem. Dotyczy widgetu (desktop i mobile); w dolnym
+     pasku procent i tak nie występował.
+  9. **LCP** — kryterium ≤ 2,5 s **przyjęte jako niespełnione**; pomiar powtórzyć na Vercelu
+     przed FA-1.57. W tej rundzie nie pracujemy nad wydajnością.
+  10. **Sekret w gałęzi** — `whatsapp-bridge/.env.example` (prawdziwy klucz service_role i
+     login Zoho) trafił do commita `f2a16a3e` przez `git add -A`; plik był nieśledzony na
+     checkoucie tj. Historia przepisana za zgodą tj (amend + `rebase --onto` +
+     `--force-with-lease`), klucze rotuje tj. Od tej pory: wyłącznie `git add <ścieżka>` i
+     `git diff --cached --stat` przed każdym commitem.
 - 2026-10-05 tj: O-31 — klient widzi cenę całkowitą (przewodnik + opłata FA), bez osobnej linii „opłata”.

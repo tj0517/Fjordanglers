@@ -8,7 +8,8 @@
  *
  * The three lines of the widget are, in the words the page uses:
  *   Total                 = guideCents + feeCents
- *   Deposit now (20%)     = feeCents   — the FA fee *is* the deposit (ADR-0001)
+ *   Deposit now           = feeCents   — the FA fee *is* the deposit (ADR-0001),
+ *                                      and it is 20% of the guide price, not of the total
  *   Balance to the guide  = guideCents
  *
  * Which is why `feeCents + guideCents === totalCents` has to hold to the cent, always:
