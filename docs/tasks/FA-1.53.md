@@ -2,7 +2,7 @@
 id: FA-1.53
 title: Szablon v2 — górna część strony (S0–S2): hero i galeria, H1 z chipami, trzy linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; dane przez `getExperienceV2()`
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -73,4 +73,16 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ```
 
 ## Notatki z realizacji
+- 2026-10-07 tj (prompt zadania, decyzje wiążące dla FA-1.53):
+  1. **Fixture w `supabase/seed.sql` jest w zakresie** — tylko lokalnie, dane syntetyczne; wejście
+     dopiero po bramce STOP (pokazać, co w repo zakłada pustkę `experience_guides`/`experience_prices`).
+  2. **Najbliższy wiersz cennika = ten sam `days`, najbliższa liczba `anglers`**; nadpisanie
+     (`guide_price_override_cents`) podmienia **wyłącznie wiersz bazowy** (`days=1`,
+     `anglers=max_anglers_per_guide`), pozostałe wiersze zostają z `experience_prices`.
+     Kolumna jest w centach i ≤ 115% bazy (pilnuje baza), nie procentem — zmiana wobec tego pliku.
+  3. **Widełki `custom` pokazujemy dokładnie jak w bazie**, jako orientacyjne, **bez dodawania
+     opłaty FA** — dane nie są jeszcze zwalidowane i zostaną poprawione później (zmiana wobec
+     kryterium (d) w tym pliku).
+  4. **Wireframe leży w `docs/brand/wireframes/`** (`README.md`, `Main.dc.html` desktop 1440,
+     `Mobile.dc.html` 390, `canvas.json`; `Form.dc.html` → FA-1.55), nie jako link do artefaktu.
 - 2026-10-05 tj: O-31 — klient widzi cenę całkowitą (przewodnik + opłata FA), bez osobnej linii „opłata”.
