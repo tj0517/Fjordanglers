@@ -26,7 +26,7 @@ import {
 import { formatCents } from '@/lib/format-price'
 import { ANGLER_COUNTRIES } from '@/lib/angler-countries'
 import { nextMonths, todayIso, type WizardAnswers, type WizardErrors } from './wizard-state'
-import { ChoiceRow, Counter, MUTED, PillRow, Question, TextField } from './wizard-fields'
+import { BORDER, ChoiceRow, Counter, MUTED, NAVY, PillRow, Question, SELECTED, TextField } from './wizard-fields'
 
 /** Everything the questions need to know about the page they are asked on. */
 export interface WizardPageInfo {
@@ -112,7 +112,7 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
                 value={answers.flexMonth}
                 onChange={e => set('flexMonth', e.target.value)}
                 className="w-full rounded-lg border px-3 text-[16px]"
-                style={{ minHeight: 48, borderColor: 'rgba(10,46,77,0.28)', background: '#fff' }}
+                style={{ minHeight: 48, borderColor: BORDER, background: '#fff' }}
               >
                 <option value="">Pick a month…</option>
                 {months.map(month => (
@@ -231,9 +231,9 @@ export function StepAngler({ answers, errors, page, set }: StepProps) {
             className="flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 text-[15px]"
             style={{
               minHeight:   48,
-              borderColor: answers.budgetAck ? 'var(--fa-navy)' : 'rgba(10,46,77,0.28)',
+              borderColor: answers.budgetAck ? NAVY : BORDER,
               borderWidth: answers.budgetAck ? 2 : 1,
-              background:  answers.budgetAck ? 'rgba(10,46,77,0.06)' : '#fff',
+              background:  answers.budgetAck ? SELECTED : '#fff',
             }}
           >
             <input
@@ -315,7 +315,7 @@ export function StepContact({ answers, errors, set }: StepProps) {
           className="w-full rounded-lg border px-3 text-[16px]"
           style={{
             minHeight:   48,
-            borderColor: errors.country != null ? '#B23A1C' : 'rgba(10,46,77,0.28)',
+            borderColor: errors.country != null ? '#B23A1C' : BORDER,
             background:  '#fff',
           }}
           aria-invalid={errors.country != null}

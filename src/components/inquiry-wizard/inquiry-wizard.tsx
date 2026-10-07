@@ -90,7 +90,7 @@ interface WizardValue {
 
 const WizardContext = createContext<WizardValue | null>(null)
 
-export function useInquiryWizard(): WizardValue {
+function useInquiryWizard(): WizardValue {
   const value = useContext(WizardContext)
   if (value == null) throw new Error('useInquiryWizard must be used inside <InquiryWizardProvider>')
   return value
@@ -257,7 +257,7 @@ export function InquiryInline() {
   if (submitState === 'done') {
     return (
       <div className="rounded-xl border-2 p-6" style={{ borderColor: 'var(--fa-navy)' }}>
-        <ThankYou />
+        <ThankYou testId="inquiry-inline-done" />
       </div>
     )
   }
@@ -358,7 +358,7 @@ function InquiryWizardOverlay() {
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7">
           {done ? (
-            <ThankYou headingRef={headingRef} />
+            <ThankYou testId="inquiry-thank-you" headingRef={headingRef} />
           ) : (
             <>
               <h2 ref={headingRef} tabIndex={-1} className="f-display mb-4 text-xl font-bold outline-none">
@@ -412,12 +412,19 @@ function InquiryWizardOverlay() {
 
 // ─── Thank you ────────────────────────────────────────────────────────────────
 
-function ThankYou({ headingRef }: { headingRef?: React.Ref<HTMLHeadingElement> } = {}) {
+function ThankYou({
+  testId,
+  headingRef,
+}: {
+  /** The inline copy and the overlay copy are two places on one page — distinct markers. */
+  testId:      string
+  headingRef?: React.Ref<HTMLHeadingElement>
+}) {
   const { page } = useInquiryWizard()
   const licenceUrl = safeHttpUrl(page.licenseUrl)
 
   return (
-    <div data-testid="inquiry-thank-you">
+    <div data-testid={testId}>
       <h2 ref={headingRef} tabIndex={-1} className="f-display mb-2 text-2xl font-bold outline-none">
         Your inquiry is in.
       </h2>

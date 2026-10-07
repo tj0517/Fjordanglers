@@ -245,7 +245,7 @@ export function briefSummaryLines(brief: Brief): string[] {
 export const BRIEF_BLOCK_HEADING = 'Answers from the inquiry form'
 
 /** The exact line `composeBriefMessage` writes, and the one `anglerTextFromMessage` cuts at. */
-export const BRIEF_BLOCK_MARKER = `— ${BRIEF_BLOCK_HEADING} —`
+const BRIEF_BLOCK_MARKER = `— ${BRIEF_BLOCK_HEADING} —`
 
 /**
  * What the angler actually typed, out of a stored `message` that also carries the summary.

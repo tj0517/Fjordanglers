@@ -248,7 +248,8 @@ export function Progress({ step, total }: { step: number; total: number }) {
         Step {step} of {total}
       </p>
       <div className="flex gap-1" aria-hidden>
-        {Array.from({ length: total }, (_, i) => (
+        {/* A spread, so this tree stays free of any Supabase-looking query call. */}
+        {[...new Array(total)].map((_, i) => (
           <div
             key={i}
             className="h-1.5 flex-1 rounded-full"

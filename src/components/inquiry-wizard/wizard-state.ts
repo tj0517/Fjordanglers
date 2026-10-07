@@ -171,10 +171,6 @@ export function validateStep(
   return errors
 }
 
-export function isStepValid(step: WizardStep, a: WizardAnswers, rules: WizardPageRules): boolean {
-  return Object.keys(validateStep(step, a, rules)).length === 0
-}
-
 // ─── The brief ────────────────────────────────────────────────────────────────
 
 /**

@@ -29,8 +29,6 @@ import {
   type FaqEntry,
 } from '@/lib/experience-v2-content'
 
-export type { LodgingSuggestion, FaqEntry }
-
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'
 export const CACHE_TAG_GUIDES      = 'guides'

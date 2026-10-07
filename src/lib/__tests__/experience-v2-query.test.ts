@@ -25,6 +25,8 @@ vi.mock('@supabase/supabase-js', () => ({
         select: () => builder,
         eq: () => builder,
         order: () => builder,
+        not: () => builder,
+        limit: () => builder,
         maybeSingle: () => Promise.resolve(result),
         then: (resolve: (v: typeof result) => unknown) => resolve(result),
       }
@@ -64,6 +66,19 @@ beforeEach(() => {
       min_days: 1, max_days: 3, max_anglers_per_guide: 2, response_sla_hours: 24, offer_mode: 'fixed',
       fee_pct: 0.2, currency: 'NZD', price_from_cents: null, price_to_cents: null,
       meta_title: null, meta_description: null,
+      // FA-1.55 — S10–S13.
+      peak_months: [11, 12], location_lat: -44.7, location_lng: 169.1,
+      nearest_airport: 'Queenstown (ZQN)',
+      suggested_lodging: [
+        { name: 'Wanaka Lakeside', url: 'https://lodging.example/wanaka', note: '20 min away' },
+        { name: 'Bad link', url: 'javascript:alert(1)', note: null },
+        { url: 'https://lodging.example/nameless' },
+      ],
+      what_to_bring: ['Polarised sunglasses'],
+      faq: [
+        { question: 'Licence?', answer: 'Online.' },
+        { question: 'Half an entry', answer: '' },
+      ],
     },
     experience_guides: [
       guideRow('a', { role: 'primary', sort_order: 0, override: 130000 }),
@@ -73,6 +88,18 @@ beforeEach(() => {
     ],
     experience_prices: [
       { days: 1, anglers: 2, guide_price_cents: 125000, currency: 'NZD', valid_from: null, valid_to: null },
+    ],
+    reviews: [
+      {
+        id: 'rev-1', overall_rating: 5, comment: 'Spotted every fish first.',
+        submitted_at: '2026-03-18T09:00:00Z',
+        media_urls: ['javascript:alert(1)', 'https://pics.example/trout.jpg'],
+        inquiry: { angler_name: 'Tomasz Kowalski', angler_country: 'PL' },
+      },
+      {
+        id: 'rev-2', overall_rating: null, comment: '   ', submitted_at: '2026-02-01T09:00:00Z',
+        media_urls: [], inquiry: { angler_name: 'Empty Review', angler_country: 'DE' },
+      },
     ],
     experience_page_options: [
       { id: 'o1', kind: 'archetype', label: 'Day', price_from_cents: 1, price_to_cents: null, currency: 'NZD',
@@ -130,5 +157,65 @@ describe('getExperienceV2 — content for S3–S9', () => {
     const options = (await getExperienceV2('seed-nz'))?.options
     expect(options?.find(o => o.kind === 'archetype')?.sampleItinerary).toEqual([{ day: 1, title: 'River', details: [] }])
     expect(options?.find(o => o.kind === 'addon')?.sampleItinerary).toEqual([])
+  })
+})
+
+describe('getExperienceV2 — S10–S13 (FA-1.55)', () => {
+  it('maps the map, the logistics and the season columns', async () => {
+    const page = await getExperienceV2('seed-nz')
+
+    expect(page?.locationLat).toBe(-44.7)
+    expect(page?.locationLng).toBe(169.1)
+    expect(page?.nearestAirport).toBe('Queenstown (ZQN)')
+    expect(page?.peakMonths).toEqual([11, 12])
+    expect(page?.whatToBring).toEqual(['Polarised sunglasses'])
+  })
+
+  it('keeps a lodging link only when it is http(s), and drops a row with no name', async () => {
+    const page = await getExperienceV2('seed-nz')
+
+    expect(page?.suggestedLodging).toEqual([
+      { name: 'Wanaka Lakeside', url: 'https://lodging.example/wanaka', note: '20 min away' },
+      { name: 'Bad link', url: null, note: null },
+    ])
+  })
+
+  it('drops a FAQ entry that is missing its answer', async () => {
+    const page = await getExperienceV2('seed-nz')
+    expect(page?.faq).toEqual([{ question: 'Licence?', answer: 'Online.' }])
+  })
+
+  it('a Google profile that is not an http(s) URL never leaves the data layer', async () => {
+    const page = await getExperienceV2('seed-nz')
+    expect(page?.guides.every(g => g.googleProfileUrl == null)).toBe(true)
+  })
+})
+
+describe('getExperienceV2 — S10 reviews (FA-1.55)', () => {
+  it('sends the first name only, never the stored full name', async () => {
+    const page = await getExperienceV2('seed-nz')
+
+    expect(page?.reviews).toHaveLength(1)
+    expect(page?.reviews[0]).toMatchObject({
+      id: 'rev-1', rating: 5, firstName: 'Tomasz', country: 'PL',
+      comment: 'Spotted every fish first.',
+    })
+    expect(JSON.stringify(page?.reviews)).not.toContain('Kowalski')
+  })
+
+  it('takes the first http(s) photo and ignores anything else in media_urls', async () => {
+    const page = await getExperienceV2('seed-nz')
+    expect(page?.reviews[0].photoUrl).toBe('https://pics.example/trout.jpg')
+  })
+
+  it('drops a submitted review that carries neither a rating nor text', async () => {
+    const page = await getExperienceV2('seed-nz')
+    expect(page?.reviews.map(r => r.id)).not.toContain('rev-2')
+  })
+
+  it('no reviews stored → an empty list, and the section renders nothing', async () => {
+    h.tables.reviews = []
+    const page = await getExperienceV2('seed-nz')
+    expect(page?.reviews).toEqual([])
   })
 })
