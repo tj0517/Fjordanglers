@@ -2,13 +2,14 @@
 id: FA-1.56
 title: Admin — zakładka v2 na stronie oferty: przewodnicy (wielu, primary/backup), tryb oferty, cennik dni × wędkarze, nowe pola treści, `page_version`, aliasy slugów
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/admin-experience-v2-tab
+pr: 135
 depends_on: [FA-1.50]
 blocked_by_questions: []
 touches_db: false
