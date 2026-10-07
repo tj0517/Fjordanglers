@@ -2,7 +2,7 @@
 id: FA-1.52
 title: Dwa szablony na jednej trasie — `_v1/` bez zmian, router po fladze i `page_version`, podgląd `?preview=v2` dla admina
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -72,3 +72,5 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ## Notatki z realizacji
 
 2026-10-06 tj (/wf-task): admin preview via proxy rewrite to a hidden dynamic route, public page stays ISR (revalidate 3600); alias redirect = permanentRedirect (308); flag = 'true'|'false' like AI_AUTO_REPLY_ENABLED; snapshot criterion compares visible text; v1 has 8 `.from(` calls, not 6.
+
+2026-10-06 tj (/wf-review): FA-1.52 accepted with additions (PR #133, head 60659e08). Router, admin preview via proxy rewrite, 308 alias redirect and the flag verified against the task; comment corrected; deferred rows added for the dynamic rendering of /experiences/[slug] (cause not confirmed) and for cache invalidation of getExperienceRouting (affects FA-1.56/1.57).
