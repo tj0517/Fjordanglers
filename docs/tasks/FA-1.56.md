@@ -71,3 +71,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 
 ## Notatki z realizacji
 - 2026-10-07 tj: kryterium 1 zawężone — synchronizacja primary → experience_pages.guide_id należy do FA-1.51 (todo), nie do tego zadania; zapis wielotabelowy sekwencją z kontrolą błędów, bez migracji/RPC (touches_db: false); testy na własnych danych, bez db reset i edycji seed.sql (równolegle FA-1.54 na tym samym stacku).
+- 2026-10-07 tj: decyzje z PR #135 — (1) scalanie stron: najpierw archiwizacja, potem alias (krótkie 404) — na pilota; (2) day_schedule meta jako liczby (drive_min, walk_km) + wading tak/nie; (3) kwoty wpisywane w jednostkach głównych, zapis w centach; (4) strona już v2 nie może stracić primary active, ceny „od" ani suited_for. Przekierowanie aliasu to 308 (permanentRedirect z FA-1.52, decyzja tj 2026-10-06) — kryterium „301" uznane za spełnione znaczeniowo.
