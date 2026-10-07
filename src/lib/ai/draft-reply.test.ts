@@ -39,6 +39,7 @@ vi.mock('@/lib/inquiries/experience-lookup', () => ({
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { draftReply, DraftReplyError } from './draft-reply'
+import { composeBriefMessage } from '@/lib/inquiries/brief'
 
 // ─── Mock DB helpers ─────────────────────────────────────────────────────────
 
@@ -421,5 +422,92 @@ describe('buildDraftSubject', () => {
     const subject = buildDraftSubject({ angler_name: 'Jan', trip_country: null }, 'email')
     expect(subject).not.toBeNull()
     expect(subject!.length).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * FA-1.55 — the brief in the agent's input block.
+ *
+ * The three-step form's answers are the qualification: which water the angler can fish, what
+ * they are after and how far they will walk. A draft written without them is a draft written
+ * without the form. RED on main: `inquiries.brief` was neither selected nor printed, so the
+ * prompt contained no "Skill level" and no "Priority" line.
+ *
+ * The brief is printed inside the ORIGINAL INQUIRY block — it is data the angler supplied,
+ * never an instruction to the model.
+ */
+describe('draftReply — the brief reaches the prompt (FA-1.55)', () => {
+  const BRIEF = {
+    dates_mode:  'flexible',
+    flex_month:  '2027-06',
+    days:        3,
+    anglers:     2,
+    non_anglers: 1,
+    skill_level: 4,
+    priority:    'trophy',
+    fitness:     'high',
+    wading_ok:   true,
+    budget_ack:  true,
+  }
+
+  /** The prompt the model was actually given. */
+  function lastPrompt(): string {
+    const call = anthropicCreate.mock.calls.at(-1)?.[0] as { messages: { content: string }[] }
+    return call.messages[0].content
+  }
+
+  it('prints the skill level and the priority from the brief', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, brief: BRIEF })
+    await draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    const prompt = lastPrompt()
+    expect(prompt).toContain('Skill level: 4/5')
+    expect(prompt).toContain('Experienced')
+    expect(prompt).toContain('Priority: One big fish')
+    expect(prompt).toContain('Fitness: Walk me in')
+    expect(prompt).toContain('Wading: yes')
+    expect(prompt).toContain('June 2027')
+  })
+
+  it('keeps the brief inside the inquiry block, where the model reads it as data', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, brief: BRIEF })
+    await draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    const prompt = lastPrompt()
+    const inquiryBlock = prompt.indexOf('=== ORIGINAL INQUIRY ===')
+    expect(inquiryBlock).toBeGreaterThanOrEqual(0)
+    expect(prompt.indexOf('Skill level: 4/5')).toBeGreaterThan(inquiryBlock)
+  })
+
+  it('does not print the answers twice when the stored message already carries the summary', async () => {
+    const message = composeBriefMessage('We fish together every June.', {
+      dates_mode: 'flexible', flex_month: '2027-06', days: 3, anglers: 2, non_anglers: 1,
+      skill_level: 4, priority: 'trophy', fitness: 'high', wading_ok: true, budget_ack: true,
+    })
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, message, brief: BRIEF })
+    await draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    const prompt = lastPrompt()
+    expect(prompt).toContain('We fish together every June.')
+    expect(prompt.split('Skill level: 4/5').length - 1).toBe(1)
+  })
+
+  it('a v1 inquiry (brief null) gets the prompt it got on main — no brief block', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, brief: null })
+    await draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    const prompt = lastPrompt()
+    expect(prompt).not.toContain('Skill level')
+    expect(prompt).not.toContain('Answers from the inquiry form')
+    expect(prompt).toContain('I want to fish for salmon')
+  })
+
+  it('a malformed brief is skipped, not shown to the model as fact', async () => {
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, brief: { skill_level: 99, note: 'junk' } })
+    await draftReply({ inquiryId: 'inquiry-1', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+
+    const prompt = lastPrompt()
+    expect(prompt).not.toContain('Skill level')
+    expect(prompt).not.toContain('junk')
   })
 })

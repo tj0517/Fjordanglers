@@ -7,9 +7,9 @@
  * (CLAUDE.md rule 3), and the guide's price override is folded into the price rows
  * server-side, so it never reaches the browser.
  *
- * S3–S9 are `OfferBody` (FA-1.54); S10–S14 and the inquiry form are FA-1.55. The anchors
- * FA-1.55 fills are already here, and already wired to the top bar, the CTA and the sticky
- * column, so the plumbing is proven before the content lands.
+ * S3–S9 are `OfferBody` (FA-1.54); S10–S14 and the three-step inquiry form are FA-1.55. The
+ * whole tree sits inside `InquiryWizardProvider`, so every CTA on the page — the hero, the
+ * sticky widget, the mobile bar — opens the one form, with the one set of answers.
  */
 
 import { notFound } from 'next/navigation'
@@ -24,8 +24,15 @@ import OfferPriceLead from '@/components/experience-v2/offer-price-lead'
 import OfferWidget, { type OfferWidgetProps } from '@/components/experience-v2/offer-widget'
 import OfferMobileBar from '@/components/experience-v2/offer-mobile-bar'
 import OfferBody from '@/components/experience-v2/offer-body'
+import OfferReviews from '@/components/experience-v2/offer-reviews'
+import OfferLogistics from '@/components/experience-v2/offer-logistics'
+import OfferBring from '@/components/experience-v2/offer-bring'
+import OfferFaq from '@/components/experience-v2/offer-faq'
+import OfferInquiry from '@/components/experience-v2/offer-inquiry'
+import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
+import { fromPrice } from '@/lib/pricing/experience-price'
 
-/** The inquiry form of FA-1.55. Named in that task, so the anchor is stable from here. */
+/** The inquiry section of S14. The CTAs keep the href even though they also open the wizard. */
 const INQUIRY_ANCHOR = '#zapytanie'
 
 /**
@@ -67,6 +74,26 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
     `Hi, I am looking at ${page.experienceName}. Dates: ___ Anglers: ___`,
   )}`
 
+  // What the form needs to know about the page it is on. `fromTotalCents` is the same number
+  // the widget prints as "from …" (FA fee included), so the budget checkbox confirms the price
+  // the angler actually saw, not a different one.
+  const wizardPage: InquiryWizardPage = {
+    experiencePageId: page.id,
+    experienceName:   page.experienceName,
+    responseSlaHours: page.responseSlaHours,
+    licenseUrl:       page.license?.buyUrl ?? null,
+    offerMode:        page.offerMode,
+    currency:         page.currency,
+    fromTotalCents:   page.offerMode === 'fixed'
+      ? fromPrice({ prices: page.prices, feePct: page.feePct, maxAnglersPerGuide: page.maxAnglersPerGuide })?.totalCents ?? null
+      : null,
+    priceFromCents:     page.priceFromCents,
+    priceToCents:       page.priceToCents,
+    minDays:            page.minDays,
+    maxDays:            page.maxDays,
+    maxAnglersPerGuide: page.maxAnglersPerGuide,
+  }
+
   const widget: OfferWidgetProps = {
     offerMode:          page.offerMode,
     prices:             page.prices,
@@ -91,6 +118,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
 
   return (
     <CurrencyProvider baseCurrency={page.currency} rates={rates}>
+     <InquiryWizardProvider page={wizardPage}>
       <OfferTopBar whatsappUrl={whatsappUrl} />
 
       <main style={{ background: 'var(--fa-white)', color: 'var(--fa-navy)' }} className="pb-24 sm:pb-10">
@@ -202,17 +230,26 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
             </aside>
           </div>
 
-          {/* ── S10–S14 → FA-1.55. #recenzje also ends the sticky column above. ── */}
+          {/* ── S10–S14 (FA-1.55). #recenzje also ends the sticky column above. ── */}
           <div className="px-4 sm:px-0">
-            <section id="recenzje" className="mt-8 scroll-mt-20">
-              <Placeholder label="S10 · reviews — FA-1.55" />
-            </section>
-            <section id="faq" className="mt-4 scroll-mt-20">
-              <Placeholder label="S11–S13 · map, what to bring, FAQ — FA-1.55" />
-            </section>
-            <section id="zapytanie" className="mt-4 scroll-mt-20">
-              <Placeholder label="S14 · inquiry, step 1 of 3 — FA-1.55" />
-            </section>
+            <OfferReviews
+              reviews={page.reviews}
+              googleRating={primary?.googleRating ?? null}
+              googleReviewCount={primary?.googleReviewCount ?? null}
+              googleProfileUrl={primary?.googleProfileUrl ?? null}
+            />
+            <OfferLogistics
+              locationLat={page.locationLat}
+              locationLng={page.locationLng}
+              nearestAirport={page.nearestAirport}
+              suggestedLodging={page.suggestedLodging}
+              seasonMonths={page.seasonMonths}
+              peakMonths={page.peakMonths}
+              region={page.region}
+            />
+            <OfferBring whatToBring={page.whatToBring} />
+            <OfferFaq faq={page.faq} />
+            <OfferInquiry />
           </div>
         </div>
       </main>
@@ -220,18 +257,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
       <OfferMobileBar>
         <OfferWidget {...widget} compact />
       </OfferMobileBar>
+     </InquiryWizardProvider>
     </CurrencyProvider>
-  )
-}
-
-/** A section this task deliberately does not build, named so a screenshot is readable. */
-function Placeholder({ label }: { label: string }) {
-  return (
-    <div
-      className="rounded-xl border border-dashed px-4 py-6 text-center text-xs"
-      style={{ borderColor: 'rgba(10,46,77,0.25)', color: 'rgba(10,46,77,0.5)' }}
-    >
-      {label}
-    </div>
   )
 }

@@ -506,6 +506,7 @@ type ExperienceV2Guide = {
   responseTimeHours: number | null
   googleRating:      number | null
   googleReviewCount: number | null
+  /** Already checked `http(s)` — the value is admin-typed, and a page must not link to `javascript:`. */
   googleProfileUrl:  string | null
   languages:         string[]
   bio:               string | null
@@ -825,7 +826,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         responseTimeHours: row.guide!.response_time_hours,
         googleRating:      row.guide!.google_rating,
         googleReviewCount: row.guide!.google_review_count,
-        googleProfileUrl:  row.guide!.google_profile_url,
+        googleProfileUrl:  safeHttpUrl(row.guide!.google_profile_url),
         languages:         row.guide!.languages ?? [],
         bio:               row.guide!.bio,
         balancePaymentMethod: row.guide!.default_balance_payment_method === 'stripe' ? 'stripe' : 'cash',

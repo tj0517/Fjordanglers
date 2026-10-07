@@ -54,7 +54,21 @@ const IPV6_PATTERN = /(?:[0-9a-f]{1,4}:){2,7}[0-9a-f]{0,4}|::/i
 
 const FROZEN_NOW = 1_800_000_000_000
 
-function body(email: string) {
+/** FA-1.55 — what the v2 three-step form sends. The limiter must not care. */
+const BRIEF = {
+  dates_mode:  'flexible',
+  flex_month:  '2027-06',
+  days:        2,
+  anglers:     2,
+  non_anglers: 0,
+  skill_level: 3,
+  priority:    'numbers',
+  fitness:     'mid',
+  wading_ok:   true,
+  budget_ack:  true,
+}
+
+function body(email: string, withBrief = false) {
   return {
     experience_page_id: '550e8400-e29b-41d4-a716-446655440000',
     angler_name:        'Test Angler',
@@ -62,17 +76,18 @@ function body(email: string) {
     requested_dates:    ['2026-08-01'],
     party_size:         2,
     message:            'I want to fish New Zealand rivers.',
+    ...(withBrief ? { brief: BRIEF } : {}),
   }
 }
 
-async function post(email: string, ip: string | null): Promise<Response> {
+async function post(email: string, ip: string | null, withBrief = false): Promise<Response> {
   const { POST } = await import('@/app/api/inquiries/route')
   const headers: Record<string, string> = { 'content-type': 'application/json' }
   if (ip != null) headers['cf-connecting-ip'] = ip
   return POST(new NextRequest('http://localhost/api/inquiries', {
     method: 'POST',
     headers,
-    body:   JSON.stringify(body(email)),
+    body:   JSON.stringify(body(email, withBrief)),
   }))
 }
 
@@ -102,10 +117,20 @@ beforeEach(() => {
     guide_id:        'guide-1',
     experience_name: 'NZ Trout Fly Fishing',
     country:         'New Zealand',
+    page_version:    2,
   }
   mocks.createServiceClient.mockReturnValue({
     from: () => {
-      const b = { select: () => b, eq: () => b, single: async () => ({ data: page, error: null }) }
+      const b = {
+        select: () => b,
+        eq: () => b,
+        limit: () => b,
+        single: async () => ({ data: page, error: null }),
+        // experience_guides (FA-1.55) and the repeat lookup end here.
+        maybeSingle: async () => ({ data: { guide_id: 'guide-primary' }, error: null }),
+        ilike: () => b,
+        gte: () => b,
+      }
       return b
     },
   })
@@ -245,5 +270,45 @@ describe('POST /api/inquiries — limiter failure (O-29 a, fail-open)', () => {
       expect((await post('same@example.com', '203.0.113.50')).status).toBe(201)
     }
     expect(mocks.createInquiry).toHaveBeenCalledTimes(8)
+  })
+})
+
+/**
+ * FA-1.55 — the v2 form asks for no exception, and gets none.
+ *
+ * The limiter runs on the client IP before the body is read and on the e-mail before the
+ * database is touched, so a request carrying a `brief` is counted and blocked exactly like
+ * one from the old widget. RED with the guard bypassed: `getRateLimiter` returning null makes
+ * both of these 201.
+ */
+describe('POST /api/inquiries — the limiter holds for the v2 form (FA-1.55)', () => {
+  it('6th v2 request from the same IP → 429, nothing runs', async () => {
+    for (let i = 1; i <= 5; i++) {
+      expect((await post(`v2angler${i}@example.com`, '203.0.113.21', true)).status).toBe(201)
+    }
+    vi.clearAllMocks()
+
+    const blocked = await post('v2angler6@example.com', '203.0.113.21', true)
+    expect(blocked.status).toBe(429)
+    expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThan(0)
+    expectNothingHappened()
+  })
+
+  it('4th v2 request for the same e-mail from different IPs → 429, nothing runs', async () => {
+    expect((await post('same@example.com', '203.0.113.31', true)).status).toBe(201)
+    expect((await post('same@example.com', '203.0.113.32', true)).status).toBe(201)
+    expect((await post('same@example.com', '203.0.113.33', true)).status).toBe(201)
+    vi.clearAllMocks()
+
+    const blocked = await post('same@example.com', '203.0.113.34', true)
+    expect(blocked.status).toBe(429)
+    expect(mocks.createInquiry).not.toHaveBeenCalled()
+  })
+
+  it('a v2 request below the thresholds passes and reaches createInquiry with the brief', async () => {
+    const response = await post('fine@example.com', '198.51.100.9', true)
+    expect(response.status).toBe(201)
+    expect(mocks.createInquiry).toHaveBeenCalledTimes(1)
+    expect(mocks.createInquiry.mock.calls[0][0].brief).toEqual(BRIEF)
   })
 })

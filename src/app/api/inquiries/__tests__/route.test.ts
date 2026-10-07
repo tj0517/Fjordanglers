@@ -54,8 +54,10 @@ vi.mock('@/lib/email', () => ({
 
 // FA-1.42 — data-layer lookup for "same e-mail within 24 h"
 const hasRecentInquiryMock = vi.fn()
+const primaryGuideMock = vi.fn()
 vi.mock('@/lib/supabase/queries', () => ({
   hasRecentInquiryFromEmail: hasRecentInquiryMock,
+  getPrimaryGuideId:         primaryGuideMock,
 }))
 
 const createInquiryMock = vi.fn()
@@ -81,6 +83,7 @@ beforeEach(() => {
   sendFaEmailMock.mockResolvedValue(undefined)
   sendAnglerEmailMock.mockResolvedValue(undefined)
   hasRecentInquiryMock.mockResolvedValue(false)
+  primaryGuideMock.mockResolvedValue('guide-primary')
 
   vi.mocked(createServiceClient).mockReturnValue({
     from: (table: string) => {
@@ -459,5 +462,83 @@ describe('/api/inquiries POST — trap field and fill time, FA-1.43', () => {
     expect(response.status).toBe(201)
     expect(sendAnglerEmailMock).not.toHaveBeenCalled()
     expect(sendFaEmailMock).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * FA-1.55 — the trap field and the minimum fill time on the v2 path.
+ *
+ * The three-step form sends the same two signals the v1 widget does, and the server reads
+ * them the same way: a `brief` buys no exemption. RED with the guard bypassed: make
+ * `suspicionReason` return null and both of the first two cases below classify, auto-send and
+ * e-mail a bot's submission.
+ */
+describe('/api/inquiries POST — trap and fill time on the v2 form, FA-1.55', () => {
+  const BRIEF = {
+    dates_mode:  'exact',
+    date_from:   '2027-03-10',
+    date_to:     '2027-03-11',
+    days:        2,
+    anglers:     2,
+    non_anglers: 0,
+    skill_level: 3,
+    priority:    'learning',
+    fitness:     'mid',
+    wading_ok:   true,
+    budget_ack:  true,
+  }
+
+  const V2_BODY = { ...TEST_BODY, brief: BRIEF }
+
+  it('trap filled on a v2 request: saved, but no AI, no auto-reply and no e-mail to anyone', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post({ ...V2_BODY, trip_notes_extra: 'http://spam.example', form_elapsed_ms: 60000 })
+
+    expect(response.status).toBe(201)
+    expect(createInquiryMock).toHaveBeenCalledTimes(1)
+    expect(createInquiryMock.mock.calls[0][0].brief).toEqual(BRIEF)
+    expect(classifyInquiryMock).not.toHaveBeenCalled()
+    expect(autoSendReplyMock).not.toHaveBeenCalled()
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).not.toHaveBeenCalled()
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([TRAP_REASON])
+  })
+
+  it('a v2 request submitted in under 2 s: same path, same reason', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post({ ...V2_BODY, trip_notes_extra: '', form_elapsed_ms: 900 })
+
+    expect(response.status).toBe(201)
+    expect(classifyInquiryMock).not.toHaveBeenCalled()
+    expect(sendFaEmailMock).not.toHaveBeenCalled()
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([FAST_REASON])
+  })
+
+  it('a v2 request with an empty trap after 2 s behaves as a normal one', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+
+    const response = await post({ ...V2_BODY, trip_notes_extra: '', form_elapsed_ms: 45000 })
+
+    expect(response.status).toBe(201)
+    expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
+    expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
+    expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
+    expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    expect(emittedEvents).toHaveLength(0)
+  })
+
+  it('a repeat v2 submission from the same e-mail still skips the customer e-mail and the AI', async () => {
+    mockEnv.AI_AUTO_REPLY_ENABLED = true
+    hasRecentInquiryMock.mockResolvedValue(true)
+
+    const response = await post({ ...V2_BODY, form_elapsed_ms: 45000 })
+
+    expect(response.status).toBe(201)
+    expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
+    expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    expect(classifyInquiryMock).not.toHaveBeenCalled()
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([REPEAT_REASON])
   })
 })
