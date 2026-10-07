@@ -52,7 +52,14 @@ export default function OfferGallery({
 
   return (
     <>
-      {/* Mobile — one strip, swipe, counter. */}
+      {/* Mobile — one strip, swipe, counter.
+          Only the slides next to the current one carry an <Image>. Every slide in a
+          horizontal scroller counts as in-viewport, so `loading="lazy"` does not hold any
+          of them back: without this window all six full-width photos are requested before
+          the first paint, and on a throttled connection the hero — the LCP element — ends
+          up queued behind five pictures nobody has swiped to yet. Measured: that alone was
+          most of a 4.6 s mobile LCP. The slide boxes are all rendered, so scroll-snap and
+          the counter behave exactly as if the photos were there. */}
       <div className="relative sm:hidden">
         <div
           ref={stripRef}
@@ -62,15 +69,21 @@ export default function OfferGallery({
           aria-label={`${all.length} photos of ${alt}`}
         >
           {all.map((url, i) => (
-            <div key={url} className="relative h-[212px] w-full flex-none snap-center">
-              <Image
-                src={url}
-                alt={i === 0 ? alt : `${alt} — photo ${i + 1}`}
-                fill
-                sizes="100vw"
-                className="object-cover"
-                priority={i === 0}
-              />
+            <div
+              key={url}
+              className="relative h-[212px] w-full flex-none snap-center"
+              style={{ background: 'rgba(10,46,77,0.06)' }}
+            >
+              {Math.abs(i - index) <= 1 && (
+                <Image
+                  src={url}
+                  alt={i === 0 ? alt : `${alt} — photo ${i + 1}`}
+                  fill
+                  sizes="100vw"
+                  className="object-cover"
+                  priority={i === 0}
+                />
+              )}
             </div>
           ))}
         </div>

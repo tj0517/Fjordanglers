@@ -2,13 +2,14 @@
 id: FA-1.53
 title: Szablon v2 — górna część strony (S0–S2): hero i galeria, H1 z chipami, trzy linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; dane przez `getExperienceV2()`
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/experience-v2-hero-widget
+pr: 134
 depends_on: [FA-1.52]
 blocked_by_questions: []
 touches_db: false
