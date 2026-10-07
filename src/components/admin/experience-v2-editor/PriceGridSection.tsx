@@ -37,7 +37,8 @@ interface Props {
 
 function emptySeason(key: string, maxAnglersPerGuide: number): Season {
   const days    = ['1', '2', '3']
-  const anglers = Array.from({ length: maxAnglersPerGuide }, (_, index) => String(index + 1))
+  const anglers: string[] = []
+  for (let count = 1; count <= maxAnglersPerGuide; count++) anglers.push(String(count))
   return { key, validFrom: '', validTo: '', days, anglers, cells: days.map(() => anglers.map(() => '')) }
 }
 
