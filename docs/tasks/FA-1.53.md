@@ -46,7 +46,7 @@ Pierwszy ekran v2 ma pokazać cenę, pojemność, sezon, poziom i trzy gwarancje
 - [ ] `generateMetadata` dla v2 z `meta_title`/`meta_description` (bez podwójnego sufiksu — FA-0.12)
 
 ## Gotowe, gdy
-- [ ] Testy `experience-price`: (a) 1 dzień × 2 wędkarzy = cena z `experience_prices` × 1.20; (b) brak wiersza dla (days, anglers) → najbliższy dostępny z informacją „na zapytanie”; (c) override 10% → liczony z override; (d) `custom` → tylko widełki — zielone
+- [ ] Testy `experience-price`: (a) 1 dzień × 2 wędkarzy = cena z `experience_prices` × 1.20; (b1) żądane 2 wędkarzy, wiersze dla 1 i 3 → wiersz dla **3** (najbliższy równy lub większy), oznaczony „on request”; (b2) żądane 3, wiersze dla 1 i 2 → **brak liczby**, „on request”; brak wiersza dla tego `days` → brak liczby; (c) nadpisanie 110% wiersza bazowego → total z nadpisania (kolumna jest w centach ≤ 115% bazy, podmienia tylko wiersz bazowy); (d) `custom` → tylko widełki, **bez** opłaty FA — zielone
 - [ ] Red proof: przy `fee_pct=0.20` suma `feeCents + guideCents` = `totalCents` co do centa dla 20 losowych kwot (test property-based albo tabela) — bez zaokrągleń gubiących centy
 - [ ] `grep -rn "\.from(" "src/app/experiences/[slug]/_v2" src/components/experience-v2` → 0
 - [ ] Playwright (lokalny seed, strona z `page_version=2`, flaga on): zrzut desktop 1440 i mobile 390 above the fold — widoczne: cena, chipy, 3 linie, CTA; na mobile pasek dolny pojawia się po przewinięciu 600 px — ścieżki zrzutów w raporcie (`.playwright-mcp/`)
@@ -85,4 +85,24 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
      kryterium (d) w tym pliku).
   4. **Wireframe leży w `docs/brand/wireframes/`** (`README.md`, `Main.dc.html` desktop 1440,
      `Mobile.dc.html` 390, `canvas.json`; `Form.dc.html` → FA-1.55), nie jako link do artefaktu.
+- 2026-10-07 tj (odpowiedź na bramkę STOP i dwa pytania FA-1.53):
+  5. **Bramka STOP `supabase/seed.sql` — zgoda** na zakres przedstawiony w sesji: kolumny
+     przewodników (`avatar_url`, `google_rating`, `google_review_count`, `google_profile_url`),
+     kolumny stron (`page_version=2`, `offer_mode`, centy, treść, `season_months`, `includes`,
+     `response_sla_hours`, zdjęcia, meta), **cztery** wiersze `experience_prices` (w tym jeden
+     celowo wygasły z 2024 — dowód na filtr `valid_from/valid_to`), dwa wiersze
+     `experience_guides` (primary, active, `show_on_page`), **bez nadpisania ceny w seedzie**
+     oraz przepisany komentarz-nagłówek seeda. `docs/brand/wireframes/` zostaje w tym PR.
+  6. **Wyszukiwanie wiersza cennika — zmiana wobec decyzji (2) z tego samego dnia:** dla
+     żądanego `days` bierzemy wiersz o najbliższej liczbie wędkarzy **równej lub większej**
+     niż żądana; jeśli takiego nie ma — żadnej liczby, „on request" i CTA. Wycena nigdy nie
+     może być niższa od ceny rzeczywistej. Nadpisanie nadal podmienia wyłącznie wiersz bazowy
+     (`days=1`, `anglers=max_anglers_per_guide`). Kryterium (b) rozbite na: (b1) żądane 2,
+     wiersze 1 i 3 → wiersz dla 3, oznaczony „on request"; (b2) żądane 3, wiersze 1 i 2 →
+     brak liczby. Stara reguła („najbliższy w obie strony") musi być pokazana jako czerwona.
+  7. **Język v2 — angielski**, zgodnie z żywą stroną (`lang="en"`) i v1. Polskie napisy z
+     zadania i wireframe'u tłumaczymy („Check availability", „Plan your trip", „Total /
+     Deposit now 20% / Balance to the guide", „free inquiry", „deposit only after you accept
+     the offer", „answer within {n} h", „on request", „indicative rate"). Bez zmian atrybutu
+     `lang`, bez mechanizmu i18n.
 - 2026-10-05 tj: O-31 — klient widzi cenę całkowitą (przewodnik + opłata FA), bez osobnej linii „opłata”.
