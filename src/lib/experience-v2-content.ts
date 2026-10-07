@@ -172,3 +172,32 @@ export function languageNames(codes: readonly string[]): string[] {
     }
   })
 }
+
+/** `experience_pages.suggested_lodging` — `[{name, url, note}]` (proposal §2.5, FA-1.55). */
+export type LodgingSuggestion = {
+  name: string
+  /** Already checked: an `http(s)` URL or null. The only form that may become a link. */
+  url:  string | null
+  note: string | null
+}
+
+/** Rows without a name are dropped: a link with no name is nothing a visitor can act on. */
+export function parseSuggestedLodging(value: Json | null | undefined): LodgingSuggestion[] {
+  return entries(value).flatMap(item => {
+    const name = text(item.name)
+    if (name == null) return []
+    return [{ name, url: safeHttpUrl(text(item.url)), note: text(item.note) }]
+  })
+}
+
+/** `experience_pages.faq` — `[{question, answer}]`, as the v1 admin form stores it. */
+export type FaqEntry = { question: string; answer: string }
+
+/** Both halves are required: a question with no answer is worse than no question. */
+export function parseFaq(value: Json | null | undefined): FaqEntry[] {
+  return entries(value).flatMap(item => {
+    const question = text(item.question)
+    const answer   = text(item.answer)
+    return question == null || answer == null ? [] : [{ question, answer }]
+  })
+}

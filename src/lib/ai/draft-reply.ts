@@ -62,7 +62,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
   // Fetch inquiry context
   const { data: inquiry, error: inquiryErr } = await supabase
     .from('inquiries')
-    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id, status, source')
+    .select('angler_name, message, requested_dates, party_size, trip_country, assigned_guide_id, trip_id, experience_page_id, status, source, brief')
     .eq('id', inquiryId)
     .single()
 
@@ -136,6 +136,8 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     thread,
     guideName,
     inquiry.source,
+    // FA-1.55: the v2 form's answers reach the model the same way the form fields do.
+    { brief: inquiry.brief },
   )
 
   // Build prompt + call model

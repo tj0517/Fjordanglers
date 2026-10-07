@@ -24,6 +24,14 @@
  *
  * No auth required — anglers do not need an account to submit an inquiry.
  *
+ * FA-1.55 — the v2 three-step form additionally sends `brief`: the answers that qualify the
+ * angler (dates, days, party, skill level, priority, fitness, budget). It is validated by
+ * `briefSchema`, stored 1:1, and the old columns (`requested_dates`, `party_size`,
+ * `trip_length`, `message`) are derived **here, from the validated brief** rather than from
+ * whatever the client sent next to it, so the two can never disagree. A request without a
+ * brief — today's v1 widget — takes exactly the path it took before this existed: same
+ * columns, same guide lookup, same event payload.
+ *
  * Rate limited (FA-1.41) per client IP (checked first, before the body is read) and
  * per e-mail (checked once the body is valid). A rejected request gets 429 with
  * Retry-After and causes no database lookup, no save, no AI call and no e-mail.
@@ -34,12 +42,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
+import {
+  briefSchema,
+  composeBriefMessage,
+  partySizeFromBrief,
+  requestedDatesFromBrief,
+  tripLengthFromBrief,
+} from '@/lib/inquiries/brief'
 import { sendInquiryReceivedFaEmail, sendInquiryReceivedAnglerEmail } from '@/lib/email'
 import { env } from '@/lib/env'
 import { classifyInquiry } from '@/lib/ai/inquiry-agent'
 import { autoSendReply } from '@/lib/ai/auto-send'
 import { REPEAT_SKIP_REASON, REPEAT_WINDOW_MS, emitAutoSendDecision, suspicionReason } from '@/lib/ai/auto-send-guards'
-import { hasRecentInquiryFromEmail } from '@/lib/supabase/queries'
+import { hasRecentInquiryFromEmail, getPrimaryGuideId } from '@/lib/supabase/queries'
 import { addBusinessDays, formatBusinessDay } from '@/lib/business-days'
 import { checkEmailLimit, checkIpLimit, clientIpFromHeaders } from '@/lib/rate-limit/inquiries'
 
@@ -66,6 +81,10 @@ const InquirySchema = z.object({
   selected_option: z.string().max(200).optional().nullable(),
   angler_phone:         z.string().max(50).optional().nullable(),
   angler_phone_country: z.string().min(2).max(2).optional().nullable(),
+  /** Where the angler lives, ISO 3166-1 alpha-2 — step 3 of the v2 form. */
+  angler_country:       z.string().min(2).max(2).optional().nullable(),
+  /** FA-1.55 — v2 form only; unknown keys inside it are rejected, see briefSchema. */
+  brief:                briefSchema.optional().nullable(),
   trip_length:          z.enum(['1', '2-3', '4-7', '7+']).optional().nullable(),
   gclid:           z.string().max(200).optional().nullable(),
   // FA-1.43 — anything is accepted here on purpose: an odd value is "no information",
@@ -124,6 +143,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   let guideId: string | null = null
   // Destination country comes from the experience page, never from the request body.
   let tripCountry: string | null = null
+  let pageId: string | null = null
+  let pageVersion: number | null = null
 
   if (parsed.data.trip_id != null) {
     // trip_id is the expedition UUID stored in experience_pages.trip_id.
@@ -131,7 +152,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // that links to this expedition to get guide_id and title.
     const { data: expPage } = await svc
       .from('experience_pages')
-      .select('id, guide_id, experience_name, country')
+      .select('id, guide_id, experience_name, country, page_version')
       .eq('trip_id', parsed.data.trip_id)
       .eq('status', 'active')
       .single()
@@ -143,11 +164,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     tripTitle   = expPage.experience_name
     guideId     = expPage.guide_id
     tripCountry = expPage.country
+    pageId      = expPage.id
+    pageVersion = expPage.page_version
   } else {
     // Fetch experience page title
     const { data: expPage } = await svc
       .from('experience_pages')
-      .select('id, guide_id, experience_name, country')
+      .select('id, guide_id, experience_name, country, page_version')
       .eq('id', parsed.data.experience_page_id!)
       .eq('status', 'active')
       .single()
@@ -159,10 +182,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     tripTitle   = expPage.experience_name
     guideId     = expPage.guide_id
     tripCountry = expPage.country
+    pageId      = expPage.id
+    pageVersion = expPage.page_version
   }
 
   // Sort dates before storing
   const sortedDates = [...parsed.data.requested_dates].sort()
+
+  // ── The v2 path. Everything below is derived from the validated brief, so the brief is
+  //    the single version of the answers and the old columns are a projection of it.
+  const brief = parsed.data.brief ?? null
+
+  const requestedDates = brief != null ? requestedDatesFromBrief(brief) : sortedDates
+  const partySize      = brief != null ? partySizeFromBrief(brief)      : parsed.data.party_size
+  const tripLength     = brief != null ? tripLengthFromBrief(brief)     : (parsed.data.trip_length ?? null)
+  const message        = brief != null
+    ? composeBriefMessage(parsed.data.message, brief)
+    : (parsed.data.message ?? null)
+
+  // Until CONTRACT, `inquiries.guide_id` stays "the guide of the page" — on a v2 page that
+  // is the active `primary` row of `experience_guides`, not the legacy column (proposal §7
+  // step 3). A page with no primary row keeps today's value rather than losing its guide.
+  if (brief != null && pageId != null) {
+    try {
+      guideId = (await getPrimaryGuideId(svc, pageId)) ?? guideId
+    } catch (err) {
+      console.error(`[inquiries/POST] Primary-guide lookup failed for page ${pageId}, keeping the page's guide_id:`, err)
+    }
+  }
 
   let inquiry: { id: string; status: string }
   try {
@@ -173,13 +220,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       tripCountry,
       anglerName:        parsed.data.angler_name,
       anglerEmail:       parsed.data.angler_email,
-      requestedDates:    sortedDates,
-      partySize:         parsed.data.party_size,
-      message:           parsed.data.message ?? null,
+      anglerCountry:     parsed.data.angler_country?.toUpperCase() ?? null,
+      requestedDates,
+      partySize,
+      message,
       selectedOption:    parsed.data.selected_option ?? null,
       anglerPhone:         parsed.data.angler_phone ?? null,
       anglerPhoneCountry:  parsed.data.angler_phone_country?.toUpperCase() ?? null,
-      tripLength:          parsed.data.trip_length ?? null,
+      tripLength,
+      brief,
+      pageVersion,
       gclid:             parsed.data.gclid ?? null,
       utm:               parsed.data.utm ?? null,
       source:            'web_form',
@@ -234,9 +284,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             anglerName:     parsed.data.angler_name,
             anglerEmail:    parsed.data.angler_email,
             tripTitle,
-            requestedDates: sortedDates,
-            partySize:      parsed.data.party_size,
-            message:        parsed.data.message ?? null,
+            requestedDates,
+            partySize,
+            message,
             selectedOption: parsed.data.selected_option ?? null,
             inquiryId:      inquiry.id,
             dashboardUrl,
@@ -247,8 +297,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             to:             parsed.data.angler_email,
             anglerName:     parsed.data.angler_name,
             tripTitle,
-            requestedDates: sortedDates,
-            partySize:      parsed.data.party_size,
+            requestedDates,
+            partySize,
             inquiryId:      inquiry.id,
             replyByDate:    formatBusinessDay(addBusinessDays(new Date(), 2, 'Europe/Warsaw')),
           }),
@@ -266,9 +316,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         inquiryId:      inquiry.id,
         anglerName:     parsed.data.angler_name,
         tripTitle,
-        message:        parsed.data.message ?? null,
-        requestedDates: sortedDates,
-        partySize:      parsed.data.party_size,
+        message,
+        requestedDates,
+        partySize,
       })
     } catch (err) {
       console.error('[inquiries/POST] Agent error:', err)
