@@ -149,6 +149,11 @@ export const envSchema = z.object({
   // Daily cap on auto-sends (rolling 24 h). Unset = default of 5, defined in src/lib/ai/auto-send-guards.ts.
   AI_AUTO_SEND_DAILY_CAP: z.coerce.number().int().positive().optional(),
 
+  // ── Feature flags ──────────────────────────────────────────────────────────
+  // Offer-centric experience template (v2). Off by default; a page also needs
+  // experience_pages.page_version = 2 to get it (FA-1.52). Rollback = set to 'false'.
+  EXPERIENCE_V2_ENABLED: z.enum(['true', 'false']).optional().default('false').transform(v => v === 'true'),
+
   // ── Optional ───────────────────────────────────────────────────────────────
   // Supabase CLI access token — only needed for `pnpm supabase:types`
   SUPABASE_ACCESS_TOKEN: z.string().optional(),

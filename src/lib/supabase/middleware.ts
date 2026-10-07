@@ -3,7 +3,9 @@
  *
  * Call updateSession() inside middleware.ts on every request so the
  * server-side session token stays fresh (Supabase uses short-lived JWTs).
- * Returns both the updated response and the current user (null if unauthenticated).
+ * Returns the updated response, the current user (null if unauthenticated) and
+ * the request-scoped client, so the caller can read role data without building
+ * a second client (FA-1.52).
  */
 
 import { createServerClient } from '@supabase/ssr'
@@ -57,8 +59,8 @@ export async function updateSession(request: NextRequest) {
       redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
     }
 
-    return { supabaseResponse: redirectResponse, user: null }
+    return { supabaseResponse: redirectResponse, user: null, supabase }
   }
 
-  return { supabaseResponse, user }
+  return { supabaseResponse, user, supabase }
 }
