@@ -2,7 +2,7 @@
 id: FA-1.55
 title: Szablon v2 — dół strony (S10–S14) i formularz 3-krokowy: recenzje z linkiem zewnętrznym, mapa i sezon, co zabrać, FAQ, zapytanie z `brief`; aliasy slugów
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -95,3 +95,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
      zaokrąglone do pełnych setek. Strona bez użytecznego zakresu nie pyta o budżet.
      Zapis: `"EUR:140000-230000"` / `"EUR:320000+"` — waluta w wartości, bez dodatkowego
      klucza poza listą z propozycji §2.
+- 2026-10-07 tj: odbiór PR #137 — przyjęte. Udowodnione: brief zapisany 1:1 + stare kolumny, v1 bez brief jak na main, red proof zod (400, brak wiersza), limiter/honeypot/min. czas dla v2 (red proofs), inquiry.created z page_version=2 i brief_completed=true w `payload` (tabela nie ma kolumny metadata — kryterium w pliku zadania było błędne), draft-reply czerwony na main, alias → kanoniczny experience_page_id, zrzuty 3 kroków + powrót + podziękowanie, CI 4/4 zielone. Incydent: RESEND_DEV_FAKE nie obejmuje src/lib/email.ts — podczas spaceru poszły 2 prawdziwe maile (trips@ i adres .test); luka w istniejącym kodzie, nie w tym PR → osobne zadanie FA-1.58 (guard w sendEmail() + docs/05 §10). Przed FA-1.57 osobne zadanie: reviews.experience_id + backfill + zgoda na publikację imienia i kraju.
