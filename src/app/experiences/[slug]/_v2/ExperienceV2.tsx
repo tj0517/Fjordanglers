@@ -7,9 +7,9 @@
  * (CLAUDE.md rule 3), and the guide's price override is folded into the price rows
  * server-side, so it never reaches the browser.
  *
- * S3–S9 are FA-1.54; S10–S14 and the inquiry form are FA-1.55. The anchors those tasks
- * fill are already here, and already wired to the top bar, the CTA and the sticky column,
- * so the plumbing is proven before the content lands.
+ * S3–S9 are `OfferBody` (FA-1.54); S10–S14 and the inquiry form are FA-1.55. The anchors
+ * FA-1.55 fills are already here, and already wired to the top bar, the CTA and the sticky
+ * column, so the plumbing is proven before the content lands.
  */
 
 import { notFound } from 'next/navigation'
@@ -23,6 +23,7 @@ import OfferChips from '@/components/experience-v2/offer-chips'
 import OfferPriceLead from '@/components/experience-v2/offer-price-lead'
 import OfferWidget, { type OfferWidgetProps } from '@/components/experience-v2/offer-widget'
 import OfferMobileBar from '@/components/experience-v2/offer-mobile-bar'
+import OfferBody from '@/components/experience-v2/offer-body'
 
 /** The inquiry form of FA-1.55. Named in that task, so the anchor is stable from here. */
 const INQUIRY_ANCHOR = '#zapytanie'
@@ -191,13 +192,9 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 <OfferWidget {...widget} />
               </div>
 
-              {/* ── S3–S9 → FA-1.54. The anchors the top bar already points at. ── */}
-              <section id="jak-dziala" className="mt-10 scroll-mt-20">
-                <Placeholder label="S3–S8 · how it works, what is included, the day — FA-1.54" />
-              </section>
-              <section id="cena" className="mt-4 scroll-mt-20">
-                <Placeholder label="S9 · price and deposit, in full — FA-1.54" />
-              </section>
+              {/* ── S3–S9 (FA-1.54). S8 carries #jak-dziala and S9 #cena, the anchors the
+                     top bar and the CTA already point at. ── */}
+              <OfferBody page={page} />
             </div>
 
             <aside className="hidden w-[360px] flex-none sm:block" style={{ position: 'sticky', top: 88 }}>

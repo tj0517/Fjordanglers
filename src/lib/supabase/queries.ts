@@ -14,6 +14,15 @@ import type { Database } from './database.types'
 import { COUNTRIES } from '@/lib/countries'
 import { availabilityWindow } from '@/lib/availability-window'
 import { effectivePrices, type PriceRow } from '@/lib/pricing/experience-price'
+import {
+  speciesNames,
+  parseLicenseInfo,
+  parseDaySchedule,
+  parseItinerary,
+  type LicenseInfo,
+  type DayStep,
+  type ItineraryDay,
+} from '@/lib/experience-v2-content'
 
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'
@@ -474,6 +483,10 @@ type ExperienceV2Guide = {
   googleRating:      number | null
   googleReviewCount: number | null
   googleProfileUrl:  string | null
+  languages:         string[]
+  bio:               string | null
+  /** How this guide collects the balance — the last step of "How booking works" (S8). */
+  balancePaymentMethod: 'cash' | 'stripe'
   isPrimary:         boolean
 }
 
@@ -486,6 +499,9 @@ type ExperienceV2Option = {
   currency:        string | null
   durationDaysMin: number | null
   durationDaysMax: number | null
+  description:     string | null
+  /** `archetype` options only; empty for the others. */
+  sampleItinerary: ItineraryDay[]
 }
 
 export type ExperienceV2 = {
@@ -498,6 +514,22 @@ export type ExperienceV2 = {
   heroImageUrl:       string | null
   galleryImageUrls:   string[]
   includes:           string[]
+  excludes:           string[]
+  speciesNames:       string[]
+  technique:          string[]
+  meetingPointName:        string | null
+  meetingPointDescription: string | null
+  walkingKmMin:       number | null
+  walkingKmMax:       number | null
+  license:            LicenseInfo | null
+  tipGuidanceText:    string | null
+  suitedFor:          string[]
+  notSuitedFor:       string[]
+  expectationsText:   string | null
+  /** `fixed` pages: the day as a timeline. Empty = no S6. */
+  daySchedule:        DayStep[]
+  weatherPolicyText:  string | null
+  offerEtaText:       string | null
   seasonMonths:       number[]
   skillLevel:         number | null
   minDays:            number
@@ -536,6 +568,9 @@ type RawGuideRow = {
     google_rating:       number | null
     google_review_count: number | null
     google_profile_url:  string | null
+    languages:           string[]
+    bio:                 string | null
+    default_balance_payment_method: string
   } | null
 }
 
@@ -590,7 +625,11 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         .from('experience_pages')
         .select(`
           id, slug, experience_name, intro_text, country, region,
-          hero_image_url, gallery_image_urls, includes, season_months, skill_level,
+          hero_image_url, gallery_image_urls, includes, excludes, season_months, skill_level,
+          species_details, technique, meeting_point_name, meeting_point_description,
+          walking_km_min, walking_km_max, license_info, tip_guidance_text,
+          suited_for, not_suited_for, expectations_text, day_schedule,
+          weather_policy_text, offer_eta_text,
           min_days, max_days, max_anglers_per_guide, response_sla_hours,
           offer_mode, fee_pct, currency, price_from_cents, price_to_cents,
           meta_title, meta_description
@@ -612,7 +651,8 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
             role, status, show_on_page, sort_order, guide_price_override_cents,
             guide:guides!guide_id (
               id, slug, full_name, avatar_url, years_experience, association,
-              response_time_hours, google_rating, google_review_count, google_profile_url
+              response_time_hours, google_rating, google_review_count, google_profile_url,
+              languages, bio, default_balance_payment_method
             )
           `)
           .eq('experience_id', page.id),
@@ -622,7 +662,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
           .eq('experience_id', page.id),
         db
           .from('experience_page_options')
-          .select('id, kind, label, price_from_cents, price_to_cents, currency, duration_days_min, duration_days_max, sort_order')
+          .select('id, kind, label, price_from_cents, price_to_cents, currency, duration_days_min, duration_days_max, description, sample_itinerary, sort_order')
           .eq('experience_page_id', page.id)
           .order('sort_order', { ascending: true }),
       ])
@@ -647,6 +687,9 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         googleRating:      row.guide!.google_rating,
         googleReviewCount: row.guide!.google_review_count,
         googleProfileUrl:  row.guide!.google_profile_url,
+        languages:         row.guide!.languages ?? [],
+        bio:               row.guide!.bio,
+        balancePaymentMethod: row.guide!.default_balance_payment_method === 'stripe' ? 'stripe' : 'cash',
         isPrimary:         row.role === 'primary',
       }))
 
@@ -677,6 +720,21 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         heroImageUrl:       page.hero_image_url,
         galleryImageUrls:   page.gallery_image_urls ?? [],
         includes:           page.includes ?? [],
+        excludes:           page.excludes ?? [],
+        speciesNames:       speciesNames(page.species_details),
+        technique:          page.technique ?? [],
+        meetingPointName:        page.meeting_point_name,
+        meetingPointDescription: page.meeting_point_description,
+        walkingKmMin:       page.walking_km_min,
+        walkingKmMax:       page.walking_km_max,
+        license:            parseLicenseInfo(page.license_info),
+        tipGuidanceText:    page.tip_guidance_text,
+        suitedFor:          page.suited_for ?? [],
+        notSuitedFor:       page.not_suited_for ?? [],
+        expectationsText:   page.expectations_text,
+        daySchedule:        parseDaySchedule(page.day_schedule),
+        weatherPolicyText:  page.weather_policy_text,
+        offerEtaText:       page.offer_eta_text,
         seasonMonths:       page.season_months ?? [],
         skillLevel:         page.skill_level,
         minDays:            page.min_days,
@@ -701,6 +759,8 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
           currency:        o.currency,
           durationDaysMin: o.duration_days_min,
           durationDaysMax: o.duration_days_max,
+          description:     o.description,
+          sampleItinerary: o.kind === 'archetype' ? parseItinerary(o.sample_itinerary) : [],
         })),
       }
     },
