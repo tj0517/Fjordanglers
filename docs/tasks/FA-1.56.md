@@ -2,13 +2,14 @@
 id: FA-1.56
 title: Admin — zakładka v2 na stronie oferty: przewodnicy (wielu, primary/backup), tryb oferty, cennik dni × wędkarze, nowe pola treści, `page_version`, aliasy slugów
 stage: 1
-status: todo
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/admin-experience-v2-tab
+pr: 135
 depends_on: [FA-1.50]
 blocked_by_questions: []
 touches_db: false
@@ -40,7 +41,8 @@ Bez admina pola z FA-1.50 trzeba by wpisywać SQL-em na prod. Po tym zadaniu tj 
 - [ ] Lista `/admin/experiences`: kolumna „v2” (1/2) i liczba przewodników
 
 ## Gotowe, gdy
-- [ ] Test akcji: dodanie drugiego przewodnika jako `backup` → 2 wiersze, `guide_id` strony bez zmian; zmiana `primary` → `guide_id` = nowy (trigger FA-1.51) — wklejony odczyt
+- [ ] Test akcji: dodanie drugiego przewodnika jako `backup` → 2 wiersze w `experience_guides`, `guide_id` strony bez zmian — wklejony odczyt *(zawężone 2026-10-07, tj: połowa „zmiana `primary` → `guide_id` = nowy" zależy od triggera FA-1.51, którego jeszcze nie ma)*
+- [ ] Test akcji: zmiana `primary` w zakładce v2 zostawia dokładnie jeden wiersz `primary active`, a poprzedni `primary` jest zdegradowany — wklejony odczyt
 - [ ] Red proof 1: zapis `page_version=2` bez `primary active` → błąd z komunikatem, `page_version` dalej 1
 - [ ] Red proof 2: nadpisanie ceny +30% → błąd walidacji w akcji **i** (jeśli przez formularz obejdzie) błąd z bazy — oba wklejone
 - [ ] Red proof 3: akcja wywołana bez sesji admina → odmowa (`requireAdmin`) — test
@@ -68,3 +70,6 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ```
 
 ## Notatki z realizacji
+- 2026-10-07 tj: kryterium 1 zawężone — synchronizacja primary → experience_pages.guide_id należy do FA-1.51 (todo), nie do tego zadania; zapis wielotabelowy sekwencją z kontrolą błędów, bez migracji/RPC (touches_db: false); testy na własnych danych, bez db reset i edycji seed.sql (równolegle FA-1.54 na tym samym stacku).
+- 2026-10-07 tj: decyzje z PR #135 — (1) scalanie stron: najpierw archiwizacja, potem alias (krótkie 404) — na pilota; (2) day_schedule meta jako liczby (drive_min, walk_km) + wading tak/nie; (3) kwoty wpisywane w jednostkach głównych, zapis w centach; (4) strona już v2 nie może stracić primary active, ceny „od" ani suited_for. Przekierowanie aliasu to 308 (permanentRedirect z FA-1.52, decyzja tj 2026-10-06) — kryterium „301" uznane za spełnione znaczeniowo.
+- 2026-10-07 tj: CI `db` startuje gotrue (zgoda tj, opcja A) — testy akcji v2 logują się naprawdę jako admin@seed.test / angler@seed.test; podmiana tożsamości w testach odrzucona jako słabszy dowód.

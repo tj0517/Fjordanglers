@@ -191,11 +191,12 @@ jobs:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
       # Startujemy tylko to, czego dotykają testy: postgres + kong (API 54421) + postgrest.
+      # + gotrue: action tests log in for real as seed accounts (FA-1.56).
       # Reszta kontenerów to kilka minut pobierania obrazów za nic.
       - name: supabase start
         run: |
           supabase start \
-            -x gotrue,realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+            -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
       # ── FAIL 1: migracja, która nie aplikuje się na czysto ────────────────
       - name: db reset — wszystkie migracje na pustej bazie

@@ -88,7 +88,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.53 | Szablon v2 S0–S2 — hero, chipy, 3 linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; `getExperienceV2()` | L | opus | done | FA-1.52 |
 | FA-1.54 | Szablon v2 S3–S9 — w skrócie, w cenie / poza ceną, dla kogo / nie, przebieg dnia, przewodnicy, 4 kroki, cena i depozyt | M | sonnet | done | FA-1.53 |
 | FA-1.55 | Szablon v2 S10–S14 + formularz 3-krokowy → `inquiries` + `brief`; recenzje z linkiem, mapa, sezon, FAQ | L | opus | todo | FA-1.54 |
-| FA-1.56 | Admin — zakładka v2: przewodnicy (wielu), tryb, cennik, pola treści, `page_version`, aliasy slugów | L | opus | todo | FA-1.50 |
+| FA-1.56 | Admin — zakładka v2: przewodnicy (wielu), tryb, cennik, pola treści, `page_version`, aliasy slugów | L | opus | review | FA-1.50 |
 | FA-1.57 | Pilot v2 — jedna strona NZ na `page_version=2` (prod), 14 dni pomiaru v1 vs v2; robi tj | S | — (człowiek) | todo | FA-1.53, FA-1.54, FA-1.55, FA-1.56 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
