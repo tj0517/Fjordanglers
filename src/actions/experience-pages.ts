@@ -539,7 +539,7 @@ export type ExperienceV2SaveResult =
   | { success: true;  warnings: string[] }
   | { success: false; error: string }
 
-export interface ExperienceV2EditorGuide {
+interface ExperienceV2EditorGuide {
   guideId:       string
   fullName:      string
   role:          'primary' | 'backup'
