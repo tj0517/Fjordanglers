@@ -19,18 +19,26 @@
  * The admin preview (?preview=v2) is a separate dynamic route: src/proxy.ts
  * rewrites to it, and ./preview/page.tsx checks admin on the server itself.
  *
- * generateMetadata is re-exported from v1 unchanged; v2 inherits it for now.
+ * generateMetadata routes the same way the page does: a v2 page describes itself from
+ * its own meta_title / meta_description (FA-1.53), anything else keeps v1's unchanged.
  */
 
 import { permanentRedirect } from 'next/navigation'
 import { env } from '@/lib/env'
 import { getExperienceRouting } from '@/lib/supabase/queries'
-import ExperienceV1 from './_v1/ExperienceV1'
-import ExperienceV2 from './_v2/ExperienceV2'
+import ExperienceV1, { generateMetadata as v1Metadata } from './_v1/ExperienceV1'
+import ExperienceV2, { generateMetadata as v2Metadata } from './_v2/ExperienceV2'
 
 export const revalidate = 3600
 
-export { generateMetadata } from './_v1/ExperienceV1'
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const routing  = await getExperienceRouting(slug)
+
+  return env.EXPERIENCE_V2_ENABLED && routing?.pageVersion === 2
+    ? v2Metadata({ params })
+    : v1Metadata({ params })
+}
 
 export default async function ExperiencePublicPage({
   params,

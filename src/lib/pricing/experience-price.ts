@@ -37,7 +37,7 @@ export interface Money {
 }
 
 /** Why a page or a (days, anglers) combination shows no number at all. */
-export type UnpricedReason =
+type UnpricedReason =
   /** The page has no current price rows (a `custom` page, or a `fixed` one nobody priced yet). */
   | 'no-prices'
   /** Rows exist, but none for the requested number of days. */

@@ -13,7 +13,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
 import type { Database } from './database.types'
 import { COUNTRIES } from '@/lib/countries'
 import { availabilityWindow } from '@/lib/availability-window'
-import { effectivePrices } from '@/lib/pricing/experience-price'
+import { effectivePrices, type PriceRow } from '@/lib/pricing/experience-price'
 
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'
@@ -463,7 +463,7 @@ export async function getExperienceRouting(slug: string): Promise<ExperienceRout
 // ─── Experience page v2 — the offer-centric template (FA-1.53) ───────────────
 
 /** One guide shown on the page, from `experience_guides` + `guides`. */
-export type ExperienceV2Guide = {
+type ExperienceV2Guide = {
   id:                string
   slug:              string | null
   fullName:          string
@@ -477,15 +477,7 @@ export type ExperienceV2Guide = {
   isPrimary:         boolean
 }
 
-/** One current price row, already carrying the primary guide's override if there is one. */
-export type ExperienceV2PriceRow = {
-  days:            number
-  anglers:         number
-  guidePriceCents: number
-  currency:        string
-}
-
-export type ExperienceV2Option = {
+type ExperienceV2Option = {
   id:              string
   kind:            string
   label:           string
@@ -522,7 +514,8 @@ export type ExperienceV2 = {
   metaTitle:          string | null
   metaDescription:    string | null
   guides:             ExperienceV2Guide[]
-  prices:             ExperienceV2PriceRow[]
+  /** Current rows, already carrying the primary guide's override if there is one. */
+  prices:             PriceRow[]
   options:            ExperienceV2Option[]
 }
 
@@ -553,7 +546,7 @@ type RawGuideRow = {
  */
 function newestPerSlot(
   rows: { days: number; anglers: number; guide_price_cents: number; currency: string; valid_from: string | null }[],
-): ExperienceV2PriceRow[] {
+): PriceRow[] {
   const best = new Map<string, (typeof rows)[number]>()
 
   for (const row of rows) {
