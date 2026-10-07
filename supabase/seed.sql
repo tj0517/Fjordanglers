@@ -263,13 +263,17 @@ INSERT INTO auth.identities (
 ON CONFLICT (id) DO NOTHING;
 
 -- One guide, so the `guide` knowledge entry has something to point at. Fictional.
+-- avatar_url / google_* are read by the v2 offer page (FA-1.53): the rating line next to the
+-- H1 and the mini-avatar in the widget. Fictional values, example.com so nothing resolves.
 INSERT INTO guides (
-  id, full_name, country, city, status, languages, fish_expertise, years_experience, bio
+  id, full_name, country, city, status, languages, fish_expertise, years_experience, bio,
+  avatar_url, google_rating, google_review_count, google_profile_url, association, response_time_hours
 ) VALUES (
   '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03',
   'Jon Seed', 'Iceland', 'Reykjavik', 'active',
   ARRAY['en', 'is'], ARRAY['atlantic salmon', 'brown trout'], 12,
-  'Fictional seed guide. Not a real person, not real content.'
+  'Fictional seed guide. Not a real person, not real content.',
+  '/about/krzychu.jpg', 4.8, 21, 'https://example.com/seed-google-profile-jon', 'SEED-ASSOC', 48
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ─── agent_knowledge — one entry of each kind (FA-1.22) ──────────────────────
@@ -336,32 +340,78 @@ INSERT INTO inquiries (
 --
 -- Three pages: NZ (active, guide), Iceland (active, guide), a draft with no guide — each
 -- with at least one option — and a second fictional guide, so a second `primary` can be
--- attempted in a red proof. experience_guides / experience_prices / experience_slug_aliases
--- are deliberately NOT seeded: on `supabase db reset` the migration runs BEFORE this file,
--- so its backfill never sees these rows. The proof re-runs the backfill statements
--- (the BACKFILL-BEGIN … BACKFILL-END block of 20261007000000_experience_offer_centric_expand.sql)
--- by hand after the seed. All UUIDs are v4.
+-- attempted in a red proof. All UUIDs are v4.
+--
+-- FA-1.53 (tj, 2026-10-07) adds the offer-page fixture the v2 template needs to render:
+-- `experience_guides` (one active primary per active page) and `experience_prices` (NZ only),
+-- plus the v2 columns on the two active pages. `experience_slug_aliases` stays unseeded.
+-- Two consequences of seeding tables the migration also backfills:
+--   • Nothing here relies on the backfill. On `supabase db reset` the migration runs BEFORE
+--     this file, so its backfill never sees these rows — `offer_mode`, `price_from_cents`
+--     and the option `kind`/`currency` are therefore written out in full below, not inherited.
+--   • FA-1.50's verification re-runs the BACKFILL-BEGIN … BACKFILL-END block of
+--     20261007000000_experience_offer_centric_expand.sql by hand after the seed. Its
+--     `experience_guides` INSERT is now a no-op for both active pages (ON CONFLICT DO NOTHING
+--     over the rows below), so the count check still matches but no longer demonstrates that
+--     the backfill inserts anything. Use a page added after the seed for that.
+-- No `guide_price_override_cents` anywhere: the public read policy on `experience_guides` is
+-- wider than what the page may show (docs/deferred-tasks.md, FA-1.50), so the seed does not
+-- put an override on a row anon can read.
 -- ════════════════════════════════════════════════════════════════════════════
 
-INSERT INTO guides (id, full_name, country, city, status, languages, fish_expertise, years_experience, bio)
-VALUES (
+INSERT INTO guides (
+  id, full_name, country, city, status, languages, fish_expertise, years_experience, bio,
+  avatar_url, google_rating, google_review_count, google_profile_url, association, response_time_hours
+) VALUES (
   '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04',
   'Hana Seed', 'New Zealand', 'Queenstown', 'active',
   ARRAY['en'], ARRAY['brown trout', 'rainbow trout'], 9,
-  'Fictional seed guide. Not a real person, not real content.'
+  'Fictional seed guide. Not a real person, not real content.',
+  '/brand/profile-photo.png', 4.9, 37, 'https://example.com/seed-google-profile-hana', 'SEED-ASSOC', 24
 ) ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO experience_pages (id, guide_id, experience_name, slug, country, region, status, price_from, currency)
+-- Both active pages are on page_version = 2, so the v2 template renders them as soon as
+-- EXPERIENCE_V2_ENABLED is on. NZ is the `fixed` variant (calculator over experience_prices);
+-- Iceland is `custom` (a price range, no calculator) — offer_mode is written out because the
+-- migration's backfill runs before this file and never sees these rows.
+-- price_from_cents mirrors what that backfill would have made of price_from; the v2 `fixed`
+-- page ignores it and prices from experience_prices (its semantics are unresolved —
+-- docs/deferred-tasks.md, FA-1.50). The `custom` page is the one that shows it, as stored.
+INSERT INTO experience_pages (
+  id, guide_id, experience_name, slug, country, region, status, price_from, currency,
+  page_version, offer_mode, price_from_cents, price_to_cents,
+  intro_text, skill_level, season_months, includes,
+  min_days, max_days, max_anglers_per_guide, response_sla_hours,
+  hero_image_url, gallery_image_urls, meta_title, meta_description
+)
 VALUES
   ('e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04',
    'Seed Backcountry Day, South Island', 'seed-backcountry-day-nz', 'New Zealand', 'Otago',
-   'active', 650, 'NZD'),
+   'active', 650, 'NZD',
+   2, 'fixed', 65000, NULL,
+   'Sight-fishing for wild brown trout in clear backcountry water. Full day, one or two anglers. Fictional seed content.',
+   3, ARRAY[10, 11, 12, 1, 2, 3, 4], ARRAY['Guide service', 'Gear and flies included', 'Lunch on the river'],
+   1, 3, 2, 24,
+   '/hero.jpg',
+   ARRAY['/about/gallery-1.jpg', '/about/gallery-2.jpg', '/about/gallery-3.jpg', '/about/gallery-4.jpg', '/brand/guide-fishing.jpg'],
+   'Seed Backcountry Day, South Island', 'Fictional seed page for the v2 offer template. Not real content.'),
   ('e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e202', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03',
    'Seed Salmon Week, South-West Iceland', 'seed-salmon-week-iceland', 'Iceland', 'South-West',
-   'active', 450.50, 'EUR'),
+   'active', 450.50, 'EUR',
+   2, 'custom', 45050, 320000,
+   'Multi-day salmon fishing on a private beat in South-West Iceland. Planned around your dates. Fictional seed content.',
+   2, ARRAY[6, 7, 8, 9], ARRAY['Guide service', 'Transfers from Reykjavik'],
+   3, 7, 2, 48,
+   '/iceland.jpg',
+   ARRAY['/norway.jpg', '/sweden.jpg', '/brand/hero-fjord.jpg'],
+   'Seed Salmon Week, South-West Iceland', 'Fictional seed page for the v2 offer template, custom mode. Not real content.'),
   ('e3e3e3e3-e3e3-4e3e-8e3e-e3e3e3e3e303', NULL,
    'Seed Draft Page, Finland', 'seed-draft-finland', 'finland', 'Lapland',
-   'draft', 300, 'EUR')
+   'draft', 300, 'EUR',
+   1, 'fixed', 30000, NULL,
+   NULL, NULL, '{}', '{}',
+   1, NULL, 2, 24,
+   NULL, '{}', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO experience_page_options (id, experience_page_id, sort_order, label, price_from)
@@ -371,3 +421,33 @@ VALUES
   ('e6e6e6e6-e6e6-4e6e-8e6e-e6e6e6e6e603', 'e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e202', 1, 'Lodge week', 3200),
   ('e7e7e7e7-e7e7-4e7e-8e7e-e7e7e7e7e704', 'e3e3e3e3-e3e3-4e3e-8e3e-e3e3e3e3e303', 0, 'Draft option', 300)
 ON CONFLICT (id) DO NOTHING;
+
+-- ─── experience_prices — the NZ (`fixed`) page only (FA-1.53) ────────────────
+-- Guide prices, excluding the FA fee; the angler sees guide_price_cents × (1 + fee_pct = 0.20),
+-- computed, never stored (O-31). Amounts are chosen so the 20% divides to a whole cent, which
+-- is what the widget's "Total / Deposit / Balance" lines add up from.
+--   (1 day, 1 angler)  900.00 → total 1 080.00   ← the minimum total, i.e. the "from" price
+--   (1 day, 2 anglers) 1 250.00 → total 1 500.00
+--   (2 days, 2 anglers) 2 400.00 → total 2 880.00
+-- The fourth row is deliberately EXPIRED (season 2024): a reader of getExperienceV2() must be
+-- able to see that "current by valid_from/valid_to" is filtered, not merely asserted. It shares
+-- (days, anglers) with the undated row above it, which the UNIQUE constraint allows because
+-- valid_from differs (NULLS NOT DISTINCT only collapses two *undated* rows).
+-- Iceland gets no rows on purpose: `custom` has no price table, and that is also the empty
+-- state ("no price rows") the v2 calculator has to survive.
+INSERT INTO experience_prices (id, experience_id, days, anglers, guide_price_cents, currency, valid_from, valid_to)
+VALUES
+  ('e8e8e8e8-e8e8-4e8e-8e8e-e8e8e8e8e801', 'e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', 1, 1,  90000, 'NZD', NULL, NULL),
+  ('e8e8e8e8-e8e8-4e8e-8e8e-e8e8e8e8e802', 'e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', 1, 2, 125000, 'NZD', NULL, NULL),
+  ('e8e8e8e8-e8e8-4e8e-8e8e-e8e8e8e8e803', 'e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', 2, 2, 240000, 'NZD', NULL, NULL),
+  ('e8e8e8e8-e8e8-4e8e-8e8e-e8e8e8e8e804', 'e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', 1, 2, 100000, 'NZD', '2024-01-01', '2024-12-31')
+ON CONFLICT (id) DO NOTHING;
+
+-- ─── experience_guides — one active primary per active page (FA-1.53) ───────
+-- Inserted after experience_prices: the override trigger reads the base price row. No override
+-- is set here (see the block header), so the trigger returns early either way.
+INSERT INTO experience_guides (experience_id, guide_id, role, status, show_on_page, sort_order)
+VALUES
+  ('e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04', 'primary', 'active', true, 0),
+  ('e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e202', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03', 'primary', 'active', true, 0)
+ON CONFLICT DO NOTHING;
