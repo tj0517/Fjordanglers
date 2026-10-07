@@ -2,7 +2,12 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExperiencePageForm, { type ExperiencePageFormInitialData } from '@/components/admin/ExperiencePageForm'
-import type { SpeciesDetailItem, SpecialAttraction, Accommodation, Boat, ContentBlock } from '@/actions/experience-pages'
+import { ExperienceEditTabs } from '@/components/admin/ExperienceEditTabs'
+import { ExperienceV2Editor } from '@/components/admin/experience-v2-editor/ExperienceV2Editor'
+import {
+  getExperienceV2Editor,
+  type SpeciesDetailItem, type SpecialAttraction, type Accommodation, type Boat, type ContentBlock,
+} from '@/actions/experience-pages'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -93,6 +98,10 @@ export default async function AdminExperienceEditPage({
     guidePhotos = (photos ?? []).map(p => p.url).filter(Boolean)
   }
 
+  // Everything the "Offer v2" tab edits, through the data layer (FA-1.56).
+  const v2 = await getExperienceV2Editor(id)
+  if (v2 == null) notFound()
+
   const initialData: ExperiencePageFormInitialData = {
     experience_name:           page.experience_name,
     slug:                      page.slug,
@@ -169,12 +178,17 @@ export default async function AdminExperienceEditPage({
         </p>
       </div>
 
-      <ExperiencePageForm
-        mode="edit"
-        experienceId={id}
-        initialData={initialData}
-        guidePhotos={guidePhotos}
-        initialOptions={initialOptions}
+      <ExperienceEditTabs
+        pageForm={
+          <ExperiencePageForm
+            mode="edit"
+            experienceId={id}
+            initialData={initialData}
+            guidePhotos={guidePhotos}
+            initialOptions={initialOptions}
+          />
+        }
+        offerV2={<ExperienceV2Editor data={v2} />}
       />
     </div>
   )

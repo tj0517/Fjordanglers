@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { Plus, ExternalLink } from 'lucide-react'
 import { PublishAllDraftsButton } from './PublishAllDraftsButton'
 import { formatPrice } from '@/lib/format-price'
+import { getExperienceGuideCounts } from '@/actions/experience-pages'
 
 export const metadata = {
   title: 'Experience Pages — Admin',
@@ -19,10 +20,11 @@ export default async function AdminExperiencesPage() {
 
   const { data: pages } = await svc
     .from('experience_pages')
-    .select('id, experience_name, slug, country, region, status, price_from, price_type, currency, target_species, created_at')
+    .select('id, experience_name, slug, country, region, status, price_from, price_type, currency, target_species, created_at, page_version')
     .order('created_at', { ascending: false })
 
   const rows = pages ?? []
+  const guideCounts = await getExperienceGuideCounts()
 
   const counts = {
     active:   rows.filter(r => r.status === 'active').length,
@@ -90,6 +92,8 @@ export default async function AdminExperiencesPage() {
           {rows.map(row => {
             const st = STATUS_STYLE[row.status] ?? STATUS_STYLE.draft
             const date = new Date(row.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+            const guides = guideCounts[row.id] ?? { total: 0, active: 0 }
+            const paused = guides.total - guides.active
             return (
               <div key={row.id}
                 className="flex items-center gap-4 px-6 py-4 rounded-[20px]"
@@ -107,6 +111,19 @@ export default async function AdminExperiencesPage() {
                       ? ` · ${(row.target_species as string[]).slice(0, 3).join(', ')}`
                       : ''}
                     {' · '}/experiences/{row.slug}
+                  </p>
+                </div>
+
+                {/* Template version and guides on the page (FA-1.56) */}
+                <div className="hidden sm:flex flex-col items-end gap-0.5 flex-shrink-0" data-v2-summary>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full f-body"
+                    style={row.page_version === 2
+                      ? { background: 'rgba(10,46,77,0.9)', color: '#F8FAFB' }
+                      : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.55)' }}>
+                    v{row.page_version === 2 ? 2 : 1}
+                  </span>
+                  <p className="text-[10px] f-body" style={{ color: 'rgba(10,46,77,0.45)' }}>
+                    {guides.total} {guides.total === 1 ? 'guide' : 'guides'}{paused > 0 ? ` (${paused} paused)` : ''}
                   </p>
                 </div>
 

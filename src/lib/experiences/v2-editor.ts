@@ -109,6 +109,36 @@ export function centsToMoneyText(cents: number | null): string {
   return fraction === 0 ? String(whole) : `${whole}.${String(fraction).padStart(2, '0')}`
 }
 
+// ─── Other numbers typed by a human ──────────────────────────────────────────
+
+/** "20", "17.5", "17,25" → 2000 / 1750 / 1725 basis points. Null when it is not a percentage. */
+export function parsePercentToBp(input: string): number | null {
+  const match = /^(\d{1,2})(?:\.(\d{1,2}))?$/.exec(input.trim().replace(',', '.'))
+  if (match == null) return null
+  return Number.parseInt(match[1], 10) * 100 + Number.parseInt((match[2] ?? '').padEnd(2, '0'), 10)
+}
+
+/** 1750 → "17.5" — the inverse of parsePercentToBp. */
+export function bpToPercentText(bp: number): string {
+  const whole    = Math.trunc(bp / 100)
+  const fraction = bp % 100
+  if (fraction === 0) return String(whole)
+  return `${whole}.${String(fraction).padStart(2, '0').replace(/0$/, '')}`
+}
+
+/** Digits only → a whole number; anything else (sign, decimal point, exponent) → null. */
+export function parseWholeNumber(input: string): number | null {
+  const trimmed = input.trim()
+  return /^\d{1,6}$/.test(trimmed) ? Number.parseInt(trimmed, 10) : null
+}
+
+/** "4", "4.5", "4,5" → a distance with at most one decimal; anything else → null. */
+export function parseKm(input: string): number | null {
+  const match = /^(\d{1,3})(?:\.(\d))?$/.exec(input.trim().replace(',', '.'))
+  if (match == null) return null
+  return Number.parseInt(match[1], 10) + Number.parseInt(match[2] ?? '0', 10) / 10
+}
+
 // ─── Base price and the override cap ─────────────────────────────────────────
 
 export interface EditorPriceCell {

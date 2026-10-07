@@ -6,12 +6,16 @@
 import { describe, it, expect } from 'vitest'
 import {
   basePriceCents,
+  bpToPercentText,
   centsToMoneyText,
   guidesSchema,
   missingForV2,
   overrideExceedsCap,
   overrideLimitCents,
+  parseKm,
   parseMoneyToCents,
+  parsePercentToBp,
+  parseWholeNumber,
   slugSchema,
   type EditorPriceCell,
   type GuideRowInput,
@@ -44,6 +48,32 @@ describe('parseMoneyToCents — text to integer cents, no float in between', () 
     expect(centsToMoneyText(125050)).toBe('1250.50')
     expect(centsToMoneyText(7)).toBe('0.07')
     expect(centsToMoneyText(null)).toBe('')
+  })
+})
+
+describe('percent, whole numbers and distances typed into the form', () => {
+  it('reads a percentage as basis points and back', () => {
+    expect(parsePercentToBp('20')).toBe(2000)
+    expect(parsePercentToBp('17.5')).toBe(1750)
+    expect(parsePercentToBp('17,25')).toBe(1725)
+    expect(parsePercentToBp('0')).toBe(0)
+    for (const bad of ['', '100', '-1', '17.555', '20%', 'x']) expect(parsePercentToBp(bad), bad).toBeNull()
+
+    for (const bp of [0, 5, 50, 1725, 1750, 2000, 9999]) expect(parsePercentToBp(bpToPercentText(bp))).toBe(bp)
+    expect(bpToPercentText(2000)).toBe('20')
+    expect(bpToPercentText(1750)).toBe('17.5')
+  })
+
+  it('accepts only digits as a whole number', () => {
+    expect(parseWholeNumber(' 12 ')).toBe(12)
+    for (const bad of ['', '1.5', '-2', '1e2', 'two']) expect(parseWholeNumber(bad), bad).toBeNull()
+  })
+
+  it('reads a distance with at most one decimal', () => {
+    expect(parseKm('4')).toBe(4)
+    expect(parseKm('4,5')).toBe(4.5)
+    expect(parseKm('0.3')).toBe(0.3)
+    for (const bad of ['', '4.55', '-1', '1000', 'far']) expect(parseKm(bad), bad).toBeNull()
   })
 })
 
