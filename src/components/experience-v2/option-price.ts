@@ -19,3 +19,17 @@ export function optionPriceText(
   }
   return `from ${formatCents(fromCents, currency)}`
 }
+
+/** "1 day", "7 days", "3–5 days" — whichever ends of the stored range exist. */
+export function durationText(min: number | null, max: number | null): string | null {
+  if (min == null && max == null) return null
+  const lo = min ?? max
+  const hi = max ?? min
+  if (lo == null || hi == null) return null
+  if (lo === hi) return `${lo} ${lo === 1 ? 'day' : 'days'}`
+  return `${lo}–${hi} days`
+}
+
+// This file is deliberately plain TypeScript, with no 'use client': S9 is a server component
+// and calls these, and a function exported from a client module cannot be called from the
+// server (Next fails the render at request time, which no jsdom test would see).

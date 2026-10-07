@@ -180,6 +180,13 @@ describe('S7 — guides', () => {
     expect(container.querySelectorAll('[data-testid="fa-card"]')).toHaveLength(1)
   })
 
+  it('prints language names, not codes', () => {
+    const page = fixedPage({ guides: [guide({ languages: ['en', 'is'] })] })
+    const { container } = render(<OfferBody page={page} />)
+    expect(container.querySelector('[data-section="S3"]')!.textContent).toContain('English, Icelandic')
+    expect(container.querySelector('[data-testid="guide-card"]')!.textContent).toContain('Speaks English, Icelandic')
+  })
+
   it('shortens a long bio on a word boundary', () => {
     const bio = 'word '.repeat(200)
     const { container } = render(<OfferBody page={fixedPage({ guides: [guide({ bio })] })} />)
@@ -294,7 +301,9 @@ describe('S9 — price and deposit', () => {
     const s9 = nine(fixedPage())
     // 2 days × 1 angler has no row of its own; only the 2-angler row covers it.
     expect(s9.querySelector('td[data-days="2"][data-anglers="1"]')?.textContent).toBe('on request')
-    expect(s9.querySelector('[data-testid="currency-note"]')?.textContent).toContain('NZD')
+    const note = s9.querySelector('[data-testid="currency-note"]')?.textContent
+    expect(note).toContain('NZD')
+    expect(note).toContain('charged in EUR')
   })
 
   it('no currency warning on a EUR page', () => {

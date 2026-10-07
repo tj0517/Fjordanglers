@@ -146,3 +146,29 @@ export function parseItinerary(value: Json | null | undefined): ItineraryDay[] {
     return [{ day: num(item.day) ?? index + 1, title, details }]
   })
 }
+
+/**
+ * `guides.languages` stores ISO codes ("en", "is"); the page says "English", "Icelandic".
+ * A value that is not a language code is printed as stored rather than dropped.
+ */
+export function languageNames(codes: readonly string[]): string[] {
+  let display: Intl.DisplayNames | null = null
+  try {
+    display = new Intl.DisplayNames(['en'], { type: 'language' })
+  } catch {
+    display = null
+  }
+
+  return codes.flatMap(raw => {
+    const code = raw.trim()
+    if (code === '') return []
+    // Only a real language code is translated. Anything else ("English", typed by hand) is
+    // printed as stored: `Intl` would happily lowercase it into "english".
+    if (!/^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i.test(code)) return [code]
+    try {
+      return [display?.of(code) ?? code]
+    } catch {
+      return [code]
+    }
+  })
+}

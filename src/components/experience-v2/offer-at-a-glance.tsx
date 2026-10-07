@@ -5,6 +5,7 @@
 
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
+import { languageNames } from '@/lib/experience-v2-content'
 
 export type OfferAtAGlanceProps = {
   speciesNames:       string[]
@@ -41,7 +42,7 @@ export default function OfferAtAGlance(props: OfferAtAGlanceProps) {
         ? '1 angler per guide'
         : `1–${props.maxAnglersPerGuide} anglers per guide`,
     },
-    { label: 'Guide speaks', value: props.languages.join(', ') },
+    { label: 'Guide speaks', value: languageNames(props.languages).join(', ') },
     { label: 'Terrain',      value: terrainText(props.walkingKmMin, props.walkingKmMax) ?? '' },
   ].filter(card => card.value !== '')
 

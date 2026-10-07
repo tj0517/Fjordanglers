@@ -17,8 +17,8 @@
 
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
-import { optionPriceText } from './option-price'
-import { durationText, type OfferArchetype } from './offer-day'
+import { optionPriceText, durationText } from './option-price'
+import type { OfferArchetype } from './offer-day'
 import { quote, customRange, type PriceRow, type Quote } from '@/lib/pricing/experience-price'
 import { formatCents } from '@/lib/format-price'
 
@@ -105,8 +105,8 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
             </p>
             {currency !== 'EUR' && (
               <p className="mt-2 text-[13px]" style={mutedStyle} data-testid="currency-note">
-                Prices are in {currency}. The deposit is paid online through Stripe — the exact
-                amount and currency are on your offer.
+                Prices are in {currency}. The deposit is charged in EUR through Stripe — your
+                offer shows the exact amount.
               </p>
             )}
           </Box>
@@ -155,7 +155,7 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
                 return (
                   <li key={a.id} className="flex items-baseline justify-between gap-3">
                     <span>{a.label}{length != null && <span style={mutedStyle}> · {length}</span>}</span>
-                    <b>{optionPriceText(a.priceFromCents, a.priceToCents, a.currency ?? currency)}</b>
+                    <b className="flex-none whitespace-nowrap">{optionPriceText(a.priceFromCents, a.priceToCents, a.currency ?? currency)}</b>
                   </li>
                 )
               })}

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  safeHttpUrl, speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary,
+  safeHttpUrl, speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary, languageNames,
 } from './experience-v2-content'
 
 describe('safeHttpUrl', () => {
@@ -78,5 +78,14 @@ describe('parseItinerary', () => {
   })
   it('numbers a day that has no number by its position', () => {
     expect(parseItinerary([{ title: 'A' }, { title: 'B' }]).map(d => d.day)).toEqual([1, 2])
+  })
+})
+
+describe('languageNames', () => {
+  it('turns ISO codes into English names', () => {
+    expect(languageNames(['en', 'is', 'pl'])).toEqual(['English', 'Icelandic', 'Polish'])
+  })
+  it('prints a value it does not recognise as stored, and skips blanks', () => {
+    expect(languageNames(['English', ' ', 'xx-not-a-code!'])).toEqual(['English', 'xx-not-a-code!'])
   })
 })

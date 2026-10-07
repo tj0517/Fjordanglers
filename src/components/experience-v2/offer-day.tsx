@@ -17,7 +17,7 @@
 import { useState } from 'react'
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
-import { optionPriceText } from './option-price'
+import { optionPriceText, durationText } from './option-price'
 import type { DayStep, ItineraryDay } from '@/lib/experience-v2-content'
 
 export type OfferArchetype = {
@@ -42,15 +42,6 @@ export type OfferDayProps = {
 
 const SAMPLE_PLAN_NOTE =
   'This is a sample plan — your guide picks the water to suit the weather and the state of the river.'
-
-export function durationText(min: number | null, max: number | null): string | null {
-  if (min == null && max == null) return null
-  const lo = min ?? max
-  const hi = max ?? min
-  if (lo == null || hi == null) return null
-  if (lo === hi) return `${lo} ${lo === 1 ? 'day' : 'days'}`
-  return `${lo}–${hi} days`
-}
 
 export default function OfferDay({ offerMode, daySchedule, archetypes, currency }: OfferDayProps) {
   const [selectedId, setSelectedId] = useState<string | null>(archetypes[0]?.id ?? null)

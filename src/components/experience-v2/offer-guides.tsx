@@ -15,6 +15,7 @@
 import Image from 'next/image'
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
+import { languageNames } from '@/lib/experience-v2-content'
 
 type OfferGuide = {
   id:                string
@@ -100,7 +101,7 @@ function GuideCard({ guide }: { guide: OfferGuide }) {
             <p className="mt-1 text-sm" style={mutedStyle}>{facts.join(' · ')}</p>
           )}
           {guide.languages.length > 0 && (
-            <p className="mt-1 text-sm" style={mutedStyle}>Speaks {guide.languages.join(', ')}</p>
+            <p className="mt-1 text-sm" style={mutedStyle}>Speaks {languageNames(guide.languages).join(', ')}</p>
           )}
           {guide.bio != null && guide.bio.trim() !== '' && (
             <p className="mt-2.5 text-[15px]">{shorten(guide.bio, BIO_MAX_CHARS)}</p>
