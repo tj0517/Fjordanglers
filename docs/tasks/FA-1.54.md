@@ -2,13 +2,14 @@
 id: FA-1.54
 title: Szablon v2 — środek strony (S3–S9): w skrócie, w cenie / poza ceną, dla kogo i dla kogo nie, przebieg dnia, przewodnicy, jak działa rezerwacja, cena i depozyt
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: feat/experience-v2-body
+pr: 136
 depends_on: [FA-1.53]
 blocked_by_questions: []
 touches_db: false
