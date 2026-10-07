@@ -2,7 +2,7 @@
 id: FA-1.53
 title: Szablon v2 — górna część strony (S0–S2): hero i galeria, H1 z chipami, trzy linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; dane przez `getExperienceV2()`
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -119,3 +119,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
      `--force-with-lease`), klucze rotuje tj. Od tej pory: wyłącznie `git add <ścieżka>` i
      `git diff --cached --stat` przed każdym commitem.
 - 2026-10-05 tj: O-31 — klient widzi cenę całkowitą (przewodnik + opłata FA), bez osobnej linii „opłata”.
+- 2026-10-07 tj: zamknięte po merge'u (#134) — odbiór potwierdzony przez tj, status domknięty w pierwszym commicie FA-1.54 (core/tasks.md: PR zmergowany bez odbioru).

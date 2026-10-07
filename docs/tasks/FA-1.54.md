@@ -2,7 +2,7 @@
 id: FA-1.54
 title: Szablon v2 — środek strony (S3–S9): w skrócie, w cenie / poza ceną, dla kogo i dla kogo nie, przebieg dnia, przewodnicy, jak działa rezerwacja, cena i depozyt
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -73,3 +73,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 
 ## Notatki z realizacji
 - 2026-10-05 tj: O-34 — S7 pokazuje wszystkich przypiętych przewodników; O-35 — zwrot depozytu globalny FA + wyjątek pogodowy per oferta; O-36 — SLA i ETA oferty per oferta (`response_sla_hours`, `offer_eta_text`).
+- 2026-10-07 tj: S9 — globalna polityka zwrotu depozytu = jedna stała z istniejącego tekstu (terms-of-service / offers), strony prawne bez zmian; brak db reset i edycji seed.sql (równolegle FA-1.56 na tym samym stacku).
