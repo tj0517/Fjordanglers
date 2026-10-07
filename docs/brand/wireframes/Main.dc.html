@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Strona ofertowa — desktop</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;background:#F6F6F4;color:#1F2A30;font-family:'Public Sans',system-ui,sans-serif;font-size:16px;line-height:1.45}
+a{color:#1E6F8E}a:hover{color:#15556E}
+.wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+.ph{background:#DDE0DE;background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.05) 0 12px,transparent 12px 24px);border:1px solid #B9BFBD;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#5C666A;font-size:14px;text-align:center}
+.sec{padding:40px 0;border-top:1px solid #D4D8D6}
+.tag{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#1E6F8E;margin-bottom:12px}
+.h2{font-size:28px;font-weight:600;margin:0 0 20px;line-height:1.2}
+.box{background:#FFFFFF;border:1px solid #C9CECC;border-radius:10px;padding:20px}
+.chip{display:inline-block;border:1px solid #9AA3A5;border-radius:999px;padding:6px 14px;font-size:14px;background:#fff}
+.btn{display:block;width:100%;box-sizing:border-box;border:0;border-radius:8px;background:#1E6F8E;color:#fff;font:inherit;font-weight:600;font-size:17px;padding:16px;cursor:pointer;text-align:center}
+.btn2{display:block;width:100%;box-sizing:border-box;border:1px solid #1E6F8E;border-radius:8px;background:#fff;color:#1E6F8E;font:inherit;font-weight:500;font-size:15px;padding:12px;cursor:pointer;text-align:center}
+.inp{display:flex;align-items:center;justify-content:space-between;border:1px solid #9AA3A5;border-radius:8px;padding:12px 14px;font-size:15px;background:#fff;min-height:48px;box-sizing:border-box}
+.row{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding:8px 0;border-top:1px solid #E3E6E4}
+.muted{color:#5C666A}
+.ok{color:#1E6F8E;font-weight:500}
+ul.ls{margin:0;padding-left:20px}ul.ls li{margin:6px 0}
+.avatar{width:72px;height:72px;border-radius:50%;background:#C9CECC;flex:none}
+.faq{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-top:1px solid #D4D8D6;font-size:16px;font-weight:500}
+.step{flex:1;background:#fff;border:1px solid #C9CECC;border-radius:10px;padding:18px;min-width:0}
+.step b{display:block;font-size:22px;color:#1E6F8E;margin-bottom:6px}
+</style>
+</helmet>
+<div style="display: flex; flex-direction: column; min-height: 100%">
+
+<!-- S0 pasek górny -->
+<header style="background: #FFFFFF; border-bottom: 1px solid #D4D8D6; position: sticky; top: 0; z-index: 5">
+<div class="wrap" style="display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 64px">
+<div style="display: flex; align-items: center; gap: 12px"><div class="ph" style="width: 36px; height: 36px; border-radius: 6px">L</div><span style="font-weight: 700; font-size: 18px">FjordAnglers</span></div>
+<nav style="display: flex; align-items: center; gap: 28px; font-size: 15px"><a href="#jak-dziala">Jak to działa</a><a href="#faq">FAQ</a><span class="chip" style="padding: 6px 12px">USD ▾</span><a href="#kontakt" style="font-weight: 600">WhatsApp ☏</a></nav>
+</div>
+</header>
+
+<main class="wrap" style="width: 100%; box-sizing: border-box">
+
+<!-- S1 hero -->
+<section style="padding: 20px 0 32px">
+<p class="muted" style="font-size: 13px; margin: 0 0 16px">Home › Nowa Zelandia › South Island › Sight-fishing na pstrągi brązowe — pełny dzień</p>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 220px 220px; gap: 10px">
+<div class="ph" style="grid-column: span 2; grid-row: span 2; font-size: 16px">HERO — zdjęcie / film 30–60 s z przewodnikiem</div>
+<div class="ph">foto 2 — klient z rybą</div>
+<div class="ph">foto 3 — rzeka, sight-fishing</div>
+<div class="ph">foto 4 — krajobraz</div>
+<div class="ph" style="font-weight: 600">+14 zdjęć ›</div>
+</div>
+</section>
+
+<!-- dwie kolumny: treść + sticky widget -->
+<div style="display: flex; gap: 48px; align-items: flex-start">
+<div style="flex: 1 1 0; min-width: 0">
+
+<h1 style="font-size: 40px; line-height: 1.15; margin: 0 0 12px; font-weight: 700">Sight-fishing na dzikie pstrągi brązowe — South Island, Nowa Zelandia</h1>
+<p style="font-size: 18px; margin: 0 0 16px" class="muted">Polowanie wzrokiem na ryby 5–10 lb w krystalicznych rzekach. Pełny dzień z licencjonowanym przewodnikiem, 1–2 wędkarzy.</p>
+<p style="margin: 0 0 16px; font-size: 15px">★ 4.9 · 37 recenzji · <a href="#recenzje">zobacz na Google ›</a></p>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px">
+<span class="chip">South Island</span><span class="chip">pełny dzień ~8 h</span><span class="chip">1–2 wędkarzy / przewodnik</span><span class="chip">sezon paź–kwi</span><span class="chip">poziom 3 / 5</span><span class="chip">sprzęt w cenie</span>
+</div>
+<div style="display: flex; gap: 24px; flex-wrap: wrap; font-size: 15px; padding: 14px 0; border-top: 1px solid #D4D8D6; border-bottom: 1px solid #D4D8D6">
+<span class="ok">✓ Zapytanie bezpłatne i niezobowiązujące</span><span class="ok">✓ Depozyt dopiero po akceptacji oferty</span><span class="ok">✓ Odpowiedź w 24 h (pn–pt)</span>
+</div>
+
+<!-- S3 quick facts -->
+<section class="sec" style="border-top: 0">
+<p class="tag">S3 · W skrócie</p>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+<div class="box"><p class="muted" style="margin: 0 0 4px; font-size: 13px">Gatunki</p><p style="margin: 0; font-weight: 500">Pstrąg brązowy (typowo 3–6 lb, trofeum 8–10 lb), pstrąg tęczowy</p></div>
+<div class="box"><p class="muted" style="margin: 0 0 4px; font-size: 13px">Techniki</p><p style="margin: 0; font-weight: 500">Sight-fishing, sucha mucha, nimfa; rzuty 12–15 m</p></div>
+<div class="box"><p class="muted" style="margin: 0 0 4px; font-size: 13px">Start i dojazd</p><p style="margin: 0; font-weight: 500">Odbiór 7:30 z Twojego noclegu, dojazd 45–90 min</p></div>
+<div class="box"><p class="muted" style="margin: 0 0 4px; font-size: 13px">Osoby</p><p style="margin: 0; font-weight: 500">1–2 wędkarzy na przewodnika; 3+ → drugi przewodnik</p></div>
+<div class="box"><p class="muted" style="margin: 0 0 4px; font-size: 13px">Języki przewodnika</p><p style="margin: 0; font-weight: 500">Angielski</p></div>
+<div class="box"><p class="muted" style="margin: 0 0 4px; font-size: 13px">Teren</p><p style="margin: 0; font-weight: 500">6–12 km pieszo, brodzenie do kolan</p></div>
+</div>
+</section>
+
+<!-- S4 w cenie / poza ceną -->
+<section class="sec">
+<p class="tag">S4 · Co w cenie / co poza ceną</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div class="box"><h3 style="margin: 0 0 10px; font-size: 18px">W cenie</h3><ul class="ls"><li>Licencjonowany przewodnik, cały dzień</li><li>Sprzęt: wędki, kołowrotki, wodery i buty</li><li>Muchy i przypony</li><li>Lunch nad rzeką, napoje</li><li>Transport z/do miejsca noclegu</li></ul></div>
+<div class="box"><h3 style="margin: 0 0 10px; font-size: 18px">Poza ceną</h3><ul class="ls"><li><b>Licencja wędkarska</b> — kupujesz sam online, <a href="#faq">instrukcja krok po kroku ›</a></li><li>Loty i nocleg</li><li>Napiwek dla przewodnika (zwyczajowo [__]%)</li><li>Opcje: dodatkowy dzień, heli-access — <a href="#cena">cennik opcji ›</a></li></ul></div>
+</div>
+</section>
+
+<!-- S5 dla kogo -->
+<section class="sec">
+<p class="tag">S5 · Dla kogo jest ta wyprawa — i dla kogo nie</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div class="box" style="border-color: #1E6F8E"><h3 style="margin: 0 0 10px; font-size: 18px">Idealna, jeśli…</h3><ul class="ls"><li>rzucasz celnie na 12–15 m także przy wietrze</li><li>możesz przejść 8–15 km dziennie po kamieniach</li><li>cenisz jakość ryb nad ich liczbę</li><li>chcesz uczyć się czytania wody od przewodnika</li></ul></div>
+<div class="box"><h3 style="margin: 0 0 10px; font-size: 18px">Nie dla Ciebie, jeśli…</h3><ul class="ls"><li>dopiero zaczynasz z muchą — <a href="#">polecamy wtedy [inna oferta] ›</a></li><li>oczekujesz gwarancji wielu ryb</li><li>nie chcesz chodzić i brodzić</li></ul></div>
+</div>
+<p class="muted" style="font-style: italic; margin: 16px 0 0">„Dzień nastawiony na trofeum to często mniej brań i wymagające łowienie — bez gwarancji dużej ryby.”</p>
+</section>
+
+<!-- S6 przebieg dnia -->
+<section class="sec">
+<p class="tag">S6 · Przebieg dnia</p>
+<div style="display: flex; gap: 10px">
+<div class="step"><b>7:30</b>Odbiór z noclegu w Wanaka / Queenstown</div>
+<div class="step"><b>8:15</b>Dojazd nad rzekę · 45–90 min · wybór wody wg pogody</div>
+<div class="step"><b>9:00</b>Łowienie · 3–6 km w górę rzeki · brodzenie</div>
+<div class="step"><b>13:00</b>Lunch nad rzeką · 45 min</div>
+<div class="step"><b>14:00</b>Łowienie · najlepsze światło do sight-fishingu</div>
+<div class="step"><b>17:30</b>Powrót do noclegu</div>
+</div>
+<p class="muted" style="margin: 14px 0 0; font-size: 14px">Plan przykładowy — przewodnik dobiera wody do pogody i przejrzystości wody. Przy elastycznych datach wybieramy dni z najlepszą widocznością.</p>
+</section>
+
+<!-- S7 przewodnik + FA -->
+<section class="sec">
+<p class="tag">S7 · Twój przewodnik</p>
+<div style="display: grid; grid-template-columns: 3fr 2fr; gap: 16px">
+<div class="box" style="display: flex; gap: 20px">
+<div class="avatar"></div>
+<div><h3 style="margin: 0 0 4px; font-size: 20px">[Imię Nazwisko]</h3><p class="muted" style="margin: 0 0 10px; font-size: 14px">11 lat doświadczenia · NZ Professional Fishing Guides Association · odpowiada zwykle w 24 h</p><p style="margin: 0 0 10px">[2–3 zdania osobiste: skąd jest, od kiedy prowadzi, jaki styl łowienia lubi.]</p><p style="margin: 0; font-style: italic">„[Cytat przewodnika o tym, co jest dla niego najważniejsze w dniu na rzece.]”</p></div>
+</div>
+<div class="box">
+<div style="display: flex; gap: 8px; margin-bottom: 12px"><div class="avatar" style="width: 48px; height: 48px"></div><div class="avatar" style="width: 48px; height: 48px"></div></div>
+<h3 style="margin: 0 0 6px; font-size: 18px">Kim jesteśmy — FjordAnglers</h3><p style="margin: 0; font-size: 15px">[Imiona założycieli]. Dobieramy przewodnika i wody do Twojego poziomu, obsługujemy Cię w Twojej strefie czasowej, mamy plan B na pogodę i jedną płatność online.</p>
+</div>
+</div>
+</section>
+
+<!-- S8 jak działa -->
+<section class="sec" id="jak-dziala">
+<p class="tag">S8 · Jak działa rezerwacja</p>
+<div style="display: flex; gap: 10px">
+<div class="step"><b>1</b>Wysyłasz zapytanie — 2 minuty, bezpłatnie</div>
+<div class="step"><b>2</b>Potwierdzamy dostępność z przewodnikiem i wysyłamy ofertę — do 48–72 h</div>
+<div class="step" style="border-color: #1E6F8E; background: #EAF3F7"><b>3</b>Akceptujesz i płacisz depozyt 20% online (Stripe) — oferta ważna 72 h</div>
+<div class="step"><b>4</b>Saldo płacisz bezpośrednio przewodnikowi w dniu wyprawy</div>
+</div>
+</section>
+
+<!-- S9 cena -->
+<section class="sec" id="cena">
+<p class="tag">S9 · Cena i depozyt</p>
+<div style="display: grid; grid-template-columns: 3fr 2fr; gap: 16px">
+<div class="box">
+<table style="width: 100%; border-collapse: collapse; font-size: 15px">
+<tr style="text-align: left; color: #5C666A; font-size: 13px"><th style="padding: 8px 0; border-bottom: 1px solid #D4D8D6"></th><th style="padding: 8px 0; border-bottom: 1px solid #D4D8D6">1 wędkarz</th><th style="padding: 8px 0; border-bottom: 1px solid #D4D8D6">2 wędkarzy</th></tr>
+<tr><td style="padding: 10px 0; border-bottom: 1px solid #E3E6E4">1 dzień</td><td style="border-bottom: 1px solid #E3E6E4">NZD [__]</td><td style="border-bottom: 1px solid #E3E6E4">NZD [__]</td></tr>
+<tr><td style="padding: 10px 0; border-bottom: 1px solid #E3E6E4">2 dni</td><td style="border-bottom: 1px solid #E3E6E4">NZD [__]</td><td style="border-bottom: 1px solid #E3E6E4">NZD [__]</td></tr>
+<tr><td style="padding: 10px 0">3 dni</td><td>NZD [__]</td><td>NZD [__]</td></tr>
+</table>
+<p class="muted" style="margin: 12px 0 0; font-size: 13px">Ceny w NZD. Orientacyjne przeliczenie na USD / EUR w widgecie; depozyt pobierany w [waluta] przez Stripe.</p>
+<p style="margin: 12px 0 0; font-size: 14px"><b>Opcje z ceną:</b> dodatkowy dzień NZD [__] · heli-access NZD [__] · wynajem sprzętu własnego — w cenie</p>
+</div>
+<div class="box">
+<div class="row" style="border-top: 0"><span>Razem (cena całkowita)</span><b>NZD [__]</b></div>
+<div class="row" style="background: #EAF3F7; padding: 8px 10px; border-radius: 6px"><span>Depozyt teraz · 20% · Stripe</span><b style="color: #1E6F8E">NZD [__]</b></div>
+<div class="row"><span>Saldo — przewodnikowi</span><b>NZD [__]</b></div>
+<p style="margin: 14px 0 0; font-size: 14px"><b>Zwrot depozytu:</b> [polityka w 2–3 zdaniach]. Przy niebezpiecznych warunkach zmiana terminu bez kosztów. <a href="#">Pełne warunki ›</a></p>
+</div>
+</div>
+</section>
+
+</div>
+
+<!-- S2 sticky widget -->
+<aside style="width: 360px; flex: none; position: sticky; top: 88px; align-self: flex-start">
+<div class="box" style="padding: 24px; border: 2px solid #1F2A30; box-shadow: 0 8px 24px rgba(0,0,0,.06)">
+<p style="margin: 0; font-size: 28px; font-weight: 700; line-height: 1.1">od NZD 1 500 <span style="font-size: 16px; font-weight: 400; color: #5C666A">/ dzień</span></p>
+<p class="muted" style="margin: 4px 0 14px; font-size: 14px">1–2 wędkarzy na przewodnika · sprzęt w cenie</p>
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px"><div class="avatar" style="width: 36px; height: 36px"></div><span style="font-size: 14px">Przewodnik: [Imię] · ★ 4.9 (37)</span></div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div class="inp"><span>Kiedy? &nbsp;<b>Elastycznie — marzec 2027</b></span><span>▾</span></div>
+<div style="display: flex; gap: 8px">
+<div class="inp" style="flex: 1"><span>Wędkarze</span><span>− &nbsp;2&nbsp; +</span></div>
+<div class="inp" style="flex: 1"><span>Dni</span><span>− &nbsp;1&nbsp; +</span></div>
+</div>
+</div>
+<div style="margin-top: 16px">
+<div class="row"><span>Razem</span><b>NZD [__]</b></div>
+<div class="row"><span>Depozyt teraz · 20%</span><b>NZD [__]</b></div>
+<div class="row"><span>Saldo przewodnikowi</span><b>NZD [__]</b></div>
+<p class="muted" style="margin: 4px 0 0; font-size: 13px">≈ USD [__] · kurs orientacyjny</p>
+</div>
+<div style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px">
+<button class="btn" type="button">Sprawdź dostępność</button>
+<p class="muted" style="margin: 0; font-size: 13px; text-align: center">Bezpłatne · bez zobowiązań · depozyt dopiero po akceptacji oferty</p>
+<button class="btn2" type="button">Odpowiadamy w 24 h · Zapytaj przewodnika ›</button>
+</div>
+</div>
+</aside>
+</div>
+
+<!-- S10 recenzje (sticky kończy się tu) -->
+<section class="sec" id="recenzje" style="margin-top: 24px">
+<p class="tag">S10 · Recenzje</p>
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 16px"><h2 class="h2">★ 4.9 · 37 recenzji</h2><a href="#" style="font-weight: 600">Zobacz wszystkie na Google ›</a></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<div class="box"><div class="ph" style="height: 150px; margin-bottom: 12px">zdjęcie ryby klienta</div><p style="margin: 0 0 6px">★★★★★</p><p style="margin: 0 0 8px">„[Treść recenzji — 2–4 zdania.]”</p><p class="muted" style="margin: 0; font-size: 13px">[Imię], [Kraj] · marzec 2026</p></div>
+<div class="box"><div class="ph" style="height: 150px; margin-bottom: 12px">zdjęcie ryby klienta</div><p style="margin: 0 0 6px">★★★★★</p><p style="margin: 0 0 8px">„[Treść recenzji — 2–4 zdania.]”</p><p class="muted" style="margin: 0; font-size: 13px">[Imię], [Kraj] · luty 2026</p></div>
+<div class="box"><div class="ph" style="height: 150px; margin-bottom: 12px">zdjęcie ryby klienta</div><p style="margin: 0 0 6px">★★★★★</p><p style="margin: 0 0 8px">„[Treść recenzji — 2–4 zdania.]”</p><p class="muted" style="margin: 0; font-size: 13px">[Imię], [Kraj] · styczeń 2026</p></div>
+</div>
+</section>
+
+<!-- S11 mapa i logistyka -->
+<section class="sec">
+<p class="tag">S11 · Mapa, logistyka, sezon</p>
+<div style="display: grid; grid-template-columns: 3fr 2fr; gap: 16px">
+<div class="ph" style="height: 320px; font-size: 16px">MAPA — region, punkt odbioru, lotnisko ZQN</div>
+<div class="box">
+<p style="margin: 0 0 10px"><b>Najbliższe lotnisko:</b> Queenstown (ZQN), 1 h od Wanaka</p>
+<p style="margin: 0 0 10px"><b>Nocleg:</b> Wanaka lub Queenstown — [3 sugerowane obiekty]</p>
+<p style="margin: 0 0 14px"><b>Pogoda:</b> zmienna; przewodnik ma plan B na inne wody</p>
+<p class="muted" style="margin: 0 0 6px; font-size: 13px">SEZON — miesiąc po miesiącu</p>
+<div style="display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; font-size: 11px; text-align: center">
+<div style="background: #1E6F8E; color: #fff; padding: 8px 0; border-radius: 4px">Paź</div><div style="background: #1E6F8E; color: #fff; padding: 8px 0; border-radius: 4px">Lis</div><div style="background: #1E6F8E; color: #fff; padding: 8px 0; border-radius: 4px">Gru</div><div style="background: #1E6F8E; color: #fff; padding: 8px 0; border-radius: 4px">Sty</div><div style="background: #1E6F8E; color: #fff; padding: 8px 0; border-radius: 4px">Lut</div><div style="background: #1E6F8E; color: #fff; padding: 8px 0; border-radius: 4px">Mar</div><div style="background: #7FB8CF; padding: 8px 0; border-radius: 4px">Kwi</div><div style="background: #DDE0DE; padding: 8px 0; border-radius: 4px">Maj</div><div style="background: #DDE0DE; padding: 8px 0; border-radius: 4px">Cze</div><div style="background: #DDE0DE; padding: 8px 0; border-radius: 4px">Lip</div><div style="background: #DDE0DE; padding: 8px 0; border-radius: 4px">Sie</div><div style="background: #DDE0DE; padding: 8px 0; border-radius: 4px">Wrz</div>
+</div>
+<p class="muted" style="margin: 8px 0 0; font-size: 12px">ciemny = najlepszy · jasny = ok · szary = sezon zamknięty</p>
+</div>
+</div>
+</section>
+
+<!-- S12 + S13 -->
+<section class="sec" id="faq">
+<div style="display: grid; grid-template-columns: 2fr 3fr; gap: 32px">
+<div>
+<p class="tag">S12 · Co zabrać</p>
+<div class="box"><ul class="ls"><li>Okulary polaryzacyjne (kluczowe do sight-fishingu)</li><li>Warstwy: wiatr i słońce tego samego dnia</li><li>Kapelusz, krem SPF 50, repelent na sandflies</li><li>Własny sprzęt mile widziany — przewodnik zapewnia komplet</li><li>Biosecurity NZ: sprzęt czysty i suchy (Check · Clean · Dry)</li></ul></div>
+</div>
+<div>
+<p class="tag">S13 · FAQ</p>
+<div class="faq" style="border-top: 0">Jak kupić licencję wędkarską online? <span>+</span></div>
+<div class="faq">Co, gdy w dniu wyprawy pada lub rzeka jest mętna? <span>+</span></div>
+<div class="faq">Czy może jechać osoba niewędkująca? <span>+</span></div>
+<div class="faq">Ile wynosi różnica w cenie vs rezerwacja bezpośrednio u przewodnika? <span>+</span></div>
+<div class="faq">W jakiej walucie płacę depozyt i saldo? <span>+</span></div>
+<div class="faq">Catch &amp; release — czy mogę zabrać rybę? <span>+</span></div>
+<div class="faq">Jakie ubezpieczenie polecacie? <span>+</span></div>
+</div>
+</div>
+</section>
+
+<!-- S14 końcowe CTA + formularz -->
+<section class="sec" id="kontakt" style="padding-bottom: 56px">
+<p class="tag">S14 · Zapytanie — krok 1 z 3</p>
+<div class="box" style="border: 2px solid #1F2A30; padding: 32px; display: grid; grid-template-columns: 3fr 2fr; gap: 32px; align-items: start">
+<div>
+<h2 class="h2" style="margin-bottom: 8px">Sprawdź dostępność — 2 minuty, bez zobowiązań</h2>
+<p class="muted" style="margin: 0 0 20px">Odpowiadamy w 24 h, ofertę od przewodnika dostaniesz w 48–72 h.</p>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px">Kiedy chcesz łowić?<div class="inp"><span>Elastycznie — wybierz miesiąc</span><span>▾</span></div></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px">Ile dni łowienia?<div class="inp"><span>1</span><span>▾</span></div></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px">Liczba wędkarzy<div class="inp"><span>2</span><span>− +</span></div></label>
+<label style="display: flex; flex-direction: column; gap: 6px; font-size: 14px">Osoby niewędkujące (opcjonalnie)<div class="inp"><span>0</span><span>− +</span></div></label>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px; padding-top: 44px">
+<button class="btn" type="button">Dalej → krok 2: Ty jako wędkarz</button>
+<p class="muted" style="margin: 0; font-size: 13px; text-align: center">Krok 2: poziom, priorytet, kondycja, budżet · Krok 3: kontakt</p>
+</div>
+</div>
+</section>
+
+<!-- podobne wyprawy -->
+<section class="sec" style="padding-bottom: 48px">
+<p class="tag">Podobne wyprawy</p>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<div class="box" style="padding: 0; overflow: hidden"><div class="ph" style="height: 160px; border: 0; border-radius: 0">zdjęcie</div><div style="padding: 16px"><p style="margin: 0 0 4px; font-weight: 600">Wielodniowa: 3 dni, South Island</p><p class="muted" style="margin: 0; font-size: 14px">od NZD [__] · 1–2 wędkarzy</p></div></div>
+<div class="box" style="padding: 0; overflow: hidden"><div class="ph" style="height: 160px; border: 0; border-radius: 0">zdjęcie</div><div style="padding: 16px"><p style="margin: 0 0 4px; font-weight: 600">Patagonia — Argentyna, pełny dzień</p><p class="muted" style="margin: 0; font-size: 14px">od USD [__] · 1–2 wędkarzy</p></div></div>
+<div class="box" style="padding: 0; overflow: hidden"><div class="ph" style="height: 160px; border: 0; border-radius: 0">zdjęcie</div><div style="padding: 16px"><p style="margin: 0 0 4px; font-weight: 600">Islandia — tydzień w lodge</p><p class="muted" style="margin: 0; font-size: 14px">od EUR [__] / os. · oferta personalizowana</p></div></div>
+</div>
+</section>
+</main>
+
+<footer style="background: #1F2A30; color: #BFD8D5; padding: 32px 0; margin-top: auto">
+<div class="wrap" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; font-size: 13px">
+<span>FjordAnglers · [dane firmy, NIP] · Płatności: Stripe</span><span>Warunki · Polityka depozytu · Prywatność · Kontakt</span>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":5660}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

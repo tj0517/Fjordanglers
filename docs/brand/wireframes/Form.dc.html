@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>Kreator zapytania — krok 1 z 3</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+body{margin:0;background:#FFFFFF;color:#1F2A30;font-family:'Public Sans',system-ui,sans-serif;font-size:15px;line-height:1.45}
+a{color:#1E6F8E}a:hover{color:#15556E}
+.q{font-size:17px;font-weight:600;margin:0 0 10px}
+.opt{display:flex;align-items:center;gap:12px;border:1px solid #9AA3A5;border-radius:8px;padding:14px;min-height:48px;box-sizing:border-box;font-size:15px;background:#fff}
+.opt.on{border:2px solid #1E6F8E;background:#EAF3F7}
+.pill{flex:1;text-align:center;border:1px solid #9AA3A5;border-radius:8px;padding:12px 0;min-height:48px;box-sizing:border-box;font-size:16px;font-weight:500;background:#fff}
+.pill.on{border:2px solid #1E6F8E;background:#EAF3F7;color:#1E6F8E}
+.cnt{display:flex;align-items:center;justify-content:space-between;border:1px solid #9AA3A5;border-radius:8px;padding:8px 8px 8px 14px;min-height:48px;box-sizing:border-box}
+.cnt span.b{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid #9AA3A5;border-radius:6px;font-size:18px}
+.muted{color:#5C666A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; padding: 16px 20px 20px">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px">
+<button type="button" aria-label="Zamknij" style="background: none; border: 0; font-size: 22px; padding: 4px 8px 4px 0">✕</button>
+<span style="font-family: ui-monospace, Menlo, monospace; font-size: 12px; letter-spacing: .08em; color: #1E6F8E">KROK 1 Z 3 · WYPRAWA</span>
+</div>
+<div style="display: flex; gap: 4px; margin-bottom: 24px"><div style="flex: 1; height: 6px; border-radius: 3px; background: #1E6F8E"></div><div style="flex: 1; height: 6px; border-radius: 3px; background: #DDE0DE"></div><div style="flex: 1; height: 6px; border-radius: 3px; background: #DDE0DE"></div></div>
+
+<p class="q">Kiedy chcesz łowić?</p>
+<div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px">
+<label class="opt"><input type="radio" name="kiedy" style="width: 20px; height: 20px; margin: 0"> Mam konkretne daty</label>
+<label class="opt on"><input type="radio" name="kiedy" checked style="width: 20px; height: 20px; margin: 0"> Elastycznie — wybiorę miesiąc</label>
+<div class="opt" style="justify-content: space-between; margin-left: 0"><span>Marzec 2027</span><span>▾</span></div>
+<p class="muted" style="margin: 0; font-size: 12px">Elastyczne daty = wybieramy dni z najlepszą przejrzystością wody.</p>
+</div>
+
+<p class="q">Ile dni łowienia?</p>
+<div style="display: flex; gap: 8px; margin-bottom: 22px"><span class="pill on">1</span><span class="pill">2</span><span class="pill">3</span><span class="pill">4+</span></div>
+
+<p class="q">Kto jedzie?</p>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div class="cnt"><label for="w">Wędkarze</label><span style="display: flex; align-items: center; gap: 10px"><span class="b">−</span><input id="w" type="text" value="2" style="width: 28px; text-align: center; border: 0; font: inherit; font-size: 17px"><span class="b">+</span></span></div>
+<div class="cnt"><label for="nw">Osoby niewędkujące <span class="muted" style="font-size: 12px">(opcjonalnie)</span></label><span style="display: flex; align-items: center; gap: 10px"><span class="b">−</span><input id="nw" type="text" value="0" style="width: 28px; text-align: center; border: 0; font: inherit; font-size: 17px"><span class="b">+</span></span></div>
+</div>
+<p class="muted" style="margin: 8px 0 0; font-size: 12px">3+ wędkarzy → dobierzemy drugiego przewodnika.</p>
+
+<div style="flex: 1"></div>
+<p class="muted" style="margin: 0 0 10px; font-size: 12px; text-align: center">Krok 2: Ty jako wędkarz · Krok 3: kontakt. Zapisujemy Twoje odpowiedzi.</p>
+<button type="button" style="width: 100%; border: 0; border-radius: 8px; background: #1E6F8E; color: #fff; font: inherit; font-weight: 600; font-size: 17px; padding: 16px; min-height: 52px">Dalej →</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

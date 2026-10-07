@@ -2,13 +2,14 @@
 id: FA-1.53
 title: Szablon v2 — górna część strony (S0–S2): hero i galeria, H1 z chipami, trzy linie redukcji ryzyka, sticky widget z kalkulatorem Razem / Depozyt / Saldo; dane przez `getExperienceV2()`
 stage: 1
-status: todo
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/experience-v2-hero-widget
+pr: 134
 depends_on: [FA-1.52]
 blocked_by_questions: []
 touches_db: false
@@ -46,7 +47,7 @@ Pierwszy ekran v2 ma pokazać cenę, pojemność, sezon, poziom i trzy gwarancje
 - [ ] `generateMetadata` dla v2 z `meta_title`/`meta_description` (bez podwójnego sufiksu — FA-0.12)
 
 ## Gotowe, gdy
-- [ ] Testy `experience-price`: (a) 1 dzień × 2 wędkarzy = cena z `experience_prices` × 1.20; (b) brak wiersza dla (days, anglers) → najbliższy dostępny z informacją „na zapytanie”; (c) override 10% → liczony z override; (d) `custom` → tylko widełki — zielone
+- [ ] Testy `experience-price`: (a) 1 dzień × 2 wędkarzy = cena z `experience_prices` × 1.20; (b1) żądane 2 wędkarzy, wiersze dla 1 i 3 → wiersz dla **3** (najbliższy równy lub większy), oznaczony „on request”; (b2) żądane 3, wiersze dla 1 i 2 → **brak liczby**, „on request”; brak wiersza dla tego `days` → brak liczby; (c) nadpisanie 110% wiersza bazowego → total z nadpisania (kolumna jest w centach ≤ 115% bazy, podmienia tylko wiersz bazowy); (d) `custom` → tylko widełki, **bez** opłaty FA — zielone
 - [ ] Red proof: przy `fee_pct=0.20` suma `feeCents + guideCents` = `totalCents` co do centa dla 20 losowych kwot (test property-based albo tabela) — bez zaokrągleń gubiących centy
 - [ ] `grep -rn "\.from(" "src/app/experiences/[slug]/_v2" src/components/experience-v2` → 0
 - [ ] Playwright (lokalny seed, strona z `page_version=2`, flaga on): zrzut desktop 1440 i mobile 390 above the fold — widoczne: cena, chipy, 3 linie, CTA; na mobile pasek dolny pojawia się po przewinięciu 600 px — ścieżki zrzutów w raporcie (`.playwright-mcp/`)
@@ -73,4 +74,48 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ```
 
 ## Notatki z realizacji
+- 2026-10-07 tj (prompt zadania, decyzje wiążące dla FA-1.53):
+  1. **Fixture w `supabase/seed.sql` jest w zakresie** — tylko lokalnie, dane syntetyczne; wejście
+     dopiero po bramce STOP (pokazać, co w repo zakłada pustkę `experience_guides`/`experience_prices`).
+  2. **Najbliższy wiersz cennika = ten sam `days`, najbliższa liczba `anglers`**; nadpisanie
+     (`guide_price_override_cents`) podmienia **wyłącznie wiersz bazowy** (`days=1`,
+     `anglers=max_anglers_per_guide`), pozostałe wiersze zostają z `experience_prices`.
+     Kolumna jest w centach i ≤ 115% bazy (pilnuje baza), nie procentem — zmiana wobec tego pliku.
+  3. **Widełki `custom` pokazujemy dokładnie jak w bazie**, jako orientacyjne, **bez dodawania
+     opłaty FA** — dane nie są jeszcze zwalidowane i zostaną poprawione później (zmiana wobec
+     kryterium (d) w tym pliku).
+  4. **Wireframe leży w `docs/brand/wireframes/`** (`README.md`, `Main.dc.html` desktop 1440,
+     `Mobile.dc.html` 390, `canvas.json`; `Form.dc.html` → FA-1.55), nie jako link do artefaktu.
+- 2026-10-07 tj (odpowiedź na bramkę STOP i dwa pytania FA-1.53):
+  5. **Bramka STOP `supabase/seed.sql` — zgoda** na zakres przedstawiony w sesji: kolumny
+     przewodników (`avatar_url`, `google_rating`, `google_review_count`, `google_profile_url`),
+     kolumny stron (`page_version=2`, `offer_mode`, centy, treść, `season_months`, `includes`,
+     `response_sla_hours`, zdjęcia, meta), **cztery** wiersze `experience_prices` (w tym jeden
+     celowo wygasły z 2024 — dowód na filtr `valid_from/valid_to`), dwa wiersze
+     `experience_guides` (primary, active, `show_on_page`), **bez nadpisania ceny w seedzie**
+     oraz przepisany komentarz-nagłówek seeda. `docs/brand/wireframes/` zostaje w tym PR.
+  6. **Wyszukiwanie wiersza cennika — zmiana wobec decyzji (2) z tego samego dnia:** dla
+     żądanego `days` bierzemy wiersz o najbliższej liczbie wędkarzy **równej lub większej**
+     niż żądana; jeśli takiego nie ma — żadnej liczby, „on request" i CTA. Wycena nigdy nie
+     może być niższa od ceny rzeczywistej. Nadpisanie nadal podmienia wyłącznie wiersz bazowy
+     (`days=1`, `anglers=max_anglers_per_guide`). Kryterium (b) rozbite na: (b1) żądane 2,
+     wiersze 1 i 3 → wiersz dla 3, oznaczony „on request"; (b2) żądane 3, wiersze 1 i 2 →
+     brak liczby. Stara reguła („najbliższy w obie strony") musi być pokazana jako czerwona.
+  7. **Język v2 — angielski**, zgodnie z żywą stroną (`lang="en"`) i v1. Polskie napisy z
+     zadania i wireframe'u tłumaczymy („Check availability", „Plan your trip", „Total /
+     Deposit now 20% / Balance to the guide", „free inquiry", „deposit only after you accept
+     the offer", „answer within {n} h", „on request", „indicative rate"). Bez zmian atrybutu
+     `lang`, bez mechanizmu i18n.
+- 2026-10-07 tj (review PR #134, runda 1):
+  8. **Etykieta depozytu** — „Deposit now · 20%" przy NZ$250 na sumie NZ$1 500 czyta się jak
+     16,7%. Etykieta to teraz „Deposit now", a procent zszedł do przypisu „20% of the guide
+     price", który mówi, czego jest procentem. Dotyczy widgetu (desktop i mobile); w dolnym
+     pasku procent i tak nie występował.
+  9. **LCP** — kryterium ≤ 2,5 s **przyjęte jako niespełnione**; pomiar powtórzyć na Vercelu
+     przed FA-1.57. W tej rundzie nie pracujemy nad wydajnością.
+  10. **Sekret w gałęzi** — `whatsapp-bridge/.env.example` (prawdziwy klucz service_role i
+     login Zoho) trafił do commita `f2a16a3e` przez `git add -A`; plik był nieśledzony na
+     checkoucie tj. Historia przepisana za zgodą tj (amend + `rebase --onto` +
+     `--force-with-lease`), klucze rotuje tj. Od tej pory: wyłącznie `git add <ścieżka>` i
+     `git diff --cached --stat` przed każdym commitem.
 - 2026-10-05 tj: O-31 — klient widzi cenę całkowitą (przewodnik + opłata FA), bez osobnej linii „opłata”.

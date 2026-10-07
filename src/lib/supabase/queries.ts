@@ -12,6 +12,8 @@ import { unstable_cache } from 'next/cache'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 import { COUNTRIES } from '@/lib/countries'
+import { availabilityWindow } from '@/lib/availability-window'
+import { effectivePrices, type PriceRow } from '@/lib/pricing/experience-price'
 
 // Cache tag constants — used here and revalidated from Server Actions.
 export const CACHE_TAG_EXPERIENCES = 'experiences'
@@ -455,6 +457,255 @@ export async function getExperienceRouting(slug: string): Promise<ExperienceRout
     },
     ['experience-routing', slug],
     { revalidate: 3600, tags: [CACHE_TAG_EXPERIENCES] },
+  )()
+}
+
+// ─── Experience page v2 — the offer-centric template (FA-1.53) ───────────────
+
+/** One guide shown on the page, from `experience_guides` + `guides`. */
+type ExperienceV2Guide = {
+  id:                string
+  slug:              string | null
+  fullName:          string
+  avatarUrl:         string | null
+  yearsExperience:   number | null
+  association:       string | null
+  responseTimeHours: number | null
+  googleRating:      number | null
+  googleReviewCount: number | null
+  googleProfileUrl:  string | null
+  isPrimary:         boolean
+}
+
+type ExperienceV2Option = {
+  id:              string
+  kind:            string
+  label:           string
+  priceFromCents:  number | null
+  priceToCents:    number | null
+  currency:        string | null
+  durationDaysMin: number | null
+  durationDaysMax: number | null
+}
+
+export type ExperienceV2 = {
+  id:                 string
+  slug:               string
+  experienceName:     string
+  introText:          string | null
+  country:            string
+  region:             string
+  heroImageUrl:       string | null
+  galleryImageUrls:   string[]
+  includes:           string[]
+  seasonMonths:       number[]
+  skillLevel:         number | null
+  minDays:            number
+  maxDays:            number | null
+  maxAnglersPerGuide: number
+  responseSlaHours:   number
+  offerMode:          'fixed' | 'custom'
+  /** `experience_pages.fee_pct` — the FA fee, which is also the deposit (ADR-0001). */
+  feePct:             number
+  currency:           string
+  /** `custom` pages only: the indicative range, shown exactly as stored (no FA fee added). */
+  priceFromCents:     number | null
+  priceToCents:       number | null
+  metaTitle:          string | null
+  metaDescription:    string | null
+  guides:             ExperienceV2Guide[]
+  /** Current rows, already carrying the primary guide's override if there is one. */
+  prices:             PriceRow[]
+  options:            ExperienceV2Option[]
+}
+
+type RawGuideRow = {
+  role:         string
+  status:       string
+  show_on_page: boolean
+  sort_order:   number
+  guide_price_override_cents: number | null
+  guide: {
+    id:                  string
+    slug:                string | null
+    full_name:           string
+    avatar_url:          string | null
+    years_experience:    number | null
+    association:         string | null
+    response_time_hours: number | null
+    google_rating:       number | null
+    google_review_count: number | null
+    google_profile_url:  string | null
+  } | null
+}
+
+/**
+ * Keeps the newest row per (days, anglers), matching how the override trigger picks a base
+ * price: latest `valid_from`, with an undated row last (`ORDER BY valid_from DESC NULLS LAST`).
+ * A dated row therefore wins over the page's standing price while its season is on.
+ */
+function newestPerSlot(
+  rows: { days: number; anglers: number; guide_price_cents: number; currency: string; valid_from: string | null }[],
+): PriceRow[] {
+  const best = new Map<string, (typeof rows)[number]>()
+
+  for (const row of rows) {
+    const key     = `${row.days}×${row.anglers}`
+    const current = best.get(key)
+    const newer   = current == null
+      || (row.valid_from != null && (current.valid_from == null || row.valid_from > current.valid_from))
+    if (newer) best.set(key, row)
+  }
+
+  return [...best.values()]
+    .map(r => ({ days: r.days, anglers: r.anglers, guidePriceCents: r.guide_price_cents, currency: r.currency }))
+    .sort((a, b) => a.days - b.days || a.anglers - b.anglers)
+}
+
+/**
+ * Everything the v2 offer page renders, in one call — the only read path for that template
+ * (CLAUDE.md rule 3: no `.from(` in components).
+ *
+ * Two filters are deliberately applied here in code rather than left to the database:
+ *
+ *  • **Which guides the page may show.** The policy "Public reads guides of active pages"
+ *    returns every row of an active page — `paused`, `backup` and `show_on_page = false`
+ *    included (docs/deferred-tasks.md, FA-1.50). The page may show only active rows with
+ *    `show_on_page`, so that is enforced here. Narrowing the policy itself is that deferred row.
+ *
+ *  • **Which prices are current.** `valid_from`/`valid_to` are compared against one clock
+ *    read, in the data layer, so the whole page prices off a single date.
+ *
+ * `guide_price_override_cents` never leaves this function: it is folded into the price rows
+ * (the base row only — days 1 × `max_anglers_per_guide`, tj 2026-10-07) so the number the
+ * client receives is already the price this guide charges, and the column itself — like guide
+ * contact data, which is not selected at all — stays out of the client bundle.
+ */
+export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null> {
+  return unstable_cache(
+    async () => {
+      const db = createPublicClient()
+
+      const { data: page, error } = await db
+        .from('experience_pages')
+        .select(`
+          id, slug, experience_name, intro_text, country, region,
+          hero_image_url, gallery_image_urls, includes, season_months, skill_level,
+          min_days, max_days, max_anglers_per_guide, response_sla_hours,
+          offer_mode, fee_pct, currency, price_from_cents, price_to_cents,
+          meta_title, meta_description
+        `)
+        .eq('slug', slug)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (error != null) {
+        console.error('[getExperienceV2]', error.message)
+        return null
+      }
+      if (page == null) return null
+
+      const [guidesResult, pricesResult, optionsResult] = await Promise.all([
+        db
+          .from('experience_guides')
+          .select(`
+            role, status, show_on_page, sort_order, guide_price_override_cents,
+            guide:guides!guide_id (
+              id, slug, full_name, avatar_url, years_experience, association,
+              response_time_hours, google_rating, google_review_count, google_profile_url
+            )
+          `)
+          .eq('experience_id', page.id),
+        db
+          .from('experience_prices')
+          .select('days, anglers, guide_price_cents, currency, valid_from, valid_to')
+          .eq('experience_id', page.id),
+        db
+          .from('experience_page_options')
+          .select('id, kind, label, price_from_cents, price_to_cents, currency, duration_days_min, duration_days_max, sort_order')
+          .eq('experience_page_id', page.id)
+          .order('sort_order', { ascending: true }),
+      ])
+
+      if (guidesResult.error != null) console.error('[getExperienceV2] guides', guidesResult.error.message)
+      if (pricesResult.error != null) console.error('[getExperienceV2] prices', pricesResult.error.message)
+      if (optionsResult.error != null) console.error('[getExperienceV2] options', optionsResult.error.message)
+
+      // Only rows the page is allowed to show — see the note above.
+      const shown = ((guidesResult.data ?? []) as unknown as RawGuideRow[])
+        .filter(row => row.status === 'active' && row.show_on_page && row.guide != null)
+        .sort((a, b) => a.sort_order - b.sort_order)
+
+      const guides: ExperienceV2Guide[] = shown.map(row => ({
+        id:                row.guide!.id,
+        slug:              row.guide!.slug,
+        fullName:          row.guide!.full_name,
+        avatarUrl:         row.guide!.avatar_url,
+        yearsExperience:   row.guide!.years_experience,
+        association:       row.guide!.association,
+        responseTimeHours: row.guide!.response_time_hours,
+        googleRating:      row.guide!.google_rating,
+        googleReviewCount: row.guide!.google_review_count,
+        googleProfileUrl:  row.guide!.google_profile_url,
+        isPrimary:         row.role === 'primary',
+      }))
+
+      // One clock read for the whole page, in the data layer (src/lib/availability-window.ts).
+      const today   = availabilityWindow(0).from
+      const current = (pricesResult.data ?? []).filter(
+        r => (r.valid_from == null || r.valid_from <= today) && (r.valid_to == null || r.valid_to >= today),
+      )
+
+      // The override belongs to the primary guide — the one whose price the widget quotes.
+      const override = shown.find(row => row.role === 'primary')?.guide_price_override_cents ?? null
+
+      const prices = effectivePrices(newestPerSlot(current), {
+        maxAnglersPerGuide: page.max_anglers_per_guide,
+        overrideCents:      override,
+      })
+
+      // Narrowed to the union here: in a plain object literal the ternary widens to `string`.
+      const offerMode: 'fixed' | 'custom' = page.offer_mode === 'custom' ? 'custom' : 'fixed'
+
+      return {
+        id:                 page.id,
+        slug:               page.slug,
+        experienceName:     page.experience_name,
+        introText:          page.intro_text,
+        country:            page.country,
+        region:             page.region,
+        heroImageUrl:       page.hero_image_url,
+        galleryImageUrls:   page.gallery_image_urls ?? [],
+        includes:           page.includes ?? [],
+        seasonMonths:       page.season_months ?? [],
+        skillLevel:         page.skill_level,
+        minDays:            page.min_days,
+        maxDays:            page.max_days,
+        maxAnglersPerGuide: page.max_anglers_per_guide,
+        responseSlaHours:   page.response_sla_hours,
+        offerMode,
+        feePct:             page.fee_pct,
+        currency:           page.currency,
+        priceFromCents:     page.price_from_cents,
+        priceToCents:       page.price_to_cents,
+        metaTitle:          page.meta_title,
+        metaDescription:    page.meta_description,
+        guides,
+        prices,
+        options: (optionsResult.data ?? []).map(o => ({
+          id:              o.id,
+          kind:            o.kind,
+          label:           o.label,
+          priceFromCents:  o.price_from_cents,
+          priceToCents:    o.price_to_cents,
+          currency:        o.currency,
+          durationDaysMin: o.duration_days_min,
+          durationDaysMax: o.duration_days_max,
+        })),
+      }
+    },
+    ['experience-v2', slug],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
 }
 

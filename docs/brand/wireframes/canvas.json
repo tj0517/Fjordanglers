@@ -1,0 +1,67 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Form.dc.html": {
+      "h": 844,
+      "title": "Mobile — kreator zapytania, krok 1 z 3",
+      "w": 390,
+      "x": 1990,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 5878,
+      "title": "Desktop — strona ofertowa (oferta stała, NZ)",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Mobile.dc.html": {
+      "h": 4560,
+      "title": "Mobile — strona ofertowa",
+      "w": 390,
+      "x": 1520,
+      "y": 0
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-05T11:30:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "n1": {
+      "fill": "blue",
+      "text": "Wariant A (oferta stała: NZ / Patagonia / Szwecja). Wariant B (Islandia / Norwegia / Finlandia) różni się tylko: widełki ceny zamiast kalkulatora, CTA „Zaplanuj wyprawę”, przykładowy itinerary wielodniowy, 2–3 archetypy wyjazdu.",
+      "w": 320,
+      "x": 2470,
+      "y": 0
+    },
+    "n2": {
+      "fill": "orange",
+      "text": "Kwoty [__] zależą od decyzji: cena przewodnika + 20% FA czy cena całkowita. Sticky widget: desktop od końca galerii do recenzji; mobile dolny pasek po przewinięciu hero.",
+      "w": 320,
+      "x": 2470,
+      "y": 460
+    },
+    "t1": {
+      "kind": "title1",
+      "maxW": 2380,
+      "text": "Strona ofertowa FjordAnglers — wireframe (desktop · mobile · kreator)",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Mobile.dc.html",
+    "Form.dc.html"
+  ],
+  "pages": [],
+  "title": "FjordAnglers — Wireframe strony ofertowej"
+}
