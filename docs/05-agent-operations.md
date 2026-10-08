@@ -261,8 +261,10 @@ Każdy skrypt w `.fa-proofs/` musi:
 
 | Kanał   | Wymagana flaga         | Co sprawdza adapter               |
 |---------|------------------------|-----------------------------------|
-| Email   | `RESEND_DEV_FAKE=1`    | `channels/email.ts` — zwraca fake `externalId`, bez API call do Resend |
+| Email   | `RESEND_DEV_FAKE=1`    | Każda ścieżka wysyłki maila: `sendEmail()` (`src/lib/email.ts`), cron `offer-sla`, `channels/email.ts` — każda pyta `isEmailFaked()` (`src/lib/email-fake.ts`); z flagą zwraca fake wynik, bez wywołania Resend |
 | WhatsApp | `WA_DEV_FAKE=1`       | (gdy zostanie dodany adapter WA)  |
+
+Na produkcji (`VERCEL_ENV=production`) ustawiona flaga `RESEND_DEV_FAKE` zatrzymuje start aplikacji: `assertNoEmailFakeInProduction()` w `src/lib/env.ts` rzuca błąd z nazwą zmiennej (FA-1.58, decyzja D1). Flaga nigdy nie wycisza maili klientom po cichu.
 
 Skrypty startują z guardem:
 ```typescript
@@ -344,10 +346,10 @@ Klucz | Wartość
 `STRIPE_SECRET_KEY` | `sk_test_…` (test mode)
 `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | `pk_test_…` (test mode)
 `STRIPE_WEBHOOK_SECRET` | placeholder (brak endpointu Stripe dla Preview — D3)
-`RESEND_DEV_FAKE` | `1` (kanał email.ts omija Resend)
-`RESEND_API_KEY` | placeholder (nie-działający) — `src/lib/email.ts` ignoruje
-`RESEND_DEV_FAKE`; wysyłki transakcyjne (confirmation, deposit-link, password-reset)
-padają przechwyconym błędem na Preview. Reset hasła nie wysyła na Preview.
+`RESEND_DEV_FAKE` | `1` (wszystkie ścieżki maili omijają Resend — §10)
+`RESEND_API_KEY` | placeholder (nie-działający) — od FA-1.58 `RESEND_DEV_FAKE=1` obejmuje
+wszystkie ścieżki wysyłki, więc wysyłki transakcyjne (confirmation, deposit-link, password-reset)
+na Preview są udawane (bez błędu i bez wywołania Resend), a nie padają.
 
 Pozostałe zmienne — decyzje tj z FA-1.18 (data + co zrobić przy każdej).
 
