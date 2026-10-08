@@ -2,7 +2,7 @@
 id: FA-1.51
 title: SYNC — stary `guide_id` i nowe `experience_guides` mówią to samo: triggery w obie strony, `price_from` ↔ centy; testy z red proofem
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -66,3 +66,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ```
 
 ## Notatki z realizacji
+- 2026-10-08 tj: D1 — INSERT w zakresie (stary admin ustawia guide_id tylko przy tworzeniu strony); D2 — trzy triggery, trg_sync_guide_id AFTER (BEFORE INSERT łamie FK experience_guides.experience_id), bez DEFERRABLE FK.
