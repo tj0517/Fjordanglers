@@ -2,7 +2,7 @@
 id: FA-1.58
 title: Flaga `RESEND_DEV_FAKE` obejmuje każdą wysyłkę maili (`sendEmail()`, cron `offer-sla`) + odmowa startu na produkcji z ustawioną flagą; `docs/05` §10 zgodny z kodem
 stage: 1
-status: review
+status: done
 difficulty: S
 model: sonnet
 model_approved:
@@ -72,3 +72,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 
 ## Notatki z realizacji
 - 2026-10-08 tj (/wf-plan): D1 — flaga fake ustawiona na produkcji ma zatrzymać start aplikacji (opcja a). Zadanie wynika z incydentu FA-1.55 (2 prawdziwe maile przez `src/lib/email.ts` mimo flagi).
+- 2026-10-08 tj: odbiór PR #139 — przyjęte. Udowodnione: isEmailFaked() na każdej ścieżce wysyłki (sendEmail(), cron offer-sla, channels/email.ts) z red proofem na każdej; bez flagi wysyłka bez zmian; odmowa startu przy VERCEL_ENV=production + RESEND_DEV_FAKE=1 (red proof, także przy realnym imporcie env.ts); grep: 3 ścieżki wysyłające, wszystkie za flagą, email-inbound tylko czyta; docs/05 §10 zgodny z kodem; CI 4/4 zielone. Blokada przy buildzie, ujednolicenie nadawców i helper w email-inbound — w deferred, bez decyzji teraz.
