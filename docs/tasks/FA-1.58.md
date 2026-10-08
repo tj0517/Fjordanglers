@@ -2,7 +2,7 @@
 id: FA-1.58
 title: Flaga `RESEND_DEV_FAKE` obejmuje każdą wysyłkę maili (`sendEmail()`, cron `offer-sla`) + odmowa startu na produkcji z ustawioną flagą; `docs/05` §10 zgodny z kodem
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: sonnet
 model_approved:
