@@ -2476,6 +2476,8 @@ export type Database = {
           inquiry_id: string
           media_urls: Json | null
           overall_rating: number | null
+          publish_consent: boolean
+          publish_consent_at: string | null
           submitted_at: string | null
           token: string
           token_expires_at: string
@@ -2490,6 +2492,8 @@ export type Database = {
           inquiry_id: string
           media_urls?: Json | null
           overall_rating?: number | null
+          publish_consent?: boolean
+          publish_consent_at?: string | null
           submitted_at?: string | null
           token: string
           token_expires_at?: string
@@ -2504,6 +2508,8 @@ export type Database = {
           inquiry_id?: string
           media_urls?: Json | null
           overall_rating?: number | null
+          publish_consent?: boolean
+          publish_consent_at?: string | null
           submitted_at?: string | null
           token?: string
           token_expires_at?: string

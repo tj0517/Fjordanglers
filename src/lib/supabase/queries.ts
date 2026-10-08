@@ -794,11 +794,13 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
           .order('sort_order', { ascending: true }),
         // Only reviews stamped with this page (tj 2026-10-07, option A: `experience_id`
         // only — no fallback through the inquiry). Submitted ones only: an unanswered
-        // review link is a row with nothing in it.
+        // review link is a row with nothing in it. Consented ones only (FA-1.59, O-37 a):
+        // the name, country and photos are shown only when the author ticked the box.
         createServiceReadClient()
           .from('reviews')
           .select('id, overall_rating, comment, submitted_at, media_urls, inquiry:inquiries!inquiry_id (angler_name, angler_country)')
           .eq('experience_id', page.id)
+          .eq('publish_consent', true)
           .not('submitted_at', 'is', null)
           .order('submitted_at', { ascending: false })
           .limit(6),

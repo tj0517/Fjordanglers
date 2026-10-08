@@ -20,15 +20,22 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     from: (table: string) => {
       // One chainable, awaitable stand-in for every query shape the function uses.
-      const result = { data: h.tables[table] ?? null, error: null }
+      // `reviews` answers with the rows its `.eq()` clauses select, so the page and consent
+      // filters are what the test exercises (FA-1.59). Other tables answer with all their rows.
+      const filters: [string, unknown][] = []
+      const rows = () => {
+        const data = h.tables[table]
+        if (table !== 'reviews' || !Array.isArray(data)) return data ?? null
+        return data.filter(r => filters.every(([col, val]) => (r as Record<string, unknown>)[col] === val))
+      }
       const builder: Record<string, unknown> = {
         select: () => builder,
-        eq: () => builder,
+        eq: (col: string, val: unknown) => { filters.push([col, val]); return builder },
         order: () => builder,
         not: () => builder,
         limit: () => builder,
-        maybeSingle: () => Promise.resolve(result),
-        then: (resolve: (v: typeof result) => unknown) => resolve(result),
+        maybeSingle: () => Promise.resolve({ data: rows(), error: null }),
+        then: (resolve: (v: { data: unknown; error: null }) => unknown) => resolve({ data: rows(), error: null }),
       }
       return builder
     },
@@ -91,14 +98,22 @@ beforeEach(() => {
     ],
     reviews: [
       {
-        id: 'rev-1', overall_rating: 5, comment: 'Spotted every fish first.',
+        id: 'rev-1', experience_id: 'p1', publish_consent: true, overall_rating: 5, comment: 'Spotted every fish first.',
         submitted_at: '2026-03-18T09:00:00Z',
         media_urls: ['javascript:alert(1)', 'https://pics.example/trout.jpg'],
         inquiry: { angler_name: 'Tomasz Kowalski', angler_country: 'PL' },
       },
       {
-        id: 'rev-2', overall_rating: null, comment: '   ', submitted_at: '2026-02-01T09:00:00Z',
+        id: 'rev-2', experience_id: 'p1', publish_consent: true, overall_rating: null, comment: '   ',
+        submitted_at: '2026-02-01T09:00:00Z',
         media_urls: [], inquiry: { angler_name: 'Empty Review', angler_country: 'DE' },
+      },
+      {
+        // Submitted, pinned to this page, rated — but the author did not agree to publication (FA-1.59).
+        id: 'rev-3', experience_id: 'p1', publish_consent: false, overall_rating: 4, comment: 'Good trip, no consent.',
+        submitted_at: '2026-01-10T09:00:00Z',
+        media_urls: ['https://pics.example/unconsented.jpg'],
+        inquiry: { angler_name: 'Anna Nowak', angler_country: 'PL' },
       },
     ],
     experience_page_options: [
@@ -211,6 +226,20 @@ describe('getExperienceV2 — S10 reviews (FA-1.55)', () => {
   it('drops a submitted review that carries neither a rating nor text', async () => {
     const page = await getExperienceV2('seed-nz')
     expect(page?.reviews.map(r => r.id)).not.toContain('rev-2')
+  })
+
+  it('shows a review only when its author agreed to publication (FA-1.59, O-37 a)', async () => {
+    const page = await getExperienceV2('seed-nz')
+    // rev-3 is rated and pinned to this page but has no consent → not shown, name and photo included.
+    expect(page?.reviews.map(r => r.id)).toEqual(['rev-1'])
+    expect(JSON.stringify(page?.reviews)).not.toContain('Nowak')
+    expect(JSON.stringify(page?.reviews)).not.toContain('unconsented')
+  })
+
+  it('only consented reviews pinned to this page: none → no section', async () => {
+    h.tables.reviews = (h.tables.reviews as { publish_consent: boolean }[]).map(r => ({ ...r, publish_consent: false }))
+    const page = await getExperienceV2('seed-nz')
+    expect(page?.reviews).toEqual([])
   })
 
   it('no reviews stored → an empty list, and the section renders nothing', async () => {

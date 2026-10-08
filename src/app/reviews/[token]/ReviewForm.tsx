@@ -9,6 +9,8 @@ export function ReviewForm({ token }: { token: string }) {
   const [tripDescription, setTripDesc]  = useState('')
   const [comment, setComment]           = useState('')
   const [mediaUrls, setMediaUrls]       = useState<string[]>([])
+  // Unticked by default: publication needs an explicit yes (O-38 a, O-37 a).
+  const [publishConsent, setPublishConsent] = useState(false)
   const [uploadBusy, setUploadBusy] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone]             = useState(false)
@@ -34,6 +36,7 @@ export function ReviewForm({ token }: { token: string }) {
       tripDescription: tripDescription.trim() || undefined,
       comment:         comment.trim() || undefined,
       mediaUrls:       mediaUrls.length > 0 ? mediaUrls : undefined,
+      publishConsent,
     })
     if (result.ok) {
       setDone(true)
@@ -154,6 +157,18 @@ export function ReviewForm({ token }: { token: string }) {
           onBusyChange={handleUploadBusy}
         />
       </div>
+
+      {/* Publication consent (FA-1.59) */}
+      <label style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '14px', color: '#111', lineHeight: 1.5, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          name="publishConsent"
+          checked={publishConsent}
+          onChange={e => setPublishConsent(e.target.checked)}
+          style={{ marginTop: '3px', width: '16px', height: '16px', flexShrink: 0 }}
+        />
+        <span>Publish my review with my first name, country and photos on fjordanglers.com</span>
+      </label>
 
       {error != null && (
         <p style={{ color: '#dc2626', fontSize: '13px', margin: 0 }}>{error}</p>
