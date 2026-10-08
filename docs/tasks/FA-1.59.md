@@ -2,7 +2,7 @@
 id: FA-1.59
 title: Recenzje dla v2 — zgoda na publikację w formularzu recenzji, `reviews.experience_id` zapisywane przy tworzeniu linku, backfill istniejących na prod, S10 pokazuje tylko recenzje ze zgodą
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -89,3 +89,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 - 2026-10-08 tj — D2 (a): usuń politykę anon `"Public read reviews"` w tej samej migracji — ujawnia każdą recenzję, w tym tokeny linków i treść bez zgody.
 - 2026-10-08 tj — D3 (a): `generateReviewLink` emituje `review.requested`; `submitReview` emituje `review.submitted` z wartością zgody w payloadzie.
 - 2026-10-08 tj — review PR 140: treść checkboxa zatwierdzona (ostateczna): „Publish my review with my first name, country and photos on fjordanglers.com”. Limity zod zostają: 5000 znaków dla opisu i komentarza, 50 zdjęć, tylko http(s). Nieudana emisja `review.*` nadal rzuca wyjątek do wołającego (obecne zachowanie); wiersz o niepełnej atomowości zostaje w deferred. Odebranie grantów kolumnowych anon na `reviews` — osobne małe zadanie; wiersz w deferred bez zmian. Atomowość zdarzeń (pkt 4): przyjęta na razie, naprawa później, wiersz w deferred zostaje.
+- 2026-10-08 tj: accepted (PR #140). Migration 20261008000000 applied to prod by tj; post-apply: 1 review pinned, 0 consented, no policies on reviews, RLS on, anon REST []. CI green on d7f81b8. Screenshots reviewed by tj. Follow-ups in deferred: anon column grants, event atomicity, privacy text (blocks FA-1.57).
