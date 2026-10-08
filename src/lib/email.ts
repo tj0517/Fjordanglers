@@ -12,6 +12,7 @@
 import { createElement } from 'react'
 import { render } from '@react-email/components'
 import { env } from '@/lib/env'
+import { isEmailFaked, logFakeSend } from '@/lib/email-fake'
 import { PasswordResetEmail } from '@/emails/password-reset'
 // FA inquiry flow emails
 import { InquiryReceivedFaEmail } from '@/emails/inquiry-received-fa'
@@ -54,6 +55,11 @@ async function sendEmail({
   react: React.ReactElement
   threadHeaders?: ThreadHeaders
 }): Promise<void> {
+  if (isEmailFaked()) {
+    logFakeSend(typeof react.type === 'function' ? react.type.name : 'unknown', to)
+    return
+  }
+
   const html = await render(react)
 
   // Build optional threading headers

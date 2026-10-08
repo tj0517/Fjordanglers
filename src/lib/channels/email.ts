@@ -7,6 +7,7 @@
 
 import { randomUUID } from 'crypto'
 import { env } from '@/lib/env'
+import { isEmailFaked, logFakeSend } from '@/lib/email-fake'
 import type { ChannelAdapter, InboundMessage, SendParams, SendResult } from './types'
 
 function newMessageId(): string {
@@ -57,7 +58,8 @@ export const emailAdapter: ChannelAdapter = {
   },
 
   async send(params: SendParams): Promise<SendResult> {
-    if (process.env.RESEND_DEV_FAKE === '1' || !process.env.RESEND_API_KEY) {
+    if (isEmailFaked() || !process.env.RESEND_API_KEY) {
+      if (isEmailFaked()) logFakeSend('channel message', params.to)
       const t = Date.now()
       return { externalId: `fake-${t}`, threadKey: `<fake-${t}@dev.fjordanglers.com>` }
     }

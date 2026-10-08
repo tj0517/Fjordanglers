@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
-import type { envSchema as EnvSchemaType } from './env'
+import type { envSchema as EnvSchemaType, assertNoEmailFakeInProduction as AssertNoEmailFakeType } from './env'
 
 // env.ts validates the full process.env at module-load time (see env.ts:149-152).
 // That throws in the test environment (missing STRIPE_SECRET_KEY etc.) before we
@@ -7,10 +7,34 @@ import type { envSchema as EnvSchemaType } from './env'
 // is the existing, already-shipped bypass for exactly this situation (Next.js build
 // phase) — reusing it here for the test import, not adding a new one.
 let envSchema: typeof EnvSchemaType
+let assertNoEmailFakeInProduction: typeof AssertNoEmailFakeType
 
 beforeAll(async () => {
   process.env.NEXT_PHASE = 'phase-production-build'
-  ;({ envSchema } = await import('./env'))
+  ;({ envSchema, assertNoEmailFakeInProduction } = await import('./env'))
+})
+
+// FA-1.58 (D1): RESEND_DEV_FAKE on production must stop start-up, not silently drop customer e-mail.
+describe('RESEND_DEV_FAKE on production', () => {
+  it('VERCEL_ENV=production + RESEND_DEV_FAKE=1 → throws and names the variable', () => {
+    expect(() =>
+      assertNoEmailFakeInProduction({ VERCEL_ENV: 'production', RESEND_DEV_FAKE: '1' }),
+    ).toThrow(/RESEND_DEV_FAKE/)
+  })
+
+  it('VERCEL_ENV=production without the flag → passes', () => {
+    expect(() => assertNoEmailFakeInProduction({ VERCEL_ENV: 'production' })).not.toThrow()
+  })
+
+  it('VERCEL_ENV=preview + RESEND_DEV_FAKE=1 → passes (Preview uses the flag by design, FA-1.18)', () => {
+    expect(() =>
+      assertNoEmailFakeInProduction({ VERCEL_ENV: 'preview', RESEND_DEV_FAKE: '1' }),
+    ).not.toThrow()
+  })
+
+  it('local (VERCEL_ENV unset) + RESEND_DEV_FAKE=1 → passes', () => {
+    expect(() => assertNoEmailFakeInProduction({ RESEND_DEV_FAKE: '1' })).not.toThrow()
+  })
 })
 
 describe('AI_AUTO_REPLY_ENABLED', () => {
