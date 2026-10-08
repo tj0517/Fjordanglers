@@ -8,6 +8,12 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import {
+  BRIEF_BLOCK_HEADING,
+  anglerTextFromMessage,
+  briefSchema,
+  briefSummaryLines,
+} from '@/lib/inquiries/brief'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,6 +80,20 @@ function inquiryMessageLabel(source: string | null | undefined): string {
   }
 }
 
+/**
+ * FA-1.55 — extras that only the v2 form produces. An options object rather than a ninth
+ * positional parameter: five callers pass the first eight, and none of them should have to
+ * thread a placeholder through to reach this one.
+ */
+export interface ConversationExtras {
+  /**
+   * `inquiries.brief` exactly as stored. Validated here before it is printed, so a brief
+   * written by an older or broken form is skipped rather than shown to the model as fact.
+   * It is data inside the inquiry block, never an instruction.
+   */
+  brief?: unknown
+}
+
 export function assembleConversation(
   anglerName:     string,
   anglerMessage:  string | null,
@@ -83,16 +103,28 @@ export function assembleConversation(
   messages:       ConversationMessage[],
   guideName?:     string | null,
   source?:        string | null,
+  extras?:        ConversationExtras,
 ): string {
   const lines: string[] = []
+
+  const brief = extras?.brief == null ? null : briefSchema.safeParse(extras.brief)
+  const validBrief = brief?.success === true ? brief.data : null
+
+  // With a brief, `inquiries.message` already ends with the same answers (composeBriefMessage)
+  // — print the angler's own words once and the answers once, as a list.
+  const typedText = validBrief != null ? anglerTextFromMessage(anglerMessage) : anglerMessage
 
   lines.push('=== ORIGINAL INQUIRY ===')
   lines.push(`Angler: ${anglerName}`)
   if (experienceTitle) lines.push(`Experience requested: ${experienceTitle}`)
   if (requestedDates.length > 0) lines.push(`Requested dates: ${requestedDates.join(', ')}`)
   lines.push(`Party size: ${partySize}`)
-  if (anglerMessage?.trim()) {
-    lines.push(`${inquiryMessageLabel(source)}: "${anglerMessage.trim()}"`)
+  if (typedText?.trim()) {
+    lines.push(`${inquiryMessageLabel(source)}: "${typedText.trim()}"`)
+  }
+  if (validBrief != null) {
+    lines.push(`--- ${BRIEF_BLOCK_HEADING} ---`)
+    lines.push(...briefSummaryLines(validBrief))
   }
 
   if (messages.length > 0) {

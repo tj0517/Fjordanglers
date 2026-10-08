@@ -110,3 +110,72 @@ describe('createInquiry — receivedOn', () => {
     expect(eventArg).not.toHaveProperty('occurredAt')
   })
 })
+
+/**
+ * FA-1.55 — the brief, and the two keys the pilot's metrics need on `inquiry.created`.
+ *
+ * `page_version` and `brief_completed` are added **only** with a brief, so a v1 inquiry's
+ * event payload stays byte-identical to what it was before this task.
+ */
+describe('createInquiry — brief (FA-1.55)', () => {
+  const brief = {
+    dates_mode:  'flexible' as const,
+    flex_month:  '2027-06',
+    days:        2,
+    anglers:     2,
+    non_anglers: 0,
+    skill_level: 4,
+    priority:    'numbers' as const,
+    fitness:     'mid' as const,
+    wading_ok:   true,
+  }
+
+  it('writes the brief to the column as given, and the angler country', async () => {
+    const { svc, getInsertPayload } = makeSvc()
+    vi.mocked(createServiceClient).mockReturnValue(svc)
+
+    await createInquiry({
+      anglerName: 'V2 Angler', anglerEmail: 'v2@seed.test', anglerCountry: 'PL',
+      partySize: 2, source: 'web_form', actor: { kind: 'system' },
+      brief, pageVersion: 2,
+    })
+
+    const payload = getInsertPayload()
+    expect(payload?.brief).toEqual(brief)
+    expect(payload?.angler_country).toBe('PL')
+  })
+
+  it('stamps the created event with page_version and brief_completed', async () => {
+    const { svc } = makeSvc()
+    vi.mocked(createServiceClient).mockReturnValue(svc)
+
+    await createInquiry({
+      anglerName: 'V2 Angler', anglerEmail: 'v2@seed.test', partySize: 2,
+      source: 'web_form', actor: { kind: 'system' }, brief, pageVersion: 2,
+    })
+
+    const event = mockEmitEvent.mock.calls[0][1] as { type: string; payload: Record<string, unknown> }
+    expect(event.type).toBe('inquiry.created')
+    expect(event.payload.page_version).toBe(2)
+    expect(event.payload.brief_completed).toBe(true)
+  })
+
+  it('without a brief: no brief column, no angler_country, and the event payload of main', async () => {
+    const { svc, getInsertPayload } = makeSvc()
+    vi.mocked(createServiceClient).mockReturnValue(svc)
+
+    await createInquiry({
+      anglerName: 'V1 Angler', anglerEmail: 'v1@seed.test', partySize: 2,
+      source: 'web_form', actor: { kind: 'system' }, pageVersion: 2,
+    })
+
+    const payload = getInsertPayload()
+    expect(payload).not.toHaveProperty('brief')
+    expect(payload).not.toHaveProperty('angler_country')
+
+    const event = mockEmitEvent.mock.calls[0][1] as { payload: Record<string, unknown> }
+    expect(Object.keys(event.payload).sort()).toEqual(
+      ['experience_page_id', 'guide_id', 'inquiry_source', 'trip_country'],
+    )
+  })
+})

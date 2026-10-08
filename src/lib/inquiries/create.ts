@@ -16,6 +16,7 @@ import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js'
 import { createServiceClient } from '@/lib/supabase/server'
 import { emitEvent, type EventActor } from '@/lib/events/emit'
 import { assertNotFutureDate, instantOf, warsawToday } from '@/lib/inquiries/history'
+import type { Brief } from '@/lib/inquiries/brief'
 import type { UtmParams } from '@/lib/utm'
 
 /**
@@ -90,6 +91,8 @@ export interface CreateInquiryParams {
   tripCountry?:         string | null
   anglerName:           string
   anglerEmail:          string
+  /** ISO 3166-1 alpha-2 of where the angler lives — step 3 of the v2 form. */
+  anglerCountry?:       string | null
   anglerPhone?:         string | null
   /** ISO 3166-1 alpha-2 code for the angler's phone country (e.g. 'US', 'PL'). Sent by the form picker. */
   anglerPhoneCountry?:  string | null
@@ -104,6 +107,18 @@ export interface CreateInquiryParams {
   gclid?:             string | null
   utm?:               UtmParams | null
   internalNotes?:     string | null
+  /**
+   * FA-1.55: the answers of the v2 three-step form, already validated by `briefSchema`.
+   * Stored 1:1. The v1 form does not send one, and an inquiry without a brief is written
+   * and announced exactly as it was before this parameter existed.
+   */
+  brief?:             Brief | null
+  /**
+   * `experience_pages.page_version` of the page the inquiry came from. Recorded on the
+   * `inquiry.created` event — but only together with a brief, so a v1 inquiry's event
+   * payload keeps the exact shape it has always had.
+   */
+  pageVersion?:       number | null
   /** FA-1.38: admin backdates a manually created inquiry to the day it actually arrived
    *  (e.g. an Instagram DM from two months ago). 'YYYY-MM-DD', never in the future.
    *  Sets both `created_at` and the `inquiry.created` event's `occurred_at`. */
@@ -139,6 +154,7 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       trip_country:        params.tripCountry ?? null,
       angler_name:         params.anglerName,
       angler_email:        params.anglerEmail,
+      ...(params.anglerCountry != null ? { angler_country: params.anglerCountry } : {}),
       angler_phone:        normalisePhoneForStorage(
                              params.anglerPhone ?? null,
                              params.anglerPhoneCountry
@@ -150,6 +166,7 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       message:             params.message ?? null,
       selected_option:     params.selectedOption ?? null,
       trip_length:         params.tripLength ?? null,
+      ...(params.brief != null ? { brief: params.brief } : {}),
       status:              'new',
       source:              params.source,
       gclid:               params.gclid ?? null,
@@ -174,6 +191,11 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       experience_page_id: params.experiencePageId ?? null,
       guide_id:           params.guideId ?? null,
       trip_country:       params.tripCountry ?? null,
+      // Only on the v2 path: the metrics of the pilot (FA-1.57) need to tell a v2 inquiry
+      // from a v1 one, and a v1 event must stay byte-identical to what it was before.
+      ...(params.brief != null
+        ? { page_version: params.pageVersion ?? 2, brief_completed: true }
+        : {}),
     },
     ...(receivedAt != null ? { occurredAt: receivedAt } : {}),
   })

@@ -150,6 +150,7 @@ export async function autoSendReply(params: {
       [],
       null,
       inquiry.source,
+      { brief: inquiry.brief },
     )}`
   }
 

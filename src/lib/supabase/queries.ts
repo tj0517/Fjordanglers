@@ -19,9 +19,14 @@ import {
   parseLicenseInfo,
   parseDaySchedule,
   parseItinerary,
+  parseSuggestedLodging,
+  parseFaq,
+  safeHttpUrl,
   type LicenseInfo,
   type DayStep,
   type ItineraryDay,
+  type LodgingSuggestion,
+  type FaqEntry,
 } from '@/lib/experience-v2-content'
 
 // Cache tag constants — used here and revalidated from Server Actions.
@@ -469,6 +474,23 @@ export async function getExperienceRouting(slug: string): Promise<ExperienceRout
   )()
 }
 
+/**
+ * Service-role reader for the one piece of a v2 page that RLS cannot serve: the reviewer's
+ * first name and country live on `inquiries`, which `anon` may not read at all (and must
+ * not — the row also holds the e-mail, the phone and FA's internal notes).
+ *
+ * Built here rather than imported from `@/lib/supabase/server` so this module keeps its
+ * "no cookies, ISR-friendly" property. Only the three fields the review card prints ever
+ * leave `getExperienceV2`.
+ */
+function createServiceReadClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  )
+}
+
 // ─── Experience page v2 — the offer-centric template (FA-1.53) ───────────────
 
 /** One guide shown on the page, from `experience_guides` + `guides`. */
@@ -482,6 +504,7 @@ type ExperienceV2Guide = {
   responseTimeHours: number | null
   googleRating:      number | null
   googleReviewCount: number | null
+  /** Already checked `http(s)` — the value is admin-typed, and a page must not link to `javascript:`. */
   googleProfileUrl:  string | null
   languages:         string[]
   bio:               string | null
@@ -502,6 +525,25 @@ type ExperienceV2Option = {
   description:     string | null
   /** `archetype` options only; empty for the others. */
   sampleItinerary: ItineraryDay[]
+}
+
+/**
+ * One review card of S10 (FA-1.55).
+ *
+ * `firstName` is the first word of the angler's name and nothing else (tj 2026-10-07,
+ * option C): the review form records no consent to publish a name, so the page shows the
+ * least that still reads as a person.
+ */
+export type ExperienceV2Review = {
+  id:          string
+  rating:      number | null
+  comment:     string | null
+  firstName:   string | null
+  /** ISO 3166-1 alpha-2, when the inquiry carries one. */
+  country:     string | null
+  submittedAt: string
+  /** First `http(s)` entry of `media_urls`, when there is one. */
+  photoUrl:    string | null
 }
 
 export type ExperienceV2 = {
@@ -531,6 +573,8 @@ export type ExperienceV2 = {
   weatherPolicyText:  string | null
   offerEtaText:       string | null
   seasonMonths:       number[]
+  /** The best months of `seasonMonths`; a subset of it, drawn darker on the season bar. */
+  peakMonths:         number[]
   skillLevel:         number | null
   minDays:            number
   maxDays:            number | null
@@ -543,8 +587,19 @@ export type ExperienceV2 = {
   /** `custom` pages only: the indicative range, shown exactly as stored (no FA fee added). */
   priceFromCents:     number | null
   priceToCents:       number | null
+  /** S11: the pin of the map. Both or neither — a lone coordinate draws nothing. */
+  locationLat:        number | null
+  locationLng:        number | null
+  nearestAirport:     string | null
+  suggestedLodging:   LodgingSuggestion[]
+  /** S12 — `experience_pages.what_to_bring`. */
+  whatToBring:        string[]
+  /** S13 — the page's own questions. The fixed FA-vs-direct one is added by the section. */
+  faq:                FaqEntry[]
   metaTitle:          string | null
   metaDescription:    string | null
+  /** S10 — newest first, at most 6. Empty means the page shows no reviews section. */
+  reviews:            ExperienceV2Review[]
   guides:             ExperienceV2Guide[]
   /** Current rows, already carrying the primary guide's override if there is one. */
   prices:             PriceRow[]
@@ -597,6 +652,76 @@ function newestPerSlot(
     .sort((a, b) => a.days - b.days || a.anglers - b.anglers)
 }
 
+type RawReviewRow = {
+  id:             string
+  overall_rating: number | null
+  comment:        string | null
+  submitted_at:   string | null
+  media_urls:     unknown
+  inquiry: { angler_name: string | null; angler_country: string | null } | null
+}
+
+/** First `http(s)` entry of `media_urls`; anything else in the array is ignored. */
+function firstPhotoUrl(mediaUrls: unknown): string | null {
+  if (!Array.isArray(mediaUrls)) return null
+  for (const entry of mediaUrls) {
+    const url = safeHttpUrl(typeof entry === 'string' ? entry : null)
+    if (url != null) return url
+  }
+  return null
+}
+
+/**
+ * What the page is allowed to say about a reviewer: the first word of their name, their
+ * country, the month they submitted, the rating, the text and one photo. The e-mail, the
+ * phone, the full name and the inquiry id stay on the server (tj 2026-10-07, option C).
+ *
+ * A row with neither a rating nor a comment is dropped — an empty card is not social proof.
+ */
+function reviewCards(rows: unknown[]): ExperienceV2Review[] {
+  return (rows as RawReviewRow[]).flatMap(row => {
+    if (row.submitted_at == null) return []
+    const comment = row.comment?.trim() ?? ''
+    if (comment === '' && row.overall_rating == null) return []
+
+    const firstName = row.inquiry?.angler_name?.trim().split(/\s+/)[0] ?? null
+
+    return [{
+      id:          row.id,
+      rating:      row.overall_rating,
+      comment:     comment === '' ? null : comment,
+      firstName:   firstName === '' ? null : firstName,
+      country:     row.inquiry?.angler_country ?? null,
+      submittedAt: row.submitted_at,
+      photoUrl:    firstPhotoUrl(row.media_urls),
+    }]
+  })
+}
+
+/**
+ * The guide a v2 page's inquiry belongs to: the active `primary` row of
+ * `experience_guides` (proposal §7 step 3). Null when the page has no primary guide — the
+ * caller then keeps whatever `experience_pages.guide_id` says rather than losing the guide.
+ *
+ * Takes the caller's client so the public API route does not open a second connection.
+ */
+export async function getPrimaryGuideId(
+  client: ServiceClient,
+  experiencePageId: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from('experience_guides')
+    .select('guide_id')
+    .eq('experience_id', experiencePageId)
+    .eq('role', 'primary')
+    .eq('status', 'active')
+    .limit(1)
+    .maybeSingle()
+
+  if (error != null) throw new Error(`getPrimaryGuideId: ${error.message}`)
+  return data?.guide_id ?? null
+}
+
 /**
  * Everything the v2 offer page renders, in one call — the only read path for that template
  * (CLAUDE.md rule 3: no `.from(` in components).
@@ -632,6 +757,8 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
           weather_policy_text, offer_eta_text,
           min_days, max_days, max_anglers_per_guide, response_sla_hours,
           offer_mode, fee_pct, currency, price_from_cents, price_to_cents,
+          peak_months, location_lat, location_lng, nearest_airport, suggested_lodging,
+          what_to_bring, faq,
           meta_title, meta_description
         `)
         .eq('slug', slug)
@@ -644,7 +771,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
       }
       if (page == null) return null
 
-      const [guidesResult, pricesResult, optionsResult] = await Promise.all([
+      const [guidesResult, pricesResult, optionsResult, reviewsResult] = await Promise.all([
         db
           .from('experience_guides')
           .select(`
@@ -665,11 +792,22 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
           .select('id, kind, label, price_from_cents, price_to_cents, currency, duration_days_min, duration_days_max, description, sample_itinerary, sort_order')
           .eq('experience_page_id', page.id)
           .order('sort_order', { ascending: true }),
+        // Only reviews stamped with this page (tj 2026-10-07, option A: `experience_id`
+        // only — no fallback through the inquiry). Submitted ones only: an unanswered
+        // review link is a row with nothing in it.
+        createServiceReadClient()
+          .from('reviews')
+          .select('id, overall_rating, comment, submitted_at, media_urls, inquiry:inquiries!inquiry_id (angler_name, angler_country)')
+          .eq('experience_id', page.id)
+          .not('submitted_at', 'is', null)
+          .order('submitted_at', { ascending: false })
+          .limit(6),
       ])
 
       if (guidesResult.error != null) console.error('[getExperienceV2] guides', guidesResult.error.message)
       if (pricesResult.error != null) console.error('[getExperienceV2] prices', pricesResult.error.message)
       if (optionsResult.error != null) console.error('[getExperienceV2] options', optionsResult.error.message)
+      if (reviewsResult.error != null) console.error('[getExperienceV2] reviews', reviewsResult.error.message)
 
       // Only rows the page is allowed to show — see the note above.
       const shown = ((guidesResult.data ?? []) as unknown as RawGuideRow[])
@@ -686,7 +824,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         responseTimeHours: row.guide!.response_time_hours,
         googleRating:      row.guide!.google_rating,
         googleReviewCount: row.guide!.google_review_count,
-        googleProfileUrl:  row.guide!.google_profile_url,
+        googleProfileUrl:  safeHttpUrl(row.guide!.google_profile_url),
         languages:         row.guide!.languages ?? [],
         bio:               row.guide!.bio,
         balancePaymentMethod: row.guide!.default_balance_payment_method === 'stripe' ? 'stripe' : 'cash',
@@ -736,6 +874,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         weatherPolicyText:  page.weather_policy_text,
         offerEtaText:       page.offer_eta_text,
         seasonMonths:       page.season_months ?? [],
+        peakMonths:         page.peak_months ?? [],
         skillLevel:         page.skill_level,
         minDays:            page.min_days,
         maxDays:            page.max_days,
@@ -746,8 +885,15 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         currency:           page.currency,
         priceFromCents:     page.price_from_cents,
         priceToCents:       page.price_to_cents,
+        locationLat:        page.location_lat,
+        locationLng:        page.location_lng,
+        nearestAirport:     page.nearest_airport,
+        suggestedLodging:   parseSuggestedLodging(page.suggested_lodging),
+        whatToBring:        page.what_to_bring ?? [],
+        faq:                parseFaq(page.faq),
         metaTitle:          page.meta_title,
         metaDescription:    page.meta_description,
+        reviews:            reviewCards(reviewsResult.data ?? []),
         guides,
         prices,
         options: (optionsResult.data ?? []).map(o => ({
@@ -790,6 +936,8 @@ export type InquiryForAutoSend = {
   requested_dates:    string[] | null
   party_size:         number | null
   source:             string | null
+  /** FA-1.55 — the v2 form's answers, so the judge reads the same block as the draft. */
+  brief:              unknown
 }
 
 export async function getInquiryForAutoSend(
@@ -798,7 +946,7 @@ export async function getInquiryForAutoSend(
 ): Promise<InquiryForAutoSend | null> {
   const { data } = await client
     .from('inquiries')
-    .select('id, status, trip_country, angler_email, message, trip_id, experience_page_id, angler_name, requested_dates, party_size, source')
+    .select('id, status, trip_country, angler_email, message, trip_id, experience_page_id, angler_name, requested_dates, party_size, source, brief')
     .eq('id', inquiryId)
     .maybeSingle()
   return (data ?? null) as InquiryForAutoSend | null

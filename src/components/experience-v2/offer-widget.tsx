@@ -22,9 +22,9 @@
  * asks to plan the trip instead. The range is printed exactly as stored, with no FA fee
  * added — whether those numbers are net of the fee is unresolved (tj, 2026-10-07).
  *
- * The CTA is an anchor. The inquiry form it points at is FA-1.55; the "when" the visitor
- * picks here is kept in local state for that task to pick up, and is deliberately not
- * persisted anywhere yet.
+ * The CTA stays an anchor to `#zapytanie` — without JavaScript it still reaches the form at
+ * the bottom of the page. With it, the click opens the same form full-screen (FA-1.55) and
+ * hands over the "when", the days and the anglers picked here, so nothing is asked twice.
  */
 
 import Image from 'next/image'
@@ -32,6 +32,7 @@ import { useMemo, useState } from 'react'
 import { quote, fromPrice, customRange, type PriceRow } from '@/lib/pricing/experience-price'
 import { formatCents } from '@/lib/format-price'
 import { useCurrency } from './currency-context'
+import { useInquiryWizardOptional } from '@/components/inquiry-wizard/inquiry-wizard'
 
 type OfferWidgetGuide = {
   fullName:          string
@@ -118,6 +119,21 @@ export default function OfferWidget({
   const months = useMemo(() => nextTwelveMonths(new Date()), [])
   const [flexMonth, setFlexMonth] = useState(() => months[2]?.value ?? '')
 
+  // Null when the widget is rendered outside a v2 page's provider: the CTA is then just the
+  // anchor it has always been.
+  const wizard = useInquiryWizardOptional()
+
+  const openWizard = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    if (wizard == null) return
+    event.preventDefault()
+    wizard.startFromWidget({
+      datesMode: whenMode,
+      ...(whenMode === 'exact' ? { dateFrom: exactDate } : { flexMonth }),
+      days,
+      anglers,
+    })
+  }
+
   const range = customRange(priceFromCents, priceToCents, currency)
   const from  = useMemo(() => fromPrice({ prices, feePct, maxAnglersPerGuide }), [prices, feePct, maxAnglersPerGuide])
   const q     = useMemo(
@@ -148,7 +164,7 @@ export default function OfferWidget({
 
         {!compact && <GuideLine guide={guide} />}
 
-        <a href={inquiryHref} className={compact ? compactCtaClass : ctaClass} style={compact ? compactCtaStyle : ctaStyle}>
+        <a href={inquiryHref} onClick={openWizard} className={compact ? compactCtaClass : ctaClass} style={compact ? compactCtaStyle : ctaStyle}>
           Plan your trip
         </a>
 
@@ -178,7 +194,7 @@ export default function OfferWidget({
           <p className="truncate text-base font-bold leading-tight">{fromLine}</p>
           <p className="text-xs opacity-90">free inquiry · {responseSlaHours} h</p>
         </div>
-        <a href={inquiryHref} className={compactCtaClass} style={compactCtaStyle}>
+        <a href={inquiryHref} onClick={openWizard} className={compactCtaClass} style={compactCtaStyle}>
           Check availability
         </a>
       </div>
@@ -292,7 +308,7 @@ export default function OfferWidget({
         )}
       </div>
 
-      <a href={inquiryHref} className={ctaClass} style={ctaStyle}>Check availability</a>
+      <a href={inquiryHref} onClick={openWizard} className={ctaClass} style={ctaStyle}>Check availability</a>
       <p className="mt-2.5 text-center text-xs" style={mutedStyle}>
         Free · no obligation · deposit only after you accept the offer
       </p>

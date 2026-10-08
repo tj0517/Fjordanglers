@@ -2,7 +2,7 @@
 id: FA-1.56
 title: Admin — zakładka v2 na stronie oferty: przewodnicy (wielu, primary/backup), tryb oferty, cennik dni × wędkarze, nowe pola treści, `page_version`, aliasy slugów
 stage: 1
-status: review
+status: done
 difficulty: L
 model: opus
 model_approved:
@@ -73,3 +73,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 - 2026-10-07 tj: kryterium 1 zawężone — synchronizacja primary → experience_pages.guide_id należy do FA-1.51 (todo), nie do tego zadania; zapis wielotabelowy sekwencją z kontrolą błędów, bez migracji/RPC (touches_db: false); testy na własnych danych, bez db reset i edycji seed.sql (równolegle FA-1.54 na tym samym stacku).
 - 2026-10-07 tj: decyzje z PR #135 — (1) scalanie stron: najpierw archiwizacja, potem alias (krótkie 404) — na pilota; (2) day_schedule meta jako liczby (drive_min, walk_km) + wading tak/nie; (3) kwoty wpisywane w jednostkach głównych, zapis w centach; (4) strona już v2 nie może stracić primary active, ceny „od" ani suited_for. Przekierowanie aliasu to 308 (permanentRedirect z FA-1.52, decyzja tj 2026-10-06) — kryterium „301" uznane za spełnione znaczeniowo.
 - 2026-10-07 tj: CI `db` startuje gotrue (zgoda tj, opcja A) — testy akcji v2 logują się naprawdę jako admin@seed.test / angler@seed.test; podmiana tożsamości w testach odrzucona jako słabszy dowód.
+- 2026-10-07 tj: odbiór PR #135 po merge'u — przyjęte. Udowodnione: backup → 2 wiersze bez zmiany guide_id, przełączenie primary = jeden primary active (z przypadkiem czerwonym), red proofs 1–3 (v2 bez primary, +30% w akcji i w bazie, 20/20 odmów bez admina), alias → 308, 0 nowych .from(, CI db zielone z gotrue. Status domknięty w pierwszym commicie FA-1.55.
