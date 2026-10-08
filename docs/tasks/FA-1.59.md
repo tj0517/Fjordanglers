@@ -2,13 +2,14 @@
 id: FA-1.59
 title: Recenzje dla v2 — zgoda na publikację w formularzu recenzji, `reviews.experience_id` zapisywane przy tworzeniu linku, backfill istniejących na prod, S10 pokazuje tylko recenzje ze zgodą
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/reviews-consent-experience
+pr: 140
 depends_on: []
 blocked_by_questions: []
 touches_db: true
