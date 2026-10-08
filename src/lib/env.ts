@@ -163,7 +163,21 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>
 
+// FA-1.58 (decision D1, 2026-10-08): RESEND_DEV_FAKE on a production deployment would
+// silently stop all customer e-mail. Refuse to start instead. VERCEL_ENV is set by Vercel
+// to 'production' only on production deployments (Preview is 'preview', local is unset).
+export function assertNoEmailFakeInProduction(vars: Record<string, string | undefined>): void {
+  if (vars.VERCEL_ENV === 'production' && vars.RESEND_DEV_FAKE === '1') {
+    throw new Error(
+      '\n❌ RESEND_DEV_FAKE=1 is set on a production deployment (VERCEL_ENV=production).\n' +
+        'Remove RESEND_DEV_FAKE from the production environment: with it set, no customer e-mail is sent.',
+    )
+  }
+}
+
 function validateEnv(): Env {
+  assertNoEmailFakeInProduction(process.env)
+
   const result = envSchema.safeParse(process.env)
 
   if (!result.success) {

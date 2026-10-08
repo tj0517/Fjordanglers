@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
+import { isEmailFaked, logFakeSend } from '@/lib/email-fake'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -114,6 +115,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         </div>
       </div>
     </div>`
+
+  if (isEmailFaked()) {
+    logFakeSend('offer-sla digest', env.OWNER_EMAIL)
+    return NextResponse.json({ overdue: overdue.length, mailed: false, faked: true })
+  }
 
   const sendRes = await fetch('https://api.resend.com/emails', {
     method:  'POST',
