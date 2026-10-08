@@ -91,7 +91,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.56 | Admin — zakładka v2: przewodnicy (wielu), tryb, cennik, pola treści, `page_version`, aliasy slugów | L | opus | done | FA-1.50 |
 | FA-1.57 | Pilot v2 — jedna strona NZ na `page_version=2` (prod), 14 dni pomiaru v1 vs v2; robi tj | S | — (człowiek) | todo | FA-1.51, FA-1.53, FA-1.54, FA-1.55, FA-1.56, FA-1.59 |
 | FA-1.58 | Flaga `RESEND_DEV_FAKE` na każdej wysyłce maili (`sendEmail()`, cron `offer-sla`) + odmowa startu na prod z flagą; `docs/05` §10 | S | sonnet | done | — |
-| FA-1.59 | Recenzje v2 — zgoda na publikację, `experience_id` przy tworzeniu linku, backfill na prod, S10 tylko ze zgodą | L | opus | todo | — |
+| FA-1.59 | Recenzje v2 — zgoda na publikację, `experience_id` przy tworzeniu linku, backfill na prod, S10 tylko ze zgodą | L | opus | in_progress | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |

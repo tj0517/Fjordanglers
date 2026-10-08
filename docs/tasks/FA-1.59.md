@@ -2,7 +2,7 @@
 id: FA-1.59
 title: Recenzje dla v2 — zgoda na publikację w formularzu recenzji, `reviews.experience_id` zapisywane przy tworzeniu linku, backfill istniejących na prod, S10 pokazuje tylko recenzje ze zgodą
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -84,3 +84,6 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 
 ## Notatki z realizacji
 - 2026-10-08 tj (/wf-plan): O-37 (a) — recenzje zebrane bez zgody nigdy nie są pokazywane; O-38 (a) — jedno pole zgody obejmuje imię, kraj i zdjęcia. Zadanie wynika z review FA-1.55 (S10 puste na prod, brak zgody).
+- 2026-10-08 tj — D1 (c): backfill dowiedziony lokalnie (idempotentna migracja uruchomiona ponownie na własnych wierszach testowych) i na prod (liczby przed/po).
+- 2026-10-08 tj — D2 (a): usuń politykę anon `"Public read reviews"` w tej samej migracji — ujawnia każdą recenzję, w tym tokeny linków i treść bez zgody.
+- 2026-10-08 tj — D3 (a): `generateReviewLink` emituje `review.requested`; `submitReview` emituje `review.submitted` z wartością zgody w payloadzie.
