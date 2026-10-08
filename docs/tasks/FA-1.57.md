@@ -9,7 +9,7 @@ model_approved:
 effort:
 agent:
 branch:
-depends_on: [FA-1.53, FA-1.54, FA-1.55, FA-1.56]
+depends_on: [FA-1.51, FA-1.53, FA-1.54, FA-1.55, FA-1.56, FA-1.59]
 blocked_by_questions: []
 touches_db: false
 touches_prod: true
@@ -59,3 +59,4 @@ SELECT count(*) FROM inquiries WHERE experience_page_id='<id>' AND brief IS NOT 
 ```
 
 ## Notatki z realizacji
+- 2026-10-08 tj (/wf-plan): pilot zależy też od FA-1.51 (zmiana przewodnika w adminie v2 musi zmieniać przewodnika zapytań) i FA-1.59 (recenzje ze zgodą). Przed startem treści od tj: tekst zwrotu depozytu, odpowiedź FAQ „FA vs bezpośrednio”, akapit polityki prywatności o recenzjach, regulamin §10, pytania o copy z FA-1.54.
