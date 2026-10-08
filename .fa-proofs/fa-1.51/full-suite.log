@@ -1,0 +1,24 @@
+### pnpm typecheck
+$ tsc --noEmit
+### exit=0
+### pnpm lint
+  63:32  warning  '_id' is defined but never used     @typescript-eslint/no-unused-vars
+
+/home/tj/fjordanglers-1.51/src/lib/ui/contrast.test.ts
+  20:7  warning  'BORDER_PAIRS_PASS' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 99 problems (0 errors, 99 warnings)
+
+### exit=0
+### pnpm test run
+ ✓ src/app/admin/inquiries/InquiriesClient.test.tsx (3 tests) 4ms
+
+ Test Files  86 passed (86)
+      Tests  998 passed (998)
+   Start at  17:22:56
+   Duration  11.52s (transform 4.76s, setup 754ms, import 12.26s, tests 20.75s, environment 6.94s)
+
+### exit=0
+### pnpm knip
+$ knip
+### exit=0
