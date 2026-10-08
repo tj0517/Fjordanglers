@@ -638,10 +638,12 @@ w aplikacji — nigdy jako osobny krok „dopisz".
 | `agent.auto_send_decided` | agent | email | `autoSendReply()` po każdej próbie auto-wysyłki (FA-1.27); `payload.sent`, `payload.score`, `payload.reasons`, `payload.draft_message_id` | M11 (nie liczy się jako ręczne dotknięcie) |
 | `deposit.amount_set` | admin | app | admin ustawia kwotę depozytu na karcie zapytania (FA-1.28); `payload.amount_cents`, `payload.currency`, `payload.eur_rate`, `payload.eur_rate_at` | M1, M3 |
 | `inquiry.history_corrected` | admin | app | admin koryguje `inquiries.created_at` na wcześniejszą datę (FA-1.38, `correctReceivedDate()`, zawsze `source='backfill'`); `payload.field='created_at'`, `payload.from`, `payload.to` | M5, M7, M9b (baza kohorty po `created_at`) |
+| `review.requested` | admin | app | admin generuje link do recenzji (`generateReviewLink`, FA-1.59); nowa recenzja dostaje `experience_id` z zapytania; `payload.experience_id` (może być null) | S10, M14–M15 |
+| `review.submitted` | angler | app | klient wysyła recenzję (`submitReview`, FA-1.59); `payload.publish_consent` (bool) | S10, M15 |
 
 Zarezerwowane, bez emisji w etapie 1 (w `types.ts` z komentarzem `// stage N`):
 `agent.round_completed`, `inquiry.brief_completed`, `guide.assigned`/`unassigned`,
-`guide.accepted`/`declined`, `offer.viewed`, `review.requested`/`submitted`,
+`guide.accepted`/`declined`, `offer.viewed`,
 `incident.opened`/`resolved`.
 
 Usunięte z katalogu (brak odpowiednika w rzeczywistym procesie): `offer.created`,

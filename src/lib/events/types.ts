@@ -48,6 +48,8 @@ const EMITTED_EVENT_TYPES = [
   'agent.auto_send_decided',  // hybrid auto-send decision: score, send, reasons (FA-1.27)
   'deposit.amount_set',       // admin sets deposit amount (FA-1.28); payload: amount_cents, currency, eur_rate, eur_rate_at
   'inquiry.history_corrected', // admin corrects a past fact by hand (FA-1.38, correctReceivedDate); payload: field, from, to
+  'review.requested',         // admin generates a review link (FA-1.59); payload: experience_id
+  'review.submitted',         // angler submits the review (FA-1.59); payload: publish_consent
 ] as const
 
 // ─── Reserved — no emitter yet ────────────────────────────────────────────────
@@ -63,8 +65,6 @@ const RESERVED_EVENT_TYPES = [
   'guide.unassigned',        // stage 4
   'guide.accepted',          // stage 4
   'guide.declined',          // stage 4
-  'review.requested',        // stage 6 — /quality
-  'review.submitted',        // stage 6 — /quality
   'incident.opened',         // stage 6 — /quality (M16)
   'incident.resolved',       // stage 6 — /quality (M16)
 ] as const

@@ -286,7 +286,7 @@ describe('reviews.ts', () => {
       mockExpiredReviewToken()
       const { submitReview } = await import('@/actions/reviews')
       await expect(
-        submitReview('expired-token', { overallRating: 5 }),
+        submitReview('expired-token', { overallRating: 5, publishConsent: false }),
       ).rejects.toBeInstanceOf(UnauthorizedError)
     })
   })

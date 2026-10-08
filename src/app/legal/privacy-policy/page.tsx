@@ -318,6 +318,11 @@ export default function PrivacyPolicyPage() {
                 desc: 'The Platform is intended exclusively for persons who are at least 18 years of age. If you become aware that a minor has shared their personal data with us, please contact us immediately for its deletion.',
               },
             ]} />
+            {/* FA-1.59 — placeholder until tj supplies the text (deferred-tasks.md: "text from tj — blocks FA-1.57") */}
+            <SubHeading>Publication of reviews</SubHeading>
+            <p className="text-sm f-body leading-relaxed" style={{ color: 'rgba(10,46,77,0.68)' }}>
+              [Reviews publication — text from tj]
+            </p>
           </section>
 
           <Divider />
