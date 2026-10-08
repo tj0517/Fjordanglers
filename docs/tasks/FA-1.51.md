@@ -2,13 +2,14 @@
 id: FA-1.51
 title: SYNC — stary `guide_id` i nowe `experience_guides` mówią to samo: triggery w obie strony, `price_from` ↔ centy; testy z red proofem
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: db/experience-guides-sync
+pr: 141
 depends_on: [FA-1.50]
 blocked_by_questions: []
 touches_db: true
