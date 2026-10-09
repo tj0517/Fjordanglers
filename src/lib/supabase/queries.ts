@@ -21,12 +21,16 @@ import {
   parseItinerary,
   parseSuggestedLodging,
   parseFaq,
+  parseContentBlocks,
+  parseSpeciesDetails,
   safeHttpUrl,
   type LicenseInfo,
   type DayStep,
   type ItineraryDay,
   type LodgingSuggestion,
   type FaqEntry,
+  type StoryBlock,
+  type SpeciesDetail,
 } from '@/lib/experience-v2-content'
 
 // Cache tag constants — used here and revalidated from Server Actions.
@@ -551,6 +555,12 @@ export type ExperienceV2 = {
   slug:               string
   experienceName:     string
   introText:          string | null
+  /** The written story and its photo blocks — the v1 editorial fields, kept on v2. */
+  storyText:          string | null
+  contentBlocks:      StoryBlock[]
+  speciesDetails:     SpeciesDetail[]
+  catchesText:        string | null
+  environment:        string[]
   country:            string
   region:             string
   heroImageUrl:       string | null
@@ -750,6 +760,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         .from('experience_pages')
         .select(`
           id, slug, experience_name, intro_text, country, region,
+          story_text, content_blocks, catches_text, environment,
           hero_image_url, gallery_image_urls, includes, excludes, season_months, skill_level,
           species_details, technique, meeting_point_name, meeting_point_description,
           walking_km_min, walking_km_max, license_info, tip_guidance_text,
@@ -855,6 +866,11 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         slug:               page.slug,
         experienceName:     page.experience_name,
         introText:          page.intro_text,
+        storyText:          page.story_text,
+        contentBlocks:      parseContentBlocks(page.content_blocks),
+        speciesDetails:     parseSpeciesDetails(page.species_details),
+        catchesText:        page.catches_text,
+        environment:        page.environment ?? [],
         country:            page.country,
         region:             page.region,
         heroImageUrl:       page.hero_image_url,

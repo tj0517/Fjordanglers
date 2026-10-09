@@ -201,3 +201,34 @@ export function parseFaq(value: Json | null | undefined): FaqEntry[] {
     return question == null || answer == null ? [] : [{ question, answer }]
   })
 }
+
+/**
+ * `experience_pages.content_blocks` — `[{headline, text, image_url?}]`, the v1 admin form's
+ * `ContentBlock`. Photos may be a site path (`/photo.jpg`) or an http(s) URL; anything else is
+ * dropped, the block itself is kept. A block with neither headline nor text is nothing to show.
+ */
+export type StoryBlock = { headline: string | null; text: string | null; imageUrl: string | null }
+
+function imageUrl(value: Json | undefined): string | null {
+  const raw = text(value)
+  if (raw == null) return null
+  return raw.startsWith('/') ? raw : safeHttpUrl(raw)
+}
+
+export function parseContentBlocks(value: Json | null | undefined): StoryBlock[] {
+  return entries(value).flatMap(item => {
+    const headline = text(item.headline)
+    const body     = text(item.text)
+    return headline == null && body == null ? [] : [{ headline, text: body, imageUrl: imageUrl(item.image_url) }]
+  })
+}
+
+/** `species_details` with its description and photo — the "what you fish for" cards. */
+export type SpeciesDetail = { name: string; description: string | null; imageUrl: string | null }
+
+export function parseSpeciesDetails(value: Json | null | undefined): SpeciesDetail[] {
+  return entries(value).flatMap(item => {
+    const name = text(item.name)
+    return name == null ? [] : [{ name, description: text(item.description), imageUrl: imageUrl(item.image_url) }]
+  })
+}

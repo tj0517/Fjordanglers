@@ -31,6 +31,7 @@ import OfferPriceLead from '@/components/experience-v2/offer-price-lead'
 import OfferWidget, { type OfferWidgetProps } from '@/components/experience-v2/offer-widget'
 import OfferMobileBar from '@/components/experience-v2/offer-mobile-bar'
 import OfferBody from '@/components/experience-v2/offer-body'
+import OfferStory from '@/components/experience-v2/offer-story'
 import OfferReviews from '@/components/experience-v2/offer-reviews'
 import OfferLogistics from '@/components/experience-v2/offer-logistics'
 import OfferBring from '@/components/experience-v2/offer-bring'
@@ -262,6 +263,16 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
               <div className="mt-6 md:hidden">
                 <OfferWidget {...widget} />
               </div>
+
+              {/* The written story, before the facts: what the water is like, told by the
+                  people who fish it. */}
+              <OfferStory
+                storyText={page.storyText}
+                contentBlocks={page.contentBlocks}
+                speciesDetails={page.speciesDetails}
+                catchesText={page.catchesText}
+                environment={page.environment}
+              />
 
               {/* ── S3–S9 (FA-1.54). S8 carries #jak-dziala and S9 #cena, the anchors the
                      top bar and the CTA already point at. ── */}
