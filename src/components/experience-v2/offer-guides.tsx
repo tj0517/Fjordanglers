@@ -10,9 +10,6 @@
  * from the page's gallery, because a face next to a landscape is what the reference pages
  * have and a bordered paragraph does not.
  *
- * Next to them, a static card on why FA picks local guides over outfitters — the positioning
- * in docs/brand/03-product-and-customers.md. Nothing the brand docs do not say is claimed here.
- *
  * There is no "quote" field on `guides` or `experience_guides`, so a guide card has none.
  */
 
@@ -37,7 +34,7 @@ type OfferGuide = {
 
 export type OfferGuidesProps = {
   guides:    OfferGuide[]
-  /** The page's gallery, in order — card `i` takes photo `i`, the FA card the next one. */
+  /** The page's gallery, in order — card `i` takes photo `i`. */
   photoUrls: string[]
   /** `experience_pages.response_sla_hours` — the promise the page makes in the hero. */
   responseSlaHours: number
@@ -96,7 +93,6 @@ export default function OfferGuides({ guides, photoUrls, responseSlaHours }: Off
         {guides.map((guide, i) => (
           <GuideCard key={guide.id} guide={guide} photoUrl={photoUrls[i] ?? null} />
         ))}
-        <FaCard photoUrl={photoUrls[guides.length] ?? null} />
       </div>
     </OfferSection>
   )
@@ -162,20 +158,3 @@ function GuideCard({ guide, photoUrl }: { guide: OfferGuide; photoUrl: string | 
   )
 }
 
-/** Static on purpose — the same card on every offer page, from the brand docs. */
-function FaCard({ photoUrl }: { photoUrl: string | null }) {
-  return (
-    <div data-testid="fa-card">
-      <Box className="flex h-full flex-col">
-        {photoUrl != null && <Cover url={photoUrl} alt="" />}
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>Why a local guide</p>
-        <h3 className="f-display mt-1 text-[22px] font-bold leading-tight">Local guides, not big outfitters</h3>
-        <p className="mt-2.5 text-[15px] leading-relaxed">
-          We work only with independent local guides — people who live on this water and fish
-          it year-round, not a lodge selling slots. We match you with the guide and the water
-          for your level, you pay us a deposit online, and the rest goes straight to your guide.
-        </p>
-      </Box>
-    </div>
-  )
-}
