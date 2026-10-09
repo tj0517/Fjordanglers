@@ -285,19 +285,20 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 <OfferWidget {...widget} />
               </div>
 
-              {/* The written story, before the facts: what the water is like, told by the
-                  people who fish it. */}
-              <OfferStory
-                storyText={page.storyText}
-                contentBlocks={page.contentBlocks}
-                speciesDetails={page.speciesDetails}
-                catchesText={page.catchesText}
-                environment={page.environment}
+              {/* ── S3–S9 (FA-1.54) with the written story slotted in after "At a glance".
+                     S8 carries #jak-dziala and S9 #cena, the anchors the CTA points at. ── */}
+              <OfferBody
+                page={page}
+                story={
+                  <OfferStory
+                    storyText={page.storyText}
+                    contentBlocks={page.contentBlocks}
+                    speciesDetails={page.speciesDetails}
+                    catchesText={page.catchesText}
+                    environment={page.environment}
+                  />
+                }
               />
-
-              {/* ── S3–S9 (FA-1.54). S8 carries #jak-dziala and S9 #cena, the anchors the
-                     top bar and the CTA already point at. ── */}
-              <OfferBody page={page} />
             </div>
 
             <aside className="anim-2 hidden w-[360px] flex-none md:block" style={{ position: 'sticky', top: 92 }}>

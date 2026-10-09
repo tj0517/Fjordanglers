@@ -1,8 +1,13 @@
 /**
- * S3–S9 of the v2 offer page, in the wireframe's order (FA-1.54):
+ * S3–S9 of the v2 offer page (FA-1.54), in reading order — scan first, read second,
+ * meet the guide before the day, money last:
  *
- *   S3 at a glance · S4 included / not · S5 who it's for · S6 the day ·
- *   S7 your guides · S8 how booking works · S9 price and deposit
+ *   S3 at a glance · story (slot) · S7 your guides · S6 the day ·
+ *   S4 included / not · S5 who it's for · S8 how booking works · S9 price and deposit
+ *
+ * The wireframe's numbering is kept on `data-section`; the order on the page is the
+ * product decision of 2026-10-09 (tj): facts in five seconds, the story when interested,
+ * the guide — the product, in an agency — right after it.
  *
  * Takes the one object `getExperienceV2` returns and hands each section its slice — no
  * section reads anything else, and none queries (CLAUDE.md rule 3). Each section decides
@@ -10,6 +15,7 @@
  * nothing, so the page never has a heading over an empty body.
  */
 
+import type { ReactNode } from 'react'
 import type { ExperienceV2 } from '@/lib/supabase/queries'
 import OfferAtAGlance from './offer-at-a-glance'
 import OfferIncluded from './offer-included'
@@ -19,7 +25,7 @@ import OfferGuides from './offer-guides'
 import OfferHowItWorks from './offer-how-it-works'
 import OfferPriceTable from './offer-price-table'
 
-export default function OfferBody({ page }: { page: ExperienceV2 }) {
+export default function OfferBody({ page, story }: { page: ExperienceV2; story?: ReactNode }) {
   const primary = page.guides.find(g => g.isPrimary) ?? page.guides[0] ?? null
 
   const archetypes = page.options.filter(o => o.kind === 'archetype')
@@ -28,7 +34,6 @@ export default function OfferBody({ page }: { page: ExperienceV2 }) {
   return (
     <>
       <OfferAtAGlance
-        speciesNames={page.speciesNames}
         technique={page.technique}
         meetingPointName={page.meetingPointName}
         meetingPointDescription={page.meetingPointDescription}
@@ -36,6 +41,14 @@ export default function OfferBody({ page }: { page: ExperienceV2 }) {
         languages={primary?.languages ?? []}
         walkingKmMin={page.walkingKmMin}
         walkingKmMax={page.walkingKmMax}
+      />
+      {story}
+      <OfferGuides guides={page.guides} photoUrls={page.galleryImageUrls} responseSlaHours={page.responseSlaHours} />
+      <OfferDay
+        offerMode={page.offerMode}
+        daySchedule={page.daySchedule}
+        archetypes={archetypes}
+        currency={page.currency}
       />
       <OfferIncluded
         includes={page.includes}
@@ -50,13 +63,6 @@ export default function OfferBody({ page }: { page: ExperienceV2 }) {
         notSuitedFor={page.notSuitedFor}
         expectationsText={page.expectationsText}
       />
-      <OfferDay
-        offerMode={page.offerMode}
-        daySchedule={page.daySchedule}
-        archetypes={archetypes}
-        currency={page.currency}
-      />
-      <OfferGuides guides={page.guides} photoUrls={page.galleryImageUrls} responseSlaHours={page.responseSlaHours} />
       <OfferHowItWorks
         offerEtaText={page.offerEtaText}
         feePct={page.feePct}

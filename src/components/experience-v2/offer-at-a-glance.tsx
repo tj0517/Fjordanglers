@@ -3,13 +3,12 @@
  * A card whose field is empty is not drawn — never "Terrain: —".
  */
 
-import { Fish, Footprints, Languages, MapPin, Target, Users, type LucideIcon } from 'lucide-react'
+import { Footprints, Languages, MapPin, Target, Users, type LucideIcon } from 'lucide-react'
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
 import { languageNames } from '@/lib/experience-v2-content'
 
 export type OfferAtAGlanceProps = {
-  speciesNames:       string[]
   technique:          string[]
   meetingPointName:        string | null
   meetingPointDescription: string | null
@@ -33,8 +32,9 @@ export default function OfferAtAGlance(props: OfferAtAGlanceProps) {
     .filter((part): part is string => part != null && part.trim() !== '')
     .join(' — ')
 
+  // Species are not a card here: "What you fish for" in the story section shows them with
+  // a photo and a description, and the same name twice in 400 px reads as padding.
   const cards: { icon: LucideIcon; label: string; value: string }[] = [
-    { icon: Fish,       label: 'Species',           value: props.speciesNames.join(', ') },
     { icon: Target,     label: 'Techniques',        value: props.technique.join(', ') },
     { icon: MapPin,     label: 'Start and pick-up', value: meeting },
     {
