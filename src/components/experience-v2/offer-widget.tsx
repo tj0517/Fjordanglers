@@ -57,6 +57,8 @@ export type OfferWidgetProps = {
   inquiryHref:        string
   /** Rendered inside the mobile bottom bar instead of the desktop card. */
   compact?:           boolean
+  /** The second way in, for the visitor who would rather talk than fill a form. */
+  whatsappUrl?:       string | null
 }
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -106,6 +108,7 @@ export default function OfferWidget({
   guide,
   inquiryHref,
   compact = false,
+  whatsappUrl = null,
 }: OfferWidgetProps) {
   const { indicative } = useCurrency()
 
@@ -147,20 +150,25 @@ export default function OfferWidget({
   if (offerMode === 'custom') {
     return (
       <div data-testid="offer-widget" data-mode="custom" className={compact ? '' : cardClass} style={compact ? undefined : cardStyle}>
-        {range != null ? (
-          <>
-            <p className={compact ? 'text-base font-bold leading-tight' : 'f-display text-2xl font-bold leading-tight'}>
-              {range.toCents != null
-                ? `${formatCents(range.fromCents, range.currency)}–${formatCents(range.toCents, range.currency)}`
-                : `from ${formatCents(range.fromCents, range.currency)}`}
-            </p>
-            <p className={compact ? 'text-xs opacity-90' : 'mt-1 text-sm'} style={compact ? undefined : mutedStyle}>
-              indicative · the offer is built around your dates
-            </p>
-          </>
-        ) : (
-          <p className={compact ? 'text-base font-bold' : 'f-display text-2xl font-bold'}>Price on request</p>
-        )}
+        <div className={compact ? '' : 'flex items-start justify-between gap-3'}>
+          <div className="min-w-0">
+            {range != null ? (
+              <>
+                <p className={compact ? 'text-base font-bold leading-tight' : 'f-display text-[26px] font-bold leading-none tracking-[-0.01em]'}>
+                  {range.toCents != null
+                    ? `${formatCents(range.fromCents, range.currency)}–${formatCents(range.toCents, range.currency)}`
+                    : `from ${formatCents(range.fromCents, range.currency)}`}
+                </p>
+                <p className={compact ? 'text-xs opacity-90' : 'mt-1.5 text-sm'} style={compact ? undefined : mutedStyle}>
+                  indicative · the offer is built around your dates
+                </p>
+              </>
+            ) : (
+              <p className={compact ? 'text-base font-bold' : 'f-display text-[26px] font-bold leading-none'}>Price on request</p>
+            )}
+          </div>
+          {!compact && <CurrencyPicker />}
+        </div>
 
         {!compact && <GuideLine guide={guide} />}
 
@@ -176,6 +184,7 @@ export default function OfferWidget({
             <p className="mt-1 text-center text-xs" style={mutedStyle}>
               We answer within {responseSlaHours} h
             </p>
+            <WhatsAppLine url={whatsappUrl} />
           </>
         )}
       </div>
@@ -203,10 +212,15 @@ export default function OfferWidget({
 
   return (
     <div data-testid="offer-widget" data-mode="fixed" className={cardClass} style={cardStyle}>
-      <p className="f-display text-[28px] font-bold leading-none tracking-[-0.01em]" data-testid="offer-from-price">{fromLine}</p>
-      <p className="mt-1.5 text-sm" style={mutedStyle}>
-        {maxAnglersPerGuide === 1 ? '1 angler per guide' : `1–${maxAnglersPerGuide} anglers per guide`}
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="f-display text-[28px] font-bold leading-none tracking-[-0.01em]" data-testid="offer-from-price">{fromLine}</p>
+          <p className="mt-1.5 text-sm" style={mutedStyle}>
+            {maxAnglersPerGuide === 1 ? '1 angler per guide' : `1–${maxAnglersPerGuide} anglers per guide`}
+          </p>
+        </div>
+        <CurrencyPicker />
+      </div>
 
       <GuideLine guide={guide} />
 
@@ -315,11 +329,43 @@ export default function OfferWidget({
       <p className="mt-1 text-center text-xs" style={mutedStyle}>
         We answer within {responseSlaHours} h
       </p>
+      <WhatsAppLine url={whatsappUrl} />
     </div>
   )
 }
 
 // ─── small pieces, local on purpose: nothing outside this widget uses them ───
+
+/** Lives in the card, next to the number it changes, rather than in the site header. */
+function CurrencyPicker() {
+  const { display, setDisplay, available } = useCurrency()
+  if (available.length < 2) return null
+  return (
+    <label className="flex flex-none items-center">
+      <span className="sr-only">Show prices in</span>
+      <select
+        value={display}
+        onChange={e => setDisplay(e.target.value)}
+        className="rounded-full border bg-white py-1 pl-2.5 pr-1.5 text-xs font-semibold"
+        style={fieldStyle}
+      >
+        {available.map(code => <option key={code} value={code}>{code}</option>)}
+      </select>
+    </label>
+  )
+}
+
+function WhatsAppLine({ url }: { url: string | null }) {
+  if (url == null) return null
+  return (
+    <p className="mt-3 border-t pt-3 text-center text-xs" style={{ ...mutedStyle, borderColor: 'rgba(10,46,77,0.08)' }}>
+      Prefer to talk?{' '}
+      <a href={url} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2" style={{ color: 'var(--fa-navy)' }}>
+        Write to us on WhatsApp
+      </a>
+    </p>
+  )
+}
 
 const cardClass  = 'rounded-2xl bg-white px-5 py-4'
 const cardStyle  = {

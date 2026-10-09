@@ -56,7 +56,7 @@ export default function OfferBody({ page }: { page: ExperienceV2 }) {
         archetypes={archetypes}
         currency={page.currency}
       />
-      <OfferGuides guides={page.guides} />
+      <OfferGuides guides={page.guides} photoUrls={page.galleryImageUrls} responseSlaHours={page.responseSlaHours} />
       <OfferHowItWorks
         offerEtaText={page.offerEtaText}
         feePct={page.feePct}

@@ -44,7 +44,7 @@ export default function OfferMobileBar({ children }: { children: ReactNode }) {
       data-testid="offer-mobile-bar"
       data-visible={visible}
       aria-hidden={!visible}
-      className="fixed inset-x-0 bottom-0 z-40 flex items-center px-4 py-3 transition-transform duration-200 sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 flex items-center px-4 py-3 transition-transform duration-200 md:hidden"
       style={{
         background:  'var(--fa-navy)',
         color:       '#fff',
