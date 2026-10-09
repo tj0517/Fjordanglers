@@ -1,11 +1,18 @@
 /**
- * The bordered box and the muted text colour S3–S9 share (FA-1.54) — what the wireframe
- * calls `.box` and `.muted`. Kept in one place so the seven sections cannot drift apart.
+ * The surfaces S3–S14 share (FA-1.54): a white card lifted by a soft shadow instead of a
+ * 1 px border, and the muted text colour. Kept in one place so the sections cannot drift
+ * apart. Borders made the page read as a wireframe — the shadow and the glacier-white page
+ * ground are what give a card its edge now.
  */
 
 import type { ReactNode } from 'react'
 
 export const mutedStyle = { color: 'rgba(10,46,77,0.62)' }
+
+/** Two-layer shadow: a hairline for the edge, a wide soft one for the lift. */
+export const cardShadow = '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)'
+
+export const hairline = 'rgba(10,46,77,0.08)'
 
 export function Box({
   children,
@@ -19,8 +26,10 @@ export function Box({
 }) {
   return (
     <div
-      className={`rounded-xl border bg-white p-4 ${className}`}
-      style={{ borderColor: accent ? 'var(--fa-navy)' : 'rgba(10,46,77,0.16)' }}
+      className={`rounded-2xl p-5 ${className}`}
+      style={accent
+        ? { background: 'rgba(10,46,77,0.045)', boxShadow: `inset 0 0 0 1px rgba(10,46,77,0.10)` }
+        : { background: '#fff', boxShadow: cardShadow }}
     >
       {children}
     </div>

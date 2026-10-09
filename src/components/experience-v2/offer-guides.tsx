@@ -52,6 +52,7 @@ export default function OfferGuides({ guides }: OfferGuidesProps) {
   return (
     <OfferSection
       section="S7"
+      eyebrow="Who takes you out"
       title={guides.length === 1 ? 'Your guide' : 'Your guides'}
       accordion={{ defaultOpen: true }}
     >

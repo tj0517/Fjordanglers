@@ -13,7 +13,7 @@ import OfferSection from './offer-section'
 
 export default function OfferInquiry() {
   return (
-    <OfferSection section="S14" anchor="zapytanie" title="Send your inquiry">
+    <OfferSection section="S14" anchor="zapytanie" eyebrow="Next step" title="Send your inquiry">
       <InquiryInline />
     </OfferSection>
   )

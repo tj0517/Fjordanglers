@@ -6,7 +6,9 @@
  * seven half-filled chips reads worse than one with four full ones.
  */
 
+import { CalendarDays, Gauge, MapPin, Package, Sun, Users, type LucideIcon } from 'lucide-react'
 import { seasonLabel } from '@/lib/season-months'
+import { cardShadow } from './offer-box'
 
 /** Words in `experience_pages.includes` that mean the angler can turn up without tackle. */
 const GEAR_WORDS = /\b(gear|rod|rods|tackle|equipment|flies|fly)\b/i
@@ -27,6 +29,8 @@ function anglersLabel(maxAnglersPerGuide: number): string {
     : `1–${maxAnglersPerGuide} anglers / guide`
 }
 
+type Chip = { icon: LucideIcon; label: string }
+
 export default function OfferChips({
   region,
   minDays,
@@ -46,26 +50,27 @@ export default function OfferChips({
 }) {
   const season = seasonLabel(seasonMonths)
 
-  const chips = [
-    region,
-    lengthLabel(minDays, maxDays),
-    anglersLabel(maxAnglersPerGuide),
-    season != null ? `season ${season}` : null,
-    skillLevel != null ? `level ${skillLevel} / 5` : null,
-    gearIncluded(includes) ? 'gear included' : null,
-  ].filter((c): c is string => c != null && c !== '')
+  const chips = ([
+    region !== '' ? { icon: MapPin, label: region } : null,
+    { icon: CalendarDays, label: lengthLabel(minDays, maxDays) },
+    { icon: Users, label: anglersLabel(maxAnglersPerGuide) },
+    season != null ? { icon: Sun, label: `season ${season}` } : null,
+    skillLevel != null ? { icon: Gauge, label: `level ${skillLevel} / 5` } : null,
+    gearIncluded(includes) ? { icon: Package, label: 'gear included' } : null,
+  ] as (Chip | null)[]).filter((c): c is Chip => c != null)
 
   if (chips.length === 0) return null
 
   return (
     <ul className="flex flex-wrap gap-2" data-testid="offer-chips">
-      {chips.map(chip => (
+      {chips.map(({ icon: Icon, label }) => (
         <li
-          key={chip}
-          className="rounded-full border bg-white px-3 py-1.5 text-sm"
-          style={{ borderColor: 'rgba(10,46,77,0.22)', color: 'var(--fa-navy)' }}
+          key={label}
+          className="flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-2.5 pr-3.5 text-sm font-medium"
+          style={{ boxShadow: cardShadow, color: 'var(--fa-navy)' }}
         >
-          {chip}
+          <Icon aria-hidden size={15} strokeWidth={2} style={{ color: 'rgba(10,46,77,0.55)' }} />
+          {label}
         </li>
       ))}
     </ul>

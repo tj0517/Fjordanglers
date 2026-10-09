@@ -89,7 +89,7 @@ export default function OfferReviews({
     : 'What anglers said'
 
   return (
-    <OfferSection section="S10" anchor="recenzje" title={title}>
+    <OfferSection section="S10" anchor="recenzje" eyebrow="From anglers" title={title}>
       {googleProfileUrl != null && (
         <p className="-mt-2 mb-4 text-[15px]">
           <a

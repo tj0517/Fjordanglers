@@ -13,6 +13,7 @@
  */
 
 import { notFound } from 'next/navigation'
+import { Clock, Lock, ShieldCheck, Star } from 'lucide-react'
 import { env } from '@/lib/env'
 import { getExperienceV2 } from '@/lib/supabase/queries'
 import { fetchIndicativeRates } from '@/lib/fx'
@@ -134,37 +135,40 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
           {/* ── two columns: the page on the left, the widget sticky on the right.
                  The flex container ends right before #recenzje, which is exactly how far
                  the sticky card is meant to travel. ── */}
-          <div className="flex items-start gap-10 px-4 sm:px-0">
+          <div className="flex items-start gap-12 px-4 sm:px-0">
             <div className="min-w-0 flex-1">
-              <h1 className="f-display mt-5 text-3xl font-bold leading-[1.15] sm:text-[34px]">
-                {page.experienceName}
-              </h1>
+              <div className="anim-1">
+                <h1 className="f-display mt-6 text-[32px] font-bold leading-[1.08] tracking-[-0.015em] sm:mt-8 sm:text-[44px]">
+                  {page.experienceName}
+                </h1>
 
-              {page.introText != null && (
-                <p className="mt-2.5 text-base sm:text-[17px]" style={{ color: 'rgba(10,46,77,0.7)' }}>
-                  {page.introText}
-                </p>
-              )}
+                {page.introText != null && (
+                  <p className="mt-3 max-w-[60ch] text-[17px] leading-relaxed sm:text-lg" style={{ color: 'rgba(10,46,77,0.7)' }}>
+                    {page.introText}
+                  </p>
+                )}
 
-              {primary?.googleRating != null && (
-                <p className="mt-3 text-sm" data-testid="offer-rating">
-                  ★ {primary.googleRating.toFixed(1)}
-                  {primary.googleReviewCount != null && ` · ${primary.googleReviewCount} reviews`}
-                  {primary.googleProfileUrl != null && (
-                    <>
-                      {' · '}
-                      <a
-                        href={primary.googleProfileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline"
-                      >
-                        see them on Google
-                      </a>
-                    </>
-                  )}
-                </p>
-              )}
+                {primary?.googleRating != null && (
+                  <p className="mt-4 flex items-center gap-1.5 text-sm" data-testid="offer-rating">
+                    <Star aria-hidden size={15} fill="currentColor" strokeWidth={0} />
+                    <b>{primary.googleRating.toFixed(1)}</b>
+                    {primary.googleReviewCount != null && <span style={{ color: 'rgba(10,46,77,0.7)' }}>· {primary.googleReviewCount} reviews</span>}
+                    {primary.googleProfileUrl != null && (
+                      <>
+                        <span style={{ color: 'rgba(10,46,77,0.7)' }}>·</span>
+                        <a
+                          href={primary.googleProfileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline decoration-[rgba(10,46,77,0.3)] underline-offset-4 hover:decoration-current"
+                        >
+                          see them on Google
+                        </a>
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
 
               {/* Mobile keeps the wireframe's order: the price sits above the chips, and the
                   full calculator is further down. Desktop shows the same numbers in the
@@ -181,7 +185,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 />
               </div>
 
-              <div className="mt-4">
+              <div className="anim-2 mt-5">
                 <OfferChips
                   region={page.region}
                   minDays={page.minDays}
@@ -193,27 +197,40 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 />
               </div>
 
-              {/* The three lines that make sending an inquiry cost nothing. */}
-              <ul
-                className="mt-4 flex flex-col gap-1.5 border-y py-3 text-sm sm:flex-row sm:gap-6"
-                style={{ borderColor: 'rgba(10,46,77,0.14)' }}
-                data-testid="offer-assurances"
-              >
-                <li>✓ Inquiry is free and non-binding</li>
-                <li>✓ Deposit only after you accept the offer</li>
-                <li>✓ We answer within {page.responseSlaHours} h</li>
-              </ul>
-
               {/* Mobile: the CTA is above the fold on its own, so the first screen ends on
                   an action rather than on a form the visitor has to scroll to find. The
                   bottom bar repeats it once the hero is scrolled past. */}
               <a
                 href={INQUIRY_ANCHOR}
-                className="mt-4 block w-full rounded-lg px-4 py-3 text-center text-base font-semibold sm:hidden"
-                style={{ background: 'var(--fa-navy)', color: '#fff' }}
+                className="mt-5 block w-full rounded-xl px-4 py-3.5 text-center text-base font-bold sm:hidden"
+                style={{ background: 'var(--fa-salmon)', color: 'var(--fa-navy)' }}
               >
                 {page.offerMode === 'custom' ? 'Plan your trip' : 'Check availability'}
               </a>
+
+              {/* The three lines that make sending an inquiry cost nothing. */}
+              <ul
+                className="anim-3 mt-3 grid grid-cols-1 gap-0.5 rounded-2xl p-1.5 text-sm sm:mt-6 sm:grid-cols-3 sm:gap-1 sm:p-2"
+                style={{ background: 'rgba(10,46,77,0.05)' }}
+                data-testid="offer-assurances"
+              >
+                {([
+                  [ShieldCheck, 'Inquiry is free and non-binding'],
+                  [Lock,        'Deposit only after you accept the offer'],
+                  [Clock,       `We answer within ${page.responseSlaHours} h`],
+                ] as const).map(([Icon, text]) => (
+                  <li key={text} className="flex items-center gap-3 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2.5">
+                    <span
+                      aria-hidden
+                      className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-white sm:h-8 sm:w-8"
+                      style={{ boxShadow: '0 1px 2px rgba(10,46,77,0.08)' }}
+                    >
+                      <Icon size={15} strokeWidth={2} />
+                    </span>
+                    <span className="font-medium leading-snug">{text}</span>
+                  </li>
+                ))}
+              </ul>
 
               {/* The full calculator, for the visitor who wants the three numbers. */}
               <div className="mt-6 sm:hidden">
@@ -225,7 +242,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
               <OfferBody page={page} />
             </div>
 
-            <aside className="hidden w-[360px] flex-none sm:block" style={{ position: 'sticky', top: 88 }}>
+            <aside className="anim-2 hidden w-[360px] flex-none sm:block" style={{ position: 'sticky', top: 92 }}>
               <OfferWidget {...widget} />
             </aside>
           </div>

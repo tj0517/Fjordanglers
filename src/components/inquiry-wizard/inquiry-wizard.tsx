@@ -256,7 +256,7 @@ export function InquiryInline() {
 
   if (submitState === 'done') {
     return (
-      <div className="rounded-xl border-2 p-6" style={{ borderColor: 'var(--fa-navy)' }}>
+      <div className="rounded-2xl bg-white p-6" style={{ boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)' }}>
         <ThankYou testId="inquiry-inline-done" />
       </div>
     )
@@ -264,8 +264,8 @@ export function InquiryInline() {
 
   return (
     <div
-      className="rounded-xl border-2 p-5 sm:p-8"
-      style={{ borderColor: 'var(--fa-navy)', background: '#fff' }}
+      className="rounded-2xl p-5 sm:p-8"
+      style={{ background: '#fff', boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)' }}
       data-testid="inquiry-inline"
     >
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-[3fr_2fr] sm:gap-8">

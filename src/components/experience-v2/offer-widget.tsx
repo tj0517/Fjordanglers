@@ -203,18 +203,18 @@ export default function OfferWidget({
 
   return (
     <div data-testid="offer-widget" data-mode="fixed" className={cardClass} style={cardStyle}>
-      <p className="f-display text-2xl font-bold leading-tight" data-testid="offer-from-price">{fromLine}</p>
-      <p className="mt-1 text-sm" style={mutedStyle}>
+      <p className="f-display text-[28px] font-bold leading-none tracking-[-0.01em]" data-testid="offer-from-price">{fromLine}</p>
+      <p className="mt-1.5 text-sm" style={mutedStyle}>
         {maxAnglersPerGuide === 1 ? '1 angler per guide' : `1–${maxAnglersPerGuide} anglers per guide`}
       </p>
 
       <GuideLine guide={guide} />
 
       {/* ── when / anglers / days ── */}
-      <div className="mt-3.5 flex flex-col gap-2">
-        <div className="rounded-lg border p-2.5" style={fieldStyle}>
+      <div className="mt-3 flex flex-col gap-2">
+        <div className="rounded-xl border p-2.5" style={fieldStyle}>
           <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium">When?</span>
+            <span className={labelClass} style={mutedStyle}>When</span>
             <div className="flex gap-1 text-xs">
               {(['exact', 'flexible'] as const).map(mode => (
                 <button
@@ -222,7 +222,7 @@ export default function OfferWidget({
                   type="button"
                   onClick={() => setWhenMode(mode)}
                   aria-pressed={whenMode === mode}
-                  className="rounded-full px-2.5 py-1"
+                  className="rounded-full px-2.5 py-1 font-medium"
                   style={whenMode === mode
                     ? { background: 'var(--fa-navy)', color: '#fff' }
                     : { background: 'rgba(10,46,77,0.06)', color: 'var(--fa-navy)' }}
@@ -278,7 +278,7 @@ export default function OfferWidget({
       </div>
 
       {/* ── the three numbers ── */}
-      <div className="mt-3.5" data-testid="offer-totals">
+      <div className="mt-3" data-testid="offer-totals">
         {q.priced ? (
           <>
             <Row label="Total" value={formatCents(q.totalCents, q.currency)} strong />
@@ -321,19 +321,26 @@ export default function OfferWidget({
 
 // ─── small pieces, local on purpose: nothing outside this widget uses them ───
 
-const cardClass  = 'rounded-xl border-2 bg-white p-4'
-const cardStyle  = { borderColor: 'var(--fa-navy)', boxShadow: '0 8px 24px rgba(10,46,77,0.08)', color: 'var(--fa-navy)' }
+const cardClass  = 'rounded-2xl bg-white px-5 py-4'
+const cardStyle  = {
+  boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 20px 48px -16px rgba(10,46,77,0.22)',
+  border:    '1px solid rgba(10,46,77,0.08)',
+  color:     'var(--fa-navy)',
+}
 const mutedStyle = { color: 'rgba(10,46,77,0.62)' }
-const fieldStyle = { borderColor: 'rgba(10,46,77,0.20)', color: 'var(--fa-navy)' }
-const ctaClass   = 'mt-3.5 block w-full rounded-lg px-4 py-3 text-center text-base font-semibold'
-const ctaStyle   = { background: 'var(--fa-navy)', color: '#fff' }
-const compactCtaClass = 'flex-none rounded-lg px-4 py-3 text-sm font-bold'
-const compactCtaStyle = { background: '#fff', color: 'var(--fa-navy)', minHeight: 44 }
+const fieldStyle = { borderColor: 'rgba(10,46,77,0.14)', color: 'var(--fa-navy)' }
+const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.12em]'
+// The one salmon moment on the page (CLAUDE.md brand rule): navy text on salmon passes AA,
+// white on salmon does not.
+const ctaClass   = 'mt-3.5 block w-full rounded-xl px-4 py-3.5 text-center text-base font-bold transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_8px_20px_-6px_rgba(230,126,80,0.6)]'
+const ctaStyle   = { background: 'var(--fa-salmon)', color: 'var(--fa-navy)' }
+const compactCtaClass = 'flex-none rounded-xl px-4 py-3 text-sm font-bold'
+const compactCtaStyle = { background: 'var(--fa-salmon)', color: 'var(--fa-navy)', minHeight: 44 }
 
 function GuideLine({ guide }: { guide: OfferWidgetGuide | null }) {
   if (guide == null) return null
   return (
-    <div className="mt-3.5 flex items-center gap-2.5">
+    <div className="mt-3 flex items-center gap-2.5">
       {guide.avatarUrl != null && (
         <Image
           src={guide.avatarUrl}
@@ -360,16 +367,16 @@ function Row({
 }) {
   return (
     <div
-      className="flex items-baseline justify-between gap-3 border-t py-1.5 text-sm"
-      style={{ borderColor: 'rgba(10,46,77,0.10)' }}
+      className="flex items-baseline justify-between gap-3 border-t py-2 text-sm"
+      style={{ borderColor: 'rgba(10,46,77,0.08)' }}
     >
-      <span>
+      <span className={strong ? 'font-semibold' : undefined}>
         {label}
         {note != null && (
-          <span className="mt-0.5 block text-xs" style={mutedStyle}>{note}</span>
+          <span className="mt-0.5 block text-xs font-normal" style={mutedStyle}>{note}</span>
         )}
       </span>
-      <b className={strong ? 'text-base' : undefined}>{value}</b>
+      <b className={strong ? 'f-display text-xl' : 'tabular-nums'}>{value}</b>
     </div>
   )
 }
@@ -380,26 +387,26 @@ function Stepper({
   label: string; value: number; min: number; max: number; onChange: (n: number) => void
 }) {
   return (
-    <div className="flex flex-1 items-center justify-between rounded-lg border px-2.5 py-2" style={fieldStyle}>
-      <span className="text-sm">{label}</span>
+    <div className="flex flex-1 items-center justify-between rounded-xl border px-3 py-2" style={fieldStyle}>
+      <span className={labelClass} style={mutedStyle}>{label}</span>
       <span className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           aria-label={`One fewer ${label.toLowerCase()}`}
-          className="h-7 w-7 rounded-md text-base leading-none disabled:opacity-30"
+          className="h-7 w-7 rounded-full text-base leading-none disabled:opacity-30"
           style={{ background: 'rgba(10,46,77,0.06)' }}
         >
           −
         </button>
-        <b className="w-5 text-center text-sm" aria-live="polite">{value}</b>
+        <b className="w-5 text-center text-[15px]" aria-live="polite">{value}</b>
         <button
           type="button"
           onClick={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}
           aria-label={`One more ${label.toLowerCase()}`}
-          className="h-7 w-7 rounded-md text-base leading-none disabled:opacity-30"
+          className="h-7 w-7 rounded-full text-base leading-none disabled:opacity-30"
           style={{ background: 'rgba(10,46,77,0.06)' }}
         >
           +

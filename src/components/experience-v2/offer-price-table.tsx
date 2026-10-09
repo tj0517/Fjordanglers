@@ -64,7 +64,7 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
   if (!tableUsable && range == null && archetypes.length === 0 && weatherPolicyText == null) return null
 
   return (
-    <OfferSection section="S9" anchor="cena" title="Price and deposit" accordion={{ defaultOpen: true }}>
+    <OfferSection section="S9" anchor="cena" eyebrow="Money" title="Price and deposit" accordion={{ defaultOpen: true }}>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[3fr_2fr]">
         {tableUsable && (
           <Box>

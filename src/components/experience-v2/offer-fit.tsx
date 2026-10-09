@@ -21,7 +21,7 @@ export default function OfferFit({ suitedFor, notSuitedFor, expectationsText }: 
   if (suitedFor.length === 0 && notSuitedFor.length === 0) return null
 
   return (
-    <OfferSection section="S5" title="Who it's for — and who it isn't" accordion={{ defaultOpen: true }}>
+    <OfferSection section="S5" eyebrow="Is it for you" title="Who it's for — and who it isn't" accordion={{ defaultOpen: true }}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {suitedFor.length > 0 && (
           <Box accent>

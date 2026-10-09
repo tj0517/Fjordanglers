@@ -261,8 +261,10 @@ export function Progress({ step, total }: { step: number; total: number }) {
   )
 }
 
+// Salmon with navy text: the one accent moment on the offer page; white on salmon fails AA.
 export const primaryButtonStyle = {
-  background: NAVY,
-  color:      '#fff',
+  background: 'var(--fa-salmon)',
+  color:      NAVY,
+  fontWeight: 700,
   minHeight:  52,
 }

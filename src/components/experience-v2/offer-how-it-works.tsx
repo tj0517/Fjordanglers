@@ -11,6 +11,7 @@
  */
 
 import OfferSection from './offer-section'
+import { cardShadow } from './offer-box'
 
 export type OfferHowItWorksProps = {
   offerEtaText: string | null
@@ -57,21 +58,27 @@ export default function OfferHowItWorks({ offerEtaText, feePct, balancePaymentMe
   ]
 
   return (
-    <OfferSection section="S8" anchor="jak-dziala" title="How booking works" accordion={{ defaultOpen: false }}>
+    <OfferSection section="S8" anchor="jak-dziala" eyebrow="Booking" title="How booking works" accordion={{ defaultOpen: false }}>
       <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {steps.map((step, i) => (
           <li
             key={step.title}
             data-step={i + 1}
-            className="rounded-xl border p-3.5"
-            style={{
-              borderColor: step.highlight ? 'var(--fa-navy)' : 'rgba(10,46,77,0.16)',
-              background:  step.highlight ? 'rgba(10,46,77,0.05)' : '#fff',
-            }}
+            className="rounded-2xl p-5"
+            style={step.highlight
+              ? { background: 'var(--fa-navy)', color: '#fff' }
+              : { background: '#fff', boxShadow: cardShadow }}
           >
-            <b className="mb-1 block text-lg">{i + 1}</b>
-            <p className="text-[15px] font-semibold">{step.title}</p>
-            <p className="mt-1 text-sm" style={{ color: 'rgba(10,46,77,0.7)' }}>{step.body}</p>
+            <b
+              className="f-display block text-[32px] font-bold leading-none"
+              style={{ color: step.highlight ? 'rgba(255,255,255,0.45)' : 'rgba(10,46,77,0.28)' }}
+            >
+              {String(i + 1).padStart(2, '0')}
+            </b>
+            <p className="mt-3 text-[15px] font-semibold leading-snug">{step.title}</p>
+            <p className="mt-1.5 text-sm leading-relaxed" style={{ color: step.highlight ? 'rgba(255,255,255,0.78)' : 'rgba(10,46,77,0.7)' }}>
+              {step.body}
+            </p>
           </li>
         ))}
       </ol>
