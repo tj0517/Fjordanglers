@@ -382,11 +382,13 @@ function InquiryWizardOverlay() {
       data-testid="inquiry-wizard"
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
       style={{ background: 'rgba(10,46,77,0.45)' }}
+      // A tap on the dark area is a dismiss — the gesture everyone tries first.
+      onClick={event => { if (event.target === event.currentTarget) close() }}
     >
       {/* Mobile: a sheet that fills the screen. Desktop: a centred card. */}
       <div
         className="flex h-full w-full flex-col bg-white sm:h-auto sm:max-h-[90vh] sm:max-w-[560px] sm:rounded-xl"
-        style={{ color: 'var(--fa-navy)' }}
+        style={{ color: 'var(--fa-navy)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-start justify-between gap-4 px-5 pt-4 sm:px-7">
           <div className="min-w-0 flex-1">

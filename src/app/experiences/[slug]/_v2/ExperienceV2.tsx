@@ -31,6 +31,7 @@ import OfferChips from '@/components/experience-v2/offer-chips'
 import OfferPriceLead from '@/components/experience-v2/offer-price-lead'
 import OfferWidget, { type OfferWidgetProps } from '@/components/experience-v2/offer-widget'
 import OfferMobileBar from '@/components/experience-v2/offer-mobile-bar'
+import OfferHeroCta from '@/components/experience-v2/offer-hero-cta'
 import OfferBody from '@/components/experience-v2/offer-body'
 import OfferStory from '@/components/experience-v2/offer-story'
 import OfferReviews from '@/components/experience-v2/offer-reviews'
@@ -248,13 +249,9 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
               {/* Mobile: the CTA is above the fold on its own, so the first screen ends on
                   an action rather than on a form the visitor has to scroll to find. The
                   bottom bar repeats it once the hero is scrolled past. */}
-              <a
-                href={INQUIRY_ANCHOR}
-                className="mt-5 block w-full rounded-xl px-4 py-3.5 text-center text-base font-bold md:hidden"
-                style={{ background: 'var(--fa-salmon)', color: 'var(--fa-navy)' }}
-              >
+              <OfferHeroCta href={INQUIRY_ANCHOR}>
                 {page.offerMode === 'custom' ? 'Plan your trip' : 'Check availability'}
-              </a>
+              </OfferHeroCta>
 
               {/* The three lines that make sending an inquiry cost nothing. */}
               <ul
