@@ -17,8 +17,9 @@
  * sticky widget, the mobile bar — opens the one form, with the one set of answers.
  */
 
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Clock, Lock, ShieldCheck, Star } from 'lucide-react'
+import { ArrowLeft, Clock, Lock, ShieldCheck, Star } from 'lucide-react'
 import { env } from '@/lib/env'
 import { getExperienceV2 } from '@/lib/supabase/queries'
 import { fetchIndicativeRates } from '@/lib/fx'
@@ -138,16 +139,32 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
       <main style={{ background: '#F3EDE4', color: 'var(--fa-navy)' }} className="pb-24 md:pb-16">
         {/* Mobile: the photos run full-bleed under the fixed nav, as on v1. */}
         {images.length > 0 && (
-          <div className="pt-[72px] md:hidden">
+          <div className="relative pt-[72px] md:hidden">
             <ExperienceGallery images={images} title={page.experienceName} topMobile mobileHeight="clamp(240px, 56vw, 380px)" />
+            <Link
+              href="/trips"
+              className="absolute left-4 top-[84px] z-10 inline-flex items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3 text-[13px] font-semibold text-white"
+              style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)' }}
+            >
+              <ArrowLeft aria-hidden size={14} strokeWidth={2.25} />
+              Trips
+            </Link>
           </div>
         )}
 
         <div className="mx-auto max-w-[1200px] px-4 sm:px-8 md:pt-[72px]">
           {/* ── S1 title block — above the gallery on desktop ── */}
           <div className="mt-6 md:mt-10">
-            <nav aria-label="Breadcrumb" className="mb-4 hidden text-xs md:block" style={{ color: 'rgba(10,46,77,0.6)' }}>
-              {page.country} › {page.region} › {page.experienceName}
+            <nav aria-label="Breadcrumb" className="mb-5 hidden items-center gap-3 text-[13px] md:flex" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              <Link
+                href="/trips"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-2.5 pr-3.5 font-semibold transition-shadow hover:shadow-md"
+                style={{ color: 'var(--fa-navy)', boxShadow: '0 1px 2px rgba(10,46,77,0.08)' }}
+              >
+                <ArrowLeft aria-hidden size={14} strokeWidth={2.25} />
+                All trips
+              </Link>
+              <span>{page.country} › {page.region}</span>
             </nav>
 
             <div className="anim-1 relative">
