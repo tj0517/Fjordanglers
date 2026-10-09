@@ -81,6 +81,59 @@ export function ChoiceRow({
   )
 }
 
+/**
+ * A two-way (or three-way) switch in one track — the control for "exact dates / flexible".
+ * Reads as a switch at a glance, which two separate pills did not. Radios under the paint,
+ * so the keyboard and screen readers get a real group.
+ */
+export function SegmentedControl({
+  name,
+  options,
+  value,
+  onChange,
+  compact = false,
+}: {
+  name:     string
+  options:  readonly { value: string; label: string }[]
+  value:    string
+  onChange: (value: string) => void
+  /** The widget's 36 px version; the form uses the 48 px touch target. */
+  compact?: boolean
+}) {
+  return (
+    <div
+      role="radiogroup"
+      className="flex rounded-xl p-1"
+      style={{ background: 'rgba(10,46,77,0.06)' }}
+    >
+      {options.map(option => {
+        const checked = option.value === value
+        return (
+          <label
+            key={option.value}
+            className={`flex flex-1 cursor-pointer items-center justify-center rounded-lg text-center font-semibold transition-[background,color,box-shadow] duration-150 ${compact ? 'text-[13px]' : 'text-[15px]'}`}
+            style={{
+              minHeight:  compact ? 30 : 42,
+              background: checked ? NAVY : 'transparent',
+              color:      checked ? '#fff' : NAVY,
+              boxShadow:  checked ? '0 1px 2px rgba(10,46,77,0.2)' : 'none',
+            }}
+          >
+            <input
+              type="radio"
+              name={name}
+              checked={checked}
+              onChange={() => onChange(option.value)}
+              className="sr-only"
+            />
+            {option.label}
+          </label>
+        )
+      })}
+    </div>
+  )
+}
+
 /** A row of short choices — the wireframe's `.pill`. Radios under the paint. */
 export function PillRow({
   name,
@@ -178,8 +231,8 @@ function CounterButton({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex items-center justify-center rounded-md border text-[18px] disabled:opacity-35"
-      style={{ width: 44, height: 44, borderColor: BORDER, background: '#fff' }}
+      className="flex items-center justify-center rounded-full border text-[18px] transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-35 disabled:hover:bg-white"
+      style={{ width: 40, height: 40, borderColor: BORDER, background: '#fff' }}
     >
       {children}
     </button>

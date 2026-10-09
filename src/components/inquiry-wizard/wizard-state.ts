@@ -137,11 +137,12 @@ export function validateStep(
       errors.flexMonth = 'Pick a month.'
     }
 
-    const maxDays = Math.min(rules.maxDays ?? MAX_BRIEF_DAYS, MAX_BRIEF_DAYS)
+    // The page's own `maxDays` is a hint ("usually 1–3 days"), not a wall: a longer trip is
+    // a normal inquiry, priced on request. Only the brief's hard cap is enforced here.
     if (a.days < rules.minDays) {
       errors.days = `This trip runs for at least ${rules.minDays} day${rules.minDays === 1 ? '' : 's'}.`
-    } else if (a.days > maxDays) {
-      errors.days = `Ask us directly for more than ${maxDays} days.`
+    } else if (a.days > MAX_BRIEF_DAYS) {
+      errors.days = `Ask us directly for more than ${MAX_BRIEF_DAYS} days.`
     }
     if (a.anglers < 1) errors.anglers = 'At least one angler.'
   }

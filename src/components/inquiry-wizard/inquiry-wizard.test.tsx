@@ -125,7 +125,7 @@ describe('S14 inline step 1', () => {
 
   it('will not open step 2 while the month is missing, and says so', () => {
     renderForm()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     expect(screen.queryByTestId('inquiry-wizard')).toBeNull()
     expect(screen.getByText('Pick a month.')).toBeTruthy()
   })
@@ -133,7 +133,7 @@ describe('S14 inline step 1', () => {
   it('opens the full-screen wizard at step 2 once step 1 is answered', () => {
     renderForm()
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
 
     expect(screen.getByTestId('inquiry-wizard')).toBeTruthy()
     expect(screen.getByTestId('wizard-step-2')).toBeTruthy()
@@ -148,21 +148,22 @@ describe('moving between the steps', () => {
     fireEvent.click(screen.getByLabelText('One more anglers'))
     fireEvent.click(screen.getByLabelText('One more non-anglers'))
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
 
     fireEvent.click(screen.getByText('← Back'))
     expect(screen.getByTestId('wizard-progress').textContent).toBe('Step 1 of 3')
     // The dialog's copy of step 1 shows what was entered on the page.
     const dialog = screen.getByTestId('inquiry-wizard')
+    // days, anglers, non-anglers — the three ± counters of step 1, in order
     const outputs = [...dialog.querySelectorAll('output')].map(o => o.textContent)
-    expect(outputs).toEqual(['3', '1'])
+    expect(outputs).toEqual(['1', '3', '1'])
     expect(dialog.querySelector<HTMLSelectElement>('select')?.value).toBe(nextMonthValue())
   })
 
   it('will not leave step 2 until every question is answered', () => {
     renderForm()
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     fireEvent.click(screen.getByTestId('wizard-next'))
 
     expect(screen.getByTestId('wizard-step-2')).toBeTruthy()
@@ -175,13 +176,13 @@ describe('moving between the steps', () => {
     renderForm()
     expect(screen.queryByText(/I have seen the price — from NZ\$1,500/)).toBeNull()
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     expect(screen.getByText(/I have seen the price — from NZ\$1,500/)).toBeTruthy()
 
     cleanup()
     renderForm(CUSTOM_PAGE)
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     expect(screen.getByText('under €1,400')).toBeTruthy()
     expect(screen.getByText('over €3,200')).toBeTruthy()
   })
@@ -191,7 +192,7 @@ describe('the submit', () => {
   async function walkToSend(page: InquiryWizardPage = FIXED_PAGE) {
     renderForm(page)
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     completeStepTwo()
     fireEvent.click(screen.getByTestId('wizard-next'))
     completeStepThree()
@@ -233,7 +234,7 @@ describe('the submit', () => {
   it('sends a band instead of an acknowledgement on a custom page', async () => {
     renderForm(CUSTOM_PAGE)
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     choose(/I cast 15 m/)
     choose(/One big fish/)
     choose(/A few kilometres/)
@@ -261,7 +262,7 @@ describe('the submit', () => {
   it('offers no licence link when the page stores something that is not an http(s) URL', async () => {
     renderForm({ ...FIXED_PAGE, licenseUrl: 'javascript:alert(1)' })
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     completeStepTwo()
     fireEvent.click(screen.getByTestId('wizard-next'))
     completeStepThree()
@@ -275,7 +276,7 @@ describe('the submit', () => {
     fetchMock.mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: 'Invalid input' }) })
     renderForm()
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     completeStepTwo()
     fireEvent.click(screen.getByTestId('wizard-next'))
     completeStepThree()
@@ -297,7 +298,7 @@ describe('what the browser is allowed to remember', () => {
   it('wipes the stored answers on a successful submit — no e-mail or phone left behind', async () => {
     renderForm()
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     completeStepTwo()
     fireEvent.click(screen.getByTestId('wizard-next'))
     completeStepThree()
@@ -314,8 +315,9 @@ describe('what the browser is allowed to remember', () => {
     }))
     renderForm()
     // The bad types fall back to the defaults; the good one is kept.
+    // days, anglers, non-anglers — all three back at their defaults
     expect([...screen.getByTestId('inquiry-inline').querySelectorAll('output')].map(o => o.textContent))
-      .toEqual(['2', '0'])
+      .toEqual(['1', '2', '0'])
   })
 
   it('still works when sessionStorage throws on every access', () => {
@@ -325,7 +327,7 @@ describe('what the browser is allowed to remember', () => {
 
     renderForm()
     completeStepOne()
-    fireEvent.click(screen.getByText(/Next → step 2 of 3/))
+    fireEvent.click(screen.getByText(/Continue →/))
     expect(screen.getByTestId('wizard-step-2')).toBeTruthy()
   })
 })
