@@ -11,7 +11,7 @@
 import { unstable_cache } from 'next/cache'
 import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
-import { COUNTRIES } from '@/lib/countries'
+import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 import { availabilityWindow } from '@/lib/availability-window'
 import { effectivePrices, type PriceRow } from '@/lib/pricing/experience-price'
 import {
@@ -377,6 +377,74 @@ export async function getFeaturedExperiencePages(limit = 8): Promise<FeaturedExp
       return all.slice(0, limit)
     },
     ['featured-experience-pages', String(limit)],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
+  )()
+}
+
+// ─── Related experience pages (offer page, "More trips") ─────────────────────
+
+export type RelatedExperiencePages = {
+  /** How close the picks are to the page they sit under — the heading is worded from it. */
+  tier:  'region' | 'country' | 'group' | 'anywhere'
+  pages: FeaturedExperiencePage[]
+}
+
+const RELATED_SELECT =
+  'id, slug, experience_name, country, region, price_from, price_type, currency, hero_image_url, guide:guides!guide_id ( id, full_name )'
+
+/**
+ * Up to `limit` other active pages, as close as the catalogue allows: same region, else
+ * same country, else the same part of the world (`getRegionGroup`), else any. Each tier is
+ * tried only when the previous one is empty, so the result is never a mix the heading
+ * cannot describe. Cached like the featured list; a page edit revalidates the tag.
+ */
+export async function getRelatedExperiencePages({
+  pageId, country, region, limit = 3,
+}: {
+  pageId: string; country: string; region: string; limit?: number
+}): Promise<RelatedExperiencePages> {
+  return unstable_cache(
+    async () => {
+      const db = createPublicClient()
+
+      const groupCountries = (() => {
+        const group = getRegionGroup(country)
+        return group == null ? [] : COUNTRIES.filter(c => getRegionGroup(c) === group && c !== country)
+      })()
+
+      const tiers: { tier: RelatedExperiencePages['tier']; apply: (q: ReturnType<typeof base>) => ReturnType<typeof base> }[] = [
+        { tier: 'region',   apply: q => q.eq('country', country).eq('region', region) },
+        { tier: 'country',  apply: q => q.eq('country', country) },
+        { tier: 'group',    apply: q => q.in('country', groupCountries) },
+        { tier: 'anywhere', apply: q => q },
+      ]
+
+      function base() {
+        return db
+          .from('experience_pages')
+          .select(RELATED_SELECT)
+          .eq('status', 'active')
+          .neq('id', pageId)
+          .limit(limit)
+      }
+
+      for (const { tier, apply } of tiers) {
+        if (tier === 'region' && region === '') continue
+        if (tier === 'group' && groupCountries.length === 0) continue
+
+        const { data, error } = await apply(base())
+        if (error) {
+          console.error('[getRelatedExperiencePages]', tier, error.message)
+          continue
+        }
+        if (data != null && data.length > 0) {
+          return { tier, pages: data as unknown as FeaturedExperiencePage[] }
+        }
+      }
+
+      return { tier: 'anywhere' as const, pages: [] }
+    },
+    ['related-experience-pages', pageId, String(limit)],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES] },
   )()
 }

@@ -33,8 +33,9 @@ const h = vi.hoisted(() => {
 
 vi.mock('@/lib/env', () => ({ env: h.mockEnv }))
 vi.mock('@/lib/supabase/queries', () => ({
-  getExperienceRouting: h.getExperienceRouting,
-  getExperienceV2:      h.getExperienceV2,
+  getExperienceRouting:       h.getExperienceRouting,
+  getExperienceV2:            h.getExperienceV2,
+  getRelatedExperiencePages:  async () => [],
 }))
 vi.mock('@/lib/fx', () => ({ fetchIndicativeRates: async () => ({}) }))
 vi.mock('next/navigation', () => ({ permanentRedirect: h.permanentRedirect, notFound: h.notFound }))

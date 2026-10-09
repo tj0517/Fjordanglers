@@ -21,7 +21,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Clock, Lock, ShieldCheck, Star } from 'lucide-react'
 import { env } from '@/lib/env'
-import { getExperienceV2 } from '@/lib/supabase/queries'
+import { getExperienceV2, getRelatedExperiencePages } from '@/lib/supabase/queries'
 import { fetchIndicativeRates } from '@/lib/fx'
 import { NavWithUser } from '@/components/layout/nav-with-user'
 import { SiteFooter } from '@/components/layout/footer'
@@ -38,6 +38,7 @@ import OfferLogistics from '@/components/experience-v2/offer-logistics'
 import OfferBring from '@/components/experience-v2/offer-bring'
 import OfferFaq from '@/components/experience-v2/offer-faq'
 import OfferInquiry from '@/components/experience-v2/offer-inquiry'
+import OfferMoreTrips from '@/components/experience-v2/offer-more-trips'
 import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
 import { fromPrice } from '@/lib/pricing/experience-price'
 
@@ -75,7 +76,10 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
 
   // Display only, never stored, never charged (CLAUDE.md rule 6). A provider that fails
   // returns nothing usable and the "≈" line simply does not appear.
-  const rates = await fetchIndicativeRates(page.currency)
+  const [rates, related] = await Promise.all([
+    fetchIndicativeRates(page.currency),
+    getRelatedExperiencePages({ pageId: page.id, country: page.country, region: page.region }),
+  ])
 
   const primary = page.guides.find(g => g.isPrimary) ?? page.guides[0] ?? null
 
@@ -320,6 +324,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
           <OfferBring whatToBring={page.whatToBring} />
           <OfferFaq faq={page.faq} />
           <OfferInquiry />
+          <OfferMoreTrips related={related} country={page.country} region={page.region} />
         </div>
       </main>
 
