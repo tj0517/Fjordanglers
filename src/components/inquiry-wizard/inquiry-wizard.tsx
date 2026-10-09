@@ -81,6 +81,12 @@ interface WizardValue {
    * no date, say).
    */
   startFromWidget: (trip: WidgetTrip) => void
+  /**
+   * What the inline form's "Continue" does: validate step 1 — always step 1, whatever step
+   * the overlay was closed on — and open at step 2. `next()` would validate the remembered
+   * step instead and, after a closed overlay on step 2, silently refuse to open.
+   */
+  continueFromInline: () => void
   close:   () => void
   /** Validates the current step; advances, or shows what is missing. */
   next:    () => void
@@ -165,6 +171,14 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
     setIsOpen(true)
   }, [rules])
 
+  const continueFromInline = useCallback(() => {
+    setAttempted(a => ({ ...a, 1: true }))
+    const stepOneDone = Object.keys(validateStep(1, answersRef.current, rules)).length === 0
+    // Invalid: stay on step 1 so the inline form shows step-1 errors, not a stale step's.
+    setStep(stepOneDone ? 2 : 1)
+    if (stepOneDone) setIsOpen(true)
+  }, [rules])
+
   const submit = useCallback(async () => {
     if (sending.current) return
     setAttempted(a => ({ ...a, 3: true }))
@@ -236,7 +250,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
 
   const value: WizardValue = {
     page, answers, errors, step, isOpen, submitState, errorMessage,
-    set, openAt, startFromWidget, close, next, back, submit: () => void submit(),
+    set, openAt, startFromWidget, continueFromInline, close, next, back, submit: () => void submit(),
   }
 
   return (
@@ -252,7 +266,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
 
 /** Step 1 in the page's own flow, with the CTA that opens step 2 full-screen. */
 export function InquiryInline() {
-  const { page, answers, errors, set, next, submitState } = useInquiryWizard()
+  const { page, answers, errors, set, continueFromInline, submitState } = useInquiryWizard()
 
   if (submitState === 'done') {
     return (
@@ -280,7 +294,7 @@ export function InquiryInline() {
 
           <button
             type="button"
-            onClick={next}
+            onClick={continueFromInline}
             className="mt-2 w-full rounded-xl px-4 text-[17px] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_8px_20px_-6px_rgba(230,126,80,0.6)]"
             style={primaryButtonStyle}
             data-testid="inquiry-continue"

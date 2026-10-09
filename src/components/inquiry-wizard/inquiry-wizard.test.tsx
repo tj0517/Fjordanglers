@@ -167,6 +167,22 @@ describe('moving between the steps', () => {
     expect(dialog.querySelector<HTMLInputElement>('input[name="flex-month"]:checked')?.value).toBe(nextMonthValue())
   })
 
+  it('the inline Continue opens again after the overlay was closed on step 2', () => {
+    renderForm()
+    completeStepOne()
+    fireEvent.click(screen.getByText(/Continue →/))
+    expect(screen.getByTestId('wizard-progress').textContent).toBe('Step 2 of 3')
+
+    fireEvent.click(screen.getByLabelText('Close'))
+    expect(screen.queryByTestId('inquiry-wizard')).toBeNull()
+
+    // The remembered step is 2; Continue must still judge step 1 and open — not validate
+    // the unanswered step 2 and do nothing.
+    fireEvent.click(screen.getByText(/Continue →/))
+    expect(screen.getByTestId('inquiry-wizard')).not.toBeNull()
+    expect(screen.getByTestId('wizard-progress').textContent).toBe('Step 2 of 3')
+  })
+
   it('will not leave step 2 until every question is answered', () => {
     renderForm()
     completeStepOne()
