@@ -298,7 +298,7 @@ export default function OfferWidget({
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           <Stepper
             label="Anglers"
             value={anglers}
@@ -519,9 +519,9 @@ function Stepper({
   label: string; value: number; display: string; min: number; max: number; onChange: (n: number) => void
 }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-xl border py-1 pl-3 pr-1" style={fieldStyle}>
+    <div className="inline-flex items-center gap-1.5 rounded-xl border py-1 pl-2.5 pr-1" style={fieldStyle}>
       <span className={labelClass} style={mutedStyle}>{label}</span>
-      <span className="flex items-center gap-0.5">
+      <span className="flex items-center">
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
@@ -532,7 +532,7 @@ function Stepper({
         >
           −
         </button>
-        <b className="w-7 text-center text-[15px] tabular-nums" aria-live="polite">{display}</b>
+        <b className="w-6 text-center text-[15px] tabular-nums" aria-live="polite">{display}</b>
         <button
           type="button"
           onClick={() => onChange(Math.min(max, value + 1))}
