@@ -1,0 +1,8 @@
+BEGIN
+   slug    | page_guide | primary_guide |  role   | status | price_from_cents 
+-----------+------------+---------------+---------+--------+------------------
+ replay-is | 03         | 03            | primary | active |            45050
+ replay-nz | 04         | 04            | primary | active |            65000
+(2 rows)
+
+ROLLBACK

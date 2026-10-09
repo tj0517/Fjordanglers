@@ -1,0 +1,35 @@
+# trimmed: the recursion trace (~165 KB in full) is cut after the first lines of the error
+=== 1. guard removed ===
+psql:.fa-proofs/fa-1.51/loop-proof.sql:45: ERROR:  stack depth limit exceeded
+HINT:  Increase the configuration parameter "max_stack_depth" (currently 2048kB), after ensuring the platform's stack depth limit is adequate.
+CONTEXT:  PL/pgSQL function sync_guide_id_to_experience_guides() line 3 at IF
+[... recursion trace cut ...]
+=== 2. guard in place (migration as shipped) ===
+UPDATE 1
+ guide |  role   | status 
+-------+---------+--------
+ f1    | primary | paused
+ f2    | primary | active
+(2 rows)
+
+ primary_active_rows 
+---------------------
+                   1
+(1 row)
+
+ pages_guide_id 
+----------------
+ f2
+(1 row)
+
+=== leftovers after both rollbacks (must be 0) ===
+ leftover_pages 
+----------------
+              0
+(1 row)
+
+ leftover_guides 
+-----------------
+               0
+(1 row)
+
