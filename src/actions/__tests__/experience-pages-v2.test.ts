@@ -171,11 +171,12 @@ beforeAll(async () => {
   ], { defaultToNull: false })
   expect(pages.error).toBeNull()
 
-  const links = await svc.from('experience_guides').insert([
+  // Upsert: inserting the pages above with guide_id already created these rows (trg_sync_guide_id, FA-1.51).
+  const links = await svc.from('experience_guides').upsert([
     { experience_id: PAGE.guides,   guide_id: G1, role: 'primary' },
     { experience_id: PAGE.override, guide_id: G1, role: 'primary' },
     { experience_id: PAGE.auth,     guide_id: G1, role: 'primary' },
-  ])
+  ], { onConflict: 'experience_id,guide_id' })
   expect(links.error).toBeNull()
 
   const option = await svc.from('experience_page_options').insert({
@@ -224,13 +225,13 @@ describe('saveExperienceV2Guides', () => {
     const rows = await readGuides(PAGE.guides)
     const page = await readPage(PAGE.guides)
     show('after switching primary to G2 — experience_guides', rows)
-    show('after switching primary to G2 — experience_pages.guide_id (FA-1.51 not built: unchanged)', page.guide_id)
+    show('after switching primary to G2 — experience_pages.guide_id (synced by trg_sync_primary)', page.guide_id)
 
     const activePrimaries = rows.filter(r => r.role === 'primary' && r.status === 'active')
     expect(activePrimaries.map(r => r.guide_id)).toEqual([G2])
     expect(rows.find(r => r.guide_id === G1)).toMatchObject({ role: 'backup', status: 'active' })
-    // The sync to guide_id is FA-1.51's trigger; this action must not do it by hand.
-    expect(page.guide_id).toBe(G1)
+    // The sync to guide_id is trg_sync_primary (FA-1.51); this action must not do it by hand.
+    expect(page.guide_id).toBe(G2)
   })
 
   it('removes the primary and names a new one in the same save', async () => {

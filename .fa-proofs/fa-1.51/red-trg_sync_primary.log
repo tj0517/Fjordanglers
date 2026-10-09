@@ -1,0 +1,23 @@
+== trg_sync_primary DISABLED (experience_guides) ==
+trg_sync_primary enabled=D
+     ✓ (a) UPDATE guide_id: the new guide is primary/active, the old primary is paused 43ms
+     ✓ (a2) UPDATE guide_id to a guide already on the page as backup promotes that row 26ms
+     ✓ (a3) UPDATE guide_id to NULL pauses the primary and keeps the row 26ms
+     ✓ (a4) INSERT of a page with guide_id creates the primary/active row (decision D1) 11ms
+     × (b) INSERT of a primary/active row sets guide_id 27ms
+     × (b2) the v2 admin swap — demote the old primary, promote another — ends with guide_id on the new one 134ms
+     × (c) DELETE of the primary row sets guide_id to NULL 26ms
+     ✓ (d) UPDATE price_from: price_from_cents = price_from x 100, exact 15ms
+     ✓ (d2) INSERT without price_from_cents derives it; a writer that sets cents itself wins 48ms
+     ✓ (e) a new page with a guide and a price ends with one primary/active row and price_from_cents 76ms
+     ✓ UPDATE guide_id on a page with two guides ends with exactly one primary/active row and no error 36ms
+     ✓ deleting a page that has guides does not trip the sync on the vanishing row 25ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_primary — experience_guides -> experience_pages.guide_id > (b) INSERT of a primary/active row sets guide_id
+AssertionError: expected null to be '51a00000-0000-4000-8000-000000000001' // Object.is equality
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_primary — experience_guides -> experience_pages.guide_id > (b2) the v2 admin swap — demote the old primary, promote another — ends with guide_id on the new one
+AssertionError: expected '51a00000-0000-4000-8000-000000000001' to be '51a00000-0000-4000-8000-000000000002' // Object.is equality
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_primary — experience_guides -> experience_pages.guide_id > (c) DELETE of the primary row sets guide_id to NULL
+AssertionError: expected '51a00000-0000-4000-8000-000000000001' to be null
+ Test Files  1 failed (1)
+      Tests  3 failed | 9 passed (12)

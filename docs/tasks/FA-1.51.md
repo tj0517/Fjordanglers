@@ -2,13 +2,14 @@
 id: FA-1.51
 title: SYNC — stary `guide_id` i nowe `experience_guides` mówią to samo: triggery w obie strony, `price_from` ↔ centy; testy z red proofem
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-core
 branch: db/experience-guides-sync
+pr: 141
 depends_on: [FA-1.50]
 blocked_by_questions: []
 touches_db: true
@@ -66,3 +67,5 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip
 ```
 
 ## Notatki z realizacji
+- 2026-10-08 tj: D1 — INSERT w zakresie (stary admin ustawia guide_id tylko przy tworzeniu strony); D2 — trzy triggery, trg_sync_guide_id AFTER (BEFORE INSERT łamie FK experience_guides.experience_id), bez DEFERRABLE FK.
+- 2026-10-08 tj: przyjęte (PR #141). Udowodnione: (a)–(e) zielone i czerwone per trigger, red proof pętli (stack depth bez guarda), triggerdef + COMMENT, createExperiencePage bez zmiany kodu, suite 998/998, CI zielone. Migracja 20261008010000 zastosowana na prod przed merge'em (3 triggery enabled, 0 stron z rozjazdem guide_id).

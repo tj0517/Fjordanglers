@@ -1,0 +1,40 @@
+
+── A. getExperienceV2('seed-backcountry-day-nz') — fixed ──
+   prices: [{"days":1,"anglers":1,"guidePriceCents":90000,"currency":"NZD"},{"days":1,"anglers":2,"guidePriceCents":125000,"currency":"NZD"},{"days":2,"anglers":2,"guidePriceCents":240000,"currency":"NZD"}]
+  ✓ offer mode — offerMode=fixed
+  ✓ fee_pct read from the page — feePct=0.2
+  ✓ three current price rows — 3 rows
+  ✓ the expired 2024 row is gone — guide prices = 90000, 125000, 240000
+  ✓ one primary guide, with the rating fields the H1 line needs — Hana Seed ★4.9 (37)
+  ✓ chip data present — season=7 months, skill=3, maxAnglers=2
+  ✓ gallery — hero=/hero.jpg, +5
+
+── B. getExperienceV2('seed-salmon-week-iceland') — custom 
+  ✓ offer mode — offerMode=custom
+  ✓ no price table — 0 rows
+  ✓ the range is there, exactly as stored — 45050–320000 EUR
+  ✓ its own SLA, not a constant — 48 h
+
+── C. guide_price_override_cents — base row only, cap enforced 
+  ✓ writing 110% of the base row is accepted — written
+  ✓ the base row now carries the override — 137500
+  ✓ the 2-day row is untouched — 240000
+  ✓ the 1-angler row is untouched — 90000
+  ✓ the override never leaves the data layer — ExperienceV2 keys: id, slug, experienceName, introText, country, region, heroImageUrl, galleryImageUrls, includes, excludes, speciesNames, technique, meetingPointName, meetingPointDescription, walkingKmMin, walkingKmMax, license, tipGuidanceText, suitedFor, notSuitedFor, expectationsText, daySchedule, weatherPolicyText, offerEtaText, seasonMonths, peakMonths, skillLevel, minDays, maxDays, maxAnglersPerGuide, responseSlaHours, offerMode, feePct, currency, priceFromCents, priceToCents, locationLat, locationLng, nearestAirport, suggestedLodging, whatToBring, faq, metaTitle, metaDescription, reviews, guides, prices, options
+  ✓ RED PROOF — 145 000 (116% of 125 000) is rejected — guide_price_override_cents 145000 exceeds 115% of the base price 125000 (limit 143750)
+
+── D. paused / show_on_page = false / backup are filtered in code 
+   rows in the table: [{"guide_id":"9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04","role":"primary","status":"active","show_on_page":true},{"guide_id":"9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03","role":"backup","status":"active","show_on_page":false}]
+  ✓ a show_on_page = false backup row is not on the page — 1 guide(s): Hana Seed
+  ✓ with show_on_page = true the same row appears, after the primary by sort_order — Hana Seed (primary) → Jon Seed
+  ✓ a paused row disappears again — 1 guide(s)
+
+── E. the widget numbers, from the seeded rows ────────────
+  ✓ 1 d × 1 angler(s) — total 108000 = guide 90000 + deposit 18000 NZD
+  ✓ 1 d × 2 angler(s) — total 150000 = guide 125000 + deposit 25000 NZD
+  ✓ 2 d × 2 angler(s) — total 288000 = guide 240000 + deposit 48000 NZD
+  ✓ 1 d × 3 anglers — no row covers the group, so no number — on request (no-anglers-row)
+  ✓ the "from" price is the lowest total — 108000 NZD
+  ✓ the custom page has no calculator answer at all — no-prices
+
+ALL CHECKS PASSED
