@@ -98,7 +98,7 @@ export default function OfferLogistics({
   if (!hasMap && !hasFacts && !hasSeason) return null
 
   return (
-    <OfferSection section="S11" title="Where it is, and when" accordion={{ defaultOpen: true }}>
+    <OfferSection section="S11" eyebrow="Getting there" title="Where it is, and when" accordion={{ defaultOpen: true }}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[3fr_2fr]">
         {hasMap && (
           <div data-testid="offer-map">

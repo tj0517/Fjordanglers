@@ -17,15 +17,20 @@ const sections = (container: HTMLElement) =>
   [...container.querySelectorAll('[data-section]')].map(el => el.getAttribute('data-section'))
 
 describe('OfferBody — order and content', () => {
-  it('renders S3–S9 in the wireframe order for a fixed page', () => {
+  it('renders S3–S9 in reading order for a fixed page: facts, guide, day, scope, money', () => {
     const { container } = render(<OfferBody page={fixedPage()} />)
-    expect(sections(container)).toEqual(['S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9'])
+    expect(sections(container)).toEqual(['S3', 'S7', 'S6', 'S4', 'S5', 'S8', 'S9'])
+  })
+
+  it('slots the story right after S3', () => {
+    const { container } = render(<OfferBody page={fixedPage()} story={<section data-section="story" />} />)
+    expect(sections(container).slice(0, 3)).toEqual(['S3', 'story', 'S7'])
   })
 
   it('custom: S6 shows the archetypes and S9 the stored range, with no calculator table', () => {
     const { container } = render(<OfferBody page={customPage()} />)
 
-    expect(sections(container)).toEqual(['S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9'])
+    expect(sections(container)).toEqual(['S3', 'S7', 'S6', 'S4', 'S5', 'S8', 'S9'])
 
     const s6 = container.querySelector('[data-section="S6"]')!
     expect(s6.querySelectorAll('[role="tab"]')).toHaveLength(2)
@@ -64,7 +69,7 @@ describe('OfferBody — empty field means no section', () => {
 
     expect(container.querySelector('[data-section="S5"]')).toBeNull()
     expect(container.querySelector('[data-section="S6"]')).toBeNull()
-    expect(sections(container)).toEqual(['S3', 'S4', 'S7', 'S8', 'S9'])
+    expect(sections(container)).toEqual(['S3', 'S7', 'S4', 'S8', 'S9'])
     // no orphan headings either
     expect(container.textContent).not.toContain('The day')
     expect(container.textContent).not.toContain("Who it's for")

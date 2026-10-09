@@ -16,7 +16,7 @@
 
 import { useState } from 'react'
 import OfferSection from './offer-section'
-import { Box, mutedStyle } from './offer-box'
+import { Box, cardShadow, mutedStyle } from './offer-box'
 import { optionPriceText, durationText } from './option-price'
 import type { DayStep, ItineraryDay } from '@/lib/experience-v2-content'
 
@@ -53,7 +53,7 @@ export default function OfferDay({ offerMode, daySchedule, archetypes, currency 
   const selected = archetypes.find(a => a.id === selectedId) ?? archetypes[0] ?? null
 
   return (
-    <OfferSection section="S6" title="The day" accordion={{ defaultOpen: true }}>
+    <OfferSection section="S6" eyebrow="On the water" title="The day" accordion={{ defaultOpen: true }}>
       {offerMode === 'custom' ? (
         <div data-testid="archetypes">
           <div role="tablist" aria-label="Trip styles" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -69,8 +69,8 @@ export default function OfferDay({ offerMode, daySchedule, archetypes, currency 
                   aria-selected={active}
                   data-archetype={a.id}
                   onClick={() => setSelectedId(a.id)}
-                  className="rounded-xl border-2 bg-white p-3 text-left"
-                  style={{ borderColor: active ? 'var(--fa-navy)' : 'rgba(10,46,77,0.16)', minHeight: 44 }}
+                  className="rounded-2xl bg-white p-4 text-left transition-shadow"
+                  style={{ boxShadow: active ? '0 0 0 2px var(--fa-navy)' : cardShadow, minHeight: 44 }}
                 >
                   <b className="block text-[15px]">{a.label}</b>
                   {length != null && <span className="block text-[13px]" style={mutedStyle}>{length}</span>}

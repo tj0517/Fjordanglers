@@ -18,6 +18,7 @@ export const guide = (over: Partial<ExperienceV2['guides'][number]> = {}): Exper
 
 export const fixedPage = (over: Partial<ExperienceV2> = {}): ExperienceV2 => ({
   id: 'p1', slug: 'seed-nz', experienceName: 'Seed Backcountry Day', introText: null,
+  storyText: null, contentBlocks: [], speciesDetails: [], catchesText: null, environment: [],
   country: 'New Zealand', region: 'Otago', heroImageUrl: null, galleryImageUrls: [],
   includes: ['Guide service', 'Lunch on the river'], excludes: ['Flights and lodging'],
   speciesNames: ['Brown trout'], technique: ['Sight-fishing'],

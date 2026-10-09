@@ -14,7 +14,7 @@ export default function OfferBring({ whatToBring }: OfferBringProps) {
   if (whatToBring.length === 0) return null
 
   return (
-    <OfferSection section="S12" title="What to bring" accordion={{ defaultOpen: false }}>
+    <OfferSection section="S12" eyebrow="Packing" title="What to bring" accordion={{ defaultOpen: false }}>
       <Box>
         <BulletList items={whatToBring} />
       </Box>

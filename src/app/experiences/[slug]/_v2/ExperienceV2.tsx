@@ -7,28 +7,39 @@
  * (CLAUDE.md rule 3), and the guide's price override is folded into the price rows
  * server-side, so it never reaches the browser.
  *
+ * The frame is the site's own: `NavWithUser` on top, `SiteFooter` below, and the same
+ * `ExperienceGallery` v1 uses (bento + lightbox). The title sits above the gallery, the way
+ * the reference pages do, so the sticky offer card starts below the photos with air around
+ * it instead of touching them.
+ *
  * S3–S9 are `OfferBody` (FA-1.54); S10–S14 and the three-step inquiry form are FA-1.55. The
  * whole tree sits inside `InquiryWizardProvider`, so every CTA on the page — the hero, the
  * sticky widget, the mobile bar — opens the one form, with the one set of answers.
  */
 
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { ArrowLeft, Clock, Lock, ShieldCheck, Star } from 'lucide-react'
 import { env } from '@/lib/env'
-import { getExperienceV2 } from '@/lib/supabase/queries'
+import { getExperienceV2, getRelatedExperiencePages } from '@/lib/supabase/queries'
 import { fetchIndicativeRates } from '@/lib/fx'
+import { NavWithUser } from '@/components/layout/nav-with-user'
+import { SiteFooter } from '@/components/layout/footer'
+import { ExperienceGallery } from '@/components/trips/experience-gallery'
 import { CurrencyProvider } from '@/components/experience-v2/currency-context'
-import OfferTopBar from '@/components/experience-v2/offer-top-bar'
-import OfferGallery from '@/components/experience-v2/offer-gallery'
 import OfferChips from '@/components/experience-v2/offer-chips'
 import OfferPriceLead from '@/components/experience-v2/offer-price-lead'
 import OfferWidget, { type OfferWidgetProps } from '@/components/experience-v2/offer-widget'
 import OfferMobileBar from '@/components/experience-v2/offer-mobile-bar'
+import OfferHeroCta from '@/components/experience-v2/offer-hero-cta'
 import OfferBody from '@/components/experience-v2/offer-body'
+import OfferStory from '@/components/experience-v2/offer-story'
 import OfferReviews from '@/components/experience-v2/offer-reviews'
 import OfferLogistics from '@/components/experience-v2/offer-logistics'
 import OfferBring from '@/components/experience-v2/offer-bring'
 import OfferFaq from '@/components/experience-v2/offer-faq'
 import OfferInquiry from '@/components/experience-v2/offer-inquiry'
+import OfferMoreTrips from '@/components/experience-v2/offer-more-trips'
 import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
 import { fromPrice } from '@/lib/pricing/experience-price'
 
@@ -66,13 +77,20 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
 
   // Display only, never stored, never charged (CLAUDE.md rule 6). A provider that fails
   // returns nothing usable and the "≈" line simply does not appear.
-  const rates = await fetchIndicativeRates(page.currency)
+  const [rates, related] = await Promise.all([
+    fetchIndicativeRates(page.currency),
+    getRelatedExperiencePages({ pageId: page.id, country: page.country, region: page.region }),
+  ])
 
   const primary = page.guides.find(g => g.isPrimary) ?? page.guides[0] ?? null
 
   const whatsappUrl = `https://wa.me/${env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(
     `Hi, I am looking at ${page.experienceName}. Dates: ___ Anglers: ___`,
   )}`
+
+  const images = [page.heroImageUrl, ...page.galleryImageUrls]
+    .filter((url): url is string => url != null && url !== '')
+    .map((url, i) => ({ id: String(i), url, is_cover: i === 0 }))
 
   // What the form needs to know about the page it is on. `fromTotalCents` is the same number
   // the widget prints as "from …" (FA fee included), so the budget checkbox confirms the price
@@ -106,6 +124,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
     priceToCents:       page.priceToCents,
     responseSlaHours:   page.responseSlaHours,
     inquiryHref:        INQUIRY_ANCHOR,
+    whatsappUrl,
     guide: primary != null
       ? {
           fullName:          primary.fullName,
@@ -119,45 +138,64 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
   return (
     <CurrencyProvider baseCurrency={page.currency} rates={rates}>
      <InquiryWizardProvider page={wizardPage}>
-      <OfferTopBar whatsappUrl={whatsappUrl} />
+      <NavWithUser />
 
-      <main style={{ background: 'var(--fa-white)', color: 'var(--fa-navy)' }} className="pb-24 sm:pb-10">
-        <div className="mx-auto max-w-[1200px] sm:px-8">
-          {/* ── S1 gallery ── */}
-          <nav aria-label="Breadcrumb" className="hidden px-4 pt-3 text-xs sm:block sm:px-0" style={{ color: 'rgba(10,46,77,0.6)' }}>
-            {page.country} › {page.region} › {page.experienceName}
-          </nav>
-          <div className="sm:mt-2.5">
-            <OfferGallery heroUrl={page.heroImageUrl} galleryUrls={page.galleryImageUrls} alt={page.experienceName} />
+      {/* The site's warm sand — the same ground v1 and the home page stand on. */}
+      <main style={{ background: '#F3EDE4', color: 'var(--fa-navy)' }} className="pb-24 md:pb-16">
+        {/* Mobile: the photos run full-bleed under the fixed nav, as on v1. */}
+        {images.length > 0 && (
+          <div className="relative pt-[72px] md:hidden">
+            <ExperienceGallery images={images} title={page.experienceName} topMobile mobileHeight="clamp(240px, 56vw, 380px)" />
+            <Link
+              href="/trips"
+              className="absolute left-4 top-[84px] z-10 inline-flex items-center gap-1.5 rounded-full py-1.5 pl-2.5 pr-3 text-[13px] font-semibold text-white"
+              style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)' }}
+            >
+              <ArrowLeft aria-hidden size={14} strokeWidth={2.25} />
+              Trips
+            </Link>
           </div>
+        )}
 
-          {/* ── two columns: the page on the left, the widget sticky on the right.
-                 The flex container ends right before #recenzje, which is exactly how far
-                 the sticky card is meant to travel. ── */}
-          <div className="flex items-start gap-10 px-4 sm:px-0">
-            <div className="min-w-0 flex-1">
-              <h1 className="f-display mt-5 text-3xl font-bold leading-[1.15] sm:text-[34px]">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-8 md:pt-[72px]">
+          {/* ── S1 title block — above the gallery on desktop ── */}
+          <div className="mt-6 md:mt-10">
+            <nav aria-label="Breadcrumb" className="mb-5 hidden items-center gap-3 text-[13px] md:flex" style={{ color: 'rgba(10,46,77,0.6)' }}>
+              <Link
+                href="/trips"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white py-1.5 pl-2.5 pr-3.5 font-semibold transition-shadow hover:shadow-md"
+                style={{ color: 'var(--fa-navy)', boxShadow: '0 1px 2px rgba(10,46,77,0.08)' }}
+              >
+                <ArrowLeft aria-hidden size={14} strokeWidth={2.25} />
+                All trips
+              </Link>
+              <span>{page.country} › {page.region}</span>
+            </nav>
+
+            <div className="anim-1 relative">
+              <h1 className="f-display max-w-[20ch] text-[32px] font-bold leading-[1.06] tracking-[-0.015em] md:text-[48px]">
                 {page.experienceName}
               </h1>
 
               {page.introText != null && (
-                <p className="mt-2.5 text-base sm:text-[17px]" style={{ color: 'rgba(10,46,77,0.7)' }}>
+                <p className="mt-3 max-w-[62ch] text-[17px] leading-relaxed md:mt-4 md:text-lg" style={{ color: 'rgba(10,46,77,0.7)' }}>
                   {page.introText}
                 </p>
               )}
 
               {primary?.googleRating != null && (
-                <p className="mt-3 text-sm" data-testid="offer-rating">
-                  ★ {primary.googleRating.toFixed(1)}
-                  {primary.googleReviewCount != null && ` · ${primary.googleReviewCount} reviews`}
+                <p className="mt-4 flex items-center gap-1.5 text-sm" data-testid="offer-rating">
+                  <Star aria-hidden size={15} fill="currentColor" strokeWidth={0} />
+                  <b>{primary.googleRating.toFixed(1)}</b>
+                  {primary.googleReviewCount != null && <span style={{ color: 'rgba(10,46,77,0.7)' }}>· {primary.googleReviewCount} reviews</span>}
                   {primary.googleProfileUrl != null && (
                     <>
-                      {' · '}
+                      <span style={{ color: 'rgba(10,46,77,0.7)' }}>·</span>
                       <a
                         href={primary.googleProfileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline"
+                        className="underline decoration-[rgba(10,46,77,0.3)] underline-offset-4 hover:decoration-current"
                       >
                         see them on Google
                       </a>
@@ -165,11 +203,26 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                   )}
                 </p>
               )}
+            </div>
+          </div>
 
+          {/* ── S1 gallery — desktop bento with lightbox; its own bottom margin is the
+                 air between the photos and the offer card. ── */}
+          {images.length > 0 && (
+            <div className="mt-7 hidden md:block">
+              <ExperienceGallery images={images} title={page.experienceName} />
+            </div>
+          )}
+
+          {/* ── two columns: the page on the left, the widget sticky on the right.
+                 The flex container ends right before #recenzje, which is exactly how far
+                 the sticky card is meant to travel. ── */}
+          <div className="flex items-start gap-12">
+            <div className="min-w-0 flex-1">
               {/* Mobile keeps the wireframe's order: the price sits above the chips, and the
                   full calculator is further down. Desktop shows the same numbers in the
                   sticky card instead. */}
-              <div className="mt-3 sm:hidden">
+              <div className="mt-5 md:hidden">
                 <OfferPriceLead
                   offerMode={page.offerMode}
                   prices={page.prices}
@@ -181,7 +234,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 />
               </div>
 
-              <div className="mt-4">
+              <div className="anim-2 mt-5 md:mt-0">
                 <OfferChips
                   region={page.region}
                   minDays={page.minDays}
@@ -193,70 +246,95 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                 />
               </div>
 
-              {/* The three lines that make sending an inquiry cost nothing. */}
-              <ul
-                className="mt-4 flex flex-col gap-1.5 border-y py-3 text-sm sm:flex-row sm:gap-6"
-                style={{ borderColor: 'rgba(10,46,77,0.14)' }}
-                data-testid="offer-assurances"
-              >
-                <li>✓ Inquiry is free and non-binding</li>
-                <li>✓ Deposit only after you accept the offer</li>
-                <li>✓ We answer within {page.responseSlaHours} h</li>
-              </ul>
-
               {/* Mobile: the CTA is above the fold on its own, so the first screen ends on
                   an action rather than on a form the visitor has to scroll to find. The
                   bottom bar repeats it once the hero is scrolled past. */}
-              <a
-                href={INQUIRY_ANCHOR}
-                className="mt-4 block w-full rounded-lg px-4 py-3 text-center text-base font-semibold sm:hidden"
-                style={{ background: 'var(--fa-navy)', color: '#fff' }}
-              >
+              <OfferHeroCta href={INQUIRY_ANCHOR}>
                 {page.offerMode === 'custom' ? 'Plan your trip' : 'Check availability'}
-              </a>
+              </OfferHeroCta>
+
+              {/* The three lines that make sending an inquiry cost nothing. */}
+              <ul
+                className="anim-3 mt-3 grid grid-cols-1 gap-0.5 rounded-2xl p-1.5 text-sm md:mt-6 md:grid-cols-3 md:gap-1 md:p-2"
+                style={{ background: 'rgba(10,46,77,0.05)' }}
+                data-testid="offer-assurances"
+              >
+                {([
+                  [ShieldCheck, 'Inquiry is free and non-binding'],
+                  [Lock,        'Deposit only after you accept the offer'],
+                  [Clock,       `We answer within ${page.responseSlaHours} h`],
+                ] as const).map(([Icon, text]) => (
+                  <li key={text} className="flex items-center gap-3 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2.5">
+                    <span
+                      aria-hidden
+                      className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-white md:h-8 md:w-8"
+                      style={{ boxShadow: '0 1px 2px rgba(10,46,77,0.08)' }}
+                    >
+                      <Icon size={15} strokeWidth={2} />
+                    </span>
+                    <span className="font-medium leading-snug">{text}</span>
+                  </li>
+                ))}
+              </ul>
 
               {/* The full calculator, for the visitor who wants the three numbers. */}
-              <div className="mt-6 sm:hidden">
+              <div className="mt-6 md:hidden">
                 <OfferWidget {...widget} />
               </div>
 
-              {/* ── S3–S9 (FA-1.54). S8 carries #jak-dziala and S9 #cena, the anchors the
-                     top bar and the CTA already point at. ── */}
-              <OfferBody page={page} />
+              {/* ── S3–S9 (FA-1.54) with the written story slotted in after "At a glance".
+                     S8 carries #jak-dziala and S9 #cena, the anchors the CTA points at. ── */}
+              <OfferBody
+                page={page}
+                story={
+                  <OfferStory
+                    storyText={page.storyText}
+                    contentBlocks={page.contentBlocks}
+                    speciesDetails={page.speciesDetails}
+                    catchesText={page.catchesText}
+                    environment={page.environment}
+                  />
+                }
+              />
             </div>
 
-            <aside className="hidden w-[360px] flex-none sm:block" style={{ position: 'sticky', top: 88 }}>
+            {/* Follows the auto-hiding nav: under it while shown, near the top once it is gone. */}
+            <aside
+              className="anim-2 hidden w-[360px] flex-none md:block"
+              style={{ position: 'sticky', top: 'var(--nav-offset, 92px)', transition: 'top 0.3s ease' }}
+            >
               <OfferWidget {...widget} />
             </aside>
           </div>
 
           {/* ── S10–S14 (FA-1.55). #recenzje also ends the sticky column above. ── */}
-          <div className="px-4 sm:px-0">
-            <OfferReviews
-              reviews={page.reviews}
-              googleRating={primary?.googleRating ?? null}
-              googleReviewCount={primary?.googleReviewCount ?? null}
-              googleProfileUrl={primary?.googleProfileUrl ?? null}
-            />
-            <OfferLogistics
-              locationLat={page.locationLat}
-              locationLng={page.locationLng}
-              nearestAirport={page.nearestAirport}
-              suggestedLodging={page.suggestedLodging}
-              seasonMonths={page.seasonMonths}
-              peakMonths={page.peakMonths}
-              region={page.region}
-            />
-            <OfferBring whatToBring={page.whatToBring} />
-            <OfferFaq faq={page.faq} />
-            <OfferInquiry />
-          </div>
+          <OfferReviews
+            reviews={page.reviews}
+            googleRating={primary?.googleRating ?? null}
+            googleReviewCount={primary?.googleReviewCount ?? null}
+            googleProfileUrl={primary?.googleProfileUrl ?? null}
+          />
+          <OfferLogistics
+            locationLat={page.locationLat}
+            locationLng={page.locationLng}
+            nearestAirport={page.nearestAirport}
+            suggestedLodging={page.suggestedLodging}
+            seasonMonths={page.seasonMonths}
+            peakMonths={page.peakMonths}
+            region={page.region}
+          />
+          <OfferBring whatToBring={page.whatToBring} />
+          <OfferFaq faq={page.faq} />
+          <OfferInquiry />
+          <OfferMoreTrips related={related} country={page.country} region={page.region} />
         </div>
       </main>
 
       <OfferMobileBar>
         <OfferWidget {...widget} compact />
       </OfferMobileBar>
+
+      <SiteFooter />
      </InquiryWizardProvider>
     </CurrencyProvider>
   )

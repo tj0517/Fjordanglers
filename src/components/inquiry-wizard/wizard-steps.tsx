@@ -25,8 +25,8 @@ import {
 } from '@/lib/inquiries/brief'
 import { formatCents } from '@/lib/format-price'
 import { ANGLER_COUNTRIES } from '@/lib/angler-countries'
-import { nextMonths, todayIso, type WizardAnswers, type WizardErrors } from './wizard-state'
-import { BORDER, ChoiceRow, Counter, MUTED, NAVY, PillRow, Question, SELECTED, TextField } from './wizard-fields'
+import { nextMonths, type WizardAnswers, type WizardErrors } from './wizard-state'
+import { BORDER, ChoiceRow, Counter, DateRangeCalendar, MonthGrid, MUTED, NAVY, PillRow, Question, SELECTED, SegmentedControl, TextField } from './wizard-fields'
 
 /** Everything the questions need to know about the page they are asked on. */
 export interface WizardPageInfo {
@@ -49,14 +49,11 @@ export type StepProps = {
   set:     <K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) => void
 }
 
-/** The days the page itself allows, never more than a brief can hold. */
-function dayOptions(page: WizardPageInfo): { value: string; label: string }[] {
-  const max = Math.min(page.maxDays ?? page.minDays + 3, MAX_BRIEF_DAYS)
-  const days: { value: string; label: string }[] = []
-  for (let d = page.minDays; d <= max && days.length < 6; d++) {
-    days.push({ value: String(d), label: String(d) })
-  }
-  return days
+/** "Usually 1–3 days" — what the page itself is built for; anything longer is on request. */
+function usualDays(page: WizardPageInfo): string | undefined {
+  if (page.maxDays == null) return undefined
+  const range = page.minDays === page.maxDays ? `${page.maxDays}` : `${page.minDays}–${page.maxDays}`
+  return `Usually ${range} days — longer trips are priced on request.`
 }
 
 /** Whether step 2 has a price to anchor the budget question to. */
@@ -70,7 +67,6 @@ export function asksBudget(page: WizardPageInfo): boolean {
 
 export function StepTrip({ answers, errors, page, set }: StepProps) {
   const months = nextMonths(12)
-  const days   = dayOptions(page)
   // Companions can outnumber the anglers (a family), but not without limit.
   const maxAnglers = Math.max(page.maxAnglersPerGuide * 3, 6)
 
@@ -81,55 +77,43 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
         hint="Flexible dates let us pick the days with the best water."
         error={errors.dateFrom ?? errors.flexMonth}
       >
-        <div className="flex flex-col gap-2">
-          <ChoiceRow
-            name="dates-mode"
-            checked={answers.datesMode === 'exact'}
-            onChange={() => set('datesMode', 'exact')}
-            title="I have exact dates"
-          />
-          {answers.datesMode === 'exact' && (
-            <div className="pl-1">
-              <TextField
-                label="First day of fishing"
-                type="date"
-                min={todayIso()}
-                value={answers.dateFrom}
-                onChange={value => set('dateFrom', value)}
+        {/* The switch first, then one field slot of a fixed height: switching modes swaps
+            the field, it never moves the questions below. */}
+        <SegmentedControl
+          name="dates-mode"
+          options={[{ value: 'exact', label: 'I have exact dates' }, { value: 'flexible', label: 'Flexible — any month' }]}
+          value={answers.datesMode}
+          onChange={value => set('datesMode', value === 'exact' ? 'exact' : 'flexible')}
+        />
+        <div className="mt-3 rounded-xl border p-3 sm:p-4" style={{ borderColor: BORDER, background: '#fff', minHeight: 300 }}>
+          {answers.datesMode === 'exact' ? (
+            <div className="mx-auto max-w-[360px]">
+              <DateRangeCalendar
+                dateFrom={answers.dateFrom}
+                days={answers.days}
+                minDays={page.minDays}
+                maxDays={MAX_BRIEF_DAYS}
+                onChange={(dateFrom, days) => { set('dateFrom', dateFrom); set('days', days) }}
               />
             </div>
-          )}
-          <ChoiceRow
-            name="dates-mode"
-            checked={answers.datesMode === 'flexible'}
-            onChange={() => set('datesMode', 'flexible')}
-            title="Flexible — I will pick a month"
-          />
-          {answers.datesMode === 'flexible' && (
-            <label className="flex flex-col gap-1.5 pl-1 text-[14px]">
-              Month
-              <select
-                value={answers.flexMonth}
-                onChange={e => set('flexMonth', e.target.value)}
-                className="w-full rounded-lg border px-3 text-[16px]"
-                style={{ minHeight: 48, borderColor: BORDER, background: '#fff' }}
-              >
-                <option value="">Pick a month…</option>
-                {months.map(month => (
-                  <option key={month.value} value={month.value}>{month.label}</option>
-                ))}
-              </select>
-            </label>
+          ) : (
+            <MonthGrid
+              name="flex-month"
+              options={months}
+              value={answers.flexMonth}
+              onChange={value => set('flexMonth', value)}
+            />
           )}
         </div>
       </Question>
 
-      <Question label="How many days of fishing?" error={errors.days}>
-        <PillRow
-          name="days"
-          options={days}
-          value={String(answers.days)}
-          onChange={value => set('days', Number(value))}
+      <Question label="How many days of fishing?" hint={usualDays(page)} error={errors.days}>
+        <Counter
+          label="Days"
+          value={answers.days}
+          min={page.minDays}
+          max={MAX_BRIEF_DAYS}
+          onChange={value => set('days', value)}
         />
       </Question>
 
@@ -138,7 +122,7 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
         hint={`More than ${page.maxAnglersPerGuide} anglers — we add a second guide.`}
         error={errors.anglers}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-3">
           <Counter
             label="Anglers"
             value={answers.anglers}

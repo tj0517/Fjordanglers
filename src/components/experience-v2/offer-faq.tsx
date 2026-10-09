@@ -52,7 +52,7 @@ export default function OfferFaq({ faq }: OfferFaqProps) {
   ]
 
   return (
-    <OfferSection section="S13" anchor="faq" title="Questions anglers ask" accordion={{ defaultOpen: true }}>
+    <OfferSection section="S13" anchor="faq" eyebrow="Good to know" title="Questions anglers ask" accordion={{ defaultOpen: true }}>
       <div data-testid="offer-faq" className="border-t" style={{ borderColor: 'rgba(10,46,77,0.14)' }}>
         {entries.map((entry, i) => <Entry key={`${i}-${entry.question}`} {...entry} />)}
       </div>

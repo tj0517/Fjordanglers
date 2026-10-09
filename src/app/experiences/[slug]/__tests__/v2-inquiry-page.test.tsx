@@ -33,12 +33,16 @@ const h = vi.hoisted(() => {
 
 vi.mock('@/lib/env', () => ({ env: h.mockEnv }))
 vi.mock('@/lib/supabase/queries', () => ({
-  getExperienceRouting: h.getExperienceRouting,
-  getExperienceV2:      h.getExperienceV2,
+  getExperienceRouting:       h.getExperienceRouting,
+  getExperienceV2:            h.getExperienceV2,
+  getRelatedExperiencePages:  async () => [],
 }))
 vi.mock('@/lib/fx', () => ({ fetchIndicativeRates: async () => ({}) }))
 vi.mock('next/navigation', () => ({ permanentRedirect: h.permanentRedirect, notFound: h.notFound }))
 vi.mock('../_v1/ExperienceV1', () => ({ default: () => null, generateMetadata: vi.fn() }))
+// The site frame reads the session and the destination list; neither is what this test is about.
+vi.mock('@/components/layout/nav-with-user', () => ({ NavWithUser: () => null }))
+vi.mock('@/components/layout/footer', () => ({ SiteFooter: () => null }))
 
 import ExperiencePublicPage from '../page'
 import ExperienceV2 from '../_v2/ExperienceV2'

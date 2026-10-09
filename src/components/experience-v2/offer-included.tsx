@@ -38,7 +38,7 @@ export default function OfferIncluded({
   if (includes.length === 0 && !hasNotIncluded) return null
 
   return (
-    <OfferSection section="S4" title="Included / Not included" accordion={{ defaultOpen: false }}>
+    <OfferSection section="S4" eyebrow="What's covered" title="Included / Not included" accordion={{ defaultOpen: false }}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {includes.length > 0 && (
           <Box>

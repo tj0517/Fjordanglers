@@ -45,7 +45,7 @@ import {
   type WizardStep,
 } from './wizard-state'
 import { StepAngler, StepContact, StepTrip, asksBudget, type WizardPageInfo } from './wizard-steps'
-import { MUTED, Progress, primaryButtonStyle } from './wizard-fields'
+import { MUTED, Progress, primaryButtonStyle, rangeLabel } from './wizard-fields'
 
 const TOTAL_STEPS = 3
 
@@ -81,6 +81,12 @@ interface WizardValue {
    * no date, say).
    */
   startFromWidget: (trip: WidgetTrip) => void
+  /**
+   * What the inline form's "Continue" does: validate step 1 — always step 1, whatever step
+   * the overlay was closed on — and open at step 2. `next()` would validate the remembered
+   * step instead and, after a closed overlay on step 2, silently refuse to open.
+   */
+  continueFromInline: () => void
   close:   () => void
   /** Validates the current step; advances, or shows what is missing. */
   next:    () => void
@@ -165,6 +171,14 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
     setIsOpen(true)
   }, [rules])
 
+  const continueFromInline = useCallback(() => {
+    setAttempted(a => ({ ...a, 1: true }))
+    const stepOneDone = Object.keys(validateStep(1, answersRef.current, rules)).length === 0
+    // Invalid: stay on step 1 so the inline form shows step-1 errors, not a stale step's.
+    setStep(stepOneDone ? 2 : 1)
+    if (stepOneDone) setIsOpen(true)
+  }, [rules])
+
   const submit = useCallback(async () => {
     if (sending.current) return
     setAttempted(a => ({ ...a, 3: true }))
@@ -236,7 +250,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
 
   const value: WizardValue = {
     page, answers, errors, step, isOpen, submitState, errorMessage,
-    set, openAt, startFromWidget, close, next, back, submit: () => void submit(),
+    set, openAt, startFromWidget, continueFromInline, close, next, back, submit: () => void submit(),
   }
 
   return (
@@ -252,11 +266,11 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
 
 /** Step 1 in the page's own flow, with the CTA that opens step 2 full-screen. */
 export function InquiryInline() {
-  const { page, answers, errors, set, next, submitState } = useInquiryWizard()
+  const { page, answers, errors, set, continueFromInline, submitState } = useInquiryWizard()
 
   if (submitState === 'done') {
     return (
-      <div className="rounded-xl border-2 p-6" style={{ borderColor: 'var(--fa-navy)' }}>
+      <div className="rounded-2xl bg-white p-6" style={{ boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)' }}>
         <ThankYou testId="inquiry-inline-done" />
       </div>
     )
@@ -264,11 +278,11 @@ export function InquiryInline() {
 
   return (
     <div
-      className="rounded-xl border-2 p-5 sm:p-8"
-      style={{ borderColor: 'var(--fa-navy)', background: '#fff' }}
+      className="rounded-2xl p-5 sm:p-8"
+      style={{ background: '#fff', boxShadow: '0 1px 2px rgba(10,46,77,0.06), 0 12px 32px -12px rgba(10,46,77,0.14)' }}
       data-testid="inquiry-inline"
     >
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-[3fr_2fr] sm:gap-8">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_300px] md:gap-12">
         <div>
           <h3 className="f-display mb-2 text-2xl font-bold leading-tight">
             Check availability — two minutes, non-binding
@@ -277,23 +291,70 @@ export function InquiryInline() {
             We answer within {page.responseSlaHours} h; the guide&apos;s offer follows.
           </p>
           <StepTrip answers={answers} errors={errors} page={page} set={set} />
-        </div>
 
-        <div className="flex flex-col gap-3 sm:pt-11">
           <button
             type="button"
-            onClick={next}
-            className="w-full rounded-lg px-4 text-[17px] font-semibold"
+            onClick={continueFromInline}
+            className="mt-2 w-full rounded-xl px-4 text-[17px] transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-[0_8px_20px_-6px_rgba(230,126,80,0.6)]"
             style={primaryButtonStyle}
+            data-testid="inquiry-continue"
           >
-            Next → step 2 of 3
+            Continue →
           </button>
-          <p className="text-center text-[13px]" style={MUTED}>
-            Step 2: your fishing, what matters, budget · Step 3: contact
+          <p className="mt-2.5 text-center text-[13px]" style={MUTED}>
+            Nothing is sent yet — two short steps follow: your fishing, then where to send the offer.
           </p>
         </div>
+
+        <TripSummary />
       </div>
     </div>
+  )
+}
+
+/**
+ * The right-hand column of S14: what the visitor has picked so far, as they pick it, and
+ * the three promises the page already made — so the column says something, instead of
+ * holding a lone button.
+ */
+function TripSummary() {
+  const { page, answers } = useInquiryWizard()
+
+  const when = answers.datesMode === 'exact'
+    ? (answers.dateFrom === '' ? 'Exact dates — pick the days' : rangeLabel(answers.dateFrom, answers.days))
+    : (answers.flexMonth === '' ? 'Flexible — pick a month' : `Flexible · ${new Date(`${answers.flexMonth}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`)
+
+  const who = `${answers.anglers} ${answers.anglers === 1 ? 'angler' : 'anglers'}${answers.nonAnglers > 0 ? ` + ${answers.nonAnglers} non-angler${answers.nonAnglers === 1 ? '' : 's'}` : ''}`
+
+  const rows: [string, string][] = [
+    ['Trip',  page.experienceName],
+    ['When',  when],
+    ['Days',  `${answers.days} ${answers.days === 1 ? 'day' : 'days'} of fishing`],
+    ['Who',   who],
+  ]
+
+  return (
+    <aside
+      className="self-start rounded-2xl p-5"
+      style={{ background: 'rgba(10,46,77,0.05)' }}
+      data-testid="inquiry-summary"
+      aria-live="polite"
+    >
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={MUTED}>Your trip so far</p>
+      <dl className="mt-3 space-y-2.5">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex gap-3 text-[14px]">
+            <dt className="w-12 flex-none" style={MUTED}>{label}</dt>
+            <dd className="min-w-0 font-medium">{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <ul className="mt-5 space-y-2 border-t pt-4 text-[13px]" style={{ borderColor: 'rgba(10,46,77,0.1)' }}>
+        <li>✓ Free and non-binding</li>
+        <li>✓ We answer within {page.responseSlaHours} h</li>
+        <li>✓ Deposit only after you accept the offer</li>
+      </ul>
+    </aside>
   )
 }
 
@@ -335,11 +396,13 @@ function InquiryWizardOverlay() {
       data-testid="inquiry-wizard"
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
       style={{ background: 'rgba(10,46,77,0.45)' }}
+      // A tap on the dark area is a dismiss — the gesture everyone tries first.
+      onClick={event => { if (event.target === event.currentTarget) close() }}
     >
       {/* Mobile: a sheet that fills the screen. Desktop: a centred card. */}
       <div
         className="flex h-full w-full flex-col bg-white sm:h-auto sm:max-h-[90vh] sm:max-w-[560px] sm:rounded-xl"
-        style={{ color: 'var(--fa-navy)' }}
+        style={{ color: 'var(--fa-navy)', paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="flex items-start justify-between gap-4 px-5 pt-4 sm:px-7">
           <div className="min-w-0 flex-1">
