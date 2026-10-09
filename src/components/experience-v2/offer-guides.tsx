@@ -10,9 +10,8 @@
  * from the page's gallery, because a face next to a landscape is what the reference pages
  * have and a bordered paragraph does not.
  *
- * Next to them, a static card on who FA is. Its copy comes from docs/brand/01-brand-overview.md
- * ("Origin Story") and the founders' names in CLAUDE.md; nothing the brand docs do not
- * say (time zones, a weather "plan B") is claimed for us here.
+ * Next to them, a static card on why FA picks local guides over outfitters — the positioning
+ * in docs/brand/03-product-and-customers.md. Nothing the brand docs do not say is claimed here.
  *
  * There is no "quote" field on `guides` or `experience_guides`, so a guide card has none.
  */
@@ -169,12 +168,12 @@ function FaCard({ photoUrl }: { photoUrl: string | null }) {
     <div data-testid="fa-card">
       <Box className="flex h-full flex-col">
         {photoUrl != null && <Cover url={photoUrl} alt="" />}
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>Who we are</p>
-        <h3 className="f-display mt-1 text-[22px] font-bold leading-tight">FjordAnglers</h3>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>Why a local guide</p>
+        <h3 className="f-display mt-1 text-[22px] font-bold leading-tight">Local guides, not big outfitters</h3>
         <p className="mt-2.5 text-[15px] leading-relaxed">
-          Tymon, Krzychu and Lukas — a group of students from Poland who love to travel the
-          Nordic countries with a rod. We pick the guide and the water for your level, you pay
-          us a deposit online, and the rest goes straight to your guide.
+          We work only with independent local guides — people who live on this water and fish
+          it year-round, not a lodge selling slots. We match you with the guide and the water
+          for your level, you pay us a deposit online, and the rest goes straight to your guide.
         </p>
       </Box>
     </div>
