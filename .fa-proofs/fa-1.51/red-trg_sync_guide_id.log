@@ -1,0 +1,29 @@
+== trg_sync_guide_id DISABLED (experience_pages) ==
+trg_sync_guide_id enabled=D
+     × (a) UPDATE guide_id: the new guide is primary/active, the old primary is paused 43ms
+     × (a2) UPDATE guide_id to a guide already on the page as backup promotes that row 26ms
+     × (a3) UPDATE guide_id to NULL pauses the primary and keeps the row 23ms
+     × (a4) INSERT of a page with guide_id creates the primary/active row (decision D1) 12ms
+     ✓ (b) INSERT of a primary/active row sets guide_id 23ms
+     ✓ (b2) the v2 admin swap — demote the old primary, promote another — ends with guide_id on the new one 142ms
+     ✓ (c) DELETE of the primary row sets guide_id to NULL 27ms
+     ✓ (d) UPDATE price_from: price_from_cents = price_from x 100, exact 16ms
+     ✓ (d2) INSERT without price_from_cents derives it; a writer that sets cents itself wins 52ms
+     × (e) a new page with a guide and a price ends with one primary/active row and price_from_cents 80ms
+     × UPDATE guide_id on a page with two guides ends with exactly one primary/active row and no error 31ms
+     ✓ deleting a page that has guides does not trip the sync on the vanishing row 24ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_guide_id — experience_pages.guide_id -> experience_guides > (a) UPDATE guide_id: the new guide is primary/active, the old primary is paused
+AssertionError: expected [ '1:primary:active' ] to deeply equal [ '1:primary:paused', …(1) ]
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_guide_id — experience_pages.guide_id -> experience_guides > (a2) UPDATE guide_id to a guide already on the page as backup promotes that row
+AssertionError: expected [ '1:primary:active', …(1) ] to deeply equal [ '1:primary:paused', …(1) ]
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_guide_id — experience_pages.guide_id -> experience_guides > (a3) UPDATE guide_id to NULL pauses the primary and keeps the row
+AssertionError: expected [ '1:primary:active' ] to deeply equal [ '1:primary:paused' ]
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_guide_id — experience_pages.guide_id -> experience_guides > (a4) INSERT of a page with guide_id creates the primary/active row (decision D1)
+AssertionError: expected [] to deeply equal [ '3:primary:active' ]
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > createExperiencePage — the old admin, no code change > (e) a new page with a guide and a price ends with one primary/active row and price_from_cents
+AssertionError: expected [] to deeply equal [ { …(3) } ]
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > loop guard > UPDATE guide_id on a page with two guides ends with exactly one primary/active row and no error
+AssertionError: expected [ '1:primary:active', …(1) ] to deeply equal [ '1:primary:paused', …(1) ]
+ Test Files  1 failed (1)
+      Tests  6 failed | 6 passed (12)

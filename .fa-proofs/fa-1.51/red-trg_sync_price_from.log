@@ -1,0 +1,23 @@
+== trg_sync_price_from DISABLED (experience_pages) ==
+trg_sync_price_from enabled=D
+     ✓ (a) UPDATE guide_id: the new guide is primary/active, the old primary is paused 40ms
+     ✓ (a2) UPDATE guide_id to a guide already on the page as backup promotes that row 26ms
+     ✓ (a3) UPDATE guide_id to NULL pauses the primary and keeps the row 28ms
+     ✓ (a4) INSERT of a page with guide_id creates the primary/active row (decision D1) 12ms
+     ✓ (b) INSERT of a primary/active row sets guide_id 23ms
+     ✓ (b2) the v2 admin swap — demote the old primary, promote another — ends with guide_id on the new one 131ms
+     ✓ (c) DELETE of the primary row sets guide_id to NULL 27ms
+     × (d) UPDATE price_from: price_from_cents = price_from x 100, exact 20ms
+     × (d2) INSERT without price_from_cents derives it; a writer that sets cents itself wins 10ms
+     × (e) a new page with a guide and a price ends with one primary/active row and price_from_cents 98ms
+     ✓ UPDATE guide_id on a page with two guides ends with exactly one primary/active row and no error 35ms
+     ✓ deleting a page that has guides does not trip the sync on the vanishing row 22ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_price_from — price_from -> price_from_cents > (d) UPDATE price_from: price_from_cents = price_from x 100, exact
+AssertionError: expected null to be 1999 // Object.is equality
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > trg_sync_price_from — price_from -> price_from_cents > (d2) INSERT without price_from_cents derives it; a writer that sets cents itself wins
+AssertionError: expected null to be 25000 // Object.is equality
+ FAIL  src/actions/__tests__/experience-guides-sync.test.ts > createExperiencePage — the old admin, no code change > (e) a new page with a guide and a price ends with one primary/active row and price_from_cents
+AssertionError: expected { …(3) } to match object { …(2) }
+ Test Files  1 failed (1)
+      Tests  3 failed | 9 passed (12)

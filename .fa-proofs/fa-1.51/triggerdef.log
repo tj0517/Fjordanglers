@@ -1,0 +1,19 @@
+-[ RECORD 1 ]-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+on_table   | experience_pages
+tgname     | trg_sync_guide_id
+enabled    | O
+definition | CREATE TRIGGER trg_sync_guide_id AFTER INSERT OR UPDATE OF guide_id ON public.experience_pages FOR EACH ROW EXECUTE FUNCTION sync_guide_id_to_experience_guides()
+comment    | temporary until stage-4 CONTRACT (docs/proposals/2026-10-05-experience-offer-centric.md §7 step 4)
+-[ RECORD 2 ]-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+on_table   | experience_pages
+tgname     | trg_sync_price_from
+enabled    | O
+definition | CREATE TRIGGER trg_sync_price_from BEFORE INSERT OR UPDATE OF price_from ON public.experience_pages FOR EACH ROW EXECUTE FUNCTION sync_price_from_to_cents()
+comment    | temporary until stage-4 CONTRACT (docs/proposals/2026-10-05-experience-offer-centric.md §7 step 4)
+-[ RECORD 3 ]-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+on_table   | experience_guides
+tgname     | trg_sync_primary
+enabled    | O
+definition | CREATE TRIGGER trg_sync_primary AFTER INSERT OR DELETE OR UPDATE ON public.experience_guides FOR EACH ROW EXECUTE FUNCTION sync_primary_guide_to_guide_id()
+comment    | temporary until stage-4 CONTRACT (docs/proposals/2026-10-05-experience-offer-centric.md §7 step 4)
+

@@ -226,6 +226,8 @@ CREATE TRIGGER trg_sync_primary AFTER INSERT OR UPDATE OR DELETE ON experience_g
 
 Strona z dwoma aktywnymi przewodnikami ma w `guide_id` tego oznaczonego `primary` — stary szablon dalej działa, pokazuje jednego. Triggery są tymczasowe i spadają w kroku CONTRACT.
 
+> Zrealizowane w `supabase/migrations/20261008010000_experience_guides_sync.sql` (FA-1.51) jako **trzy** triggery, nie dwa — powód (AFTER zamiast BEFORE przy INSERT, osobny trigger na `price_from`) i pętla/guard: komentarz w nagłówku migracji.
+
 ### Krok 3 — SWITCH: dwa szablony, ta sama ścieżka `/experiences/[slug]`
 
 ```
