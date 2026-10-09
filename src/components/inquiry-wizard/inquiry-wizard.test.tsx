@@ -75,11 +75,18 @@ function fill(label: string | RegExp, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } })
 }
 
-/** Everything step 1 needs, with a flexible month. */
+/** Everything step 1 needs, with a flexible month: tap next month's tile. */
 function completeStepOne() {
-  fireEvent.change(screen.getByLabelText('Month'), { target: { value: nextMonthValue() } })
+  const now  = new Date()
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+  const month = next.toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' })
+  const year  = String(next.getUTCFullYear())
+  const tile  = [...screen.getAllByText(month)].find(el => el.parentElement?.textContent === `${month}${year}`)
+  if (tile == null) throw new Error(`no month tile for ${month} ${year}`)
+  fireEvent.click(tile)
 }
 
+/** `YYYY-MM` of next month — what completeStepOne() stores. */
 function nextMonthValue(): string {
   const now = new Date()
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 7)
@@ -157,7 +164,7 @@ describe('moving between the steps', () => {
     // days, anglers, non-anglers — the three ± counters of step 1, in order
     const outputs = [...dialog.querySelectorAll('output')].map(o => o.textContent)
     expect(outputs).toEqual(['1', '3', '1'])
-    expect(dialog.querySelector<HTMLSelectElement>('select')?.value).toBe(nextMonthValue())
+    expect(dialog.querySelector<HTMLInputElement>('input[name="flex-month"]:checked')?.value).toBe(nextMonthValue())
   })
 
   it('will not leave step 2 until every question is answered', () => {

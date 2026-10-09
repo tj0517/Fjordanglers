@@ -45,7 +45,7 @@ import {
   type WizardStep,
 } from './wizard-state'
 import { StepAngler, StepContact, StepTrip, asksBudget, type WizardPageInfo } from './wizard-steps'
-import { MUTED, Progress, primaryButtonStyle } from './wizard-fields'
+import { MUTED, Progress, primaryButtonStyle, rangeLabel } from './wizard-fields'
 
 const TOTAL_STEPS = 3
 
@@ -307,8 +307,8 @@ function TripSummary() {
   const { page, answers } = useInquiryWizard()
 
   const when = answers.datesMode === 'exact'
-    ? (answers.dateFrom === '' ? 'Exact dates — pick a day' : new Date(`${answers.dateFrom}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }))
-    : (answers.flexMonth === '' ? 'Flexible — pick a month' : new Date(`${answers.flexMonth}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }))
+    ? (answers.dateFrom === '' ? 'Exact dates — pick the days' : rangeLabel(answers.dateFrom, answers.days))
+    : (answers.flexMonth === '' ? 'Flexible — pick a month' : `Flexible · ${new Date(`${answers.flexMonth}-01T00:00:00Z`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`)
 
   const who = `${answers.anglers} ${answers.anglers === 1 ? 'angler' : 'anglers'}${answers.nonAnglers > 0 ? ` + ${answers.nonAnglers} non-angler${answers.nonAnglers === 1 ? '' : 's'}` : ''}`
 

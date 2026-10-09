@@ -42,7 +42,7 @@ import { formatCents } from '@/lib/format-price'
 import { MAX_BRIEF_DAYS } from '@/lib/inquiries/brief'
 import { useCurrency } from './currency-context'
 import { useInquiryWizardOptional } from '@/components/inquiry-wizard/inquiry-wizard'
-import { SegmentedControl } from '@/components/inquiry-wizard/wizard-fields'
+import { DateRangeCalendar, SegmentedControl } from '@/components/inquiry-wizard/wizard-fields'
 
 type OfferWidgetGuide = {
   fullName:          string
@@ -273,16 +273,16 @@ export default function OfferWidget({
           />
 
           {whenMode === 'exact' ? (
-            <label className="mt-2 block">
-              <span className="sr-only">First day</span>
-              <input
-                type="date"
-                value={exactDate}
-                onChange={e => setExactDate(e.target.value)}
-                className="w-full rounded-lg border bg-white px-2.5 text-sm"
-                style={{ ...fieldStyle, minHeight: 38 }}
+            <div className="mt-2.5">
+              <DateRangeCalendar
+                compact
+                dateFrom={exactDate}
+                days={days}
+                minDays={minDays}
+                maxDays={MAX_BRIEF_DAYS}
+                onChange={(from, n) => { setExactDate(from); setDays(n) }}
               />
-            </label>
+            </div>
           ) : (
             <label className="mt-2 block">
               <span className="sr-only">Month</span>
@@ -298,7 +298,7 @@ export default function OfferWidget({
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Stepper
             label="Anglers"
             value={anglers}
@@ -519,15 +519,15 @@ function Stepper({
   label: string; value: number; display: string; min: number; max: number; onChange: (n: number) => void
 }) {
   return (
-    <div className="flex flex-1 items-center justify-between rounded-xl border py-1.5 pl-3 pr-1.5" style={fieldStyle}>
+    <div className="inline-flex items-center gap-2 rounded-xl border py-1 pl-3 pr-1" style={fieldStyle}>
       <span className={labelClass} style={mutedStyle}>{label}</span>
-      <span className="flex items-center gap-1">
+      <span className="flex items-center gap-0.5">
         <button
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
           aria-label={`One fewer ${label.toLowerCase()}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full border text-lg leading-none transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-30 disabled:hover:bg-transparent"
+          className="flex h-7 w-7 items-center justify-center rounded-full border text-base leading-none transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-30 disabled:hover:bg-transparent"
           style={{ borderColor: 'rgba(10,46,77,0.18)' }}
         >
           −
@@ -538,7 +538,7 @@ function Stepper({
           onClick={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}
           aria-label={`One more ${label.toLowerCase()}`}
-          className="flex h-8 w-8 items-center justify-center rounded-full border text-lg leading-none transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-30 disabled:hover:bg-transparent"
+          className="flex h-7 w-7 items-center justify-center rounded-full border text-base leading-none transition-colors hover:bg-[rgba(10,46,77,0.06)] disabled:opacity-30 disabled:hover:bg-transparent"
           style={{ borderColor: 'rgba(10,46,77,0.18)' }}
         >
           +

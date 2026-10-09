@@ -301,7 +301,11 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
               />
             </div>
 
-            <aside className="anim-2 hidden w-[360px] flex-none md:block" style={{ position: 'sticky', top: 92 }}>
+            {/* Follows the auto-hiding nav: under it while shown, near the top once it is gone. */}
+            <aside
+              className="anim-2 hidden w-[360px] flex-none md:block"
+              style={{ position: 'sticky', top: 'var(--nav-offset, 92px)', transition: 'top 0.3s ease' }}
+            >
               <OfferWidget {...widget} />
             </aside>
           </div>

@@ -25,8 +25,8 @@ import {
 } from '@/lib/inquiries/brief'
 import { formatCents } from '@/lib/format-price'
 import { ANGLER_COUNTRIES } from '@/lib/angler-countries'
-import { nextMonths, todayIso, type WizardAnswers, type WizardErrors } from './wizard-state'
-import { BORDER, ChoiceRow, Counter, MUTED, NAVY, PillRow, Question, SELECTED, SegmentedControl, TextField } from './wizard-fields'
+import { nextMonths, type WizardAnswers, type WizardErrors } from './wizard-state'
+import { BORDER, ChoiceRow, Counter, DateRangeCalendar, MonthGrid, MUTED, NAVY, PillRow, Question, SELECTED, SegmentedControl, TextField } from './wizard-fields'
 
 /** Everything the questions need to know about the page they are asked on. */
 export interface WizardPageInfo {
@@ -85,30 +85,24 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
           value={answers.datesMode}
           onChange={value => set('datesMode', value === 'exact' ? 'exact' : 'flexible')}
         />
-        <div className="mt-3 min-h-[76px]">
+        <div className="mt-3 rounded-xl border p-3 sm:p-4" style={{ borderColor: BORDER, background: '#fff', minHeight: 300 }}>
           {answers.datesMode === 'exact' ? (
-            <TextField
-              label="First day of fishing"
-              type="date"
-              min={todayIso()}
-              value={answers.dateFrom}
-              onChange={value => set('dateFrom', value)}
-            />
+            <div className="mx-auto max-w-[360px]">
+              <DateRangeCalendar
+                dateFrom={answers.dateFrom}
+                days={answers.days}
+                minDays={page.minDays}
+                maxDays={MAX_BRIEF_DAYS}
+                onChange={(dateFrom, days) => { set('dateFrom', dateFrom); set('days', days) }}
+              />
+            </div>
           ) : (
-            <label className="flex flex-col gap-1.5 text-[14px]">
-              Month
-              <select
-                value={answers.flexMonth}
-                onChange={e => set('flexMonth', e.target.value)}
-                className="w-full rounded-lg border px-3 text-[16px]"
-                style={{ minHeight: 48, borderColor: BORDER, background: '#fff' }}
-              >
-                <option value="">Pick a month…</option>
-                {months.map(month => (
-                  <option key={month.value} value={month.value}>{month.label}</option>
-                ))}
-              </select>
-            </label>
+            <MonthGrid
+              name="flex-month"
+              options={months}
+              value={answers.flexMonth}
+              onChange={value => set('flexMonth', value)}
+            />
           )}
         </div>
       </Question>
@@ -128,7 +122,7 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
         hint={`More than ${page.maxAnglersPerGuide} anglers — we add a second guide.`}
         error={errors.anglers}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-3">
           <Counter
             label="Anglers"
             value={answers.anglers}

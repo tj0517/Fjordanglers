@@ -201,6 +201,12 @@ export function SiteNav({ user }: { user: NavUser | null }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [isExperiencePage, pathname])
 
+  // Anything sticky under the nav (the offer card on an experience page) reads this, so it
+  // can sit under the bar while it is shown and move up when the bar slides away.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--nav-offset', navHidden ? '20px' : '92px')
+  }, [navHidden])
+
   useEffect(() => {
     const onResize = () => { if (window.innerWidth >= 1024) setMenuOpen(false) }
     window.addEventListener('resize', onResize)

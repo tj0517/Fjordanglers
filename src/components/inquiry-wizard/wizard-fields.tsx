@@ -10,7 +10,8 @@
  * `<button>` — the wireframe's `<span class="pill">` would be invisible to a keyboard.
  */
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const NAVY     = 'var(--fa-navy)'
 export const BORDER   = 'rgba(10,46,77,0.28)'
@@ -178,7 +179,11 @@ export function PillRow({
   )
 }
 
-/** The ± counter — the wireframe's `.cnt`. The number itself is a read-only output. */
+/**
+ * The ± counter — the wireframe's `.cnt`. The number itself is a read-only output. Sized to
+ * its content, not the column: a 700 px bar for a number between 1 and 6 makes the
+ * buttons look lost.
+ */
 export function Counter({
   label,
   hint,
@@ -198,8 +203,8 @@ export function Counter({
 
   return (
     <div
-      className="flex items-center justify-between rounded-lg border py-1.5 pl-3.5 pr-1.5"
-      style={{ minHeight: 48, borderColor: BORDER }}
+      className="inline-flex items-center justify-between gap-4 rounded-xl border py-1.5 pl-3.5 pr-1.5"
+      style={{ minHeight: 48, minWidth: 220, borderColor: BORDER, background: '#fff' }}
     >
       <span className="text-[15px]">
         {label}
@@ -320,4 +325,202 @@ export const primaryButtonStyle = {
   color:      NAVY,
   fontWeight: 700,
   minHeight:  52,
+}
+
+// ─── Dates, in the site's own calendar ────────────────────────────────────────
+
+const DAY_MS = 86_400_000
+
+function isoOf(utcMs: number): string {
+  return new Date(utcMs).toISOString().slice(0, 10)
+}
+
+function utcOf(iso: string): number {
+  return Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)))
+}
+
+/** `YYYY-MM-DD` for today in UTC — the floor of every picker here. */
+export function todayIsoUtc(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10)
+}
+
+function fmtDay(iso: string, withYear: boolean): string {
+  return new Date(utcOf(iso)).toLocaleDateString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC',
+  })
+}
+
+/** "Sat 14 Mar – Mon 16 Mar 2027 · 3 days" — what the range the angler picked means. */
+export function rangeLabel(dateFrom: string, days: number): string {
+  if (dateFrom === '') return ''
+  const last = isoOf(utcOf(dateFrom) + (days - 1) * DAY_MS)
+  const span = days === 1 ? fmtDay(dateFrom, true) : `${fmtDay(dateFrom, false)} – ${fmtDay(last, true)}`
+  return `${span} · ${days} ${days === 1 ? 'day' : 'days'}`
+}
+
+/**
+ * A range on one month grid, the way v1's widget picked days — first click is the first day
+ * of fishing, the next click the last. The range is stored as `dateFrom` + `days`, the same
+ * two answers the rest of the form already keeps, so nothing else learns a new shape.
+ */
+export function DateRangeCalendar({
+  dateFrom,
+  days,
+  minDays,
+  maxDays,
+  onChange,
+  compact = false,
+}: {
+  dateFrom: string
+  days:     number
+  minDays:  number
+  maxDays:  number
+  onChange: (dateFrom: string, days: number) => void
+  /** The widget's smaller version. */
+  compact?: boolean
+}) {
+  const today = todayIsoUtc()
+  const [view, setView] = useState(() => {
+    const base = dateFrom !== '' ? new Date(utcOf(dateFrom)) : new Date()
+    return { year: base.getUTCFullYear(), month: base.getUTCMonth() }
+  })
+  const [pickingEnd, setPickingEnd] = useState(false)
+  const [hover, setHover] = useState<string | null>(null)
+
+  const from = dateFrom === '' ? null : dateFrom
+  const to   = from == null ? null : isoOf(utcOf(from) + (days - 1) * DAY_MS)
+
+  const move = (delta: number) => setView(v => {
+    const d = new Date(Date.UTC(v.year, v.month + delta, 1))
+    return { year: d.getUTCFullYear(), month: d.getUTCMonth() }
+  })
+
+  const pick = (iso: string) => {
+    if (from == null || !pickingEnd || iso < from) {
+      onChange(iso, Math.max(1, minDays))
+      setPickingEnd(true)
+      return
+    }
+    const span = Math.round((utcOf(iso) - utcOf(from)) / DAY_MS) + 1
+    onChange(from, Math.min(maxDays, Math.max(minDays, span)))
+    setPickingEnd(false)
+  }
+
+  // While the second click is pending, the days under the pointer preview the range.
+  const previewTo = pickingEnd && from != null && hover != null && hover >= from ? hover : to
+
+  const first       = new Date(Date.UTC(view.year, view.month, 1))
+  const offset      = (first.getUTCDay() + 6) % 7
+  const daysInMonth = new Date(Date.UTC(view.year, view.month + 1, 0)).getUTCDate()
+  const cells: (number | null)[] = [...new Array<null>(offset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  const monthName = first.toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  const canGoBack = view.year > Number(today.slice(0, 4)) || (view.year === Number(today.slice(0, 4)) && view.month > Number(today.slice(5, 7)) - 1)
+
+  return (
+    <div className="select-none" data-testid="date-range-calendar" onMouseLeave={() => setHover(null)}>
+      <div className="mb-2 flex items-center justify-between">
+        <button type="button" onClick={() => move(-1)} disabled={!canGoBack} aria-label="Previous month"
+          className="flex h-8 w-8 items-center justify-center rounded-lg disabled:opacity-30" style={{ background: 'rgba(10,46,77,0.05)', color: NAVY }}>
+          <ChevronLeft size={15} />
+        </button>
+        <span className={`font-semibold ${compact ? 'text-[13px]' : 'text-[14px]'}`} style={{ color: NAVY }}>{monthName}</span>
+        <button type="button" onClick={() => move(1)} aria-label="Next month"
+          className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: 'rgba(10,46,77,0.05)', color: NAVY }}>
+          <ChevronRight size={15} />
+        </button>
+      </div>
+
+      <div className="mb-1 grid grid-cols-7">
+        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+          <div key={i} className="py-0.5 text-center text-[10px] font-bold" style={{ color: 'rgba(10,46,77,0.3)' }}>{d}</div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-y-0.5" role="group" aria-label="Pick the first and the last day of fishing">
+        {cells.map((day, i) => {
+          if (day == null) return <div key={`e-${i}`} />
+          const iso      = `${view.year}-${String(view.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+          const past     = iso < today
+          const isStart  = iso === from
+          const isEnd    = previewTo != null && iso === previewTo && from != null
+          const inRange  = from != null && previewTo != null && iso > from && iso < previewTo
+          const edge     = isStart || isEnd
+          return (
+            <div
+              key={iso}
+              className="flex justify-center"
+              style={{
+                background: inRange || (edge && from !== previewTo)
+                  ? 'rgba(10,46,77,0.09)' : 'transparent',
+                borderRadius: isStart && from !== previewTo ? '999px 0 0 999px' : isEnd && from !== previewTo ? '0 999px 999px 0' : 0,
+              }}
+            >
+              <button
+                type="button"
+                disabled={past}
+                onClick={() => pick(iso)}
+                onMouseEnter={() => setHover(iso)}
+                aria-label={`${fmtDay(iso, true)}${isStart ? ' — first day' : isEnd ? ' — last day' : ''}`}
+                aria-pressed={isStart || (isEnd && !pickingEnd)}
+                className={`flex items-center justify-center rounded-full transition-colors ${compact ? 'h-8 w-8 text-[12px]' : 'h-10 w-10 text-[14px]'}`}
+                style={{
+                  background: edge ? NAVY : 'transparent',
+                  color:      past ? 'rgba(10,46,77,0.2)' : edge ? '#fff' : NAVY,
+                  fontWeight: edge ? 700 : iso === today ? 700 : 400,
+                  cursor:     past ? 'not-allowed' : 'pointer',
+                  boxShadow:  iso === today && !edge ? `inset 0 0 0 1px ${BORDER}` : 'none',
+                }}
+              >
+                {day}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+
+      <p className={`mt-2.5 ${compact ? 'text-[12px]' : 'text-[13px]'} font-medium`} style={from == null ? MUTED : { color: NAVY }} aria-live="polite" data-testid="date-range-label">
+        {from == null
+          ? 'Tap the first day of fishing, then the last.'
+          : pickingEnd ? `From ${fmtDay(from, true)} — now tap the last day.` : rangeLabel(from, days)}
+      </p>
+    </div>
+  )
+}
+
+/** The twelve months from this one as tiles — the "flexible" half, in the same style as the calendar. */
+export function MonthGrid({
+  name,
+  options,
+  value,
+  onChange,
+}: {
+  name:     string
+  options:  readonly { value: string; label: string }[]
+  value:    string
+  onChange: (value: string) => void
+}) {
+  return (
+    <div role="radiogroup" aria-label="Month" className="grid grid-cols-3 gap-2 sm:grid-cols-4" data-testid="month-grid">
+      {options.map(option => {
+        const checked = option.value === value
+        const [month, year] = option.label.split(' ')
+        return (
+          <label
+            key={option.value}
+            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border py-2 text-center transition-colors"
+            style={{
+              minHeight:   52,
+              borderColor: checked ? NAVY : BORDER,
+              background:  checked ? NAVY : '#fff',
+              color:       checked ? '#fff' : NAVY,
+            }}
+          >
+            <input type="radio" name={name} value={option.value} checked={checked} onChange={() => onChange(option.value)} className="sr-only" />
+            <span className="text-[14px] font-semibold leading-tight">{month}</span>
+            <span className="text-[11px]" style={{ color: checked ? 'rgba(255,255,255,0.7)' : 'rgba(10,46,77,0.5)' }}>{year}</span>
+          </label>
+        )
+      })}
+    </div>
+  )
 }
