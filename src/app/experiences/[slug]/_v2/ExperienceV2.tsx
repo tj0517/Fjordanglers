@@ -36,7 +36,6 @@ import OfferLogistics from '@/components/experience-v2/offer-logistics'
 import OfferBring from '@/components/experience-v2/offer-bring'
 import OfferFaq from '@/components/experience-v2/offer-faq'
 import OfferInquiry from '@/components/experience-v2/offer-inquiry'
-import OfferSquiggle from '@/components/experience-v2/offer-squiggle'
 import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
 import { fromPrice } from '@/lib/pricing/experience-price'
 
@@ -134,7 +133,8 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
      <InquiryWizardProvider page={wizardPage}>
       <NavWithUser />
 
-      <main style={{ background: '#fff', color: 'var(--fa-navy)' }} className="pb-24 md:pb-16">
+      {/* The site's warm sand — the same ground v1 and the home page stand on. */}
+      <main style={{ background: '#F3EDE4', color: 'var(--fa-navy)' }} className="pb-24 md:pb-16">
         {/* Mobile: the photos run full-bleed under the fixed nav, as on v1. */}
         {images.length > 0 && (
           <div className="pt-[72px] md:hidden">
@@ -144,10 +144,8 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
 
         <div className="mx-auto max-w-[1200px] px-4 sm:px-8 md:pt-[72px]">
           {/* ── S1 title block — above the gallery on desktop ── */}
-          <div className="relative mt-6 md:mt-10">
-            <OfferSquiggle className="absolute -right-10 -top-2 hidden h-[140px] w-[520px] lg:block" />
-
-            <nav aria-label="Breadcrumb" className="relative mb-4 hidden text-xs md:block" style={{ color: 'rgba(10,46,77,0.6)' }}>
+          <div className="mt-6 md:mt-10">
+            <nav aria-label="Breadcrumb" className="mb-4 hidden text-xs md:block" style={{ color: 'rgba(10,46,77,0.6)' }}>
               {page.country} › {page.region} › {page.experienceName}
             </nav>
 
