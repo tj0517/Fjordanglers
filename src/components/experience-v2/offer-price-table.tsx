@@ -100,15 +100,6 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
                 ))}
               </tbody>
             </table>
-            <p className="mt-3 text-[13px]" style={mutedStyle}>
-              Total price per group, in {currency}: the guide and our fee together.
-            </p>
-            {currency !== 'EUR' && (
-              <p className="mt-2 text-[13px]" style={mutedStyle} data-testid="currency-note">
-                Prices are in {currency}. The deposit is charged in EUR through Stripe — your
-                offer shows the exact amount.
-              </p>
-            )}
           </Box>
         )}
 

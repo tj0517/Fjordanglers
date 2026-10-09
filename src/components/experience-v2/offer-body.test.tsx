@@ -119,13 +119,12 @@ describe('OfferBody — empty field means no section', () => {
 })
 
 describe('S7 — guides', () => {
-  it('renders one card per guide it is given, plus the static FA card', () => {
+  it('renders one card per guide it is given', () => {
     const page = fixedPage({
       guides: [guide({ id: 'g1' }), guide({ id: 'g2', fullName: 'Sam Lake', isPrimary: false })],
     })
     const { container } = render(<OfferBody page={page} />)
     expect(container.querySelectorAll('[data-testid="guide-card"]')).toHaveLength(2)
-    expect(container.querySelectorAll('[data-testid="fa-card"]')).toHaveLength(1)
   })
 
   it('prints language names, not codes', () => {
@@ -245,22 +244,12 @@ describe('S9 — price and deposit', () => {
     expect(text).toContain('NZ$1,250')   // balance to the guide
   })
 
-  it('says "on request" for a cell with no exact row, and warns about the currency', () => {
+  it('says "on request" for a cell with no exact row', () => {
     const s9 = nine(fixedPage())
     // 2 days × 1 angler has no row of its own; only the 2-angler row covers it.
     expect(s9.querySelector('td[data-days="2"][data-anglers="1"]')?.textContent).toBe('on request')
-    const note = s9.querySelector('[data-testid="currency-note"]')?.textContent
-    expect(note).toContain('NZD')
-    expect(note).toContain('charged in EUR')
   })
 
-  it('no currency warning on a EUR page', () => {
-    const page = fixedPage({
-      currency: 'EUR',
-      prices: [{ days: 1, anglers: 2, guidePriceCents: 125000, currency: 'EUR' }],
-    })
-    expect(nine(page).querySelector('[data-testid="currency-note"]')).toBeNull()
-  })
 
   it('shows the weather note and no global refund line (O-35, option D)', () => {
     const text = nine(fixedPage()).textContent!

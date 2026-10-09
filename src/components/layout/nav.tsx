@@ -20,7 +20,6 @@ const LINKS = [
   ['/', 'Home'],
   ['/trips', 'Trips'],
   ['/guides', 'Guides'],
-  ['/about', 'About'],
 ] as const
 
 function getDashboard(role: NavUser['role']): { href: string; label: string } | null {

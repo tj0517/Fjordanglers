@@ -10,10 +10,6 @@
  * from the page's gallery, because a face next to a landscape is what the reference pages
  * have and a bordered paragraph does not.
  *
- * Next to them, a static card on who FA is. Its copy comes from docs/brand/01-brand-overview.md
- * ("Origin Story") and the founders' names in CLAUDE.md; nothing the brand docs do not
- * say (time zones, a weather "plan B") is claimed for us here.
- *
  * There is no "quote" field on `guides` or `experience_guides`, so a guide card has none.
  */
 
@@ -38,7 +34,7 @@ type OfferGuide = {
 
 export type OfferGuidesProps = {
   guides:    OfferGuide[]
-  /** The page's gallery, in order — card `i` takes photo `i`, the FA card the next one. */
+  /** The page's gallery, in order — card `i` takes photo `i`. */
   photoUrls: string[]
   /** `experience_pages.response_sla_hours` — the promise the page makes in the hero. */
   responseSlaHours: number
@@ -97,7 +93,6 @@ export default function OfferGuides({ guides, photoUrls, responseSlaHours }: Off
         {guides.map((guide, i) => (
           <GuideCard key={guide.id} guide={guide} photoUrl={photoUrls[i] ?? null} />
         ))}
-        <FaCard photoUrl={photoUrls[guides.length] ?? null} />
       </div>
     </OfferSection>
   )
@@ -163,20 +158,3 @@ function GuideCard({ guide, photoUrl }: { guide: OfferGuide; photoUrl: string | 
   )
 }
 
-/** Static on purpose — the same card on every offer page, from the brand docs. */
-function FaCard({ photoUrl }: { photoUrl: string | null }) {
-  return (
-    <div data-testid="fa-card">
-      <Box className="flex h-full flex-col">
-        {photoUrl != null && <Cover url={photoUrl} alt="" />}
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>Who we are</p>
-        <h3 className="f-display mt-1 text-[22px] font-bold leading-tight">FjordAnglers</h3>
-        <p className="mt-2.5 text-[15px] leading-relaxed">
-          Tymon, Krzychu and Lukas — a group of students from Poland who love to travel the
-          Nordic countries with a rod. We pick the guide and the water for your level, you pay
-          us a deposit online, and the rest goes straight to your guide.
-        </p>
-      </Box>
-    </div>
-  )
-}

@@ -88,7 +88,7 @@ function utcOf(iso: string): number {
 }
 
 /** `YYYY-MM-DD` for today in UTC — the floor of the date picker. */
-export function todayIso(now: Date = new Date()): string {
+function todayIso(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10)
 }
 

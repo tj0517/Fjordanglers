@@ -340,7 +340,7 @@ function utcOf(iso: string): number {
 }
 
 /** `YYYY-MM-DD` for today in UTC — the floor of every picker here. */
-export function todayIsoUtc(now: Date = new Date()): string {
+function todayIsoUtc(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10)
 }
 
