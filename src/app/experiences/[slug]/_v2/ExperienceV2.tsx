@@ -1,7 +1,7 @@
 /**
  * /experiences/[slug] — template v2 (offer-centric), sections S0–S2 (FA-1.53).
  *
- * The first screen has one job: price, group size, season, level and the three things
+ * The first screen has one job: price, group size, season and the three things
  * that make an inquiry cheap to send, before anyone scrolls. Everything it needs comes
  * from one data-layer call (`getExperienceV2`) — no component here touches Supabase
  * (CLAUDE.md rule 3), and the guide's price override is folded into the price rows
@@ -241,7 +241,6 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                   maxDays={page.maxDays}
                   maxAnglersPerGuide={page.maxAnglersPerGuide}
                   seasonMonths={page.seasonMonths}
-                  skillLevel={page.skillLevel}
                   includes={page.includes}
                 />
               </div>
@@ -321,6 +320,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
             suggestedLodging={page.suggestedLodging}
             seasonMonths={page.seasonMonths}
             peakMonths={page.peakMonths}
+            seasonPeriods={page.seasonPeriods}
             region={page.region}
           />
           <OfferBring whatToBring={page.whatToBring} />

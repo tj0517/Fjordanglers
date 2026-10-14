@@ -1,7 +1,7 @@
 /**
  * Typed readers for the free-form columns of a v2 offer page (FA-1.54).
  *
- * `species_details`, `license_info`, `day_schedule` and `sample_itinerary` are `jsonb`, so
+ * `species_details`, `license_info`, `day_schedule`, `season_periods` and `sample_itinerary` are `jsonb`, so
  * the database promises nothing about their shape and an admin can save anything. These
  * readers keep what is usable and drop the rest instead of throwing — a malformed entry
  * costs one line on the page, never the page. No casts: every field is checked.
@@ -93,33 +93,54 @@ export function parseLicenseInfo(value: Json | null | undefined): LicenseInfo | 
   return hasContent || value.required === true ? info : null
 }
 
-/** One line of a `fixed` page's day — `[{time, title, meta:{drive_min, walk_km, wading}}]`. */
+/**
+ * One line of a `fixed` page's day — `[{time, title, description}]`. Rows written before
+ * feedback round 1 carry `meta: {drive_min, walk_km, wading}` instead of a description: the
+ * meta is not read (it is never shown) and such a row is `{time, title, description: null}`.
+ */
 export type DayStep = {
-  time:     string
-  title:    string
-  /** Short facts printed under the title, in order: drive, distance on foot, wading. */
-  metaLines: string[]
+  /** '' when the row has no time — the gutter stays, empty. */
+  time:        string
+  title:       string
+  description: string | null
 }
 
 export function parseDaySchedule(value: Json | null | undefined): DayStep[] {
   return entries(value).flatMap(item => {
     const title = text(item.title)
     if (title == null) return []
+    return [{ time: text(item.time) ?? '', title, description: text(item.description) }]
+  })
+}
 
-    const meta      = isDict(item.meta) ? item.meta : {}
-    const driveMin  = num(meta.drive_min)
-    const walkKm    = num(meta.walk_km)
-    // `wading` is a note ("to the knee") or just a flag; the proposal does not say which.
-    const wadingText = text(meta.wading)
-    const wading     = wadingText ?? (meta.wading === true ? 'yes' : null)
+/**
+ * `experience_pages.season_periods` — `[{title, months, text}]` (feedback round 1): what one
+ * part of the season is like, shown under the season bar for each of its months.
+ *
+ * Months outside 1–12 or not whole are dropped; a month already claimed by an earlier period
+ * is dropped from the later one, so every month maps to at most one period even if the
+ * stored data says otherwise. A period with no title or no month left is skipped.
+ */
+export type SeasonPeriod = {
+  title:  string
+  months: number[]
+  /** Null when the admin wrote none — such a period does not open the panel. */
+  text:   string | null
+}
 
-    const metaLines = [
-      driveMin != null ? `${driveMin} min drive` : null,
-      walkKm != null ? `${walkKm} km on foot` : null,
-      wading != null ? `wading: ${wading}` : null,
-    ].filter((line): line is string => line != null)
+export function parseSeasonPeriods(value: Json | null | undefined): SeasonPeriod[] {
+  const claimed = new Set<number>()
+  return entries(value).flatMap(item => {
+    const title = text(item.title)
+    if (title == null || !Array.isArray(item.months)) return []
 
-    return [{ time: text(item.time) ?? '', title, metaLines }]
+    const months = item.months.flatMap(month => {
+      const n = num(month)
+      if (n == null || !Number.isInteger(n) || n < 1 || n > 12 || claimed.has(n)) return []
+      claimed.add(n)
+      return [n]
+    })
+    return months.length === 0 ? [] : [{ title, months: months.sort((a, b) => a - b), text: text(item.text) }]
   })
 }
 
@@ -203,11 +224,18 @@ export function parseFaq(value: Json | null | undefined): FaqEntry[] {
 }
 
 /**
- * `experience_pages.content_blocks` — `[{headline, text, image_url?}]`, the v1 admin form's
- * `ContentBlock`. Photos may be a site path (`/photo.jpg`) or an http(s) URL; anything else is
- * dropped, the block itself is kept. A block with neither headline nor text is nothing to show.
+ * `experience_pages.content_blocks` — `[{headline, text, image_url?, image_urls?}]`, the v1
+ * admin form's `ContentBlock`. `image_urls` is the block's gallery and wins when present;
+ * a block written before the gallery has only `image_url`, read as a gallery of one. Photos
+ * may be a site path (`/photo.jpg`) or an http(s) URL; anything else is dropped, the block
+ * itself is kept. A block with neither headline nor text is nothing to show.
  */
-export type StoryBlock = { headline: string | null; text: string | null; imageUrl: string | null }
+export type StoryBlock = {
+  headline:  string | null
+  text:      string | null
+  /** The block's photos in order; the first is the cover. Empty = no photo. */
+  imageUrls: string[]
+}
 
 function imageUrl(value: Json | undefined): string | null {
   const raw = text(value)
@@ -215,11 +243,22 @@ function imageUrl(value: Json | undefined): string | null {
   return raw.startsWith('/') ? raw : safeHttpUrl(raw)
 }
 
+function blockImageUrls(item: Dict): string[] {
+  if (Array.isArray(item.image_urls)) {
+    return item.image_urls.flatMap(url => {
+      const checked = imageUrl(url)
+      return checked == null ? [] : [checked]
+    })
+  }
+  const cover = imageUrl(item.image_url)
+  return cover == null ? [] : [cover]
+}
+
 export function parseContentBlocks(value: Json | null | undefined): StoryBlock[] {
   return entries(value).flatMap(item => {
     const headline = text(item.headline)
     const body     = text(item.text)
-    return headline == null && body == null ? [] : [{ headline, text: body, imageUrl: imageUrl(item.image_url) }]
+    return headline == null && body == null ? [] : [{ headline, text: body, imageUrls: blockImageUrls(item) }]
   })
 }
 

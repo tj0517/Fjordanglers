@@ -65,7 +65,9 @@ beforeEach(() => {
     experience_pages: {
       id: 'p1', slug: 'seed-nz', experience_name: 'Seed NZ', intro_text: null, country: 'New Zealand',
       region: 'Otago', hero_image_url: null, gallery_image_urls: [], includes: ['Guide'], excludes: ['Flights'],
-      season_months: [10], skill_level: 3, species_details: [{ name: 'Brown trout' }], technique: ['Sight'],
+      season_months: [10],
+      season_periods: [{ title: 'Spring', months: [10], text: 'Lake fish return.' }, { title: 'broken' }],
+      species_details: [{ name: 'Brown trout' }], technique: ['Sight'],
       meeting_point_name: 'Lodge', meeting_point_description: null, walking_km_min: 6, walking_km_max: 12,
       license_info: { required: true, buy_url: 'javascript:alert(1)' }, tip_guidance_text: null,
       suited_for: ['a'], not_suited_for: [], expectations_text: null,
@@ -158,7 +160,8 @@ describe('getExperienceV2 — content for S3–S9', () => {
       excludes: ['Flights'], speciesNames: ['Brown trout'], technique: ['Sight'],
       meetingPointName: 'Lodge', walkingKmMin: 6, walkingKmMax: 12, suitedFor: ['a'], notSuitedFor: [],
       offerEtaText: '48 h',
-      daySchedule: [{ time: '9:00', title: 'Fishing', metaLines: [] }],
+      daySchedule: [{ time: '9:00', title: 'Fishing', description: null }],
+      seasonPeriods: [{ title: 'Spring', months: [10], text: 'Lake fish return.' }],
     })
   })
 

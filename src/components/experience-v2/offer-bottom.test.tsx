@@ -3,19 +3,18 @@
  * FA-1.55 — S10–S13 of the v2 offer page.
  *
  * Each section follows the rule S3–S9 set: nothing stored, nothing rendered — never a heading
- * over an empty body. S13 is the one exception, and the test says why: the FA-vs-direct
- * question is on every page whether the admin wrote any FAQ or not.
+ * over an empty body. S13 included: since feedback round 1 there is no fixed FAQ entry.
  *
  * Fixtures: ./v2-page.fixture.ts (the seed's two v2 pages).
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, cleanup } from '@testing-library/react'
+import { render, cleanup, fireEvent } from '@testing-library/react'
 import type { ExperienceV2Review } from '@/lib/supabase/queries'
 import OfferReviews from './offer-reviews'
 import OfferLogistics from './offer-logistics'
 import OfferBring from './offer-bring'
-import OfferFaq, { FA_VS_DIRECT_ANSWER, FA_VS_DIRECT_QUESTION } from './offer-faq'
+import OfferFaq from './offer-faq'
 import { fixedPage } from './v2-page.fixture'
 
 // Leaflet needs a real browser; the map is proven in the Playwright walk, not here.
@@ -110,6 +109,7 @@ describe('S11 map, logistics and season', () => {
         suggestedLodging={page.suggestedLodging}
         seasonMonths={page.seasonMonths}
         peakMonths={page.peakMonths}
+        seasonPeriods={page.seasonPeriods}
         region={page.region}
       />,
     )
@@ -130,6 +130,7 @@ describe('S11 map, logistics and season', () => {
         suggestedLodging={[]}
         seasonMonths={[]}
         peakMonths={[]}
+        seasonPeriods={[]}
         region="Otago"
       />,
     )
@@ -141,7 +142,7 @@ describe('S11 map, logistics and season', () => {
     const { getByTestId } = render(
       <OfferLogistics
         locationLat={null} locationLng={null} nearestAirport={null} suggestedLodging={[]}
-        seasonMonths={[10, 11, 12, 1, 2, 3, 4]} peakMonths={[12, 1, 2]} region="Otago"
+        seasonMonths={[10, 11, 12, 1, 2, 3, 4]} peakMonths={[12, 1, 2]} seasonPeriods={[]} region="Otago"
       />,
     )
     const bar    = getByTestId('offer-season-bar')
@@ -157,7 +158,7 @@ describe('S11 map, logistics and season', () => {
     const { container } = render(
       <OfferLogistics
         locationLat={null} locationLng={null} nearestAirport={null} suggestedLodging={[]}
-        seasonMonths={[]} peakMonths={[]} region="Otago"
+        seasonMonths={[]} peakMonths={[]} seasonPeriods={[]} region="Otago"
       />,
     )
     expect(container.querySelector('[data-section="S11"]')).toBeNull()
@@ -177,23 +178,18 @@ describe('S12 what to bring', () => {
 })
 
 describe('S13 FAQ', () => {
-  it('shows the page\'s questions and the fixed FA-vs-direct one last', () => {
+  it('shows exactly the page\'s own questions, in order — nothing appended', () => {
     const { getByTestId } = render(<OfferFaq faq={fixedPage().faq} />)
     const questions = [...getByTestId('offer-faq').querySelectorAll('summary')].map(el => el.textContent ?? '')
-    expect(questions).toHaveLength(3)
+    expect(questions).toHaveLength(2)
     expect(questions[0]).toContain('fishing licence')
-    expect(questions.at(-1)).toContain(FA_VS_DIRECT_QUESTION)
+    expect(questions[1]).toContain('river is muddy')
   })
 
-  it('still renders with no stored FAQ at all — the fixed question is on every page', () => {
-    const { getByTestId } = render(<OfferFaq faq={[]} />)
-    expect(getByTestId('offer-faq').querySelectorAll('summary')).toHaveLength(1)
-  })
-
-  it('the FA-vs-direct answer is still the placeholder — this test fails when tj\'s copy lands, which is the point', () => {
-    const { getByTestId } = render(<OfferFaq faq={[]} />)
-    expect(getByTestId('offer-faq').textContent).toContain(FA_VS_DIRECT_ANSWER)
-    expect(FA_VS_DIRECT_ANSWER).toBe('[FA vs direct — answer from tj]')
+  it('renders nothing at all when the page has no FAQ', () => {
+    const { container } = render(<OfferFaq faq={[]} />)
+    expect(container.querySelector('[data-section="S13"]')).toBeNull()
+    expect(container.innerHTML).toBe('')
   })
 
   it('renders answers as text, never as markup', () => {
@@ -203,5 +199,82 @@ describe('S13 FAQ', () => {
     const body = getByTestId('offer-faq')
     expect(body.querySelector('img')).toBeNull()
     expect(body.textContent).toContain('<img src=x')
+  })
+})
+
+describe('S11 season bar — periods (feedback round 1)', () => {
+  const periods = [
+    { title: 'Summer (December – February)', months: [1, 2, 12], text: 'Prime time for sight-fishing, nymphing, and dry-fly action.' },
+    { title: 'Winter (June – August)',       months: [6, 7, 8],  text: 'The signature period of the Taupō fishery.' },
+    { title: 'No words yet',                 months: [10],       text: null },
+  ]
+  const renderBar = () => render(
+    <OfferLogistics
+      locationLat={null} locationLng={null} nearestAirport={null} suggestedLodging={[]}
+      seasonMonths={[10, 11, 12, 1, 2, 3, 4, 6, 7, 8]} peakMonths={[12, 1, 2]} seasonPeriods={periods} region="Taupō"
+    />,
+  )
+  const month = (bar: HTMLElement, n: number) => bar.querySelector(`[data-month="${n}"]`) as HTMLElement
+  const panel = (bar: HTMLElement) => bar.querySelector('[data-testid="season-panel"]')?.textContent ?? ''
+
+  it('months whose period has text are buttons described by that period; the others are as before', () => {
+    const bar = renderBar().getByTestId('offer-season-bar')
+    const jan = month(bar, 1).querySelector('button')
+    expect(jan).not.toBeNull()
+    expect(month(bar, 1).getAttribute('title')).toBe('January — best · Summer (December – February)')
+    const described = bar.ownerDocument.getElementById(jan!.getAttribute('aria-describedby') ?? '')
+    expect(described?.textContent).toContain('Prime time for sight-fishing')
+
+    // No period (May), or a period with no text (October): no button, nothing to open.
+    expect(month(bar, 5).querySelector('button')).toBeNull()
+    expect(month(bar, 10).querySelector('button')).toBeNull()
+    // The colours are untouched: the existing state rule still holds.
+    expect(month(bar, 1).getAttribute('data-state')).toBe('peak')
+    expect(bar.textContent).toContain('dark = best months · mid = open · pale = closed')
+  })
+
+  it('click / tap pins a period under the bar, marks the month active, and toggles off on a second tap', () => {
+    const bar = renderBar().getByTestId('offer-season-bar')
+    expect(panel(bar)).toContain('Pick a month')
+
+    fireEvent.click(month(bar, 7).querySelector('button')!)
+    expect(panel(bar)).toContain('Winter (June – August)')
+    expect(panel(bar)).toContain('signature period')
+    expect(month(bar, 7).getAttribute('data-active')).toBe('true')
+    expect(month(bar, 7).querySelector('button')!.getAttribute('aria-pressed')).toBe('true')
+
+    // Another month swaps the one panel's content.
+    fireEvent.click(month(bar, 1).querySelector('button')!)
+    expect(panel(bar)).toContain('Summer (December – February)')
+    expect(bar.querySelectorAll('[data-testid="season-panel"]')).toHaveLength(1)
+
+    fireEvent.click(month(bar, 1).querySelector('button')!)
+    expect(panel(bar)).toContain('Pick a month')
+    expect(month(bar, 1).getAttribute('data-active')).toBeNull()
+  })
+
+  it('a mouse hover previews a period and leaving restores the pinned one; touch pointers do not preview', () => {
+    const bar = renderBar().getByTestId('offer-season-bar')
+    fireEvent.click(month(bar, 7).querySelector('button')!)
+
+    fireEvent.pointerEnter(month(bar, 12).querySelector('button')!, { pointerType: 'mouse' })
+    expect(panel(bar)).toContain('Summer')
+    fireEvent.pointerLeave(month(bar, 12).querySelector('button')!, { pointerType: 'mouse' })
+    expect(panel(bar)).toContain('Winter')
+
+    fireEvent.pointerEnter(month(bar, 12).querySelector('button')!, { pointerType: 'touch' })
+    expect(panel(bar)).toContain('Winter')
+  })
+
+  it('a page without periods draws the bar exactly as before: no buttons, no panel', () => {
+    const { getByTestId } = render(
+      <OfferLogistics
+        locationLat={null} locationLng={null} nearestAirport={null} suggestedLodging={[]}
+        seasonMonths={[10, 11, 12]} peakMonths={[12]} seasonPeriods={[]} region="Otago"
+      />,
+    )
+    const bar = getByTestId('offer-season-bar')
+    expect(bar.querySelector('button')).toBeNull()
+    expect(bar.querySelector('[data-testid="season-panel"]')).toBeNull()
   })
 })

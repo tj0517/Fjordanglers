@@ -82,8 +82,8 @@ try {
   )
   check(
     'chip data present',
-    nz.seasonMonths.length === 7 && nz.skillLevel === 3 && nz.maxAnglersPerGuide === 2,
-    `season=${nz.seasonMonths.length} months, skill=${nz.skillLevel}, maxAnglers=${nz.maxAnglersPerGuide}`,
+    nz.seasonMonths.length === 7 && nz.maxAnglersPerGuide === 2,
+    `season=${nz.seasonMonths.length} months, maxAnglers=${nz.maxAnglersPerGuide}`,
   )
   check('gallery', nz.galleryImageUrls.length === 5, `hero=${nz.heroImageUrl}, +${nz.galleryImageUrls.length}`)
 

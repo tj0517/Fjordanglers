@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { saveExperienceV2Content, type ExperienceV2EditorData } from '@/actions/experience-pages'
 import { parseKm, parseWholeNumber, type DayScheduleItem, type LodgingItem } from '@/lib/experiences/v2-editor'
 import { Field, NativeSelect, SaveBar, Section, toLines, useSave } from './fields'
+import { SeasonPeriodsField, type SeasonPeriodDraft } from './SeasonPeriodsField'
 
-interface ScheduleDraft { key: string; time: string; title: string; driveMin: string; walkKm: string; wading: boolean }
+interface ScheduleDraft { key: string; time: string; title: string; description: string }
 interface LodgingDraft  { key: string; name: string; url: string; note: string }
 
 const kmText = (km: number | null) => (km == null ? '' : String(km))
@@ -22,9 +23,10 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
   const [walkingMin,    setWalkingMin]    = useState(kmText(page.walkingKmMin))
   const [walkingMax,    setWalkingMax]    = useState(kmText(page.walkingKmMax))
   const [schedule,      setSchedule]      = useState<ScheduleDraft[]>(() => page.daySchedule.map((item, index) => ({
-    key: `stored-${index}`, time: item.time, title: item.title,
-    driveMin: item.meta.drive_min == null ? '' : String(item.meta.drive_min),
-    walkKm: kmText(item.meta.walk_km), wading: item.meta.wading,
+    key: `stored-${index}`, time: item.time, title: item.title, description: item.description ?? '',
+  })))
+  const [periods,       setPeriods]       = useState<SeasonPeriodDraft[]>(() => page.seasonPeriods.map((item, index) => ({
+    key: `stored-${index}`, title: item.title, months: item.months, text: item.text,
   })))
   const [airport,       setAirport]       = useState(page.nearestAirport ?? '')
   const [lodging,       setLodging]       = useState<LodgingDraft[]>(() => page.suggestedLodging.map((item, index) => ({
@@ -53,14 +55,7 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
       return fail('Walking distance must be a number of km with at most one decimal')
     }
 
-    const daySchedule: DayScheduleItem[] = []
-    for (const row of schedule) {
-      const driveMin = row.driveMin.trim() === '' ? null : parseWholeNumber(row.driveMin)
-      const walkKm   = row.walkKm.trim() === '' ? null : parseKm(row.walkKm)
-      if (row.driveMin.trim() !== '' && driveMin == null) return fail(`Day schedule “${row.title}”: drive must be whole minutes`)
-      if (row.walkKm.trim() !== '' && walkKm == null)     return fail(`Day schedule “${row.title}”: walk must be km with at most one decimal`)
-      daySchedule.push({ time: row.time, title: row.title, meta: { drive_min: driveMin, walk_km: walkKm, wading: row.wading } })
-    }
+    const daySchedule: DayScheduleItem[] = schedule.map(row => ({ time: row.time, title: row.title, description: row.description }))
 
     const suggestedLodging: LodgingItem[] = lodging.map(row => ({
       name: row.name, url: row.url.trim() === '' ? null : row.url.trim(), note: row.note.trim() === '' ? null : row.note,
@@ -77,6 +72,7 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
       walkingKmMin,
       walkingKmMax,
       daySchedule,
+      seasonPeriods:     periods.map(({ title, months, text }) => ({ title, months, text })),
       nearestAirport:    airport,
       suggestedLodging,
       licenseInfo:       hasLicense
@@ -128,27 +124,34 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
 
       <fieldset className="flex flex-col gap-2">
         <legend className="f-body mb-1 text-xs font-semibold text-muted-foreground">Day schedule</legend>
+        <p className="f-body -mt-1 text-xs text-muted-foreground">Time (optional), a short title in bold, and a sentence or two under it.</p>
         {schedule.map((row, index) => (
-          <div key={row.key} className="grid grid-cols-[5rem_1fr_5rem_5rem_auto_auto] items-center gap-2">
-            <Input aria-label={`Schedule row ${index + 1} time`} placeholder="7:30" value={row.time} onChange={e => patchSchedule(row.key, { time: e.target.value })} />
-            <Input aria-label={`Schedule row ${index + 1} title`} placeholder="Pick-up from your lodging" value={row.title} onChange={e => patchSchedule(row.key, { title: e.target.value })} />
-            <Input aria-label={`Schedule row ${index + 1} drive minutes`} placeholder="drive min" inputMode="numeric" value={row.driveMin} onChange={e => patchSchedule(row.key, { driveMin: e.target.value })} />
-            <Input aria-label={`Schedule row ${index + 1} walk km`} placeholder="walk km" inputMode="decimal" value={row.walkKm} onChange={e => patchSchedule(row.key, { walkKm: e.target.value })} />
-            <label className="f-body flex items-center gap-1 text-xs text-muted-foreground">
-              <input type="checkbox" checked={row.wading} onChange={e => patchSchedule(row.key, { wading: e.target.checked })} />
-              wading
-            </label>
+          <div key={row.key} className="grid grid-cols-[5rem_1fr_auto] items-start gap-2">
+            <Input aria-label={`Schedule row ${index + 1} time`} placeholder="7:30" maxLength={20} value={row.time} onChange={e => patchSchedule(row.key, { time: e.target.value })} />
+            <div className="flex min-w-0 flex-col gap-2">
+              <Input aria-label={`Schedule row ${index + 1} title`} placeholder="Pickup & Briefing" maxLength={120} value={row.title} onChange={e => patchSchedule(row.key, { title: e.target.value })} />
+              <Textarea
+                aria-label={`Schedule row ${index + 1} description`}
+                placeholder="Guide collects you from your hotel or the port and briefs you over coffee."
+                maxLength={1500}
+                className="min-h-16"
+                value={row.description}
+                onChange={e => patchSchedule(row.key, { description: e.target.value })}
+              />
+            </div>
             <Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove schedule row ${index + 1}`} onClick={() => setSchedule(current => current.filter(r => r.key !== row.key))}>
               <Trash2 />
             </Button>
           </div>
         ))}
         <div>
-          <Button type="button" variant="outline" size="xs" onClick={() => setSchedule(current => [...current, { key: crypto.randomUUID(), time: '', title: '', driveMin: '', walkKm: '', wading: false }])}>
+          <Button type="button" variant="outline" size="xs" onClick={() => setSchedule(current => [...current, { key: crypto.randomUUID(), time: '', title: '', description: '' }])}>
             <Plus /> schedule row
           </Button>
         </div>
       </fieldset>
+
+      <SeasonPeriodsField value={periods} onChange={setPeriods} />
 
       <Field label="Nearest airport">
         <Input value={airport} onChange={e => setAirport(e.target.value)} placeholder="Queenstown (ZQN), 1 h from Wanaka" />

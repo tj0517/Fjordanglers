@@ -39,6 +39,7 @@ import {
   type ExperiencePageOptionPayload,
 } from '@/actions/experience-pages'
 import ImageUpload from '@/components/admin/image-upload'
+import { CONTENT_BLOCK_MAX_PHOTOS } from '@/lib/experiences/v2-editor'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
 import LatLngPicker from '@/components/admin/LatLngPicker'
 import dynamic from 'next/dynamic'
@@ -81,6 +82,19 @@ interface SpeciesDetailRecord {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/** A page content block while it is edited: the stored block plus a key that survives removals. */
+type PageBlockDraft = ContentBlock & { key: string }
+
+/** What is sent for a block — the draft without its key. The server derives `image_url` from `image_urls`. */
+function toContentBlock({ headline, text, image_url, image_urls }: PageBlockDraft): ContentBlock {
+  return { headline, text, image_url, image_urls }
+}
+
+/** A block's photos, first = cover: the gallery when it has one, else the single legacy photo. */
+function blockPhotos(block: ContentBlock): string[] {
+  return block.image_urls ?? (block.image_url ? [block.image_url] : [])
+}
+
 function slugify(s: string): string {
   return s.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
 }
@@ -101,6 +115,20 @@ function toggleItem<T>(arr: T[], item: T): T[] {
   return arr.includes(item) ? arr.filter(x => x !== item) : [...arr, item]
 }
 
+/**
+ * The chips to offer: the fixed list, then every stored value the list does not have
+ * ("Spin fishing", "National Park"), flagged so the admin can see it and switch it off.
+ * `stored` is what the page held when the form opened — a stale value stays visible after
+ * it is switched off, so a mis-click can be undone before saving.
+ */
+function chipOptions(list: readonly string[], stored: readonly string[]): { value: string; notInList: boolean }[] {
+  const extra = [...new Set(stored)].filter(value => !list.includes(value))
+  return [
+    ...list.map(value => ({ value, notInList: false })),
+    ...extra.map(value => ({ value, notInList: true })),
+  ]
+}
+
 // ─── UI atoms ─────────────────────────────────────────────────────────────────
 
 function SectionLabel({ step, title, desc }: { step: number; title: string; desc?: string }) {
@@ -118,17 +146,26 @@ function SectionLabel({ step, title, desc }: { step: number; title: string; desc
   )
 }
 
-function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function Chip({ label, active, onClick, notInList = false }: {
+  label:      string
+  active:     boolean
+  onClick:    () => void
+  /** A stored value the fixed list does not offer — dashed outline and a "not in list" note. */
+  notInList?: boolean
+}) {
   return (
     <button type="button" onClick={onClick}
+      aria-pressed={active}
+      title={notInList ? 'Stored on this page but not in the list — click to remove it' : undefined}
       className="px-3 py-1.5 rounded-full text-xs font-semibold f-body transition-all"
       style={{
         background: active ? '#E67E50' : 'rgba(10,46,77,0.06)',
         color:      active ? '#fff'    : 'rgba(10,46,77,0.6)',
-        border:     active ? 'none'    : '1px solid rgba(10,46,77,0.1)',
+        border:     notInList ? `1.5px dashed ${active ? '#0A2E4D' : 'rgba(10,46,77,0.35)'}` : active ? 'none' : '1px solid rgba(10,46,77,0.1)',
         boxShadow:  active ? '0 2px 8px rgba(230,126,80,0.28)' : 'none',
       }}>
       {label}
+      {notInList && <span className="ml-1 font-normal opacity-80">· not in list</span>}
     </button>
   )
 }
@@ -971,8 +1008,11 @@ export default function ExperiencePageForm({
   const [effort,            setEffort]            = useState(initialData?.physical_effort ?? '')
   const [nonAnglerFriendly, setNonAnglerFriendly] = useState(initialData?.non_angler_friendly ?? false)
   const [technique,         setTechnique]         = useState<string[]>(initialData?.technique ?? prefill?.technique ?? [])
+  // What the page held when the form opened — chipOptions() keeps off-list values visible.
+  const [storedTechnique]                         = useState<string[]>(() => technique)
   const [targetSpecies,     setTargetSpecies]     = useState<string[]>(initialData?.target_species ?? prefill?.species ?? [])
   const [environment,       setEnvironment]       = useState<string[]>(initialData?.environment ?? [])
+  const [storedEnvironment]                       = useState<string[]>(() => environment)
 
   // ── Section 4: Content
   const [introText,    setIntroText]    = useState(initialData?.intro_text ?? '')
@@ -1045,7 +1085,11 @@ export default function ExperiencePageForm({
   const [excludes, setExcludes] = useState(initialData?.excludes?.join('\n') ?? '')
 
   // ── Page-level content blocks
-  const [pageBlocks, setPageBlocks] = useState<ContentBlock[]>(initialData?.content_blocks ?? [])
+  // Each block carries a stable key: its photo manager (MultiImageUpload) keeps its own list,
+  // so an index key would hand one block's photos to the next one when a block is removed.
+  const [pageBlocks, setPageBlocks] = useState<PageBlockDraft[]>(
+    () => (initialData?.content_blocks ?? []).map((block, i) => ({ ...block, key: `stored-${i}` })),
+  )
 
   // ── Section 12b: FAQ (global)
   const [faqItems, setFaqItems] = useState<FaqItem[]>(() => parseJsonField<FaqItem>(initialData?.faq))
@@ -1166,7 +1210,9 @@ export default function ExperiencePageForm({
       meeting_point_description:        meetingDesc.trim() || null,
       includes:                         parseLines(includes),
       excludes:                         parseLines(excludes),
-      content_blocks:                   pageBlocks.filter(b => b.headline.trim() || b.text.trim()),
+      content_blocks:                   pageBlocks
+        .filter(b => b.headline.trim() || b.text.trim())
+        .map(toContentBlock),
       faq:                              faqItems.filter(f => f.question.trim() || f.answer.trim()),
       meta_title:                       metaTitle.trim()   || null,
       meta_description:                 metaDesc.trim()    || null,
@@ -1386,9 +1432,9 @@ export default function ExperiencePageForm({
         <div>
           <label className={lbl}>Technique</label>
           <div className="flex flex-wrap gap-2">
-            {TECHNIQUES.map(t => (
-              <Chip key={t} label={t} active={technique.includes(t)}
-                onClick={() => setTechnique(toggleItem(technique, t))} />
+            {chipOptions(TECHNIQUES, storedTechnique).map(({ value, notInList }) => (
+              <Chip key={value} label={value} active={technique.includes(value)} notInList={notInList}
+                onClick={() => setTechnique(toggleItem(technique, value))} />
             ))}
           </div>
         </div>
@@ -1396,9 +1442,9 @@ export default function ExperiencePageForm({
         <div>
           <label className={lbl}>Environment</label>
           <div className="flex flex-wrap gap-2">
-            {ENVIRONMENTS.map(env => (
-              <Chip key={env} label={env} active={environment.includes(env)}
-                onClick={() => setEnvironment(toggleItem(environment, env))} />
+            {chipOptions(ENVIRONMENTS, storedEnvironment).map(({ value, notInList }) => (
+              <Chip key={value} label={value} active={environment.includes(value)} notInList={notInList}
+                onClick={() => setEnvironment(toggleItem(environment, value))} />
             ))}
           </div>
         </div>
@@ -1561,14 +1607,14 @@ export default function ExperiencePageForm({
           <label className={lbl}>Text blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
           <button
             type="button"
-            onClick={() => setPageBlocks(prev => [...prev, { headline: '', text: '' }])}
+            onClick={() => setPageBlocks(prev => [...prev, { key: crypto.randomUUID(), headline: '', text: '' }])}
             className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
             style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
             + Add block
           </button>
         </div>
         {pageBlocks.map((block, bi) => (
-          <div key={bi} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+          <div key={block.key} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -1584,16 +1630,15 @@ export default function ExperiencePageForm({
                 Remove
               </button>
             </div>
-            <ImageUpload
-              label="Photo (optional — if set, photo is on left, text on right)"
-              variant="cover"
-              aspect="wide"
-              cropAspect={4 / 3}
-              currentUrl={block.image_url || null}
-              onUpload={url => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, image_url: url } : b))}
+            <MultiImageUpload
+              label={`Photos (optional, up to ${CONTENT_BLOCK_MAX_PHOTOS} — first is the cover; 2 or more open as a gallery on the v2 page)`}
+              initial={blockPhotos(block).map((url, i) => ({ url, is_cover: i === 0, sort_order: i }))}
+              max={CONTENT_BLOCK_MAX_PHOTOS}
+              onChange={imgs => setPageBlocks(prev => prev.map(b => b.key === block.key
+                ? { ...b, image_urls: imgs.map(g => g.url), image_url: imgs[0]?.url ?? '' }
+                : b))}
               pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
               guideId={prefill?.guide_id ?? undefined}
-              hint="Landscape — if present the heading is full width, then photo left and text right."
             />
             <textarea
               value={block.text}

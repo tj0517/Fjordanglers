@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   safeHttpUrl, speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary, languageNames,
+  parseSeasonPeriods, parseContentBlocks,
 } from './experience-v2-content'
 
 describe('safeHttpUrl', () => {
@@ -58,16 +59,61 @@ describe('speciesNames', () => {
 })
 
 describe('parseDaySchedule', () => {
-  it('turns meta into short lines, in a fixed order', () => {
+  it('reads time, title and description', () => {
+    expect(parseDaySchedule([{ time: '7:30', title: 'Pickup & Briefing', description: 'Guide collects you from your hotel.' }]))
+      .toEqual([{ time: '7:30', title: 'Pickup & Briefing', description: 'Guide collects you from your hotel.' }])
+  })
+  it('reads a legacy row (meta, no description) as having no description — the meta is never shown', () => {
     expect(parseDaySchedule([{ time: '9:00', title: 'Fishing', meta: { wading: 'to the knee', walk_km: 3, drive_min: 45 } }]))
-      .toEqual([{ time: '9:00', title: 'Fishing', metaLines: ['45 min drive', '3 km on foot', 'wading: to the knee'] }])
+      .toEqual([{ time: '9:00', title: 'Fishing', description: null }])
   })
-  it('skips a step with no title and tolerates a missing time and meta', () => {
-    expect(parseDaySchedule([{ time: '1:00' }, { title: 'Lunch' }]))
-      .toEqual([{ time: '', title: 'Lunch', metaLines: [] }])
+  it('skips a step with no title and tolerates a missing time and description', () => {
+    expect(parseDaySchedule([{ time: '1:00' }, { title: 'Lunch' }, { title: 'Dinner', description: '   ' }]))
+      .toEqual([{ time: '', title: 'Lunch', description: null }, { time: '', title: 'Dinner', description: null }])
   })
-  it('reads a boolean wading flag', () => {
-    expect(parseDaySchedule([{ title: 'x', meta: { wading: true } }])[0]?.metaLines).toEqual(['wading: yes'])
+})
+
+describe('parseSeasonPeriods', () => {
+  it('reads periods, sorting their months', () => {
+    expect(parseSeasonPeriods([{ title: 'Summer (December – February)', months: [12, 1, 2], text: 'Prime time.' }]))
+      .toEqual([{ title: 'Summer (December – February)', months: [1, 2, 12], text: 'Prime time.' }])
+  })
+  it('gives a month to the first period that claims it and drops it from later ones', () => {
+    expect(parseSeasonPeriods([
+      { title: 'Summer', months: [12, 1, 2], text: 'a' },
+      { title: 'Autumn', months: [2, 3],     text: 'b' },
+    ]).map(p => p.months)).toEqual([[1, 2, 12], [3]])
+  })
+  it('skips what is malformed instead of throwing', () => {
+    expect(parseSeasonPeriods([
+      { title: 'No months' },
+      { months: [5] },
+      { title: 'Bad months', months: [0, 13, 4.5, '6'] },
+      'not an object',
+      { title: 'Kept', months: [6], text: '  ' },
+    ])).toEqual([{ title: 'Kept', months: [6], text: null }])
+    expect(parseSeasonPeriods(null)).toEqual([])
+    expect(parseSeasonPeriods({ title: 'not an array' })).toEqual([])
+  })
+})
+
+describe('parseContentBlocks — photos', () => {
+  it('a legacy block with only image_url is a gallery of one', () => {
+    expect(parseContentBlocks([{ headline: 'Lake', text: 't', image_url: '/lake.jpg' }]))
+      .toEqual([{ headline: 'Lake', text: 't', imageUrls: ['/lake.jpg'] }])
+  })
+  it('a block with image_urls keeps them in order, first = cover', () => {
+    expect(parseContentBlocks([{ headline: 'Spring Creeks', text: 't', image_urls: ['https://x.example/1.jpg', '/2.jpg'] }])[0]?.imageUrls)
+      .toEqual(['https://x.example/1.jpg', '/2.jpg'])
+  })
+  it('image_urls wins when both are stored', () => {
+    expect(parseContentBlocks([{ headline: 'H', text: 't', image_url: '/old.jpg', image_urls: ['/new-1.jpg', '/new-2.jpg'] }])[0]?.imageUrls)
+      .toEqual(['/new-1.jpg', '/new-2.jpg'])
+  })
+  it('drops unsafe or empty photo entries but keeps the block', () => {
+    expect(parseContentBlocks([{ headline: 'H', text: null, image_urls: ['javascript:alert(1)', '', 42, '/ok.jpg'] }]))
+      .toEqual([{ headline: 'H', text: null, imageUrls: ['/ok.jpg'] }])
+    expect(parseContentBlocks([{ headline: 'H', text: 't' }])[0]?.imageUrls).toEqual([])
   })
 })
 

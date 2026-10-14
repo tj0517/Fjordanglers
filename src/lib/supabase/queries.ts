@@ -18,6 +18,7 @@ import {
   speciesNames,
   parseLicenseInfo,
   parseDaySchedule,
+  parseSeasonPeriods,
   parseItinerary,
   parseSuggestedLodging,
   parseFaq,
@@ -26,6 +27,7 @@ import {
   safeHttpUrl,
   type LicenseInfo,
   type DayStep,
+  type SeasonPeriod,
   type ItineraryDay,
   type LodgingSuggestion,
   type FaqEntry,
@@ -653,7 +655,8 @@ export type ExperienceV2 = {
   seasonMonths:       number[]
   /** The best months of `seasonMonths`; a subset of it, drawn darker on the season bar. */
   peakMonths:         number[]
-  skillLevel:         number | null
+  /** S11: what each part of the season is like, shown under the bar for its months. */
+  seasonPeriods:      SeasonPeriod[]
   minDays:            number
   maxDays:            number | null
   maxAnglersPerGuide: number
@@ -672,7 +675,7 @@ export type ExperienceV2 = {
   suggestedLodging:   LodgingSuggestion[]
   /** S12 — `experience_pages.what_to_bring`. */
   whatToBring:        string[]
-  /** S13 — the page's own questions. The fixed FA-vs-direct one is added by the section. */
+  /** S13 — the page's own questions. Empty = no S13. */
   faq:                FaqEntry[]
   metaTitle:          string | null
   metaDescription:    string | null
@@ -829,7 +832,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         .select(`
           id, slug, experience_name, intro_text, country, region,
           story_text, content_blocks, catches_text, environment,
-          hero_image_url, gallery_image_urls, includes, excludes, season_months, skill_level,
+          hero_image_url, gallery_image_urls, includes, excludes, season_months, season_periods,
           species_details, technique, meeting_point_name, meeting_point_description,
           walking_km_min, walking_km_max, license_info, tip_guidance_text,
           suited_for, not_suited_for, expectations_text, day_schedule,
@@ -961,7 +964,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         offerEtaText:       page.offer_eta_text,
         seasonMonths:       page.season_months ?? [],
         peakMonths:         page.peak_months ?? [],
-        skillLevel:         page.skill_level,
+        seasonPeriods:      parseSeasonPeriods(page.season_periods),
         minDays:            page.min_days,
         maxDays:            page.max_days,
         maxAnglersPerGuide: page.max_anglers_per_guide,

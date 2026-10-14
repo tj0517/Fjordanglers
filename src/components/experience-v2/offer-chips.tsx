@@ -1,12 +1,12 @@
 /**
  * S1 chips — what the angler needs before reading a word of prose (FA-1.53):
- * where, how long, how many of them per guide, when, how hard, and whether gear is included.
+ * where, how long, how many of them per guide, when, and whether gear is included.
  *
  * A chip with no data behind it is left out rather than shown empty — an offer page with
  * seven half-filled chips reads worse than one with four full ones.
  */
 
-import { CalendarDays, Gauge, MapPin, Package, Sun, Users, type LucideIcon } from 'lucide-react'
+import { CalendarDays, MapPin, Package, Sun, Users, type LucideIcon } from 'lucide-react'
 import { seasonLabel } from '@/lib/season-months'
 import { cardShadow } from './offer-box'
 
@@ -37,7 +37,6 @@ export default function OfferChips({
   maxDays,
   maxAnglersPerGuide,
   seasonMonths,
-  skillLevel,
   includes,
 }: {
   region:             string
@@ -45,7 +44,6 @@ export default function OfferChips({
   maxDays:            number | null
   maxAnglersPerGuide: number
   seasonMonths:       number[]
-  skillLevel:         number | null
   includes:           string[]
 }) {
   const season = seasonLabel(seasonMonths)
@@ -55,7 +53,6 @@ export default function OfferChips({
     { icon: CalendarDays, label: lengthLabel(minDays, maxDays) },
     { icon: Users, label: anglersLabel(maxAnglersPerGuide) },
     season != null ? { icon: Sun, label: `season ${season}` } : null,
-    skillLevel != null ? { icon: Gauge, label: `level ${skillLevel} / 5` } : null,
     gearIncluded(includes) ? { icon: Package, label: 'gear included' } : null,
   ] as (Chip | null)[]).filter((c): c is Chip => c != null)
 

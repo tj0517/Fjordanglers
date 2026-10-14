@@ -53,6 +53,23 @@ describe('OfferBody — order and content', () => {
     expect(panel()).not.toContain('River Ytri')
   })
 
+  it('fixed: S6 prints each row as time, bold title and its description — no logistics meta line', () => {
+    const { container } = render(<OfferBody page={fixedPage()} />)
+    const rows = [...container.querySelectorAll('[data-testid="timeline"] > li')]
+    expect(rows).toHaveLength(2)
+
+    const [first, second] = rows
+    expect(first!.querySelector('b')!.textContent).toBe('7:30')
+    const title = first!.querySelector('p.font-semibold')
+    expect(title!.textContent).toBe('Pickup & Briefing')
+    expect(title!.nextElementSibling!.textContent).toBe('Guide collects you from your hotel or the port and briefs you over coffee.')
+
+    // No time: the gutter stays, empty. No description: the title stands alone.
+    expect(second!.querySelector('b')!.textContent).toBe('')
+    expect(second!.querySelectorAll('p')).toHaveLength(1)
+    expect(container.querySelector('[data-section="S6"]')!.textContent).not.toMatch(/drive|on foot|wading/)
+  })
+
   it('always says the plan is a sample and the weather decides', () => {
     for (const page of [fixedPage(), customPage()]) {
       const { container, unmount } = render(<OfferBody page={page} />)
