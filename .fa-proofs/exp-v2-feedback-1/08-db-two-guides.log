@@ -1,0 +1,6 @@
+ full_name |  role   | status | show_on_page | sort_order 
+-----------+---------+--------+--------------+------------
+ Hana Seed | primary | active | t            |          0
+ Jon Seed  | backup  | active | t            |          1
+(2 rows)
+

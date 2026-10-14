@@ -1,0 +1,35 @@
+-[ RECORD 1 ]--+------------------------------------------------------------------------------------------------------------------------------
+suited_for     | {"you cast 12–15 m in wind"}
+day_schedule   | [                                                                                                                            +
+               |     {                                                                                                                        +
+               |         "time": "7:30",                                                                                                      +
+               |         "title": "Pickup & Briefing",                                                                                        +
+               |         "description": "Guide collects you from your hotel or the port and briefs you over coffee."                          +
+               |     },                                                                                                                       +
+               |     {                                                                                                                        +
+               |         "time": "",                                                                                                          +
+               |         "title": "Sight-fishing the upper river",                                                                            +
+               |         "description": "A short walk in, then slow stalking of brown trout in clear water. Lunch on the bank."               +
+               |     }                                                                                                                        +
+               | ]
+season_periods | [                                                                                                                            +
+               |     {                                                                                                                        +
+               |         "text": "Prime time for sight-fishing, nymphing, and dry-fly action. Long days, warm water and active fish.",        +
+               |         "title": "Summer (December – February)",                                                                             +
+               |         "months": [                                                                                                          +
+               |             1,                                                                                                               +
+               |             2,                                                                                                               +
+               |             12                                                                                                               +
+               |         ]                                                                                                                    +
+               |     },                                                                                                                       +
+               |     {                                                                                                                        +
+               |         "text": "A highly productive, often overlooked transitional period. Fewer anglers, fish feeding hard before winter.",+
+               |         "title": "Autumn (March – May)",                                                                                     +
+               |         "months": [                                                                                                          +
+               |             3,                                                                                                               +
+               |             4,                                                                                                               +
+               |             5                                                                                                                +
+               |         ]                                                                                                                    +
+               |     }                                                                                                                        +
+               | ]
+

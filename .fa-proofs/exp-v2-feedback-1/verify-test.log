@@ -1,0 +1,1397 @@
+$ vitest run
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/tj/Fjordanglers[39m
+
+ [32m✓[39m src/actions/__tests__/authorization.test.ts [2m([22m[2m29 tests[22m[2m)[22m[33m 821[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Guides[2m > [22m[2madds a second guide as backup: two rows, experience_pages.guide_id untouched
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000001 — 2 guide(s), 0 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Guides[2m > [22m[2madds a second guide as backup: two rows, experience_pages.guide_id untouched
+[22m[39m[read] after adding G2 as backup — experience_guides
+[
+ {
+  "guide_id": "56a00000-0000-4000-8000-000000000001",
+  "role": "primary",
+  "status": "active",
+  "show_on_page": true,
+  "sort_order": 0,
+  "guide_price_override_cents": null
+ },
+ {
+  "guide_id": "56a00000-0000-4000-8000-000000000002",
+  "role": "backup",
+  "status": "active",
+  "show_on_page": true,
+  "sort_order": 1,
+  "guide_price_override_cents": null
+ }
+]
+[read] after adding G2 as backup — experience_pages.guide_id
+"56a00000-0000-4000-8000-000000000001"
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Guides[2m > [22m[2mswitches the primary: exactly one active primary, the previous one demoted
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000001 — 2 guide(s), 0 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Guides[2m > [22m[2mswitches the primary: exactly one active primary, the previous one demoted
+[22m[39m[read] after switching primary to G2 — experience_guides
+[
+ {
+  "guide_id": "56a00000-0000-4000-8000-000000000001",
+  "role": "backup",
+  "status": "active",
+  "show_on_page": true,
+  "sort_order": 0,
+  "guide_price_override_cents": null
+ },
+ {
+  "guide_id": "56a00000-0000-4000-8000-000000000002",
+  "role": "primary",
+  "status": "active",
+  "show_on_page": true,
+  "sort_order": 1,
+  "guide_price_override_cents": null
+ }
+]
+[read] after switching primary to G2 — experience_pages.guide_id (synced by trg_sync_primary)
+"56a00000-0000-4000-8000-000000000002"
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Guides[2m > [22m[2mremoves the primary and names a new one in the same save
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000001 — 2 guide(s), 1 removed
+
+ [32m✓[39m src/actions/getInquiryConfirmation.test.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1348[2mms[22m[39m
+     [33m[2m✓[22m[39m returns depositPaidAt: null for an unpaid inquiry [33m 1061[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_guide_id — experience_pages.guide_id -> experience_guides[2m > [22m[2m(a) UPDATE guide_id: the new guide is primary/active, the old primary is paused
+[22m[39m[read] (a) experience_guides after UPDATE guide_id G1 -> G2
+[
+ "1:primary:paused",
+ "2:primary:active"
+]
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_guide_id — experience_pages.guide_id -> experience_guides[2m > [22m[2m(a2) UPDATE guide_id to a guide already on the page as backup promotes that row
+[22m[39m[read] (a2) experience_guides after promoting the backup G2 via guide_id
+[
+ "1:primary:paused",
+ "2:primary:active"
+]
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_guide_id — experience_pages.guide_id -> experience_guides[2m > [22m[2m(a4) INSERT of a page with guide_id creates the primary/active row (decision D1)
+[22m[39m[read] (a4) experience_guides after INSERT of a page with guide_id
+[
+ "3:primary:active"
+]
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_primary — experience_guides -> experience_pages.guide_id[2m > [22m[2m(b) INSERT of a primary/active row sets guide_id
+[22m[39m[read] (b) experience_pages.guide_id after INSERT of a primary/active row
+"51a00000-0000-4000-8000-000000000001"
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_primary — experience_guides -> experience_pages.guide_id[2m > [22m[2m(b2) the v2 admin swap — demote the old primary, promote another — ends with guide_id on the new one
+[22m[39m[saveExperienceV2Guides] page 51b00000-0000-4000-8000-000000000006 — 2 guide(s), 0 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_primary — experience_guides -> experience_pages.guide_id[2m > [22m[2m(b2) the v2 admin swap — demote the old primary, promote another — ends with guide_id on the new one
+[22m[39m[read] (b2) experience_guides after saveExperienceV2Guides swap G1 -> G2
+[
+ "1:backup:active",
+ "2:primary:active"
+]
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mprice override (≤ 115% of the base row)[2m > [22m[2mwithout a base row: refused by the action and by the trigger
+[22m[39m[red] no base row — action: {"success":false,"error":"Price override rejected: the price grid has no current base row (1 day × max anglers per guide) to measure it against"}
+[red] no base row — database: guide_price_override_cents rejected: page 56b00000-0000-4000-8000-000000000002 has no valid base price row (days = 1, anglers = max_anglers_per_guide) in experience_prices
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_primary — experience_guides -> experience_pages.guide_id[2m > [22m[2m(c) DELETE of the primary row sets guide_id to NULL
+[22m[39m[read] (c) experience_pages.guide_id after DELETE of the primary row
+null
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mtrg_sync_price_from — price_from -> price_from_cents[2m > [22m[2m(d) UPDATE price_from: price_from_cents = price_from x 100, exact
+[22m[39m[read] (d) price_from / price_from_cents after UPDATE price_from = 19.99
+{
+ "guide_id": null,
+ "price_from": 19.99,
+ "price_from_cents": 1999
+}
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mprice override (≤ 115% of the base row)[2m > [22m[2m+30% of the base row: zod error in the action AND the trigger exception on a direct write
+[22m[39m[saveExperienceV2Prices] page 56b00000-0000-4000-8000-000000000002 — 2 row(s), 0 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mprice override (≤ 115% of the base row)[2m > [22m[2m+30% of the base row: zod error in the action AND the trigger exception on a direct write
+[22m[39m[red] +30% — action: {"success":false,"error":"Price override 130000 exceeds 115% of the base price 100000 (limit 115000)"}
+[red] +30% — database: guide_price_override_cents 130000 exceeds 115% of the base price 100000 (limit 115000) (code 23514)
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mcreateExperiencePage — the old admin, no code change[2m > [22m[2m(e) a new page with a guide and a price ends with one primary/active row and price_from_cents
+[22m[39m[createExperiencePage] Created 460e456a-9e20-4f27-8523-d29e000a9b58 — /experiences/fa151-test-created-by-old-admin
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mcreateExperiencePage — the old admin, no code change[2m > [22m[2m(e) a new page with a guide and a price ends with one primary/active row and price_from_cents
+[22m[39m[read] (e) experience_guides after createExperiencePage
+[
+ {
+  "guide_id": "51a00000-0000-4000-8000-000000000001",
+  "role": "primary",
+  "status": "active"
+ }
+]
+[read] (e) experience_pages row after createExperiencePage
+{
+ "guide_id": "51a00000-0000-4000-8000-000000000001",
+ "price_from": 250.5,
+ "price_from_cents": 25050
+}
+
+[90mstdout[2m | src/actions/__tests__/experience-guides-sync.test.ts[2m > [22m[2mloop guard[2m > [22m[2mUPDATE guide_id on a page with two guides ends with exactly one primary/active row and no error
+[22m[39m[read] loop: experience_guides
+[
+ "1:primary:paused",
+ "2:primary:active"
+]
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mprice override (≤ 115% of the base row)[2m > [22m[2mexactly 115% is accepted and stored; one cent more is not
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000002 — 1 guide(s), 0 removed
+
+ [32m✓[39m src/actions/__tests__/experience-guides-sync.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 1008[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mprice override (≤ 115% of the base row)[2m > [22m[2mprices moving under a stored override warn, and do not block an unrelated guide edit
+[22m[39m[saveExperienceV2Prices] page 56b00000-0000-4000-8000-000000000002 — 1 row(s), 1 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mprice override (≤ 115% of the base row)[2m > [22m[2mprices moving under a stored override warn, and do not block an unrelated guide edit
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000002 — 2 guide(s), 0 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mprice override (≤ 115% of the base row)[2m > [22m[2mprices moving under a stored override warn, and do not block an unrelated guide edit
+[22m[39m[saveExperienceV2Prices] page 56b00000-0000-4000-8000-000000000002 — 0 row(s), 1 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msetExperiencePageVersion[2m > [22m[2mrefuses v2 without an active primary guide and leaves page_version at 1
+[22m[39m[red] page_version=2 without a primary — {"success":false,"error":"Cannot switch to v2 — missing: an active primary guide (Guides)"}
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msetExperiencePageVersion[2m > [22m[2ma paused primary does not count
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000003 — 1 guide(s), 0 removed
+
+ [32m✓[39m src/components/experience-v2/offer-body.test.tsx [2m([22m[2m35 tests[22m[2m)[22m[33m 1592[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msetExperiencePageVersion[2m > [22m[2maccepts v2 once the page has a price, an active primary and a "suited for" line
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000003 — 1 guide(s), 0 removed
+
+ [32m✓[39m src/app/admin/finances/FinancesClient.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 402[2mms[22m[39m
+     [33m[2m✓[22m[39m two rapid clicks on Save call addFixedCost once [33m 352[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msetExperiencePageVersion[2m > [22m[2maccepts v2 once the page has a price, an active primary and a "suited for" line
+[22m[39m[setExperiencePageVersion] page 56b00000-0000-4000-8000-000000000003 → v2
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:147:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:147:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:147:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:147:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:147:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2m6th request from the same IP in the window → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:164:34
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:164:34
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:164:34
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:164:34
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:164:34
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:165:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per IP[2m > [22m[2manother IP is not affected by the first one being blocked
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per e-mail[2m > [22m[2m4th request for the same e-mail from different IPs → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:171:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per e-mail[2m > [22m[2m4th request for the same e-mail from different IPs → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per e-mail[2m > [22m[2m4th request for the same e-mail from different IPs → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:172:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per e-mail[2m > [22m[2m4th request for the same e-mail from different IPs → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per e-mail[2m > [22m[2m4th request for the same e-mail from different IPs → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:173:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — rate limit per e-mail[2m > [22m[2m4th request for the same e-mail from different IPs → 429 + Retry-After, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:192:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:192:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:192:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:192:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:192:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:195:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:195:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:195:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — below the thresholds nothing changes[2m > [22m[2m5 requests from one IP (different e-mails) and 3 for one e-mail (different IPs) all pass
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — counter keys[2m > [22m[2mkeys handed to the adapter contain no @, no IPv4/IPv6 pattern, nothing from the raw values
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:209:5
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — counter keys[2m > [22m[2mkeys handed to the adapter contain no @, no IPv4/IPv6 pattern, nothing from the raw values
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — counter keys[2m > [22m[2mkeys handed to the adapter contain no @, no IPv4/IPv6 pattern, nothing from the raw values
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:210:5
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — counter keys[2m > [22m[2mkeys handed to the adapter contain no @, no IPv4/IPv6 pattern, nothing from the raw values
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:225:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:228:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:228:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:228:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2mskips only the IP check: unlimited per IP, still limited per e-mail
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2min production a missing header logs a warning without personal data
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:240:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — missing client IP (decision 2)[2m > [22m[2min production a missing header logs a warning without personal data
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:270:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — limiter failure (O-29 a, fail-open)[2m > [22m[2mlimiter not configured (local, no variables) → behaves exactly as before
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:287:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:287:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:287:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:287:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:287:15
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m6th v2 request from the same IP → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m4th v2 request for the same e-mail from different IPs → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:298:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m4th v2 request for the same e-mail from different IPs → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m4th v2 request for the same e-mail from different IPs → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:299:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m4th v2 request for the same e-mail from different IPs → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m4th v2 request for the same e-mail from different IPs → 429, nothing runs
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:300:13
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2m4th v2 request for the same e-mail from different IPs → 429, nothing runs
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2ma v2 request below the thresholds passes and reaches createInquiry with the brief
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-rl, treating as new: TypeError: client.from(...).select(...).ilike(...).neq is not a function
+    at hasRecentInquiryFromEmail [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1143:6[90m)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/inquiries/route.ts:253:24[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/rate-limit.test.ts:309:22
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/rate-limit.test.ts[2m > [22m[2mPOST /api/inquiries — the limiter holds for the v2 form (FA-1.55)[2m > [22m[2ma v2 request below the thresholds passes and reaches createInquiry with the brief
+[22m[39m[inquiries/POST] Created inquiry inq-rl (page 550e8400-e29b-41d4-a716-446655440000)
+
+ [32m✓[39m src/app/api/inquiries/__tests__/rate-limit.test.ts [2m([22m[2m12 tests[22m[2m)[22m[33m 530[2mms[22m[39m
+     [33m[2m✓[22m[39m 6th request from the same IP in the window → 429 + Retry-After, nothing runs [33m 450[2mms[22m[39m
+[90mstderr[2m | src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22m[2mthe submit[2m > [22m[2msays it failed and does not pretend to have sent, when the server refuses
+[22m[39m[inquiry-wizard] submit failed: Invalid input
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msetExperiencePageVersion[2m > [22m[2mswitches back to v1 without conditions, and refuses a version that is not 1 or 2
+[22m[39m[setExperiencePageVersion] page 56b00000-0000-4000-8000-000000000003 → v1
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-unmatched.test.ts[2m > [22m[2memail-inbound webhook — unmatched path[2m > [22m[2minserts into unmatched_messages when no inquiry matches
+[22m[39m[email-inbound] Unmatched email from stranger@unknown.com queued
+
+ [32m✓[39m src/app/api/webhooks/__tests__/email-inbound-unmatched.test.ts [2m([22m[2m1 test[22m[2m)[22m[33m 380[2mms[22m[39m
+     [33m[2m✓[22m[39m inserts into unmatched_messages when no inquiry matches [33m 378[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mslug aliases[2m > [22m[2ma saved alias resolves to the page it was added to — the router redirects on exactly this
+[22m[39m[addExperienceSlugAlias] /experiences/fa156-old-twin → /experiences/fa156-test-target
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mslug aliases[2m > [22m[2maccepts the slug of an archived page — that is the merge case
+[22m[39m[addExperienceSlugAlias] /experiences/fa156-test-archived → /experiences/fa156-test-target
+
+ [32m✓[39m src/components/inquiry-wizard/inquiry-wizard.test.tsx [2m([22m[2m17 tests[22m[2m)[22m[33m 2960[2mms[22m[39m
+     [33m[2m✓[22m[39m sends the trap field and an elapsed time, exactly as the v1 widget does [33m 309[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mslug aliases[2m > [22m[2mrefuses the slug of a live page
+[22m[39m[red] alias = live slug — {"success":false,"error":"\"fa156-test-live\" is the slug of the live page \"FA-1.56 live\" — archive that page first, then add the alias"}
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mslug aliases[2m > [22m[2mrefuses another page's alias, this page's alias twice, and its own slug
+[22m[39m[red] alias of another page — {"success":false,"error":"\"fa156-old-twin\" is already an alias of another page"}
+
+ [32m✓[39m src/components/experience-v2/offer-story.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 558[2mms[22m[39m
+     [33m[2m✓[22m[39m opens a lightbox: counter, next / prev and the arrow keys wrap around, Esc closes and focus returns [33m 398[2mms[22m[39m
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-human-takeover.test.ts[2m > [22m[2memail-inbound webhook — client message after a human reply (FA-1.48)[2m > [22m[2mstores the message and message.received, then autoSendReply answers "human has taken over" — no draft, no judge, no send, no D2
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-1
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-human-takeover.test.ts[2m > [22m[2memail-inbound webhook — client message after a human reply (FA-1.48)[2m > [22m[2mleaves D2 untouched: an earlier agent auto-reply still moves new → qualifying, while the human takeover keeps the agent silent
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-1
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-human-takeover.test.ts[2m > [22m[2memail-inbound webhook — client message after a human reply (FA-1.48)[2m > [22m[2mkeeps the agent leading when no human has written yet — the model is called and the reply goes out
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-1
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-human-takeover.test.ts[2m > [22m[2memail-inbound webhook — client message after a human reply (FA-1.48)[2m > [22m[2ma human message to a guide is not a takeover — the agent keeps leading
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-1
+
+ [32m✓[39m src/app/api/webhooks/__tests__/email-inbound-human-takeover.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 250[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Prices[2m > [22m[2mstores the grid in the page currency, one row per days × anglers × season
+[22m[39m[saveExperienceV2Prices] page 56b00000-0000-4000-8000-000000000007 — 4 row(s), 0 removed
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Prices[2m > [22m[2mstores the grid in the page currency, one row per days × anglers × season
+[22m[39m[read] experience_prices after the first save
+[
+ "1d × 1a = 90000 NZD [— → —]",
+ "1d × 2a = 110000 NZD [— → —]",
+ "2d × 2a = 210000 NZD [— → —]",
+ "1d × 2a = 125000 NZD [2027-10-01 → 2028-04-30]"
+]
+
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2msaveExperienceV2Prices[2m > [22m[2ma second save updates kept cells in place and removes the ones left out
+[22m[39m[saveExperienceV2Prices] page 56b00000-0000-4000-8000-000000000007 — 2 row(s), 3 removed
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mstores the brief exactly as sent
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mfills the old columns from the brief, not from what the client sent beside it
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mpoints guide_id at the page's active primary guide, not the legacy column
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mkeeps the page's guide when it has no primary row, instead of losing the guide
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mkeeps the page's guide when the primary lookup fails
+[22m[39m[inquiries/POST] Primary-guide lookup failed for page 550e8400-e29b-41d4-a716-446655440000, keeping the page's guide_id: Error: connection lost
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/route-brief.test.ts:177:40
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mkeeps the page's guide when the primary lookup fails
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mpasses the page_version on, for the event
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2msends FA the message that carries the summary and the dates from the brief
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST with a brief — the v2 form[2m > [22m[2mstores nothing for requested_dates when the dates are flexible
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-brief.test.ts[2m > [22m[2mPOST without a brief — the v1 widget, unchanged[2m > [22m[2mreaches createInquiry with the same arguments as before brief existed
+[22m[39m[inquiries/POST] Created inquiry inq-brief (page 550e8400-e29b-41d4-a716-446655440000)
+
+ [32m✓[39m src/app/api/inquiries/__tests__/route-brief.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 209[2mms[22m[39m
+ [32m✓[39m src/app/admin/inquiries/[id]/InquiryDetailTabs.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 299[2mms[22m[39m
+ [32m✓[39m src/components/experience-v2/offer-bottom.test.tsx [2m([22m[2m19 tests[22m[2m)[22m[33m 424[2mms[22m[39m
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — flag off, FA-1.27[2m > [22m[2mcalls 0 AI model invocations when AI_AUTO_REPLY_ENABLED=false
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — autoSendReply throws, FA-1.27[2m > [22m[2mreturns 201 even when autoSendReply throws
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — autoSendReply throws, FA-1.27[2m > [22m[2mreturns 201 even when autoSendReply throws
+[22m[39m[inquiries/POST] Auto-send error: Error: auto-send pipeline crashed
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/route.test.ts:148:45
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2msaves the inquiry, skips AI, auto-reply and the customer e-mail, still mails FA, and leaves an event with the reason — RED on main: everything is called
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mdoes not write the angler e-mail address into the event
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mtreats a repeat the same way when the auto-reply flag is off (D2): no customer e-mail, event still saved
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mleaves behaviour unchanged for a first inquiry from an e-mail: classify, auto-send, customer e-mail, no skip event
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2masks the data layer about this e-mail, excluding the new inquiry, over the last 24 h
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstderr[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mfails open when the lookup throws: the inquiry is treated as new and gets the usual flow
+[22m[39m[inquiries/POST] Repeat lookup failed for inq-flag-off, treating as new: Error: connection reset
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/inquiries/__tests__/route.test.ts:249:44
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — repeat from the same e-mail, FA-1.42[2m > [22m[2mfails open when the lookup throws: the inquiry is treated as new and gets the usual flow
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mtrap filled: saves the inquiry, no AI, no auto-reply, no e-mail to anyone, event with the reason — RED on main: everything is called
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2msubmitted in under 2 s with an empty trap: same path — RED on main
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe skip is recorded even when the auto-reply flag is off
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma fractional duration is usable (performance.now deltas are fractional): 400.5 ms is suspicious
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mzero ms is a valid duration and suspicious
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe 2 s boundary: 1999 ms is suspicious, 2000 ms is a normal request
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mempty trap and 2 s or more: behaves as today — classify, auto-send, both e-mails, no event
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mneither field sent: a missing field alone is not suspicious
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (negative) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (text) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (numeric string) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (null) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (NaN-like object) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (array) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (boolean) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2munusable form_elapsed_ms (absurdly large) means "no information": normal request, never a 400
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (number) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (null) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (object) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma trap value that is not a non-blank string (blank) is not "filled"
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2msuspicious wins over repeat: no repeat lookup, one event, reason is the trap
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mboth signals at once: one event, trap reason only
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe response is identical to a normal one — status, body keys and headers
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2mthe response is identical to a normal one — status, body keys and headers
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap field and fill time, FA-1.43[2m > [22m[2ma failed event write does not turn into a 500 and the skip still applies
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap and fill time on the v2 form, FA-1.55[2m > [22m[2mtrap filled on a v2 request: saved, but no AI, no auto-reply and no e-mail to anyone
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap and fill time on the v2 form, FA-1.55[2m > [22m[2ma v2 request submitted in under 2 s: same path, same reason
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap and fill time on the v2 form, FA-1.55[2m > [22m[2ma v2 request with an empty trap after 2 s behaves as a normal one
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route.test.ts[2m > [22m[2m/api/inquiries POST — trap and fill time on the v2 form, FA-1.55[2m > [22m[2ma repeat v2 submission from the same e-mail still skips the customer e-mail and the AI
+[22m[39m[inquiries/POST] Created inquiry inq-flag-off (page 550e8400-e29b-41d4-a716-446655440000)
+
+ [32m✓[39m src/app/api/inquiries/__tests__/route.test.ts [2m([22m[2m37 tests[22m[2m)[22m[32m 214[2mms[22m[39m
+ [32m✓[39m src/app/admin/inquiries/[id]/MessageComposer.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 289[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/guideContactsRls.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 176[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/inquiryMatcherGuide.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+[90mstderr[2m | src/app/api/webhooks/__tests__/email-inbound-schema.test.ts[2m > [22m[2memail-inbound webhook — missing email_id, FA-1.49[2m > [22m[2mreturns 200 OK when email_id is absent (not 400)
+[22m[39m[email-inbound] Missing email_id in payload
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-schema.test.ts[2m > [22m[2memail-inbound webhook — raw_payload stores original, FA-1.49[2m > [22m[2mstores the full original JSON object in unmatched_messages.raw_payload
+[22m[39m[email-inbound] Unmatched email from stranger@example.test queued
+
+ [32m✓[39m src/app/api/webhooks/__tests__/email-inbound-schema.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 151[2mms[22m[39m
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-outbound.test.ts[2m > [22m[2memail-inbound webhook — outbound path, FA-1.49[2m > [22m[2minserts an outbound/sent messages row and emits message.sent
+[22m[39m[email-inbound] outbound from Zoho → inquiry inq-outbound
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-outbound.test.ts[2m > [22m[2memail-inbound webhook — outbound path, FA-1.49[2m > [22m[2mdoes NOT call autoSendReply or D2 transition on outbound
+[22m[39m[email-inbound] outbound from Zoho → inquiry inq-outbound
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-outbound.test.ts[2m > [22m[2memail-inbound webhook — outbound path, FA-1.49[2m > [22m[2mis idempotent — duplicate delivery (23505) creates no second row and no second event
+[22m[39m[email-inbound] outbound duplicate delivery — skipping: outbound-email-1
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-outbound.test.ts[2m > [22m[2memail-inbound webhook — outbound path, FA-1.49[2m > [22m[2mdoes NOT write to unmatched_messages when no inquiry matches the recipient
+[22m[39m[email-inbound] outbound without matching inquiry — skipping
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-outbound.test.ts[2m > [22m[2memail-inbound webhook — outbound path, FA-1.49[2m > [22m[2malso detects outbound when from matches FA_EMAIL (contact@fjordanglers.com)
+[22m[39m[email-inbound] outbound from Zoho → inquiry inq-outbound
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-outbound.test.ts[2m > [22m[2memail-inbound webhook — outbound path, FA-1.49[2m > [22m[2muses FA_OUTBOUND_ADDRESSES env when set
+[22m[39m[email-inbound] outbound from Zoho → inquiry inq-outbound
+
+ [32m✓[39m src/app/api/webhooks/__tests__/email-inbound-outbound.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+ [32m✓[39m src/components/inquiry/InquiryTrapField.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/lostReasonCode.test.ts[2m > [22m[2mFA-0.16 — updateInquiryStatus / lost_reason_code[2m > [22m[2maccepts status=lost with a reason code and writes both fields
+[22m[39m[updateInquiryStatus] Inquiry inq-1 → lost
+
+[90mstdout[2m | src/actions/__tests__/lostReasonCode.test.ts[2m > [22m[2mFA-0.16 — updateInquiryStatus / lost_reason_code[2m > [22m[2mrecords the loss as status.changed + inquiry.lost, with the code in the payload
+[22m[39m[updateInquiryStatus] Inquiry inq-1 → lost
+
+[90mstdout[2m | src/actions/__tests__/lostReasonCode.test.ts[2m > [22m[2mFA-0.16 — updateInquiryStatus / lost_reason_code[2m > [22m[2mclears lost_reason_code when moving to a non-lost status
+[22m[39m[updateInquiryStatus] Inquiry inq-1 → offer_presented
+
+ [32m✓[39m src/actions/__tests__/lostReasonCode.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 166[2mms[22m[39m
+ [32m✓[39m src/app/admin/inquiries/[id]/NextStepCard.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 190[2mms[22m[39m
+ [32m✓[39m src/actions/__tests__/inquiryStatusDefault.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 147[2mms[22m[39m
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-matched.test.ts[2m > [22m[2memail-inbound webhook — matched path, FA-1.25[2m > [22m[2mdoes not call classifyInquiry when an email matches an existing inquiry
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-matched
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-matched.test.ts[2m > [22m[2memail-inbound webhook — D2 transition, FA-1.27[2m > [22m[2mtransitions new → qualifying when inquiry is new AND has a prior agent auto-reply
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-matched
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-matched.test.ts[2m > [22m[2memail-inbound webhook — D2 transition, FA-1.27[2m > [22m[2mdoes NOT transition when inquiry is new but has NO prior agent auto-reply
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-matched
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/email-inbound-matched.test.ts[2m > [22m[2memail-inbound webhook — D2 transition, FA-1.27[2m > [22m[2mdoes NOT call autoSendReply or transition when AI_AUTO_REPLY_ENABLED is false
+[22m[39m[email-inbound] Email from angler@example.com → inquiry inq-matched
+
+ [32m✓[39m src/app/api/webhooks/__tests__/email-inbound-matched.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 148[2mms[22m[39m
+[90mstderr[2m | src/app/api/inquiries/__tests__/rate-limit-config.test.ts[2m > [22m[2mPOST /api/inquiries — limiter cannot be created (O-29 a, fail-open)[2m > [22m[2ma URL with a stray space → 201, nothing thrown, the log holds nothing from the URL or token
+[22m[39m[Upstash Redis] The redis url contains whitespace or newline, which can cause errors!
+
+ [32m✓[39m src/app/api/inquiries/__tests__/rate-limit-config.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 154[2mms[22m[39m
+ [32m✓[39m src/lib/env.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 85[2mms[22m[39m
+[90mstderr[2m | src/app/api/webhooks/__tests__/whatsapp-inbound.test.ts[2m > [22m[2mHMAC Option B — no secret configured[2m > [22m[2mreturns 401 when WHATSAPP_APP_SECRET is absent
+[22m[39m[whatsapp-webhook] WHATSAPP_APP_SECRET not configured — rejecting request
+
+[90mstderr[2m | src/app/api/webhooks/__tests__/whatsapp-inbound.test.ts[2m > [22m[2mHMAC Option B — bad signature[2m > [22m[2mreturns 401 when signature is wrong
+[22m[39m[whatsapp-webhook] Signature mismatch — rejected
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/whatsapp-inbound.test.ts[2m > [22m[2mInbound routing — guide phone match[2m > [22m[2minserts messages row with counterpart=guide and emits message.received
+[22m[39m[whatsapp-webhook] guide +48123456789 → inquiry inq-1
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/whatsapp-inbound.test.ts[2m > [22m[2mInbound routing — angler phone match[2m > [22m[2minserts messages row with counterpart=angler and emits message.received
+[22m[39m[whatsapp-webhook] angler +48123456789 → inquiry inq-2
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/whatsapp-inbound.test.ts[2m > [22m[2mInbound routing — unknown number[2m > [22m[2minserts into unmatched_messages and does NOT insert into messages
+[22m[39m[whatsapp-webhook] +48123456789 queued as unmatched (no match)
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/whatsapp-inbound.test.ts[2m > [22m[2mInbound routing — multi-match (2 open inquiries)[2m > [22m[2minserts into unmatched_messages with candidates list, NO messages insert
+[22m[39m[whatsapp-webhook] +48123456789 queued as unmatched (2 candidates)
+
+ [32m✓[39m src/app/api/webhooks/__tests__/whatsapp-inbound.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/agentKnowledgeCountries.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 83[2mms[22m[39m
+[90mstderr[2m | src/actions/__tests__/messages-thread.test.ts[2m > [22m[2mcreatePaymentLink — FA-1.29[2m > [22m[2mamount changed: deactivates old link and creates a new one
+[22m[39m[createPaymentLink] draft error: TypeError: svc.from(...).select is not a function
+    at createPaymentLink [90m(/home/tj/Fjordanglers/[39msrc/actions/messages.ts:731:8[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/actions/__tests__/messages-thread.test.ts:493:20
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/actions/__tests__/messages-thread.test.ts[2m > [22m[2mcreatePaymentLink — FA-1.29[2m > [22m[2mISK: passes deposit_amount_cents directly to Stripe unit_amount (no ÷100)
+[22m[39m[createPaymentLink] draft error: TypeError: svc.from(...).select is not a function
+    at createPaymentLink [90m(/home/tj/Fjordanglers/[39msrc/actions/messages.ts:731:8[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/actions/__tests__/messages-thread.test.ts:534:5
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/actions/__tests__/messages-thread.test.ts[2m > [22m[2mcreatePaymentLink — FA-1.29[2m > [22m[2mFA-1.30: product.create called with name/description, price.create uses that product id
+[22m[39m[createPaymentLink] draft error: TypeError: svc.from(...).select is not a function
+    at createPaymentLink [90m(/home/tj/Fjordanglers/[39msrc/actions/messages.ts:731:8[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/actions/__tests__/messages-thread.test.ts:573:20
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/actions/__tests__/messages-thread.test.ts[2m > [22m[2mcreatePaymentLink — FA-1.29[2m > [22m[2mFA-1.30: draft fails — link still created, draftError returned, no throw
+[22m[39m[createPaymentLink] draft error: Error: AI unavailable
+    at [90m/home/tj/Fjordanglers/[39msrc/actions/__tests__/messages-thread.test.ts:648:58
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstderr[2m | src/actions/__tests__/messages-thread.test.ts[2m > [22m[2mcreatePaymentLink — FA-1.29[2m > [22m[2mdeactivation fails: returns error, no prices.create or paymentLinks.create called
+[22m[39m[createPaymentLink] Could not deactivate old link: Error: Stripe network error
+    at [90m/home/tj/Fjordanglers/[39msrc/actions/__tests__/messages-thread.test.ts:764:61
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+ [32m✓[39m src/actions/__tests__/messages-thread.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+ [32m✓[39m src/lib/email.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 96[2mms[22m[39m
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — Payment Link session (D1)[2m > [22m[2mprocesses deposit when metadata comes from the payment link
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_test_plink
+
+[90mstderr[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — payment link retrieve failure (D4)[2m > [22m[2mreturns 500 and writes nothing when stripe.paymentLinks.retrieve throws
+[22m[39m[stripe-deposit/webhook] Could not retrieve payment link metadata: cs_test_retrieve_fail Error: Stripe API error: service unavailable
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/webhooks/__tests__/stripe-deposit.test.ts:298:7
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstderr[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — payment link retrieve failure (D4)[2m > [22m[2mreturns 500 and writes nothing when stripe.paymentLinks.retrieve throws
+[22m[39m[stripe-deposit/webhook] Handler error: RetriableError: Payment link metadata unavailable: plink_test_fail
+    at handleCheckoutCompleted [90m(/home/tj/Fjordanglers/[39msrc/app/api/webhooks/stripe-deposit/route.ts:106:13[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/webhooks/stripe-deposit/route.ts:68:7[90m)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/webhooks/__tests__/stripe-deposit.test.ts:311:22
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — payment link retrieve failure (D4)[2m > [22m[2mretries successfully: retrieve recovers → 200 and exactly one payment.received
+[22m[39m[stripe-deposit/webhook] Could not retrieve payment link metadata: cs_test_retrieve_retry Error: transient
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/webhooks/__tests__/stripe-deposit.test.ts:322:30
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstderr[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — payment link retrieve failure (D4)[2m > [22m[2mretries successfully: retrieve recovers → 200 and exactly one payment.received
+[22m[39m[stripe-deposit/webhook] Handler error: RetriableError: Payment link metadata unavailable: plink_test_retry
+    at handleCheckoutCompleted [90m(/home/tj/Fjordanglers/[39msrc/app/api/webhooks/stripe-deposit/route.ts:106:13[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at POST [90m(/home/tj/Fjordanglers/[39msrc/app/api/webhooks/stripe-deposit/route.ts:68:7[90m)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/app/api/webhooks/__tests__/stripe-deposit.test.ts:339:16
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — payment link retrieve failure (D4)[2m > [22m[2mretries successfully: retrieve recovers → 200 and exactly one payment.received
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_test_retrieve_retry
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — parallel double delivery (D2)[2m > [22m[2memits exactly one payment.received when two deliveries run in parallel
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-parallel — session cs_test_parallel
+[stripe-deposit/webhook] Skipped — already processed or not found: inq-parallel
+
+[90mstderr[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — no inquiry_id in metadata[2m > [22m[2mreturns 200 and does not update any inquiry when inquiry_id is missing
+[22m[39m[stripe-deposit/webhook] No inquiry_id in metadata: cs_test_no_inquiry_id
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — idempotency (atomic UPDATE returns empty)[2m > [22m[2mreturns 200 and emits no events when UPDATE returns empty (already processed)
+[22m[39m[stripe-deposit/webhook] Skipped — already processed or not found: inq-idempotent
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — sequential double call[2m > [22m[2memits exactly one payment.received for two sequential calls with the same session
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-double — session cs_test_double
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — sequential double call[2m > [22m[2memits exactly one payment.received for two sequential calls with the same session
+[22m[39m[stripe-deposit/webhook] Skipped — already processed or not found: inq-double
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — happy path emails (Checkout Session)[2m > [22m[2mcalls all three email functions when guide is assigned
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_test_emails
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — trip title in the confirmation emails (FA-1.09)[2m > [22m[2mputs the resolved experience name into the angler and FA emails
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_test_title
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — trip title in the confirmation emails (FA-1.09)[2m > [22m[2mstill returns 200 and sends the emails with the generic title when nothing resolves
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_test_title_null
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — depositAmountEur (FA-1.28)[2m > [22m[2mEUR row: uses deposit_amount_cents / deposit_eur_rate / 100
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_eur_fa128
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — depositAmountEur (FA-1.28)[2m > [22m[2mISK row: uses deposit_amount_cents / deposit_eur_rate / 100
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_isk_fa128
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — depositAmountEur (FA-1.28)[2m > [22m[2mlegacy row (deposit_amount_cents NULL): falls back to deposit_amount
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_legacy_fa128
+
+[90mstdout[2m | src/app/api/webhooks/__tests__/stripe-deposit.test.ts[2m > [22m[2mstripe-deposit webhook — payment.received currency uppercase (FA-1.29)[2m > [22m[2memits payment.received with uppercase currency when session.currency is lowercase
+[22m[39m[stripe-deposit/webhook] Deposit paid for inquiry inq-test — session cs_isk_currency
+
+ [32m✓[39m src/app/api/webhooks/__tests__/stripe-deposit.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/history.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m src/app/admin/inquiries/InquiriesCalendar.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+[90mstderr[2m | src/lib/ai/auto-send.test.ts[2m > [22m[2mautoSendReply — judge gate failures[2m > [22m[2mdoes NOT send and emits sent=false when judgeReply throws (API error)
+[22m[39m[autoSendReply] judgeReply failed: Error: Anthropic API timeout
+    at [90m/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.test.ts:361:45
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstderr[2m | src/lib/ai/auto-send.test.ts[2m > [22m[2mautoSendReply — judge gate failures[2m > [22m[2mdoes NOT send and emits sent=false when judgeReply throws (malformed JSON)
+[22m[39m[autoSendReply] judgeReply failed: SyntaxError: Unexpected token < in JSON at position 0
+    at [90m/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.test.ts:381:45
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:145:11
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:26
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1209:10[90m)[39m
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:37
+    at Traces.$ [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/traces.CCmnQaNT.js:142:27[90m)[39m
+    at trace [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/[4mvitest[24m/dist/chunks/test.B8ej_ZHS.js:239:21[90m)[39m
+    at runTest [90m(file:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:1653:12[90m)[39m
+
+[90mstderr[2m | src/lib/ai/auto-send.test.ts[2m > [22m[2mautoSendReply — daily cap (FA-1.42)[2m > [22m[2mholds the draft with a reason when the count query fails (D4) — nothing is sent
+[22m[39m[autoSendReply] daily cap count failed: Error: connection reset
+    at countAutoSendsSince [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1167:28[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at dailyCapHoldReason [90m(/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.ts:254:26[90m)[39m
+    at Module.autoSendReply [90m(/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.ts:198:24[90m)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.test.ts:586:20
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/lib/rate-limit/factory.test.ts[2m > [22m[2mgetRateLimiter[2m > [22m[2mcreation fails on a leading space → no limiter, no throw, one fixed log line without the URL or token
+[22m[39m[Upstash Redis] The redis url contains whitespace or newline, which can cause errors!
+
+[90mstderr[2m | src/lib/ai/auto-send.test.ts[2m > [22m[2mautoSendReply — the agent leads only until a human takes over (FA-1.48)[2m > [22m[2mholds with a reason when the takeover check fails — no model call, nothing sent
+[22m[39m[autoSendReply] takeover check failed: Error: connection reset
+    at hasHumanTakenOverThread [90m(/home/tj/Fjordanglers/[39msrc/lib/supabase/queries.ts:1082:28[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:103:5)[39m
+    at humanTakeoverReason [90m(/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.ts:239:13[90m)[39m
+    at Module.autoSendReply [90m(/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.ts:114:26[90m)[39m
+    at [90m/home/tj/Fjordanglers/[39msrc/lib/ai/auto-send.test.ts:882:20
+    at [90mfile:///home/tj/Fjordanglers/[39mnode_modules/[4m.pnpm[24m/@vitest+runner@4.0.18/node_modules/[4m@vitest/runner[24m/dist/index.js:915:20
+
+[90mstderr[2m | src/lib/rate-limit/factory.test.ts[2m > [22m[2mgetRateLimiter[2m > [22m[2mcreation fails on a trailing space → no limiter, no throw, one fixed log line without the URL or token
+[22m[39m[Upstash Redis] The redis url contains whitespace or newline, which can cause errors!
+
+ [32m✓[39m src/lib/ai/auto-send.test.ts [2m([22m[2m40 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m src/lib/rate-limit/factory.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m src/lib/channels/__tests__/whatsapp-adapter.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m src/lib/rate-limit/rate-limit.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/brief.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m src/lib/ai/draft-reply.test.ts [2m([22m[2m24 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32m✓[39m src/lib/experience-v2-content.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+ [32m✓[39m src/lib/ai/extract-trip.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/state.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/lib/channels/email.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/lib/metrics/facts.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/create.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+ [32m✓[39m src/components/experience-v2/offer-chips.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/app/admin/finances/revenue.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/lib/business-days.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/components/admin/inquiry/StatusStepper.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m src/lib/rate-limit/upstash.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/lib/experiences/admin-experience-v2.test.ts [2m([22m[2m42 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/lib/format-price.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/components/experience-v2/option-price.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-0.18 — classifyInquiry / trip_country[2m > [22m[2mleaves a country that came from the experience page untouched
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-0.18 — classifyInquiry / trip_country[2m > [22m[2mleaves a country that came from the experience page untouched
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-0.18 — classifyInquiry / trip_country[2m > [22m[2mfills the country when the inquiry has none (e-mail / WhatsApp path)
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-0.18 — classifyInquiry / trip_country[2m > [22m[2mfills the country when the inquiry has none (e-mail / WhatsApp path)
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-0.18 — classifyInquiry / trip_country[2m > [22m[2mstill overwrites priority — later context has more information
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-0.18 — classifyInquiry / trip_country[2m > [22m[2mstill overwrites priority — later context has more information
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.04 — admin lock[2m > [22m[2mdoes not call setQualified when qualified_set_by is admin
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.04 — admin lock[2m > [22m[2mdoes not call setQualified when qualified_set_by is admin
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.04 — admin lock[2m > [22m[2mcalls setQualified when qualified_set_by is null
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.04 — admin lock[2m > [22m[2mcalls setQualified when qualified_set_by is null
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.25 — classification update excludes round fields[2m > [22m[2mdoes not write the removed round-tracking fields into the inquiries row
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.25 — classification update excludes round fields[2m > [22m[2mdoes not write the removed round-tracking fields into the inquiries row
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.25 — classification update excludes round fields[2m > [22m[2mwrites country, type, and priority in the classification update
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.25 — classification update excludes round fields[2m > [22m[2mwrites country, type, and priority in the classification update
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.25 — classification update excludes round fields[2m > [22m[2memits inquiry.qualified_set event
+[22m[39m[inquiry-agent] classification — country: Iceland, type: multi_day, priority: high
+
+[90mstdout[2m | src/lib/ai/inquiry-agent.test.ts[2m > [22m[2mFA-1.25 — classification update excludes round fields[2m > [22m[2memits inquiry.qualified_set event
+[22m[39m[inquiry-agent] classified inquiry inq-1
+
+ [32m✓[39m src/lib/ai/inquiry-agent.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m src/lib/ai/__tests__/draft-deposit-link.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/actions/__tests__/reviews.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/experience-v2-query.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/lib/metrics/weekly.test.ts [2m([22m[2m28 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+ [32m✓[39m src/lib/pricing/experience-price.test.ts [2m([22m[2m39 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/experience-pages-v2.test.ts[2m > [22m[2mevery new action refuses a caller who is not an admin[2m > [22m[2mthe same calls go through for admin@seed.test — the refusals above are about the caller
+[22m[39m[saveExperienceV2Guides] page 56b00000-0000-4000-8000-000000000009 — 1 guide(s), 0 removed
+
+ [32m✓[39m src/app/api/cron/offer-sla/route.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/actions/__tests__/experience-pages-v2.test.ts [2m([22m[2m61 tests[22m[2m)[22m[33m 9971[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses a guide id that is not a uuid, a duplicate guide and an unknown guide [33m 339[2mms[22m[39m
+     [33m[2m✓[22m[39m prices moving under a stored override warn, and do not block an unrelated guide edit [33m 337[2mms[22m[39m
+     [33m[2m✓[22m[39m a v2 page cannot lose what v2 needs through the other sections [33m 312[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses another page's alias, this page's alias twice, and its own slug [33m 358[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses anything that is not a slug [33m 400[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses a duplicate slot, a float, a zero price and an inverted season — and writes nothing [33m 350[2mms[22m[39m
+     [33m[2m✓[22m[39m refuses a URL that is not http(s) [33m 643[2mms[22m[39m
+ [32m✓[39m src/lib/leadValue.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/app/admin/pipeline/PipelineClient.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m src/app/experiences/[slug]/__tests__/experience-router.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/__tests__/experience-lookup.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/lib/messages/send.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/experienceTabs.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/events/emit.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/qualified.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/metrics/weeks.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/__tests__/normalise-phone.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/guideContactsErrors.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/sendDepositLink.test.ts[2m > [22m[2msendDepositLink — deposit amount[2m > [22m[2moffer_deposit_eur wins, even when the experience price is on request
+[22m[39m[sendDepositLink] Deposit link sent for inquiry inq-1 — session cs_1 — €450.00
+
+[90mstdout[2m | src/actions/__tests__/sendDepositLink.test.ts[2m > [22m[2msendDepositLink — deposit amount[2m > [22m[2mwithout an offer deposit, falls back to price x party size x percent (per person)
+[22m[39m[sendDepositLink] Deposit link sent for inquiry inq-1 — session cs_1 — €180.00
+
+[90mstdout[2m | src/actions/__tests__/sendDepositLink.test.ts[2m > [22m[2msendDepositLink — deposit amount[2m > [22m[2mflat price is not multiplied by party size
+[22m[39m[sendDepositLink] Deposit link sent for inquiry inq-1 — session cs_1 — €450.00
+
+ [32m✓[39m src/actions/__tests__/sendDepositLink.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/lib/ai/knowledge.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/metrics/gaps.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/__tests__/deposit-fallback.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/ai/judge-reply.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/ui/contrast.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/inquiryMatcherRecipient.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/autoSendGuardQueries.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+[90mstdout[2m | src/actions/__tests__/setDepositAmount.test.ts[2m > [22m[2msetDepositAmount[2m > [22m[2msucceeds for EUR without calling fetchEurRate (rate = 1)
+[22m[39m[setDepositAmount] Inquiry inq-1 — 20000 EUR @ 1
+
+[90mstdout[2m | src/actions/__tests__/setDepositAmount.test.ts[2m > [22m[2msetDepositAmount[2m > [22m[2msucceeds for ISK, uppercases currency, uses fetchEurRate result
+[22m[39m[setDepositAmount] Inquiry inq-1 — 3000000 ISK @ 138
+
+ [32m✓[39m src/actions/__tests__/setDepositAmount.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/metrics/commission.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/lib/season-months.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/inquiries/__tests__/deposit.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/ai/draft-reply-prompt.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/app/experiences/[slug]/__tests__/v2-inquiry-page.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/app/admin/inquiries/InquiriesClient.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m87 passed[39m[22m[90m (87)[39m
+[2m      Tests [22m [1m[32m1024 passed[39m[22m[90m (1024)[39m
+[2m   Start at [22m 11:26:16
+[2m   Duration [22m 12.98s[2m (transform 5.05s, setup 762ms, import 14.39s, tests 24.35s, environment 8.26s)[22m
+

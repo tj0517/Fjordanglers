@@ -1,0 +1,21 @@
+-[ RECORD 1 ]--+------------------------------------------------------------------------------------------------------------
+technique      | {"Fly fishing",Spinning}
+environment    | {River,Lake,"National Park"}
+content_blocks | [                                                                                                          +
+               |     {                                                                                                      +
+               |         "text": "Slow, clear water through farmland — the hardest and most rewarding fishing of the trip.",+
+               |         "headline": "Spring Creeks",                                                                       +
+               |         "image_url": "/about/gallery-2.jpg",                                                               +
+               |         "image_urls": [                                                                                    +
+               |             "/about/gallery-2.jpg",                                                                        +
+               |             "/about/gallery-3.jpg",                                                                        +
+               |             "/about/gallery-4.jpg"                                                                         +
+               |         ]                                                                                                  +
+               |     },                                                                                                     +
+               |     {                                                                                                      +
+               |         "text": "A helicopter or a long walk in; big fish, few anglers.",                                  +
+               |         "headline": "Backcountry Rivers",                                                                  +
+               |         "image_url": "/about/gallery-5.jpg"                                                                +
+               |     }                                                                                                      +
+               | ]
+
