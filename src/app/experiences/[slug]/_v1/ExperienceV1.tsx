@@ -8,6 +8,7 @@ import { MapPin, Check, X as XIcon, ChevronDown } from 'lucide-react'
 import ExpPageMapWrapper from '@/app/trips/exp-page-map-wrapper'
 import type { ExpPage } from '@/app/trips/exp-page-map-section'
 import { InquiryWidget, MobileInquiryBar } from '@/components/inquiry/InquiryWidget'
+import { ExperienceFunnelProvider } from '@/components/analytics/experience-funnel'
 import { CountryFlag } from '@/components/ui/country-flag'
 import { ExperienceTabLayout } from '@/components/trips/ExperienceTabLayout'
 import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
@@ -92,6 +93,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
+
+/**
+ * The sections whose view is counted in the GA4 funnel (FA-1.60): the "Price" block and the
+ * FAQ, marked with `data-funnel-section`. A page in options mode has no "Price" block (the
+ * option tabs carry the prices), so it reports only `faq`.
+ */
+const FUNNEL_SECTIONS_V1 = {
+  pricing: '[data-funnel-section="pricing"]',
+  faq:     '[data-funnel-section="faq"]',
+}
 
 export default async function ExperienceV1({ slug }: { slug: string }) {
   const svc = createServiceClient()
@@ -338,7 +349,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
   } : null
 
   return (
-    <>
+    <ExperienceFunnelProvider version={1} slug={slug} sections={FUNNEL_SECTIONS_V1}>
       <WebEventTracker country={page.country} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(tripSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
@@ -1322,7 +1333,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
 
             {/* ──────────── FAQ ──────────── */}
             {faq.length > 0 && (
-              <section className="mb-12">
+              <section className="mb-12" data-funnel-section="faq">
                 <SalmonRule />
                 <SectionLabel label="FAQ" />
                 <div className="space-y-2">
@@ -1349,7 +1360,7 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
             )}
 
             {/* ──────────── PRICE ──────────── */}
-            <section className="mb-4">
+            <section className="mb-4" data-funnel-section="pricing">
               <SalmonRule />
               <SectionLabel label="Price" />
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-6 rounded-2xl"
@@ -1612,6 +1623,6 @@ export default async function ExperienceV1({ slug }: { slug: string }) {
       )}
 
       <SiteFooter />
-    </>
+    </ExperienceFunnelProvider>
   )
 }

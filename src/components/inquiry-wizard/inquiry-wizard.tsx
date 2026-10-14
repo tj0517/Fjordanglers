@@ -29,6 +29,10 @@ import {
   type ReactNode,
 } from 'react'
 import { InquiryTrapField, TRAP_FIELD_NAME, elapsedSinceShown } from '@/components/inquiry/InquiryTrapField'
+import { useExperienceFunnel } from '@/components/analytics/experience-funnel'
+import { trackSubmitLeadForm } from '@/lib/gtag'
+import { estimateLeadValue } from '@/lib/leadValue'
+import { partySizeFromBrief, tripLengthFromBrief } from '@/lib/inquiries/brief'
 import { getStoredGclid } from '@/lib/gclid'
 import { getStoredUtm } from '@/lib/utm'
 import { safeHttpUrl } from '@/lib/experience-v2-content'
@@ -49,10 +53,19 @@ import { MUTED, Progress, primaryButtonStyle, rangeLabel } from './wizard-fields
 
 const TOTAL_STEPS = 3
 
+/** Each step's name in the GA4 funnel (FA-1.60) — the step components' own names. */
+const FUNNEL_STEP_NAMES: Record<WizardStep, string> = {
+  1: 'trip',
+  2: 'angler',
+  3: 'contact',
+}
+
 export interface InquiryWizardPage extends WizardPageInfo {
   /** The canonical page the inquiry is filed against — an alias slug has already resolved. */
   experiencePageId: string
   experienceName:   string
+  /** `experience_pages.country` — the region of the lead value sent to Ads, as on v1. */
+  country:          string
   responseSlaHours: number
   /** `license_info.buy_url`, already checked `http(s)` by the data layer, or null. */
   licenseUrl:       string | null
@@ -72,6 +85,11 @@ interface WizardValue {
   submitState: SubmitState
   errorMessage: string | null
   set:     <K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) => void
+  /**
+   * The visitor started on the form from outside it — a field of the sticky widget. Counts
+   * as `form_open` and step 1 in the funnel (FA-1.60); does nothing else.
+   */
+  started: () => void
   /** Opens the full-screen wizard at `step`, keeping every answer given so far. */
   openAt:  (step: WizardStep) => void
   /**
@@ -144,16 +162,35 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
     saveAnswers(page.experiencePageId, answers)
   }, [answers, page.experiencePageId, submitState])
 
+  // FA-1.60 — the funnel. Opening the form in any way, or touching any field of step 1, is
+  // `form_open` and entering step 1: step 1 is on the page itself (S14) and the widget's CTA
+  // may skip straight to step 2 with the trip answers it collected, so "the overlay showed
+  // step 1" would miss most visitors. Steps 2 and 3 count when the form moves onto them.
+  // The once-per-page-load guard is the funnel provider's; outside one this is a no-op.
+  const funnel = useExperienceFunnel()
+
+  const started = useCallback(() => {
+    funnel?.formOpen()
+    funnel?.formStep({ step: FUNNEL_STEP_NAMES[1], step_index: 1, total_steps: TOTAL_STEPS })
+  }, [funnel])
+
+  useEffect(() => {
+    if (step === 1) return
+    funnel?.formStep({ step: FUNNEL_STEP_NAMES[step], step_index: step, total_steps: TOTAL_STEPS })
+  }, [step, funnel])
+
   const set = useCallback(<K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) => {
+    started()
     setAnswers(current => ({ ...current, [key]: value }))
-  }, [])
+  }, [started])
 
   const errors = attempted[step] ? validateStep(step, answers, rules) : {}
 
   const openAt = useCallback((target: WizardStep) => {
+    started()
     setStep(target)
     setIsOpen(true)
-  }, [])
+  }, [started])
 
   const close = useCallback(() => setIsOpen(false), [])
 
@@ -163,21 +200,23 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
   useEffect(() => { answersRef.current = answers }, [answers])
 
   const startFromWidget = useCallback((trip: WidgetTrip) => {
+    started()
     const merged = { ...answersRef.current, ...trip }
     setAnswers(merged)
     const stepOneDone = Object.keys(validateStep(1, merged, rules)).length === 0
     setAttempted(a => ({ ...a, 1: a[1] || !stepOneDone }))
     setStep(stepOneDone ? 2 : 1)
     setIsOpen(true)
-  }, [rules])
+  }, [rules, started])
 
   const continueFromInline = useCallback(() => {
+    started()
     setAttempted(a => ({ ...a, 1: true }))
     const stepOneDone = Object.keys(validateStep(1, answersRef.current, rules)).length === 0
     // Invalid: stay on step 1 so the inline form shows step-1 errors, not a stale step's.
     setStep(stepOneDone ? 2 : 1)
     if (stepOneDone) setIsOpen(true)
-  }, [rules])
+  }, [rules, started])
 
   const submit = useCallback(async () => {
     if (sending.current) return
@@ -187,6 +226,8 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
     sending.current = true
     setSubmitState('sending')
     setErrorMessage(null)
+
+    const brief = briefFromAnswers(answers, rules)
 
     try {
       const response = await fetch('/api/inquiries', {
@@ -204,9 +245,10 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
           // brief; party_size is sent because the schema requires it and is overridden there.
           party_size: answers.anglers,
           message:    answers.extra.trim() === '' ? null : answers.extra.trim(),
-          brief:      briefFromAnswers(answers, rules),
+          brief,
           gclid:      getStoredGclid() ?? null,
           utm:        getStoredUtm() ?? null,
+          ...(funnel != null ? funnel.inquiryFields : {}),
           [TRAP_FIELD_NAME]: trapRef.current?.value ?? '',
           form_elapsed_ms:   elapsedSinceShown(shownAt.current, performance.now()),
         }),
@@ -221,6 +263,17 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
       }
 
       setSubmitState('done')
+      // The same call, the same value formula and the same PLN as the v1 widget (FA-1.60, D1):
+      // the Ads conversion and SUBMIT_LEAD_FORM. `sending` above keeps it to one per inquiry.
+      trackSubmitLeadForm({
+        value: estimateLeadValue({
+          tripLength: tripLengthFromBrief(brief),
+          groupSize:  partySizeFromBrief(brief),
+          location:   page.country,
+        }),
+        trip_name: page.experienceName,
+        ...(funnel != null ? { page: funnel.page } : {}),
+      })
       // Name, e-mail and phone must not outlive the submit in the browser.
       clearAnswers(page.experiencePageId)
     } catch (err) {
@@ -230,7 +283,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
       setErrorMessage('We could not send that. Please try again, or write to us directly.')
       sending.current = false
     }
-  }, [answers, page.experiencePageId, rules])
+  }, [answers, page.experiencePageId, page.country, page.experienceName, rules, funnel])
 
   const next = useCallback(() => {
     setAttempted(a => ({ ...a, [step]: true }))
@@ -250,7 +303,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
 
   const value: WizardValue = {
     page, answers, errors, step, isOpen, submitState, errorMessage,
-    set, openAt, startFromWidget, continueFromInline, close, next, back, submit: () => void submit(),
+    set, started, openAt, startFromWidget, continueFromInline, close, next, back, submit: () => void submit(),
   }
 
   return (

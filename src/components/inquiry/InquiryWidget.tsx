@@ -28,6 +28,7 @@ import { getStoredGclid } from '@/lib/gclid'
 import { getStoredUtm } from '@/lib/utm'
 import { currencySymbol } from '@/lib/format-price'
 import { sendWebEvent } from '@/lib/web-events'
+import { useExperienceFunnel } from '@/components/analytics/experience-funnel'
 import { InquiryTrapField, TRAP_FIELD_NAME, elapsedSinceShown } from './InquiryTrapField'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
@@ -268,19 +269,30 @@ function InquiryModal({
     return () => window.removeEventListener('keydown', handleKey)
   }, [onClose])
 
+  // FA-1.60 — the GA4 funnel of an experience page; null anywhere else. Its events fire once
+  // per page load (the provider's guard), however many times this modal is opened.
+  const funnel = useExperienceFunnel()
+
   // form_open — fires on every InquiryModal mount (= every widget open)
   useEffect(() => {
     sendWebEvent({ event: 'form_open', path: window.location.pathname })
   }, []) // empty dep: once per mount
 
+  // GA4 funnel: opening the modal is `form_open` and entering its first step, the calendar.
+  useEffect(() => {
+    funnel?.formOpen()
+    funnel?.formStep({ step: 'calendar', step_index: 1, total_steps: 2 })
+  }, [funnel])
+
   // form_start — fire once when angler proceeds to the contact form step
   useEffect(() => {
     if (step === 'form') {
+      funnel?.formStep({ step: 'form', step_index: 2, total_steps: 2 })
       trackFormStart({ form_id: 'inquiry_modal', form_name: 'Trip Inquiry' })
       // Set once: going back to the calendar and returning does not restart the clock.
       formShownAt.current ??= performance.now()
     }
-  }, [step])
+  }, [step, funnel])
 
   const toggleDate = useCallback((date: string) => {
     setSelectedDates(prev =>
@@ -333,6 +345,7 @@ function InquiryModal({
           angler_phone_country: phoneCountry || null,
           gclid:           gclid ?? null,
           utm:             utm ?? null,
+          ...(funnel != null ? funnel.inquiryFields : {}),
           [TRAP_FIELD_NAME]: trapRef.current?.value ?? '',
           form_elapsed_ms:   elapsedSinceShown(formShownAt.current, performance.now()),
         }),
@@ -344,7 +357,7 @@ function InquiryModal({
       }
 
       setSubmitState('success')
-      trackSubmitLeadForm({ value: leadValue, trip_name: tripTitle })
+      trackSubmitLeadForm({ value: leadValue, trip_name: tripTitle, ...(funnel != null ? { page: funnel.page } : {}) })
       sendWebEvent({ event: 'form_submit', path: window.location.pathname })
     } catch (err) {
       console.error('[InquiryModal] submit error:', err)
@@ -354,7 +367,7 @@ function InquiryModal({
       )
       submittingRef.current = false
     }
-  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, phoneCountry, selectedOptionLabel])
+  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, phoneCountry, selectedOptionLabel, funnel])
 
   return (
     /* Backdrop */
