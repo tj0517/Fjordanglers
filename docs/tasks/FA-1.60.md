@@ -52,10 +52,10 @@ lejka v1 i v2 jest w GA4 tą samą miarą, a każde zapytanie w bazie ma wersję
 - [ ] Admin: szczegół zapytania pokazuje `page_version` i `page_slug` (jedno pole tekstowe obok `source`/`utm`; bez nowych ekranów)
 
 ## Gotowe, gdy
-- [ ] Na stronie NZ v2 w GA4 DebugView jeden przebieg daje w tej kolejności: `experience_view(page_version=2, page_slug)` → `section_view(section=pricing)` → `form_open` → `form_step` dla KAŻDEGO kroku (indeksy 1..n, `total_steps=n`) → `SUBMIT_LEAD_FORM` z `value`, `page_version`, `page_slug`. Zrzut/lista z DebugView w raporcie
-- [ ] Ten sam przebieg na stronie v1 (np. Brynjar, Islandia): `experience_view(page_version=1)` → `form_open` → `form_step(single,1,1)` → `SUBMIT_LEAD_FORM`. Brak `section_view=pricing`, jeśli v1 nie ma cennika
+- [ ] Na stronie NZ v2 w GA4 DebugView jeden przebieg daje w tej kolejności: `experience_view(page_version=2, page_slug)` → `section_view(section=pricing)` → `form_open` → `form_step` dla KAŻDEGO kroku (`trip`/`angler`/`contact`, indeksy 1..3, `total_steps=3`) → `SUBMIT_LEAD_FORM` z `value`, `page_version`, `page_slug`. Zrzut/lista z DebugView w raporcie (kroki i nazwy: decyzja tj D2, 14.10)
+- [ ] Ten sam przebieg na stronie v1 (np. Brynjar, Islandia): `experience_view(page_version=1)` → `section_view(section=pricing)` (blok „Price” v1) → `form_open` → `form_step(calendar,1,2)` → `form_step(form,2,2)` → `SUBMIT_LEAD_FORM` (v1 ma dwa kroki, nie jeden; blok „Price” liczy się jako `pricing` — decyzje tj D2 i D3, 14.10)
 - [ ] Żaden event nie odpala się podwójnie na jedno załadowanie/krok (guard jak `submittingRef` przy konwersji) — pokazany na czerwono (guard usunięty → podwójny event)
-- [ ] Request konwersji Ads (`googleadservices.com/pagead/conversion/18171634204/…`) niezmieniony — porównanie parametrów przed/po (label, value, currency_code) w raporcie
+- [ ] Request konwersji Ads (`googleadservices.com/pagead/conversion/18171634204/…`) na v1 niezmieniony — porównanie parametrów przed/po (label, value, currency_code) w raporcie; na v2 request pojawia się (wcześniej go nie było) z tym samym labelem i walutą PLN (decyzja tj D1, 14.10)
 - [ ] Migracja w `supabase/migrations` (nazwa wg konwencji repo); `CHECK` pokazany na czerwono (`page_version=3` odrzucone); na prod po STOP: `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name='inquiries' AND column_name IN ('page_version','page_slug')` zwraca 2 wiersze — wynik w raporcie
 - [ ] Zapytanie testowe wysłane z v2 ma w bazie `page_version=2` i `page_slug` strony (SELECT w raporcie), a następnie jest USUNIĘTE (DELETE po STOP, wynik w raporcie; jak `audit_20260903` we wrześniu)
 - [ ] Admin pokazuje oba pola dla tego zapytania (zrzut przed usunięciem)
@@ -98,3 +98,13 @@ DebugView v1 i v2 — lista eventów z parametrami; Network — request do `goog
 
 ## Notatki z realizacji
 - 2026-10-14 tj: zadanie zlecone jako „FA-1.58”; numer zajęty (FA-1.58 = flaga `RESEND_DEV_FAKE`, done, PR #139) → decyzja tj: FA-1.60. `depends_on: [FA-1.57]` — decyzja tj: FA-1.57 przechodzi na `in_progress` (pilot live od 14.10 ~16:40), co wystarcza do startu tego zadania. Model: Opus, effort medium — zatwierdzone przez tj 14.10.
+- 2026-10-14 odczyt przed startem (agent):
+  - Formularz v2 (`src/components/inquiry-wizard/inquiry-wizard.tsx`, `submit`) nie woła `trackSubmitLeadForm` — na v2 nie ma ani konwersji Ads, ani `SUBMIT_LEAD_FORM`. Na prod `page_version=2` mają 3 strony NZ (`fly-fishing---taup--tongariro-central-north-island`, `fly-fishing-south-island-new-zealand`, `guided-fly-fishing-north-island-new-zealand`); od 14.10 z nich 0 zapytań.
+  - Modal v1 ma dwa kroki (`'calendar' | 'form'`, `InquiryWidget.tsx:68`), nie jeden.
+  - v2: sekcje mają `data-section` S3–S14 (`offer-section.tsx`); osobnych sekcji „options” i „not_suited” nie ma (S5 `OfferFit` = suited + not suited; archetypy w S6/S9, dodatki w S4).
+  - `trackFormStart` (`form_start`) nie ma `send_to` do GA4 — stąd zero `form_start` w GA4.
+- 2026-10-14 decyzje tj (AskUserQuestion):
+  - D1 (STOP konwersji): v2 woła `trackSubmitLeadForm` bez zmian w `gtag.ts`; `value = estimateLeadValue({ tripLength: przedział z brief.days, groupSize: anglers, location: kraj strony })`, PLN.
+  - D2: `form_step` v2 = `trip`/`angler`/`contact` (1..3), krok 1 odpala razem z `form_open` (także gdy CTA widgetu otwiera od razu krok 2); v1 = `calendar` (1/2), `form` (2/2).
+  - D3: `section_view` v2 = `pricing` (S9), `faq` (S13), `fit` (S5); `options` pominięte. v1 = `pricing` (blok „Price”), `faq`.
+  - D4: `form_open` v2 = pierwsze z: otwarcie overlayu z dowolnego CTA, pierwsza zmiana pola kroku 1 inline w S14, pierwsza zmiana dat/liczby osób w sticky widgecie. v1 = pierwsze otwarcie modala. Wspólny helper w `gtag.ts`, raz na załadowanie strony.
