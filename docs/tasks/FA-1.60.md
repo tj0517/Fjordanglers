@@ -59,6 +59,9 @@ lejka v1 i v2 jest w GA4 tą samą miarą, a każde zapytanie w bazie ma wersję
 - [ ] Migracja w `supabase/migrations` (nazwa wg konwencji repo); `CHECK` pokazany na czerwono (`page_version=3` odrzucone); na prod po STOP: `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name='inquiries' AND column_name IN ('page_version','page_slug')` zwraca 2 wiersze — wynik w raporcie
 - [ ] Zapytanie testowe wysłane z v2 ma w bazie `page_version=2` i `page_slug` strony (SELECT w raporcie), a następnie jest USUNIĘTE (DELETE po STOP, wynik w raporcie; jak `audit_20260903` we wrześniu)
 - [ ] Admin pokazuje oba pola dla tego zapytania (zrzut przed usunięciem)
+- [ ] Parytet zapisu v2 z v1: testowe zapytanie z v2 ma w bazie `gclid`, `utm`, `source`, `trip_length`, `party_size` tak jak v1, a `value` w `SUBMIT_LEAD_FORM` liczone przez `estimateLeadValue` (region z `getRegionGroup(location)`) — SELECT tych kolumn w raporcie (decyzja tj, „go” 14.10, pkt 1)
+- [ ] Test na prod z consentem `ad_storage=denied`, `analytics_storage=granted`: brak requestu do `googleadservices.com`; request konwersji Ads zweryfikowany lokalnie Playwrightem (przed/po). Zapytanie testowe: imię „TEST FA-1.60”, mail tj (decyzja tj, „go” 14.10, pkt 2)
+- [ ] Lista zapytań ze stron NZ v2 z `created_at ≥ 2026-10-14 16:40` (Europe/Warsaw) sprzed merge'a — do ręcznego importu offline konwersji w Ads (decyzja tj, „go” 14.10, pkt 3)
 - [ ] Build i lint przechodzą; brak `as any` w nowym kodzie
 
 ## Poza zakresem
@@ -108,3 +111,4 @@ DebugView v1 i v2 — lista eventów z parametrami; Network — request do `goog
   - D2: `form_step` v2 = `trip`/`angler`/`contact` (1..3), krok 1 odpala razem z `form_open` (także gdy CTA widgetu otwiera od razu krok 2); v1 = `calendar` (1/2), `form` (2/2).
   - D3: `section_view` v2 = `pricing` (S9), `faq` (S13), `fit` (S5); `options` pominięte. v1 = `pricing` (blok „Price”), `faq`.
   - D4: `form_open` v2 = pierwsze z: otwarcie overlayu z dowolnego CTA, pierwsza zmiana pola kroku 1 inline w S14, pierwsza zmiana dat/liczby osób w sticky widgecie. v1 = pierwsze otwarcie modala. Wspólny helper w `gtag.ts`, raz na załadowanie strony.
+- 2026-10-14 tj „go” z uzupełnieniami: (1) parytet zapisu v2 z v1 (`gclid`, `utm`, `source`, `trip_length`, `party_size`, `value` przez `estimateLeadValue`) — braki naprawiane w ramach D1; (2) test prod z `ad_storage=denied` / `analytics_storage=granted`, konwersja Ads tylko lokalnie Playwrightem, imię „TEST FA-1.60”, mail tj, przy STOP propozycja zatrzymania agenta/maili; (3) kolejność: migracja → merge → test prod → SELECT + zrzut admina → DELETE; w raporcie lista zapytań NZ v2 od 14.10 16:40.
