@@ -119,6 +119,14 @@ export interface CreateInquiryParams {
    * payload keeps the exact shape it has always had.
    */
   pageVersion?:       number | null
+  /**
+   * FA-1.60: the template the visitor actually saw (1 | 2), as the form reports it — stored
+   * on `inquiries.page_version`. Not `pageVersion` above: that one is the page's opt-in and
+   * goes only on the event.
+   */
+  pageVersionShown?:  1 | 2 | null
+  /** FA-1.60: slug of the experience page the form was sent from → `inquiries.page_slug`. */
+  pageSlug?:          string | null
   /** FA-1.38: admin backdates a manually created inquiry to the day it actually arrived
    *  (e.g. an Instagram DM from two months ago). 'YYYY-MM-DD', never in the future.
    *  Sets both `created_at` and the `inquiry.created` event's `occurred_at`. */
@@ -171,6 +179,8 @@ export async function createInquiry(params: CreateInquiryParams): Promise<Create
       source:              params.source,
       gclid:               params.gclid ?? null,
       utm:                 params.utm ?? null,
+      page_version:        params.pageVersionShown ?? null,
+      page_slug:           params.pageSlug ?? null,
       internal_notes:      params.internalNotes ?? null,
     })
     .select('id, status')

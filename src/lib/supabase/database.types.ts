@@ -1674,6 +1674,8 @@ export type Database = {
           offer_total_eur: number | null
           offer_trip_plan: string | null
           offer_what_to_bring: Json
+          page_slug: string | null
+          page_version: number | null
           party_size: number
           priority: string | null
           qualified: string
@@ -1754,6 +1756,8 @@ export type Database = {
           offer_total_eur?: number | null
           offer_trip_plan?: string | null
           offer_what_to_bring?: Json
+          page_slug?: string | null
+          page_version?: number | null
           party_size?: number
           priority?: string | null
           qualified?: string
@@ -1834,6 +1838,8 @@ export type Database = {
           offer_total_eur?: number | null
           offer_trip_plan?: string | null
           offer_what_to_bring?: Json
+          page_slug?: string | null
+          page_version?: number | null
           party_size?: number
           priority?: string | null
           qualified?: string
