@@ -53,6 +53,7 @@ import {
   saveExperienceV2Prices,
   setExperiencePageVersion,
   updateExperienceOptionV2,
+  updateExperiencePage,
 } from '@/actions/experience-pages'
 import type { ContentInput, GuideRowInput, OfferInput } from '@/lib/experiences/v2-editor'
 
@@ -562,7 +563,7 @@ function offer(over: Partial<OfferInput> = {}): OfferInput {
 function content(over: Partial<ContentInput> = {}): ContentInput {
   return {
     suitedFor: ['you cast 12 m in wind'], notSuitedFor: [], expectationsText: null, skillLevel: null,
-    walkingKmMin: null, walkingKmMax: null, daySchedule: [], nearestAirport: null, suggestedLodging: [],
+    walkingKmMin: null, walkingKmMax: null, daySchedule: [], seasonPeriods: [], nearestAirport: null, suggestedLodging: [],
     licenseInfo: null, tipGuidanceText: null, weatherPolicyText: null, responseSlaHours: 24, offerEtaText: null,
     ...over,
   }
@@ -597,8 +598,12 @@ describe('saveExperienceV2Content', () => {
       expectationsText: 'No guarantee of a trophy fish.',
       skillLevel: 3, walkingKmMin: 3, walkingKmMax: 6.5,
       daySchedule: [
-        { time: '7:30', title: 'Pick-up from your lodging', meta: { drive_min: null, walk_km: null, wading: false } },
-        { time: '9:00', title: 'Fishing upstream',          meta: { drive_min: 60,  walk_km: 4.5,  wading: true } },
+        { time: '7:30', title: 'Pickup & Briefing', description: 'Guide collects you from your hotel or the port and briefs you over coffee.' },
+        { time: '',     title: 'Fishing upstream',  description: null },
+      ],
+      seasonPeriods: [
+        { title: 'Summer (December – February)', months: [1, 2, 12], text: 'Prime time for sight-fishing.' },
+        { title: 'Winter (June – August)',       months: [6, 7, 8],  text: 'The signature period of the Taupō fishery.' },
       ],
       nearestAirport: 'Queenstown (ZQN)',
       suggestedLodging: [{ name: 'Lake lodge', url: 'https://example.com/lodge', note: '10 min from pick-up' }],
@@ -611,6 +616,7 @@ describe('saveExperienceV2Content', () => {
     const page = await readPage(PAGE.content)
     expect(page.suited_for).toEqual(input.suitedFor)
     expect(page.day_schedule).toEqual(input.daySchedule)
+    expect(page.season_periods).toEqual(input.seasonPeriods)
     expect(page.suggested_lodging).toEqual(input.suggestedLodging)
     expect(page.license_info).toEqual(input.licenseInfo)
     expect([page.skill_level, page.walking_km_min, page.walking_km_max, page.response_sla_hours]).toEqual([3, 3, 6.5, 12])
@@ -618,6 +624,7 @@ describe('saveExperienceV2Content', () => {
     const editor = await getExperienceV2Editor(PAGE.content)
     expect(editor?.shapeWarnings).toEqual([])
     expect(editor?.page.daySchedule).toEqual(input.daySchedule)
+    expect(editor?.page.seasonPeriods).toEqual(input.seasonPeriods)
     expect(editor?.page.licenseInfo).toEqual(input.licenseInfo)
     expect(editor?.page.feeBp).toBe(1750)
   })
@@ -631,6 +638,76 @@ describe('saveExperienceV2Content', () => {
       expect(licence, url).toEqual({ success: false, error: 'URL must start with http:// or https://' })
     }
     expect((await readPage(PAGE.content)).suggested_lodging).toEqual([{ name: 'Lake lodge', url: 'https://example.com/lodge', note: '10 min from pick-up' }])
+  })
+})
+
+describe('saveExperienceV2Content — season periods and day rows (feedback round 1)', () => {
+  it('stores no season periods as NULL, not []', async () => {
+    expect(await saveExperienceV2Content(PAGE.content, content({ seasonPeriods: [] }))).toEqual({ success: true, warnings: [] })
+    expect((await readPage(PAGE.content)).season_periods).toBeNull()
+    expect((await getExperienceV2Editor(PAGE.content))?.page.seasonPeriods).toEqual([])
+  })
+
+  it('loads a legacy day_schedule row (meta, no description) without a shape warning; the next save drops meta', async () => {
+    const legacy = [{ time: '9:00', title: 'Fishing upstream', meta: { drive_min: 60, walk_km: 4.5, wading: true } }]
+    await db().from('experience_pages').update({ day_schedule: legacy }).eq('id', PAGE.content)
+
+    const editor = await getExperienceV2Editor(PAGE.content)
+    expect(editor?.shapeWarnings).toEqual([])
+    expect(editor?.page.daySchedule).toEqual([{ time: '9:00', title: 'Fishing upstream', description: null }])
+
+    expect(await saveExperienceV2Content(PAGE.content, content({ daySchedule: editor?.page.daySchedule ?? [] }))).toEqual({ success: true, warnings: [] })
+    expect((await readPage(PAGE.content)).day_schedule).toEqual([{ time: '9:00', title: 'Fishing upstream', description: null }])
+  })
+
+  // Red proofs for the new zod rules — each payload is refused and nothing is written.
+  it('refuses a month that is in two season periods', async () => {
+    const before = (await readPage(PAGE.content)).season_periods
+    const result = await saveExperienceV2Content(PAGE.content, content({
+      seasonPeriods: [
+        { title: 'Summer', months: [12, 1, 2], text: 'a' },
+        { title: 'Autumn', months: [2, 3, 4],  text: 'b' },
+      ],
+    }))
+    expect(result).toEqual({ success: false, error: 'Month 2 is in two season periods (“Summer” and “Autumn”)' })
+    expect((await readPage(PAGE.content)).season_periods).toEqual(before)
+  })
+
+  it('refuses a schedule row without a title, and a title over 120 characters', async () => {
+    const before = (await readPage(PAGE.content)).day_schedule
+    const untitled = await saveExperienceV2Content(PAGE.content, content({ daySchedule: [{ time: '7:30', title: '  ', description: 'Pickup' }] }))
+    expect(untitled).toEqual({ success: false, error: 'Every schedule row needs a title' })
+    const long = await saveExperienceV2Content(PAGE.content, content({ daySchedule: [{ time: '', title: 'x'.repeat(121), description: null }] }))
+    expect(long).toEqual({ success: false, error: 'Text is longer than 120 characters' })
+    expect((await readPage(PAGE.content)).day_schedule).toEqual(before)
+  })
+})
+
+describe('updateExperiencePage — content block galleries', () => {
+  const photo = (n: number) => `https://example.com/block-${n}.jpg`
+
+  it('stores image_urls and rewrites image_url to the first of them', async () => {
+    const result = await updateExperiencePage(PAGE.content, {
+      content_blocks: [{ headline: 'Spring Creeks', text: 'Clear water.', image_url: 'https://example.com/stale.jpg', image_urls: [photo(1), photo(2)] }],
+    })
+    expect(result).toMatchObject({ success: true })
+    expect((await readPage(PAGE.content)).content_blocks).toEqual([
+      { headline: 'Spring Creeks', text: 'Clear water.', image_url: photo(1), image_urls: [photo(1), photo(2)] },
+    ])
+  })
+
+  it('keeps a legacy block (image_url only) as it is', async () => {
+    await updateExperiencePage(PAGE.content, { content_blocks: [{ headline: 'Lake', text: 'Big fish.', image_url: photo(9) }] })
+    expect((await readPage(PAGE.content)).content_blocks).toEqual([{ headline: 'Lake', text: 'Big fish.', image_url: photo(9) }])
+  })
+
+  it('refuses a block with 13 photos and writes nothing', async () => {
+    const before = (await readPage(PAGE.content)).content_blocks
+    const result = await updateExperiencePage(PAGE.content, {
+      content_blocks: [{ headline: 'Too many', text: 'x', image_urls: Array.from({ length: 13 }, (_, i) => photo(i)) }],
+    })
+    expect(result).toEqual({ success: false, error: 'A content block has at most 12 photos' })
+    expect((await readPage(PAGE.content)).content_blocks).toEqual(before)
   })
 })
 

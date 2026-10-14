@@ -6,7 +6,9 @@
  * photos (`species_details`), some a line on what anglers actually catch (`catches_text`).
  * The offer-centric template left all of it unread, and a page that is only chips and a
  * calculator has nothing to say about the water. This section says it, in that order:
- * the story, the blocks as photo cards, the fish, the catches.
+ * the story, the waters (`environment`, under a "Waters" eyebrow), the blocks as photo cards
+ * (under "Programs"; a block with several photos opens them in a lightbox — see
+ * ./offer-story-block.tsx), the fish, the catches. Each eyebrow appears only over content.
  *
  * Nothing here is required — a page with only a story shows only the story. With none of
  * the four, the section is not drawn.
@@ -14,6 +16,7 @@
 
 import Image from 'next/image'
 import OfferSection from './offer-section'
+import OfferStoryBlock from './offer-story-block'
 import { Box, mutedStyle } from './offer-box'
 import type { SpeciesDetail, StoryBlock } from '@/lib/experience-v2-content'
 
@@ -27,6 +30,11 @@ export type OfferStoryProps = {
 }
 
 const SPECIES_MAX_CHARS = 150
+
+/** The small label over a group — "Waters", "Programs", "What you fish for". */
+function Eyebrow({ children }: { children: string }) {
+  return <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>{children}</p>
+}
 
 function shorten(value: string, max: number): string {
   const trimmed = value.trim()
@@ -53,39 +61,31 @@ export default function OfferStory({ storyText, contentBlocks, speciesDetails, c
               {para}
             </p>
           ))}
-          {environment.length > 0 && (
-            <p className="mt-4 text-[13px] uppercase tracking-[0.12em]" style={mutedStyle}>
-              {environment.join(' · ')}
-            </p>
-          )}
+        </div>
+      )}
+
+      {/* Waters sits right above Programs, outside the narrow story column. */}
+      {environment.length > 0 && (
+        <div className={paragraphs.length > 0 ? 'mt-8' : ''} data-testid="offer-waters">
+          <Eyebrow>Waters</Eyebrow>
+          <p className="text-[15px] font-medium">{environment.join(' · ')}</p>
         </div>
       )}
 
       {contentBlocks.length > 0 && (
-        <div className={`${paragraphs.length > 0 ? 'mt-8' : ''} grid grid-cols-1 gap-4 ${contentBlocks.length === 1 ? '' : 'sm:grid-cols-2'}`} data-testid="offer-story-blocks">
-          {contentBlocks.map((block, i) => (
-            <Box key={`${i}-${block.headline ?? ''}`} className={contentBlocks.length === 1 ? 'flex flex-col gap-5 sm:flex-row' : 'flex flex-col'}>
-              {block.imageUrl != null && (
-                <div
-                  className={contentBlocks.length === 1
-                    ? 'relative -mx-5 -mt-5 h-[220px] flex-none overflow-hidden rounded-t-2xl sm:-my-5 sm:ml-[-20px] sm:mr-0 sm:h-auto sm:w-[320px] sm:rounded-l-2xl sm:rounded-tr-none'
-                    : 'relative -mx-5 -mt-5 mb-4 h-[200px] overflow-hidden rounded-t-2xl'}
-                >
-                  <Image src={block.imageUrl} alt={block.headline ?? ''} fill sizes="(min-width: 640px) 45vw, 100vw" className="object-cover" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                {block.headline != null && <h3 className="f-display text-[21px] font-bold leading-tight">{block.headline}</h3>}
-                {block.text != null && <p className={`${block.headline != null ? 'mt-2' : ''} text-[15px] leading-relaxed`} style={{ color: 'rgba(10,46,77,0.78)' }}>{block.text}</p>}
-              </div>
-            </Box>
-          ))}
+        <div className={environment.length > 0 ? 'mt-6' : paragraphs.length > 0 ? 'mt-8' : ''} data-testid="offer-programs">
+          <Eyebrow>Programs</Eyebrow>
+          <div className={`grid grid-cols-1 gap-4 ${contentBlocks.length === 1 ? '' : 'sm:grid-cols-2'}`} data-testid="offer-story-blocks">
+            {contentBlocks.map((block, i) => (
+              <OfferStoryBlock key={`${i}-${block.headline ?? ''}`} block={block} single={contentBlocks.length === 1} />
+            ))}
+          </div>
         </div>
       )}
 
       {speciesDetails.length > 0 && (
-        <div className={paragraphs.length > 0 || contentBlocks.length > 0 ? 'mt-8' : ''} data-testid="offer-species">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>What you fish for</p>
+        <div className={paragraphs.length > 0 || environment.length > 0 || contentBlocks.length > 0 ? 'mt-8' : ''} data-testid="offer-species">
+          <Eyebrow>What you fish for</Eyebrow>
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {speciesDetails.map(species => (
               <li key={species.name}>

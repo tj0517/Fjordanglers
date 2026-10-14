@@ -12,6 +12,8 @@ export const FISH_ALL = [
   'Arctic Char',
   'Grayling',
   'Whitefish',
+  'Brook Trout',
+  'Coho Salmon',
   // ── Freshwater predators ───────────────────────────────────────────────
   'Pike',
   'Perch',
@@ -32,6 +34,8 @@ export const FISH_ALL = [
   'Mackerel',
   'Garfish',
   'Norway Redfish',
+  // ── Saltwater — NZ ────────────────────────────────────────────────────
+  'Saltwater Species: Kingfish & Coastal Predators',
 ] as const
 
 /**
@@ -50,6 +54,8 @@ export const FISH_IMG: Record<string, string> = {
   'Arctic Char':      '/fish_catalog/char.png',
   'Grayling':         '/fish_catalog/grayling.png',
   'Whitefish':        '/fish_catalog/whitefish.png',
+  'Brook Trout':      '/fish_catalog/char.png',     // a char, not a trout — closest is Arctic Char
+  'Coho Salmon':      '/fish_catalog/salmon.png',
   // Freshwater predators
   'Pike':             '/fish_catalog/pike.png',
   'Perch':            '/fish_catalog/perch.png',
@@ -72,6 +78,8 @@ export const FISH_IMG: Record<string, string> = {
   'Sea Bass':         '/fish_catalog/sea-bass.png',
   'Mackerel':         '/fish_catalog/mackrel.png',
   'Garfish':          '/fish_catalog/gar-fish.png',
+  // Saltwater — NZ
+  'Saltwater Species: Kingfish & Coastal Predators': '/fish_catalog/mackrel.png', // kingfish is a jack — the mackerel is the closest streamlined, fork-tailed shape
 }
 
 /** Species shown on the homepage slider */

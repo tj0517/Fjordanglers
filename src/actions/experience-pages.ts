@@ -18,6 +18,7 @@ import { availabilityWindow } from '@/lib/availability-window'
 import type { Database } from '@/lib/supabase/database.types'
 import {
   basePriceCents,
+  contentBlocksSchema,
   contentSchema,
   dayScheduleSchema,
   formatIssues,
@@ -33,6 +34,7 @@ import {
   priceSlotKey,
   pricesSchema,
   sampleItinerarySchema,
+  seasonPeriodsSchema,
   slugSchema,
   suggestedLodgingSchema,
   type ContentInput,
@@ -44,6 +46,7 @@ import {
   type LodgingItem,
   type OfferInput,
   type OptionV2Input,
+  type SeasonPeriodItem,
 } from '@/lib/experiences/v2-editor'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,10 +77,16 @@ export interface Boat {
   image_url:   string
 }
 
+/**
+ * One content block. `image_urls` is the block's gallery (first = cover, at most 12);
+ * `image_url` is the cover, kept for readers that predate the gallery — updateExperiencePage
+ * rewrites it from `image_urls` (contentBlocksSchema).
+ */
 export interface ContentBlock {
-  headline:  string
-  text:      string
-  image_url?: string
+  headline:    string
+  text:        string
+  image_url?:  string
+  image_urls?: string[]
 }
 
 export interface FaqItem {
@@ -284,6 +293,9 @@ export async function updateExperiencePage(
 
   if (existing == null) return { success: false, error: 'Experience page not found' }
 
+  const contentBlocks = payload.content_blocks == null ? null : contentBlocksSchema.safeParse(payload.content_blocks)
+  if (contentBlocks != null && !contentBlocks.success) return { success: false, error: formatIssues(contentBlocks.error) }
+
   const update: Record<string, unknown> = {}
   if (payload.experience_name   != null) update.experience_name              = payload.experience_name.trim()
   if (payload.slug              != null) update.slug                         = payload.slug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
@@ -321,7 +333,7 @@ export async function updateExperiencePage(
   if (payload.what_to_bring      != null) update.what_to_bring                 = payload.what_to_bring
   if (payload.includes          != null) update.includes                       = payload.includes
   if (payload.excludes          != null) update.excludes                     = payload.excludes
-  if (payload.content_blocks    != null) update.content_blocks               = payload.content_blocks as unknown as import('@/lib/supabase/database.types').Json
+  if (contentBlocks != null)            update.content_blocks               = contentBlocks.data
   if (payload.faq               != null) update.faq                          = payload.faq as unknown as import('@/lib/supabase/database.types').Json
   if (payload.meta_title        !== undefined) update.meta_title             = payload.meta_title
   if (payload.meta_description  !== undefined) update.meta_description       = payload.meta_description
@@ -584,6 +596,7 @@ export interface ExperienceV2EditorData {
     walkingKmMin:       number | null
     walkingKmMax:       number | null
     daySchedule:        DayScheduleItem[]
+    seasonPeriods:      SeasonPeriodItem[]
     nearestAirport:     string | null
     suggestedLodging:   LodgingItem[]
     licenseInfo:        LicenseInfo | null
@@ -686,7 +699,7 @@ export async function getExperienceV2Editor(experienceId: string): Promise<Exper
       id, slug, status, currency, guide_id, page_version, offer_mode,
       price_from_cents, price_to_cents, fee_pct, max_anglers_per_guide, min_days, max_days,
       suited_for, not_suited_for, expectations_text, skill_level, walking_km_min, walking_km_max,
-      day_schedule, nearest_airport, suggested_lodging, license_info,
+      day_schedule, season_periods, nearest_airport, suggested_lodging, license_info,
       tip_guidance_text, weather_policy_text, response_sla_hours, offer_eta_text
     `)
     .eq('id', experienceId)
@@ -721,6 +734,8 @@ export async function getExperienceV2Editor(experienceId: string): Promise<Exper
 
   const daySchedule = dayScheduleSchema.safeParse(page.day_schedule)
   if (!daySchedule.success) shapeWarnings.push('day_schedule')
+  const seasonPeriods = seasonPeriodsSchema.safeParse(page.season_periods ?? [])
+  if (!seasonPeriods.success) shapeWarnings.push('season_periods')
   const suggestedLodging = suggestedLodgingSchema.safeParse(page.suggested_lodging)
   if (!suggestedLodging.success) shapeWarnings.push('suggested_lodging')
   const licenseInfo = licenseInfoOrNullSchema.safeParse(page.license_info)
@@ -748,6 +763,7 @@ export async function getExperienceV2Editor(experienceId: string): Promise<Exper
       walkingKmMin:       page.walking_km_min,
       walkingKmMax:       page.walking_km_max,
       daySchedule:        daySchedule.success ? daySchedule.data : [],
+      seasonPeriods:      seasonPeriods.success ? seasonPeriods.data : [],
       nearestAirport:     page.nearest_airport,
       suggestedLodging:   suggestedLodging.success ? suggestedLodging.data : [],
       licenseInfo:        licenseInfo.success ? licenseInfo.data : null,
@@ -1133,6 +1149,8 @@ export async function saveExperienceV2Content(
       walking_km_min:      input.walkingKmMin,
       walking_km_max:      input.walkingKmMax,
       day_schedule:        input.daySchedule,
+      // No periods is NULL, not [] — the column comment's "not set".
+      season_periods:      input.seasonPeriods.length > 0 ? input.seasonPeriods : null,
       nearest_airport:     input.nearestAirport,
       suggested_lodging:   input.suggestedLodging,
       license_info:        input.licenseInfo,

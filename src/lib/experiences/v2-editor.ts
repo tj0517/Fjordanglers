@@ -314,16 +314,52 @@ export function priceSlotKey(cell: { days: number; anglers: number; validFrom: s
 
 // ─── Content (S3–S9, S11–S13) ────────────────────────────────────────────────
 
-/** day_schedule item — proposal §2.5: [{time, title, meta:{drive_min, walk_km, wading}}]. */
+/**
+ * day_schedule item — `{time, title, description}` (feedback round 1, 2026-10-13): a bold
+ * title and a sentence under it, the way the reference pages write a day. `time` may be
+ * empty. Rows written before that carry `meta: {drive_min, walk_km, wading}` and no
+ * `description`: `meta` is stripped (z.object drops unknown keys) and the missing
+ * description reads as null, so they load into the editor and lose `meta` on the next save.
+ */
 const dayScheduleItemSchema = z.object({
-  time:  text(20),
-  title: text(200).min(1, 'Every schedule row needs a title'),
-  meta:  z.object({
-    drive_min: z.number().int().min(0).max(1440).nullable(),
-    walk_km:   kmSchema.nullable(),
-    wading:    z.boolean(),
-  }),
+  time:        text(20),
+  title:       text(120).min(1, 'Every schedule row needs a title'),
+  description: z.preprocess(value => value ?? null, optionalText(1500)),
 })
+
+/**
+ * season_periods item — `{title, months, text}` (feedback round 1, change 1): what one part
+ * of the season is like, shown under the season bar when one of its months is picked.
+ */
+const seasonPeriodSchema = z.object({
+  title:  text(80).min(1, 'Every season period needs a title'),
+  months: z
+    .array(z.number().int().min(1, 'Months are 1–12').max(12, 'Months are 1–12'))
+    .min(1, 'Every season period needs at least one month')
+    .max(12, 'A period has at most 12 months')
+    .transform(months => [...new Set(months)].sort((a, b) => a - b)),
+  text:   text(1500),
+})
+
+/** A month belongs to at most one period — otherwise the bar could not say which one to show. */
+export const seasonPeriodsSchema = z.array(seasonPeriodSchema).max(12, 'At most 12 season periods').superRefine((periods, ctx) => {
+  const owner = new Map<number, string>()
+  for (const [index, period] of periods.entries()) {
+    for (const month of new Set(period.months)) {
+      const taken = owner.get(month)
+      if (taken != null) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [index, 'months'],
+          message: `Month ${month} is in two season periods (“${taken}” and “${period.title}”)`,
+        })
+      }
+      owner.set(month, period.title)
+    }
+  }
+})
+
+export type SeasonPeriodItem = z.infer<typeof seasonPeriodSchema>
 
 /** suggested_lodging item — proposal §2.5: [{name, url, note}]. */
 const lodgingItemSchema = z.object({
@@ -345,6 +381,30 @@ export const suggestedLodgingSchema = z.array(lodgingItemSchema).max(20, 'At mos
 export const licenseInfoOrNullSchema = licenseInfoSchema.nullable()
 
 export type DayScheduleItem = z.infer<typeof dayScheduleItemSchema>
+
+/** The most photos one content block may carry (feedback round 1, change 9). */
+export const CONTENT_BLOCK_MAX_PHOTOS = 12
+
+/**
+ * content_blocks item — `{headline, text, image_url?, image_urls?}`, written by the v1 form
+ * (page and option blocks). `image_urls` is the block's gallery, first = cover; `image_url`
+ * stays as the cover for every reader that predates the gallery, so whenever `image_urls`
+ * is sent, `image_url` is rewritten from it here — the two can never disagree in storage.
+ */
+const contentBlockSchema = z
+  .object({
+    headline:   z.string(),
+    text:       z.string(),
+    image_url:  z.string().optional(),
+    image_urls: z
+      .array(z.string().trim().min(1, 'Empty photo URL'))
+      .max(CONTENT_BLOCK_MAX_PHOTOS, `A content block has at most ${CONTENT_BLOCK_MAX_PHOTOS} photos`)
+      .optional(),
+  })
+  // An empty gallery leaves `image_url` undefined, which JSON drops — no cover, as intended.
+  .transform(block => (block.image_urls == null ? block : { ...block, image_url: block.image_urls[0] }))
+
+export const contentBlocksSchema = z.array(contentBlockSchema).max(30, 'At most 30 content blocks')
 export type LodgingItem     = z.infer<typeof lodgingItemSchema>
 export type LicenseInfo     = z.infer<typeof licenseInfoSchema>
 
@@ -357,6 +417,7 @@ export const contentSchema = z
     walkingKmMin:      kmSchema.nullable(),
     walkingKmMax:      kmSchema.nullable(),
     daySchedule:       dayScheduleSchema,
+    seasonPeriods:     seasonPeriodsSchema,
     nearestAirport:    optionalText(200),
     suggestedLodging:  suggestedLodgingSchema,
     licenseInfo:       licenseInfoOrNullSchema,

@@ -6,16 +6,15 @@
  * Leaflet setup in the codebase, not two. It renders only with both coordinates: a lone
  * latitude draws the middle of the ocean.
  *
- * The season bar is drawn from `season_months` and `peak_months`, which the admin stores as
- * month numbers. `peak_months` entries outside `season_months` are shown as peak anyway —
- * the data says "best", and silently hiding a month the admin marked would be worse than an
- * inconsistent-looking bar that they can see and fix.
+ * The season bar, with what each part of the season is like, is `SeasonBar`
+ * (./offer-season-bar.tsx) — a client component, so this section stays a server one.
  */
 
 import OfferSection from './offer-section'
 import { OfferLocationMap } from '@/components/offer/OfferLocationMap'
 import { Box, mutedStyle } from './offer-box'
-import type { LodgingSuggestion } from '@/lib/experience-v2-content'
+import SeasonBar from './offer-season-bar'
+import type { LodgingSuggestion, SeasonPeriod } from '@/lib/experience-v2-content'
 
 export type OfferLogisticsProps = {
   locationLat:      number | null
@@ -24,62 +23,12 @@ export type OfferLogisticsProps = {
   suggestedLodging: LodgingSuggestion[]
   seasonMonths:     number[]
   peakMonths:       number[]
+  seasonPeriods:    SeasonPeriod[]
   region:           string
 }
 
-/** Wide enough to read at 390 px: one letter per month, with the full name in the title. */
-const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
-
 /** The zoom the region-level map of an offer page opens at; `experience_pages` stores none. */
 const REGION_ZOOM = 8
-
-function SeasonBar({ seasonMonths, peakMonths }: { seasonMonths: number[]; peakMonths: number[] }) {
-  const season = new Set(seasonMonths)
-  const peak   = new Set(peakMonths)
-  if (season.size === 0 && peak.size === 0) return null
-
-  return (
-    <div data-testid="offer-season-bar">
-      <p className="mb-1.5 text-[13px] uppercase tracking-wide" style={mutedStyle}>
-        Season, month by month
-      </p>
-      <ol className="grid grid-cols-12 gap-[3px] text-center text-[11px]">
-        {MONTH_INITIALS.map((initial, index) => {
-          const month  = index + 1
-          const isPeak = peak.has(month)
-          const isOpen = season.has(month)
-          const state  = isPeak ? 'peak' : isOpen ? 'open' : 'closed'
-          return (
-            <li
-              key={month}
-              data-month={month}
-              data-state={state}
-              title={`${MONTH_NAMES[index]} — ${isPeak ? 'best' : isOpen ? 'open' : 'closed'}`}
-              className="rounded py-2"
-              style={
-                isPeak
-                  ? { background: 'var(--fa-navy)', color: '#fff' }
-                  : isOpen
-                    ? { background: 'rgba(10,46,77,0.22)' }
-                    : { background: 'rgba(10,46,77,0.07)', color: 'rgba(10,46,77,0.45)' }
-              }
-            >
-              <span aria-hidden>{initial}</span>
-              <span className="sr-only">{MONTH_NAMES[index]}</span>
-            </li>
-          )
-        })}
-      </ol>
-      <p className="mt-2 text-[12px]" style={mutedStyle}>
-        dark = best months · mid = open · pale = closed
-      </p>
-    </div>
-  )
-}
 
 export default function OfferLogistics({
   locationLat,
@@ -88,6 +37,7 @@ export default function OfferLogistics({
   suggestedLodging,
   seasonMonths,
   peakMonths,
+  seasonPeriods,
   region,
 }: OfferLogisticsProps) {
   const hasMap    = locationLat != null && locationLng != null
@@ -147,7 +97,7 @@ export default function OfferLogistics({
               </div>
             )}
 
-            <SeasonBar seasonMonths={seasonMonths} peakMonths={peakMonths} />
+            <SeasonBar seasonMonths={seasonMonths} peakMonths={peakMonths} periods={seasonPeriods} />
           </Box>
         )}
       </div>

@@ -1,0 +1,5 @@
+ ✓ src/actions/__tests__/experience-pages-v2.test.ts > saveExperienceV2Content — season periods and day rows (feedback round 1) > refuses a month that is in two season periods 83ms
+ ✓ src/actions/__tests__/experience-pages-v2.test.ts > saveExperienceV2Content — season periods and day rows (feedback round 1) > refuses a schedule row without a title, and a title over 120 characters 126ms
+ ✓ src/actions/__tests__/experience-pages-v2.test.ts > updateExperiencePage — content block galleries > refuses a block with 13 photos and writes nothing 73ms
+ Test Files  1 passed (1)
+      Tests  3 passed | 58 skipped (61)

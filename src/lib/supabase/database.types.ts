@@ -792,6 +792,7 @@ export type Database = {
           rod_setup: string | null
           season_end: string | null
           season_months: number[]
+          season_periods: Json | null
           season_start: string | null
           skill_level: number | null
           slug: string
@@ -870,6 +871,7 @@ export type Database = {
           rod_setup?: string | null
           season_end?: string | null
           season_months?: number[]
+          season_periods?: Json | null
           season_start?: string | null
           skill_level?: number | null
           slug: string
@@ -948,6 +950,7 @@ export type Database = {
           rod_setup?: string | null
           season_end?: string | null
           season_months?: number[]
+          season_periods?: Json | null
           season_start?: string | null
           skill_level?: number | null
           slug?: string

@@ -1,11 +1,9 @@
 /**
- * S13 FAQ (FA-1.55) — the page's own questions plus one that is on every offer page.
+ * S13 FAQ (FA-1.55) — the page's own questions.
  *
- * The fixed question is the one every angler asks and nobody asks us directly: whether
- * booking through FA costs more than going to the guide. Its answer is **not written yet**
- * (tj 2026-10-07): `FA_VS_DIRECT_ANSWER` is a placeholder, and the real copy lands before
- * FA-1.57 — see docs/deferred-tasks.md. It is exported so the test and the pilot checklist
- * can assert that the placeholder is gone, rather than someone grepping the page by eye.
+ * Like every other section: no entries, no section. The "FA vs direct" question used to be
+ * appended to every page; since feedback round 1 (2026-10-13) the founders write it per page,
+ * in the page's own FAQ, so the section prints only what is stored.
  *
  * `<details>` rather than React state: the accordion then works before the page hydrates and
  * is keyboard- and screen-reader-correct without any of it being written here. Both halves of
@@ -15,11 +13,6 @@
 import type { FaqEntry } from '@/lib/experience-v2-content'
 import OfferSection from './offer-section'
 import { mutedStyle } from './offer-box'
-
-/** Placeholder. Replace with tj's copy before the v2 pilot (FA-1.57). */
-export const FA_VS_DIRECT_ANSWER = '[FA vs direct — answer from tj]'
-
-export const FA_VS_DIRECT_QUESTION = 'Booking through FjordAnglers vs directly with the guide — what is the difference?'
 
 export type OfferFaqProps = { faq: FaqEntry[] }
 
@@ -44,17 +37,13 @@ function Entry({ question, answer }: FaqEntry) {
 }
 
 export default function OfferFaq({ faq }: OfferFaqProps) {
-  // The fixed question is always there, so — unlike every other section — S13 never
-  // disappears: "is this more expensive than going direct?" is asked on every page.
-  const entries: FaqEntry[] = [
-    ...faq,
-    { question: FA_VS_DIRECT_QUESTION, answer: FA_VS_DIRECT_ANSWER },
-  ]
+  // The empty-field guard: no stored question, no section.
+  if (faq.length === 0) return null
 
   return (
     <OfferSection section="S13" anchor="faq" eyebrow="Good to know" title="Questions anglers ask" accordion={{ defaultOpen: true }}>
       <div data-testid="offer-faq" className="border-t" style={{ borderColor: 'rgba(10,46,77,0.14)' }}>
-        {entries.map((entry, i) => <Entry key={`${i}-${entry.question}`} {...entry} />)}
+        {faq.map((entry, i) => <Entry key={`${i}-${entry.question}`} {...entry} />)}
       </div>
     </OfferSection>
   )

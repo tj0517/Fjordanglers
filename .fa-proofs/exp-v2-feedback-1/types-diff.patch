@@ -1,0 +1,28 @@
+diff --git a/src/lib/supabase/database.types.ts b/src/lib/supabase/database.types.ts
+index b121b07..ac6e3b1 100644
+--- a/src/lib/supabase/database.types.ts
++++ b/src/lib/supabase/database.types.ts
+@@ -792,6 +792,7 @@ export type Database = {
+           rod_setup: string | null
+           season_end: string | null
+           season_months: number[]
++          season_periods: Json | null
+           season_start: string | null
+           skill_level: number | null
+           slug: string
+@@ -870,6 +871,7 @@ export type Database = {
+           rod_setup?: string | null
+           season_end?: string | null
+           season_months?: number[]
++          season_periods?: Json | null
+           season_start?: string | null
+           skill_level?: number | null
+           slug: string
+@@ -948,6 +950,7 @@ export type Database = {
+           rod_setup?: string | null
+           season_end?: string | null
+           season_months?: number[]
++          season_periods?: Json | null
+           season_start?: string | null
+           skill_level?: number | null
+           slug?: string

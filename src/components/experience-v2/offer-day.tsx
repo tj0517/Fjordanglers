@@ -114,9 +114,11 @@ export default function OfferDay({ offerMode, daySchedule, archetypes, currency 
             <li key={`${i}-${step.title}`} className="flex gap-4">
               <b className="w-14 flex-none text-[15px] tabular-nums">{step.time}</b>
               <div className="min-w-0 border-l pl-4" style={{ borderColor: 'rgba(10,46,77,0.2)' }}>
-                <p className="text-[15px]">{step.title}</p>
-                {step.metaLines.length > 0 && (
-                  <p className="text-[13px]" style={mutedStyle}>{step.metaLines.join(' · ')}</p>
+                <p className="text-[15px] font-semibold">{step.title}</p>
+                {step.description != null && (
+                  <p className="mt-0.5 whitespace-pre-line text-[15px] leading-relaxed" style={{ color: 'rgba(10,46,77,0.78)' }}>
+                    {step.description}
+                  </p>
                 )}
               </div>
             </li>
