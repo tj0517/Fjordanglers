@@ -2,7 +2,7 @@
 id: FA-1.57
 title: Pilot v2 — jedna strona NZ na nowym szablonie (`page_version=2` na prod), dwa tygodnie pomiaru zapytań v1 vs v2; robi tj
 stage: 1
-status: todo
+status: in_progress
 difficulty: S
 model: — (człowiek)
 model_approved:
@@ -60,3 +60,4 @@ SELECT count(*) FROM inquiries WHERE experience_page_id='<id>' AND brief IS NOT 
 
 ## Notatki z realizacji
 - 2026-10-08 tj (/wf-plan): pilot zależy też od FA-1.51 (zmiana przewodnika w adminie v2 musi zmieniać przewodnika zapytań) i FA-1.59 (recenzje ze zgodą). Przed startem treści od tj: tekst zwrotu depozytu, odpowiedź FAQ „FA vs bezpośrednio”, akapit polityki prywatności o recenzjach, regulamin §10, pytania o copy z FA-1.54.
+- 2026-10-14 tj: pilot live od 14.10.2026 ~16:40 (`page_version=2` na stronie NZ, prod) — status `in_progress` na czas 14-dniowego pomiaru. Pomiar lejka per etap dokłada FA-1.60.
