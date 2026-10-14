@@ -12,8 +12,8 @@
 -- Safe to apply before the code that writes it is deployed.
 
 ALTER TABLE "public"."inquiries"
-  ADD COLUMN IF NOT EXISTS "page_version" smallint,
-  ADD COLUMN IF NOT EXISTS "page_slug" "text";
+  ADD COLUMN "page_version" smallint,
+  ADD COLUMN "page_slug" "text";
 
 ALTER TABLE "public"."inquiries"
   ADD CONSTRAINT "inquiries_page_version_check"
