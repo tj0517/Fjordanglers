@@ -51,11 +51,7 @@ export default function OfferLogistics({
     <OfferSection section="S11" eyebrow="Getting there" title="Where it is, and when" accordion={{ defaultOpen: true }}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[3fr_2fr]">
         {hasMap && (
-          // `isolate`: Leaflet gives its panes z-index 200–700 and its controls 1000, and
-          // nothing above them made a stacking context, so they competed with the page's own
-          // layers — the map was drawn over the mobile booking bar (z-40) and the inquiry
-          // wizard (z-50). Its own stacking context keeps all of that inside the map.
-          <div data-testid="offer-map" className="isolate">
+          <div data-testid="offer-map">
             <OfferLocationMap
               lat={locationLat!}
               lng={locationLng!}

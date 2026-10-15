@@ -51,8 +51,12 @@ interface Props {
 }
 
 export function LocationMap({ lat, lng, zoom, geojson }: Props) {
+  // `isolate`: Leaflet gives its panes z-index 200–700 and its controls 1000. Without a
+  // stacking context of its own the map competed with the page's layers and was drawn over
+  // them (on v2 S11: the mobile booking bar z-40 and the inquiry wizard z-50). Here, all of
+  // Leaflet's z-index stays inside the map, on every page that shows it.
   return (
-    <div className="rounded-xl overflow-hidden mt-4"
+    <div className="isolate rounded-xl overflow-hidden mt-4"
       style={{ height: 280, border: '1.5px solid rgba(10,46,77,0.1)' }}>
       <MapContainer
         center={[lat, lng]}
