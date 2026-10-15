@@ -56,6 +56,12 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   )
 }
 
+/** "v2 · <slug>" — which template the angler saw, on which page (FA-1.60). Null = nothing recorded. */
+function pageSourceLabel(version: number | null, slug: string | null): string | null {
+  if (version == null && slug == null) return null
+  return [version != null ? `v${version}` : null, slug].filter(part => part != null).join(' · ')
+}
+
 // ─── Correspondence thread item types ─────────────────────────────────────────
 
 type ThreadItem =
@@ -423,6 +429,8 @@ export default async function AdminInquiryDetailPage({
             {inquiry.selected_option != null && (
               <Row label="Option" value={inquiry.selected_option} />
             )}
+            {/* FA-1.60 — template seen and page sent from; absent for older and non-page inquiries. */}
+            <Row label="Page" value={pageSourceLabel(inquiry.page_version, inquiry.page_slug)} />
           </div>
         </div>
 

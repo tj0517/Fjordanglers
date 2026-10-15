@@ -152,6 +152,10 @@ export default function OfferWidget({
   // anchor it has always been.
   const wizard = useInquiryWizardOptional()
 
+  // FA-1.60 — a change to any trip field up here is the visitor starting on the inquiry:
+  // `form_open` and step 1 in the funnel. The answers themselves stay local until the CTA.
+  const touched = () => wizard?.started()
+
   const openWizard = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (wizard == null) return
     event.preventDefault()
@@ -269,7 +273,7 @@ export default function OfferWidget({
             compact
             options={[{ value: 'exact', label: 'Exact dates' }, { value: 'flexible', label: 'Flexible' }]}
             value={whenMode}
-            onChange={value => setWhenMode(value === 'exact' ? 'exact' : 'flexible')}
+            onChange={value => { touched(); setWhenMode(value === 'exact' ? 'exact' : 'flexible') }}
           />
 
           {whenMode === 'exact' ? (
@@ -280,7 +284,7 @@ export default function OfferWidget({
                 days={days}
                 minDays={minDays}
                 maxDays={MAX_BRIEF_DAYS}
-                onChange={(from, n) => { setExactDate(from); setDays(n) }}
+                onChange={(from, n) => { touched(); setExactDate(from); setDays(n) }}
               />
             </div>
           ) : (
@@ -288,7 +292,7 @@ export default function OfferWidget({
               <span className="sr-only">Month</span>
               <select
                 value={flexMonth}
-                onChange={e => setFlexMonth(e.target.value)}
+                onChange={e => { touched(); setFlexMonth(e.target.value) }}
                 className="w-full rounded-lg border bg-white px-2.5 text-sm"
                 style={{ ...fieldStyle, minHeight: 38 }}
               >
@@ -305,7 +309,7 @@ export default function OfferWidget({
             display={anglerLabel(anglers)}
             min={1}
             max={anglerCap}
-            onChange={setAnglers}
+            onChange={n => { touched(); setAnglers(n) }}
           />
           <Stepper
             label="Days"
@@ -313,7 +317,7 @@ export default function OfferWidget({
             display={String(days)}
             min={minDays}
             max={MAX_BRIEF_DAYS}
-            onChange={setDays}
+            onChange={n => { touched(); setDays(n) }}
           />
         </div>
         {maxDays != null && days > maxDays && (

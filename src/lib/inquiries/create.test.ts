@@ -179,3 +179,40 @@ describe('createInquiry — brief (FA-1.55)', () => {
     )
   })
 })
+
+describe('createInquiry — page_version / page_slug (FA-1.60)', () => {
+  it('writes the template seen and the page slug to their columns', async () => {
+    const { svc, getInsertPayload } = makeSvc()
+    vi.mocked(createServiceClient).mockReturnValue(svc)
+
+    await createInquiry({
+      anglerName: 'Page Angler', anglerEmail: 'page@seed.test', partySize: 2,
+      source: 'web_form', actor: { kind: 'system' }, pageVersionShown: 2, pageSlug: 'seed-backcountry-day',
+    })
+
+    expect(getInsertPayload()).toMatchObject({ page_version: 2, page_slug: 'seed-backcountry-day' })
+  })
+
+  it('writes NULL to both when the caller has no page (admin form, e-mail, WhatsApp)', async () => {
+    const { svc, getInsertPayload } = makeSvc()
+    vi.mocked(createServiceClient).mockReturnValue(svc)
+
+    await createInquiry({ anglerName: 'Manual', anglerEmail: 'manual@seed.test', partySize: 1, source: 'manual', actor })
+
+    expect(getInsertPayload()).toMatchObject({ page_version: null, page_slug: null })
+  })
+
+  it('keeps the event payload as it was — page_version on the event stays the page\'s opt-in, v2 only', async () => {
+    const { svc } = makeSvc()
+    vi.mocked(createServiceClient).mockReturnValue(svc)
+
+    await createInquiry({
+      anglerName: 'V1', anglerEmail: 'v1@seed.test', partySize: 1, source: 'web_form',
+      actor: { kind: 'system' }, pageVersionShown: 1, pageSlug: 'brynjar-iceland',
+    })
+
+    const payload = mockEmitEvent.mock.calls[0][1].payload as Record<string, unknown>
+    expect(payload).not.toHaveProperty('page_version')
+    expect(payload).not.toHaveProperty('page_slug')
+  })
+})

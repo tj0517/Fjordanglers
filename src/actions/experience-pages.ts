@@ -37,6 +37,7 @@ import {
   seasonPeriodsSchema,
   slugSchema,
   suggestedLodgingSchema,
+  type ContentBlockSection,
   type ContentInput,
   type DayScheduleItem,
   type EditorPriceCell,
@@ -80,13 +81,15 @@ export interface Boat {
 /**
  * One content block. `image_urls` is the block's gallery (first = cover, at most 12);
  * `image_url` is the cover, kept for readers that predate the gallery — updateExperiencePage
- * rewrites it from `image_urls` (contentBlocksSchema).
+ * rewrites it from `image_urls` (contentBlocksSchema). `section` (page blocks only) puts the
+ * block under "Waters" or "Programs" on the v2 page; absent = programs.
  */
 export interface ContentBlock {
   headline:    string
   text:        string
   image_url?:  string
   image_urls?: string[]
+  section?:    ContentBlockSection
 }
 
 export interface FaqItem {

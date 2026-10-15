@@ -11,6 +11,7 @@
  */
 
 import type { Json } from '@/lib/supabase/database.types'
+import { pageBlockSection, type ContentBlockSection } from '@/lib/experiences/v2-editor'
 
 type Dict = { [key: string]: Json | undefined }
 
@@ -224,17 +225,20 @@ export function parseFaq(value: Json | null | undefined): FaqEntry[] {
 }
 
 /**
- * `experience_pages.content_blocks` — `[{headline, text, image_url?, image_urls?}]`, the v1
- * admin form's `ContentBlock`. `image_urls` is the block's gallery and wins when present;
- * a block written before the gallery has only `image_url`, read as a gallery of one. Photos
- * may be a site path (`/photo.jpg`) or an http(s) URL; anything else is dropped, the block
- * itself is kept. A block with neither headline nor text is nothing to show.
+ * `experience_pages.content_blocks` — `[{headline, text, image_url?, image_urls?, section?}]`,
+ * the v1 admin form's `ContentBlock`. `image_urls` is the block's gallery and wins when
+ * present; a block written before the gallery has only `image_url`, read as a gallery of one.
+ * Photos may be a site path (`/photo.jpg`) or an http(s) URL; anything else is dropped, the
+ * block itself is kept. A block with neither headline nor text is nothing to show.
+ * `section` is "waters" only when stored as exactly that; anything else — absent, "programs",
+ * a value this reader does not know — is "programs", where every older block already shows.
  */
 export type StoryBlock = {
   headline:  string | null
   text:      string | null
   /** The block's photos in order; the first is the cover. Empty = no photo. */
   imageUrls: string[]
+  section:   ContentBlockSection
 }
 
 function imageUrl(value: Json | undefined): string | null {
@@ -258,7 +262,9 @@ export function parseContentBlocks(value: Json | null | undefined): StoryBlock[]
   return entries(value).flatMap(item => {
     const headline = text(item.headline)
     const body     = text(item.text)
-    return headline == null && body == null ? [] : [{ headline, text: body, imageUrls: blockImageUrls(item) }]
+    return headline == null && body == null
+      ? []
+      : [{ headline, text: body, imageUrls: blockImageUrls(item), section: pageBlockSection(item) }]
   })
 }
 

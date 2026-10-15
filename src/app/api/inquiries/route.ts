@@ -87,6 +87,11 @@ const InquirySchema = z.object({
   brief:                briefSchema.optional().nullable(),
   trip_length:          z.enum(['1', '2-3', '4-7', '7+']).optional().nullable(),
   gclid:           z.string().max(200).optional().nullable(),
+  // FA-1.60 — the template the visitor saw and the page they sent it from, as the browser
+  // reports them (analytics, like gclid/utm — nothing the inquiry depends on). An odd value
+  // is stored as NULL, never a 400: a measurement must not cost an inquiry.
+  page_version:    z.union([z.literal(1), z.literal(2)]).nullable().optional().catch(null),
+  page_slug:       z.string().max(200).regex(/^[a-z0-9-]+$/).nullable().optional().catch(null),
   // FA-1.43 — anything is accepted here on purpose: an odd value is "no information",
   // never a 400 (a 400 would tell a bot which field it got wrong). See suspicionReason.
   trip_notes_extra: z.unknown().optional(),
@@ -232,6 +237,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       pageVersion,
       gclid:             parsed.data.gclid ?? null,
       utm:               parsed.data.utm ?? null,
+      pageVersionShown:  parsed.data.page_version ?? null,
+      pageSlug:          parsed.data.page_slug ?? null,
       source:            'web_form',
       actor:             { kind: 'system' },
     })

@@ -23,7 +23,8 @@ const story = (over: Partial<OfferStoryProps> = {}) => render(
   />,
 )
 
-const block = (over: Partial<StoryBlock> = {}): StoryBlock => ({ headline: 'Spring Creeks', text: 'Clear, slow water.', imageUrls: [], ...over })
+const block = (over: Partial<StoryBlock> = {}): StoryBlock => ({ headline: 'Spring Creeks', text: 'Clear, slow water.', imageUrls: [], section: 'programs', ...over })
+const water = (over: Partial<StoryBlock> = {}): StoryBlock => block({ headline: 'Tongariro River', section: 'waters', ...over })
 
 /** The section body — the section's own header (eyebrow, accordion button) is not what is tested. */
 const body = (container: HTMLElement) => container.querySelector('#offer-story-body') as HTMLElement
@@ -54,6 +55,44 @@ describe('OfferStory — Waters and Programs', () => {
     expect([...container.querySelectorAll('p.uppercase')].map(el => el.textContent)).not.toContain('Waters')
     expect(container.querySelector('[data-testid="offer-waters"]')).toBeNull()
     expect(container.querySelector('[data-testid="offer-programs"]')).toBeNull()
+  })
+})
+
+describe('OfferStory — Waters blocks (FA-1.60)', () => {
+  const headlines = (el: HTMLElement) => [...el.querySelectorAll('h3')].map(h => h.textContent)
+
+  it('(a) Waters blocks are photo cards under Waters, in place of the environment line', () => {
+    const { getByTestId } = story({
+      environment:   ['River', 'Lake'],
+      contentBlocks: [water({ imageUrls: ['/t-1.jpg', '/t-2.jpg'] }), water({ headline: 'Lake Otamangakau' })],
+    })
+    const waters = getByTestId('offer-waters')
+    expect(headlines(waters)).toEqual(['Tongariro River', 'Lake Otamangakau'])
+    expect(within(waters).getByTestId('offer-water-blocks').className).toContain('sm:grid-cols-2')
+    expect(within(waters).getByTestId('story-block-gallery').textContent).toBe('+1 photos')
+    expect(waters.textContent).not.toContain('River · Lake')
+  })
+
+  it('(b) no Waters blocks and an environment: the line, exactly as before', () => {
+    const { getByTestId } = story({ environment: ['River', 'Lake'], contentBlocks: [block()] })
+    expect(getByTestId('offer-waters').textContent).toBe('WatersRiver · Lake')
+    expect(getByTestId('offer-waters').querySelector('[data-testid="offer-water-blocks"]')).toBeNull()
+  })
+
+  it('(c) Waters blocks are not in Programs; programs keep their stored order', () => {
+    const { getByTestId, container } = story({
+      contentBlocks: [block({ headline: 'Day 1' }), water(), block({ headline: 'Day 2' })],
+    })
+    expect(headlines(getByTestId('offer-programs'))).toEqual(['Day 1', 'Day 2'])
+    expect(headlines(getByTestId('offer-waters'))).toEqual(['Tongariro River'])
+    expect(eyebrows(container)).toEqual(['Waters', 'Programs'])
+  })
+
+  it('only Waters blocks: no Programs eyebrow, the section is still drawn', () => {
+    const { getByTestId, container } = story({ storyText: null, contentBlocks: [water()] })
+    expect(getByTestId('offer-waters')).toBeTruthy()
+    expect(container.querySelector('[data-testid="offer-programs"]')).toBeNull()
+    expect(getByTestId('offer-waters').className).toBe('')
   })
 })
 

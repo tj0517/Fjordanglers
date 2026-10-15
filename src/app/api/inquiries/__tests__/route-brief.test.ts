@@ -257,3 +257,37 @@ describe('red cases — 400 and no inquiry created', () => {
     expect(Object.keys(body.details)).toContain('brief')
   })
 })
+
+// ─── FA-1.60 — page_version / page_slug from the form ─────────────────────────
+
+describe('page_version and page_slug — the page the form was sent from', () => {
+  it('a v2 request passes both on, as the browser reported them', async () => {
+    const response = await post(v2Body(BRIEF, { page_version: 2, page_slug: 'seed-backcountry-day' }))
+    expect(response.status).toBe(201)
+    const args = createInquiryMock.mock.calls[0][0]
+    expect(args.pageVersionShown).toBe(2)
+    expect(args.pageSlug).toBe('seed-backcountry-day')
+  })
+
+  it('a v1 request passes both on too — v1 and v2 are stored the same way', async () => {
+    await post({ ...V1_BODY, page_version: 1, page_slug: 'brynjar-iceland' })
+    const args = createInquiryMock.mock.calls[0][0]
+    expect(args.pageVersionShown).toBe(1)
+    expect(args.pageSlug).toBe('brynjar-iceland')
+  })
+
+  it('a request without them (an old cached page, another client) stores NULL', async () => {
+    await post(V1_BODY)
+    const args = createInquiryMock.mock.calls[0][0]
+    expect(args.pageVersionShown).toBeNull()
+    expect(args.pageSlug).toBeNull()
+  })
+
+  it('odd values are dropped to NULL, never a 400 — a measurement must not cost an inquiry', async () => {
+    const response = await post({ ...V1_BODY, page_version: 3, page_slug: '../../etc <script>' })
+    expect(response.status).toBe(201)
+    const args = createInquiryMock.mock.calls[0][0]
+    expect(args.pageVersionShown).toBeNull()
+    expect(args.pageSlug).toBeNull()
+  })
+})

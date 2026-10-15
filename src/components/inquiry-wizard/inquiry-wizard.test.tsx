@@ -23,12 +23,14 @@ import {
   type InquiryWizardPage,
 } from './inquiry-wizard'
 import { storageKey } from './wizard-state'
+import { ExperienceFunnelProvider } from '@/components/analytics/experience-funnel'
 
 const PAGE_ID = '550e8400-e29b-41d4-a716-446655440000'
 
 const FIXED_PAGE: InquiryWizardPage = {
   experiencePageId:   PAGE_ID,
   experienceName:     'Seed Backcountry Day',
+  country:            'New Zealand',
   responseSlaHours:   24,
   licenseUrl:         'https://fishandgame.example/licence',
   offerMode:          'fixed',
@@ -354,3 +356,113 @@ describe('what the browser is allowed to remember', () => {
     expect(screen.getByTestId('wizard-step-2')).toBeTruthy()
   })
 })
+
+// ─── FA-1.60 — the GA4 funnel and the Ads conversion ─────────────────────────
+
+describe('the GA4 funnel (FA-1.60)', () => {
+  type GtagCall = [command: string, action: string, params: Record<string, unknown>]
+  const V2_PAGE = { page_version: '2', page_slug: 'seed-backcountry-day' }
+  const GA4     = 'G-Z3Y8GMHR4J'
+
+  let gtag: ReturnType<typeof vi.fn>
+  const events  = () => (gtag.mock.calls as GtagCall[]).map(([, action]) => action)
+  const callsOf = (action: string) => (gtag.mock.calls as GtagCall[]).filter(([, a]) => a === action).map(([, , p]) => p)
+
+  beforeEach(() => {
+    gtag = vi.fn()
+    vi.stubGlobal('gtag', gtag)
+  })
+
+  function renderInFunnel() {
+    return render(
+      <ExperienceFunnelProvider version={2} slug="seed-backcountry-day" sections={{}}>
+        <InquiryWizardProvider page={FIXED_PAGE}>
+          <InquiryInline />
+        </InquiryWizardProvider>
+      </ExperienceFunnelProvider>,
+    )
+  }
+
+  async function send() {
+    completeStepOne()
+    fireEvent.click(screen.getByText(/Continue →/))
+    completeStepTwo()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    completeStepThree()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    await waitFor(() => expect(callsOf('SUBMIT_LEAD_FORM')).toHaveLength(1))
+    return JSON.parse(fetchMock.mock.calls[0][1].body as string) as Record<string, unknown>
+  }
+
+  it('goes experience_view → form_open → trip → angler → contact → conversion + SUBMIT_LEAD_FORM', async () => {
+    renderInFunnel()
+    const body = await send()
+
+    expect(events()).toEqual([
+      'experience_view', 'form_open', 'form_step', 'form_step', 'form_step', 'conversion', 'SUBMIT_LEAD_FORM',
+    ])
+    expect(callsOf('form_open')).toEqual([{ send_to: GA4, ...V2_PAGE }])
+    expect(callsOf('form_step')).toEqual([
+      { send_to: GA4, ...V2_PAGE, step: 'trip',    step_index: 1, total_steps: 3 },
+      { send_to: GA4, ...V2_PAGE, step: 'angler',  step_index: 2, total_steps: 3 },
+      { send_to: GA4, ...V2_PAGE, step: 'contact', step_index: 3, total_steps: 3 },
+    ])
+    // New Zealand, 1 day = 500, two anglers = × 1 — the v1 formula (estimateLeadValue), in PLN.
+    expect(callsOf('conversion')).toEqual([{ send_to: 'AW-18171634204/yydcCKmuoe0cEJzE9NhD', value: 500, currency: 'PLN' }])
+    expect(callsOf('SUBMIT_LEAD_FORM')).toEqual([{
+      send_to: GA4, value: 500, currency: 'PLN', trip_name: 'Seed Backcountry Day', ...V2_PAGE,
+    }])
+    expect(body).toMatchObject({ page_version: 2, page_slug: 'seed-backcountry-day' })
+  })
+
+  it('counts each step once when the visitor goes back, closes and comes again', () => {
+    renderInFunnel()
+    completeStepOne()
+    fireEvent.click(screen.getByText(/Continue →/))
+    fireEvent.click(screen.getByText('← Back'))
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    fireEvent.click(screen.getByLabelText('Close'))
+    fireEvent.click(screen.getByText(/Continue →/))
+
+    expect(callsOf('form_open')).toHaveLength(1)
+    expect(callsOf('form_step').map(p => p.step)).toEqual(['trip', 'angler'])
+  })
+
+  it('a second submit click while sending does not send a second conversion', async () => {
+    renderInFunnel()
+    completeStepOne()
+    fireEvent.click(screen.getByText(/Continue →/))
+    completeStepTwo()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    completeStepThree()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    await waitFor(() => expect(callsOf('SUBMIT_LEAD_FORM')).toHaveLength(1))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(callsOf('conversion')).toHaveLength(1)
+  })
+
+  it('no conversion when the server refuses the inquiry', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'nope' }) })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    renderInFunnel()
+    completeStepOne()
+    fireEvent.click(screen.getByText(/Continue →/))
+    completeStepTwo()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    completeStepThree()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    await waitFor(() => expect(screen.getByText(/We could not send that/)).toBeTruthy())
+    expect(callsOf('conversion')).toEqual([])
+    expect(callsOf('SUBMIT_LEAD_FORM')).toEqual([])
+  })
+
+  it('outside an experience page: the conversion still fires, no funnel events, nothing new in the body', async () => {
+    renderForm()
+    const body = await send()
+    expect(events()).toEqual(['conversion', 'SUBMIT_LEAD_FORM'])
+    expect(body).not.toHaveProperty('page_version')
+    expect(body).not.toHaveProperty('page_slug')
+  })
+})
+

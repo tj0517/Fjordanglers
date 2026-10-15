@@ -6,12 +6,15 @@
 import { describe, it, expect } from 'vitest'
 import {
   basePriceCents,
+  contentBlocksSchema,
   bpToPercentText,
   centsToMoneyText,
   guidesSchema,
+  mergePageBlocks,
   missingForV2,
   overrideExceedsCap,
   overrideLimitCents,
+  pageBlockSection,
   parseKm,
   parseMoneyToCents,
   parsePercentToBp,
@@ -183,5 +186,46 @@ describe('slugSchema — the format the page form has always produced', () => {
 
   it.each(['The-Gaula-Run', 'a b', 'a_b', 'a/b', 'ø', ''])('refuses "%s"', slug => {
     expect(slugSchema.safeParse(slug).success).toBe(false)
+  })
+})
+
+describe('contentBlocksSchema — the Waters / Programs section of a page block (FA-1.60)', () => {
+  const block = { headline: 'Tongariro River', text: 'Pocket water.', image_urls: ['/a.jpg', '/b.jpg'] }
+
+  it('keeps section: waters and section: programs through the save', () => {
+    const parsed = contentBlocksSchema.parse([{ ...block, section: 'waters' }, { ...block, section: 'programs' }])
+    expect(parsed.map(b => b.section)).toEqual(['waters', 'programs'])
+    expect(parsed[0]).toEqual({ ...block, section: 'waters', image_url: '/a.jpg' })
+  })
+
+  it('leaves a block without a section without one — it reads as programs', () => {
+    expect(contentBlocksSchema.parse([block])[0]).not.toHaveProperty('section')
+  })
+
+  it('refuses a section that is not waters or programs', () => {
+    expect(contentBlocksSchema.safeParse([{ ...block, section: 'lodging' }]).success).toBe(false)
+  })
+})
+
+describe('the admin form\'s Waters / Programs lists (FA-1.60)', () => {
+  const b = (headline: string, text = 't') => ({ headline, text })
+
+  it('merges Waters first, then Programs, each in the order shown, every block labelled', () => {
+    expect(mergePageBlocks([b('Tongariro'), b('Lake O')], [b('Day 1'), b('Day 2')])).toEqual([
+      { headline: 'Tongariro', text: 't', section: 'waters' },
+      { headline: 'Lake O',    text: 't', section: 'waters' },
+      { headline: 'Day 1',     text: 't', section: 'programs' },
+      { headline: 'Day 2',     text: 't', section: 'programs' },
+    ])
+  })
+
+  it('drops a block with neither headline nor text, in either list', () => {
+    expect(mergePageBlocks([b(' ', ''), b('Tongariro')], [b('', ' ')]).map(x => x.headline)).toEqual(['Tongariro'])
+  })
+
+  it('reads a stored block without a section — or with an unknown one — as a program', () => {
+    expect([{}, { section: 'programs' }, { section: 'Waters' }, { section: null }].map(pageBlockSection))
+      .toEqual(['programs', 'programs', 'programs', 'programs'])
+    expect(pageBlockSection({ section: 'waters' })).toBe('waters')
   })
 })

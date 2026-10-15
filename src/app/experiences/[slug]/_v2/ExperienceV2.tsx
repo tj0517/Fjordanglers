@@ -41,10 +41,21 @@ import OfferFaq from '@/components/experience-v2/offer-faq'
 import OfferInquiry from '@/components/experience-v2/offer-inquiry'
 import OfferMoreTrips from '@/components/experience-v2/offer-more-trips'
 import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
+import { ExperienceFunnelProvider } from '@/components/analytics/experience-funnel'
 import { fromPrice } from '@/lib/pricing/experience-price'
 
 /** The inquiry section of S14. The CTAs keep the href even though they also open the wizard. */
 const INQUIRY_ANCHOR = '#zapytanie'
+
+/**
+ * The sections whose view is counted in the GA4 funnel (FA-1.60), by the wireframe's own
+ * `data-section` names: S9 price and deposit, S13 FAQ, S5 who it's for — and who it isn't.
+ */
+const FUNNEL_SECTIONS_V2 = {
+  pricing: '[data-section="S9"]',
+  faq:     '[data-section="S13"]',
+  fit:     '[data-section="S5"]',
+}
 
 /**
  * Metadata for a v2 page: the page's own `meta_title` / `meta_description`, falling back
@@ -98,6 +109,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
   const wizardPage: InquiryWizardPage = {
     experiencePageId: page.id,
     experienceName:   page.experienceName,
+    country:          page.country,
     responseSlaHours: page.responseSlaHours,
     licenseUrl:       page.license?.buyUrl ?? null,
     offerMode:        page.offerMode,
@@ -135,7 +147,11 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
       : null,
   }
 
+  // `slug` is the one this page was rendered under — the public route has already redirected
+  // a retired alias, so it is the canonical one; the preview renders the same component, so
+  // ?preview=v2 reports page_version 2 as well.
   return (
+   <ExperienceFunnelProvider version={2} slug={slug} sections={FUNNEL_SECTIONS_V2}>
     <CurrencyProvider baseCurrency={page.currency} rates={rates}>
      <InquiryWizardProvider page={wizardPage}>
       <NavWithUser />
@@ -337,5 +353,6 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
       <SiteFooter />
      </InquiryWizardProvider>
     </CurrencyProvider>
+   </ExperienceFunnelProvider>
   )
 }

@@ -229,7 +229,7 @@ export function ExperienceTabLayout({
               {children}
 
               {faq.length > 0 && (
-                <section className="mt-10">
+                <section className="mt-10" data-funnel-section="faq">
                   <div className="w-10 h-px mb-4" style={{ background: '#E67E50' }} />
                   <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-5 f-body" style={{ color: '#E67E50' }}>
                     FAQ

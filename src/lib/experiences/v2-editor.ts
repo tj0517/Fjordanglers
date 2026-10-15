@@ -386,11 +386,16 @@ export type DayScheduleItem = z.infer<typeof dayScheduleItemSchema>
 export const CONTENT_BLOCK_MAX_PHOTOS = 12
 
 /**
- * content_blocks item — `{headline, text, image_url?, image_urls?}`, written by the v1 form
- * (page and option blocks). `image_urls` is the block's gallery, first = cover; `image_url`
- * stays as the cover for every reader that predates the gallery, so whenever `image_urls`
- * is sent, `image_url` is rewritten from it here — the two can never disagree in storage.
+ * content_blocks item — `{headline, text, image_url?, image_urls?, section?}`, written by the
+ * v1 form (page and option blocks). `image_urls` is the block's gallery, first = cover;
+ * `image_url` stays as the cover for every reader that predates the gallery, so whenever
+ * `image_urls` is sent, `image_url` is rewritten from it here — the two can never disagree
+ * in storage. `section` puts a page block under "Waters" or "Programs" on the v2 page
+ * (FA-1.60); no section = programs, which is where every block written before it stays.
  */
+const CONTENT_BLOCK_SECTIONS = ['waters', 'programs'] as const
+export type ContentBlockSection = (typeof CONTENT_BLOCK_SECTIONS)[number]
+
 const contentBlockSchema = z
   .object({
     headline:   z.string(),
@@ -400,11 +405,33 @@ const contentBlockSchema = z
       .array(z.string().trim().min(1, 'Empty photo URL'))
       .max(CONTENT_BLOCK_MAX_PHOTOS, `A content block has at most ${CONTENT_BLOCK_MAX_PHOTOS} photos`)
       .optional(),
+    section:    z.enum(CONTENT_BLOCK_SECTIONS).optional(),
   })
   // An empty gallery leaves `image_url` undefined, which JSON drops — no cover, as intended.
   .transform(block => (block.image_urls == null ? block : { ...block, image_url: block.image_urls[0] }))
 
 export const contentBlocksSchema = z.array(contentBlockSchema).max(30, 'At most 30 content blocks')
+
+/** A stored block's section: "waters" only when it says exactly that; anything else is a program. */
+export function pageBlockSection(block: { section?: unknown }): ContentBlockSection {
+  return block.section === 'waters' ? 'waters' : 'programs'
+}
+
+/**
+ * The admin form's two lists → one `content_blocks`: Waters first, then Programs, each in
+ * the order shown, every block labelled with its list. A block with neither headline nor
+ * text is dropped — it has nothing to show.
+ */
+export function mergePageBlocks<B extends { headline: string; text: string }>(
+  waters: B[],
+  programs: B[],
+): (B & { section: ContentBlockSection })[] {
+  const filled = (block: B) => block.headline.trim() !== '' || block.text.trim() !== ''
+  return [
+    ...waters.filter(filled).map(block => ({ ...block, section: 'waters' as const })),
+    ...programs.filter(filled).map(block => ({ ...block, section: 'programs' as const })),
+  ]
+}
 export type LodgingItem     = z.infer<typeof lodgingItemSchema>
 export type LicenseInfo     = z.infer<typeof licenseInfoSchema>
 
