@@ -9,6 +9,14 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { flushAfter, resetAfterQueue } from './after-queue'
+
+// FA-1.61 — `after()` only works inside a Next request scope; the stand-in queues the callback
+// and the test runs it with flushAfter() (see ./after-queue).
+vi.mock('next/server', async (orig) => ({
+  ...(await orig<typeof import('next/server')>()),
+  after: (await import('./after-queue')).afterMock,
+}))
 
 const mocks = vi.hoisted(() => ({
   createServiceClient: vi.fn(),
@@ -72,6 +80,7 @@ async function post(email: string): Promise<Response> {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  resetAfterQueue()
   vi.resetModules() // fresh factory cache per test
   mockEnv.UPSTASH_REDIS_REST_TOKEN = TOKEN
 
@@ -111,6 +120,7 @@ describe('POST /api/inquiries — limiter cannot be created (O-29 a, fail-open)'
     const first = await post('first@example.com')
     expect(first.status).toBe(201)
     expect(mocks.createInquiry).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(mocks.autoSendReply).toHaveBeenCalledTimes(1)
 
     // later requests keep passing and do not log the failure again

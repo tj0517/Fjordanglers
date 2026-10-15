@@ -10,6 +10,14 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { flushAfter, resetAfterQueue } from './after-queue'
+
+// FA-1.61 — `after()` only works inside a Next request scope; the stand-in queues the callback
+// and the test runs it with flushAfter() (see ./after-queue).
+vi.mock('next/server', async (orig) => ({
+  ...(await orig<typeof import('next/server')>()),
+  after: (await import('./after-queue')).afterMock,
+}))
 
 const anthropicCreateMock = vi.fn()
 
@@ -77,6 +85,7 @@ let emittedEvents: Record<string, unknown>[] = []
 
 beforeEach(() => {
   vi.clearAllMocks()
+  resetAfterQueue()
   mockEnv.AI_AUTO_REPLY_ENABLED = false
   emittedEvents = []
   createInquiryMock.mockResolvedValue({ id: 'inq-flag-off', status: 'new' })
@@ -135,6 +144,7 @@ describe('/api/inquiries POST — flag off, FA-1.27', () => {
 
     expect(response.status).toBe(201)
 
+    await flushAfter()
     expect(classifyInquiryMock).toHaveBeenCalledTimes(0)
     expect(autoSendReplyMock).toHaveBeenCalledTimes(0)
     expect(anthropicCreateMock).toHaveBeenCalledTimes(0)
@@ -156,6 +166,7 @@ describe('/api/inquiries POST — autoSendReply throws, FA-1.27', () => {
     }))
 
     expect(response.status).toBe(201)
+    await flushAfter()
     expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
   })
 })
@@ -181,6 +192,7 @@ describe('/api/inquiries POST — repeat from the same e-mail, FA-1.42', () => {
 
     expect(response.status).toBe(201)
     expect(createInquiryMock).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(classifyInquiryMock).not.toHaveBeenCalled()
     expect(autoSendReplyMock).not.toHaveBeenCalled()
     expect(sendAnglerEmailMock).not.toHaveBeenCalled()
@@ -223,6 +235,7 @@ describe('/api/inquiries POST — repeat from the same e-mail, FA-1.42', () => {
     const response = await post()
 
     expect(response.status).toBe(201)
+    await flushAfter()
     expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
     expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
     expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
@@ -252,6 +265,7 @@ describe('/api/inquiries POST — repeat from the same e-mail, FA-1.42', () => {
 
     expect(response.status).toBe(201)
     expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
     expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
     expect(emittedEvents).toHaveLength(0)
@@ -273,6 +287,7 @@ describe('/api/inquiries POST — trap field and fill time, FA-1.43', () => {
 
     expect(response.status).toBe(201)
     expect(createInquiryMock).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(classifyInquiryMock).not.toHaveBeenCalled()
     expect(autoSendReplyMock).not.toHaveBeenCalled()
     expect(sendAnglerEmailMock).not.toHaveBeenCalled()
@@ -293,6 +308,7 @@ describe('/api/inquiries POST — trap field and fill time, FA-1.43', () => {
 
     expect(response.status).toBe(201)
     expect(createInquiryMock).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(classifyInquiryMock).not.toHaveBeenCalled()
     expect(autoSendReplyMock).not.toHaveBeenCalled()
     expect(sendAnglerEmailMock).not.toHaveBeenCalled()
@@ -347,6 +363,7 @@ describe('/api/inquiries POST — trap field and fill time, FA-1.43', () => {
     const response = await post({ ...TEST_BODY, trip_notes_extra: '', form_elapsed_ms: 12000 })
 
     expect(response.status).toBe(201)
+    await flushAfter()
     expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
     expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
     expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
@@ -361,6 +378,7 @@ describe('/api/inquiries POST — trap field and fill time, FA-1.43', () => {
 
     expect(response.status).toBe(201)
     expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
     expect(emittedEvents).toHaveLength(0)
   })
@@ -381,6 +399,7 @@ describe('/api/inquiries POST — trap field and fill time, FA-1.43', () => {
 
     expect(response.status).toBe(201)
     expect(sendAnglerEmailMock).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
     expect(emittedEvents).toHaveLength(0)
   })
@@ -498,6 +517,7 @@ describe('/api/inquiries POST — trap and fill time on the v2 form, FA-1.55', (
     expect(response.status).toBe(201)
     expect(createInquiryMock).toHaveBeenCalledTimes(1)
     expect(createInquiryMock.mock.calls[0][0].brief).toEqual(BRIEF)
+    await flushAfter()
     expect(classifyInquiryMock).not.toHaveBeenCalled()
     expect(autoSendReplyMock).not.toHaveBeenCalled()
     expect(sendAnglerEmailMock).not.toHaveBeenCalled()
@@ -511,6 +531,7 @@ describe('/api/inquiries POST — trap and fill time on the v2 form, FA-1.55', (
     const response = await post({ ...V2_BODY, trip_notes_extra: '', form_elapsed_ms: 900 })
 
     expect(response.status).toBe(201)
+    await flushAfter()
     expect(classifyInquiryMock).not.toHaveBeenCalled()
     expect(sendFaEmailMock).not.toHaveBeenCalled()
     expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([FAST_REASON])
@@ -522,6 +543,7 @@ describe('/api/inquiries POST — trap and fill time on the v2 form, FA-1.55', (
     const response = await post({ ...V2_BODY, trip_notes_extra: '', form_elapsed_ms: 45000 })
 
     expect(response.status).toBe(201)
+    await flushAfter()
     expect(classifyInquiryMock).toHaveBeenCalledTimes(1)
     expect(autoSendReplyMock).toHaveBeenCalledTimes(1)
     expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
@@ -538,6 +560,7 @@ describe('/api/inquiries POST — trap and fill time on the v2 form, FA-1.55', (
     expect(response.status).toBe(201)
     expect(sendFaEmailMock).toHaveBeenCalledTimes(1)
     expect(sendAnglerEmailMock).not.toHaveBeenCalled()
+    await flushAfter()
     expect(classifyInquiryMock).not.toHaveBeenCalled()
     expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual([REPEAT_REASON])
   })

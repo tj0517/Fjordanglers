@@ -1,0 +1,121 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/tj/Fjordanglers[39m
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mreturns 201 before classifyInquiry finishes (it takes 5 s), then runs classify and auto-send in that order — RED on main: the response waits for the 5 s
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mthe stand-in really defers: when POST returns the callback is queued and nothing of the AI work has run — a route awaiting classify inline would fail this
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mtrap filled: after() is not called at all, and nothing runs after a flush
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mfilled too fast: after() is not called at all, and nothing runs after a flush
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mrepeat from the e-mail: after() is not called at all, and nothing runs after a flush
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mauto-reply flag off: after() is not called at all, and nothing runs after a flush
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mclassifyInquiry throws inside after(): logged as the agent error, auto-send still runs, the response was 201 already
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mautoSendReply throws inside after(): logged as the auto-send error, nothing escapes the callback
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+[90mstdout[2m | src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m[2m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22m[2mafter() itself throws synchronously (no request scope / no waitUntil): still 201, the e-mails were sent, the failure is logged
+[22m[39m[inquiries/POST] Created inquiry inq-after (page 550e8400-e29b-41d4-a716-446655440000)
+
+ [31m❯[39m src/app/api/inquiries/__tests__/route-after.test.ts [2m([22m[2m9 tests[22m[2m | [22m[31m4 failed[39m[2m)[22m[33m 5033[2mms[22m[39m
+[31m     [31m×[31m returns 201 before classifyInquiry finishes (it takes 5 s), then runs classify and auto-send in that order — RED on main: the response waits for the 5 s[39m[33m 5010[2mms[22m[39m
+[31m     [31m×[31m the stand-in really defers: when POST returns the callback is queued and nothing of the AI work has run — a route awaiting classify inline would fail this[39m[32m 6[2mms[22m[39m
+     [32m✓[39m trap filled: after() is not called at all, and nothing runs after a flush[32m 2[2mms[22m[39m
+     [32m✓[39m filled too fast: after() is not called at all, and nothing runs after a flush[32m 1[2mms[22m[39m
+     [32m✓[39m repeat from the e-mail: after() is not called at all, and nothing runs after a flush[32m 2[2mms[22m[39m
+     [32m✓[39m auto-reply flag off: after() is not called at all, and nothing runs after a flush[32m 2[2mms[22m[39m
+[31m     [31m×[31m classifyInquiry throws inside after(): logged as the agent error, auto-send still runs, the response was 201 already[39m[32m 3[2mms[22m[39m
+     [32m✓[39m autoSendReply throws inside after(): logged as the auto-send error, nothing escapes the callback[32m 2[2mms[22m[39m
+[31m     [31m×[31m after() itself throws synchronously (no request scope / no waitUntil): still 201, the e-mails were sent, the failure is logged[39m[32m 3[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 4 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22mreturns 201 before classifyInquiry finishes (it takes 5 s), then runs classify and auto-send in that order — RED on main: the response waits for the 5 s
+[31m[1mError[22m: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route-after.test.ts:[2m114:3[22m[39m
+    [90m112| [39m
+    [90m113| [39m[34mdescribe[39m([32m'/api/inquiries POST — AI work in after(), FA-1.61'[39m[33m,[39m () [33m=>[39m {
+    [90m114| [39m  it('returns 201 before classifyInquiry finishes (it takes 5 s), then…
+    [90m   | [39m  [31m^[39m
+    [90m115| [39m    // Only setTimeout is faked, so performance.now() below is real ti…
+    [90m116| [39m    vi[33m.[39m[34museFakeTimers[39m({ toFake[33m:[39m [[32m'setTimeout'[39m[33m,[39m [32m'clearTimeout'[39m] })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22mthe stand-in really defers: when POST returns the callback is queued and nothing of the AI work has run — a route awaiting classify inline would fail this
+[31m[1mAssertionError[22m: expected [] to have a length of 1 but got +0[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 1[39m
+[31m+ 0[39m
+
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route-after.test.ts:[2m158:24[22m[39m
+    [90m156| [39m
+    [90m157| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)
+    [90m158| [39m    [34mexpect[39m(afterQueue)[33m.[39m[34mtoHaveLength[39m([34m1[39m)
+    [90m   | [39m                       [31m^[39m
+    [90m159| [39m    [34mexpect[39m(classifyInquiryMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m160| [39m    [34mexpect[39m(autoSendReplyMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22mclassifyInquiry throws inside after(): logged as the agent error, auto-send still runs, the response was 201 already
+[31m[1mAssertionError[22m: expected "error" to not be called at all, but actually been called 1 times[90m
+
+Received: 
+
+[1m  1st error call:
+
+[22m    Array [
+      "[inquiries/POST] Agent error:",
+      [Error: model unavailable],
+    ]
+[31m[90m
+
+Number of calls: [1m1[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route-after.test.ts:[2m195:23[22m[39m
+    [90m193| [39m    [35mconst[39m response [33m=[39m [35mawait[39m [34mpost[39m()
+    [90m194| [39m    [34mexpect[39m(response[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m201[39m)
+    [90m195| [39m    [34mexpect[39m(error)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m   | [39m                      [31m^[39m
+    [90m196| [39m    [34mexpect[39m(autoSendReplyMock)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+    [90m197| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/app/api/inquiries/__tests__/route-after.test.ts[2m > [22m/api/inquiries POST — AI work in after(), FA-1.61[2m > [22mafter() itself throws synchronously (no request scope / no waitUntil): still 201, the e-mails were sent, the failure is logged
+[31m[1mAssertionError[22m: expected "error" to be called with arguments: [ StringContaining{…}, …(1) ][90m
+
+Number of calls: [1m0[22m
+[31m[39m
+[36m [2m❯[22m src/app/api/inquiries/__tests__/route-after.test.ts:[2m228:19[22m[39m
+    [90m226| [39m    [34mexpect[39m(sendFaEmailMock)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m1[39m)
+    [90m227| [39m    [34mexpect[39m(sendAnglerEmailMock)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m1[39m)
+    [90m228| [39m    expect(error).toHaveBeenCalledWith(expect.stringContaining('Could …
+    [90m   | [39m                  [31m^[39m
+    [90m229| [39m
+    [90m230| [39m    [35mawait[39m [34mflushAfter[39m()
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m4 failed[39m[22m[2m | [22m[1m[32m5 passed[39m[22m[90m (9)[39m
+[2m   Start at [22m 16:42:26
+[2m   Duration [22m 5.30s[2m (transform 214ms, setup 30ms, import 112ms, tests 5.03s, environment 0ms)[22m
+
