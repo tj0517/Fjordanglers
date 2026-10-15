@@ -105,3 +105,13 @@ grep -rn "scrollIntoView" src/components/inquiry src/components/inquiry-wizard  
   wysłanie; brak przewinięcia do brakującego pola w v1 i v2). Diagnoza z odczytu kodu
   `origin/main` 2159df5: `route.ts` czeka na `classifyInquiry` i `autoSendReply` przed
   `return 201`; czasy z prod 15.10: 32 s / 15 s bez pułapki, 0,3 s z pułapką.
+- 2026-10-15 faza A (pomiar lokalny, `next dev`, AI włączone, maile `RESEND_DEV_FAKE=1`, hosty Google zablokowane w Playwright; `src` bez zmian). Szczegóły i surowe dane: `.fa-proofs/fa-1.61/stage-timings-before.md`, `send-to-success-before.log`, `scroll-before.log`, zrzuty `before-*.png`.
+  - Trasa v1, zwykłe zapytanie (n=5, ms min / mediana / max): `classifyInquiry` 1235 / 1295 / 1576, `autoSendReply` 4324 / 5084 / 6293, całość 5652 / 6361 / 7701. Z pułapką 27 / 28 / 51, powtórka 33 / 35 / 41. v2 (z `brief`, n=4): zwykłe 8678 / 9611 / 10830, pułapka 34, powtórka 38. Wszystko przed AI: ok. 25–60 ms. Czas realnych maili (render + Resend) niezmierzony — atrapa wraca przed renderem.
+  - Przeglądarka „Send” → ekran sukcesu (n=3): v1 mediana 7,9 s, v2 10,4 s — prawie w całości czekanie na odpowiedź.
+  - Przewinięcie „przed”: v1 — imię 0% widoczne (1280×720, 390×667, 390×844), focus na „Send”, brak `aria-invalid`; v2 krok 3 — 0% przy 1280×720 i 390×667 (390×844 bez reprodukcji), `aria-invalid` już jest; v2 krok 2 — pierwsza grupa 0% przy każdym rozmiarze, grupy (`fieldset` + `legend` + `input type="radio"`) bez `aria-invalid` / `aria-describedby`.
+  - `after` (Next 16.1.6): callback po zamknięciu odpowiedzi; błąd w callbacku złapany i zalogowany; osobne `after()` biegną równolegle; poza zakresem żądania (vitest) `after()` rzuca synchronicznie; czas pracy w ramach `maxDuration` trasy (dokumentacja Next; w repo nieustawione → domyślny limit planu).
+- 2026-10-15 decyzje tj (STOP 1):
+  - D1 = (a): do `after()` tylko `classifyInquiry` + `autoSendReply`, w jednym callbacku, kolejno, każde w `try/catch`; maile zostają przed odpowiedzią. Wywołanie `after()` owinięte w `try/catch` z logiem.
+  - D2.1 = (i): v2 krok 2 — przewinięcie do `fieldset` + focus na pierwszym radio grupy; `aria-invalid` + `aria-describedby` (na komunikat błędu) na `fieldset`.
+  - D2.2: `continueFromInline` (S14 „Continue”) poza zakresem — bez zmian.
+  - D2.3: v1 bez nowego tekstu błędu; tylko `aria-invalid`, przewinięcie, focus.
