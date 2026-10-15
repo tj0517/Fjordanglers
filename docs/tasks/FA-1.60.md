@@ -56,13 +56,35 @@ lejka v1 i v2 jest w GA4 tą samą miarą, a każde zapytanie w bazie ma wersję
 - [ ] Ten sam przebieg na stronie v1 (np. Brynjar, Islandia): `experience_view(page_version=1)` → `section_view(section=pricing)` (blok „Price” v1) → `form_open` → `form_step(calendar,1,2)` → `form_step(form,2,2)` → `SUBMIT_LEAD_FORM` (v1 ma dwa kroki, nie jeden; blok „Price” liczy się jako `pricing` — decyzje tj D2 i D3, 14.10)
 - [ ] Żaden event nie odpala się podwójnie na jedno załadowanie/krok (guard jak `submittingRef` przy konwersji) — pokazany na czerwono (guard usunięty → podwójny event)
 - [ ] Request konwersji Ads (`googleadservices.com/pagead/conversion/18171634204/…`) na v1 niezmieniony — porównanie parametrów przed/po (label, value, currency_code) w raporcie; na v2 request pojawia się (wcześniej go nie było) z tym samym labelem i walutą PLN (decyzja tj D1, 14.10)
-- [ ] Migracja w `supabase/migrations` (nazwa wg konwencji repo); `CHECK` pokazany na czerwono (`page_version=3` odrzucone); na prod po STOP: `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name='inquiries' AND column_name IN ('page_version','page_slug')` zwraca 2 wiersze — wynik w raporcie
+- [x] Migracja w `supabase/migrations` (nazwa wg konwencji repo); `CHECK` pokazany na czerwono (`page_version=3` odrzucone); na prod po STOP (15.10: 2 wiersze, wynik w notatkach): `SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_name='inquiries' AND column_name IN ('page_version','page_slug')` zwraca 2 wiersze — wynik w raporcie
 - [ ] Zapytanie testowe wysłane z v2 ma w bazie `page_version=2` i `page_slug` strony (SELECT w raporcie), a następnie jest USUNIĘTE (DELETE po STOP, wynik w raporcie; jak `audit_20260903` we wrześniu)
 - [ ] Admin pokazuje oba pola dla tego zapytania (zrzut przed usunięciem)
 - [ ] Parytet zapisu v2 z v1: testowe zapytanie z v2 ma w bazie `gclid`, `utm`, `source`, `trip_length`, `party_size` tak jak v1, a `value` w `SUBMIT_LEAD_FORM` liczone przez `estimateLeadValue` (region z `getRegionGroup(location)`) — SELECT tych kolumn w raporcie (decyzja tj, „go” 14.10, pkt 1)
 - [ ] Test na prod z consentem `ad_storage=denied`, `analytics_storage=granted`: brak requestu do `googleadservices.com`; request konwersji Ads zweryfikowany lokalnie Playwrightem (przed/po). Zapytanie testowe: imię „TEST FA-1.60”, mail tj (decyzja tj, „go” 14.10, pkt 2)
 - [ ] Lista zapytań ze stron NZ v2 z `created_at ≥ 2026-10-14 16:40` (Europe/Warsaw) sprzed merge'a — do ręcznego importu offline konwersji w Ads (decyzja tj, „go” 14.10, pkt 3)
 - [ ] Build i lint przechodzą; brak `as any` w nowym kodzie
+
+### Rozszerzenie: Waters / Programs w „About this trip” (decyzja tj 2026-10-15, przed merge'em)
+Strona v2 ma dwie listy bloków ze zdjęciami — **Waters** i **Programs** — tego samego kształtu
+co dzisiejsze Programs (`offer-story-block.tsx`: nagłówek, tekst, galeria, lightbox przy ≥2
+zdjęciach). Zapis bez migracji: blok w `experience_pages.content_blocks` ma opcjonalne
+`section: 'waters' | 'programs'`, brak pola = `programs`. Waters bez bloków → dzisiejsza linijka
+`environment.join(' · ')`; kolumny `environment` i jej użyć nie ruszamy. Bloki opcji, edytor v2,
+v1, przenoszenie danych z `environment` — poza zakresem.
+- [ ] Test jednostkowy schematu: blok z `section:'waters'` przechodzi przez `contentBlocksSchema` i zachowuje pole; red proof: bez zmiany w schemacie test pada (pole wycięte)
+- [ ] Test `parseContentBlocks`: brak / `'programs'` / śmieciowa wartość → programs; `'waters'` → waters
+- [ ] Testy `offer-story`: (a) bloki Waters → `offer-waters` zawiera karty bloków, nie linijkę; (b) brak bloków Waters + niepuste environment → linijka jak dziś; (c) bloki Waters nie pojawiają się w `offer-programs`
+- [ ] Lokalnie (Playwright): w adminie blok Waters z 2 zdjęciami → zapis → na v2 karta w Waters z badge „+1 photos” i działającym lightboxem; strona bez bloków Waters wygląda jak przed zmianą; zrzuty przed/po w `.fa-proofs/fa-1.60/`
+- [ ] Strona v1: bloki z `section:'waters'` renderują się jak każdy inny blok, bez zmian w kodzie v1 — odczyt renderera v1 + jeden zrzut
+- [ ] `pnpm typecheck`, `lint`, `test`, `knip` zielone
+
+### Rozszerzenie: mapa v2 nad innymi warstwami (decyzja tj 2026-10-15)
+Na stronach v2 mapa (S11, `offer-logistics.tsx`) bywa renderowana NAD innymi warstwami.
+Tylko kontener mapy i jej kontrolki — innych z-indexów nie dotykamy, bez doraźnego `z-index: 9999`.
+- [ ] Reprodukcja Playwrightem na 390 i 1280 px przy przewijaniu przez mapę z otwartym widgetem/headerem/drawerem; zrzuty „przed” w `.fa-proofs/fa-1.60/`; w raporcie: co dokładnie przykrywa i na jakiej szerokości
+- [ ] Przyczyna z odczytu kodu: kontekst stackowania kontenera mapy i biblioteka (Leaflet/Mapbox/Google — domyślne z-index panów i kontrolek 400–1000)
+- [ ] Naprawa: izolacja kontenera mapy (`isolation: isolate` / własny kontekst stackowania); skala z-index z `docs/03-conventions.md`, a jeśli jej nie ma — propozycja skali (mapa < treść sticky < header < drawer/modal) i czekanie na akceptację tj
+- [ ] Zrzuty „po” na 390 i 1280 bez nachodzenia; red proof: cofnięcie poprawki przywraca nachodzenie
 
 ## Poza zakresem
 - Split per cookie / A/B, Google Ads Experiments
@@ -116,3 +138,10 @@ DebugView v1 i v2 — lista eventów z parametrami; Network — request do `goog
 - 2026-10-15 odczyt prod po zgłoszonym „done” push'a (MCP `supabase-prod`, read-only): `information_schema` → 0 wierszy `page_version`/`page_slug`, `pg_constraint` → brak `inquiries_page_version_check`, `max(version)` = `20261009000000`, `list_migrations` kończy się na `20261009000000`. Migracja **nie** jest na prod; push się nie wykonał (tj: CLI na Macu ma nieaktualne hasło do bazy).
 - 2026-10-15 decyzja tj: opcja B — `apply_migration` (MCP) na `uwxrstbplaoxfghrchcy`, nazwa `inquiries_page_version_slug`, treść = plik z `79ccb1a`; potem zmiana nazwy pliku na wersję z MCP (osobny commit) i cztery odczyty. **Nie wykonane:** MCP `supabase-prod` ma w `.mcp.json` `read_only=true` (brak `apply_migration`), a konektor Supabase w claude.ai jest zalogowany na konto bez FjordAnglers — `list_projects` pokazuje 5 innych projektów, `get_project uwxrstbplaoxfghrchcy` → „You do not have permission to perform this action”. Na prod nic nie zapisano. Lekcja dopisana do `docs/ops/db-push-checklist.md` § Lekcje.
 - Typ działania `SUBMIT_LEAD_FORM` w Ads (Główne/Dodatkowe): niezweryfikowane — czeka na zrzut tj.
+- 2026-10-15 tj: migrację `20261010000000` zastosował z Maca push'em CLI (`migration list --linked`: Local = Remote we wszystkich wierszach). Odczyt prod (MCP `supabase-prod`, read-only) po tym:
+  - `information_schema.columns` (`inquiries`, `page_version`/`page_slug`) → `page_slug | text | YES`, `page_version | smallint | YES`
+  - `pg_constraint` → `inquiries_page_version_check | CHECK (((page_version IS NULL) OR (page_version = ANY (ARRAY[1, 2]))))`
+  - `max(version)` w `schema_migrations` → `20261010000000`; `list_migrations` kończy się `20261010000000 inquiries_page_version_slug` — wersja = nazwa pliku, zmiana nazwy pliku niepotrzebna
+  - wierszy `inquiries` z niepustym `page_version`/`page_slug`: 0 (kod jeszcze niezmergowany)
+- 2026-10-15 decyzja tj: rozszerzenie zakresu o Waters/Programs (bloki z `section` w `content_blocks`, bez migracji, fallback do `environment`) — pierwszeństwo przed plikiem zadania, robione przed merge'em; kolejność merge → test prod → SELECT + zrzut → DELETE bez zmian. Kryteria w „Gotowe, gdy” § Rozszerzenie. Zapis bloku Waters przez admin na prod robi tj.
+- 2026-10-15 decyzja tj (wiadomość z 15.10 przed STOP 2): mapa v2 nad innymi warstwami — osobne kryterium w „Gotowe, gdy” § Rozszerzenie.
