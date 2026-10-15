@@ -71,20 +71,20 @@ zdjęciach). Zapis bez migracji: blok w `experience_pages.content_blocks` ma opc
 `section: 'waters' | 'programs'`, brak pola = `programs`. Waters bez bloków → dzisiejsza linijka
 `environment.join(' · ')`; kolumny `environment` i jej użyć nie ruszamy. Bloki opcji, edytor v2,
 v1, przenoszenie danych z `environment` — poza zakresem.
-- [ ] Test jednostkowy schematu: blok z `section:'waters'` przechodzi przez `contentBlocksSchema` i zachowuje pole; red proof: bez zmiany w schemacie test pada (pole wycięte)
-- [ ] Test `parseContentBlocks`: brak / `'programs'` / śmieciowa wartość → programs; `'waters'` → waters
-- [ ] Testy `offer-story`: (a) bloki Waters → `offer-waters` zawiera karty bloków, nie linijkę; (b) brak bloków Waters + niepuste environment → linijka jak dziś; (c) bloki Waters nie pojawiają się w `offer-programs`
-- [ ] Lokalnie (Playwright): w adminie blok Waters z 2 zdjęciami → zapis → na v2 karta w Waters z badge „+1 photos” i działającym lightboxem; strona bez bloków Waters wygląda jak przed zmianą; zrzuty przed/po w `.fa-proofs/fa-1.60/`
-- [ ] Strona v1: bloki z `section:'waters'` renderują się jak każdy inny blok, bez zmian w kodzie v1 — odczyt renderera v1 + jeden zrzut
-- [ ] `pnpm typecheck`, `lint`, `test`, `knip` zielone
+- [x] Test jednostkowy schematu: blok z `section:'waters'` przechodzi przez `contentBlocksSchema` i zachowuje pole; red proof: bez zmiany w schemacie test pada (pole wycięte)
+- [x] Test `parseContentBlocks`: brak / `'programs'` / śmieciowa wartość → programs; `'waters'` → waters
+- [x] Testy `offer-story`: (a) bloki Waters → `offer-waters` zawiera karty bloków, nie linijkę; (b) brak bloków Waters + niepuste environment → linijka jak dziś; (c) bloki Waters nie pojawiają się w `offer-programs`
+- [x] Lokalnie (Playwright): w adminie blok Waters z 2 zdjęciami → zapis → na v2 karta w Waters z badge „+1 photos” i działającym lightboxem; strona bez bloków Waters wygląda jak przed zmianą; zrzuty przed/po w `.fa-proofs/fa-1.60/`
+- [x] Strona v1: bloki z `section:'waters'` renderują się jak każdy inny blok, bez zmian w kodzie v1 — odczyt renderera v1 + jeden zrzut
+- [x] `pnpm typecheck`, `lint`, `test`, `knip` zielone
 
 ### Rozszerzenie: mapa v2 nad innymi warstwami (decyzja tj 2026-10-15)
 Na stronach v2 mapa (S11, `offer-logistics.tsx`) bywa renderowana NAD innymi warstwami.
 Tylko kontener mapy i jej kontrolki — innych z-indexów nie dotykamy, bez doraźnego `z-index: 9999`.
-- [ ] Reprodukcja Playwrightem na 390 i 1280 px przy przewijaniu przez mapę z otwartym widgetem/headerem/drawerem; zrzuty „przed” w `.fa-proofs/fa-1.60/`; w raporcie: co dokładnie przykrywa i na jakiej szerokości
-- [ ] Przyczyna z odczytu kodu: kontekst stackowania kontenera mapy i biblioteka (Leaflet/Mapbox/Google — domyślne z-index panów i kontrolek 400–1000)
+- [x] Reprodukcja Playwrightem na 390 i 1280 px przy przewijaniu przez mapę z otwartym widgetem/headerem/drawerem; zrzuty „przed” w `.fa-proofs/fa-1.60/`; w raporcie: co dokładnie przykrywa i na jakiej szerokości
+- [x] Przyczyna z odczytu kodu: kontekst stackowania kontenera mapy i biblioteka (Leaflet/Mapbox/Google — domyślne z-index panów i kontrolek 400–1000)
 - [ ] Naprawa: izolacja kontenera mapy (`isolation: isolate` / własny kontekst stackowania); skala z-index z `docs/03-conventions.md`, a jeśli jej nie ma — propozycja skali (mapa < treść sticky < header < drawer/modal) i czekanie na akceptację tj
-- [ ] Zrzuty „po” na 390 i 1280 bez nachodzenia; red proof: cofnięcie poprawki przywraca nachodzenie
+- [x] Zrzuty „po” na 390 i 1280 bez nachodzenia; red proof: cofnięcie poprawki przywraca nachodzenie
 
 ## Poza zakresem
 - Split per cookie / A/B, Google Ads Experiments
@@ -145,3 +145,19 @@ DebugView v1 i v2 — lista eventów z parametrami; Network — request do `goog
   - wierszy `inquiries` z niepustym `page_version`/`page_slug`: 0 (kod jeszcze niezmergowany)
 - 2026-10-15 decyzja tj: rozszerzenie zakresu o Waters/Programs (bloki z `section` w `content_blocks`, bez migracji, fallback do `environment`) — pierwszeństwo przed plikiem zadania, robione przed merge'em; kolejność merge → test prod → SELECT + zrzut → DELETE bez zmian. Kryteria w „Gotowe, gdy” § Rozszerzenie. Zapis bloku Waters przez admin na prod robi tj.
 - 2026-10-15 decyzja tj (wiadomość z 15.10 przed STOP 2): mapa v2 nad innymi warstwami — osobne kryterium w „Gotowe, gdy” § Rozszerzenie.
+- 2026-10-15 Waters/Programs — wykonane (commity `a51bb74`, `aec61e5`):
+  - Zapis: `contentBlockSchema` (`v2-editor.ts`) dostał `section: z.enum(['waters','programs']).optional()`; bez tego zod wycinał pole — red proof `.fa-proofs/fa-1.60/red-waters-section-schema.log` (`expected [ undefined, undefined ] to deeply equal [ 'waters', 'programs' ]`). Test DB `experience-pages-v2.test.ts` potwierdza zapis przez `updateExperiencePage`. `ContentBlock` (akcje) ma `section?`.
+  - Odczyt: `parseContentBlocks` → `StoryBlock.section`; `'waters'` tylko przy dokładnie tej wartości, wszystko inne (brak, `programs`, `Waters`, liczba, null) → `programs` (`pageBlockSection`, jedna funkcja dla parsera i formularza).
+  - Wybór techniczny: **jedno pole** `ExperienceV2.contentBlocks` z sekcją przy każdym bloku, podział w `OfferStory` — bez nowego pola w `queries.ts`, kolejność z bazy zachowana, a warunek (c) „Waters nie w Programs” jest testem renderera, który faktycznie dzieli.
+  - `OfferStory`: Waters = siatka `OfferStoryBlock` (ten sam grid 1/2 kolumny i `single`), bez bloków Waters → linijka `environment.join(' · ')`; Programs bez bloków Waters; warunek niepustej sekcji i odstępy liczą bloki Waters. Komentarz na górze pliku zaktualizowany.
+  - Admin: dwie listy `PageBlockList` („Waters”, „Programs”), każda z „+ Add block”; zapis `mergePageBlocks` — najpierw Waters, potem Programs, kolejność wewnątrz listy zachowana, `section` ustawione przy każdym bloku; bloki bez `section` trafiają do Programs. Edycja wierszy po kluczu, nie indeksie.
+  - Playwright lokalnie (`waters-run.mjs`, seed `seed-backcountry-day-nz`, zdjęcia z lokalnej galerii przewodnika dodanej na czas dowodu i usuniętej): admin → Waters „Tongariro River” z 2 zdjęciami → zapis → `content_blocks` w bazie (`waters-local-content-blocks.log`: Waters pierwszy z `section:'waters'`, dwa dotychczasowe z `section:'programs'`) → v2: karta w Waters, badge `+1 photos`, `aria-label` „Open 2 photos of Tongariro River”, lightbox `1 / 2 → 2 / 2 → Esc`. Zrzuty `waters-admin-lists.png`, `waters-v2-story.png`, `waters-lightbox.png`.
+  - Strona bez bloków Waters jak przed zmianą: zrzut sekcji przed (kod `0f46649`, osobny worktree) i po — identyczne bajtowo (`no-waters-before-after-compare.log`, ten sam sha256).
+  - v1: renderer (`ExperienceV1.tsx` „PAGE CONTENT BLOCKS”) czyta tylko `headline`/`image_url`/`text`, `section` ignoruje; zrzut `waters-v1-blocks.png` — Tongariro River jako zwykły blok, pierwszy. Kod v1 bez zmian.
+  - Zauważone: `createExperiencePage` nie zapisuje `content_blocks` (wiersz „exp-v2 feedback 1” w deferred już to opisuje) — bloki Waters dodane przy tworzeniu nowej strony giną do drugiego zapisu, tak jak Programs dziś.
+- 2026-10-15 mapa v2 — wykonane (commit `56fd94f`):
+  - Biblioteka: Leaflet przez `react-leaflet` (`src/components/offer/LocationMap.tsx`). Odczyt stylów (`stack-probe`): `.leaflet-map-pane` z-index 400 + transform, `.leaflet-tile-pane` 200, `.leaflet-top` 1000, `.leaflet-control-zoom` 800; żaden przodek mapy nie tworzył kontekstu stackowania, więc te wartości konkurowały z warstwami strony: pasek mobilny 40, wizard 50, nav 50, menu mobilne 49.
+  - Reprodukcja (`map-run.mjs`, `elementFromPoint` + zrzuty, 390 i 1280 px; lokalnie na czas dowodu `location_lat/lng` na seedzie, potem wycofane): **przed** mapa nad warstwą w 4 przypadkach — 390: pasek rezerwacji (kontrolka zoom i kafle), wizard (mapa na kroku 2 formularza); 1280: wizard (kontrolka i kafle nad tłem i dołem panelu). Nav i menu mobilne nie mogą się nałożyć: na stronach experience nav chowa się po przewinięciu >80 px i wraca tylko na górze strony, menu zamyka się przy przewijaniu w dół (`nav.tsx`). Zrzuty `map-before-*.png`, log `map-before.log`.
+  - Naprawa: `isolate` (`isolation: isolate`) na kontenerze mapy w S11 (`offer-logistics.tsx`) — żadna wartość z-index nie zmieniona. **Po**: 0 z 8 (`map-after.log`, `map-after-*.png`). Red proof: bez `isolate` znów 4 z 8 (`red-map-isolation-removed.log`).
+  - Skala z-index: w `docs/03-conventions.md` jej nie ma → propozycja w deferred (nie wprowadzona), czeka na decyzję tj. Ta sama mapa na `/offers/[token]` bez izolacji — poza zakresem, wiersz w deferred.
+  - Weryfikacja: `tsc` czysty; vitest 88 plików / 1062 testy zielone (`full-suite-waters-map.log`); eslint 0 błędów (`lint-waters-map.log`; w zmienionych plikach te same 4 ostrzeżenia co na `main`); knip czysty (`knip-waters.log`).
