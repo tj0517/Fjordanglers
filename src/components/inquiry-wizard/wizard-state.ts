@@ -172,6 +172,22 @@ export function validateStep(
   return errors
 }
 
+/**
+ * The questions of each step in the order they are rendered — what "first" means when a
+ * step has several errors. A key that never fails on a given page (the budget question the
+ * page does not ask) is simply never in the error map.
+ */
+const FIELD_ORDER: Record<WizardStep, readonly (keyof WizardAnswers)[]> = {
+  1: ['dateFrom', 'flexMonth', 'days', 'anglers'],
+  2: ['skillLevel', 'priority', 'fitness', 'wadingOk', 'budgetAck', 'budgetBand'],
+  3: ['firstName', 'lastName', 'email', 'country'],
+}
+
+/** The first question of `step`, in display order, that has an error — or null if none. */
+export function firstInvalidField(step: WizardStep, errors: WizardErrors): keyof WizardAnswers | null {
+  return FIELD_ORDER[step].find(field => errors[field] != null) ?? null
+}
+
 // ─── The brief ────────────────────────────────────────────────────────────────
 
 /**

@@ -1,0 +1,791 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/tj/Fjordanglers[39m
+
+ [31m❯[39m src/components/inquiry/InquiryWidget.test.tsx [2m([22m[2m7 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[33m 933[2mms[22m[39m
+[31m     [31m×[31m last name empty: scrolls to it, focuses it, marks it aria-invalid — and only it[39m[33m 364[2mms[22m[39m
+[31m     [31m×[31m goes to the first invalid field in display order: first name before last name before e-mail[39m[32m 87[2mms[22m[39m
+[31m     [31m×[31m skips the valid fields: only e-mail wrong → e-mail; only trip length missing → trip length[39m[32m 121[2mms[22m[39m
+[31m     [31m×[31m does it again on every failed attempt, not only the first[39m[32m 111[2mms[22m[39m
+[31m     [31m×[31m uses an instant jump when the visitor prefers reduced motion[39m[32m 88[2mms[22m[39m
+[31m     [31m×[31m flags nothing and scrolls nowhere before the first attempt[39m[32m 56[2mms[22m[39m
+     [32m✓[39m a complete form sends and does not scroll[32m 105[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 6 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry/InquiryWidget.test.tsx[2m > [22mv1 modal — Send with a required field missing (FA-1.61)[2m > [22mlast name empty: scrolls to it, focuses it, marks it aria-invalid — and only it
+[31m[1mAssertionError[22m: expected [] to deeply equal [ <input …(6)></input> ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [[39m
+[32m-   <input[39m
+[32m-     autocomplete="family-name"[39m
+[32m-     class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"[39m
+[32m-     placeholder="Andersen"[39m
+[32m-     style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(239, 68, 68, 0.6); color: rgb(10, 46, 77);"[39m
+[32m-     type="text"[39m
+[32m-     value=""[39m
+[32m-   />,[39m
+[32m- ][39m
+[31m+ [][39m
+
+[36m [2m❯[22m src/components/inquiry/InquiryWidget.test.tsx:[2m90:32[22m[39m
+    [90m 88| [39m    [34msend[39m()
+    [90m 89| [39m
+    [90m 90| [39m    [34mexpect[39m([34mscrolledElements[39m())[33m.[39m[34mtoEqual[39m([[34mlastName[39m()])
+    [90m   | [39m                               [31m^[39m
+    [90m 91| [39m    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', beh…
+    [90m 92| [39m    [34mexpect[39m(document[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m([34mlastName[39m())
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry/InquiryWidget.test.tsx[2m > [22mv1 modal — Send with a required field missing (FA-1.61)[2m > [22mgoes to the first invalid field in display order: first name before last name before e-mail
+[31m[1mAssertionError[22m: expected [] to deeply equal [ <input …(6)></input> ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [[39m
+[32m-   <input[39m
+[32m-     autocomplete="given-name"[39m
+[32m-     class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"[39m
+[32m-     placeholder="Erik"[39m
+[32m-     style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(239, 68, 68, 0.6); color: rgb(10, 46, 77);"[39m
+[32m-     type="text"[39m
+[32m-     value=""[39m
+[32m-   />,[39m
+[32m- ][39m
+[31m+ [][39m
+
+[36m [2m❯[22m src/components/inquiry/InquiryWidget.test.tsx:[2m104:32[22m[39m
+    [90m102| [39m    [34msend[39m()
+    [90m103| [39m
+    [90m104| [39m    [34mexpect[39m([34mscrolledElements[39m())[33m.[39m[34mtoEqual[39m([[34mfirstName[39m()])
+    [90m   | [39m                               [31m^[39m
+    [90m105| [39m    [34mexpect[39m(document[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m([34mfirstName[39m())
+    [90m106| [39m    // Every empty required field is flagged, though only the first ta…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry/InquiryWidget.test.tsx[2m > [22mv1 modal — Send with a required field missing (FA-1.61)[2m > [22mskips the valid fields: only e-mail wrong → e-mail; only trip length missing → trip length
+[31m[1mAssertionError[22m: expected <body style="overflow: hidden;">…(2)</body> to be <input …(6)></input> // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[31m+ <body[39m
+[31m+   style="overflow: hidden;"[39m
+[31m+ >[39m
+[31m+   <div>[39m
+[31m+     <div[39m
+[31m+       class="rounded-3xl overflow-hidden"[39m
+[31m+       style="background: rgb(10, 46, 77); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 8px 32px rgba(10,46,77,0.3);"[39m
+[31m+     >[39m
+[31m+       <div[39m
+[31m+         class="px-5 pt-5 pb-4"[39m
+[31m+         style="border-bottom: 1px solid rgba(255, 255, 255, 0.07);"[39m
+[31m+       >[39m
+[31m+         <p[39m
+[31m+           class="text-[10px] font-bold uppercase tracking-[0.18em] mb-2 f-body"[39m
+[31m+           style="color: rgba(255, 255, 255, 0.35);"[39m
+[31m+         >[39m
+[31m+           Book this trip[39m
+[31m+         </p>[39m
+[31m+         <p[39m
+[31m+           class="text-lg font-bold f-display leading-snug"[39m
+[31m+           style="color: rgb(255, 255, 255);"[39m
+[31m+         >[39m
+[31m+           Brynjar's Rivers[39m
+[31m+         </p>[39m
+[31m+       </div>[39m
+[31m+       <div[39m
+[31m+         class="px-5 pt-4 pb-4"[39m
+[31m+         style="border-bottom: 1px solid rgba(255, 255, 255, 0.07);"[39m
+[31m+       >[39m
+[31m+         <p[39m
+[31m+           class="text-[10px] font-bold uppercase tracking-[0.18em] mb-3 f-body"[39m
+[31m+           style="color: rgba(255, 255, 255, 0.3);"[39m
+[31m+         >[39m
+[31m+           How it works[39m
+[31m+         </p>[39m
+[31m+         <div[39m
+[31m+           class="space-y-2.5"[39m
+[31m+         >[39m
+[31m+           <div[39m
+[31m+             class="flex items-center gap-3"[39m
+[31m+           >[39m
+[31m+             <div[39m
+[31m+               class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"[39m
+[31m+               style="background: rgba(230, 126, 80, 0.25); color: rgb(230, 126, 80);"[39m
+[31m+             >[39m
+[31m+               <span[39m
+[31m+                 class="text-[10px] font-bold f-body"[39m
+[31m+               >[39m
+[31m+                 1[39m
+[31m+               </span>[39m
+[31m+             </div>[39m
+[31m+             <p[39m
+[31m+               class="text-sm font-semibold f-body"[39m
+[31m+               style="color: rgb(255, 255, 255);"[39m
+[31m+             >[39m
+[31m+               Ask about your dates[39m
+[31m+             </p>[39m
+[31m+           </div>[39m
+[31m+           <div[39m
+[31m+             class="flex items-center gap-3"[39m
+[31m+           >[39m
+[31m+             <div[39m
+[31m+               class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"[39m
+[31m+               style="background: rgba(230, 126, 80, 0.25); color: rgb(230, 126, 80);"[39m
+[31m+             >[39m
+[31m+               <span[39m
+[31m+                 class="text-[10px] font-bold f-body"[39m
+[31m+               >[39m
+[31m+                 2[39m
+[31m+               </span>[39m
+[31m+             </div>[39m
+[31m+             <p[39m
+[31m+               class="text-sm font-semibold f-body"[39m
+[31m+               style="color: rgb(255, 255, 255);"[39m
+[31m+             >[39m
+[31m+               FA confirms availability[39m
+[31m+             </p>[39m
+[31m+           </div>[39m
+[31m+           <div[39m
+[31m+             class="flex items-center gap-3"[39m
+[31m+           >[39m
+[31m+             <div[39m
+[31m+               class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"[39m
+[31m+               style="background: rgba(230, 126, 80, 0.25); color: rgb(230, 126, 80);"[39m
+[31m+             >[39m
+[31m+               <span[39m
+[31m+                 class="text-[10px] font-bold f-body"[39m
+[31m+               >[39m
+[31m+                 3[39m
+[31m+               </span>[39m
+[31m+             </div>[39m
+[31m+             <p[39m
+[31m+               class="text-sm font-semibold f-body"[39m
+[31m+               style="color: rgb(255, 255, 255);"[39m
+[31m+             >[39m
+[31m+               Secure with a deposit[39m
+[31m+             </p>[39m
+[31m+           </div>[39m
+[31m+         </div>[39m
+[31m+       </div>[39m
+[31m+       <div[39m
+[31m+         class="px-5 pt-4 pb-5"[39m
+[31m+       >[39m
+[31m+         <button[39m
+[31m+           class="w-full py-3.5 rounded-xl text-sm font-bold f-body transition-all"[39m
+[31m+           style="background: rgb(230, 126, 80); color: rgb(255, 255, 255); box-shadow: 0 4px 14px rgba(230,126,80,0.4);"[39m
+[31m+           type="button"[39m
+[31m+         >[39m
+[31m+           Send Inquiry →[39m
+[31m+         </button>[39m
+[31m+         <p[39m
+[31m+           class="text-center text-[11px] f-body mt-3"[39m
+[31m+           style="color: rgba(255, 255, 255, 0.3);"[39m
+[31m+         >[39m
+[31m+           Free to ask · no payment now · reply within 24h[39m
+[31m+         </p>[39m
+[31m+       </div>[39m
+[31m+       <div[39m
+[31m+         class="px-5 pb-5"[39m
+[31m+         style="border-top: 1px solid rgba(255, 255, 255, 0.07);"[39m
+[31m+       >[39m
+[31m+         <p[39m
+[31m+           class="text-[10px] font-bold uppercase tracking-[0.2em] f-body pt-4 pb-3 text-center"[39m
+[31m+           style="color: rgba(255, 255, 255, 0.28);"[39m
+[31m+         >[39m
+[31m+           Not sure yet? Talk to us[39m
+[31m+         </p>[39m
+[31m+         <div[39m
+[31m+           class="grid grid-cols-3 gap-1.5"[39m
+[31m+         >[39m
+[31m+           <a[39m
+[31m+             class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"[39m
+[31m+             href="https://wa.me/48698936563?text=Hi!%20I%20have%20a%20question%20about%20%22Brynjar's%20Rivers%22.%20Can%20you%20help%20me%20plan%20this%20trip%3F"[39m
+[31m+             rel="noopener noreferrer"[39m
+[31m+             style="background: rgba(37, 211, 102, 0.14); color: rgb(37, 211, 102); border: 1px solid rgba(37, 211, 102, 0.2); text-decoration: none;"[39m
+[31m+             target="_blank"[39m
+[31m+           >[39m
+[31m+             <svg[39m
+[31m+               aria-hidden="true"[39m
+[31m+               fill="#25D366"[39m
+[31m+               height="14"[39m
+[31m+               viewBox="0 0 24 24"[39m
+[31m+               width="14"[39m
+[31m+             >[39m
+[31m+               <path[39m
+[31m+                 d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"[39m
+[31m+               />[39m
+[31m+             </svg>[39m
+[31m+             WhatsApp[39m
+[31m+           </a>[39m
+[31m+           <a[39m
+[31m+             class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"[39m
+[31m+             href="https://www.instagram.com/fjordanglers/"[39m
+[31m+             rel="noopener noreferrer"[39m
+[31m+             style="background: rgba(225, 48, 108, 0.12); color: rgb(225, 48, 108); border: 1px solid rgba(225, 48, 108, 0.2); text-decoration: none;"[39m
+[31m+             target="_blank"[39m
+[31m+           >[39m
+[31m+             <svg[39m
+[31m+               aria-hidden="true"[39m
+[31m+               fill="#E1306C"[39m
+[31m+               height="14"[39m
+[31m+               viewBox="0 0 24 24"[39m
+[31m+               width="14"[39m
+[31m+             >[39m
+[31m+               <path[39m
+[31m+                 d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"[39m
+[31m+               />[39m
+[31m+             </svg>[39m
+[31m+             Instagram[39m
+[31m+           </a>[39m
+[31m+           <a[39m
+[31m+             class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[11px] font-semibold f-body transition-all hover:brightness-110"[39m
+[31m+             href="mailto:contact@fjordanglers.com?subject=Question%20about%20a%20guided%20fishing%20trip"[39m
+[31m+             style="background: rgba(255, 255, 255, 0.07); color: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); text-decoration: none;"[39m
+[31m+           >[39m
+[31m+             <svg[39m
+[31m+               aria-hidden="true"[39m
+[31m+               class="lucide lucide-mail"[39m
+[31m+               fill="none"[39m
+[31m+               height="14"[39m
+[31m+               stroke="currentColor"[39m
+[31m+               stroke-linecap="round"[39m
+[31m+               stroke-linejoin="round"[39m
+[31m+               stroke-width="2"[39m
+[31m+               viewBox="0 0 24 24"[39m
+[31m+               width="14"[39m
+[31m+               xmlns="http://www.w3.org/2000/svg"[39m
+[31m+             >[39m
+[31m+               <path[39m
+[31m+                 d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"[39m
+[31m+               />[39m
+[31m+               <rect[39m
+[31m+                 height="16"[39m
+[31m+                 rx="2"[39m
+[31m+                 width="20"[39m
+[31m+                 x="2"[39m
+[31m+                 y="4"[39m
+[31m+               />[39m
+[31m+             </svg>[39m
+[31m+             Email[39m
+[31m+           </a>[39m
+[31m+         </div>[39m
+[31m+       </div>[39m
+[31m+     </div>[39m
+[31m+   </div>[39m
+[31m+   <div[39m
+[31m+     class="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center"[39m
+[31m+     style="background: rgba(10, 46, 77, 0.55); backdrop-filter: blur(4px);"[39m
+[31m+   >[39m
+[31m+     <div[39m
+[31m+       class="relative w-full sm:max-w-md bg-white flex flex-col"[39m
+[31m+       style="border-radius: 24px; max-height: 90dvh; box-shadow: 0 -8px 48px rgba(10,46,77,0.25);"[39m
+[31m+     >[39m
+[31m+       <div[39m
+[31m+         class="flex items-center justify-between px-5 pt-5 pb-4 flex-shrink-0"[39m
+[31m+         style="border-bottom: 1px solid rgba(10, 46, 77, 0.07);"[39m
+[31m+       >[39m
+[31m+         <div>[39m
+[31m+           <button[39m
+[31m+             class="flex items-center gap-1 text-xs f-body mb-1 transition-opacity hover:opacity-60"[39m
+[31m+             style="color: rgba(10, 46, 77, 0.4);"[39m
+[31m+             type="button"[39m
+[31m+           >[39m
+[31m+             <svg[39m
+[31m+               aria-hidden="true"[39m
+[31m+               class="lucide lucide-chevron-left"[39m
+[31m+               fill="none"[39m
+[31m+               height="13"[39m
+[31m+               stroke="currentColor"[39m
+[31m+               stroke-linecap="round"[39m
+[31m+               stroke-linejoin="round"[39m
+[31m+               stroke-width="2"[39m
+[31m+               viewBox="0 0 24 24"[39m
+[31m+               width="13"[39m
+[31m+               xmlns="http://www.w3.org/2000/svg"[39m
+[31m+             >[39m
+[31m+               <path[39m
+[31m+                 d="m15 18-6-6 6-6"[39m
+[31m+               />[39m
+[31m+             </svg>[39m
+[31m+             Back[39m
+[31m+           </button>[39m
+[31m+           <p[39m
+[31m+             class="text-sm font-bold f-body"[39m
+[31m+             style="color: rgb(10, 46, 77);"[39m
+[31m+           >[39m
+[31m+             Your details[39m
+[31m+           </p>[39m
+[31m+         </div>[39m
+[31m+         <button[39m
+[31m+           aria-label="Close"[39m
+[31m+           class="w-8 h-8 flex items-center justify-center rounded-full"[39m
+[31m+           style="background: rgba(10, 46, 77, 0.07); color: rgba(10, 46, 77, 0.5);"[39m
+[31m+           type="button"[39m
+[31m+         >[39m
+[31m+           <svg[39m
+[31m+             aria-hidden="true"[39m
+[31m+             class="lucide lucide-x"[39m
+[31m+             fill="none"[39m
+[31m+             height="15"[39m
+[31m+             stroke="currentColor"[39m
+[31m+             stroke-linecap="round"[39m
+[31m+             stroke-linejoin="round"[39m
+[31m+             stroke-width="2"[39m
+[31m+             viewBox="0 0 24 24"[39m
+[31m+             width="15"[39m
+[31m+             xmlns="http://www.w3.org/2000/svg"[39m
+[31m+           >[39m
+[31m+             <path[39m
+[31m+               d="M18 6 6 18"[39m
+[31m+             />[39m
+[31m+             <path[39m
+[31m+               d="m6 6 12 12"[39m
+[31m+             />[39m
+[31m+           </svg>[39m
+[31m+         </button>[39m
+[31m+       </div>[39m
+[31m+       <div[39m
+[31m+         class="overflow-y-auto flex-1"[39m
+[31m+         style="scrollbar-width: thin; scrollbar-color: rgba(230,126,80,0.4) transparent; overscroll-behavior: contain;"[39m
+[31m+       >[39m
+[31m+         <form[39m
+[31m+           id="inquiry-form"[39m
+[31m+           novalidate=""[39m
+[31m+         >[39m
+[31m+           <div[39m
+[31m+             aria-hidden="true"[39m
+[31m+             style="position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden;"[39m
+[31m+           >[39m
+[31m+             <input[39m
+[31m+               autocomplete="off"[39m
+[31m+               data-1p-ignore="true"[39m
+[31m+               data-form-type="other"[39m
+[31m+               data-lpignore="true"[39m
+[31m+               name="trip_notes_extra"[39m
+[31m+               tabindex="-1"[39m
+[31m+               type="text"[39m
+[31m+               value=""[39m
+[31m+             />[39m
+[31m+           </div>[39m
+[31m+           <div[39m
+[31m+             class="px-5 pt-4 pb-6 space-y-0"[39m
+[31m+           >[39m
+[31m+             <div[39m
+[31m+               class="mb-4 px-3.5 py-3 rounded-xl"[39m
+[31m+               style="background: rgba(10, 46, 77, 0.04); border: 1px solid rgba(10, 46, 77, 0.07);"[39m
+[31m+             >[39m
+[31m+               <p[39m
+[31m+                 class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1.5"[39m
+[31m+                 style="color: rgba(10, 46, 77, 0.38);"[39m
+[31m+               >[39m
+[31m+                 Brynjar's Rivers[39m
+[31m+               </p>[39m
+[31m+               <div[39m
+[31m+                 class="flex flex-wrap gap-1"[39m
+[31m+               />[39m
+[31m+             </div>[39m
+[31m+             <div[39m
+[31m+               class="grid grid-cols-2 gap-2 mb-3"[39m
+[31m+             >[39m
+[31m+               <div>[39m
+[31m+                 <label[39m
+[31m+                   class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1 block text-[rgba(10,46,77,0.42)]"[39m
+[31m+                 >[39m
+[31m+                   First name[39m
+[31m+                 </label>[39m
+[31m+                 <input[39m
+[31m+                   autocomplete="given-name"[39m
+[31m+                   class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"[39m
+[31m+                   placeholder="Erik"[39m
+[31m+                   style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(10, 46, 77, 0.1); color: rgb(10, 46, 77);"[39m
+[31m+                   type="text"[39m
+[31m+                   value="Anna"[39m
+[31m+                 />[39m
+[31m+               </div>[39m
+[31m+               <div>[39m
+[31m+                 <label[39m
+[31m+                   class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1 block text-[rgba(10,46,77,0.42)]"[39m
+[31m+                 >[39m
+[31m+                   Last name[39m
+[31m+                 </label>[39m
+[31m+                 <input[39m
+[31m+                   autocomplete="family-name"[39m
+[31m+                   class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"[39m
+[31m+                   placeholder="Andersen"[39m
+[31m+                   style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(10, 46, 77, 0.1); color: rgb(10, 46, 77);"[39m
+[31m+                   type="text"[39m
+[31m+                   value="Angler"[39m
+[31m+                 />[39m
+[31m+               </div>[39m
+[31m+             </div>[39m
+[31m+             <div[39m
+[31m+               class="mb-3"[39m
+[31m+             >[39m
+[31m+               <label[39m
+[31m+                 class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1 block text-[rgba(10,46,77,0.42)]"[39m
+[31m+               >[39m
+[31m+                 Email[39m
+[31m+               </label>[39m
+[2m                <input[22m
+[2m                  autocomplete="email"[22m
+[2m                  class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"[22m
+[2m                  placeholder="you@example.com"[22m
+[2m                  style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(239, 68, 68, 0.6); color: rgb(10, 46, 77);"[22m
+[2m                  type="email"[22m
+[2m                  value="not-an-address"[22m
+[31m+               />[39m
+[31m+             </div>[39m
+[31m+             <div[39m
+[31m+               class="mb-3"[39m
+[31m+             >[39m
+[31m+               <label[39m
+[31m+                 class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1 block text-[rgba(10,46,77,0.42)]"[39m
+[31m+               >[39m
+[31m+                 WhatsApp number[39m
+[31m+               </label>[39m
+[31m+               <p[39m
+[31m+                 class="text-[10px] f-body mb-1.5"[39m
+[31m+                 style="color: rgba(10, 46, 77, 0.38);"[39m
+[31m+               >[39m
+[31m+                 We'll use it to quickly discuss the details of your trip on WhatsApp.[39m
+[31m+               </p>[39m
+[31m+               <input[39m
+[31m+                 autocomplete="tel"[39m
+[31m+                 class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"[39m
+[31m+                 inputmode="tel"[39m
+[31m+                 placeholder="+48 123 456 789"[39m
+[31m+                 style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(10, 46, 77, 0.1); color: rgb(10, 46, 77);"[39m
+[31m+                 type="text"[39m
+[31m+                 value=""[39m
+[2m                />[22m
+[31m+               <select[39m
+[31m+                 aria-label="Phone number country"[39m
+[31m+                 class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all mt-1.5"[39m
+[31m+                 style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(10, 46, 77, 0.1); color: rgb(10, 46, 77); font-size: 12px;"[39m
+[31m+               >[39m
+[31m+                 <option[39m
+[31m+                   value=""[39m
+[31m+                 >[39m
+[31m+                   Country (optional)[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="AU"[39m
+[31m+                 >[39m
+[31m+                   Australia[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="CA"[39m
+[31m+                 >[39m
+[31m+                   Canada[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="DK"[39m
+[31m+                 >[39m
+[31m+                   Denmark[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="FI"[39m
+[31m+                 >[39m
+[31m+                   Finland[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="FR"[39m
+[31m+                 >[39m
+[31m+                   France[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="DE"[39m
+[31m+                 >[39m
+[31m+                   Germany[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="IS"[39m
+[31m+                 >[39m
+[31m+                   Iceland[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="IE"[39m
+[31m+                 >[39m
+[31m+                   Ireland[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="NL"[39m
+[31m+                 >[39m
+[31m+                   Netherlands[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="NZ"[39m
+[31m+                 >[39m
+[31m+                   New Zealand[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="NO"[39m
+[31m+                 >[39m
+[31m+                   Norway[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="PL"[39m
+[31m+                 >[39m
+[31m+                   Poland[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="SE"[39m
+[31m+                 >[39m
+[31m+                   Sweden[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="GB"[39m
+[31m+                 >[39m
+[31m+                   United Kingdom[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="US"[39m
+[31m+                 >[39m
+[31m+                   United States[39m
+[31m+                 </option>[39m
+[31m+               </select>[39m
+[31m+             </div>[39m
+[31m+             <div[39m
+[31m+               class="mb-3"[39m
+[31m+             >[39m
+[31m+               <label[39m
+[31m+                 class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1 block text-[rgba(10,46,77,0.42)]"[39m
+[31m+               >[39m
+[31m+                 Anglers[39m
+[31m+               </label>[39m
+[31m+               <div[39m
+[31m+                 class="flex items-center justify-between px-3.5 py-2.5 rounded-xl"[39m
+[31m+                 style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(10, 46, 77, 0.1); color: rgb(10, 46, 77);"[39m
+[31m+               >[39m
+[31m+                 <button[39m
+[31m+                   aria-label="Remove angler"[39m
+[31m+                   class="w-7 h-7 flex items-center justify-center rounded-lg"[39m
+[31m+                   disabled=""[39m
+[31m+                   style="background: transparent; color: rgba(10, 46, 77, 0.2); cursor: not-allowed;"[39m
+[31m+                   type="button"[39m
+[31m+                 >[39m
+[31m+                   <svg[39m
+[31m+                     aria-hidden="true"[39m
+[31m+                     class="lucide lucide-minus"[39m
+[31m+                     fill="none"[39m
+[31m+                     height="13"[39m
+[31m+                     stroke="currentColor"[39m
+[31m+                     stroke-linecap="round"[39m
+[31m+                     stroke-linejoin="round"[39m
+[31m+                     stroke-width="2"[39m
+[31m+                     viewBox="0 0 24 24"[39m
+[31m+                     width="13"[39m
+[31m+                     xmlns="http://www.w3.org/2000/svg"[39m
+[31m+                   >[39m
+[31m+                     <path[39m
+[31m+                       d="M5 12h14"[39m
+[31m+                     />[39m
+[31m+                   </svg>[39m
+[31m+                 </button>[39m
+[31m+                 <span[39m
+[31m+                   class="text-sm font-bold f-body"[39m
+[31m+                   style="color: rgb(10, 46, 77);"[39m
+[31m+                 >[39m
+[31m+                   1[39m
+[31m+                    [39m
+[31m+                   angler[39m
+[31m+                 </span>[39m
+[31m+                 <button[39m
+[31m+                   aria-label="Add angler"[39m
+[31m+                   class="w-7 h-7 flex items-center justify-center rounded-lg"[39m
+[31m+                   style="background: rgba(10, 46, 77, 0.08); color: rgb(10, 46, 77); cursor: pointer;"[39m
+[31m+                   type="button"[39m
+[31m+                 >[39m
+[31m+                   <svg[39m
+[31m+                     aria-hidden="true"[39m
+[31m+                     class="lucide lucide-plus"[39m
+[31m+                     fill="none"[39m
+[31m+                     height="13"[39m
+[31m+                     stroke="currentColor"[39m
+[31m+                     stroke-linecap="round"[39m
+[31m+                     stroke-linejoin="round"[39m
+[31m+                     stroke-width="2"[39m
+[31m+                     viewBox="0 0 24 24"[39m
+[31m+                     width="13"[39m
+[31m+                     xmlns="http://www.w3.org/2000/svg"[39m
+[31m+                   >[39m
+[31m+                     <path[39m
+[31m+                       d="M5 12h14"[39m
+[31m+                     />[39m
+[31m+                     <path[39m
+[31m+                       d="M12 5v14"[39m
+[31m+                     />[39m
+[31m+                   </svg>[39m
+[31m+                 </button>[39m
+[31m+               </div>[39m
+[31m+             </div>[39m
+[31m+             <div[39m
+[31m+               class="mb-3"[39m
+[31m+             >[39m
+[31m+               <label[39m
+[31m+                 class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1 block text-[rgba(10,46,77,0.42)]"[39m
+[31m+               >[39m
+[31m+                 Trip length[39m
+[31m+               </label>[39m
+[31m+               <select[39m
+[31m+                 class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"[39m
+[31m+                 style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(10, 46, 77, 0.1); color: rgb(10, 46, 77);"[39m
+[31m+               >[39m
+[31m+                 <option[39m
+[31m+                   value=""[39m
+[31m+                 >[39m
+[31m+                   Select duration…[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="1"[39m
+[31m+                 >[39m
+[31m+                   1 day[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="2-3"[39m
+[31m+                 >[39m
+[31m+                   2–3 days[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="4-7"[39m
+[31m+                 >[39m
+[31m+                   4–7 days[39m
+[31m+                 </option>[39m
+[31m+                 <option[39m
+[31m+                   value="7+"[39m
+[31m+                 >[39m
+[31m+                   7+ days[39m
+[31m+                 </option>[39m
+[31m+               </select>[39m
+[31m+             </div>[39m
+[31m+             <div[39m
+[31m+               class="mb-4"[39m
+[31m+             >[39m
+[31m+               <label[39m
+[31m+                 class="text-[10px] font-bold uppercase tracking-[0.14em] f-body mb-1 block text-[rgba(10,46,77,0.42)]"[39m
+[31m+               >[39m
+[31m+                 Your trip[39m
+[31m+               </label>[39m
+[31m+               <textarea[39m
+[31m+                 class="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"[39m
+[31m+                 maxlength="1000"[39m
+[31m+                 placeholder="Tell us what you're after — species, technique, vibe, anything on your mind..."[39m
+[31m+                 rows="3"[39m
+[31m+                 style="background: rgba(10, 46, 77, 0.04); border: 1.5px solid rgba(10, 46, 77, 0.1); color: rgb(10, 46, 77);"[39m
+[31m+               />[39m
+[31m+             </div>[39m
+[31m+             <div[39m
+[31m+               class="mt-4 pt-4 text-center"[39m
+[31m+               style="border-top: 1px solid rgba(10, 46, 77, 0.07);"[39m
+[31m+             >[39m
+[31m+               <p[39m
+[31m+                 class="text-[11px] f-body mb-1.5"[39m
+[31m+                 style="color: rgba(10, 46, 77, 0.42);"[39m
+[31m+               >[39m
+[31m+                 💬 Prefer to message?[39m
+[31m+               </p>[39m
+[31m+               <a[39m
+[31m+                 class="text-[13px] font-semibold f-body"[39m
+[31m+                 href="https://wa.me/48698936563?text=Hi!%20I%20have%20a%20question%20about%20%22Brynjar's%20Rivers%22.%20Can%20you%20help%20me%20plan%20this%20trip%3F"[39m
+[31m+                 rel="noopener noreferrer"[39m
+[31m+                 style="color: rgb(230, 126, 80); text-decoration: none;"[39m
+[31m+                 target="_blank"[39m
+[31m+               >[39m
+[31m+                 Ask on WhatsApp →[39m
+[31m+               </a>[39m
+[31m+               <p[39m
+[31m+                 class="text-[10px] f-body mt-1"[39m
+[31m+                 style="color: rgba(10, 46, 77, 0.3);"[39m
+[31m+               >[39m
+[31m+                 Usually replies within a few hours[39m
+[31m+               </p>[39m
+[31m+             </div>[39m
+[31m+           </div>[39m
+[31m+         </form>[39m
+[31m+       </div>[39m
+[31m+       <div[39m
+[31m+         class="flex-shrink-0 px-5 py-4"[39m
+[31m+         style="border-top: 1px solid rgba(10, 46, 77, 0.07); background: rgb(255, 255, 255); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;"[39m
+[31m+       >[39m
+[31m+         <button[39m
+[31m+           class="w-full py-3.5 rounded-xl text-sm font-bold f-body transition-all flex items-center justify-center gap-2"[39m
+[31m+           form="inquiry-form"[39m
+[31m+           style="background: rgb(230, 126, 80); color: rgb(255, 255, 255); cursor: pointer; box-shadow: 0 4px 14px rgba(230,126,80,0.3);"[39m
+[31m+           type="submit"[39m
+[31m+         >[39m
+[31m+           Send[39m
+[31m+         </button>[39m
+[31m+       </div>[39m
+[31m+     </div>[39m
+[31m+   </div>[39m
+[31m+ </body>[39m
+
+[36m [2m❯[22m src/components/inquiry/InquiryWidget.test.tsx:[2m115:36[22m[39m
+    [90m113| [39m    [34mopenDetails[39m({ [33m...[39m[33mFILLED[39m[33m,[39m email[33m:[39m [32m'not-an-address'[39m })
+    [90m114| [39m    [34msend[39m()
+    [90m115| [39m    [34mexpect[39m(document[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m([34memail[39m())
+    [90m   | [39m                                   [31m^[39m
+    [90m116| [39m    [34mexpect[39m([34mscrolledElements[39m())[33m.[39m[34mtoEqual[39m([[34memail[39m()])
+    [90m117| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry/InquiryWidget.test.tsx[2m > [22mv1 modal — Send with a required field missing (FA-1.61)[2m > [22mdoes it again on every failed attempt, not only the first
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called 2 times, but got 0 times[39m
+[36m [2m❯[22m src/components/inquiry/InquiryWidget.test.tsx:[2m132:28[22m[39m
+    [90m130| [39m    [34msend[39m()
+    [90m131| [39m
+    [90m132| [39m    [34mexpect[39m(scrollIntoView)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)
+    [90m   | [39m                           [31m^[39m
+    [90m133| [39m    [34mexpect[39m(document[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m([34mlastName[39m())
+    [90m134| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry/InquiryWidget.test.tsx[2m > [22mv1 modal — Send with a required field missing (FA-1.61)[2m > [22muses an instant jump when the visitor prefers reduced motion
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called with arguments: [ { block: 'center', …(1) } ][90m
+
+Number of calls: [1m0[22m
+[31m[39m
+[36m [2m❯[22m src/components/inquiry/InquiryWidget.test.tsx:[2m141:28[22m[39m
+    [90m139| [39m    [34msend[39m()
+    [90m140| [39m
+    [90m141| [39m    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', beh…
+    [90m   | [39m                           [31m^[39m
+    [90m142| [39m    [34mexpect[39m(document[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m([34mlastName[39m())
+    [90m143| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry/InquiryWidget.test.tsx[2m > [22mv1 modal — Send with a required field missing (FA-1.61)[2m > [22mflags nothing and scrolls nowhere before the first attempt
+[31m[1mAssertionError[22m: expected null to be 'false' // Object.is equality[39m
+
+[32m- Expected:[39m 
+"false"
+
+[31m+ Received:[39m 
+null
+
+[36m [2m❯[22m src/components/inquiry/InquiryWidget.test.tsx:[2m148:50[22m[39m
+    [90m146| [39m    [34mopenDetails[39m()
+    [90m147| [39m    for (const field of [firstName(), lastName(), email(), tripLength(…
+    [90m148| [39m      [34mexpect[39m(field[33m.[39m[34mgetAttribute[39m([32m'aria-invalid'[39m))[33m.[39m[34mtoBe[39m([32m'false'[39m)
+    [90m   | [39m                                                 [31m^[39m
+    [90m149| [39m    }
+    [90m150| [39m    [34mexpect[39m(scrollIntoView)[33m.[39mnot[33m.[39m[34mtoHaveBeenCalled[39m()
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/6]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m6 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (7)[39m
+[2m   Start at [22m 16:45:25
+[2m   Duration [22m 2.05s[2m (transform 179ms, setup 35ms, import 330ms, tests 933ms, environment 629ms)[22m
+

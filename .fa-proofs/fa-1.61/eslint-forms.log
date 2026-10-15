@@ -1,0 +1,7 @@
+
+/home/tj/Fjordanglers/src/components/inquiry/InquiryWidget.tsx
+   386:6   warning  React Hook useCallback has missing dependencies: 'country' and 'tripTitle'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  1000:44  warning  '_tripId' is defined but never used                                                                                             @typescript-eslint/no-unused-vars
+
+✖ 2 problems (0 errors, 2 warnings)
+

@@ -1,0 +1,25 @@
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.255.255.254:3000
+- Environments: .env.development.local, .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+✓ Starting...
+✓ Ready in 1956ms
+ GET /experiences/seed-backcountry-day-nz 200 in 5.3s (compile: 1660ms, proxy.ts: 223ms, render: 3.5s)
+ GET /experiences/seed-backcountry-day-nz 200 in 429ms (compile: 54ms, proxy.ts: 7ms, render: 368ms)
+ POST /api/events 204 in 174ms (compile: 142ms, proxy.ts: 6ms, render: 26ms)
+ POST /api/events 204 in 28ms (compile: 7ms, proxy.ts: 7ms, render: 14ms)
+ POST /api/events 204 in 34ms (compile: 12ms, proxy.ts: 9ms, render: 13ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 362ms (compile: 52ms, proxy.ts: 4ms, render: 306ms)
+ POST /api/events 204 in 22ms (compile: 3ms, proxy.ts: 7ms, render: 12ms)
+ POST /api/events 204 in 33ms (compile: 9ms, proxy.ts: 7ms, render: 17ms)
+ POST /api/events 204 in 38ms (compile: 15ms, proxy.ts: 10ms, render: 13ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 319ms (compile: 50ms, proxy.ts: 5ms, render: 265ms)
+ POST /api/events 204 in 27ms (compile: 7ms, proxy.ts: 8ms, render: 12ms)
+ POST /api/events 204 in 30ms (compile: 7ms, proxy.ts: 8ms, render: 16ms)
+ POST /api/events 204 in 36ms (compile: 11ms, proxy.ts: 9ms, render: 16ms)
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+[?25h

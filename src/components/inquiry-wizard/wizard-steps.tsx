@@ -76,6 +76,7 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
         label="When do you want to fish?"
         hint="Flexible dates let us pick the days with the best water."
         error={errors.dateFrom ?? errors.flexMonth}
+        field={answers.datesMode === 'exact' ? 'dateFrom' : 'flexMonth'}
       >
         {/* The switch first, then one field slot of a fixed height: switching modes swaps
             the field, it never moves the questions below. */}
@@ -107,7 +108,7 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
         </div>
       </Question>
 
-      <Question label="How many days of fishing?" hint={usualDays(page)} error={errors.days}>
+      <Question label="How many days of fishing?" hint={usualDays(page)} error={errors.days} field="days">
         <Counter
           label="Days"
           value={answers.days}
@@ -121,6 +122,7 @@ export function StepTrip({ answers, errors, page, set }: StepProps) {
         label="Who is coming?"
         hint={`More than ${page.maxAnglersPerGuide} anglers — we add a second guide.`}
         error={errors.anglers}
+        field="anglers"
       >
         <div className="flex flex-wrap gap-3">
           <Counter
@@ -157,6 +159,7 @@ export function StepAngler({ answers, errors, page, set }: StepProps) {
         label="Which line describes your fishing best?"
         hint="Nobody is turned away for being a beginner — it decides which water you are taken to."
         error={errors.skillLevel}
+        field="skillLevel"
       >
         <div className="flex flex-col gap-2">
           {SKILL_LEVELS.map(level => (
@@ -172,7 +175,7 @@ export function StepAngler({ answers, errors, page, set }: StepProps) {
         </div>
       </Question>
 
-      <Question label="What matters most on this trip?" error={errors.priority}>
+      <Question label="What matters most on this trip?" error={errors.priority} field="priority">
         <div className="flex flex-col gap-2">
           {PRIORITIES.map(priority => (
             <ChoiceRow
@@ -186,7 +189,7 @@ export function StepAngler({ answers, errors, page, set }: StepProps) {
         </div>
       </Question>
 
-      <Question label="How much walking are you up for?" error={errors.fitness}>
+      <Question label="How much walking are you up for?" error={errors.fitness} field="fitness">
         <div className="flex flex-col gap-2">
           {FITNESS.map(level => (
             <ChoiceRow
@@ -200,7 +203,7 @@ export function StepAngler({ answers, errors, page, set }: StepProps) {
         </div>
       </Question>
 
-      <Question label="Is wading in the river fine?" error={errors.wadingOk}>
+      <Question label="Is wading in the river fine?" error={errors.wadingOk} field="wadingOk">
         <PillRow
           name="wading"
           options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'Rather not' }]}
@@ -210,7 +213,7 @@ export function StepAngler({ answers, errors, page, set }: StepProps) {
       </Question>
 
       {page.offerMode === 'fixed' && page.fromTotalCents != null && (
-        <Question label="The price" error={errors.budgetAck}>
+        <Question label="The price" error={errors.budgetAck} field="budgetAck">
           <label
             className="flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 text-[15px]"
             style={{
@@ -241,6 +244,7 @@ export function StepAngler({ answers, errors, page, set }: StepProps) {
           label="Roughly what are you planning for?"
           hint="Indicative — it tells us which waters and lodges to build the offer from."
           error={errors.budgetBand}
+          field="budgetBand"
         >
           <div className="flex flex-col gap-2">
             {bands.map(band => (
@@ -270,6 +274,7 @@ export function StepContact({ answers, errors, set }: StepProps) {
           value={answers.firstName}
           onChange={value => set('firstName', value)}
           error={errors.firstName}
+          field="firstName"
           autoComplete="given-name"
         />
         <TextField
@@ -277,6 +282,7 @@ export function StepContact({ answers, errors, set }: StepProps) {
           value={answers.lastName}
           onChange={value => set('lastName', value)}
           error={errors.lastName}
+          field="lastName"
           autoComplete="family-name"
         />
       </div>
@@ -288,6 +294,7 @@ export function StepContact({ answers, errors, set }: StepProps) {
         value={answers.email}
         onChange={value => set('email', value)}
         error={errors.email}
+        field="email"
         autoComplete="email"
       />
 
@@ -303,6 +310,7 @@ export function StepContact({ answers, errors, set }: StepProps) {
             background:  '#fff',
           }}
           aria-invalid={errors.country != null}
+          data-field="country"
         >
           <option value="">Pick a country…</option>
           {ANGLER_COUNTRIES.map(country => (

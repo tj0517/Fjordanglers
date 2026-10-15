@@ -1,0 +1,18 @@
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3100
+- Network:       http://10.255.255.254:3100
+- Environments: .env.development.local, .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+✓ Starting...
+✓ Ready in 2.6s
+ GET /experiences/seed-backcountry-day-nz 200 in 6.2s (compile: 1865ms, proxy.ts: 225ms, render: 4.1s)
+ GET /experiences/seed-backcountry-day-nz 200 in 718ms (compile: 57ms, proxy.ts: 6ms, render: 655ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 781ms (compile: 51ms, proxy.ts: 11ms, render: 719ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 1152ms (compile: 196ms, proxy.ts: 5ms, render: 951ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 705ms (compile: 45ms, proxy.ts: 6ms, render: 655ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 746ms (compile: 51ms, proxy.ts: 21ms, render: 674ms)
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+[?25h

@@ -1,0 +1,17 @@
+{"shape":"v2","label":"warmup","status":201,"client_ms":90,"id":"c5e04afb-700b-4a30-a88d-e3716870b286"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":10190.7,"id":"9b66aea0-538c-4296-8cf7-119b8a7cb122"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":9067.2,"id":"1d43627c-097a-4ea8-bee6-6bd67b178a95"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":10843.4,"id":"a596e109-7b5e-4565-818d-4f6a88a04bfe"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":8692.4,"id":"8700cce6-bba6-43a9-9c10-64a01a2ec400"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":52.2,"id":"21e303c3-369f-44fe-87ca-fa41a1dbe7e8"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":46.4,"id":"b17245f2-1e70-4ebc-b2d9-47a27be889c0"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":43.9,"id":"017d4b4a-db4d-4f9f-adf6-8b4b51c8f0db"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":74.8,"id":"4065b7bf-c1e6-4a64-a4dc-02d6e403b909"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":9299.5,"id":"db5f2b0b-5f2b-4d70-8bc2-4242699ef1ca"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":54.3,"id":"39f4e8d1-96c1-4071-966b-fea774159244"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":9424.4,"id":"2da2eb91-03d4-460e-ba02-31bcb4aff8e8"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":49.5,"id":"41d5f37f-c9ea-48e8-b9c4-143796475bfc"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":13063.5,"id":"367bdefa-1ca1-43fb-8c06-884789b131aa"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":52.6,"id":"4cc80bed-f79b-4ddc-be1e-84368edb51e3"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":8917.9,"id":"b53e00c7-9355-453b-a295-39475174ceac"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":54.9,"id":"5fbcc2cf-c1c9-4120-b9f9-7fda12ae359a"}

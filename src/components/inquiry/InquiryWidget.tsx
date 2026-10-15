@@ -30,6 +30,7 @@ import { currencySymbol } from '@/lib/format-price'
 import { sendWebEvent } from '@/lib/web-events'
 import { useExperienceFunnel } from '@/components/analytics/experience-funnel'
 import { InquiryTrapField, TRAP_FIELD_NAME, elapsedSinceShown } from './InquiryTrapField'
+import { scrollToField } from './scroll-to-field'
 
 const WHATSAPP_NUMBER = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '48698936563'
 const FA_EMAIL        = process.env.NEXT_PUBLIC_FA_EMAIL        ?? 'contact@fjordanglers.com'
@@ -68,6 +69,9 @@ export interface InquiryWidgetProps {
 
 type Step        = 'calendar' | 'form'
 type SubmitState = 'idle' | 'loading' | 'success' | 'error'
+
+/** The required fields of the details step, keyed as their `data-field` attributes. */
+type RequiredField = 'firstName' | 'lastName' | 'email' | 'tripLength'
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -247,6 +251,10 @@ function InquiryModal({
   // and the moment the details step first appeared, on the browser's own stopwatch.
   const trapRef       = useRef<HTMLInputElement>(null)
   const formShownAt   = useRef<number | null>(null)
+  // FA-1.61 — the first invalid field is scrolled to and focused after the render that shows
+  // its error; `n` makes a repeated attempt on the same field a new request.
+  const formRef       = useRef<HTMLFormElement>(null)
+  const [focusRequest, setFocusRequest] = useState<{ field: RequiredField; n: number } | null>(null)
 
   const blockedSet = useMemo(() => new Set(blockedDates), [blockedDates])
 
@@ -303,17 +311,25 @@ function InquiryModal({
   }, [])
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  const canSubmit  = (
-    firstName.trim() !== '' &&
-    lastName.trim()  !== '' &&
-    emailValid        &&
-    tripLength        !== ''
-  )
+  // In the order the fields are rendered — the first one is where the angler is sent.
+  const firstInvalid: RequiredField | null =
+    firstName.trim() === '' ? 'firstName' :
+    lastName.trim()  === '' ? 'lastName'  :
+    !emailValid             ? 'email'     :
+    tripLength       === '' ? 'tripLength' :
+    null
+
+  useEffect(() => {
+    if (focusRequest != null) scrollToField(formRef.current, focusRequest.field)
+  }, [focusRequest])
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     setHasAttempted(true)
-    if (!canSubmit) return
+    if (firstInvalid != null) {
+      setFocusRequest(previous => ({ field: firstInvalid, n: (previous?.n ?? 0) + 1 }))
+      return
+    }
     if (submittingRef.current) return
     submittingRef.current = true
 
@@ -367,7 +383,7 @@ function InquiryModal({
       )
       submittingRef.current = false
     }
-  }, [canSubmit, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, phoneCountry, selectedOptionLabel, funnel])
+  }, [firstInvalid, tripId, experiencePageId, firstName, lastName, email, selectedDates, partySize, tripLength, message, phone, phoneCountry, selectedOptionLabel, funnel])
 
   return (
     /* Backdrop */
@@ -551,7 +567,7 @@ function InquiryModal({
 
               ) : (
                 /* ── Step 2: Form ── */
-                <form id="inquiry-form" onSubmit={handleSubmit} noValidate>
+                <form id="inquiry-form" ref={formRef} onSubmit={handleSubmit} noValidate>
                   <InquiryTrapField inputRef={trapRef} />
                   <div className="px-5 pt-4 pb-6 space-y-0">
 
@@ -592,6 +608,8 @@ function InquiryModal({
                           placeholder="Erik"
                           className={inputCls}
                           style={{ ...inputStyle, border: hasAttempted && firstName.trim() === '' ? '1.5px solid rgba(239,68,68,0.6)' : inputStyle.border }}
+                          data-field="firstName"
+                          aria-invalid={hasAttempted && firstName.trim() === ''}
                           autoComplete="given-name" />
                       </div>
                       <div>
@@ -601,6 +619,8 @@ function InquiryModal({
                           placeholder="Andersen"
                           className={inputCls}
                           style={{ ...inputStyle, border: hasAttempted && lastName.trim() === '' ? '1.5px solid rgba(239,68,68,0.6)' : inputStyle.border }}
+                          data-field="lastName"
+                          aria-invalid={hasAttempted && lastName.trim() === ''}
                           autoComplete="family-name" />
                       </div>
                     </div>
@@ -613,6 +633,8 @@ function InquiryModal({
                         placeholder="you@example.com"
                         className={inputCls}
                         style={{ ...inputStyle, border: hasAttempted && !emailValid ? '1.5px solid rgba(239,68,68,0.6)' : inputStyle.border }}
+                        data-field="email"
+                        aria-invalid={hasAttempted && !emailValid}
                         autoComplete="email" />
                     </div>
 
@@ -691,6 +713,8 @@ function InquiryModal({
                           ...inputStyle,
                           border: hasAttempted && tripLength === '' ? '1.5px solid rgba(239,68,68,0.6)' : inputStyle.border,
                         }}
+                        data-field="tripLength"
+                        aria-invalid={hasAttempted && tripLength === ''}
                       >
                         <option value="">Select duration…</option>
                         <option value="1">1 day</option>
