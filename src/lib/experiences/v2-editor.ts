@@ -393,7 +393,7 @@ export const CONTENT_BLOCK_MAX_PHOTOS = 12
  * in storage. `section` puts a page block under "Waters" or "Programs" on the v2 page
  * (FA-1.60); no section = programs, which is where every block written before it stays.
  */
-export const CONTENT_BLOCK_SECTIONS = ['waters', 'programs'] as const
+const CONTENT_BLOCK_SECTIONS = ['waters', 'programs'] as const
 export type ContentBlockSection = (typeof CONTENT_BLOCK_SECTIONS)[number]
 
 const contentBlockSchema = z
