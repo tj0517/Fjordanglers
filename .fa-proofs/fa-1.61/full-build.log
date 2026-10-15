@@ -1,0 +1,97 @@
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+  Creating an optimized production build ...
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+✓ Compiled successfully in 49s
+  Running next.config.js provided runAfterProductionCompile ...
+✓ Completed runAfterProductionCompile in 630ms
+  Running TypeScript ...
+  Collecting page data using 5 workers ...
+  Generating static pages using 5 workers (0/50) ...
+  Generating static pages using 5 workers (12/50) 
+  Generating static pages using 5 workers (24/50) 
+  Generating static pages using 5 workers (37/50) 
+✓ Generating static pages using 5 workers (50/50) in 2.0s
+  Finalizing page optimization ...
+
+Route (app)                       Revalidate  Expire
+┌ ƒ /
+├ ○ /_not-found
+├ ƒ /[destination]
+├ ƒ /admin
+├ ƒ /admin/ads
+├ ƒ /admin/data-gaps
+├ ƒ /admin/experiences
+├ ƒ /admin/experiences/[id]
+├ ƒ /admin/experiences/[id]/edit
+├ ƒ /admin/experiences/new
+├ ƒ /admin/finances
+├ ƒ /admin/forms
+├ ƒ /admin/forms/[id]
+├ ƒ /admin/forms/new
+├ ƒ /admin/guides
+├ ƒ /admin/guides/[id]
+├ ƒ /admin/guides/[id]/edit
+├ ƒ /admin/guides/new
+├ ƒ /admin/inquiries
+├ ƒ /admin/inquiries/[id]
+├ ƒ /admin/inquiries/new
+├ ƒ /admin/inquiries/unmatched
+├ ƒ /admin/knowledge
+├ ƒ /admin/knowledge/[id]/edit
+├ ƒ /admin/knowledge/new
+├ ƒ /admin/pipeline
+├ ƒ /admin/submissions
+├ ƒ /admin/submissions/[id]
+├ ƒ /admin/weekly
+├ ƒ /api/cron/offer-sla
+├ ƒ /api/cron/sync-google-ads
+├ ƒ /api/events
+├ ƒ /api/inquiries
+├ ƒ /api/stripe/webhook
+├ ƒ /api/webhooks/email-inbound
+├ ƒ /api/webhooks/stripe-deposit
+├ ƒ /api/webhooks/whatsapp
+├ ƒ /auth/callback
+├ ƒ /auth/reset
+├ ƒ /blog
+├ ƒ /blog/[slug]
+├ ƒ /dashboard
+├ ƒ /dashboard/account
+├ ƒ /dashboard/calendar
+├ ƒ /dashboard/photos
+├ ƒ /dashboard/profile
+├ ƒ /dashboard/profile/edit
+├ ƒ /dashboard/trips
+├ ƒ /dashboard/trips/[id]
+├ ƒ /experiences/[slug]
+├ ƒ /experiences/[slug]/preview
+├ ƒ /forgot-password
+├ ƒ /guide-intake/[token]
+├ ƒ /guides
+├ ƒ /guides/[id]
+├ ○ /icon.png
+├ ƒ /inquiry/[id]/confirmed
+├ ƒ /legal/cookie-policy
+├ ƒ /legal/legal-notice
+├ ƒ /legal/privacy-policy
+├ ƒ /legal/terms-of-service
+├ ○ /login
+├ ƒ /offers/[token]
+├ ○ /register
+├ ƒ /reset-password
+├ ƒ /reviews/[token]
+├ ○ /robots.txt
+├ ○ /sitemap.xml                          1h      1y
+└ ƒ /trips
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

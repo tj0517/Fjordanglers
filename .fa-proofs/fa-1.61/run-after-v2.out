@@ -1,0 +1,33 @@
+{"shape":"v2","label":"warmup","status":201,"client_ms":85.6,"id":"5bd760d5-e1d6-4999-abaa-7bf106806933"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":44.6,"id":"72e24bf7-726c-46c2-97ba-61371ea0bcb2"}
+{"shape":"v2","label":"a-normal","id":"72e24bf7-726c-46c2-97ba-61371ea0bcb2","response_ms":44.6,"landed":true,"ms_after_response":10349,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":10348,"decided_events":1,"qualified_set_events":1,"messages":1,"sent":"false"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":49.6,"id":"5d99f01f-e27f-48b2-8125-b508b89250c9"}
+{"shape":"v2","label":"a-normal","id":"5d99f01f-e27f-48b2-8125-b508b89250c9","response_ms":49.6,"landed":true,"ms_after_response":18091,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":18090,"decided_events":1,"qualified_set_events":1,"messages":1,"sent":"false"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":45.9,"id":"9feb6966-02a0-4f30-8fd8-55e7318c49f5"}
+{"shape":"v2","label":"a-normal","id":"9feb6966-02a0-4f30-8fd8-55e7318c49f5","response_ms":45.9,"landed":true,"ms_after_response":8241,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":8241,"decided_events":1,"qualified_set_events":1,"messages":1,"sent":"false"}
+{"shape":"v2","label":"a-normal","status":201,"client_ms":45.3,"id":"31985c21-3cef-4955-9566-9759cb7fdf26"}
+{"shape":"v2","label":"a-normal","id":"31985c21-3cef-4955-9566-9759cb7fdf26","response_ms":45.3,"landed":true,"ms_after_response":10163,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":10162,"decided_events":1,"qualified_set_events":1,"messages":1,"sent":"false"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":46.5,"id":"93507878-849a-4677-b777-2e06474b47dc"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":43.4,"id":"58fa3d0e-7df9-4e97-870e-47c522098974"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":42.6,"id":"2aa8fc93-7b0a-4eb3-a9c8-42edd5ce8eec"}
+{"shape":"v2","label":"b-trap","status":201,"client_ms":45.2,"id":"dc23ce2b-394f-4da7-a206-663efc24b6a0"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":43.3,"id":"5fc0320f-ec86-4e7e-b3dd-1c505f2740bb"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":50.4,"id":"49b790f9-c66e-46ed-bd19-fd0083da3fcc"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":45.3,"id":"38b5b2fe-ade9-4cb0-bb0e-5e9fe8ee3382"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":92.9,"id":"1aff4d7e-ea6a-4540-8f41-45a97ef9d32a"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":42.2,"id":"bb7d443f-69b0-4442-9b0a-642cec30a4c4"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":44.3,"id":"b06dc98f-f774-4e4b-ab64-619bdcae6a07"}
+{"shape":"v2","label":"c0-first-of-pair","status":201,"client_ms":45.3,"id":"25c8c93b-cd0a-4806-a8d0-3fb3a0ad2017"}
+{"shape":"v2","label":"c-repeat","status":201,"client_ms":53.4,"id":"059202b2-3f29-4aa5-9abc-890bee776b6a"}
+{"shape":"v2","label":"c0-first-of-pair","id":"5fc0320f-ec86-4e7e-b3dd-1c505f2740bb","response_ms":43.3,"landed":true,"ms_after_response":9863,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":9486}
+{"shape":"v2","label":"c0-first-of-pair","id":"38b5b2fe-ade9-4cb0-bb0e-5e9fe8ee3382","response_ms":45.3,"landed":true,"ms_after_response":12386,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":2619}
+{"shape":"v2","label":"c0-first-of-pair","id":"bb7d443f-69b0-4442-9b0a-642cec30a4c4","response_ms":42.2,"landed":true,"ms_after_response":12320,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":70}
+{"shape":"v2","label":"c0-first-of-pair","id":"25c8c93b-cd0a-4806-a8d0-3fb3a0ad2017","response_ms":45.3,"landed":true,"ms_after_response":12300,"reason":"no active destination knowledge entry for country: New Zealand","poll_wait_ms":70}
+{"shape":"v2","label":"b-trap","id":"93507878-849a-4677-b777-2e06474b47dc","response_ms":46.5,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"trap field filled"}
+{"shape":"v2","label":"b-trap","id":"58fa3d0e-7df9-4e97-870e-47c522098974","response_ms":43.4,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"trap field filled"}
+{"shape":"v2","label":"b-trap","id":"2aa8fc93-7b0a-4eb3-a9c8-42edd5ce8eec","response_ms":42.6,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"trap field filled"}
+{"shape":"v2","label":"b-trap","id":"dc23ce2b-394f-4da7-a206-663efc24b6a0","response_ms":45.2,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"trap field filled"}
+{"shape":"v2","label":"c-repeat","id":"49b790f9-c66e-46ed-bd19-fd0083da3fcc","response_ms":50.4,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"repeat submission from same e-mail within 24 h"}
+{"shape":"v2","label":"c-repeat","id":"1aff4d7e-ea6a-4540-8f41-45a97ef9d32a","response_ms":92.9,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"repeat submission from same e-mail within 24 h"}
+{"shape":"v2","label":"c-repeat","id":"b06dc98f-f774-4e4b-ab64-619bdcae6a07","response_ms":44.3,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"repeat submission from same e-mail within 24 h"}
+{"shape":"v2","label":"c-repeat","id":"059202b2-3f29-4aa5-9abc-890bee776b6a","response_ms":53.4,"waited_s_after_last_request":15,"decided_events":1,"qualified_set_events":0,"messages":0,"sent":"false","reason":"repeat submission from same e-mail within 24 h"}

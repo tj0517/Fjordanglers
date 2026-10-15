@@ -1,0 +1,34 @@
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.255.255.254:3000
+- Environments: .env.development.local, .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+✓ Starting...
+✓ Ready in 1566ms
+ GET /experiences/seed-backcountry-day-nz 200 in 5.9s (compile: 1534ms, proxy.ts: 226ms, render: 4.1s)
+ GET /experiences/seed-backcountry-day-nz 200 in 1156ms (compile: 44ms, proxy.ts: 7ms, render: 1105ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 6f4ff435-0632-43bc-b36f-6b2e08200e3e (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 445ms (compile: 366ms, proxy.ts: 5ms, render: 74ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 6f4ff435-0632-43bc-b36f-6b2e08200e3e
+ GET /experiences/seed-backcountry-day-nz 200 in 777ms (compile: 47ms, proxy.ts: 10ms, render: 720ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 9a570074-f47c-4d63-a66f-5f5eee208bd3 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 51ms (compile: 3ms, proxy.ts: 5ms, render: 42ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 9a570074-f47c-4d63-a66f-5f5eee208bd3
+ GET /experiences/seed-backcountry-day-nz 200 in 674ms (compile: 44ms, proxy.ts: 5ms, render: 624ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry fea10b76-df9e-4e5b-868c-d11cab6833a4 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 47ms (compile: 4ms, proxy.ts: 5ms, render: 38ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry fea10b76-df9e-4e5b-868c-d11cab6833a4
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+[?25h

@@ -1,0 +1,202 @@
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.255.255.254:3000
+- Environments: .env.development.local, .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+✓ Starting...
+✓ Ready in 1686ms
+[inquiries/POST] Created inquiry 5b7c80a5-ab11-4bb8-80ae-e1f3569e8f4b (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 867ms (compile: 537ms, proxy.ts: 214ms, render: 116ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 38ebcdd0-fa7e-4c61-97e7-2513f21a9adb (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 67ms (compile: 5ms, proxy.ts: 8ms, render: 54ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 38ebcdd0-fa7e-4c61-97e7-2513f21a9adb
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 269fd468-f347-419b-97e6-79573dec68c5 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 50ms (compile: 9ms, proxy.ts: 8ms, render: 34ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 269fd468-f347-419b-97e6-79573dec68c5
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry be8aecfb-c5fc-4ae0-a64d-8f44b61dad52 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 50ms (compile: 4ms, proxy.ts: 8ms, render: 38ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry be8aecfb-c5fc-4ae0-a64d-8f44b61dad52
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 5ccafd72-4ce7-4657-9286-c123b8bb0515 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 45ms (compile: 4ms, proxy.ts: 7ms, render: 33ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 5ccafd72-4ce7-4657-9286-c123b8bb0515
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 8def8f6a-f62a-4782-ae25-194600a73a9d (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 40ms (compile: 3ms, proxy.ts: 6ms, render: 31ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 8def8f6a-f62a-4782-ae25-194600a73a9d
+[inquiries/POST] Created inquiry 7e7819f4-dbf6-496e-bef3-8f03ef7b8bd7 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 38ms (compile: 4ms, proxy.ts: 5ms, render: 29ms)
+[inquiries/POST] Created inquiry 56f98186-9f9a-4b13-ba87-4d3e6d918345 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 37ms (compile: 3ms, proxy.ts: 4ms, render: 29ms)
+[inquiries/POST] Created inquiry 2f128e05-fe27-4b4a-aa0c-b04654d6853b (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 42ms (compile: 3ms, proxy.ts: 6ms, render: 33ms)
+[inquiries/POST] Created inquiry 52cd4159-e252-455f-9ffc-2d3897a2c346 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 56ms (compile: 4ms, proxy.ts: 6ms, render: 46ms)
+[inquiries/POST] Created inquiry af0f9bfe-81d6-4282-99f6-6b4c5e26fe15 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 35ms (compile: 3ms, proxy.ts: 4ms, render: 28ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry f7521ebb-abe2-4df2-be5d-73a7c43282d6 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 39ms (compile: 4ms, proxy.ts: 4ms, render: 32ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry c5948152-1a66-4dd4-a50e-0743900a5188 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 40ms (compile: 3ms, proxy.ts: 7ms, render: 31ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry edceb622-c589-4f76-a434-181968675265 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 36ms (compile: 3ms, proxy.ts: 6ms, render: 27ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry 7a954333-242a-49ec-b491-9284460072b4 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 45ms (compile: 2ms, proxy.ts: 7ms, render: 36ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 868deca3-51a6-42ec-9b11-34948b002980 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 36ms (compile: 3ms, proxy.ts: 4ms, render: 29ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry 49ba79bd-21b5-46c8-ba02-cbfdf3e5ebb5 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 45ms (compile: 5ms, proxy.ts: 5ms, render: 36ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry ebcd4bc4-3f9d-45c6-b457-4f072a25462f (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 36ms (compile: 3ms, proxy.ts: 4ms, render: 28ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry defa16d1-a533-49cf-a4f3-ab4eef23e756 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 45ms (compile: 2ms, proxy.ts: 7ms, render: 36ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 843930ef-b6d7-4ab1-921a-73b177374867 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 34ms (compile: 2ms, proxy.ts: 4ms, render: 28ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry 8b80632e-7331-452e-9b9d-d0f2be579cc2 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 44ms (compile: 3ms, proxy.ts: 7ms, render: 34ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry f7521ebb-abe2-4df2-be5d-73a7c43282d6
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry edceb622-c589-4f76-a434-181968675265
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry ebcd4bc4-3f9d-45c6-b457-4f072a25462f
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 868deca3-51a6-42ec-9b11-34948b002980
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 843930ef-b6d7-4ab1-921a-73b177374867
+[inquiries/POST] Created inquiry 5bd760d5-e1d6-4999-abaa-7bf106806933 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 45ms (compile: 3ms, proxy.ts: 4ms, render: 38ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 72e24bf7-726c-46c2-97ba-61371ea0bcb2 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 40ms (compile: 3ms, proxy.ts: 4ms, render: 34ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 72e24bf7-726c-46c2-97ba-61371ea0bcb2
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 5d99f01f-e27f-48b2-8125-b508b89250c9 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 45ms (compile: 3ms, proxy.ts: 7ms, render: 35ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 5d99f01f-e27f-48b2-8125-b508b89250c9
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 9feb6966-02a0-4f30-8fd8-55e7318c49f5 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 41ms (compile: 3ms, proxy.ts: 6ms, render: 33ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 9feb6966-02a0-4f30-8fd8-55e7318c49f5
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 31985c21-3cef-4955-9566-9759cb7fdf26 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 41ms (compile: 3ms, proxy.ts: 4ms, render: 34ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 31985c21-3cef-4955-9566-9759cb7fdf26
+[inquiries/POST] Created inquiry 93507878-849a-4677-b777-2e06474b47dc (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 42ms (compile: 3ms, proxy.ts: 4ms, render: 35ms)
+[inquiries/POST] Created inquiry 58fa3d0e-7df9-4e97-870e-47c522098974 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 40ms (compile: 3ms, proxy.ts: 4ms, render: 33ms)
+[inquiries/POST] Created inquiry 2aa8fc93-7b0a-4eb3-a9c8-42edd5ce8eec (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 39ms (compile: 2ms, proxy.ts: 4ms, render: 33ms)
+[inquiries/POST] Created inquiry dc23ce2b-394f-4da7-a206-663efc24b6a0 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 41ms (compile: 2ms, proxy.ts: 5ms, render: 34ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 5fc0320f-ec86-4e7e-b3dd-1c505f2740bb (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 40ms (compile: 3ms, proxy.ts: 4ms, render: 33ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry 49b790f9-c66e-46ed-bd19-fd0083da3fcc (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 47ms (compile: 2ms, proxy.ts: 5ms, render: 40ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 38b5b2fe-ade9-4cb0-bb0e-5e9fe8ee3382 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 42ms (compile: 2ms, proxy.ts: 4ms, render: 36ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry 1aff4d7e-ea6a-4540-8f41-45a97ef9d32a (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 87ms (compile: 3ms, proxy.ts: 4ms, render: 80ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry bb7d443f-69b0-4442-9b0a-642cec30a4c4 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 38ms (compile: 2ms, proxy.ts: 4ms, render: 33ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry b06dc98f-f774-4e4b-ab64-619bdcae6a07 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 42ms (compile: 3ms, proxy.ts: 4ms, render: 36ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 25c8c93b-cd0a-4806-a8d0-3fb3a0ad2017 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 42ms (compile: 2ms, proxy.ts: 5ms, render: 35ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[inquiries/POST] Created inquiry 059202b2-3f29-4aa5-9abc-890bee776b6a (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 50ms (compile: 2ms, proxy.ts: 4ms, render: 44ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 5fc0320f-ec86-4e7e-b3dd-1c505f2740bb
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry bb7d443f-69b0-4442-9b0a-642cec30a4c4
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 38b5b2fe-ade9-4cb0-bb0e-5e9fe8ee3382
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 25c8c93b-cd0a-4806-a8d0-3fb3a0ad2017
+ GET /experiences/seed-backcountry-day-nz 200 in 4.4s (compile: 1649ms, proxy.ts: 5ms, render: 2.7s)
+ POST /api/events 204 in 64ms (compile: 44ms, proxy.ts: 6ms, render: 14ms)
+ POST /api/events 204 in 30ms (compile: 6ms, proxy.ts: 6ms, render: 19ms)
+ POST /api/events 204 in 36ms (compile: 16ms, proxy.ts: 8ms, render: 12ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 6acfd021-586f-4279-8bdd-65f623da6ef3 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 54ms (compile: 4ms, proxy.ts: 4ms, render: 46ms)
+ POST /api/events 204 in 21ms (compile: 3ms, proxy.ts: 5ms, render: 14ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 6acfd021-586f-4279-8bdd-65f623da6ef3
+ GET /experiences/seed-backcountry-day-nz 200 in 391ms (compile: 48ms, proxy.ts: 7ms, render: 335ms)
+ POST /api/events 204 in 23ms (compile: 6ms, proxy.ts: 5ms, render: 12ms)
+ POST /api/events 204 in 30ms (compile: 7ms, proxy.ts: 8ms, render: 15ms)
+ POST /api/events 204 in 31ms (compile: 9ms, proxy.ts: 8ms, render: 14ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 4a5fc504-6a96-468b-9ba1-64caad49fdcf (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 55ms (compile: 8ms, proxy.ts: 5ms, render: 42ms)
+ POST /api/events 204 in 21ms (compile: 3ms, proxy.ts: 6ms, render: 13ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 4a5fc504-6a96-468b-9ba1-64caad49fdcf
+ GET /experiences/seed-backcountry-day-nz 200 in 338ms (compile: 44ms, proxy.ts: 4ms, render: 290ms)
+ POST /api/events 204 in 19ms (compile: 3ms, proxy.ts: 5ms, render: 11ms)
+ POST /api/events 204 in 23ms (compile: 5ms, proxy.ts: 8ms, render: 11ms)
+ POST /api/events 204 in 29ms (compile: 8ms, proxy.ts: 8ms, render: 12ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 5258dfb2-76c3-4a2d-9f51-4c121829f461 (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+ POST /api/inquiries 201 in 44ms (compile: 3ms, proxy.ts: 5ms, render: 37ms)
+ POST /api/events 204 in 20ms (compile: 3ms, proxy.ts: 6ms, render: 11ms)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: null
+[inquiry-agent] classified inquiry 5258dfb2-76c3-4a2d-9f51-4c121829f461
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+[?25h
