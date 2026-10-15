@@ -1,0 +1,68 @@
+FA-1.60 STOP 2 — prod reads (MCP supabase-prod, read-only), 2026-10-15. Times Europe/Warsaw.
+
+== 0. NZ v2 inquiries from the pilot start to the merge (for offline conversion import) ==
+SELECT i.id, i.created_at AT TIME ZONE 'Europe/Warsaw', p.slug, i.angler_name, i.gclid IS NOT NULL, i.source, i.status
+FROM inquiries i
+JOIN experience_pages p ON p.id = i.experience_page_id
+  OR (i.experience_page_id IS NULL AND p.trip_id IS NOT NULL AND p.trip_id = i.trip_id)
+WHERE p.slug IN ('fly-fishing---taup--tongariro-central-north-island','fly-fishing-south-island-new-zealand','guided-fly-fishing-north-island-new-zealand')
+  AND i.created_at >= timestamptz '2026-10-14 16:40 Europe/Warsaw';
+→ []
+(read at 14:41; all inquiries since 14.10 16:40 = 1, last at 15.10 05:38:49, not on an NZ v2 page; merge #145 at 14:39:58, prod deploy of 2159df5 = Vercel "success")
+
+== 1. Test inquiries (before DELETE; none is named "TEST FA-1.60" — found by time) ==
+SELECT id, created_at AT TIME ZONE 'Europe/Warsaw', angler_name, angler_email, page_version, page_slug,
+       experience_page_id, trip_id, gclid, utm, source, trip_length, party_size, status
+FROM inquiries WHERE created_at >= timestamptz '2026-10-15 12:00 Europe/Warsaw' ORDER BY created_at;
+#1 d0ee7569-ff7f-4d98-ba50-cc567f94d0d1 | 15:23:45.52 | Tymon Jezionek | tjezionekspam@gmail.com     | 2 | fly-fishing-south-island-new-zealand  | page 9eb65954-af16-41b8-bbce-be8e051cb5b8 | trip null | gclid null | utm null | web_form | 7+  | 2 | new
+#2 254cfe02-d038-4607-a23b-0e272e070f5b | 15:29:25.56 | tymon jezionek | tjezionekspam@gmail.com     | 2 | fly-fishing-south-island-new-zealand  | page 9eb65954-af16-41b8-bbce-be8e051cb5b8 | trip null | gclid null | utm null | web_form | 1   | 2 | new
+#3 18f03a3a-0ba7-447d-a6a3-7e9fb426ec16 | 15:43:22.53 | tt t           | tymonjezionek.web@gmail.com | 1 | brynjar-arnarsson-iceland-fly-fishing | page null                                 | trip dffe9998-02e9-4f97-9154-c20356f82200 | gclid null | utm null | web_form | 2-3 | 1 | new
+
+SELECT inquiry_id, created_at AT TIME ZONE 'Europe/Warsaw', type, actor_kind, source, channel, payload
+FROM inquiry_events WHERE inquiry_id IN (<3 ids>) ORDER BY inquiry_id, created_at;
+#1 15:23:45.85 inquiry.created          system app/app   {guide_id:0f6e5a30…, page_version:2, trip_country:"New Zealand", inquiry_source:"web_form", brief_completed:true, experience_page_id:9eb65954…}
+#1 15:23:48.08 inquiry.qualified_set    agent  app      {rule:"O-10", value:"yes"}
+#1 15:24:17.47 agent.auto_send_decided  agent  app/email {sent:false, score:null, reasons:["judge error: [judgeReply] Could not parse judge response: …"], draft_message_id:"4ffa4d07-0bba-4788-8470-4f71b5320b7d"}
+#2 15:29:25.87 inquiry.created          system app/app   {guide_id:0f6e5a30…, page_version:2, trip_country:"New Zealand", inquiry_source:"web_form", brief_completed:true, experience_page_id:9eb65954…}
+#2 15:29:26.19 agent.auto_send_decided  agent  app/email {sent:false, score:null, reasons:["trap field filled"], draft_message_id:null}
+#3 15:43:22.67 inquiry.created          system app/app   {guide_id:0d9721e8…, trip_country:"Iceland", inquiry_source:"web_form", experience_page_id:null}
+#3 15:43:37.67 agent.auto_send_decided  agent  app/email {sent:false, score:0.85, reasons:[judge rejected the draft: empty message 'tt t'; guide named in the draft; …], draft_message_id:"d9c5f297-89c7-46ef-afcc-cda60785cfe2"}
+
+SELECT id, inquiry_id, created_at, direction, channel, status, subject FROM messages WHERE inquiry_id IN (<#1>, <#3>);
+4ffa4d07-0bba-4788-8470-4f71b5320b7d | #1 | 15:24:12.97 | outbound | email | draft | Re: Your New Zealand inquiry — Tymon Jezionek
+d9c5f297-89c7-46ef-afcc-cda60785cfe2 | #3 | 15:43:28.31 | outbound | email | draft | Re: Your Iceland inquiry — tt t
+(other referencing tables for the 3 ids: inquiry_trip_details 0, offers 0, reviews 0, unmatched_messages.matched_inquiry_id 0, requests.legacy_inquiry_id 0)
+
+FKs to inquiries (pg_constraint): inquiry_events, inquiry_trip_details, messages, offers, reviews → ON DELETE CASCADE; unmatched_messages.matched_inquiry_id → NO ACTION.
+Triggers: inquiry_events_no_update (BEFORE UPDATE only) — DELETE not blocked.
+
+Time from insert to last event (route awaits classify + autoSend before 201): #1 ≈ 32 s, #3 ≈ 15 s, #2 (trap, no AI) ≈ 0.3 s.
+
+== 2. After tj's manual DELETE in the Supabase dashboard (not the proposed SQL) ==
+SELECT
+ (SELECT count(*) FROM inquiries            WHERE id IN (<3 ids>))                         AS inquiries_test,
+ (SELECT count(*) FROM inquiry_events       WHERE inquiry_id IN (<3 ids>))                 AS events_test,
+ (SELECT count(*) FROM inquiry_trip_details WHERE inquiry_id IN (<3 ids>))                 AS trip_details_test,
+ (SELECT count(*) FROM messages WHERE inquiry_id IN (<3 ids>) OR id IN ('4ffa4d07…','d9c5f297…')) AS messages_test,
+ (SELECT count(*) FROM offers               WHERE inquiry_id IN (<3 ids>))                 AS offers_test,
+ (SELECT count(*) FROM inquiries)                                                          AS inquiries_total,
+ (SELECT count(*) FROM inquiries WHERE created_at >= timestamptz '2026-10-14 16:40 Europe/Warsaw') AS since_14_10_1640,
+ (SELECT count(*) FROM inquiries WHERE created_at >= timestamptz '2026-10-15 12:00 Europe/Warsaw') AS since_15_10_1200,
+ (SELECT max(created_at) AT TIME ZONE 'Europe/Warsaw' FROM inquiries)                      AS last_inquiry_warsaw,
+ (SELECT count(*) FROM inquiries WHERE source='web_form' AND created_at >= '2026-09-01' AND trip_id IS NOT NULL AND experience_page_id IS NULL) AS wf_trip_only_since_1_9,
+ (SELECT count(*) FROM inquiries WHERE source='web_form' AND created_at >= '2026-09-01' AND experience_page_id IS NOT NULL) AS wf_page_since_1_9;
+→ inquiries_test 0 | events_test 0 | trip_details_test 0 | messages_test 0 | offers_test 0 | inquiries_total 124 | since_14_10_1640 1 | since_15_10_1200 0 | last_inquiry_warsaw 2026-10-15 05:38:49.814597 | wf_trip_only_since_1_9 8 | wf_page_since_1_9 31
+
+SELECT id, created_at AT TIME ZONE 'Europe/Warsaw', source, status, page_version, page_slug FROM inquiries
+WHERE created_at >= timestamptz '2026-10-14 16:40 Europe/Warsaw';
+→ a86b0a0b-d1cd-4e5f-9cad-95011721b702 | 2026-10-15 05:38:49.81 | web_form | new | null | null   (has experience_page_id, no trip_id)
+
+Baseline cross-check (deferred row FA-1.60, prod 14.10): "since 1 IX 8 web_form inquiries have trip_id and no experience_page_id (30 have the page id)".
+Now: 8 trip-only; page-id web_form before 15.10 00:00 = 30; + a86b0a0b (15.10 05:38, page id) = 31. Matches.
+No total row count was taken before the DELETE — "rest untouched" rests on this cross-check and the last real inquiry, not on a before/after total.
+
+Orphans (whole tables):
+SELECT 'inquiry_trip_details', count(*) FROM inquiry_trip_details d WHERE NOT EXISTS (SELECT 1 FROM inquiries i WHERE i.id = d.inquiry_id)
+UNION ALL SELECT 'messages', count(*) FROM messages m WHERE m.inquiry_id IS NOT NULL AND NOT EXISTS (…)
+UNION ALL SELECT 'inquiry_events', count(*) FROM inquiry_events e WHERE e.inquiry_id IS NOT NULL AND NOT EXISTS (…);
+→ inquiry_trip_details 0 | messages 0 | inquiry_events 0
