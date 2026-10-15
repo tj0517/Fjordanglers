@@ -3,6 +3,7 @@ import {
   safeHttpUrl, speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary, languageNames,
   parseSeasonPeriods, parseContentBlocks,
 } from './experience-v2-content'
+import type { Json } from '@/lib/supabase/database.types'
 
 describe('safeHttpUrl', () => {
   it('accepts http and https only', () => {
@@ -100,7 +101,7 @@ describe('parseSeasonPeriods', () => {
 describe('parseContentBlocks — photos', () => {
   it('a legacy block with only image_url is a gallery of one', () => {
     expect(parseContentBlocks([{ headline: 'Lake', text: 't', image_url: '/lake.jpg' }]))
-      .toEqual([{ headline: 'Lake', text: 't', imageUrls: ['/lake.jpg'] }])
+      .toEqual([{ headline: 'Lake', text: 't', imageUrls: ['/lake.jpg'], section: 'programs' }])
   })
   it('a block with image_urls keeps them in order, first = cover', () => {
     expect(parseContentBlocks([{ headline: 'Spring Creeks', text: 't', image_urls: ['https://x.example/1.jpg', '/2.jpg'] }])[0]?.imageUrls)
@@ -112,8 +113,27 @@ describe('parseContentBlocks — photos', () => {
   })
   it('drops unsafe or empty photo entries but keeps the block', () => {
     expect(parseContentBlocks([{ headline: 'H', text: null, image_urls: ['javascript:alert(1)', '', 42, '/ok.jpg'] }]))
-      .toEqual([{ headline: 'H', text: null, imageUrls: ['/ok.jpg'] }])
+      .toEqual([{ headline: 'H', text: null, imageUrls: ['/ok.jpg'], section: 'programs' }])
     expect(parseContentBlocks([{ headline: 'H', text: 't' }])[0]?.imageUrls).toEqual([])
+  })
+})
+
+describe('parseContentBlocks — section (FA-1.60)', () => {
+  const sectionOf = (section: Json | undefined) =>
+    parseContentBlocks([section === undefined ? { headline: 'H', text: 't' } : { headline: 'H', text: 't', section }])[0]?.section
+
+  it('"waters" is waters', () => {
+    expect(sectionOf('waters')).toBe('waters')
+  })
+  it.each([
+    ['no section',        undefined],
+    ['"programs"',        'programs'],
+    ['an unknown word',   'lodging'],
+    ['another case',      'Waters'],
+    ['not a string',      1],
+    ['null',              null],
+  ])('%s is programs', (_, section) => {
+    expect(sectionOf(section)).toBe('programs')
   })
 })
 

@@ -39,7 +39,7 @@ import {
   type ExperiencePageOptionPayload,
 } from '@/actions/experience-pages'
 import ImageUpload from '@/components/admin/image-upload'
-import { CONTENT_BLOCK_MAX_PHOTOS } from '@/lib/experiences/v2-editor'
+import { CONTENT_BLOCK_MAX_PHOTOS, mergePageBlocks, pageBlockSection, type ContentBlockSection } from '@/lib/experiences/v2-editor'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
 import LatLngPicker from '@/components/admin/LatLngPicker'
 import dynamic from 'next/dynamic'
@@ -88,6 +88,11 @@ type PageBlockDraft = ContentBlock & { key: string }
 /** What is sent for a block — the draft without its key. The server derives `image_url` from `image_urls`. */
 function toContentBlock({ headline, text, image_url, image_urls }: PageBlockDraft): ContentBlock {
   return { headline, text, image_url, image_urls }
+}
+
+/** Stored page blocks → one list of the form. A block without a section is a program. */
+function blockDrafts(stored: ContentBlock[], section: ContentBlockSection): PageBlockDraft[] {
+  return stored.flatMap((block, i) => pageBlockSection(block) === section ? [{ ...block, key: `stored-${i}` }] : [])
 }
 
 /** A block's photos, first = cover: the gallery when it has one, else the single legacy photo. */
@@ -367,6 +372,84 @@ function SpeciesDetailEditor({
 }
 
 // ─── OptionEditor sub-component ───────────────────────────────────────────────
+
+/**
+ * One list of page blocks — "Waters" or "Programs" — with its own "+ Add block". Rows are
+ * updated by key, never by index: each row's photo manager (MultiImageUpload) keeps its own
+ * list, so an index would hand one block's photos to the next one when a block is removed.
+ */
+function PageBlockList({
+  label,
+  hint,
+  blocks,
+  setBlocks,
+  guidePhotos,
+  guideId,
+  testId,
+}: {
+  label:       string
+  hint:        string
+  blocks:      PageBlockDraft[]
+  setBlocks:   React.Dispatch<React.SetStateAction<PageBlockDraft[]>>
+  guidePhotos: string[]
+  guideId?:    string
+  testId:      string
+}) {
+  const edit = (key: string, change: Partial<PageBlockDraft>) =>
+    setBlocks(prev => prev.map(b => b.key === key ? { ...b, ...change } : b))
+
+  return (
+    <div className="space-y-3" data-testid={testId}>
+      <div className="flex items-center justify-between">
+        <label className={lbl}>{label} <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>({hint})</span></label>
+        <button
+          type="button"
+          onClick={() => setBlocks(prev => [...prev, { key: crypto.randomUUID(), headline: '', text: '' }])}
+          className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
+          style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
+          + Add block
+        </button>
+      </div>
+      {blocks.map(block => (
+        <div key={block.key} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={block.headline}
+              onChange={e => edit(block.key, { headline: e.target.value })}
+              placeholder="Section headline…"
+              className={inp} style={{ ...iStyle, flex: 1 }} />
+            <button
+              type="button"
+              onClick={() => setBlocks(prev => prev.filter(b => b.key !== block.key))}
+              className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
+              style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
+              Remove
+            </button>
+          </div>
+          <MultiImageUpload
+            label={`Photos (optional, up to ${CONTENT_BLOCK_MAX_PHOTOS} — first is the cover; 2 or more open as a gallery on the v2 page)`}
+            initial={blockPhotos(block).map((url, i) => ({ url, is_cover: i === 0, sort_order: i }))}
+            max={CONTENT_BLOCK_MAX_PHOTOS}
+            onChange={imgs => edit(block.key, { image_urls: imgs.map(g => g.url), image_url: imgs[0]?.url ?? '' })}
+            pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+            guideId={guideId}
+          />
+          <textarea
+            value={block.text}
+            onChange={e => edit(block.key, { text: e.target.value })}
+            placeholder="Block text…"
+            rows={3}
+            className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
+            style={iStyle} />
+        </div>
+      ))}
+      {blocks.length === 0 && (
+        <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No blocks yet. Click &quot;+ Add block&quot; to add one.</p>
+      )}
+    </div>
+  )
+}
 
 function OptionEditor({
   option,
@@ -1084,12 +1167,10 @@ export default function ExperiencePageForm({
   const [includes, setIncludes] = useState(initialData?.includes?.join('\n') ?? 'Guide service')
   const [excludes, setExcludes] = useState(initialData?.excludes?.join('\n') ?? '')
 
-  // ── Page-level content blocks
-  // Each block carries a stable key: its photo manager (MultiImageUpload) keeps its own list,
-  // so an index key would hand one block's photos to the next one when a block is removed.
-  const [pageBlocks, setPageBlocks] = useState<PageBlockDraft[]>(
-    () => (initialData?.content_blocks ?? []).map((block, i) => ({ ...block, key: `stored-${i}` })),
-  )
+  // ── Page-level content blocks, as the two lists of "About this trip" on the v2 page
+  // (FA-1.60). Each block carries a stable key — see PageBlockList.
+  const [waterBlocks,   setWaterBlocks]   = useState<PageBlockDraft[]>(() => blockDrafts(initialData?.content_blocks ?? [], 'waters'))
+  const [programBlocks, setProgramBlocks] = useState<PageBlockDraft[]>(() => blockDrafts(initialData?.content_blocks ?? [], 'programs'))
 
   // ── Section 12b: FAQ (global)
   const [faqItems, setFaqItems] = useState<FaqItem[]>(() => parseJsonField<FaqItem>(initialData?.faq))
@@ -1210,9 +1291,7 @@ export default function ExperiencePageForm({
       meeting_point_description:        meetingDesc.trim() || null,
       includes:                         parseLines(includes),
       excludes:                         parseLines(excludes),
-      content_blocks:                   pageBlocks
-        .filter(b => b.headline.trim() || b.text.trim())
-        .map(toContentBlock),
+      content_blocks:                   mergePageBlocks(waterBlocks.map(toContentBlock), programBlocks.map(toContentBlock)),
       faq:                              faqItems.filter(f => f.question.trim() || f.answer.trim()),
       meta_title:                       metaTitle.trim()   || null,
       meta_description:                 metaDesc.trim()    || null,
@@ -1252,7 +1331,7 @@ export default function ExperiencePageForm({
     introText, heroImageUrl, galleryImages, contentPhotoImages, viewsImages, storyText, catchesText, rodSetup, bestMonths,
     seasonMonths, peakMonths, speciesDetails,
     boatItems, specialAttractions, accommodationItems, whatToBring,
-    meetingName, meetingDesc, includes, excludes, pageBlocks, faqItems, metaTitle, metaDesc, ogImage,
+    meetingName, meetingDesc, includes, excludes, waterBlocks, programBlocks, faqItems, metaTitle, metaDesc, ogImage,
     locationLat, locationLng, locationMode, locationArea, locationSpots,
     prefill, router, isEdit, experienceId,
   ])
@@ -1596,62 +1675,31 @@ export default function ExperiencePageForm({
 
       <Divider />
 
-      {/* ── 6b. Page-level text blocks ── */}
+      {/* ── 6b. Page-level photo blocks: Waters and Programs ── */}
       <SectionLabel
         step={6}
-        title="Text blocks"
-        desc="Headline + text pairs shown after the season section and before trip options."
+        title="Waters & Programs"
+        desc="Photo blocks of “About this trip” on the v2 page, Waters above Programs. With no Waters blocks, the v2 page shows the Environment line under Waters instead. The v1 page shows all blocks in one list, Waters first."
       />
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label className={lbl}>Text blocks <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(headline + text pairs)</span></label>
-          <button
-            type="button"
-            onClick={() => setPageBlocks(prev => [...prev, { key: crypto.randomUUID(), headline: '', text: '' }])}
-            className="text-xs font-semibold f-body px-3 py-1.5 rounded-xl"
-            style={{ background: 'rgba(10,46,77,0.06)', color: '#0A2E4D' }}>
-            + Add block
-          </button>
-        </div>
-        {pageBlocks.map((block, bi) => (
-          <div key={block.key} className="rounded-xl p-3 space-y-2" style={{ background: 'rgba(10,46,77,0.03)', border: '1px solid rgba(10,46,77,0.08)' }}>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={block.headline}
-                onChange={e => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, headline: e.target.value } : b))}
-                placeholder="Section headline…"
-                className={inp} style={{ ...iStyle, flex: 1 }} />
-              <button
-                type="button"
-                onClick={() => setPageBlocks(prev => prev.filter((_, i) => i !== bi))}
-                className="text-xs font-semibold f-body px-2.5 py-1.5 rounded-lg flex-shrink-0"
-                style={{ background: 'rgba(239,68,68,0.08)', color: '#DC2626' }}>
-                Remove
-              </button>
-            </div>
-            <MultiImageUpload
-              label={`Photos (optional, up to ${CONTENT_BLOCK_MAX_PHOTOS} — first is the cover; 2 or more open as a gallery on the v2 page)`}
-              initial={blockPhotos(block).map((url, i) => ({ url, is_cover: i === 0, sort_order: i }))}
-              max={CONTENT_BLOCK_MAX_PHOTOS}
-              onChange={imgs => setPageBlocks(prev => prev.map(b => b.key === block.key
-                ? { ...b, image_urls: imgs.map(g => g.url), image_url: imgs[0]?.url ?? '' }
-                : b))}
-              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
-              guideId={prefill?.guide_id ?? undefined}
-            />
-            <textarea
-              value={block.text}
-              onChange={e => setPageBlocks(prev => prev.map((b, i) => i === bi ? { ...b, text: e.target.value } : b))}
-              placeholder="Block text…"
-              rows={3}
-              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all resize-none"
-              style={iStyle} />
-          </div>
-        ))}
-        {pageBlocks.length === 0 && (
-          <p className="text-xs f-body" style={{ color: 'rgba(10,46,77,0.3)' }}>No text blocks yet. Click &quot;+ Add block&quot; to add one.</p>
-        )}
+      <div className="space-y-6">
+        <PageBlockList
+          label="Waters"
+          hint="the rivers and lakes — headline, text, photos"
+          blocks={waterBlocks}
+          setBlocks={setWaterBlocks}
+          guidePhotos={guidePhotos}
+          guideId={prefill?.guide_id ?? undefined}
+          testId="page-blocks-waters"
+        />
+        <PageBlockList
+          label="Programs"
+          hint="headline + text pairs"
+          blocks={programBlocks}
+          setBlocks={setProgramBlocks}
+          guidePhotos={guidePhotos}
+          guideId={prefill?.guide_id ?? undefined}
+          testId="page-blocks-programs"
+        />
       </div>
 
       <Divider />

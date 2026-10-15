@@ -6,12 +6,16 @@
  * photos (`species_details`), some a line on what anglers actually catch (`catches_text`).
  * The offer-centric template left all of it unread, and a page that is only chips and a
  * calculator has nothing to say about the water. This section says it, in that order:
- * the story, the waters (`environment`, under a "Waters" eyebrow), the blocks as photo cards
- * (under "Programs"; a block with several photos opens them in a lightbox — see
- * ./offer-story-block.tsx), the fish, the catches. Each eyebrow appears only over content.
+ * the story, "Waters", "Programs", the fish, the catches. Each eyebrow appears only over
+ * content.
+ *
+ * Waters and Programs are both lists of the same photo cards (a block with several photos
+ * opens them in a lightbox — see ./offer-story-block.tsx); a page block's `section` says
+ * which list it is in, and a block without one is a program (FA-1.60). A page with no Waters
+ * blocks keeps the one line it always had under Waters: `environment`, joined with " · ".
  *
  * Nothing here is required — a page with only a story shows only the story. With none of
- * the four, the section is not drawn.
+ * story, blocks, fish or catches, the section is not drawn.
  */
 
 import Image from 'next/image'
@@ -22,6 +26,7 @@ import type { SpeciesDetail, StoryBlock } from '@/lib/experience-v2-content'
 
 export type OfferStoryProps = {
   storyText:      string | null
+  /** Every page block, Waters and Programs, in stored order; each one says its section. */
   contentBlocks:  StoryBlock[]
   speciesDetails: SpeciesDetail[]
   catchesText:    string | null
@@ -36,6 +41,17 @@ function Eyebrow({ children }: { children: string }) {
   return <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em]" style={mutedStyle}>{children}</p>
 }
 
+/** Photo cards, one column for a single block, two from `sm` up. */
+function BlockGrid({ blocks, testId }: { blocks: StoryBlock[]; testId: string }) {
+  return (
+    <div className={`grid grid-cols-1 gap-4 ${blocks.length === 1 ? '' : 'sm:grid-cols-2'}`} data-testid={testId}>
+      {blocks.map((block, i) => (
+        <OfferStoryBlock key={`${i}-${block.headline ?? ''}`} block={block} single={blocks.length === 1} />
+      ))}
+    </div>
+  )
+}
+
 function shorten(value: string, max: number): string {
   const trimmed = value.trim()
   if (trimmed.length <= max) return trimmed
@@ -45,6 +61,9 @@ function shorten(value: string, max: number): string {
 
 export default function OfferStory({ storyText, contentBlocks, speciesDetails, catchesText, environment }: OfferStoryProps) {
   const paragraphs = (storyText ?? '').split(/\n\s*\n/).map(p => p.trim()).filter(p => p !== '')
+  const waterBlocks   = contentBlocks.filter(block => block.section === 'waters')
+  const programBlocks = contentBlocks.filter(block => block.section !== 'waters')
+  const hasWaters     = waterBlocks.length > 0 || environment.length > 0
 
   if (paragraphs.length === 0 && contentBlocks.length === 0 && speciesDetails.length === 0 && catchesText == null) return null
 
@@ -65,26 +84,24 @@ export default function OfferStory({ storyText, contentBlocks, speciesDetails, c
       )}
 
       {/* Waters sits right above Programs, outside the narrow story column. */}
-      {environment.length > 0 && (
+      {hasWaters && (
         <div className={paragraphs.length > 0 ? 'mt-8' : ''} data-testid="offer-waters">
           <Eyebrow>Waters</Eyebrow>
-          <p className="text-[15px] font-medium">{environment.join(' · ')}</p>
+          {waterBlocks.length > 0
+            ? <BlockGrid blocks={waterBlocks} testId="offer-water-blocks" />
+            : <p className="text-[15px] font-medium">{environment.join(' · ')}</p>}
         </div>
       )}
 
-      {contentBlocks.length > 0 && (
-        <div className={environment.length > 0 ? 'mt-6' : paragraphs.length > 0 ? 'mt-8' : ''} data-testid="offer-programs">
+      {programBlocks.length > 0 && (
+        <div className={hasWaters ? 'mt-6' : paragraphs.length > 0 ? 'mt-8' : ''} data-testid="offer-programs">
           <Eyebrow>Programs</Eyebrow>
-          <div className={`grid grid-cols-1 gap-4 ${contentBlocks.length === 1 ? '' : 'sm:grid-cols-2'}`} data-testid="offer-story-blocks">
-            {contentBlocks.map((block, i) => (
-              <OfferStoryBlock key={`${i}-${block.headline ?? ''}`} block={block} single={contentBlocks.length === 1} />
-            ))}
-          </div>
+          <BlockGrid blocks={programBlocks} testId="offer-story-blocks" />
         </div>
       )}
 
       {speciesDetails.length > 0 && (
-        <div className={paragraphs.length > 0 || environment.length > 0 || contentBlocks.length > 0 ? 'mt-8' : ''} data-testid="offer-species">
+        <div className={paragraphs.length > 0 || hasWaters || programBlocks.length > 0 ? 'mt-8' : ''} data-testid="offer-species">
           <Eyebrow>What you fish for</Eyebrow>
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {speciesDetails.map(species => (

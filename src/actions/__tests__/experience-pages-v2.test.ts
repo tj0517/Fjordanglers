@@ -701,6 +701,20 @@ describe('updateExperiencePage — content block galleries', () => {
     expect((await readPage(PAGE.content)).content_blocks).toEqual([{ headline: 'Lake', text: 'Big fish.', image_url: photo(9) }])
   })
 
+  it('stores the Waters / Programs section of each block (FA-1.60)', async () => {
+    const result = await updateExperiencePage(PAGE.content, {
+      content_blocks: [
+        { headline: 'Tongariro', text: 'Pocket water.', image_urls: [photo(1), photo(2)], section: 'waters' },
+        { headline: 'Day 1',     text: 'Upper river.',  section: 'programs' },
+      ],
+    })
+    expect(result).toMatchObject({ success: true })
+    expect((await readPage(PAGE.content)).content_blocks).toEqual([
+      { headline: 'Tongariro', text: 'Pocket water.', image_url: photo(1), image_urls: [photo(1), photo(2)], section: 'waters' },
+      { headline: 'Day 1',     text: 'Upper river.',  section: 'programs' },
+    ])
+  })
+
   it('refuses a block with 13 photos and writes nothing', async () => {
     const before = (await readPage(PAGE.content)).content_blocks
     const result = await updateExperiencePage(PAGE.content, {
