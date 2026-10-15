@@ -2,10 +2,10 @@
 id: FA-1.61
 title: Formularz zapytania — odpowiedź bez czekania na agenta AI (`after()`) + przewinięcie i focus na pierwsze błędne pole (v1 i v2)
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
-model_approved:
+model_approved: sonnet · effort high by tj 2026-10-15
 effort: high
 agent: fa-core
 branch: fix/inquiry-submit-latency-and-errors
