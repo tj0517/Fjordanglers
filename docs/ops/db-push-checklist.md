@@ -36,3 +36,17 @@ nie jest bramką STOP — dlatego lista jest krokiem, który zostawia ślad.
    niepusta kolumna nie kasuje numerów — ale wtedy zapisz, ile wierszy i czyich, zanim ruszysz.)
 5. **Po pushu** ponów `supabase migration list --linked` — kolumny `Local` i `Remote` mają się
    zgadzać — i wklej wynik do raportu zadania.
+
+## Lekcje
+
+- **FA-1.60, 14–15 X 2026: „push” się nie wykonał.** Zgłoszony jako zrobiony, a odczyt
+  produkcji (`information_schema`, `pg_constraint`, `max(version)`, `list_migrations`) nie
+  pokazał ani kolumn, ani wersji `20261010000000`. CLI na Macu tj ma nieaktualne hasło do
+  bazy, a w repo nie ma connection stringa z hasłem. Wniosek: „done” po pushu to dopiero
+  krok 5 — bez odczytu produkcji migracja nie jest zastosowana.
+- **Brak działającego hasła CLI → `apply_migration` przez MCP** (po zgodzie STOP, potem
+  zmiana nazwy pliku na wersję z `list_migrations`, `docs/03-conventions.md`). Ale MCP
+  `supabase-prod` z `.mcp.json` ma `read_only=true`, a konektor Supabase w claude.ai musi być
+  zalogowany na konto z organizacją FjordAnglers — 15 X widział tylko inne projekty
+  i zwrócił „You do not have permission” dla `uwxrstbplaoxfghrchcy`. Sprawdź dostęp
+  (`get_project`) zanim zaplanujesz tę drogę.
