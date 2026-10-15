@@ -53,6 +53,7 @@ w v1 i v2.
 - [x] v1 (`InquiryWidget`): przy nieudanej walidacji `scrollIntoView({block:'center'})`
       + `focus()` na pierwszym błędnym polu w kolejności wyświetlania; `aria-invalid` na
       polach z błędem
+      (odstępstwo: grupa wyższa niż obszar przewijania → `block:'start'` — decyzja tj 2026-10-15)
 - [x] v2 (`inquiry-wizard`): to samo przy `next()` i `submit()` z błędami bieżącego kroku
 - [x] Respektuj `prefers-reduced-motion` (bez płynnego przewijania)
 
@@ -197,7 +198,7 @@ grep -rn "scrollIntoView" src/components/inquiry src/components/inquiry-wizard  
 - The `Promise.all` e-mail problem was already in deferred (FA-1.43 row). I did not add a duplicate; I added a note to that row instead.
 
 ### Needs a decision
-- **`block: 'start'` instead of `'center'` for groups taller than their scroll area.** This deviates from the task's `scrollIntoView({block:'center'})`. A five-option group on a phone is taller than the visible area, and centring crops the legend (the question).
+- **`block: 'start'` instead of `'center'` for groups taller than their scroll area.** → **Decided by tj 2026-10-15: (a) keep `'start'`.** This deviates from the task's `scrollIntoView({block:'center'})`. A five-option group on a phone is taller than the visible area, and centring crops the legend (the question).
   - **(a) Keep `'start'`.** The question is visible and the group is 83% visible, the maximum possible. Recommended.
   - **(b) Pure `'center'`.** Delete `blockFor()` in `scroll-to-field.ts`; the legend gets cropped.
   - Test: "oversize group gives 'start'".
@@ -222,3 +223,9 @@ grep -rn "scrollIntoView" src/components/inquiry src/components/inquiry-wizard �
 - The local DB holds `fa161-*` / `fa161a-*@example.invalid` test inquiries. They are local only.
 - Two decisions made by agents were not in the brief and were left in the code for tj to decide: `block:'start'` for oversized groups (above), and `aria-invalid`/`aria-describedby` on the S14 inline groups as attributes only.
 - One lint warning from my own proof script (`after-timings-run.mjs`, an unused variable) was fixed before the count, so lint equals `main`.
+- 2026-10-15 review tj: raport przyjęty.
+  - Decyzja tj: `block:'start'` dla grup wyższych niż obszar przewijania zostaje (`blockFor()` w `scroll-to-field.ts`). To świadome odstępstwo od `scrollIntoView({block:'center'})` z zakresu: przy `'center'` ucina się legenda (pytanie).
+  - `done` dopiero po teście na prod po deployu #147. Test robi tj: jedno zwykłe zapytanie z `tjezionekspam@gmail.com`, bez pułapki. Zapytania: `.fa-proofs/fa-1.61/prod-test.sql`.
+    - krok 2: zdarzenia i szkic po `created_at` (sekundy);
+    - krok 3: DELETE po id, atomowy, ze strażnikiem na e-mail;
+    - krok 4: kontrola, że nic nie zostało.
