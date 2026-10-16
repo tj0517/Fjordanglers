@@ -1,0 +1,274 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/tj/Fjordanglers[39m
+
+[90mstderr[2m | src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22m[2mthe submit[2m > [22m[2msays it failed and does not pretend to have sent, when the server refuses
+[22m[39m[inquiry-wizard] submit failed: Invalid input
+
+ [31m❯[39m src/components/inquiry-wizard/inquiry-wizard.test.tsx [2m([22m[2m31 tests[22m[2m | [22m[31m7 failed[39m[2m)[22m[33m 3406[2mms[22m[39m
+     [32m✓[39m shows step 1 on the page, with the SLA from the page[32m 132[2mms[22m[39m
+     [32m✓[39m will not open step 2 while the month is missing, and says so[32m 50[2mms[22m[39m
+     [32m✓[39m opens the full-screen wizard at step 2 once step 1 is answered[32m 86[2mms[22m[39m
+     [32m✓[39m keeps the answers when going back from step 2 to step 1[32m 130[2mms[22m[39m
+     [32m✓[39m the inline Continue opens again after the overlay was closed on step 2[32m 114[2mms[22m[39m
+     [32m✓[39m will not leave step 2 until every question is answered[32m 83[2mms[22m[39m
+     [32m✓[39m asks a fixed page to confirm the price it shows, and a custom page for a band[32m 129[2mms[22m[39m
+     [32m✓[39m POSTs to the one inquiry endpoint, with the brief and the old fields[32m 200[2mms[22m[39m
+     [32m✓[39m sends the trap field and an elapsed time, exactly as the v1 widget does[32m 191[2mms[22m[39m
+     [32m✓[39m sends a band instead of an acknowledgement on a custom page[32m 164[2mms[22m[39m
+     [32m✓[39m shows the thank-you with the SLA and the licence link, and keeps the link external[32m 156[2mms[22m[39m
+     [32m✓[39m offers no licence link when the page stores something that is not an http(s) URL[32m 161[2mms[22m[39m
+     [32m✓[39m says it failed and does not pretend to have sent, when the server refuses[32m 136[2mms[22m[39m
+     [32m✓[39m keeps the answers in sessionStorage while the form is being filled[32m 22[2mms[22m[39m
+     [32m✓[39m wipes the stored answers on a successful submit — no e-mail or phone left behind[32m 137[2mms[22m[39m
+     [32m✓[39m ignores a stored shape from an older form instead of trusting it[32m 18[2mms[22m[39m
+     [32m✓[39m still works when sessionStorage throws on every access[32m 38[2mms[22m[39m
+     [32m✓[39m goes experience_view → form_open → trip → angler → contact → conversion + SUBMIT_LEAD_FORM[32m 146[2mms[22m[39m
+     [32m✓[39m counts each step once when the visitor goes back, closes and comes again[32m 106[2mms[22m[39m
+     [32m✓[39m a second submit click while sending does not send a second conversion[32m 147[2mms[22m[39m
+     [32m✓[39m no conversion when the server refuses the inquiry[32m 170[2mms[22m[39m
+     [32m✓[39m outside an experience page: the conversion still fires, no funnel events, nothing new in the body[32m 123[2mms[22m[39m
+[31m     [31m×[31m step 3, Send with the first name empty: the first-name input is scrolled to and focused[39m[32m 113[2mms[22m[39m
+[31m     [31m×[31m step 3: the country select is the target when it is the only thing missing[39m[32m 143[2mms[22m[39m
+[31m     [31m×[31m step 3 uses an instant jump when the visitor prefers reduced motion[39m[32m 89[2mms[22m[39m
+[31m     [31m×[31m step 2, Next with nothing picked: the first group is scrolled to, its first radio focused, the group flagged and described by its error[39m[32m 57[2mms[22m[39m
+[31m     [31m×[31m step 2: an answered group is neither flagged nor targeted — focus goes to the first one still open[39m[32m 71[2mms[22m[39m
+[31m     [31m×[31m step 2: the price acknowledgement is a checkbox, and that is what takes focus[39m[32m 98[2mms[22m[39m
+[31m     [31m×[31m goes there on every failed attempt, not only the first[39m[32m 55[2mms[22m[39m
+     [32m✓[39m does nothing of the kind when the step is complete[32m 112[2mms[22m[39m
+     [32m✓[39m the inline Continue (S14) is unchanged: it shows the error and moves nothing[32m 27[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 7 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22mscroll and focus on the first error (FA-1.61)[2m > [22mstep 3, Send with the first name empty: the first-name input is scrolled to and focused
+[31m[1mAssertionError[22m: expected [] to deeply equal [ <input …(6)></input> ][39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- [[39m
+[32m-   <input[39m
+[32m-     aria-invalid="true"[39m
+[32m-     autocomplete="given-name"[39m
+[32m-     class="w-full rounded-lg border px-3 py-2.5 text-[16px]"[39m
+[32m-     style="min-height: 48px; border-color: rgb(178, 58, 28); background: rgb(255, 255, 255);"[39m
+[32m-     type="text"[39m
+[32m-     value=""[39m
+[32m-   />,[39m
+[32m- ][39m
+[31m+ [][39m
+
+[36m [2m❯[22m src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m518:32[22m[39m
+    [90m516| [39m
+    [90m517| [39m    [35mconst[39m first [33m=[39m screen[33m.[39m[34mgetByLabelText[39m([36m/First name/[39m)
+    [90m518| [39m    [34mexpect[39m([34mscrolledElements[39m())[33m.[39m[34mtoEqual[39m([first])
+    [90m   | [39m                               [31m^[39m
+    [90m519| [39m    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', beh…
+    [90m520| [39m    [34mexpect[39m(document[33m.[39mactiveElement)[33m.[39m[34mtoBe[39m(first)
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22mscroll and focus on the first error (FA-1.61)[2m > [22mstep 3: the country select is the target when it is the only thing missing
+[31m[1mAssertionError[22m: expected <h2 tabindex="-1" …(1)></h2> to be <select …(3)>…(21)</select> // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- <select[39m
+[32m-   aria-invalid="true"[39m
+[32m-   class="w-full rounded-lg border px-3 text-[16px]"[39m
+[32m-   style="min-height: 48px; border-color: rgb(178, 58, 28); background: rgb(255, 255, 255);"[39m
+[32m- >[39m
+[32m-   <option[39m
+[32m-     value=""[39m
+[32m-   >[39m
+[32m-     Pick a country…[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="PL"[39m
+[32m-   >[39m
+[32m-     Poland[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="DE"[39m
+[32m-   >[39m
+[32m-     Germany[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="AT"[39m
+[32m-   >[39m
+[32m-     Austria[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="CH"[39m
+[32m-   >[39m
+[32m-     Switzerland[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="CZ"[39m
+[32m-   >[39m
+[32m-     Czechia[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="SK"[39m
+[32m-   >[39m
+[32m-     Slovakia[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="NL"[39m
+[32m-   >[39m
+[32m-     Netherlands[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="FR"[39m
+[32m-   >[39m
+[32m-     France[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="GB"[39m
+[32m-   >[39m
+[32m-     United Kingdom[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="IE"[39m
+[32m-   >[39m
+[32m-     Ireland[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="DK"[39m
+[32m-   >[39m
+[32m-     Denmark[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="SE"[39m
+[32m-   >[39m
+[32m-     Sweden[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="NO"[39m
+[32m-   >[39m
+[32m-     Norway[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="FI"[39m
+[32m-   >[39m
+[32m-     Finland[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="IS"[39m
+[32m-   >[39m
+[32m-     Iceland[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="US"[39m
+[31m+ <h2[39m
+[31m+   class="f-display mb-4 text-xl font-bold outline-none"[39m
+[31m+   tabindex="-1"[39m
+[2m  >[22m
+[32m-     United States[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="CA"[39m
+[32m-   >[39m
+[32m-     Canada[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="AU"[39m
+[32m-   >[39m
+[32m-     Australia[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="NZ"[39m
+[32m-   >[39m
+[32m-     New Zealand[39m
+[32m-   </option>[39m
+[32m-   <option[39m
+[32m-     value="ZZ"[39m
+[32m-   >[39m
+[32m-     Somewhere else[39m
+[32m-   </option>[39m
+[32m- </select>[39m
+[31m+   Where we send the offer[39m
+[31m+ </h2>[39m
+
+[36m [2m❯[22m src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m532:36[22m[39m
+    [90m530| [39m    fireEvent[33m.[39m[34mclick[39m(screen[33m.[39m[34mgetByTestId[39m([32m'wizard-next'[39m))
+    [90m531| [39m
+    [90m532| [39m    expect(document.activeElement).toBe(screen.getByLabelText(/Travell…
+    [90m   | [39m                                   [31m^[39m
+    [90m533| [39m  })
+    [90m534| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22mscroll and focus on the first error (FA-1.61)[2m > [22mstep 3 uses an instant jump when the visitor prefers reduced motion
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called with arguments: [ { block: 'center', …(1) } ][90m
+
+Number of calls: [1m0[22m
+[31m[39m
+[36m [2m❯[22m src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m544:28[22m[39m
+    [90m542| [39m    fireEvent[33m.[39m[34mclick[39m(screen[33m.[39m[34mgetByTestId[39m([32m'wizard-next'[39m))
+    [90m543| [39m
+    [90m544| [39m    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', beh…
+    [90m   | [39m                           [31m^[39m
+    [90m545| [39m  })
+    [90m546| [39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22mscroll and focus on the first error (FA-1.61)[2m > [22mstep 2, Next with nothing picked: the first group is scrolled to, its first radio focused, the group flagged and described by its error
+[31m[1mError[22m: no group skillLevel[39m
+[36m [2m❯[22m group src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m507:27[22m[39m
+    [90m505| [39m  [35mfunction[39m [34mgroup[39m(field[33m:[39m string)[33m:[39m [33mHTMLFieldSetElement[39m {
+    [90m506| [39m    const el = screen.getByTestId('wizard-step-2').querySelector<HTMLF…
+    [90m507| [39m    [35mif[39m (el [33m==[39m [35mnull[39m) [35mthrow[39m [35mnew[39m [33mError[39m([32m`no group [39m[36m${[39mfield[36m}[39m[32m`[39m)
+    [90m   | [39m                          [31m^[39m
+    [90m508| [39m    [35mreturn[39m el
+    [90m509| [39m  }
+[90m [2m❯[22m src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m551:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22mscroll and focus on the first error (FA-1.61)[2m > [22mstep 2: an answered group is neither flagged nor targeted — focus goes to the first one still open
+[31m[1mError[22m: no group fitness[39m
+[36m [2m❯[22m group src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m507:27[22m[39m
+    [90m505| [39m  [35mfunction[39m [34mgroup[39m(field[33m:[39m string)[33m:[39m [33mHTMLFieldSetElement[39m {
+    [90m506| [39m    const el = screen.getByTestId('wizard-step-2').querySelector<HTMLF…
+    [90m507| [39m    [35mif[39m (el [33m==[39m [35mnull[39m) [35mthrow[39m [35mnew[39m [33mError[39m([32m`no group [39m[36m${[39mfield[36m}[39m[32m`[39m)
+    [90m   | [39m                          [31m^[39m
+    [90m508| [39m    [35mreturn[39m el
+    [90m509| [39m  }
+[90m [2m❯[22m src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m578:41[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22mscroll and focus on the first error (FA-1.61)[2m > [22mstep 2: the price acknowledgement is a checkbox, and that is what takes focus
+[31m[1mError[22m: no group budgetAck[39m
+[36m [2m❯[22m group src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m507:27[22m[39m
+    [90m505| [39m  [35mfunction[39m [34mgroup[39m(field[33m:[39m string)[33m:[39m [33mHTMLFieldSetElement[39m {
+    [90m506| [39m    const el = screen.getByTestId('wizard-step-2').querySelector<HTMLF…
+    [90m507| [39m    [35mif[39m (el [33m==[39m [35mnull[39m) [35mthrow[39m [35mnew[39m [33mError[39m([32m`no group [39m[36m${[39mfield[36m}[39m[32m`[39m)
+    [90m   | [39m                          [31m^[39m
+    [90m508| [39m    [35mreturn[39m el
+    [90m509| [39m  }
+[90m [2m❯[22m src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m592:19[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22mscroll and focus on the first error (FA-1.61)[2m > [22mgoes there on every failed attempt, not only the first
+[31m[1mAssertionError[22m: expected "vi.fn()" to be called 2 times, but got 0 times[39m
+[36m [2m❯[22m src/components/inquiry-wizard/inquiry-wizard.test.tsx:[2m604:28[22m[39m
+    [90m602| [39m    fireEvent[33m.[39m[34mclick[39m(screen[33m.[39m[34mgetByTestId[39m([32m'wizard-next'[39m))
+    [90m603| [39m
+    [90m604| [39m    [34mexpect[39m(scrollIntoView)[33m.[39m[34mtoHaveBeenCalledTimes[39m([34m2[39m)
+    [90m   | [39m                           [31m^[39m
+    [90m605| [39m    expect(document.activeElement).toBe(group('skillLevel').querySelec…
+    [90m606| [39m  })
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m7 failed[39m[22m[2m | [22m[1m[32m24 passed[39m[22m[90m (31)[39m
+[2m   Start at [22m 16:45:09
+[2m   Duration [22m 4.68s[2m (transform 241ms, setup 41ms, import 455ms, tests 3.41s, environment 655ms)[22m
+

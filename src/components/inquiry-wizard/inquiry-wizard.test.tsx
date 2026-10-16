@@ -466,3 +466,174 @@ describe('the GA4 funnel (FA-1.60)', () => {
   })
 })
 
+
+// ─── FA-1.61 — a failed Next / Send takes the angler to the first invalid question ───
+
+describe('scroll and focus on the first error (FA-1.61)', () => {
+  let scrollIntoView: ReturnType<typeof vi.fn<Element['scrollIntoView']>>
+
+  beforeEach(() => {
+    scrollIntoView = vi.fn<Element['scrollIntoView']>()
+    Element.prototype.scrollIntoView = scrollIntoView
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: false, media: query,
+      addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {},
+      onchange: null, dispatchEvent: () => false,
+    }))
+  })
+
+  afterEach(() => {
+    // jsdom ships no scrollIntoView; leave the prototype as it was found.
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
+  })
+
+  const scrolledElements = () => scrollIntoView.mock.contexts as Element[]
+
+  function openStepTwo() {
+    renderForm()
+    completeStepOne()
+    fireEvent.click(screen.getByText(/Continue →/))
+  }
+
+  function openStepThree() {
+    openStepTwo()
+    completeStepTwo()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+  }
+
+  /** The fieldset of a step-2 question, by the key its error is filed under. */
+  function group(field: string): HTMLFieldSetElement {
+    const el = screen.getByTestId('wizard-step-2').querySelector<HTMLFieldSetElement>(`fieldset[data-field="${field}"]`)
+    if (el == null) throw new Error(`no group ${field}`)
+    return el
+  }
+
+  it('step 3, Send with the first name empty: the first-name input is scrolled to and focused', () => {
+    openStepThree()
+    fill(/E-mail/, 'anna@angler.test')
+    fireEvent.change(screen.getByLabelText(/Travelling from/), { target: { value: 'PL' } })
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    const first = screen.getByLabelText(/First name/)
+    expect(scrolledElements()).toEqual([first])
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' })
+    expect(document.activeElement).toBe(first)
+    expect(first.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByLabelText(/Last name/).getAttribute('aria-invalid')).toBe('true')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('step 3: the country select is the target when it is the only thing missing', () => {
+    openStepThree()
+    completeStepThree()
+    fireEvent.change(screen.getByLabelText(/Travelling from/), { target: { value: '' } })
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    expect(document.activeElement).toBe(screen.getByLabelText(/Travelling from/))
+  })
+
+  it('step 3 uses an instant jump when the visitor prefers reduced motion', () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)', media: query,
+      addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {},
+      onchange: null, dispatchEvent: () => false,
+    }))
+    openStepThree()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'auto' })
+  })
+
+  it('step 2, Next with nothing picked: the first group is scrolled to, its first radio focused, the group flagged and described by its error', () => {
+    openStepTwo()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    const skill = group('skillLevel')
+    expect(scrolledElements()).toEqual([skill])
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center', behavior: 'smooth' })
+
+    const firstRadio = skill.querySelector<HTMLInputElement>('input[type="radio"]')
+    expect(firstRadio).not.toBeNull()
+    expect(document.activeElement).toBe(firstRadio)
+
+    expect(skill.getAttribute('aria-invalid')).toBe('true')
+    const alert = skill.querySelector('[role="alert"]')
+    expect(alert?.textContent).toBe('Pick the line that fits you best.')
+    expect(alert?.id).not.toBe('')
+    expect(skill.getAttribute('aria-describedby')).toBe(alert?.id)
+
+    // The other unanswered groups carry the same pair, each pointing at its own message.
+    const priority = group('priority')
+    expect(priority.getAttribute('aria-invalid')).toBe('true')
+    expect(priority.getAttribute('aria-describedby')).toBe(priority.querySelector('[role="alert"]')?.id)
+    expect(priority.getAttribute('aria-describedby')).not.toBe(skill.getAttribute('aria-describedby'))
+  })
+
+  it('step 2: an answered group is neither flagged nor targeted — focus goes to the first one still open', () => {
+    openStepTwo()
+    choose(/I cast 15 m/)
+    choose(/One big fish/)
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    expect(scrolledElements()).toEqual([group('fitness')])
+    expect(document.activeElement).toBe(group('fitness').querySelector('input'))
+    expect(group('skillLevel').hasAttribute('aria-invalid')).toBe(false)
+    expect(group('skillLevel').hasAttribute('aria-describedby')).toBe(false)
+  })
+
+  it('step 2: the price acknowledgement is a checkbox, and that is what takes focus', () => {
+    openStepTwo()
+    choose(/I cast 15 m/)
+    choose(/One big fish/)
+    choose(/A few kilometres/)
+    choose('Yes')
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    const price = group('budgetAck')
+    expect(scrolledElements()).toEqual([price])
+    expect(document.activeElement).toBe(price.querySelector('input[type="checkbox"]'))
+    expect(price.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('step 2: a group taller than the scroll area is aligned to its top, so the question stays readable', () => {
+    // jsdom has no layout: say the scroll area is 500 px high with more inside, and the group 600 px.
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(500)
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(1000)
+    openStepTwo()
+    vi.spyOn(group('skillLevel'), 'getBoundingClientRect').mockReturnValue({ height: 600 } as DOMRect)
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+    expect(scrolledElements()).toEqual([group('skillLevel')])
+    expect(document.activeElement).toBe(group('skillLevel').querySelector('input'))
+  })
+
+  it('goes there on every failed attempt, not only the first', () => {
+    openStepTwo()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+    ;(document.activeElement as HTMLElement).blur()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    expect(scrollIntoView).toHaveBeenCalledTimes(2)
+    expect(document.activeElement).toBe(group('skillLevel').querySelector('input'))
+  })
+
+  it('does nothing of the kind when the step is complete', () => {
+    openStepTwo()
+    completeStepTwo()
+    fireEvent.click(screen.getByTestId('wizard-next'))
+
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    expect(screen.getByTestId('wizard-step-3')).toBeTruthy()
+  })
+
+  it('the inline Continue (S14) is unchanged: it shows the error and moves nothing', () => {
+    renderForm()
+    const before = document.activeElement
+    fireEvent.click(screen.getByText(/Continue →/))
+
+    expect(screen.getByText('Pick a month.')).toBeTruthy()
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(before)
+  })
+})

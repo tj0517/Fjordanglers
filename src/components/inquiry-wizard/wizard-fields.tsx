@@ -10,7 +10,7 @@
  * `<button>` — the wireframe's `<span class="pill">` would be invisible to a keyboard.
  */
 
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export const NAVY     = 'var(--fa-navy)'
@@ -22,20 +22,30 @@ export function Question({
   label,
   hint,
   error,
+  field,
   children,
 }: {
   label:    string
   hint?:    string
   error?:   string
+  /** The `WizardErrors` key of this question — what the wizard looks for to scroll to it (FA-1.61). */
+  field?:   string
   children: ReactNode
 }) {
+  const errorId = useId()
+
   return (
-    <fieldset className="mb-6 border-0 p-0">
+    <fieldset
+      className="mb-6 border-0 p-0"
+      data-field={field}
+      aria-invalid={error != null ? true : undefined}
+      aria-describedby={error != null ? errorId : undefined}
+    >
       <legend className="mb-2.5 text-[17px] font-semibold">{label}</legend>
       {children}
       {hint != null && <p className="mt-2 text-[12px]" style={MUTED}>{hint}</p>}
       {error != null && (
-        <p role="alert" className="mt-2 text-[13px] font-medium" style={{ color: '#B23A1C' }}>
+        <p id={errorId} role="alert" className="mt-2 text-[13px] font-medium" style={{ color: '#B23A1C' }}>
           {error}
         </p>
       )}
@@ -251,6 +261,7 @@ export function TextField({
   value,
   onChange,
   error,
+  field,
   optional = false,
   autoComplete,
   inputMode,
@@ -262,6 +273,8 @@ export function TextField({
   value:    string
   onChange: (value: string) => void
   error?:   string
+  /** The `WizardErrors` key of this field — what the wizard looks for to focus it (FA-1.61). */
+  field?:   string
   optional?: boolean
   autoComplete?: string
   inputMode?: 'text' | 'email' | 'tel'
@@ -276,6 +289,7 @@ export function TextField({
     className: 'w-full rounded-lg border px-3 py-2.5 text-[16px]',
     style: { minHeight: 48, borderColor: error != null ? '#B23A1C' : BORDER, background: '#fff' },
     'aria-invalid': error != null,
+    'data-field': field,
   }
 
   return (

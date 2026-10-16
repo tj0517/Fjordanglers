@@ -8,6 +8,14 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { flushAfter, resetAfterQueue } from './after-queue'
+
+// FA-1.61 — `after()` only works inside a Next request scope; the stand-in queues the callback
+// and the test runs it with flushAfter() (see ./after-queue).
+vi.mock('next/server', async (orig) => ({
+  ...(await orig<typeof import('next/server')>()),
+  after: (await import('./after-queue')).afterMock,
+}))
 
 const mocks = vi.hoisted(() => ({
   createServiceClient: vi.fn(),
@@ -102,6 +110,7 @@ function expectNothingHappened() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  resetAfterQueue()
   mockEnv.AI_AUTO_REPLY_ENABLED = true
   mockEnv.RATE_LIMIT_SALT = 'test-salt'
 
@@ -195,6 +204,7 @@ describe('POST /api/inquiries — below the thresholds nothing changes', () => {
       expect((await post('same@example.com', `198.51.100.${10 + i}`)).status).toBe(201)
     }
     expect(mocks.createInquiry).toHaveBeenCalledTimes(8)
+    await flushAfter()
     expect(mocks.classifyInquiry).toHaveBeenCalledTimes(8)
     expect(mocks.autoSendReply).toHaveBeenCalledTimes(8)
   })
@@ -256,6 +266,7 @@ describe('POST /api/inquiries — limiter failure (O-29 a, fail-open)', () => {
 
     expect(res.status).toBe(201)
     expect(mocks.createInquiry).toHaveBeenCalledTimes(1)
+    await flushAfter()
     expect(mocks.autoSendReply).toHaveBeenCalledTimes(1)
     const logged = JSON.stringify(error.mock.calls)
     expect(logged).toContain('upstash unreachable')

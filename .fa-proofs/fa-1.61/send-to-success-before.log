@@ -1,0 +1,8 @@
+{"variant":"v1","run":1,"status":201,"click_to_response_ms":8763,"click_to_success_ms":8778}
+{"variant":"v1","run":2,"status":201,"click_to_response_ms":7013,"click_to_success_ms":7025}
+{"variant":"v1","run":3,"status":201,"click_to_response_ms":7881,"click_to_success_ms":7888}
+[before] v1: click→success ms min=7025 median=7888 max=8778 (n=3); Google requests aborted: 3
+{"variant":"v2","run":1,"status":201,"click_to_response_ms":12430,"click_to_success_ms":12447}
+{"variant":"v2","run":2,"status":201,"click_to_response_ms":9454,"click_to_success_ms":9471}
+{"variant":"v2","run":3,"status":201,"click_to_response_ms":10411,"click_to_success_ms":10429}
+[before] v2: click→success ms min=9471 median=10429 max=12447 (n=3); Google requests aborted: 3

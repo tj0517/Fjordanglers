@@ -7,6 +7,14 @@
  *   • FA: new inquiry notification (with dashboard link)
  *   • Angler: inquiry received confirmation
  *
+ * FA-1.61 — what the angler waits for is the save and the two e-mails (both awaited before
+ * the response, unchanged). The AI work — `classifyInquiry`, then `autoSendReply` — runs in
+ * `after()` from `next/server`: the response is sent first and the work continues on the
+ * same invocation. On Vercel `after()` is kept alive through `waitUntil`, which is exactly
+ * the mechanism that does not have the dropped-promise problem a bare un-awaited promise
+ * has. That work shares this route's `maxDuration`. It runs only when it would have run
+ * before: flag on, not a repeat, not suspicious — otherwise `after()` is not called at all.
+ *
  * Repeat (FA-1.42): when the same e-mail already has an inquiry from the last 24 h, the
  * new one is still saved and FA is still notified, but the angler gets no e-mail and the
  * AI pipeline (classify, auto-reply) does not run. The skip is an
@@ -38,7 +46,7 @@
  * Limits and fail-open rules: src/lib/rate-limit/inquiries.ts.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { z } from 'zod'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createInquiry } from '@/lib/inquiries/create'
@@ -277,8 +285,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // Await both emails before responding — on Vercel serverless, unawaited promises
-  // are silently dropped once the response is returned and the function freezes.
+  // Both emails are awaited before responding — a bare un-awaited promise is silently dropped
+  // on Vercel serverless once the response is returned and the function freezes. (The AI work
+  // below does not have that problem: it runs in `after()`, which Vercel keeps alive via
+  // `waitUntil`.)
   const baseUrl      = env.NEXT_PUBLIC_APP_URL
   const dashboardUrl = `${baseUrl}/admin/inquiries/${inquiry.id}`
 
@@ -318,24 +328,36 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   console.log(`[inquiries/POST] Created inquiry ${inquiry.id} (${parsed.data.trip_id ? `trip ${parsed.data.trip_id}` : `page ${parsed.data.experience_page_id}`})`)
 
   if (env.AI_AUTO_REPLY_ENABLED && !isRepeat && !isSuspicious) {
-    try {
-      await classifyInquiry({
-        inquiryId:      inquiry.id,
-        anglerName:     parsed.data.angler_name,
-        tripTitle,
-        message,
-        requestedDates,
-        partySize,
-      })
-    } catch (err) {
-      console.error('[inquiries/POST] Agent error:', err)
-      // never block the 201 response
+    const inquiryId = inquiry.id
+    const agentInput = {
+      inquiryId,
+      anglerName: parsed.data.angler_name,
+      tripTitle,
+      message,
+      requestedDates,
+      partySize,
     }
 
+    // FA-1.61 — after the response. One callback, sequential: classify first, then auto-send,
+    // each in its own try/catch so a throw in classify never prevents auto-send (as before).
+    // `after()` itself throws synchronously outside a request scope or when `waitUntil` is
+    // unavailable; the inquiry is already saved, so that is logged, never a 500.
     try {
-      await autoSendReply({ inquiryId: inquiry.id, counterpart: 'angler', channel: 'email' })
+      after(async () => {
+        try {
+          await classifyInquiry(agentInput)
+        } catch (err) {
+          console.error('[inquiries/POST] Agent error:', err)
+        }
+
+        try {
+          await autoSendReply({ inquiryId, counterpart: 'angler', channel: 'email' })
+        } catch (err) {
+          console.error('[inquiries/POST] Auto-send error:', err)
+        }
+      })
     } catch (err) {
-      console.error('[inquiries/POST] Auto-send error:', err)
+      console.error(`[inquiries/POST] Could not schedule the AI work for ${inquiryId}:`, err)
     }
   }
 

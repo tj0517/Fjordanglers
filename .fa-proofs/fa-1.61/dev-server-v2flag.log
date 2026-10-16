@@ -1,0 +1,63 @@
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.255.255.254:3000
+- Environments: .env.development.local, .env.local
+- Experiments (use with caution):
+  · clientTraceMetadata
+
+✓ Starting...
+✓ Ready in 2.1s
+TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ETIMEDOUT'
+  }
+}
+TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ETIMEDOUT'
+  }
+}
+TypeError: fetch failed
+    at ignore-listed frames {
+  [cause]: AggregateError: 
+      at ignore-listed frames {
+    code: 'ETIMEDOUT'
+  }
+}
+ GET /experiences/seed-backcountry-day-nz 200 in 7.0s (compile: 1875ms, proxy.ts: 251ms, render: 4.9s)
+ GET /experiences/seed-backcountry-day-nz 200 in 1199ms (compile: 47ms, proxy.ts: 7ms, render: 1145ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 843ms (compile: 48ms, proxy.ts: 5ms, render: 790ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 980ms (compile: 66ms, proxy.ts: 9ms, render: 904ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 725ms (compile: 54ms, proxy.ts: 7ms, render: 664ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 747ms (compile: 53ms, proxy.ts: 7ms, render: 686ms)
+ GET /experiences/seed-backcountry-day-nz 200 in 682ms (compile: 53ms, proxy.ts: 5ms, render: 624ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 574bd1dc-9878-4a2a-9046-384fb3f30ced (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 574bd1dc-9878-4a2a-9046-384fb3f30ced
+[fa161-timing] {"id":"574bd1dc-9878-4a2a-9046-384fb3f30ced","suspicious":false,"repeat":false,"ai":true,"validation_lookup":40,"brief_guide_lookup":7.4,"insert":26.4,"repeat_lookup_skip_event":7.2,"emails":3.2,"classify":1677,"autosend":8635.6,"total":10396.9}
+ POST /api/inquiries 201 in 12.4s (compile: 1958ms, proxy.ts: 6ms, render: 10.4s)
+ GET /experiences/seed-backcountry-day-nz 200 in 731ms (compile: 57ms, proxy.ts: 12ms, render: 661ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 1a25a2fe-e04e-4ccf-9b34-c2f077f5606f (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 1a25a2fe-e04e-4ccf-9b34-c2f077f5606f
+[fa161-timing] {"id":"1a25a2fe-e04e-4ccf-9b34-c2f077f5606f","suspicious":false,"repeat":false,"ai":true,"validation_lookup":8.5,"brief_guide_lookup":5.3,"insert":16.2,"repeat_lookup_skip_event":4.7,"emails":2,"classify":1277.5,"autosend":8067.2,"total":9381.4}
+ POST /api/inquiries 201 in 9.4s (compile: 4ms, proxy.ts: 6ms, render: 9.4s)
+ GET /experiences/seed-backcountry-day-nz 200 in 796ms (compile: 65ms, proxy.ts: 7ms, render: 725ms)
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedFaEmail to=t***@fjordanglers.com
+[email] RESEND_DEV_FAKE=1 — not sent: type=InquiryReceivedAnglerEmail to=f***@example.invalid
+[inquiries/POST] Created inquiry 86dc0f50-4f9f-4323-8060-e698f5da916a (page e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101)
+[inquiry-agent] classification — country: New Zealand, type: day_trip, priority: medium
+[inquiry-agent] classified inquiry 86dc0f50-4f9f-4323-8060-e698f5da916a
+[fa161-timing] {"id":"86dc0f50-4f9f-4323-8060-e698f5da916a","suspicious":false,"repeat":false,"ai":true,"validation_lookup":7.9,"brief_guide_lookup":6.2,"insert":20.6,"repeat_lookup_skip_event":6.3,"emails":1.7,"classify":1324.4,"autosend":8965,"total":10332.1}
+ POST /api/inquiries 201 in 10.4s (compile: 3ms, proxy.ts: 11ms, render: 10.3s)
+[@sentry/nextjs] DEPRECATION WARNING: disableLogger is deprecated and will be removed in a future version. Use webpack.treeshake.removeDebugLogging instead. (Not supported with Turbopack.)
+[?25h

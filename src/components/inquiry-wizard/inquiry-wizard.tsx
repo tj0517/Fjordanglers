@@ -29,6 +29,7 @@ import {
   type ReactNode,
 } from 'react'
 import { InquiryTrapField, TRAP_FIELD_NAME, elapsedSinceShown } from '@/components/inquiry/InquiryTrapField'
+import { scrollToField } from '@/components/inquiry/scroll-to-field'
 import { useExperienceFunnel } from '@/components/analytics/experience-funnel'
 import { trackSubmitLeadForm } from '@/lib/gtag'
 import { estimateLeadValue } from '@/lib/leadValue'
@@ -39,6 +40,7 @@ import { safeHttpUrl } from '@/lib/experience-v2-content'
 import {
   briefFromAnswers,
   clearAnswers,
+  firstInvalidField,
   initialAnswers,
   loadAnswers,
   saveAnswers,
@@ -151,6 +153,23 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
   const trapRef = useRef<HTMLInputElement>(null)
   const sending = useRef(false)
 
+  // FA-1.61 — a failed validation sends the angler to the first invalid question of the step
+  // (scroll + focus). It is a request, honoured in an effect, so the error text — which the
+  // group's `aria-describedby` points at — is already in the DOM when focus lands. `n` makes a
+  // second attempt on the same question a new request.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [focusRequest, setFocusRequest] = useState<{ field: keyof WizardAnswers; n: number } | null>(null)
+
+  const sendToFirstError = useCallback((target: WizardStep, errors: WizardErrors) => {
+    const field = firstInvalidField(target, errors)
+    if (field != null) setFocusRequest(previous => ({ field, n: (previous?.n ?? 0) + 1 }))
+  }, [])
+
+  useEffect(() => {
+    // Scoped to the overlay's own body: S14 renders step 1 inline too, with the same keys.
+    if (focusRequest != null) scrollToField(bodyRef.current, focusRequest.field)
+  }, [focusRequest])
+
   // sessionStorage only after mount — the server render must not depend on it.
   useEffect(() => {
     shownAt.current = performance.now()
@@ -221,7 +240,11 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
   const submit = useCallback(async () => {
     if (sending.current) return
     setAttempted(a => ({ ...a, 3: true }))
-    if (Object.keys(validateStep(3, answers, rules)).length > 0) return
+    const errors = validateStep(3, answers, rules)
+    if (Object.keys(errors).length > 0) {
+      sendToFirstError(3, errors)
+      return
+    }
 
     sending.current = true
     setSubmitState('sending')
@@ -283,11 +306,15 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
       setErrorMessage('We could not send that. Please try again, or write to us directly.')
       sending.current = false
     }
-  }, [answers, page.experiencePageId, page.country, page.experienceName, rules, funnel])
+  }, [answers, page.experiencePageId, page.country, page.experienceName, rules, funnel, sendToFirstError])
 
   const next = useCallback(() => {
     setAttempted(a => ({ ...a, [step]: true }))
-    if (Object.keys(validateStep(step, answers, rules)).length > 0) return
+    const errors = validateStep(step, answers, rules)
+    if (Object.keys(errors).length > 0) {
+      sendToFirstError(step, errors)
+      return
+    }
     if (step === 3) {
       void submit()
       return
@@ -295,7 +322,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
     const target = (step + 1) as WizardStep
     setStep(target)
     setIsOpen(true)
-  }, [step, answers, rules, submit])
+  }, [step, answers, rules, submit, sendToFirstError])
 
   const back = useCallback(() => {
     setStep(current => (current > 1 ? ((current - 1) as WizardStep) : current))
@@ -310,7 +337,7 @@ export function InquiryWizardProvider({ page, children }: { page: InquiryWizardP
     <WizardContext.Provider value={value}>
       {children}
       <InquiryTrapField inputRef={trapRef} />
-      <InquiryWizardOverlay />
+      <InquiryWizardOverlay bodyRef={bodyRef} />
     </WizardContext.Provider>
   )
 }
@@ -419,7 +446,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
   3: 'Where we send the offer',
 }
 
-function InquiryWizardOverlay() {
+function InquiryWizardOverlay({ bodyRef }: { bodyRef: React.RefObject<HTMLDivElement | null> }) {
   const { answers, errors, page, set, step, isOpen, close, next, back, submitState, errorMessage } = useInquiryWizard()
   const headingRef = useRef<HTMLHeadingElement>(null)
 
@@ -472,7 +499,7 @@ function InquiryWizardOverlay() {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7">
+        <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7">
           {done ? (
             <ThankYou testId="inquiry-thank-you" headingRef={headingRef} />
           ) : (

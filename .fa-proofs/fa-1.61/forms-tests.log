@@ -1,0 +1,17 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/home/tj/Fjordanglers[39m
+
+ [32m✓[39m src/components/inquiry/InquiryTrapField.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[32m 165[2mms[22m[39m
+ [32m✓[39m src/components/analytics/experience-funnel.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 442[2mms[22m[39m
+ [32m✓[39m src/components/inquiry/InquiryWidget.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1163[2mms[22m[39m
+     [33m[2m✓[22m[39m last name empty: scrolls to it, focuses it, marks it aria-invalid — and only it [33m 454[2mms[22m[39m
+[90mstderr[2m | src/components/inquiry-wizard/inquiry-wizard.test.tsx[2m > [22m[2mthe submit[2m > [22m[2msays it failed and does not pretend to have sent, when the server refuses
+[22m[39m[inquiry-wizard] submit failed: Invalid input
+
+ [32m✓[39m src/components/inquiry-wizard/inquiry-wizard.test.tsx [2m([22m[2m32 tests[22m[2m)[22m[33m 3380[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[32m55 passed[39m[22m[90m (55)[39m
+[2m   Start at [22m 16:51:02
+[2m   Duration [22m 4.97s[2m (transform 717ms, setup 166ms, import 1.69s, tests 5.15s, environment 3.21s)[22m
+
