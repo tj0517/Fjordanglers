@@ -34,13 +34,9 @@ import { LoadingOverlay } from '@/components/ui/loading-overlay'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 import { COUNTRIES } from '@/lib/countries'
+import { GUIDE_LANGUAGES } from '@/lib/languages'
 
 const FISH_OPTIONS = FISH_ALL
-
-const LANGUAGE_OPTIONS = [
-  'English', 'Norwegian', 'Swedish', 'Finnish', 'Danish', 'Icelandic',
-  'German', 'Polish', 'French', 'Dutch', 'Russian', 'Spanish',
-]
 
 const SPECIALTY_OPTIONS = [
   'Fly fishing', 'Family-friendly',
@@ -658,7 +654,7 @@ export default function ProfileEditForm({ defaults }: { defaults: ProfileDefault
               )}
             </Label>
             <div className="flex flex-wrap gap-2">
-              {LANGUAGE_OPTIONS.map(l => (
+              {GUIDE_LANGUAGES.map(l => (
                 <Pill key={l} label={l} active={langList.includes(l)} onClick={() => toggleLang(l)} />
               ))}
             </div>

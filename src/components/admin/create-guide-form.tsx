@@ -12,12 +12,8 @@ import { Check, ExternalLink, Info, Loader2, Plus } from 'lucide-react'
 
 import { COUNTRIES } from '@/lib/countries'
 import { FISH_ALL } from '@/lib/fish'
+import { GUIDE_LANGUAGES } from '@/lib/languages'
 import { LANDSCAPE_LIBRARY } from '@/lib/landscapes'
-
-const ALL_LANGUAGES = [
-  'English', 'Norwegian', 'Swedish', 'Finnish', 'Icelandic',
-  'Danish', 'German', 'Polish', 'French',
-]
 
 const ALL_FISH = [...FISH_ALL]
 
@@ -456,7 +452,7 @@ export default function CreateGuideForm({ defaultValues }: Props) {
 
         <p className="text-[#0A2E4D]/40 text-xs f-body mb-4">Languages the guide speaks</p>
         <div className="flex flex-wrap gap-2">
-          {ALL_LANGUAGES.map(lang => (
+          {GUIDE_LANGUAGES.map(lang => (
             <PillToggle
               key={lang}
               label={lang}

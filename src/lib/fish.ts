@@ -14,6 +14,7 @@ export const FISH_ALL = [
   'Whitefish',
   'Brook Trout',
   'Coho Salmon',
+  'Chinook Salmon',
   // ── Freshwater predators ───────────────────────────────────────────────
   'Pike',
   'Perch',
@@ -56,6 +57,7 @@ export const FISH_IMG: Record<string, string> = {
   'Whitefish':        '/fish_catalog/whitefish.png',
   'Brook Trout':      '/fish_catalog/char.png',     // a char, not a trout — closest is Arctic Char
   'Coho Salmon':      '/fish_catalog/salmon.png',
+  'Chinook Salmon':   '/fish_catalog/salmon.png',
   // Freshwater predators
   'Pike':             '/fish_catalog/pike.png',
   'Perch':            '/fish_catalog/perch.png',
