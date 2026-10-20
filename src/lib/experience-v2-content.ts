@@ -61,7 +61,7 @@ export function speciesNames(value: Json | null | undefined): string[] {
  * value becomes `url` (the only form that may become a link), anything else stays `text`
  * and is printed as plain text.
  */
-export type LicenseLink = {
+type LicenseLink = {
   label: string | null
   /** Already checked: an `http(s)` URL or null. */
   url:   string | null
