@@ -81,3 +81,7 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 
 ## Notatki z realizacji
 - 2026-10-20 tj: O-39 → (a) jedna kolumna `hero_facts jsonb`; nowe techniki dopisane do wspólnej listy `TECHNIQUES` (v1 też ją widzi).
+- 2026-10-20 tj: gear included → (b) trzy stany — Automatic (z Includes) / Included / Not included. Automatic = brak wartości w jsonb; `gear_included` zostaje booleanem w kształcie.
+- 2026-10-20 tj: lokalna baza → (a) `supabase db reset` teraz; żadna inna sesja nie używa stacku.
+- 2026-10-20 tj: miejsce w adminie — NIE karta Content. Osobna sekcja „Hero facts” w zakładce v2: własna karta z własnym zapisem, jak pozostałe sekcje; te same klocki sekcji/pól i ten sam wzorzec zapisu, bez dokładania pól do „Save content”.
+- 2026-10-20 tj: domyślne przyjęte — tekst pokazany dokładnie jak wpisany (bez prefiksu „season ”), długość dnia małymi literami („full day” / „half day” / „multi-day”), jedno `group_size` zasila chip i kartę, „Start and pick-up” zastępuje kartę meeting point.
