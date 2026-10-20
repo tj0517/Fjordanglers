@@ -51,7 +51,7 @@ pokazać „Dry fly, Nymphing, Wade fishing” zamiast samego „Fly fishing”.
 
 ## Gotowe, gdy
 - [ ] `supabase db reset` lokalnie zielony; migracja tylko dodaje kolumnę (`git diff` pliku migracji = 1 ALTER + komentarz)
-- [ ] Testy: parser `hero_facts` (pełny, częściowy, pusty, śmieci → null), chipy z nadpisaniem i bez (po jednym chipie), S3 z `start_pickup` i `group_size` tekstowym; `pnpm test run -- hero-facts offer-chips offer-at-a-glance` zielone
+- [ ] Testy: parser `hero_facts` (pełny, częściowy, pusty, śmieci → null), chipy z nadpisaniem i bez (po jednym chipie), S3 z `start_pickup` i `group_size` tekstowym; `pnpm test run hero-facts offer-chips offer-at-a-glance` zielone
 - [ ] Strona pilotażowa na lokalnym stacku bez `hero_facts` renderuje identyczne chipy co na `main` (zrzut przed/po w `docs/screenshots/FA-1.63/`)
 - [ ] Po wpisaniu w adminie: „Tierra del Fuego”, multi-day, „2–4 anglers”, „Nov–Apr”, gear included — hero pokazuje dokładnie te 5 chipów (zrzut); zod odrzuca `day_length: 'week'` (pokazany na czerwono)
 - [ ] Na stronie z technikami `['Fly fishing','Dry fly','Nymphing','Wade fishing']` S3 pokazuje wszystkie cztery (zrzut)
