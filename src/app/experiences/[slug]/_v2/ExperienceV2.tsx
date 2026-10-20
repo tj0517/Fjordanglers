@@ -36,7 +36,6 @@ import OfferBody from '@/components/experience-v2/offer-body'
 import OfferStory from '@/components/experience-v2/offer-story'
 import OfferReviews from '@/components/experience-v2/offer-reviews'
 import OfferLogistics from '@/components/experience-v2/offer-logistics'
-import OfferBring from '@/components/experience-v2/offer-bring'
 import OfferFaq from '@/components/experience-v2/offer-faq'
 import OfferInquiry from '@/components/experience-v2/offer-inquiry'
 import OfferMoreTrips from '@/components/experience-v2/offer-more-trips'
@@ -322,7 +321,8 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
             </aside>
           </div>
 
-          {/* ── S10–S14 (FA-1.55). #recenzje also ends the sticky column above. ── */}
+          {/* ── S10–S14 (FA-1.55) — S12 "What to bring" sits in OfferBody since FA-1.62.
+                 #recenzje also ends the sticky column above. ── */}
           <OfferReviews
             reviews={page.reviews}
             googleRating={primary?.googleRating ?? null}
@@ -339,7 +339,6 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
             seasonPeriods={page.seasonPeriods}
             region={page.region}
           />
-          <OfferBring whatToBring={page.whatToBring} />
           <OfferFaq faq={page.faq} />
           <OfferInquiry />
           <OfferMoreTrips related={related} country={page.country} region={page.region} />

@@ -19,7 +19,20 @@ const sections = (container: HTMLElement) =>
 describe('OfferBody — order and content', () => {
   it('renders S3–S9 in reading order for a fixed page: facts, guide, day, scope, money', () => {
     const { container } = render(<OfferBody page={fixedPage()} />)
-    expect(sections(container)).toEqual(['S3', 'S7', 'S6', 'S4', 'S5', 'S8', 'S9'])
+    expect(sections(container)).toEqual(['S3', 'S7', 'S6', 'S12', 'S4', 'S8', 'S9'])
+  })
+
+  it('FA-1.62: "What to bring" (S12) comes right before "Included" (S4)', () => {
+    const order = sections(render(<OfferBody page={fixedPage()} />).container)
+    expect(order.indexOf('S12') + 1).toBe(order.indexOf('S4'))
+  })
+
+  it('FA-1.62: S5 "Who it\'s for" is not rendered, even with both lists filled', () => {
+    const page = fixedPage({ suitedFor: ['you cast 12–15 m'], notSuitedFor: ['a beginner'], expectationsText: 'Hard days.' })
+    const { container } = render(<OfferBody page={page} />)
+    expect(container.querySelector('[data-section="S5"]')).toBeNull()
+    expect(container.textContent).not.toContain("Who it's for")
+    expect(container.textContent).not.toContain('you cast 12–15 m')
   })
 
   it('slots the story right after S3', () => {
@@ -30,7 +43,7 @@ describe('OfferBody — order and content', () => {
   it('custom: S6 shows the archetypes and S9 the stored range, with no calculator table', () => {
     const { container } = render(<OfferBody page={customPage()} />)
 
-    expect(sections(container)).toEqual(['S3', 'S7', 'S6', 'S4', 'S5', 'S8', 'S9'])
+    expect(sections(container)).toEqual(['S3', 'S7', 'S6', 'S12', 'S4', 'S8', 'S9'])
 
     const s6 = container.querySelector('[data-section="S6"]')!
     expect(s6.querySelectorAll('[role="tab"]')).toHaveLength(2)
@@ -70,37 +83,36 @@ describe('OfferBody — order and content', () => {
     expect(container.querySelector('[data-section="S6"]')!.textContent).not.toMatch(/drive|on foot|wading/)
   })
 
-  it('always says the plan is a sample and the weather decides', () => {
+  it('FA-1.62: always ends the day with the sample-itinerary note', () => {
+    const note = 'Please note: This is a sample itinerary. The exact schedule will be customized to suit '
+      + 'your preferences, the weather, and the state of the water.'
     for (const page of [fixedPage(), customPage()]) {
       const { container, unmount } = render(<OfferBody page={page} />)
-      expect(container.querySelector('[data-section="S6"]')!.textContent).toMatch(/sample plan.*weather/)
+      expect(container.querySelector('[data-section="S6"]')!.textContent).toContain(note)
       unmount()
     }
   })
 })
 
 describe('OfferBody — empty field means no section', () => {
-  it('a page without suited_for / not_suited_for and day_schedule has no S5 and no S6', () => {
-    const page = fixedPage({ suitedFor: [], notSuitedFor: [], daySchedule: [] })
+  it('a page without day_schedule has no S6', () => {
+    const page = fixedPage({ daySchedule: [] })
     const { container } = render(<OfferBody page={page} />)
 
-    expect(container.querySelector('[data-section="S5"]')).toBeNull()
     expect(container.querySelector('[data-section="S6"]')).toBeNull()
-    expect(sections(container)).toEqual(['S3', 'S7', 'S4', 'S8', 'S9'])
-    // no orphan headings either
+    expect(sections(container)).toEqual(['S3', 'S7', 'S12', 'S4', 'S8', 'S9'])
+    // no orphan heading either
     expect(container.textContent).not.toContain('The day')
-    expect(container.textContent).not.toContain("Who it's for")
+  })
+
+  it('a page without what_to_bring has no S12', () => {
+    const { container } = render(<OfferBody page={fixedPage({ whatToBring: [] })} />)
+    expect(sections(container)).toEqual(['S3', 'S7', 'S6', 'S4', 'S8', 'S9'])
   })
 
   it('a custom page with no archetypes has no S6', () => {
     const { container } = render(<OfferBody page={customPage({ options: [] })} />)
     expect(container.querySelector('[data-section="S6"]')).toBeNull()
-  })
-
-  it('an expectations quote alone does not open S5', () => {
-    const page = fixedPage({ suitedFor: [], notSuitedFor: [], expectationsText: 'Only a quote.' })
-    const { container } = render(<OfferBody page={page} />)
-    expect(container.querySelector('[data-section="S5"]')).toBeNull()
   })
 
   it('S4 is dropped when nothing is included, excluded, licensed, tipped or added on', () => {
@@ -187,7 +199,7 @@ describe('S4 — licence link', () => {
 
   it('renders admin text as text, never as markup', () => {
     const html = '<img src=x onerror=alert(1)>'
-    const { container } = render(<OfferBody page={fixedPage({ tipGuidanceText: html, suitedFor: [html] })} />)
+    const { container } = render(<OfferBody page={fixedPage({ tipGuidanceText: html, whatToBring: [html] })} />)
     expect(container.querySelector('img[src="x"]')).toBeNull()
     expect(container.textContent).toContain(html)
   })
@@ -199,13 +211,22 @@ describe('S8 — how booking works', () => {
     return [...container.querySelectorAll('[data-section="S8"] [data-step]')].map(el => el.textContent ?? '')
   }
 
-  it('has four steps wired to the offer ETA, the fee and the primary guide', () => {
-    const s = steps(fixedPage({ guides: [guide({ balancePaymentMethod: 'stripe' })] }))
+  it('has four steps wired to the offer ETA and the fee', () => {
+    const s = steps(fixedPage())
     expect(s).toHaveLength(4)
     expect(s[1]).toContain('within 48–72 h')
     expect(s[2]).toContain('20%')
     expect(s[2]).toContain('72 h')
-    expect(s[3]).toContain('online by card')
+  })
+
+  it.each([
+    ['a card (stripe) guide', [guide({ balancePaymentMethod: 'stripe' })]],
+    ['a cash guide',          [guide({ balancePaymentMethod: 'cash' })]],
+    ['no guide (null)',       []],
+  ])('FA-1.62: step 4 is "Remaining balance — paid directly to your guide" for %s', (_label, guides) => {
+    const s = steps(fixedPage({ guides }))
+    expect(s[3]).toBe('04Remaining balanceThe balance is paid directly to your guide.')
+    cleanup()
   })
 
   it('a missing ETA drops the clause, not the step', () => {
@@ -214,10 +235,9 @@ describe('S8 — how booking works', () => {
     expect(s[1]).not.toContain('—')
   })
 
-  it('reads a cash guide as cash and the fee as the page stores it', () => {
-    const s = steps(fixedPage({ feePct: 0.125, guides: [guide({ balancePaymentMethod: 'cash' })] }))
+  it('reads the fee as the page stores it', () => {
+    const s = steps(fixedPage({ feePct: 0.125 }))
     expect(s[2]).toContain('12.5%')
-    expect(s[3]).toContain('in cash')
   })
 
   it('is the anchor the top bar links to', () => {
@@ -291,13 +311,14 @@ describe('S9 — price and deposit', () => {
 })
 
 describe('mobile accordions', () => {
-  it('S4 and S8 start collapsed, S5 / S6 / S7 / S9 start open, S3 has no accordion', () => {
+  it('S12, S4 and S8 start collapsed, S6 / S7 / S9 start open, S3 has no accordion', () => {
     const { container } = render(<OfferBody page={fixedPage()} />)
     const open = (s: string) => container.querySelector(`[data-section="${s}"] [data-open]`)?.getAttribute('data-open')
 
+    expect(open('S12')).toBe('false')
     expect(open('S4')).toBe('false')
     expect(open('S8')).toBe('false')
-    for (const s of ['S5', 'S6', 'S7', 'S9']) expect(open(s)).toBe('true')
+    for (const s of ['S6', 'S7', 'S9']) expect(open(s)).toBe('true')
     expect(container.querySelector('[data-section="S3"] button')).toBeNull()
   })
 

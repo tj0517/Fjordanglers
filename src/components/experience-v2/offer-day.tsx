@@ -41,7 +41,7 @@ export type OfferDayProps = {
 }
 
 const SAMPLE_PLAN_NOTE =
-  'This is a sample plan — your guide picks the water to suit the weather and the state of the river.'
+  'Please note: This is a sample itinerary. The exact schedule will be customized to suit your preferences, the weather, and the state of the water.'
 
 export default function OfferDay({ offerMode, daySchedule, archetypes, currency }: OfferDayProps) {
   const [selectedId, setSelectedId] = useState<string | null>(archetypes[0]?.id ?? null)
