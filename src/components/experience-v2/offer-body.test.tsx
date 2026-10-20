@@ -163,6 +163,22 @@ describe('S7 — guides', () => {
     expect(container.querySelector('[data-testid="guide-card"]')!.textContent).toContain('Speaks English, Icelandic')
   })
 
+  it('FA-1.62: a guide with a slug is a link to /guides/<slug>', () => {
+    const { container } = render(<OfferBody page={fixedPage({ guides: [guide({ slug: 'alex-rivers' })] })} />)
+    const card = container.querySelector('[data-testid="guide-card"]')!
+    expect(card.tagName).toBe('A')
+    expect(card.getAttribute('href')).toBe('/guides/alex-rivers')
+    expect(card.textContent).toContain('Alex Rivers')
+  })
+
+  it('FA-1.62: a guide without a slug is the same card, not a link', () => {
+    const { container } = render(<OfferBody page={fixedPage({ guides: [guide({ slug: null })] })} />)
+    const card = container.querySelector('[data-testid="guide-card"]')!
+    expect(card.tagName).toBe('DIV')
+    expect(container.querySelector('[data-section="S7"] a')).toBeNull()
+    expect(card.textContent).toContain('Alex Rivers')
+  })
+
   it('shortens a long bio on a word boundary', () => {
     const bio = 'word '.repeat(200)
     const { container } = render(<OfferBody page={fixedPage({ guides: [guide({ bio })] })} />)
