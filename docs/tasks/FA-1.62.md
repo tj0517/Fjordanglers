@@ -2,13 +2,14 @@
 id: FA-1.62
 title: Strona v2 — poprawki z przeglądu Figmy (copy, kolejność, linki, listy, zdjęcia ryb, licencja, kalendarz)
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: fix/v2-figma-review
+pr: TBD
 depends_on: []
 blocked_by_questions: []
 touches_db: false
@@ -97,3 +98,13 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
   - D3 — sygnet zamiast pomarańczowej kropli wszędzie, gdzie rysuje `LocationMap` — także na `/offers/[token]`.
   - D4 — lokalny stack FA startowany obok działających stacków innych projektów (Seaclouds, hydra-arms); `storage-api` włączony (upload zdjęć w adminie).
   - Zawężenie kryterium zod (z promptu): czerwony dowód zod tylko dla bloków treści; galeria strony i zdjęcia ryb nie mają dziś schematu po stronie serwera — zapisane w deferred.
+- 2026-10-20 odczyt stanu przed zmianami (skąd dziś bierze się każdy zmieniany element):
+  - Krok 4: `offer-how-it-works.tsx` — tytuł „You pay the balance to the guide”, tekst z `balanceText(method)` (3 warianty: stripe / cash / brak) z `primary.balancePaymentMethod` ← `guides.default_balance_payment_method` (`queries.ts`).
+  - Notatka dnia: `offer-day.tsx` `SAMPLE_PLAN_NOTE` („This is a sample plan — your guide picks the water…”).
+  - Kolejność: `offer-body.tsx` S3 · story · S7 · S6 · S4 · S5 · S8 · S9; `OfferBring` (S12) renderowany w `_v2/ExperienceV2.tsx` między S11 a S13.
+  - Limity zdjęć: `ExperiencePageForm.tsx` galeria `max={12}`, content photos `max={12}`, ryba `max={6}` (+ etykieta „up to 6”), Views `max={6}` (inne pole — bez zmian); `CONTENT_BLOCK_MAX_PHOTOS = 12` w `v2-editor.ts` (zod). Galeria i ryby nie mają schematu po stronie serwera.
+  - Parser ryb: `parseSpeciesDetails` czytał tylko `name`, `description`, `image_url`; `image_urls` i `season_months` z `species_details` (zapisywane przez admina od dawna) były ignorowane; opis cięty do 150 znaków (`SPECIES_MAX_CHARS` w `offer-story.tsx`).
+  - Licencja: parser `parseLicenseInfo` → `buyUrl` / `buyText` z jednego `buy_url`; render w `offer-included.tsx` jednym linkiem „how to buy it ›”; zod `licenseInfoSchema.buy_url`; admin — jedno pole „Where to buy (link)” w `experience-v2-editor/ContentSection.tsx`; `buyUrl` szedł też do formularza (`licenseUrl`).
+  - Języki: 3 listy — admin create/edit po 9, profil przewodnika 12 (decyzja D1).
+  - Pinezka: `LocationMap.tsx` — pomarańczowa kropla (`orangeMarker`), używana na v2 (S11) i na `/offers/[token]`; sygnet w `pinIcon()` w `src/app/trips/exp-page-map-view.tsx`.
+- 2026-10-20 tj: po restarcie WSL z braku pamięci (3 stacki Supabase + 2× `next dev`) — opcja C: PR otwarty bez zrzutów; zrzuty (strona pilotażowa, admin 13+/31 zdjęć, `/trips` przed/po) i `curl` 200 do zrobienia, gdy będzie wolna pamięć. Punkty z Figmy NIE są jeszcze odhaczone zrzutami.
