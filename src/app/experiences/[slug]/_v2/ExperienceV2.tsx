@@ -36,16 +36,15 @@ import OfferBody from '@/components/experience-v2/offer-body'
 import OfferStory from '@/components/experience-v2/offer-story'
 import OfferReviews from '@/components/experience-v2/offer-reviews'
 import OfferLogistics from '@/components/experience-v2/offer-logistics'
-import OfferBring from '@/components/experience-v2/offer-bring'
 import OfferFaq from '@/components/experience-v2/offer-faq'
 import OfferInquiry from '@/components/experience-v2/offer-inquiry'
 import OfferMoreTrips from '@/components/experience-v2/offer-more-trips'
 import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
 import { ExperienceFunnelProvider } from '@/components/analytics/experience-funnel'
 import { fromPrice } from '@/lib/pricing/experience-price'
+// The inquiry section of S14. The CTAs keep the href even though they also open the wizard.
+import { INQUIRY_ANCHOR } from '@/components/experience-v2/inquiry-anchor'
 
-/** The inquiry section of S14. The CTAs keep the href even though they also open the wizard. */
-const INQUIRY_ANCHOR = '#zapytanie'
 
 /**
  * The sections whose view is counted in the GA4 funnel (FA-1.60), by the wireframe's own
@@ -54,6 +53,8 @@ const INQUIRY_ANCHOR = '#zapytanie'
 const FUNNEL_SECTIONS_V2 = {
   pricing: '[data-section="S9"]',
   faq:     '[data-section="S13"]',
+  // Stopped 2026-10-20 (FA-1.62, tj): S5 is no longer rendered, so `section_view:fit` reads 0
+  // from then on — not a drop in interest. Kept so the step comes back with S5.
   fit:     '[data-section="S5"]',
 }
 
@@ -111,7 +112,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
     experienceName:   page.experienceName,
     country:          page.country,
     responseSlaHours: page.responseSlaHours,
-    licenseUrl:       page.license?.buyUrl ?? null,
+    licenseUrl:       page.license?.links.find(link => link.url != null)?.url ?? null,
     offerMode:        page.offerMode,
     currency:         page.currency,
     fromTotalCents:   page.offerMode === 'fixed'
@@ -322,7 +323,8 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
             </aside>
           </div>
 
-          {/* ── S10–S14 (FA-1.55). #recenzje also ends the sticky column above. ── */}
+          {/* ── S10–S14 (FA-1.55) — S12 "What to bring" sits in OfferBody since FA-1.62.
+                 #recenzje also ends the sticky column above. ── */}
           <OfferReviews
             reviews={page.reviews}
             googleRating={primary?.googleRating ?? null}
@@ -339,7 +341,6 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
             seasonPeriods={page.seasonPeriods}
             region={page.region}
           />
-          <OfferBring whatToBring={page.whatToBring} />
           <OfferFaq faq={page.faq} />
           <OfferInquiry />
           <OfferMoreTrips related={related} country={page.country} region={page.region} />

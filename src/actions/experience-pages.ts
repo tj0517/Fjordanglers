@@ -59,6 +59,8 @@ export interface SpeciesDetailItem {
   image_urls?:   string[]
   season_months: number[]
   peak_months:   number[]
+  /** "Average size: …" on the v2 species card (FA-1.62); absent or empty = not shown. */
+  avg_size_text?: string
 }
 
 export interface SpecialAttraction {

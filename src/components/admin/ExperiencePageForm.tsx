@@ -64,6 +64,13 @@ const TECHNIQUES      = [
 ]
 const MONTHS          = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const MONTHS_SHORT    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+/**
+ * The photo limit of the page gallery, content photos and each species (FA-1.62, tj
+ * 2026-10-20: 12 / 12 / 6 → 30). Enforced in this form only — neither column has a
+ * server-side schema yet (docs/deferred-tasks.md, FA-1.62). Content blocks have their own
+ * limit, `CONTENT_BLOCK_MAX_PHOTOS`, which the server checks.
+ */
+const PHOTO_FIELD_MAX = 30
 const STATUS_OPTIONS  = [
   { v: 'draft',    l: 'Draft'    },
   { v: 'active',   l: 'Active'   },
@@ -78,6 +85,7 @@ interface SpeciesDetailRecord {
   image_urls:    string[]
   season_months: number[]
   peak_months:   number[]
+  avg_size_text: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -344,9 +352,9 @@ function SpeciesDetailEditor({
           </div>
 
           <MultiImageUpload
-            label="Photos (up to 6 — first shown beside description, rest in a row below)"
+            label={`Photos (up to ${PHOTO_FIELD_MAX} — first is the cover; 2 or more open as a gallery on the v2 page)`}
             initial={(detail.image_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))}
-            max={6}
+            max={PHOTO_FIELD_MAX}
             onChange={(imgs) => onChange({
               ...detail,
               image_urls: imgs.map(g => g.url),
@@ -355,6 +363,19 @@ function SpeciesDetailEditor({
             pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
             guideId={guideId}
           />
+
+          <div>
+            <label className={lbl}>Average size <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(optional — shown as “Average size: …” on the v2 page)</span></label>
+            <input
+              type="text"
+              value={detail.avg_size_text}
+              onChange={e => onChange({ ...detail, avg_size_text: e.target.value })}
+              placeholder="e.g. 2–4 kg, fish over 5 kg every season"
+              maxLength={120}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"
+              style={iStyle}
+            />
+          </div>
 
           <div>
             <label className={lbl}>Season for this species</label>
@@ -1136,6 +1157,7 @@ export default function ExperiencePageForm({
         image_urls:    item.image_urls?.length ? item.image_urls : (item.image_url ? [item.image_url] : []),
         season_months: item.season_months,
         peak_months:   item.peak_months,
+        avg_size_text: item.avg_size_text ?? '',
       }
     }
     return rec
@@ -1252,6 +1274,8 @@ export default function ExperiencePageForm({
       image_urls:    speciesDetails[name]?.image_urls    ?? [],
       season_months: speciesDetails[name]?.season_months ?? [],
       peak_months:   speciesDetails[name]?.peak_months   ?? [],
+      // Empty is not stored (undefined drops out of the JSON): no key, no line on the v2 card.
+      avg_size_text: speciesDetails[name]?.avg_size_text.trim() || undefined,
     }))
 
     const payload: ExperiencePagePayload = {
@@ -1621,7 +1645,7 @@ export default function ExperiencePageForm({
       <MultiImageUpload
         label="Gallery images"
         initial={galleryImages}
-        max={12}
+        max={PHOTO_FIELD_MAX}
         onChange={setGalleryImages}
         pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
         guideId={prefill?.guide_id ?? undefined}
@@ -1634,7 +1658,7 @@ export default function ExperiencePageForm({
         <MultiImageUpload
           label="Content photos"
           initial={contentPhotoImages}
-          max={12}
+          max={PHOTO_FIELD_MAX}
           onChange={setContentPhotoImages}
           pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
           guideId={prefill?.guide_id ?? undefined}
@@ -1721,7 +1745,7 @@ export default function ExperiencePageForm({
             <SpeciesDetailEditor
               key={name}
               name={name}
-              detail={speciesDetails[name] ?? { description: '', image_url: '', image_urls: [], season_months: [], peak_months: [] }}
+              detail={speciesDetails[name] ?? { description: '', image_url: '', image_urls: [], season_months: [], peak_months: [], avg_size_text: '' }}
               onChange={d => updateSpeciesDetail(name, d)}
               guidePhotos={guidePhotos}
               guideId={prefill?.guide_id}

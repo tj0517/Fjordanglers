@@ -8,7 +8,8 @@
  *    Clicking a photo toggles it in/out of the selection. No duplicate uploads.
  *  - "Upload New" tab: multi-file select, optional crop modal per file.
  *  - guideId prop: new uploads land in {guideId}/{uuid}.ext for organised storage.
- *  - Up to `max` photos total, first = cover.
+ *  - Up to `max` photos total, first = cover. Files past the limit are not added, and a red
+ *    line says how many were left out (FA-1.62) — until then they were dropped silently.
  *  - Per-photo progress while uploading, remove button on thumbnails.
  */
 
@@ -109,6 +110,8 @@ export default function MultiImageUpload({
   )
 
   const inputRef = useRef<HTMLInputElement>(null)
+  // How many files of the last pick were left out because the field was full.
+  const [rejected, setRejected] = useState(0)
 
   const totalCount = committed.length + pending.length
   const canAdd     = totalCount < max
@@ -184,6 +187,7 @@ export default function MultiImageUpload({
   const handleFiles = useCallback((files: FileList) => {
     const slotsLeft = max - committed.length - pending.length
     const toProcess = Array.from(files).slice(0, Math.max(0, slotsLeft))
+    setRejected(files.length - toProcess.length)
     if (toProcess.length === 0) return
 
     if (cropAspect != null) {
@@ -199,6 +203,7 @@ export default function MultiImageUpload({
   }
 
   const removeImage = (idx: number) => {
+    setRejected(0)
     const updated = committed
       .filter((_, i) => i !== idx)
       .map((img, i) => ({ ...img, is_cover: i === 0, sort_order: i }))
@@ -490,6 +495,12 @@ export default function MultiImageUpload({
         onChange={handleChange}
         className="hidden"
       />
+
+      {rejected > 0 && (
+        <p role="alert" data-testid="photo-limit-rejected" className="mt-2 text-[11px] font-semibold f-body" style={{ color: '#DC2626' }}>
+          {rejected} photo{rejected !== 1 ? 's' : ''} not added — this field takes at most {max} photos.
+        </p>
+      )}
 
       {/* Helper text */}
       {committed.length > 0 ? (

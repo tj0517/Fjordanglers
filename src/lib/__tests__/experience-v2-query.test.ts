@@ -167,8 +167,7 @@ describe('getExperienceV2 — content for S3–S9', () => {
 
   it('a licence link that is not http(s) comes back as text, not as a URL', async () => {
     const license = (await getExperienceV2('seed-nz'))?.license
-    expect(license?.buyUrl).toBeNull()
-    expect(license?.buyText).toBe('javascript:alert(1)')
+    expect(license?.links).toEqual([{ label: null, url: null, text: 'javascript:alert(1)' }])
   })
 
   it('reads the itinerary of an archetype and ignores one on any other kind', async () => {

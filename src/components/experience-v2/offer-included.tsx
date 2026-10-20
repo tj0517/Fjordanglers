@@ -1,8 +1,9 @@
 /**
  * S4 "Included / Not included" (FA-1.54).
  *
- * "Not included" is where the surprises live, so it carries the licence as its own row (a
- * link, and the words "you buy it yourself online"), the tip, and the priced add-ons. A
+ * "Not included" is where the surprises live, so it carries the licence as its own row (the
+ * words "you buy it yourself online" and one line per link — FA-1.62), the tip, and the
+ * priced add-ons. A
  * column with nothing in it is not drawn, and with both empty the section is not either.
  */
 
@@ -86,15 +87,21 @@ function LicenceRow({ license }: { license: LicenseInfo }) {
     <li>
       <b>Fishing licence</b> — you buy it yourself online
       {license.priceText != null && <> ({license.priceText})</>}
-      {license.buyText != null && <> · {license.buyText}</>}
-      {license.buyUrl != null && (
-        <>
-          {' · '}
-          {/* `buyUrl` has already been through safeHttpUrl: http(s) only. */}
-          <a href={license.buyUrl} target="_blank" rel="noopener noreferrer" className="underline">
-            how to buy it ›
-          </a>
-        </>
+      {license.links.length > 0 && (
+        <ul className="mt-1 space-y-0.5" data-testid="licence-links">
+          {license.links.map((link, i) => (
+            <li key={`${i}-${link.url ?? link.text ?? ''}`}>
+              {link.url != null ? (
+                // `url` has already been through safeHttpUrl: http(s) only.
+                <a href={link.url} target="_blank" rel="noopener noreferrer" className="underline">
+                  {link.label ?? 'how to buy it'} ›
+                </a>
+              ) : (
+                <>{link.label != null && <>{link.label}: </>}{link.text}</>
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </li>
   )

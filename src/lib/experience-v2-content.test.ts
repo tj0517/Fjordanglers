@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   safeHttpUrl, speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary, languageNames,
-  parseSeasonPeriods, parseContentBlocks,
+  parseSeasonPeriods, parseContentBlocks, parseSpeciesDetails,
 } from './experience-v2-content'
 import type { Json } from '@/lib/supabase/database.types'
 
@@ -25,15 +25,46 @@ describe('safeHttpUrl', () => {
 })
 
 describe('parseLicenseInfo', () => {
-  it('reads the documented shape', () => {
+  it('reads a legacy row (one buy_url) as a licence with that one link, unlabelled', () => {
     expect(parseLicenseInfo({ required: true, buy_url: 'https://x.test/l', price_text: 'NZ$30', steps: ['a', 'b'] }))
-      .toEqual({ required: true, buyUrl: 'https://x.test/l', buyText: null, priceText: 'NZ$30', steps: ['a', 'b'] })
+      .toEqual({ required: true, links: [{ label: null, url: 'https://x.test/l', text: null }], priceText: 'NZ$30', steps: ['a', 'b'] })
+  })
+
+  it('FA-1.62: reads links[] in stored order, label and url each', () => {
+    const info = parseLicenseInfo({
+      required: true,
+      links: [{ label: 'Fish & Game day licence', url: 'https://fishandgame.example/day' }, { label: null, url: 'https://x.test/season' }],
+      steps: [],
+    })
+    expect(info?.links).toEqual([
+      { label: 'Fish & Game day licence', url: 'https://fishandgame.example/day', text: null },
+      { label: null, url: 'https://x.test/season', text: null },
+    ])
+  })
+
+  it('FA-1.62: a legacy buy_url next to links[] is the first link — and not twice when links[] already has it', () => {
+    const links = [{ label: 'Season', url: 'https://x.test/season' }]
+    expect(parseLicenseInfo({ required: true, buy_url: 'https://x.test/day', links })?.links.map(l => l.url))
+      .toEqual(['https://x.test/day', 'https://x.test/season'])
+    expect(parseLicenseInfo({ required: true, buy_url: 'https://x.test/season', links })?.links.map(l => l.url))
+      .toEqual(['https://x.test/season'])
+  })
+
+  it('FA-1.62: a non-http link value is kept as text, never as a URL — javascript: included', () => {
+    const info = parseLicenseInfo({ required: true, links: [{ label: 'x', url: 'javascript:alert(1)' }, { label: 'Office', url: 'Kiosk at the harbour' }] })
+    expect(info?.links).toEqual([
+      { label: 'x', url: null, text: 'javascript:alert(1)' },
+      { label: 'Office', url: null, text: 'Kiosk at the harbour' },
+    ])
   })
 
   it('keeps a non-http buy_url as text, never as a URL', () => {
     const info = parseLicenseInfo({ required: true, buy_url: 'javascript:alert(1)' })
-    expect(info?.buyUrl).toBeNull()
-    expect(info?.buyText).toBe('javascript:alert(1)')
+    expect(info?.links).toEqual([{ label: null, url: null, text: 'javascript:alert(1)' }])
+  })
+
+  it('drops a link entry without a url and anything that is not an object', () => {
+    expect(parseLicenseInfo({ required: true, links: [{ label: 'no url' }, 'https://x.test', null, { url: '  ' }] })?.links).toEqual([])
   })
 
   it('is null for null, a non-object and an object that says nothing', () => {
@@ -45,6 +76,44 @@ describe('parseLicenseInfo', () => {
 
   it('drops non-string steps instead of throwing', () => {
     expect(parseLicenseInfo({ steps: ['ok', 3, null, '  '] })?.steps).toEqual(['ok'])
+  })
+})
+
+describe('parseSpeciesDetails (FA-1.62)', () => {
+  it('image_urls is the gallery, in order, and wins over image_url', () => {
+    const [species] = parseSpeciesDetails([{ name: 'Brown Trout', image_url: '/old.jpg', image_urls: ['https://x.example/1.jpg', '/2.jpg'] }])
+    expect(species?.imageUrls).toEqual(['https://x.example/1.jpg', '/2.jpg'])
+  })
+
+  it('a legacy image_url alone is a gallery of one', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', image_url: '/only.jpg' }])[0]?.imageUrls).toEqual(['/only.jpg'])
+  })
+
+  it('no photo is an empty gallery; an unsafe photo URL is dropped', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout' }])[0]?.imageUrls).toEqual([])
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', image_urls: ['javascript:alert(1)', '', '/ok.jpg'] }])[0]?.imageUrls).toEqual(['/ok.jpg'])
+  })
+
+  it('reads season_months, keeping only whole months 1–12 once each', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', season_months: [10, 11, 12, 1, 13, 0, 2.5, '3', 11] }])[0]?.seasonMonths)
+      .toEqual([10, 11, 12, 1])
+    expect(parseSpeciesDetails([{ name: 'Brown Trout' }])[0]?.seasonMonths).toEqual([])
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', season_months: 'Oct' }])[0]?.seasonMonths).toEqual([])
+  })
+
+  it('reads avg_size_text, trimmed; absent or blank is null', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', avg_size_text: ' 2–4 kg ' }])[0]?.avgSizeText).toBe('2–4 kg')
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', avg_size_text: '  ' }])[0]?.avgSizeText).toBeNull()
+    expect(parseSpeciesDetails([{ name: 'Brown Trout' }])[0]?.avgSizeText).toBeNull()
+  })
+
+  it('reads the full stored shape', () => {
+    expect(parseSpeciesDetails([{
+      name: 'Brown Trout', description: 'Big, wary fish.', image_url: '/1.jpg', image_urls: ['/1.jpg', '/2.jpg'],
+      season_months: [10, 11], peak_months: [11], avg_size_text: '2–4 kg',
+    }])).toEqual([{
+      name: 'Brown Trout', description: 'Big, wary fish.', imageUrls: ['/1.jpg', '/2.jpg'], seasonMonths: [10, 11], avgSizeText: '2–4 kg',
+    }])
   })
 })
 

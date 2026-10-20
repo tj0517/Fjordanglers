@@ -607,7 +607,11 @@ describe('saveExperienceV2Content', () => {
       ],
       nearestAirport: 'Queenstown (ZQN)',
       suggestedLodging: [{ name: 'Lake lodge', url: 'https://example.com/lodge', note: '10 min from pick-up' }],
-      licenseInfo: { required: true, buy_url: 'https://example.com/licence', steps: ['Pick "non-resident"', 'Pay online'], price_text: 'about NZ$40 a day' },
+      licenseInfo: {
+        required: true,
+        links: [{ label: 'Day licence', url: 'https://example.com/licence' }, { label: null, url: 'https://example.com/season' }],
+        steps: ['Pick "non-resident"', 'Pay online'], price_text: 'about NZ$40 a day',
+      },
       tipGuidanceText: '10% is customary.', weatherPolicyText: 'The guide picks other water.',
       responseSlaHours: 12, offerEtaText: '48–72 h',
     })
@@ -634,10 +638,29 @@ describe('saveExperienceV2Content', () => {
       const lodging = await saveExperienceV2Content(PAGE.content, content({ suggestedLodging: [{ name: 'x', url, note: null }] }))
       expect(lodging, url).toEqual({ success: false, error: 'URL must start with http:// or https://' })
 
-      const licence = await saveExperienceV2Content(PAGE.content, content({ licenseInfo: { required: true, buy_url: url, steps: [], price_text: null } }))
+      const licence = await saveExperienceV2Content(PAGE.content, content({ licenseInfo: { required: true, links: [{ label: 'x', url }], steps: [], price_text: null } }))
       expect(licence, url).toEqual({ success: false, error: 'URL must start with http:// or https://' })
     }
     expect((await readPage(PAGE.content)).suggested_lodging).toEqual([{ name: 'Lake lodge', url: 'https://example.com/lodge', note: '10 min from pick-up' }])
+  })
+
+  it('FA-1.62: a stored legacy buy_url is read as the first link, and the next save stores links only', async () => {
+    const legacy = { required: true, buy_url: 'https://example.com/legacy', steps: [], price_text: null }
+    expect((await db().from('experience_pages').update({ license_info: legacy }).eq('id', PAGE.content)).error).toBeNull()
+
+    const editor = await getExperienceV2Editor(PAGE.content)
+    expect(editor?.shapeWarnings).toEqual([])
+    expect(editor?.page.licenseInfo?.links).toEqual([{ label: null, url: 'https://example.com/legacy' }])
+
+    expect(await saveExperienceV2Content(PAGE.content, content({ licenseInfo: editor!.page.licenseInfo }))).toEqual({ success: true, warnings: [] })
+    expect((await readPage(PAGE.content)).license_info)
+      .toEqual({ required: true, links: [{ label: null, url: 'https://example.com/legacy' }], steps: [], price_text: null })
+  })
+
+  it('FA-1.62: refuses more than 12 licence links', async () => {
+    const links = Array.from({ length: 13 }, (_, i) => ({ label: null, url: `https://example.com/l${i}` }))
+    expect(await saveExperienceV2Content(PAGE.content, content({ licenseInfo: { required: true, links, steps: [], price_text: null } })))
+      .toEqual({ success: false, error: 'At most 12 licence links' })
   })
 })
 
@@ -715,12 +738,19 @@ describe('updateExperiencePage — content block galleries', () => {
     ])
   })
 
-  it('refuses a block with 13 photos and writes nothing', async () => {
+  it('FA-1.62: stores a block with 30 photos', async () => {
+    const image_urls = Array.from({ length: 30 }, (_, i) => photo(i))
+    expect(await updateExperiencePage(PAGE.content, { content_blocks: [{ headline: 'Thirty', text: 'x', image_urls }] }))
+      .toMatchObject({ success: true })
+    expect((await readPage(PAGE.content)).content_blocks).toEqual([{ headline: 'Thirty', text: 'x', image_url: photo(0), image_urls }])
+  })
+
+  it('refuses a block with 31 photos and writes nothing', async () => {
     const before = (await readPage(PAGE.content)).content_blocks
     const result = await updateExperiencePage(PAGE.content, {
-      content_blocks: [{ headline: 'Too many', text: 'x', image_urls: Array.from({ length: 13 }, (_, i) => photo(i)) }],
+      content_blocks: [{ headline: 'Too many', text: 'x', image_urls: Array.from({ length: 31 }, (_, i) => photo(i)) }],
     })
-    expect(result).toEqual({ success: false, error: 'A content block has at most 12 photos' })
+    expect(result).toEqual({ success: false, error: 'A content block has at most 30 photos' })
     expect((await readPage(PAGE.content)).content_blocks).toEqual(before)
   })
 })

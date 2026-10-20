@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { saveExperienceV2Content, type ExperienceV2EditorData } from '@/actions/experience-pages'
-import { parseKm, parseWholeNumber, type DayScheduleItem, type LodgingItem } from '@/lib/experiences/v2-editor'
+import { LICENSE_MAX_LINKS, parseKm, parseWholeNumber, type DayScheduleItem, type LodgingItem } from '@/lib/experiences/v2-editor'
 import { Field, NativeSelect, SaveBar, Section, toLines, useSave } from './fields'
 import { SeasonPeriodsField, type SeasonPeriodDraft } from './SeasonPeriodsField'
 
 interface ScheduleDraft { key: string; time: string; title: string; description: string }
 interface LodgingDraft  { key: string; name: string; url: string; note: string }
+interface LinkDraft     { key: string; label: string; url: string }
 
 const kmText = (km: number | null) => (km == null ? '' : String(km))
 
@@ -34,7 +35,10 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
   })))
   const [hasLicense,    setHasLicense]    = useState(page.licenseInfo != null)
   const [licRequired,   setLicRequired]   = useState(page.licenseInfo?.required ?? true)
-  const [licBuyUrl,     setLicBuyUrl]     = useState(page.licenseInfo?.buy_url ?? '')
+  // A legacy `buy_url` already arrives here as the first link (licenseInfoSchema, FA-1.62).
+  const [licLinks,      setLicLinks]      = useState<LinkDraft[]>(() => (page.licenseInfo?.links ?? []).map((link, index) => ({
+    key: `stored-${index}`, label: link.label ?? '', url: link.url,
+  })))
   const [licPrice,      setLicPrice]      = useState(page.licenseInfo?.price_text ?? '')
   const [licSteps,      setLicSteps]      = useState((page.licenseInfo?.steps ?? []).join('\n'))
   const [tipGuidance,   setTipGuidance]   = useState(page.tipGuidanceText ?? '')
@@ -47,6 +51,8 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
     setSchedule(current => current.map(row => (row.key === key ? { ...row, ...change } : row)))
   const patchLodging = (key: string, change: Partial<LodgingDraft>) =>
     setLodging(current => current.map(row => (row.key === key ? { ...row, ...change } : row)))
+  const patchLink = (key: string, change: Partial<LinkDraft>) =>
+    setLicLinks(current => current.map(row => (row.key === key ? { ...row, ...change } : row)))
 
   function save() {
     const walkingKmMin = walkingMin.trim() === '' ? null : parseKm(walkingMin)
@@ -76,7 +82,14 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
       nearestAirport:    airport,
       suggestedLodging,
       licenseInfo:       hasLicense
-        ? { required: licRequired, buy_url: licBuyUrl.trim() === '' ? null : licBuyUrl.trim(), steps: toLines(licSteps), price_text: licPrice }
+        ? {
+            required:   licRequired,
+            // An untouched "+ licence link" row is not sent; a label without a URL is,
+            // and the server says what is missing.
+            links:      licLinks.filter(row => row.label.trim() !== '' || row.url.trim() !== '').map(row => ({ label: row.label, url: row.url.trim() })),
+            steps:      toLines(licSteps),
+            price_text: licPrice,
+          }
         : null,
       tipGuidanceText:   tipGuidance,
       weatherPolicyText: weatherPolicy,
@@ -187,14 +200,30 @@ export function ContentSection({ page }: { page: ExperienceV2EditorData['page'] 
               <input type="checkbox" checked={licRequired} onChange={e => setLicRequired(e.target.checked)} />
               A licence is required
             </label>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Where to buy (link)">
-                <Input value={licBuyUrl} onChange={e => setLicBuyUrl(e.target.value)} placeholder="https://…" />
-              </Field>
-              <Field label="Price, in words">
-                <Input value={licPrice} onChange={e => setLicPrice(e.target.value)} placeholder="about NZ$40 a day" />
-              </Field>
-            </div>
+            <fieldset className="flex flex-col gap-2">
+              <legend className="f-body mb-1 text-xs font-semibold text-muted-foreground">
+                Where to buy — one line per link on the page; an empty label reads “how to buy it”
+              </legend>
+              {licLinks.map((row, index) => (
+                <div key={row.key} className="grid grid-cols-[1fr_1.4fr_auto] items-center gap-2">
+                  <Input aria-label={`Licence link ${index + 1} label`} placeholder="Label, e.g. Day licence" value={row.label} onChange={e => patchLink(row.key, { label: e.target.value })} />
+                  <Input aria-label={`Licence link ${index + 1} URL`} placeholder="https://…" value={row.url} onChange={e => patchLink(row.key, { url: e.target.value })} />
+                  <Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove licence link ${index + 1}`} onClick={() => setLicLinks(current => current.filter(r => r.key !== row.key))}>
+                    <Trash2 />
+                  </Button>
+                </div>
+              ))}
+              {licLinks.length < LICENSE_MAX_LINKS && (
+                <div>
+                  <Button type="button" variant="outline" size="xs" onClick={() => setLicLinks(current => [...current, { key: crypto.randomUUID(), label: '', url: '' }])}>
+                    <Plus /> licence link
+                  </Button>
+                </div>
+              )}
+            </fieldset>
+            <Field label="Price, in words">
+              <Input value={licPrice} onChange={e => setLicPrice(e.target.value)} placeholder="about NZ$40 a day" />
+            </Field>
             <Field label="How to buy — one step per line">
               <Textarea value={licSteps} onChange={e => setLicSteps(e.target.value)} />
             </Field>

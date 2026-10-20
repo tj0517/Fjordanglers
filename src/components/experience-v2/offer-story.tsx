@@ -10,7 +10,8 @@
  * content.
  *
  * Waters and Programs are both lists of the same photo cards (a block with several photos
- * opens them in a lightbox — see ./offer-story-block.tsx); a page block's `section` says
+ * opens them in a lightbox — see ./offer-story-block.tsx), and so is the fish — its card,
+ * ./offer-species-card.tsx, adds the season, the average size and a calendar icon (FA-1.62); a page block's `section` says
  * which list it is in, and a block without one is a program (FA-1.60). A page with no Waters
  * blocks keeps the one line it always had under Waters: `environment`, joined with " · ".
  *
@@ -18,9 +19,9 @@
  * story, blocks, fish or catches, the section is not drawn.
  */
 
-import Image from 'next/image'
 import OfferSection from './offer-section'
 import OfferStoryBlock from './offer-story-block'
+import OfferSpeciesCard from './offer-species-card'
 import { Box, mutedStyle } from './offer-box'
 import type { SpeciesDetail, StoryBlock } from '@/lib/experience-v2-content'
 
@@ -33,8 +34,6 @@ export type OfferStoryProps = {
   /** `experience_pages.environment` — short words for the water and the land around it. */
   environment:    string[]
 }
-
-const SPECIES_MAX_CHARS = 150
 
 /** The small label over a group — "Waters", "Programs", "What you fish for". */
 function Eyebrow({ children }: { children: string }) {
@@ -50,13 +49,6 @@ function BlockGrid({ blocks, testId }: { blocks: StoryBlock[]; testId: string })
       ))}
     </div>
   )
-}
-
-function shorten(value: string, max: number): string {
-  const trimmed = value.trim()
-  if (trimmed.length <= max) return trimmed
-  const cut = trimmed.slice(0, max)
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), max * 0.6)).trimEnd()}…`
 }
 
 export default function OfferStory({ storyText, contentBlocks, speciesDetails, catchesText, environment }: OfferStoryProps) {
@@ -106,19 +98,7 @@ export default function OfferStory({ storyText, contentBlocks, speciesDetails, c
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {speciesDetails.map(species => (
               <li key={species.name}>
-                <Box className="flex h-full flex-col">
-                  {species.imageUrl != null && (
-                    <div className="relative -mx-5 -mt-5 mb-3.5 h-[150px] overflow-hidden rounded-t-2xl">
-                      <Image src={species.imageUrl} alt={species.name} fill sizes="(min-width: 1280px) 30vw, (min-width: 640px) 45vw, 100vw" className="object-cover" />
-                    </div>
-                  )}
-                  <h3 className="f-display text-[19px] font-bold leading-tight">{species.name}</h3>
-                  {species.description != null && (
-                    <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: 'rgba(10,46,77,0.75)' }}>
-                      {shorten(species.description, SPECIES_MAX_CHARS)}
-                    </p>
-                  )}
-                </Box>
+                <OfferSpeciesCard species={species} />
               </li>
             ))}
           </ul>

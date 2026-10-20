@@ -368,13 +368,33 @@ const lodgingItemSchema = z.object({
   note: optionalText(300),
 })
 
-/** license_info — proposal §2.5: {required, buy_url, steps[], price_text}. */
-const licenseInfoSchema = z.object({
-  required:   z.boolean(),
-  buy_url:    httpUrlSchema.nullable(),
-  steps:      lineList(12),
-  price_text: optionalText(200),
+/** The most links a licence may list — the same cap as its steps. */
+export const LICENSE_MAX_LINKS = 12
+
+/** One "where to buy" link of a licence — the label is optional ("how to buy it" when empty). */
+const licenseLinkSchema = z.object({
+  label: optionalText(80),
+  url:   httpUrlSchema,
 })
+
+/**
+ * license_info — proposal §2.5 plus FA-1.62: {required, links[], steps[], price_text}.
+ * `buy_url`, the single link every row written before FA-1.62 carries, is still accepted and
+ * read as the first link (no backfill); what this schema hands on never has `buy_url`, so the
+ * next save stores `links` only.
+ */
+const licenseInfoSchema = z
+  .object({
+    required:   z.boolean(),
+    buy_url:    httpUrlSchema.nullable().optional(),
+    links:      z.array(licenseLinkSchema).max(LICENSE_MAX_LINKS, `At most ${LICENSE_MAX_LINKS} licence links`).optional(),
+    steps:      lineList(12),
+    price_text: optionalText(200),
+  })
+  .transform(({ buy_url, links = [], ...rest }) => ({
+    ...rest,
+    links: buy_url == null || links.some(link => link.url === buy_url) ? links : [{ label: null, url: buy_url }, ...links],
+  }))
 
 export const dayScheduleSchema      = z.array(dayScheduleItemSchema).max(30, 'At most 30 schedule rows')
 export const suggestedLodgingSchema = z.array(lodgingItemSchema).max(20, 'At most 20 lodging rows')
@@ -383,7 +403,7 @@ export const licenseInfoOrNullSchema = licenseInfoSchema.nullable()
 export type DayScheduleItem = z.infer<typeof dayScheduleItemSchema>
 
 /** The most photos one content block may carry (feedback round 1, change 9). */
-export const CONTENT_BLOCK_MAX_PHOTOS = 12
+export const CONTENT_BLOCK_MAX_PHOTOS = 30
 
 /**
  * content_blocks item — `{headline, text, image_url?, image_urls?, section?}`, written by the

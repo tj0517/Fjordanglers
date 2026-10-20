@@ -69,7 +69,7 @@ export interface InquiryWizardPage extends WizardPageInfo {
   /** `experience_pages.country` — the region of the lead value sent to Ads, as on v1. */
   country:          string
   responseSlaHours: number
-  /** `license_info.buy_url`, already checked `http(s)` by the data layer, or null. */
+  /** The licence's first `http(s)` link (`license_info.links`, legacy `buy_url`), or null. */
   licenseUrl:       string | null
 }
 

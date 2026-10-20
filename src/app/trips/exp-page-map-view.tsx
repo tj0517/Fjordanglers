@@ -7,6 +7,7 @@ import Supercluster from 'supercluster'
 import 'leaflet/dist/leaflet.css'
 import type { ExpPage } from './exp-page-map-section'
 import { formatPrice } from '@/lib/format-price'
+import { pinIcon } from '@/components/map/pin-icon'
 
 export type MapBounds = { north: number; south: number; east: number; west: number }
 
@@ -176,25 +177,6 @@ function MapClickClearer({ onClear }: { onClear: () => void }) {
 }
 
 // ─── Pin icons ────────────────────────────────────────────────────────────────
-
-// Standard pin (no area)
-function pinIcon() {
-  return L.divIcon({
-    className: '',
-    html: `<div style="
-      width: 30px; height: 30px;
-      background: #0A2E4D;
-      border-radius: 50%;
-      border: 2.5px solid white;
-      box-shadow: 0 2px 10px rgba(10,46,77,0.40);
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center; overflow: hidden;
-    ">
-      <img src="/brand/sygnet.png" style="width:17px;height:17px;object-fit:contain;" draggable="false"/>
-    </div>`,
-    iconSize: [30, 30], iconAnchor: [15, 15], popupAnchor: [0, -18],
-  })
-}
 
 // Pin with a colored outer ring — visually connects it to its area polygon
 function pinIconWithArea(areaColor: string) {

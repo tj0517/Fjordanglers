@@ -2,13 +2,14 @@
 id: FA-1.62
 title: Strona v2 — poprawki z przeglądu Figmy (copy, kolejność, linki, listy, zdjęcia ryb, licencja, kalendarz)
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: fix/v2-figma-review
+pr: 149
 depends_on: []
 blocked_by_questions: []
 touches_db: false
@@ -91,3 +92,35 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 
 ## Notatki z realizacji
 - 2026-10-20 tj (przegląd w Figmie, plik `rk2npoNp3oSQO9km7SN2tE`): O-40 → (b) ikona przewija do formularza; krok 4 jeden tekst dla wszystkich metod; S5 tylko schowane.
+- 2026-10-20 tj (decyzje przy starcie FA-1.62):
+  - D1 — jedna wspólna lista języków = 12 z formularza profilu przewodnika (English, Norwegian, Swedish, Finnish, Danish, Icelandic, German, Polish, French, Dutch, Russian, Spanish); formularze admina dostają Dutch, Russian i Spanish.
+  - D2 — Chinook Salmon w obu listach `fish.ts`, jak Coho (`FISH_ALL` + `FISH_IMG` → `salmon.png`); `grep Chinook` = 2 wiersze, po jednym na listę (kryterium „1 wiersz” czytane jako 1 wpis na listę).
+  - D3 — sygnet zamiast pomarańczowej kropli wszędzie, gdzie rysuje `LocationMap` — także na `/offers/[token]`.
+  - D4 — lokalny stack FA startowany obok działających stacków innych projektów (Seaclouds, hydra-arms); `storage-api` włączony (upload zdjęć w adminie).
+  - Zawężenie kryterium zod (z promptu): czerwony dowód zod tylko dla bloków treści; galeria strony i zdjęcia ryb nie mają dziś schematu po stronie serwera — zapisane w deferred.
+- 2026-10-20 odczyt stanu przed zmianami (skąd dziś bierze się każdy zmieniany element):
+  - Krok 4: `offer-how-it-works.tsx` — tytuł „You pay the balance to the guide”, tekst z `balanceText(method)` (3 warianty: stripe / cash / brak) z `primary.balancePaymentMethod` ← `guides.default_balance_payment_method` (`queries.ts`).
+  - Notatka dnia: `offer-day.tsx` `SAMPLE_PLAN_NOTE` („This is a sample plan — your guide picks the water…”).
+  - Kolejność: `offer-body.tsx` S3 · story · S7 · S6 · S4 · S5 · S8 · S9; `OfferBring` (S12) renderowany w `_v2/ExperienceV2.tsx` między S11 a S13.
+  - Limity zdjęć: `ExperiencePageForm.tsx` galeria `max={12}`, content photos `max={12}`, ryba `max={6}` (+ etykieta „up to 6”), Views `max={6}` (inne pole — bez zmian); `CONTENT_BLOCK_MAX_PHOTOS = 12` w `v2-editor.ts` (zod). Galeria i ryby nie mają schematu po stronie serwera.
+  - Parser ryb: `parseSpeciesDetails` czytał tylko `name`, `description`, `image_url`; `image_urls` i `season_months` z `species_details` (zapisywane przez admina od dawna) były ignorowane; opis cięty do 150 znaków (`SPECIES_MAX_CHARS` w `offer-story.tsx`).
+  - Licencja: parser `parseLicenseInfo` → `buyUrl` / `buyText` z jednego `buy_url`; render w `offer-included.tsx` jednym linkiem „how to buy it ›”; zod `licenseInfoSchema.buy_url`; admin — jedno pole „Where to buy (link)” w `experience-v2-editor/ContentSection.tsx`; `buyUrl` szedł też do formularza (`licenseUrl`).
+  - Języki: 3 listy — admin create/edit po 9, profil przewodnika 12 (decyzja D1).
+  - Pinezka: `LocationMap.tsx` — pomarańczowa kropla (`orangeMarker`), używana na v2 (S11) i na `/offers/[token]`; sygnet w `pinIcon()` w `src/app/trips/exp-page-map-view.tsx`.
+- 2026-10-20 tj: po restarcie WSL z braku pamięci (3 stacki Supabase + 2× `next dev`) — opcja C: PR otwarty bez zrzutów; zrzuty (strona pilotażowa, admin 13+/31 zdjęć, `/trips` przed/po) i `curl` 200 do zrobienia, gdy będzie wolna pamięć. Punkty z Figmy NIE są jeszcze odhaczone zrzutami.
+- 2026-10-20 tj (decyzje po PR #149):
+  - S5 — opcja A: pole „Suited for” zostaje wymagane dla stron v2 (S5 może wrócić); krok lejka GA4 `fit` (`section_view:fit`, FA-1.60) oznaczony jako zatrzymany 2026-10-20 — od tej daty raportuje 0, bo S5 nie jest renderowane; to nie spadek zainteresowania. Komentarz przy `FUNNEL_SECTIONS_V2.fit` w `_v2/ExperienceV2.tsx`.
+  - Pięć drobnych decyzji agenta zatwierdzonych bez zmian: limit 12 linków licencji; link bez etykiety = „how to buy it ›”; plakietka „+N photos” na karcie ryby w prawym górnym rogu; `INQUIRY_ANCHOR` we własnym module `components/experience-v2/inquiry-anchor.ts`; czerwona linia „N photos not added” we współdzielonym `MultiImageUpload` (także formularze przewodnika).
+- 2026-10-20 zrzuty (`docs/screenshots/FA-1.62/`, lokalny stack 127.0.0.1:54421, strona testowa `fa162-pilot` = klon `seed-backcountry-day-nz` z własnym id, podgląd admina `?preview=v2`); punkty z Figmy:
+  - [x] krok 4 „Remaining balance” / „The balance is paid directly to your guide.” — `01-step4-remaining-balance.png`
+  - [x] nowa notatka pod planem dnia — `02-day-note.png`
+  - [x] „What to bring” przed „Included”, S5 nie renderowane — kolejność `data-section` na żywej stronie: S3 · story · S7 · S6 · S12 · S4 · S8 · S9 · S11 · S14 (odczyt Playwright; bez osobnego zrzutu)
+  - [x] karta ryby: galeria „+2 photos”, pełny opis, „Season: Oct–Apr”, „Average size: 2–4 kg”, pomarańczowa ikona kalendarza — `03-species-cards.png`; lightbox 2 / 3 — `07-species-gallery-lightbox.png`
+  - [x] klik ikony kalendarza przewija do formularza (scrollY 1699 → 5691, góra `#zapytanie` 96 px pod górą okna, 0 dialogów) — `06-calendar-click-scrolled-to-form.png`
+  - [x] dwa linki licencji — `04-licence-two-links.png`; admin, lista linków — `14-admin-licence-links-editor.png`
+  - [x] pinezka = sygnet FA — `05-map-sygnet-pin.png`; `/trips` bez zmian: `08-trips-map-before.png` (kod z `main`) i `08-trips-map-after.png` są identyczne bajt w bajt (`cmp`)
+  - [x] admin: galeria 14 zdjęć i Brown Trout 8 zdjęć + „2–4 kg” zapisane i po przeładowaniu — `09-admin-gallery-14-after-reload.png`, `10-admin-species-8-photos-avg-size-after-reload.png`
+  - [x] 31. zdjęcie odrzucone w UI (kafelek 31. wyłączony, czerwona linia „1 photo not added — this field takes at most 30 photos.”) — galeria `11-…`, content photos `12-…`, ryba `13-…`
+  - [ ] karta przewodnika jako link — tylko testy komponentu (przewodnicy w seedzie nie mają `slug`; deferred)
+  - Środowisko do zrzutów: lokalnie brak bucketu `guide-photos` (utworzony jednym `insert into storage.buckets` w lokalnej bazie), a upload na 127.0.0.1 wywraca formularz (`next/image` nie zna hosta) — dlatego zdjęcia w adminie wybrane z galerii przewodnika testowego (`FA-1.62 Test Guide`, 31 zdjęć z `public/`, własne id, podpięty tylko do `fa162-pilot`). Fikstury SQL: `.fa-proofs/fa-1.62/{pilot,admin}-fixture.sql` (lokalnie, nie w repo). Dev server z fikcyjnymi kluczami Stripe w env procesu (`sk_test_fake_fa162` …), bez zmian w plikach `.env*`.
+- 2026-10-20 odbiór tj (PR #149): wszystkie kryteria udowodnione — 220/1130 testów, CI zielone na 97a2f06, 14 zrzutów obejrzanych, /trips bajt w bajt bez zmian, red proofs zod/javascript:/scroll.

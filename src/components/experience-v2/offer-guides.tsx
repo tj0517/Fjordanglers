@@ -11,15 +11,21 @@
  * have and a bordered paragraph does not.
  *
  * There is no "quote" field on `guides` or `experience_guides`, so a guide card has none.
+ *
+ * A card links to the guide's profile, `/guides/[slug]` (FA-1.62, Figma review 2026-10-20);
+ * a guide without a slug gets the same card, not a link.
  */
 
 import Image from 'next/image'
+import Link from 'next/link'
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
 import { languageNames } from '@/lib/experience-v2-content'
 
 type OfferGuide = {
   id:                string
+  /** `guides.slug` — the profile URL; null for a guide that has none yet. */
+  slug:              string | null
   fullName:          string
   avatarUrl:         string | null
   yearsExperience:   number | null
@@ -115,46 +121,56 @@ function GuideCard({ guide, photoUrl }: { guide: OfferGuide; photoUrl: string | 
     guide.responseTimeHours != null ? `usually replies within ${guide.responseTimeHours} h` : null,
   ].filter((fact): fact is string => fact != null && fact.trim() !== '')
 
-  return (
-    <div data-testid="guide-card">
-      <Box className="flex h-full flex-col">
-        {photoUrl != null && <Cover url={photoUrl} alt="" />}
+  const body = (
+    <Box className="flex h-full flex-col">
+      {photoUrl != null && <Cover url={photoUrl} alt="" />}
 
-        <div className="flex items-center gap-3.5">
-          {guide.avatarUrl != null ? (
-            <Image
-              src={guide.avatarUrl}
-              alt={guide.fullName}
-              width={56}
-              height={56}
-              className="h-14 w-14 flex-none rounded-full object-cover"
-              style={{ boxShadow: '0 0 0 3px #fff, 0 2px 8px rgba(10,46,77,0.18)' }}
-            />
-          ) : (
-            <div
-              aria-hidden
-              className="flex h-14 w-14 flex-none items-center justify-center rounded-full text-lg font-semibold"
-              style={{ background: 'rgba(10,46,77,0.08)' }}
-            >
-              {initials(guide.fullName)}
-            </div>
-          )}
-          <div className="min-w-0">
-            <h3 className="f-display text-[22px] font-bold leading-tight">{guide.fullName}</h3>
-            {guide.languages.length > 0 && (
-              <p className="mt-0.5 text-[13px]" style={mutedStyle}>Speaks {languageNames(guide.languages).join(', ')}</p>
-            )}
+      <div className="flex items-center gap-3.5">
+        {guide.avatarUrl != null ? (
+          <Image
+            src={guide.avatarUrl}
+            alt={guide.fullName}
+            width={56}
+            height={56}
+            className="h-14 w-14 flex-none rounded-full object-cover"
+            style={{ boxShadow: '0 0 0 3px #fff, 0 2px 8px rgba(10,46,77,0.18)' }}
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="flex h-14 w-14 flex-none items-center justify-center rounded-full text-lg font-semibold"
+            style={{ background: 'rgba(10,46,77,0.08)' }}
+          >
+            {initials(guide.fullName)}
           </div>
+        )}
+        <div className="min-w-0">
+          <h3 className="f-display text-[22px] font-bold leading-tight">{guide.fullName}</h3>
+          {guide.languages.length > 0 && (
+            <p className="mt-0.5 text-[13px]" style={mutedStyle}>Speaks {languageNames(guide.languages).join(', ')}</p>
+          )}
         </div>
+      </div>
 
-        {facts.length > 0 && (
-          <p className="mt-3 text-sm" style={mutedStyle}>{facts.join(' · ')}</p>
-        )}
-        {guide.bio != null && guide.bio.trim() !== '' && (
-          <p className="mt-2.5 text-[15px] leading-relaxed">{shorten(guide.bio, BIO_MAX_CHARS)}</p>
-        )}
-      </Box>
-    </div>
+      {facts.length > 0 && (
+        <p className="mt-3 text-sm" style={mutedStyle}>{facts.join(' · ')}</p>
+      )}
+      {guide.bio != null && guide.bio.trim() !== '' && (
+        <p className="mt-2.5 text-[15px] leading-relaxed">{shorten(guide.bio, BIO_MAX_CHARS)}</p>
+      )}
+    </Box>
+  )
+
+  if (guide.slug == null) return <div data-testid="guide-card">{body}</div>
+
+  return (
+    <Link
+      href={`/guides/${guide.slug}`}
+      data-testid="guide-card"
+      className="block h-full rounded-2xl outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-[var(--fa-navy)] focus-visible:ring-offset-2"
+    >
+      {body}
+    </Link>
   )
 }
 
