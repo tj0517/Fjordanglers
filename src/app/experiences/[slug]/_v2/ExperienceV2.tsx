@@ -53,6 +53,8 @@ import { INQUIRY_ANCHOR } from '@/components/experience-v2/inquiry-anchor'
 const FUNNEL_SECTIONS_V2 = {
   pricing: '[data-section="S9"]',
   faq:     '[data-section="S13"]',
+  // Stopped 2026-10-20 (FA-1.62, tj): S5 is no longer rendered, so `section_view:fit` reads 0
+  // from then on — not a drop in interest. Kept so the step comes back with S5.
   fit:     '[data-section="S5"]',
 }
 

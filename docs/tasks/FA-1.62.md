@@ -108,3 +108,6 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
   - Języki: 3 listy — admin create/edit po 9, profil przewodnika 12 (decyzja D1).
   - Pinezka: `LocationMap.tsx` — pomarańczowa kropla (`orangeMarker`), używana na v2 (S11) i na `/offers/[token]`; sygnet w `pinIcon()` w `src/app/trips/exp-page-map-view.tsx`.
 - 2026-10-20 tj: po restarcie WSL z braku pamięci (3 stacki Supabase + 2× `next dev`) — opcja C: PR otwarty bez zrzutów; zrzuty (strona pilotażowa, admin 13+/31 zdjęć, `/trips` przed/po) i `curl` 200 do zrobienia, gdy będzie wolna pamięć. Punkty z Figmy NIE są jeszcze odhaczone zrzutami.
+- 2026-10-20 tj (decyzje po PR #149):
+  - S5 — opcja A: pole „Suited for” zostaje wymagane dla stron v2 (S5 może wrócić); krok lejka GA4 `fit` (`section_view:fit`, FA-1.60) oznaczony jako zatrzymany 2026-10-20 — od tej daty raportuje 0, bo S5 nie jest renderowane; to nie spadek zainteresowania. Komentarz przy `FUNNEL_SECTIONS_V2.fit` w `_v2/ExperienceV2.tsx`.
+  - Pięć drobnych decyzji agenta zatwierdzonych bez zmian: limit 12 linków licencji; link bez etykiety = „how to buy it ›”; plakietka „+N photos” na karcie ryby w prawym górnym rogu; `INQUIRY_ANCHOR` we własnym module `components/experience-v2/inquiry-anchor.ts`; czerwona linia „N photos not added” we współdzielonym `MultiImageUpload` (także formularze przewodnika).
