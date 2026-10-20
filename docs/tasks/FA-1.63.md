@@ -73,7 +73,7 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 ## Weryfikacja
 ```
 supabase db reset
-pnpm test run -- hero-facts offer-chips offer-at-a-glance v2-editor
+pnpm test run hero-facts offer-chips offer-at-a-glance
 ls docs/screenshots/FA-1.63/
 git diff main...HEAD --stat -- "src/app/experiences/[slug]/_v1"
 pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
@@ -85,3 +85,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 - 2026-10-20 tj: lokalna baza → (a) `supabase db reset` teraz; żadna inna sesja nie używa stacku.
 - 2026-10-20 tj: miejsce w adminie — NIE karta Content. Osobna sekcja „Hero facts” w zakładce v2: własna karta z własnym zapisem, jak pozostałe sekcje; te same klocki sekcji/pól i ten sam wzorzec zapisu, bez dokładania pól do „Save content”.
 - 2026-10-20 tj: domyślne przyjęte — tekst pokazany dokładnie jak wpisany (bez prefiksu „season ”), długość dnia małymi literami („full day” / „half day” / „multi-day”), jedno `group_size` zasila chip i kartę, „Start and pick-up” zastępuje kartę meeting point.
+- 2026-10-20 tj: STOP 1 zaakceptowany — migracja `20261011000000_experience_hero_facts.sql` jak pokazana, `comment on column` zostaje. Baza diffów: `origin/main` (lokalny `main` jest za `origin/main`). Weryfikacja: `pnpm test run hero-facts offer-chips offer-at-a-glance` zamiast `pnpm test run -- … v2-editor` — `--` sprawia, że vitest ignoruje filtry, a żaden plik nie pasuje do `v2-editor` (testy schematu są w `hero-facts.test.ts`).
