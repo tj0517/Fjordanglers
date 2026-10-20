@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   safeHttpUrl, speciesNames, parseLicenseInfo, parseDaySchedule, parseItinerary, languageNames,
-  parseSeasonPeriods, parseContentBlocks,
+  parseSeasonPeriods, parseContentBlocks, parseSpeciesDetails,
 } from './experience-v2-content'
 import type { Json } from '@/lib/supabase/database.types'
 
@@ -76,6 +76,44 @@ describe('parseLicenseInfo', () => {
 
   it('drops non-string steps instead of throwing', () => {
     expect(parseLicenseInfo({ steps: ['ok', 3, null, '  '] })?.steps).toEqual(['ok'])
+  })
+})
+
+describe('parseSpeciesDetails (FA-1.62)', () => {
+  it('image_urls is the gallery, in order, and wins over image_url', () => {
+    const [species] = parseSpeciesDetails([{ name: 'Brown Trout', image_url: '/old.jpg', image_urls: ['https://x.example/1.jpg', '/2.jpg'] }])
+    expect(species?.imageUrls).toEqual(['https://x.example/1.jpg', '/2.jpg'])
+  })
+
+  it('a legacy image_url alone is a gallery of one', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', image_url: '/only.jpg' }])[0]?.imageUrls).toEqual(['/only.jpg'])
+  })
+
+  it('no photo is an empty gallery; an unsafe photo URL is dropped', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout' }])[0]?.imageUrls).toEqual([])
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', image_urls: ['javascript:alert(1)', '', '/ok.jpg'] }])[0]?.imageUrls).toEqual(['/ok.jpg'])
+  })
+
+  it('reads season_months, keeping only whole months 1–12 once each', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', season_months: [10, 11, 12, 1, 13, 0, 2.5, '3', 11] }])[0]?.seasonMonths)
+      .toEqual([10, 11, 12, 1])
+    expect(parseSpeciesDetails([{ name: 'Brown Trout' }])[0]?.seasonMonths).toEqual([])
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', season_months: 'Oct' }])[0]?.seasonMonths).toEqual([])
+  })
+
+  it('reads avg_size_text, trimmed; absent or blank is null', () => {
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', avg_size_text: ' 2–4 kg ' }])[0]?.avgSizeText).toBe('2–4 kg')
+    expect(parseSpeciesDetails([{ name: 'Brown Trout', avg_size_text: '  ' }])[0]?.avgSizeText).toBeNull()
+    expect(parseSpeciesDetails([{ name: 'Brown Trout' }])[0]?.avgSizeText).toBeNull()
+  })
+
+  it('reads the full stored shape', () => {
+    expect(parseSpeciesDetails([{
+      name: 'Brown Trout', description: 'Big, wary fish.', image_url: '/1.jpg', image_urls: ['/1.jpg', '/2.jpg'],
+      season_months: [10, 11], peak_months: [11], avg_size_text: '2–4 kg',
+    }])).toEqual([{
+      name: 'Brown Trout', description: 'Big, wary fish.', imageUrls: ['/1.jpg', '/2.jpg'], seasonMonths: [10, 11], avgSizeText: '2–4 kg',
+    }])
   })
 })
 

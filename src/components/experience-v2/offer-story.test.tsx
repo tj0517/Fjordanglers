@@ -5,10 +5,11 @@
  * outside the story column, and a block with two or more photos opens them in a lightbox.
  */
 
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, cleanup, fireEvent, waitFor, within } from '@testing-library/react'
-import type { StoryBlock } from '@/lib/experience-v2-content'
+import type { SpeciesDetail, StoryBlock } from '@/lib/experience-v2-content'
 import OfferStory, { type OfferStoryProps } from './offer-story'
+import { INQUIRY_ANCHOR } from './inquiry-anchor'
 
 afterEach(cleanup)
 
@@ -141,5 +142,84 @@ describe('OfferStory — content block gallery', () => {
     fireEvent.keyDown(box, { key: 'Escape' })
     await waitFor(() => expect(document.querySelector('[data-testid="story-lightbox"]')).toBeNull())
     await waitFor(() => expect(document.activeElement).toBe(trigger))
+  })
+})
+
+describe('OfferStory — species cards (FA-1.62)', () => {
+  const fish = (over: Partial<SpeciesDetail> = {}): SpeciesDetail => ({
+    name: 'Brown Trout', description: 'Big, wary fish.', imageUrls: ['/trout-1.jpg'], seasonMonths: [], avgSizeText: null, ...over,
+  })
+  const card = (container: HTMLElement) => container.querySelector('[data-testid="offer-species"] li') as HTMLElement
+
+  it('prints the full description — no 150-character cut, no ellipsis', () => {
+    const description = 'A long description of a wary fish. '.repeat(12).trim()
+    const { container } = story({ speciesDetails: [fish({ description })] })
+    expect(card(container).textContent).toContain(description)
+    expect(card(container).textContent).not.toContain('…')
+  })
+
+  it('a species with 3 photos is a gallery: cover, "+2 photos", and the lightbox opens on its name', async () => {
+    const { container, getByTestId } = story({ speciesDetails: [fish({ imageUrls: ['/t1.jpg', '/t2.jpg', '/t3.jpg'] })] })
+    expect(card(container).querySelectorAll('img')).toHaveLength(1)
+    const trigger = getByTestId('species-gallery')
+    expect(trigger.textContent).toBe('+2 photos')
+    expect(trigger.getAttribute('aria-label')).toBe('Open 3 photos of Brown Trout')
+
+    fireEvent.click(trigger)
+    const box = await waitFor(() => {
+      const el = document.querySelector('[data-testid="story-lightbox"]') as HTMLElement | null
+      expect(el).not.toBeNull()
+      return el as HTMLElement
+    })
+    expect(within(box).getByRole('heading').textContent).toBe('Brown Trout')
+    expect(within(box).getByTestId('story-lightbox-counter').textContent).toBe('1 / 3')
+  })
+
+  it('one photo or none: no gallery button', () => {
+    const { container } = story({ speciesDetails: [fish(), fish({ name: 'Grayling', imageUrls: [] })] })
+    expect(container.querySelector('[data-testid="species-gallery"]')).toBeNull()
+    expect(container.querySelectorAll('[data-testid="offer-species"] img')).toHaveLength(1)
+  })
+
+  it('prints the season like the season chip and the average size under the description', () => {
+    const { container } = story({ speciesDetails: [fish({ seasonMonths: [10, 11, 12, 1, 2, 3, 4], avgSizeText: '2–4 kg' })] })
+    const facts = card(container).querySelector('[data-testid="species-facts"]')!
+    expect([...facts.children].map(row => row.textContent)).toEqual(['Season: Oct–Apr', 'Average size: 2–4 kg'])
+  })
+
+  it('no season and no average size: neither line, no facts block, no calendar icon', () => {
+    const { container } = story({ speciesDetails: [fish()] })
+    expect(card(container).querySelector('[data-testid="species-facts"]')).toBeNull()
+    expect(card(container).textContent).not.toContain('Average size')
+    expect(card(container).querySelector('[data-testid="species-calendar"]')).toBeNull()
+  })
+
+  it('the calendar icon points at the inquiry form and scrolls there — no modal', () => {
+    const form = document.createElement('section')
+    form.id = INQUIRY_ANCHOR.slice(1)
+    const scrollIntoView = vi.fn()
+    form.scrollIntoView = scrollIntoView
+    document.body.appendChild(form)
+
+    const { getByTestId } = story({ speciesDetails: [fish({ seasonMonths: [6, 7, 8], imageUrls: ['/t1.jpg', '/t2.jpg'] })] })
+    const icon = getByTestId('species-calendar')
+    expect(icon.getAttribute('href')).toBe(INQUIRY_ANCHOR)
+    expect(icon.getAttribute('aria-label')).toBe('Brown Trout season: Jun–Aug — ask about your dates')
+
+    fireEvent.click(icon)
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView.mock.instances[0]).toBe(form)
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    // A click on the icon is not a click on the gallery under it.
+    expect(document.querySelector('[data-testid="story-lightbox"]')).toBeNull()
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+
+    form.remove()
+  })
+
+  it('without a photo the icon sits next to the name', () => {
+    const { container } = story({ speciesDetails: [fish({ imageUrls: [], seasonMonths: [6] })] })
+    const icon = card(container).querySelector('[data-testid="species-calendar"]')!
+    expect(icon.nextElementSibling?.tagName).toBe('H3')
   })
 })

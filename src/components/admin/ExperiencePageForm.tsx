@@ -85,6 +85,7 @@ interface SpeciesDetailRecord {
   image_urls:    string[]
   season_months: number[]
   peak_months:   number[]
+  avg_size_text: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -362,6 +363,19 @@ function SpeciesDetailEditor({
             pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
             guideId={guideId}
           />
+
+          <div>
+            <label className={lbl}>Average size <span style={{ color: 'rgba(10,46,77,0.3)', fontWeight: 400 }}>(optional — shown as “Average size: …” on the v2 page)</span></label>
+            <input
+              type="text"
+              value={detail.avg_size_text}
+              onChange={e => onChange({ ...detail, avg_size_text: e.target.value })}
+              placeholder="e.g. 2–4 kg, fish over 5 kg every season"
+              maxLength={120}
+              className="w-full px-3 py-2.5 rounded-xl text-sm f-body outline-none transition-all"
+              style={iStyle}
+            />
+          </div>
 
           <div>
             <label className={lbl}>Season for this species</label>
@@ -1143,6 +1157,7 @@ export default function ExperiencePageForm({
         image_urls:    item.image_urls?.length ? item.image_urls : (item.image_url ? [item.image_url] : []),
         season_months: item.season_months,
         peak_months:   item.peak_months,
+        avg_size_text: item.avg_size_text ?? '',
       }
     }
     return rec
@@ -1259,6 +1274,8 @@ export default function ExperiencePageForm({
       image_urls:    speciesDetails[name]?.image_urls    ?? [],
       season_months: speciesDetails[name]?.season_months ?? [],
       peak_months:   speciesDetails[name]?.peak_months   ?? [],
+      // Empty is not stored (undefined drops out of the JSON): no key, no line on the v2 card.
+      avg_size_text: speciesDetails[name]?.avg_size_text.trim() || undefined,
     }))
 
     const payload: ExperiencePagePayload = {
@@ -1728,7 +1745,7 @@ export default function ExperiencePageForm({
             <SpeciesDetailEditor
               key={name}
               name={name}
-              detail={speciesDetails[name] ?? { description: '', image_url: '', image_urls: [], season_months: [], peak_months: [] }}
+              detail={speciesDetails[name] ?? { description: '', image_url: '', image_urls: [], season_months: [], peak_months: [], avg_size_text: '' }}
               onChange={d => updateSpeciesDetail(name, d)}
               guidePhotos={guidePhotos}
               guideId={prefill?.guide_id}

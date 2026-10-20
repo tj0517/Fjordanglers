@@ -42,9 +42,9 @@ import OfferMoreTrips from '@/components/experience-v2/offer-more-trips'
 import { InquiryWizardProvider, type InquiryWizardPage } from '@/components/inquiry-wizard/inquiry-wizard'
 import { ExperienceFunnelProvider } from '@/components/analytics/experience-funnel'
 import { fromPrice } from '@/lib/pricing/experience-price'
+// The inquiry section of S14. The CTAs keep the href even though they also open the wizard.
+import { INQUIRY_ANCHOR } from '@/components/experience-v2/inquiry-anchor'
 
-/** The inquiry section of S14. The CTAs keep the href even though they also open the wizard. */
-const INQUIRY_ANCHOR = '#zapytanie'
 
 /**
  * The sections whose view is counted in the GA4 funnel (FA-1.60), by the wireframe's own

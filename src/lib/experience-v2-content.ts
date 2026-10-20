@@ -269,6 +269,7 @@ function imageUrl(value: Json | undefined): string | null {
   return raw.startsWith('/') ? raw : safeHttpUrl(raw)
 }
 
+/** A gallery's photos, first = cover: `image_urls` when the item has it, else its one legacy `image_url`. */
 function blockImageUrls(item: Dict): string[] {
   if (Array.isArray(item.image_urls)) {
     return item.image_urls.flatMap(url => {
@@ -290,12 +291,35 @@ export function parseContentBlocks(value: Json | null | undefined): StoryBlock[]
   })
 }
 
-/** `species_details` with its description and photo — the "what you fish for" cards. */
-export type SpeciesDetail = { name: string; description: string | null; imageUrl: string | null }
+/** `species_details` — the "what you fish for" cards (FA-1.62: gallery, season, average size). */
+export type SpeciesDetail = {
+  name:         string
+  description:  string | null
+  /** The species' photos in order, first = cover — read like a content block's (`image_urls` wins). */
+  imageUrls:    string[]
+  /** Month numbers 1–12 when this species is in season; empty = not stated. */
+  seasonMonths: number[]
+  /** `avg_size_text`, e.g. "2–4 kg" — free text the admin types. */
+  avgSizeText:  string | null
+}
+
+function monthList(value: Json | undefined): number[] {
+  if (!Array.isArray(value)) return []
+  const months = value.flatMap(m => (typeof m === 'number' && Number.isInteger(m) && m >= 1 && m <= 12 ? [m] : []))
+  return [...new Set(months)]
+}
 
 export function parseSpeciesDetails(value: Json | null | undefined): SpeciesDetail[] {
   return entries(value).flatMap(item => {
     const name = text(item.name)
-    return name == null ? [] : [{ name, description: text(item.description), imageUrl: imageUrl(item.image_url) }]
+    return name == null
+      ? []
+      : [{
+          name,
+          description:  text(item.description),
+          imageUrls:    blockImageUrls(item),
+          seasonMonths: monthList(item.season_months),
+          avgSizeText:  text(item.avg_size_text),
+        }]
   })
 }
