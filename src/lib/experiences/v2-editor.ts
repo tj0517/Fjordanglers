@@ -396,6 +396,50 @@ const licenseInfoSchema = z
     links: buy_url == null || links.some(link => link.url === buy_url) ? links : [{ label: null, url: buy_url }, ...links],
   }))
 
+/** hero_facts.day_length — the S1 chip reads "full day", "half day" or "multi-day". */
+export const DAY_LENGTHS = ['full_day', 'half_day', 'multi_day'] as const
+export type DayLength = (typeof DAY_LENGTHS)[number]
+
+/** What `hero_facts` holds: only the keys that say something. */
+export type StoredHeroFacts = {
+  location?:      string
+  day_length?:    DayLength
+  group_size?:    string
+  season?:        string
+  gear_included?: boolean
+  start_pickup?:  string
+}
+
+/**
+ * hero_facts — FA-1.63 (O-39 a): the S1 chips and two S3 cards typed by hand. Every key is
+ * optional and an empty one means "computed as before", so what this schema hands on keeps
+ * only the keys that say something, and a form with nothing in it is stored as NULL.
+ * `gear_included: false` is a value ("Not included"), not an absence.
+ */
+const heroFactsSchema = z
+  .object({
+    location:      optionalText(80).optional(),
+    day_length:    z.enum(DAY_LENGTHS, 'Day length must be full day, half day or multi-day').nullable().optional(),
+    group_size:    optionalText(80).optional(),
+    season:        optionalText(80).optional(),
+    gear_included: z.boolean('Gear included must be yes or no').nullable().optional(),
+    start_pickup:  optionalText(500).optional(),
+  })
+  .transform((facts): StoredHeroFacts | null => {
+    const stored: StoredHeroFacts = {}
+    if (facts.location != null)      stored.location      = facts.location
+    if (facts.day_length != null)    stored.day_length    = facts.day_length
+    if (facts.group_size != null)    stored.group_size    = facts.group_size
+    if (facts.season != null)        stored.season        = facts.season
+    if (facts.gear_included != null) stored.gear_included = facts.gear_included
+    if (facts.start_pickup != null)  stored.start_pickup  = facts.start_pickup
+    return Object.keys(stored).length === 0 ? null : stored
+  })
+
+export const heroFactsOrNullSchema = heroFactsSchema.nullable()
+
+export type HeroFactsInput = z.input<typeof heroFactsOrNullSchema>
+
 export const dayScheduleSchema      = z.array(dayScheduleItemSchema).max(30, 'At most 30 schedule rows')
 export const suggestedLodgingSchema = z.array(lodgingItemSchema).max(20, 'At most 20 lodging rows')
 export const licenseInfoOrNullSchema = licenseInfoSchema.nullable()

@@ -259,6 +259,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
                   maxAnglersPerGuide={page.maxAnglersPerGuide}
                   seasonMonths={page.seasonMonths}
                   includes={page.includes}
+                  heroFacts={page.heroFacts}
                 />
               </div>
 

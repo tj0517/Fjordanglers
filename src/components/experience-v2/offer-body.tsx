@@ -47,6 +47,7 @@ export default function OfferBody({ page, story }: { page: ExperienceV2; story?:
         languages={primary?.languages ?? []}
         walkingKmMin={page.walkingKmMin}
         walkingKmMax={page.walkingKmMax}
+        heroFacts={page.heroFacts}
       />
       {story}
       <OfferGuides guides={page.guides} photoUrls={page.galleryImageUrls} responseSlaHours={page.responseSlaHours} />

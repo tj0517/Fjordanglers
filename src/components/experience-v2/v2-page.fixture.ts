@@ -25,6 +25,7 @@ export const fixedPage = (over: Partial<ExperienceV2> = {}): ExperienceV2 => ({
   meetingPointName: 'Your lodge', meetingPointDescription: 'Pick-up 7:30',
   walkingKmMin: 6, walkingKmMax: 12,
   license: { required: true, links: [{ label: null, url: 'https://fishandgame.example/licence', text: null }], priceText: 'NZ$30', steps: [] },
+  heroFacts: null,
   tipGuidanceText: 'Customary 10%',
   suitedFor: ['you cast 12–15 m in wind'], notSuitedFor: ['you are a complete beginner'],
   expectationsText: 'No promise of a big fish.',

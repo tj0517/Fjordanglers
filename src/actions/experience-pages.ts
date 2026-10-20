@@ -23,6 +23,7 @@ import {
   dayScheduleSchema,
   formatIssues,
   guidesSchema,
+  heroFactsOrNullSchema,
   idSchema,
   isActivePrimary,
   licenseInfoOrNullSchema,
@@ -42,12 +43,14 @@ import {
   type DayScheduleItem,
   type EditorPriceCell,
   type GuideRowInput,
+  type HeroFactsInput,
   type ItineraryItem,
   type LicenseInfo,
   type LodgingItem,
   type OfferInput,
   type OptionV2Input,
   type SeasonPeriodItem,
+  type StoredHeroFacts,
 } from '@/lib/experiences/v2-editor'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -609,6 +612,7 @@ export interface ExperienceV2EditorData {
     weatherPolicyText:  string | null
     responseSlaHours:   number
     offerEtaText:       string | null
+    heroFacts:          StoredHeroFacts | null
   }
   guides:          ExperienceV2EditorGuide[]
   /** Every guide, for the "add a guide" picker. */
@@ -705,7 +709,7 @@ export async function getExperienceV2Editor(experienceId: string): Promise<Exper
       price_from_cents, price_to_cents, fee_pct, max_anglers_per_guide, min_days, max_days,
       suited_for, not_suited_for, expectations_text, skill_level, walking_km_min, walking_km_max,
       day_schedule, season_periods, nearest_airport, suggested_lodging, license_info,
-      tip_guidance_text, weather_policy_text, response_sla_hours, offer_eta_text
+      tip_guidance_text, weather_policy_text, response_sla_hours, offer_eta_text, hero_facts
     `)
     .eq('id', experienceId)
     .maybeSingle()
@@ -745,6 +749,8 @@ export async function getExperienceV2Editor(experienceId: string): Promise<Exper
   if (!suggestedLodging.success) shapeWarnings.push('suggested_lodging')
   const licenseInfo = licenseInfoOrNullSchema.safeParse(page.license_info)
   if (!licenseInfo.success) shapeWarnings.push('license_info')
+  const heroFacts = heroFactsOrNullSchema.safeParse(page.hero_facts)
+  if (!heroFacts.success) shapeWarnings.push('hero_facts')
 
   return {
     page: {
@@ -776,6 +782,7 @@ export async function getExperienceV2Editor(experienceId: string): Promise<Exper
       weatherPolicyText:  page.weather_policy_text,
       responseSlaHours:   page.response_sla_hours,
       offerEtaText:       page.offer_eta_text,
+      heroFacts:          heroFacts.success ? heroFacts.data : null,
     },
     guides: (links.data ?? []).map(link => ({
       guideId:       link.guide_id,
@@ -1170,6 +1177,45 @@ export async function saveExperienceV2Content(
   if (error != null) {
     console.error('[saveExperienceV2Content] DB error:', error.message)
     return invalid(`Content could not be saved: ${error.message}`)
+  }
+
+  revalidateExperience(experienceId, page.slug)
+  return { success: true, warnings: [] }
+}
+
+// ─── saveExperienceV2HeroFacts ────────────────────────────────────────────────
+
+/**
+ * The S1 chips and S3 cards typed by hand (FA-1.63) — one UPDATE of one row. Nothing typed
+ * is stored as NULL: every chip and card is computed again.
+ */
+export async function saveExperienceV2HeroFacts(
+  experienceId: string,
+  facts: HeroFactsInput,
+): Promise<ExperienceV2SaveResult> {
+  await requireAdmin()
+  if (!idSchema.safeParse(experienceId).success) return invalid('Experience page not found')
+
+  const parsed = heroFactsOrNullSchema.safeParse(facts)
+  if (!parsed.success) return invalid(formatIssues(parsed.error))
+
+  const svc = createServiceClient()
+
+  const { data: page } = await svc
+    .from('experience_pages')
+    .select('id, slug')
+    .eq('id', experienceId)
+    .maybeSingle()
+  if (page == null) return invalid('Experience page not found')
+
+  const { error } = await svc
+    .from('experience_pages')
+    .update({ hero_facts: parsed.data, updated_at: new Date().toISOString() })
+    .eq('id', experienceId)
+
+  if (error != null) {
+    console.error('[saveExperienceV2HeroFacts] DB error:', error.message)
+    return invalid(`Hero facts could not be saved: ${error.message}`)
   }
 
   revalidateExperience(experienceId, page.slug)

@@ -1,12 +1,15 @@
 /**
  * S3 "At a glance" (FA-1.54): six facts a visitor checks before reading anything else.
  * A card whose field is empty is not drawn — never "Terrain: —".
+ *
+ * "Start and pick-up" and "Group size" can be typed in the admin (`hero_facts`, FA-1.63);
+ * with nothing typed they are computed as before, each on its own.
  */
 
 import { Footprints, Languages, MapPin, Target, Users, type LucideIcon } from 'lucide-react'
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
-import { languageNames } from '@/lib/experience-v2-content'
+import { languageNames, type HeroFacts } from '@/lib/experience-v2-content'
 
 export type OfferAtAGlanceProps = {
   technique:          string[]
@@ -17,6 +20,7 @@ export type OfferAtAGlanceProps = {
   languages:          string[]
   walkingKmMin:       number | null
   walkingKmMax:       number | null
+  heroFacts:          HeroFacts | null
 }
 
 /** "6–12 km on foot", "up to 8 km on foot", "from 3 km on foot" — whichever ends exist. */
@@ -28,7 +32,7 @@ function terrainText(min: number | null, max: number | null): string | null {
 }
 
 export default function OfferAtAGlance(props: OfferAtAGlanceProps) {
-  const meeting = [props.meetingPointName, props.meetingPointDescription]
+  const meeting = props.heroFacts?.startPickup ?? [props.meetingPointName, props.meetingPointDescription]
     .filter((part): part is string => part != null && part.trim() !== '')
     .join(' — ')
 
@@ -40,9 +44,9 @@ export default function OfferAtAGlance(props: OfferAtAGlanceProps) {
     {
       icon:  Users,
       label: 'Group size',
-      value: props.maxAnglersPerGuide === 1
+      value: props.heroFacts?.groupSize ?? (props.maxAnglersPerGuide === 1
         ? '1 angler per guide'
-        : `1–${props.maxAnglersPerGuide} anglers per guide`,
+        : `1–${props.maxAnglersPerGuide} anglers per guide`),
     },
     { icon: Languages,  label: 'Guide speaks', value: languageNames(props.languages).join(', ') },
     { icon: Footprints, label: 'Terrain',      value: terrainText(props.walkingKmMin, props.walkingKmMax) ?? '' },
@@ -63,7 +67,7 @@ export default function OfferAtAGlance(props: OfferAtAGlanceProps) {
             </span>
             <span className="min-w-0">
               <span className="block text-[12px] font-semibold uppercase tracking-[0.12em]" style={mutedStyle}>{label}</span>
-              <span className="mt-1 block text-[15px] font-medium leading-snug">{value}</span>
+              <span className="mt-1 block whitespace-pre-line text-[15px] font-medium leading-snug">{value}</span>
             </span>
           </Box>
         ))}
