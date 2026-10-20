@@ -25,15 +25,46 @@ describe('safeHttpUrl', () => {
 })
 
 describe('parseLicenseInfo', () => {
-  it('reads the documented shape', () => {
+  it('reads a legacy row (one buy_url) as a licence with that one link, unlabelled', () => {
     expect(parseLicenseInfo({ required: true, buy_url: 'https://x.test/l', price_text: 'NZ$30', steps: ['a', 'b'] }))
-      .toEqual({ required: true, buyUrl: 'https://x.test/l', buyText: null, priceText: 'NZ$30', steps: ['a', 'b'] })
+      .toEqual({ required: true, links: [{ label: null, url: 'https://x.test/l', text: null }], priceText: 'NZ$30', steps: ['a', 'b'] })
+  })
+
+  it('FA-1.62: reads links[] in stored order, label and url each', () => {
+    const info = parseLicenseInfo({
+      required: true,
+      links: [{ label: 'Fish & Game day licence', url: 'https://fishandgame.example/day' }, { label: null, url: 'https://x.test/season' }],
+      steps: [],
+    })
+    expect(info?.links).toEqual([
+      { label: 'Fish & Game day licence', url: 'https://fishandgame.example/day', text: null },
+      { label: null, url: 'https://x.test/season', text: null },
+    ])
+  })
+
+  it('FA-1.62: a legacy buy_url next to links[] is the first link — and not twice when links[] already has it', () => {
+    const links = [{ label: 'Season', url: 'https://x.test/season' }]
+    expect(parseLicenseInfo({ required: true, buy_url: 'https://x.test/day', links })?.links.map(l => l.url))
+      .toEqual(['https://x.test/day', 'https://x.test/season'])
+    expect(parseLicenseInfo({ required: true, buy_url: 'https://x.test/season', links })?.links.map(l => l.url))
+      .toEqual(['https://x.test/season'])
+  })
+
+  it('FA-1.62: a non-http link value is kept as text, never as a URL — javascript: included', () => {
+    const info = parseLicenseInfo({ required: true, links: [{ label: 'x', url: 'javascript:alert(1)' }, { label: 'Office', url: 'Kiosk at the harbour' }] })
+    expect(info?.links).toEqual([
+      { label: 'x', url: null, text: 'javascript:alert(1)' },
+      { label: 'Office', url: null, text: 'Kiosk at the harbour' },
+    ])
   })
 
   it('keeps a non-http buy_url as text, never as a URL', () => {
     const info = parseLicenseInfo({ required: true, buy_url: 'javascript:alert(1)' })
-    expect(info?.buyUrl).toBeNull()
-    expect(info?.buyText).toBe('javascript:alert(1)')
+    expect(info?.links).toEqual([{ label: null, url: null, text: 'javascript:alert(1)' }])
+  })
+
+  it('drops a link entry without a url and anything that is not an object', () => {
+    expect(parseLicenseInfo({ required: true, links: [{ label: 'no url' }, 'https://x.test', null, { url: '  ' }] })?.links).toEqual([])
   })
 
   it('is null for null, a non-object and an object that says nothing', () => {

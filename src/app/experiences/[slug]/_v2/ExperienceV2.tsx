@@ -110,7 +110,7 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
     experienceName:   page.experienceName,
     country:          page.country,
     responseSlaHours: page.responseSlaHours,
-    licenseUrl:       page.license?.buyUrl ?? null,
+    licenseUrl:       page.license?.links.find(link => link.url != null)?.url ?? null,
     offerMode:        page.offerMode,
     currency:         page.currency,
     fromTotalCents:   page.offerMode === 'fixed'

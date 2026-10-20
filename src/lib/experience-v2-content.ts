@@ -56,15 +56,31 @@ export function speciesNames(value: Json | null | undefined): string[] {
   })
 }
 
-/** `experience_pages.license_info` — `{required, buy_url, steps[], price_text}`. */
+/**
+ * One "where to buy" line of a licence. `url` and `text` are never both set: an `http(s)`
+ * value becomes `url` (the only form that may become a link), anything else stays `text`
+ * and is printed as plain text.
+ */
+export type LicenseLink = {
+  label: string | null
+  /** Already checked: an `http(s)` URL or null. */
+  url:   string | null
+  /** A stored value that is not an `http(s)` URL — shown as plain text, never as a link. */
+  text:  string | null
+}
+
+/** `experience_pages.license_info` — `{required, links[], steps[], price_text}` (legacy: `buy_url`). */
 export type LicenseInfo = {
   required:  boolean
-  /** Already checked: an `http(s)` URL or null. The only form that may become a link. */
-  buyUrl:    string | null
-  /** A `buy_url` that is not an `http(s)` URL — shown as plain text, never as a link. */
-  buyText:   string | null
+  /** In stored order; a legacy `buy_url` is the first of them. */
+  links:     LicenseLink[]
   priceText: string | null
   steps:     string[]
+}
+
+function licenseLink(raw: string, label: string | null): LicenseLink {
+  const url = safeHttpUrl(raw)
+  return { label, url, text: url == null ? raw : null }
 }
 
 /** Null when the column is empty or says nothing a visitor could use. */
@@ -78,19 +94,25 @@ export function parseLicenseInfo(value: Json | null | undefined): LicenseInfo | 
       })
     : []
 
+  const links = entries(value.links).flatMap(item => {
+    const raw = text(item.url)
+    return raw == null ? [] : [licenseLink(raw, text(item.label))]
+  })
+
+  // Rows written before FA-1.62 carry one `buy_url`: it is read as the first link, no backfill.
   const rawBuyUrl = text(value.buy_url)
-  const buyUrl    = safeHttpUrl(rawBuyUrl)
+  const legacy    = rawBuyUrl == null ? null : licenseLink(rawBuyUrl, null)
+  if (legacy != null && !links.some(link => link.url === legacy.url && link.text === legacy.text)) links.unshift(legacy)
 
   const info: LicenseInfo = {
     // Absent means required: a page that bothers to describe a licence is describing one.
     required:  value.required !== false,
-    buyUrl,
-    buyText:   buyUrl == null ? rawBuyUrl : null,
+    links,
     priceText: text(value.price_text),
     steps,
   }
 
-  const hasContent = info.buyUrl != null || info.buyText != null || info.priceText != null || info.steps.length > 0
+  const hasContent = info.links.length > 0 || info.priceText != null || info.steps.length > 0
   return hasContent || value.required === true ? info : null
 }
 

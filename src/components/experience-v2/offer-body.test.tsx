@@ -2,6 +2,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, fireEvent } from '@testing-library/react'
 import type { ExperienceV2 } from '@/lib/supabase/queries'
+import { parseLicenseInfo } from '@/lib/experience-v2-content'
 import OfferBody from './offer-body'
 import OfferWidget, { type OfferWidgetProps } from './offer-widget'
 import { CurrencyProvider } from './currency-context'
@@ -194,22 +195,44 @@ describe('S4 — licence link', () => {
     return container.querySelector('[data-section="S4"]')!
   }
 
+  const link = (url: string, label: string | null = null) => ({ label, url, text: null })
+
   it('an https link is external with rel="noopener noreferrer"', () => {
-    const a = licenceRow({ required: true, buyUrl: 'https://fishandgame.example/licence', buyText: null, priceText: null, steps: [] })
+    const a = licenceRow({ required: true, links: [link('https://fishandgame.example/licence')], priceText: null, steps: [] })
       .querySelector('a')!
     expect(a.getAttribute('href')).toBe('https://fishandgame.example/licence')
     expect(a.getAttribute('target')).toBe('_blank')
     expect(a.getAttribute('rel')).toBe('noopener noreferrer')
+    expect(a.textContent).toBe('how to buy it ›')
+  })
+
+  it('FA-1.62: two links are two lines, each with its own label', () => {
+    const row = licenceRow({
+      required: true,
+      links: [link('https://fishandgame.example/day', 'Day licence'), link('https://fishandgame.example/season', 'Season licence')],
+      priceText: null, steps: [],
+    })
+    const lines = [...row.querySelectorAll('[data-testid="licence-links"] > li')]
+    expect(lines.map(li => li.textContent)).toEqual(['Day licence ›', 'Season licence ›'])
+    expect(lines.map(li => li.querySelector('a')!.getAttribute('href')))
+      .toEqual(['https://fishandgame.example/day', 'https://fishandgame.example/season'])
   })
 
   it('anything that is not http(s) is plain text, not a link', () => {
-    const row = licenceRow({ required: true, buyUrl: null, buyText: 'javascript:alert(1)', priceText: null, steps: [] })
+    const row = licenceRow({ required: true, links: [{ label: null, url: null, text: 'javascript:alert(1)' }], priceText: null, steps: [] })
     expect(row.querySelector('a')).toBeNull()
     expect(row.textContent).toContain('javascript:alert(1)')
   })
 
+  it('FA-1.62: {label: "x", url: "javascript:alert(1)"} through parseLicenseInfo renders as text, not a link', () => {
+    const row = licenceRow(parseLicenseInfo({ required: true, links: [{ label: 'x', url: 'javascript:alert(1)' }] }))
+    expect(row.querySelector('a')).toBeNull()
+    expect(row.querySelector('[href]')).toBeNull()
+    expect(row.querySelector('[data-testid="licence-links"] > li')!.textContent).toBe('x: javascript:alert(1)')
+  })
+
   it('says the licence is bought online by the angler', () => {
-    expect(licenceRow({ required: true, buyUrl: null, buyText: null, priceText: null, steps: [] }).textContent)
+    expect(licenceRow({ required: true, links: [], priceText: null, steps: [] }).textContent)
       .toContain('you buy it yourself online')
   })
 
