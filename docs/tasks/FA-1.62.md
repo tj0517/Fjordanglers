@@ -9,7 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: fix/v2-figma-review
-pr: TBD
+pr: 149
 depends_on: []
 blocked_by_questions: []
 touches_db: false
