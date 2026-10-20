@@ -3,7 +3,7 @@
 /**
  * LocationMap — read-only Leaflet map shown on the angler-facing offer page.
  *
- * Shows an orange pin (and optional area polygon) on an OpenStreetMap base.
+ * Shows the FA sygnet pin (and optional area polygon) on an OpenStreetMap base.
  * Scroll-wheel zoom is disabled so the angler doesn't accidentally zoom
  * when scrolling through the offer page.
  *
@@ -15,6 +15,7 @@ import 'leaflet/dist/leaflet.css'
 import { MapContainer, TileLayer, Marker, GeoJSON } from 'react-leaflet'
 import L from 'leaflet'
 import type { GeoJsonObject } from 'geojson'
+import { pinIcon } from '@/components/map/pin-icon'
 
 // Fix Leaflet default icon
 if (typeof window !== 'undefined') {
@@ -27,21 +28,7 @@ if (typeof window !== 'undefined') {
   })
 }
 
-const orangeMarker = typeof window !== 'undefined'
-  ? L.divIcon({
-      className: '',
-      html: `<div style="
-        width:20px;height:20px;
-        background:#E67E50;
-        border:3px solid #fff;
-        border-radius:50% 50% 50% 0;
-        transform:rotate(-45deg);
-        box-shadow:0 3px 12px rgba(0,0,0,0.3)
-      "></div>`,
-      iconSize:   [20, 20],
-      iconAnchor: [10, 20],
-    })
-  : null
+const sygnetMarker = typeof window !== 'undefined' ? pinIcon() : null
 
 interface Props {
   lat:     number
@@ -71,8 +58,8 @@ export function LocationMap({ lat, lng, zoom, geojson }: Props) {
           attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
 
-        {orangeMarker != null && (
-          <Marker position={[lat, lng]} icon={orangeMarker} />
+        {sygnetMarker != null && (
+          <Marker position={[lat, lng]} icon={sygnetMarker} />
         )}
 
         {geojson != null && (
