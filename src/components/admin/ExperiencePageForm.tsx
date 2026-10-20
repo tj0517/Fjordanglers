@@ -64,6 +64,13 @@ const TECHNIQUES      = [
 ]
 const MONTHS          = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const MONTHS_SHORT    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+/**
+ * The photo limit of the page gallery, content photos and each species (FA-1.62, tj
+ * 2026-10-20: 12 / 12 / 6 → 30). Enforced in this form only — neither column has a
+ * server-side schema yet (docs/deferred-tasks.md, FA-1.62). Content blocks have their own
+ * limit, `CONTENT_BLOCK_MAX_PHOTOS`, which the server checks.
+ */
+const PHOTO_FIELD_MAX = 30
 const STATUS_OPTIONS  = [
   { v: 'draft',    l: 'Draft'    },
   { v: 'active',   l: 'Active'   },
@@ -344,9 +351,9 @@ function SpeciesDetailEditor({
           </div>
 
           <MultiImageUpload
-            label="Photos (up to 6 — first shown beside description, rest in a row below)"
+            label={`Photos (up to ${PHOTO_FIELD_MAX} — first is the cover; 2 or more open as a gallery on the v2 page)`}
             initial={(detail.image_urls ?? []).map((url, i) => ({ id: String(i), url, is_cover: i === 0, sort_order: i }))}
-            max={6}
+            max={PHOTO_FIELD_MAX}
             onChange={(imgs) => onChange({
               ...detail,
               image_urls: imgs.map(g => g.url),
@@ -1621,7 +1628,7 @@ export default function ExperiencePageForm({
       <MultiImageUpload
         label="Gallery images"
         initial={galleryImages}
-        max={12}
+        max={PHOTO_FIELD_MAX}
         onChange={setGalleryImages}
         pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
         guideId={prefill?.guide_id ?? undefined}
@@ -1634,7 +1641,7 @@ export default function ExperiencePageForm({
         <MultiImageUpload
           label="Content photos"
           initial={contentPhotoImages}
-          max={12}
+          max={PHOTO_FIELD_MAX}
           onChange={setContentPhotoImages}
           pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
           guideId={prefill?.guide_id ?? undefined}

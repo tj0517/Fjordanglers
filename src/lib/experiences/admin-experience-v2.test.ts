@@ -6,7 +6,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   basePriceCents,
+  CONTENT_BLOCK_MAX_PHOTOS,
   contentBlocksSchema,
+  licenseInfoOrNullSchema,
   bpToPercentText,
   centsToMoneyText,
   guidesSchema,
@@ -227,5 +229,52 @@ describe('the admin form\'s Waters / Programs lists (FA-1.60)', () => {
     expect([{}, { section: 'programs' }, { section: 'Waters' }, { section: null }].map(pageBlockSection))
       .toEqual(['programs', 'programs', 'programs', 'programs'])
     expect(pageBlockSection({ section: 'waters' })).toBe('waters')
+  })
+})
+
+describe('FA-1.62 — photo limit of a content block is 30', () => {
+  const photos = (n: number) => Array.from({ length: n }, (_, i) => `https://example.com/p${i}.jpg`)
+  const block  = (n: number) => [{ headline: 'Spring Creeks', text: 't', image_urls: photos(n) }]
+
+  it('is 30', () => expect(CONTENT_BLOCK_MAX_PHOTOS).toBe(30))
+
+  it('a block with 30 photos parses; the cover is the first', () => {
+    const parsed = contentBlocksSchema.parse(block(30))
+    expect(parsed[0]?.image_urls).toHaveLength(30)
+    expect(parsed[0]?.image_url).toBe('https://example.com/p0.jpg')
+  })
+
+  it('a block with 31 photos fails with "at most 30"', () => {
+    const result = contentBlocksSchema.safeParse(block(31))
+    expect(result.success).toBe(false)
+    expect(result.error?.issues.map(i => i.message)).toEqual(['A content block has at most 30 photos'])
+  })
+})
+
+describe('FA-1.62 — license_info links[]', () => {
+  const base = { required: true, steps: [], price_text: null }
+
+  it('keeps links in order; an empty label is null', () => {
+    expect(licenseInfoOrNullSchema.parse({ ...base, links: [{ label: 'Day', url: 'https://x.test/day' }, { label: '', url: 'https://x.test/season' }] }))
+      .toEqual({ ...base, links: [{ label: 'Day', url: 'https://x.test/day' }, { label: null, url: 'https://x.test/season' }] })
+  })
+
+  it('reads a legacy buy_url as the first link and never hands buy_url on', () => {
+    const parsed = licenseInfoOrNullSchema.parse({ ...base, buy_url: 'https://x.test/legacy' })
+    expect(parsed).toEqual({ ...base, links: [{ label: null, url: 'https://x.test/legacy' }] })
+    expect(parsed).not.toHaveProperty('buy_url')
+    expect(licenseInfoOrNullSchema.parse({ ...base, buy_url: 'https://x.test/a', links: [{ label: 'A', url: 'https://x.test/a' }] })?.links)
+      .toEqual([{ label: 'A', url: 'https://x.test/a' }])
+  })
+
+  it.each(['javascript:alert(1)', 'data:text/html,x', 'example.com'])('refuses the link %s', url => {
+    const result = licenseInfoOrNullSchema.safeParse({ ...base, links: [{ label: 'x', url }] })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.message).toBe('URL must start with http:// or https://')
+  })
+
+  it('refuses a 13th link', () => {
+    const links = Array.from({ length: 13 }, (_, i) => ({ label: null, url: `https://x.test/${i}` }))
+    expect(licenseInfoOrNullSchema.safeParse({ ...base, links }).error?.issues[0]?.message).toBe('At most 12 licence links')
   })
 })
