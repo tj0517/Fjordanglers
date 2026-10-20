@@ -2,7 +2,7 @@
 id: FA-1.62
 title: Strona v2 — poprawki z przeglądu Figmy (copy, kolejność, linki, listy, zdjęcia ryb, licencja, kalendarz)
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -91,3 +91,9 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 
 ## Notatki z realizacji
 - 2026-10-20 tj (przegląd w Figmie, plik `rk2npoNp3oSQO9km7SN2tE`): O-40 → (b) ikona przewija do formularza; krok 4 jeden tekst dla wszystkich metod; S5 tylko schowane.
+- 2026-10-20 tj (decyzje przy starcie FA-1.62):
+  - D1 — jedna wspólna lista języków = 12 z formularza profilu przewodnika (English, Norwegian, Swedish, Finnish, Danish, Icelandic, German, Polish, French, Dutch, Russian, Spanish); formularze admina dostają Dutch, Russian i Spanish.
+  - D2 — Chinook Salmon w obu listach `fish.ts`, jak Coho (`FISH_ALL` + `FISH_IMG` → `salmon.png`); `grep Chinook` = 2 wiersze, po jednym na listę (kryterium „1 wiersz” czytane jako 1 wpis na listę).
+  - D3 — sygnet zamiast pomarańczowej kropli wszędzie, gdzie rysuje `LocationMap` — także na `/offers/[token]`.
+  - D4 — lokalny stack FA startowany obok działających stacków innych projektów (Seaclouds, hydra-arms); `storage-api` włączony (upload zdjęć w adminie).
+  - Zawężenie kryterium zod (z promptu): czerwony dowód zod tylko dla bloków treści; galeria strony i zdjęcia ryb nie mają dziś schematu po stronie serwera — zapisane w deferred.
