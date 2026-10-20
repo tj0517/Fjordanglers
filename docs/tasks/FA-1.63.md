@@ -2,7 +2,7 @@
 id: FA-1.63
 title: Fakty w hero i „At a glance” wpisywane w adminie (`hero_facts` jsonb) + techniki muchowe
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: opus
 model_approved:
