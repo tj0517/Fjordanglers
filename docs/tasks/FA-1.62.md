@@ -2,7 +2,7 @@
 id: FA-1.62
 title: Strona v2 — poprawki z przeglądu Figmy (copy, kolejność, linki, listy, zdjęcia ryb, licencja, kalendarz)
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -123,3 +123,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
   - [x] 31. zdjęcie odrzucone w UI (kafelek 31. wyłączony, czerwona linia „1 photo not added — this field takes at most 30 photos.”) — galeria `11-…`, content photos `12-…`, ryba `13-…`
   - [ ] karta przewodnika jako link — tylko testy komponentu (przewodnicy w seedzie nie mają `slug`; deferred)
   - Środowisko do zrzutów: lokalnie brak bucketu `guide-photos` (utworzony jednym `insert into storage.buckets` w lokalnej bazie), a upload na 127.0.0.1 wywraca formularz (`next/image` nie zna hosta) — dlatego zdjęcia w adminie wybrane z galerii przewodnika testowego (`FA-1.62 Test Guide`, 31 zdjęć z `public/`, własne id, podpięty tylko do `fa162-pilot`). Fikstury SQL: `.fa-proofs/fa-1.62/{pilot,admin}-fixture.sql` (lokalnie, nie w repo). Dev server z fikcyjnymi kluczami Stripe w env procesu (`sk_test_fake_fa162` …), bez zmian w plikach `.env*`.
+- 2026-10-20 odbiór tj (PR #149): wszystkie kryteria udowodnione — 220/1130 testów, CI zielone na 97a2f06, 14 zrzutów obejrzanych, /trips bajt w bajt bez zmian, red proofs zod/javascript:/scroll.
