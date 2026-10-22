@@ -313,7 +313,7 @@ Jeśli projekt dev zostanie usunięty lub uśpiony:
    W każdej komendzie używaj: `set -a; . ~/.config/fa/dev.env; set +a; <command>`.
    Nigdy nie echuj, nie commituj, nie pisz nigdzie indziej.
 3. Zastosuj migracje: wpisz nowy URL poolera do sekretu `DEV_DB_URL` w GitHub
-   Environment `dev` (Settings → Environments → `dev`), potem uruchom ponownie ostatni
+   Environment `fev` (Settings → Environments → `fev`), potem uruchom ponownie ostatni
    przebieg `migrate-dev` w Actions (workflow „Deploy DB") — job wypycha wszystkie
    brakujące migracje i wpisuje `migration list` do summary. Ręcznie, tylko gdy
    Actions nie działa (guard blokuje to polecenie agentowi — robi człowiek):
@@ -348,7 +348,9 @@ Jeśli projekt dev zostanie usunięty lub uśpiony:
 
 **Migracje na dev** (od FA-1.20) wypycha job `migrate-dev` w `.github/workflows/deploy-db.yml`
 po każdym merge'u do `main`, który zmienia `supabase/migrations/**` albo sam workflow;
-sekret `DEV_DB_URL` żyje tylko w GitHub Environment `dev` (deployment branches: `main`).
+sekret `DEV_DB_URL` żyje tylko w GitHub Environment `fev` (deployment branches: `main`).
+**`fev` to Environment bazy dev** — tak nazwany przy zakładaniu, a GitHub nie pozwala
+zmienić nazwy Environment (decyzja tj 2026-10-22: zostaje `fev`).
 Stan dev = summary ostatniego przebiegu (`migration list`). Uśpiony projekt Free czerwieni
 job — obudź go i uruchom przebieg ponownie. Agent nie wypycha migracji na dev ręcznie.
 

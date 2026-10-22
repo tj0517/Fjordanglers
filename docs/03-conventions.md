@@ -97,7 +97,7 @@ in that file's header; `ci.yml` points there.
 
 | job (`deploy-db.yml`) | when | what it does | how to fix a red run |
 |---|---|---|---|
-| `migrate-dev` | push to `main` touching `supabase/migrations/**` or the workflow itself; Environment `dev` | `supabase db push --db-url` to fjordanglers-dev, then `migration list` into the step summary | read the Postgres error in the push step; a sleeping Free project fails to connect — wake it, re-run. Fix the migration in a new migration, never the database |
+| `migrate-dev` | push to `main` touching `supabase/migrations/**` or the workflow itself; Environment `fev` (= dev database) | `supabase db push --db-url` to fjordanglers-dev, then `migration list` into the step summary | read the Postgres error in the push step; a sleeping Free project fails to connect — wake it, re-run. Fix the migration in a new migration, never the database |
 | `migrate-prod` | `workflow_dispatch` from `main` only; Environment `production-db` waits for tj's Approve | `db push --dry-run` into the summary, then `db push`, then `migration list` into the summary | same; prod is never fixed by hand — the next migration goes through the same dispatch |
 
 Neither job has `continue-on-error`. No step prints the database URL: Actions masks the

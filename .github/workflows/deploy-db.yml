@@ -8,13 +8,13 @@
 #
 # ── Zasada sekretów (jedyne miejsce, gdzie jest zapisana; `ci.yml` tu odsyła) ──
 #   1. Sekrety żyją TYLKO w tym pliku i TYLKO jako sekrety GitHub Environment:
-#      `dev` -> DEV_DB_URL, `production-db` -> PROD_DB_URL. Nigdy jako sekrety
+#      `fev` (baza dev) -> DEV_DB_URL, `production-db` -> PROD_DB_URL. Nigdy jako sekrety
 #      repozytorium: te dostaje każdy workflow na każdej gałęzi, z pominięciem bramki.
 #      Sekret trafia do `env` pojedynczego kroku, który go używa — nie do joba,
 #      żeby nie widziały go akcje `checkout` i `setup-cli`.
 #   2. Żaden job z sekretem nie startuje na `pull_request`. Ten plik w ogóle nie ma
 #      wyzwalacza `pull_request`, a oba Environments mają deployment branches = tylko
-#      `main` — gałąź, która dopisze sobie `environment: dev`, sekretu nie dostanie.
+#      `main` — gałąź, która dopisze sobie `environment: fev`, sekretu nie dostanie.
 #   3. Żaden krok nie wypisuje adresu bazy. Actions maskuje cały sekret; krok
 #      „maskowanie" dokłada maski na jego części (host, użytkownik, hasło), bo
 #      błąd połączenia Postgresa wypisuje `host=… user=…` osobno. Repo jest publiczne —
@@ -58,7 +58,9 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: dev
+    # `fev` = Environment bazy dev (tak nazwany przy zakładaniu; GitHub nie zmienia
+    # nazw Environments — decyzja tj 2026-10-22).
+    environment: fev
     concurrency:
       group: deploy-db-dev
       cancel-in-progress: false
