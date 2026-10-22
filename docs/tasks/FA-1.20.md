@@ -2,7 +2,7 @@
 id: FA-1.20
 title: Migracje przez GitHub Actions — `deploy-db.yml`: dev po merge do `main`, prod ręcznie za bramką Environment `production-db` (wzór DCS)
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -82,3 +82,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 ## Notatki z realizacji
 - 2026-09-22 tj (wf-plan): wydzielone z FA-1.18 (D2) — pierwszy sekret w CI osobną decyzją.
 - 2026-10-22 tj: przepisane — `stage-1` → `main`, osobny `deploy-db.yml` jak w DCS, prod w zakresie za bramką Environment `production-db`. FA-1.63 (PR #150) czeka w `review` na pierwszy push przez Action; ręcznego pusha nie robimy.
+- 2026-10-22 tj: w tym zadaniu `gh` CLI zamiast serwera github MCP (`gh` uwierzytelniony; token MCP odrzucany — `Bad credentials` po wymianie tokenu i restarcie). Wiersz w `docs/deferred-tasks.md`.
