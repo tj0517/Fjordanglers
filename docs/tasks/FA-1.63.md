@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: feat/v2-hero-facts
+pr: 150
 depends_on: []
 blocked_by_questions: []
 touches_db: true
