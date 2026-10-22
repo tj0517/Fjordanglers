@@ -1,74 +1,84 @@
 ---
 id: FA-1.20
-title: CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev`
+title: Migracje przez GitHub Actions — `deploy-db.yml`: dev po merge do `main`, prod ręcznie za bramką Environment `production-db` (wzór DCS)
 stage: 1
 status: todo
 difficulty: M
 model: sonnet
 model_approved:
-effort: medium
+effort: high
 agent: fa-core
-branch: chore/ci-migrate-dev
+branch: chore/deploy-db-workflow
 depends_on: [FA-1.18]
 blocked_by_questions: []
 touches_db: true
-touches_prod: false
-estimate_h: 3
+touches_prod: true
+estimate_h: 4
 owner: tj
 ---
 
-# FA-1.20 — CI wypycha migracje na dev
+# FA-1.20 — Migracje przez GitHub Actions (dev auto, prod za bramką)
 
 ## Kontekst — przeczytaj przed startem
 - `CLAUDE.md` — reguły nienegocjowalne
 - `docs/03-conventions.md` — sekcja „CI"
-- `.github/workflows/ci.yml` — nagłówek „ŻADEN SEKRET" i job `db`; to zadanie wprowadza pierwszy wyjątek i musi go opisać w nagłówku
-- `docs/tasks/FA-1.18.md` — jak powstał dev i jaka jest ręczna procedura, którą ten job zastępuje
-- `scripts/agent-guard.sh` — wzorzec `supabase db push` blokuje **każdą komendę powłoki zawierającą ten tekst**, także `grep` po pliku. Szukaj przez narzędzia do czytania plików, nie przez `grep` w Bash, albo szukaj fragmentu `db push`
-- Dokumentacja Supabase CLI i GitHub Actions Environments — przez context7, nie z pamięci
+- `.github/workflows/ci.yml` — nagłówek „ŻADEN SEKRET" i job `db` (wersja CLI, setup); ten plik **nie** dostaje sekretów — sekrety żyją tylko w nowym `deploy-db.yml`
+- `docs/tasks/FA-1.18.md` — jak powstał dev; ręczna procedura `db push --db-url`, którą zastępuje job
+- `docs/05-agent-operations.md` §3 (bramki) i podrozdział „Środowisko dev"
+- `scripts/agent-guard.sh` — wzorzec `supabase db push` blokuje każdą komendę powłoki z tym tekstem, także `grep`; szukaj przez narzędzia do czytania plików albo po fragmencie `db push`
+- Wzorzec do skopiowania: `Seaclouds_management_system/.github/workflows/deploy-db.yml` (repo DCS, na PC w `~/Seaclouds_management_system`) — ten sam schemat: job dev na push, job prod na `workflow_dispatch` z `environment: production-db`
+- Dokumentacja Supabase CLI i GitHub Environments — context7, nie z pamięci
 
 Nie zgaduj tego, czego nie ma w tych plikach. Brakujące informacje zgłoś, zamiast wymyślać.
 
 ## Cel
-Po FA-1.18 dev dostaje migracje ręcznie od tj, więc łatwo się rozjedzie z repo i preview
-zacznie sypać błędami schematu. Po tym zadaniu każdy merge do `stage-1` sam wypycha nowe
-migracje na dev. Sekret z adresem bazy dev żyje tylko w GitHub Environment `dev`, dostępny
-wyłącznie dla joba uruchamianego pushem do `stage-1` — nigdy dla PR. Produkcja zostaje
-ręczna, za bramką.
+Dziś `db push` na prod robi tj ręcznie z Maca (hasło do bazy w CLI; 22 X 2026 push FA-1.63 nie
+przeszedł, bo zapisane hasło się nie zgadza), a dev dostaje migracje ręcznie od FA-1.18.
+Po tym zadaniu: każdy merge do `main` sam wypycha nowe migracje na dev; na prod migracje
+wchodzą wyłącznie przez `workflow_dispatch` w GitHub Environment `production-db` z wymaganym
+zatwierdzeniem tj — klik „Approve" zamiast terminala, log każdego pushu w Actions, hasła do
+bazy nie ma na żadnej maszynie. `agent-guard.sh` przestaje być jedyną bramką. Pierwszym
+pushem przez Action jest `20261011000000_experience_hero_facts.sql` (FA-1.63 czeka w `review`).
 
 ## Zakres
-- [ ] Odczyt stanu: `ci.yml`, `supabase migration list --db-url "$DEV_DB_URL"` (wykonuje tj, wynik do raportu).
-- [ ] **tj (STOP):** GitHub → Settings → Environments → `dev`, deployment branches: tylko `stage-1`; sekret `DEV_DB_URL` (adres **poolera** Supabase w trybie session — runnery GitHub nie mają IPv6, a bezpośrednie połączenie Free jest IPv6).
-- [ ] Job `migrate-dev` w `ci.yml`: `on: push` do `stage-1`, `environment: dev`, `needs:` na joby sprawdzające, `concurrency` bez anulowania (dwa merge nie ścigają się o bazę), ta sama wersja CLI co job `db`; wypycha migracje jawnym `--db-url`, bez `link`; potem `migration list` do summary.
-- [ ] Nagłówek `ci.yml`: wyjątek od „ŻADEN SEKRET" opisany (jaki sekret, gdzie, kto ma dostęp, dlaczego nie PR).
-- [ ] `docs/03-conventions.md` „CI" i podrozdział „Środowisko dev" w `docs/05` (z FA-1.18): ręczny krok zastąpiony jobem.
+- [ ] Odczyt stanu: `ci.yml` (job `db`, wersja CLI), `supabase migration list --db-url "$DEV_DB_URL"` (wykonuje tj, wynik do raportu), lista migracji na prod przez supabase-prod MCP (`list_migrations`)
+- [ ] **tj (STOP):** GitHub → Settings → Environments: `dev` (deployment branches: tylko `main`; sekret `DEV_DB_URL` — adres **poolera**, tryb session, bo runnery nie mają IPv6) i `production-db` (required reviewers: tj; deployment branches: tylko `main`; sekret `PROD_DB_URL`, pooler). Agent przygotowuje instrukcję, tj wykonuje
+- [ ] Nowy `.github/workflows/deploy-db.yml` (wzór DCS): job `migrate-dev` — `on: push: branches: [main]`, `paths: [supabase/migrations/**]`, `environment: dev`, `concurrency` bez anulowania, ta sama wersja CLI co job `db`, `supabase db push --db-url "$DEV_DB_URL"` bez `link`, potem `migration list` do summary; job `migrate-prod` — wyłącznie `on: workflow_dispatch` z `environment: production-db`, krok `db push --dry-run` do summary **przed** krokiem push, `migration list` po; żadnego `continue-on-error`
+- [ ] Nagłówek `ci.yml` i `deploy-db.yml`: zasada „sekrety tylko w `deploy-db.yml`, tylko w Environments, nigdy w jobach `pull_request`" opisana w jednym miejscu
+- [ ] `docs/03-conventions.md` „CI", `docs/05` §3 (bramka STOP przy migracji: „merge dopiero po zastosowaniu migracji" → „merge, potem `workflow_dispatch` prod i zatwierdzenie tj; kod nie może wymagać kolumny przed pushem — albo migracja wchodzi przed merge'em, kolejność decyduje tj per zadanie") i „Środowisko dev": ręczne kroki zastąpione jobami; `envs.prod.migrations` w `agent-workflow/projects/fa/project.md` aktualizuje tj
+- [ ] `docs/tasks/README.md` i `docs/tasks/_template.md`: bramka „`db push` na prod wyłącznie tj" → „na prod wyłącznie przez `deploy-db.yml` (`workflow_dispatch`, zatwierdza tj)"
 
 ## Gotowe, gdy
-- [ ] Merge PR z nową, nieszkodliwą migracją do `stage-1` → job `migrate-dev` zielony, w summary `migration list` z Local = Remote dla nowej migracji — **link do przebiegu**.
-- [ ] Na czerwono (izolacja sekretu): przebieg na `pull_request` nie uruchamia `migrate-dev` (job „skipped") — **link do przebiegu PR**; `grep -n 'secrets\.' .github/workflows/ci.yml` → trafienia wyłącznie w jobie `migrate-dev`.
-- [ ] Na czerwono (sekret nie wycieka): log przebiegu nie zawiera adresu bazy (Actions maskuje sekret; sprawdź, że komenda nie wypisuje URL w innej postaci, np. rozbitej) — **fragment logu**.
-- [ ] Błąd migracji na dev czerwieni job (nie `continue-on-error`) — dowód: przebieg z celowo złym `DEV_DB_URL` w gałęzi testowej environmentu **albo** uzasadnienie w raporcie, czemu dowodu nie da się bezpiecznie wykonać, i decyzja tj.
-- [ ] `pnpm typecheck && pnpm lint && pnpm test run` zielone; pozostałe joby CI bez zmian w zachowaniu.
+- [ ] Merge do `main` z nową migracją (może być migracja FA-1.63 po jej merge'u — kolejność: decyzja tj w notatkach) → `migrate-dev` zielony, summary z `migration list` Local = Remote — **link do przebiegu**
+- [ ] `workflow_dispatch` `migrate-prod` **czeka** na zatwierdzenie (status „Waiting" w Actions, zrzut), po „Approve" tj push przechodzi, summary pokazuje dry-run i `migration list` — **link do przebiegu**; po nim `list_migrations` przez supabase-prod MCP zawiera nową migrację — **wklej wynik**
+- [ ] Na czerwono (bramka): uruchomienie `migrate-prod` bez zatwierdzenia nie wykonuje pushu — dowód: przebieg odrzucony („Reject") kończy się bez kroku push, log wklejony
+- [ ] Na czerwono (izolacja sekretów): przebieg `pull_request` nie uruchamia żadnego joba z `deploy-db.yml` (brak w checkach PR — link); `grep -n 'secrets\.' .github/workflows/ci.yml` → 0 trafień; `grep -n 'secrets\.' .github/workflows/deploy-db.yml` → trafienia tylko w krokach z `environment`
+- [ ] Na czerwono (sekret nie wycieka): logi obu jobów nie zawierają adresu bazy w żadnej postaci (maskowanie + komenda nie wypisuje URL) — **fragment logu**
+- [ ] Błąd migracji czerwieni job: przebieg `migrate-dev` z celowo błędnym `DEV_DB_URL` w gałęzi testowej environmentu → czerwony — **link**, albo uzasadnienie i decyzja tj
+- [ ] `pnpm typecheck && pnpm lint && pnpm test run` zielone; CI na head PR (`check`, `knip`, `db`, `secrets`) — lista w raporcie
 
 ## Poza zakresem
-- Automatyczny `db push` na produkcję — zostaje ręczny, za bramką
-- Seed w CI (seed na dev wgrywany raz w FA-1.18; ponowny seed to osobna decyzja)
-- `supabase db diff --linked` wobec produkcji (wiersz FA-1.11 w deferred)
-- Skan sekretów → FA-1.19
+- Automatyczny push na prod po merge (bez zatwierdzenia) — nie; bramka zostaje
+- Seed na dev w CI — osobna decyzja
+- `supabase db diff --linked` wobec produkcji — deferred FA-1.11
+- Vercel Preview na dev — FA-1.18 / FA-1.75
+- Skan sekretów — FA-1.19 (done)
 Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 
 ## Bramki STOP
-- Utworzenie environmentu i sekretu w GitHubie — robi tj.
-- Każde uruchomienie migracji na dev poza jobem CI — robi tj.
-- Zmiana reguł ochrony gałęzi / required checks — decyzja tj.
-- Stan bazy ustalasz bieżącym odczytem, nigdy z pamięci, notatek ani pliku typów.
+- Environments i sekrety w GitHubie tworzy tj; agent nie zna adresów baz
+- Każde uruchomienie `migrate-prod` — wyłącznie tj (Approve); agent nie wywołuje `gh workflow run deploy-db.yml` dla joba prod
+- Zmiana reguł ochrony gałęzi / required checks — decyzja tj
+- Stan bazy ustalasz bieżącym odczytem, nigdy z pamięci, notatek ani pliku typów
 
 ## Weryfikacja
 ```
-gh run list --workflow CI --branch stage-1 --limit 3
-gh run view <id> --log | grep -n migrate-dev | head
+gh run list --workflow deploy-db.yml --limit 5
+gh run view <id> --log | grep -n 'migrate-\(dev\|prod\)' | head
+grep -n 'secrets\.' .github/workflows/ci.yml .github/workflows/deploy-db.yml
 pnpm typecheck && pnpm lint && pnpm test run
 ```
 
 ## Notatki z realizacji
 - 2026-09-22 tj (wf-plan): wydzielone z FA-1.18 (D2) — pierwszy sekret w CI osobną decyzją.
+- 2026-10-22 tj: przepisane — `stage-1` → `main`, osobny `deploy-db.yml` jak w DCS, prod w zakresie za bramką Environment `production-db`. FA-1.63 (PR #150) czeka w `review` na pierwszy push przez Action; ręcznego pusha nie robimy.

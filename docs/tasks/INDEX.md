@@ -99,9 +99,10 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.64 | Biblioteka zdjęć per strona w adminie — „Choose from this page” przy każdym polu zdjęć, bez ponownego uploadu | M | opus | todo | FA-1.62 |
 | FA-1.65 | Hub kraju v2 — `getDestinationHub()` w warstwie danych, `ExpCard` wyniesiony, szablon: hero z linią dowodu, sezon, gatunki, karty z przewodnikiem, FAQ, recenzje, 3 kroki, inne kraje, kontakt | L | opus | todo | — |
 | FA-1.66 | Hub kraju — mapa z pinami lokacji (Leaflet jak `/trips`) + pomiar `hub_view` / `section_view` / `hub_card_click` | M | sonnet | todo | FA-1.60, FA-1.65 |
+| FA-1.67 | Worktree jedną komendą — `scripts/dev-env.sh` (env z lokalnego stacku + atrapy + flaga v2), `scripts/dev-preflight.sh` (obce stacki, dysk) przed `next dev`, §9 dla PC/WSL2 | M | sonnet | todo | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
-| FA-1.20 | CI dociera migracje na dev po merge do `stage-1` — pierwszy sekret w CI, w GitHub Environment `dev` | M | sonnet | todo | FA-1.18 |
+| FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | todo | FA-1.18 |
 | FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | done | — |
 ## Stages 2–8
 
@@ -122,3 +123,4 @@ FA-1.60 dopisane 14 X 2026 (zlecone przez tj jako „FA-1.58”, numer zajęty �
 FA-1.61 dopisane 15 X 2026 przez tj po teście prod FA-1.60 (32 s na odpowiedź; brak przewinięcia do błędu).
 FA-1.62–1.64 dopisane 20 X 2026 (/wf-plan fa „exp v2 pages z komentarzy w Figmie”, plik `rk2npoNp3oSQO9km7SN2tE`) — 18 uwag tj scalone w 3 zadania (decyzja tj: „keep it simple”). Decyzje tj: O-39 (a) `hero_facts jsonb`, O-40 (b) ikona kalendarza przewija do formularza, O-41 (a) biblioteka per strona. Ścieżka: FA-1.62 → FA-1.64; FA-1.63 równolegle (migracja).
 FA-1.65–1.66 dopisane 20 X 2026 (/wf-plan fa „strony krajów jak Rod Society”) — hub kraju jako strona research-intent i landing dla fraz generycznych. Decyzje tj: O-42 (c) hybryda (dane z ofert + treść w `destinations.ts`), O-43 (b) sezon/FAQ ręcznie per hub, O-44 hero z danych + cytat ręczny, O-45 (b) mapa w zakresie, D1 hub live od razu po merge; pięć zadań scalone do dwóch (tj). Ścieżka: FA-1.65 → FA-1.66 (po merge FA-1.60) → test Ads 14 dni (tj).
+FA-1.20 przepisane, FA-1.67 dopisane 22 X 2026 (/wf-plan fa „environment”) — po FA-1.63: cztery rundy o env, cztery restarty WSL (dysk C: ~2 GB), nieudany ręczny push na prod (hasło). Decyzje tj: prod przez Action za bramką jak w DCS, FA-1.63 czeka na FA-1.20; Stripe opcjonalny w env.ts zostaje w deferred.
