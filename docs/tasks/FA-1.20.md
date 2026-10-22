@@ -2,13 +2,14 @@
 id: FA-1.20
 title: Migracje przez GitHub Actions — `deploy-db.yml`: dev po merge do `main`, prod ręcznie za bramką Environment `production-db` (wzór DCS)
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: high
 agent: fa-core
 branch: chore/deploy-db-workflow
+pr: 152
 depends_on: [FA-1.18]
 blocked_by_questions: []
 touches_db: true
@@ -89,3 +90,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-10-22 tj (dla porządku, poza zadaniem): FA-1.63 — migracja idzie na prod osobnym PR-em tylko z migracją, przed merge'em #150, bo nowe zapytanie wybiera `hero_facts` i bez kolumny dałoby 500 na prod.
 - 2026-10-22 tj: Environment bazy dev zostaje nazwany `fev` (GitHub nie zmienia nazw Environments) — `environment: fev` w workflow; `fev` w `docs/03` „CI", `docs/05` §11 i w tym pliku; w §11 linijka, że `fev` = Environment bazy dev.
 - 2026-10-22 tj: czerwony dowód „błąd czerwieni job" — opcja A: Environment `dev-red` (deployment branch `fa-1.20-red`, fałszywy `DEV_DB_URL` na nieistniejący host), gałąź `fa-1.20-red` z kopią workflow; po dowodzie gałąź i Environment do usunięcia.
+- 2026-10-22 agent: czerwony dowód A wykonany — przebiegi 39759758129 i 39759894145 (gałąź `fa-1.20-red`, usunięta). Pierwszy pokazał, że maska na 1-znakowym fałszywym haśle psuje log („e***it") → maskowane są tylko części ≥ 4 znaki (17b9326). Environment `dev-red` do usunięcia przez tj.
