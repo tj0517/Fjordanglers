@@ -162,6 +162,15 @@ Backfill (in the migration, idempotent): current `guide_id` → `experience_guid
 `agent_knowledge`, `REVOKE ALL … FROM anon, authenticated` first, then `SELECT` back to
 both and `INSERT/UPDATE/DELETE` to `authenticated`; `service_role` gets `ALL`.
 
+### Added in FA-1.63 — `experience_pages.hero_facts` (O-39 a)
+`hero_facts jsonb` — nullable, no default, no backfill, no CHECK. The S1 hero chips and
+two S3 "At a glance" cards typed by hand in the v2 admin tab:
+`{location?, day_length? full_day|half_day|multi_day, group_size?, season?,
+gear_included? boolean, start_pickup?}`. Every key is optional; NULL, an absent key or an
+empty string = computed as before (`region`, `min/max_days`, `max_anglers_per_guide`,
+`season_months`, `includes`, `meeting_point_*`), chip by chip. Shape: `heroFactsSchema`
+(writer, `saveExperienceV2HeroFacts`) and `parseHeroFacts` (reader, null on anything else).
+
 ### Still in `public`, dead or near-dead (candidates for later tasks)
 `guide_images` (admin insert + guide profile read — FA-1.07/1.08),
 `guide_submissions` (read-only archive; writer component unrendered — FA-1.07),

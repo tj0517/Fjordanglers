@@ -758,6 +758,7 @@ export type Database = {
           fee_pct: number
           gallery_image_urls: string[]
           guide_id: string | null
+          hero_facts: Json | null
           hero_image_url: string | null
           id: string
           includes: string[]
@@ -837,6 +838,7 @@ export type Database = {
           fee_pct?: number
           gallery_image_urls?: string[]
           guide_id?: string | null
+          hero_facts?: Json | null
           hero_image_url?: string | null
           id?: string
           includes?: string[]
@@ -916,6 +918,7 @@ export type Database = {
           fee_pct?: number
           gallery_image_urls?: string[]
           guide_id?: string | null
+          hero_facts?: Json | null
           hero_image_url?: string | null
           id?: string
           includes?: string[]
