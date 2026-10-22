@@ -58,9 +58,13 @@ import { SeasonCalendarGrid } from '@/components/trips/SeasonCalendarGrid'
 const DIFFICULTIES    = ['Beginner', 'Intermediate', 'Advanced', 'Expert']
 const EFFORTS         = ['Low', 'Medium', 'High']
 const ENVIRONMENTS    = ['River', 'Lake', 'Sea', 'Fjord', 'Estuary', 'Coast']
+// "Fly fishing" stays for pages that say no more; the fly-fishing techniques after it let a
+// NZ/Chile page say what it actually fishes (FA-1.63).
 const TECHNIQUES      = [
   'Fly fishing', 'Spinning', 'Trolling', 'Jigging', 'Ice fishing',
   'Baitcasting', 'Shore fishing', 'Sea fishing', 'Vertical fishing',
+  'Dry fly', 'Wet fly', 'Wade fishing', 'Boat fishing', 'Nymphing', 'Streamer', 'Topwater',
+  'Saltwater fly fishing',
 ]
 const MONTHS          = ['January','February','March','April','May','June','July','August','September','October','November','December']
 const MONTHS_SHORT    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']

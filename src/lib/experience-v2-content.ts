@@ -1,7 +1,7 @@
 /**
  * Typed readers for the free-form columns of a v2 offer page (FA-1.54).
  *
- * `species_details`, `license_info`, `day_schedule`, `season_periods` and `sample_itinerary` are `jsonb`, so
+ * `species_details`, `license_info`, `hero_facts`, `day_schedule`, `season_periods` and `sample_itinerary` are `jsonb`, so
  * the database promises nothing about their shape and an admin can save anything. These
  * readers keep what is usable and drop the rest instead of throwing — a malformed entry
  * costs one line on the page, never the page. No casts: every field is checked.
@@ -11,7 +11,7 @@
  */
 
 import type { Json } from '@/lib/supabase/database.types'
-import { pageBlockSection, type ContentBlockSection } from '@/lib/experiences/v2-editor'
+import { DAY_LENGTHS, pageBlockSection, type ContentBlockSection, type DayLength } from '@/lib/experiences/v2-editor'
 
 type Dict = { [key: string]: Json | undefined }
 
@@ -114,6 +114,43 @@ export function parseLicenseInfo(value: Json | null | undefined): LicenseInfo | 
 
   const hasContent = info.links.length > 0 || info.priceText != null || info.steps.length > 0
   return hasContent || value.required === true ? info : null
+}
+
+/**
+ * `experience_pages.hero_facts` (FA-1.63) — the S1 chips and S3 cards an admin typed by
+ * hand. A null field means "computed as before", chip by chip.
+ */
+export type HeroFacts = {
+  location:     string | null
+  dayLength:    DayLength | null
+  groupSize:    string | null
+  season:       string | null
+  /** null = decided by the page's `includes`; false hides the chip. */
+  gearIncluded: boolean | null
+  startPickup:  string | null
+}
+
+function dayLength(value: Json | undefined): DayLength | null {
+  return DAY_LENGTHS.find(length => length === value) ?? null
+}
+
+/**
+ * Null when the column is empty, is not an object, or holds nothing usable. A key with the
+ * wrong type is dropped on its own — its chip falls back to the computed value.
+ */
+export function parseHeroFacts(value: Json | null | undefined): HeroFacts | null {
+  if (!isDict(value)) return null
+
+  const facts: HeroFacts = {
+    location:     text(value.location),
+    dayLength:    dayLength(value.day_length),
+    groupSize:    text(value.group_size),
+    season:       text(value.season),
+    gearIncluded: typeof value.gear_included === 'boolean' ? value.gear_included : null,
+    startPickup:  text(value.start_pickup),
+  }
+
+  return Object.values(facts).some(fact => fact != null) ? facts : null
 }
 
 /**

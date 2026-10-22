@@ -15,6 +15,7 @@ import { basePriceCents } from '@/lib/experiences/v2-editor'
 import { ContentSection } from './ContentSection'
 import { Notice } from './fields'
 import { GuidesSection } from './GuidesSection'
+import { HeroFactsSection } from './HeroFactsSection'
 import { OfferSection } from './OfferSection'
 import { OptionsSection } from './OptionsSection'
 import { PriceGridSection } from './PriceGridSection'
@@ -43,6 +44,7 @@ export function ExperienceV2Editor({ data }: { data: ExperienceV2EditorData }) {
         currency={page.currency}
       />
       <OfferSection page={page} />
+      <HeroFactsSection page={page} />
       <PriceGridSection
         experienceId={page.id}
         prices={data.prices}

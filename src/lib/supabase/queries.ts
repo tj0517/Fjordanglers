@@ -17,6 +17,7 @@ import { effectivePrices, type PriceRow } from '@/lib/pricing/experience-price'
 import {
   speciesNames,
   parseLicenseInfo,
+  parseHeroFacts,
   parseDaySchedule,
   parseSeasonPeriods,
   parseItinerary,
@@ -26,6 +27,7 @@ import {
   parseSpeciesDetails,
   safeHttpUrl,
   type LicenseInfo,
+  type HeroFacts,
   type DayStep,
   type SeasonPeriod,
   type ItineraryDay,
@@ -644,6 +646,8 @@ export type ExperienceV2 = {
   walkingKmMin:       number | null
   walkingKmMax:       number | null
   license:            LicenseInfo | null
+  /** Chips and cards typed in the admin; null or a null field = computed (FA-1.63). */
+  heroFacts:          HeroFacts | null
   tipGuidanceText:    string | null
   suitedFor:          string[]
   notSuitedFor:       string[]
@@ -834,7 +838,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
           story_text, content_blocks, catches_text, environment,
           hero_image_url, gallery_image_urls, includes, excludes, season_months, season_periods,
           species_details, technique, meeting_point_name, meeting_point_description,
-          walking_km_min, walking_km_max, license_info, tip_guidance_text,
+          walking_km_min, walking_km_max, license_info, hero_facts, tip_guidance_text,
           suited_for, not_suited_for, expectations_text, day_schedule,
           weather_policy_text, offer_eta_text,
           min_days, max_days, max_anglers_per_guide, response_sla_hours,
@@ -955,6 +959,7 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
         walkingKmMin:       page.walking_km_min,
         walkingKmMax:       page.walking_km_max,
         license:            parseLicenseInfo(page.license_info),
+        heroFacts:          parseHeroFacts(page.hero_facts),
         tipGuidanceText:    page.tip_guidance_text,
         suitedFor:          page.suited_for ?? [],
         notSuitedFor:       page.not_suited_for ?? [],

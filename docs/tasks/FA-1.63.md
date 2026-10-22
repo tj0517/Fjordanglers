@@ -2,13 +2,14 @@
 id: FA-1.63
 title: Fakty w hero i „At a glance” wpisywane w adminie (`hero_facts` jsonb) + techniki muchowe
 stage: 1
-status: todo
+status: review
 difficulty: M
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/v2-hero-facts
+pr: 150
 depends_on: []
 blocked_by_questions: []
 touches_db: true
@@ -51,7 +52,7 @@ pokazać „Dry fly, Nymphing, Wade fishing” zamiast samego „Fly fishing”.
 
 ## Gotowe, gdy
 - [ ] `supabase db reset` lokalnie zielony; migracja tylko dodaje kolumnę (`git diff` pliku migracji = 1 ALTER + komentarz)
-- [ ] Testy: parser `hero_facts` (pełny, częściowy, pusty, śmieci → null), chipy z nadpisaniem i bez (po jednym chipie), S3 z `start_pickup` i `group_size` tekstowym; `pnpm test run -- hero-facts offer-chips offer-at-a-glance` zielone
+- [ ] Testy: parser `hero_facts` (pełny, częściowy, pusty, śmieci → null), chipy z nadpisaniem i bez (po jednym chipie), S3 z `start_pickup` i `group_size` tekstowym; `pnpm test run hero-facts offer-chips offer-at-a-glance` zielone
 - [ ] Strona pilotażowa na lokalnym stacku bez `hero_facts` renderuje identyczne chipy co na `main` (zrzut przed/po w `docs/screenshots/FA-1.63/`)
 - [ ] Po wpisaniu w adminie: „Tierra del Fuego”, multi-day, „2–4 anglers”, „Nov–Apr”, gear included — hero pokazuje dokładnie te 5 chipów (zrzut); zod odrzuca `day_length: 'week'` (pokazany na czerwono)
 - [ ] Na stronie z technikami `['Fly fishing','Dry fly','Nymphing','Wade fishing']` S3 pokazuje wszystkie cztery (zrzut)
@@ -73,7 +74,7 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 ## Weryfikacja
 ```
 supabase db reset
-pnpm test run -- hero-facts offer-chips offer-at-a-glance v2-editor
+pnpm test run hero-facts offer-chips offer-at-a-glance
 ls docs/screenshots/FA-1.63/
 git diff main...HEAD --stat -- "src/app/experiences/[slug]/_v1"
 pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
@@ -81,3 +82,10 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 
 ## Notatki z realizacji
 - 2026-10-20 tj: O-39 → (a) jedna kolumna `hero_facts jsonb`; nowe techniki dopisane do wspólnej listy `TECHNIQUES` (v1 też ją widzi).
+- 2026-10-20 tj: gear included → (b) trzy stany — Automatic (z Includes) / Included / Not included. Automatic = brak wartości w jsonb; `gear_included` zostaje booleanem w kształcie.
+- 2026-10-20 tj: lokalna baza → (a) `supabase db reset` teraz; żadna inna sesja nie używa stacku.
+- 2026-10-20 tj: miejsce w adminie — NIE karta Content. Osobna sekcja „Hero facts” w zakładce v2: własna karta z własnym zapisem, jak pozostałe sekcje; te same klocki sekcji/pól i ten sam wzorzec zapisu, bez dokładania pól do „Save content”.
+- 2026-10-20 tj: domyślne przyjęte — tekst pokazany dokładnie jak wpisany (bez prefiksu „season ”), długość dnia małymi literami („full day” / „half day” / „multi-day”), jedno `group_size` zasila chip i kartę, „Start and pick-up” zastępuje kartę meeting point.
+- 2026-10-20 tj: STOP 1 zaakceptowany — migracja `20261011000000_experience_hero_facts.sql` jak pokazana, `comment on column` zostaje. Baza diffów: `origin/main` (lokalny `main` jest za `origin/main`). Weryfikacja: `pnpm test run hero-facts offer-chips offer-at-a-glance` zamiast `pnpm test run -- … v2-editor` — `--` sprawia, że vitest ignoruje filtry, a żaden plik nie pasuje do `v2-editor` (testy schematu są w `hero-facts.test.ts`).
+- 2026-10-22 tj: STOP 2 — migracja `20261011000000_experience_hero_facts.sql` trafi na prod przez workflow GitHub Actions (FA-1.20), nie ręcznie. PR #150 zostaje w `review`, dopóki FA-1.20 nie jest zmergowane i prod push się nie wykonał; bez merge do tego czasu.
+- 2026-10-22 tj: migracja na prod przed merge #150 (bez niej `getExperienceV2` wybiera `hero_facts` i v2 strona dałaby 500) — osobny PR „db(FA-1.63): hero_facts column — migration only” z `origin/main`: migracja + wpis w `docs/02-data-model.md` + zregenerowany `database.types.ts` (opcja a — job `db` porównuje typy ze schematem); prod przez `deploy-db.yml` (FA-1.20); potem rebase `feat/v2-hero-facts`.
