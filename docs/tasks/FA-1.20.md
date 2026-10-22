@@ -2,7 +2,7 @@
 id: FA-1.20
 title: Migracje przez GitHub Actions — `deploy-db.yml`: dev po merge do `main`, prod ręcznie za bramką Environment `production-db` (wzór DCS)
 stage: 1
-status: review
+status: done
 difficulty: M
 model: sonnet
 model_approved:
@@ -93,3 +93,4 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-10-22 agent: czerwony dowód A wykonany — przebiegi 39759758129 i 39759894145 (gałąź `fa-1.20-red`, usunięta). Pierwszy pokazał, że maska na 1-znakowym fałszywym haśle psuje log („e***it") → maskowane są tylko części ≥ 4 znaki (17b9326). Environment `dev-red` do usunięcia przez tj.
 - 2026-10-22 tj: obie obserwacje do `docs/deferred-tasks.md` pod FA-1.20 (dry-run widoczny dopiero po Approve; Node 20 / `ubuntu-latest` → 26). `dev-red` usunięty przez tj.
 - 2026-10-22 tj: zamknięcie — opcja (b): zadanie zostaje w `review`, tj merguje #152 bez zmian; po merge'u agent dopisuje do opisu PR trzy dowody (`migrate-dev` — 6 migracji na dev, `migrate-prod` Waiting → Approve, przebieg Reject). Linie `done` idą w pierwszym commicie następnego zadania FA (wg `docs/tasks/README.md`).
+- 2026-10-22 tj: accepted; closed in FA-1.63's branch per README
