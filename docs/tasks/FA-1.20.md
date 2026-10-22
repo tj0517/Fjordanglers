@@ -83,3 +83,7 @@ pnpm typecheck && pnpm lint && pnpm test run
 - 2026-09-22 tj (wf-plan): wydzielone z FA-1.18 (D2) — pierwszy sekret w CI osobną decyzją.
 - 2026-10-22 tj: przepisane — `stage-1` → `main`, osobny `deploy-db.yml` jak w DCS, prod w zakresie za bramką Environment `production-db`. FA-1.63 (PR #150) czeka w `review` na pierwszy push przez Action; ręcznego pusha nie robimy.
 - 2026-10-22 tj: w tym zadaniu `gh` CLI zamiast serwera github MCP (`gh` uwierzytelniony; token MCP odrzucany — `Bad credentials` po wymianie tokenu i restarcie). Wiersz w `docs/deferred-tasks.md`.
+- 2026-10-22 tj: `paths` — opcja B: `supabase/migrations/**` plus `.github/workflows/deploy-db.yml`, jak w DCS (merge tego PR uruchamia `migrate-dev` bez nowej migracji — dowód okablowania). Pierwszy dispatch `migrate-prod` bez oczekujących migracji: dowód Waiting / Approve / pusty dry-run i czerwony dowód Reject.
+- 2026-10-22 tj: README / szablon — w `docs/tasks/README.md` i `_template.md` nie było zdania „`db push` na prod wyłącznie tj"; nowe brzmienie bramki dopisane w README pkt 6 „Bramki STOP" i w sekcji „Bramki STOP" szablonu.
+- 2026-10-22 tj: brak refu dev w `docs/05` §11 — wiersz w `docs/deferred-tasks.md`, nie poprawiane tutaj.
+- 2026-10-22 tj (dla porządku, poza zadaniem): FA-1.63 — migracja idzie na prod osobnym PR-em tylko z migracją, przed merge'em #150, bo nowe zapytanie wybiera `hero_facts` i bez kolumny dałoby 500 na prod.
