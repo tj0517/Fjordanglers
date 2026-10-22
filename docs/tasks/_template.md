@@ -43,6 +43,10 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 
 ## Bramki STOP
 brak
+<!-- przy touches_db / touches_prod zamiast „brak", m.in.:
+- `db push` na prod wyłącznie przez `deploy-db.yml` (`workflow_dispatch`, zatwierdza tj) — agent go nie uruchamia
+- kolejność migracja → kod: decyzja tj (`docs/05-agent-operations.md` §3)
+-->
 
 ## Weryfikacja
 ```

@@ -45,6 +45,9 @@ owner: tj
 5. **Poza zakresem** — konkretnie, co kusi i należy do innego zadania. Kończy się
    zdaniem: „jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj".
 6. **Bramki STOP** — wypisane, jeśli `touches_db` albo `touches_prod`; inaczej „brak".
+   Przy migracji zawsze: `db push` na prod wyłącznie przez `deploy-db.yml`
+   (`workflow_dispatch`, zatwierdza tj) — agent go nie uruchamia; kolejność migracja →
+   kod według `docs/05-agent-operations.md` §3.
 7. **Weryfikacja** — komendy i oczekiwane wyniki, do wklejenia w raport.
 8. **Notatki z realizacji** — puste na starcie; agent i reviewer dopisują.
 

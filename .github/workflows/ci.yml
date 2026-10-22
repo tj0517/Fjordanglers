@@ -13,6 +13,9 @@
 # (klucze lokalnego stacku Supabase są deterministyczne i identyczne u każdego,
 # Stripe/Resend to placeholdery). `secrets.*` nie występuje w tym pliku ani razu —
 # jedyny token to `GITHUB_TOKEN`, który Actions wstrzykuje samo i którego tu nie używamy.
+# Ten plik działa na `pull_request`, więc sekret nie może tu trafić nigdy. Jedyne
+# miejsce z sekretami to `deploy-db.yml` (FA-1.20) — zasada jest zapisana w jego
+# nagłówku, tylko tam.
 
 name: CI
 

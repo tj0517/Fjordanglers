@@ -88,7 +88,21 @@ justification, it goes in an ADR and this file links to it.
 becomes required once tj adds it after the FA-1.19 review. `knip` became a gate in
 FA-1.08, when the dead-code count reached zero. No secrets in the workflow: every value
 comes from the committed `.env.test` (local Supabase keys are deterministic, Stripe/Resend
-are placeholders), and `secrets.*` appears nowhere in the workflow.
+are placeholders), and `secrets.*` appears nowhere in the workflow. `ci.yml` runs on
+`pull_request`, so it must never get one.
+
+**Secrets live only in `.github/workflows/deploy-db.yml`** (FA-1.20), only as GitHub
+Environment secrets, never in a job triggered by `pull_request`. The rule is written out
+in that file's header; `ci.yml` points there.
+
+| job (`deploy-db.yml`) | when | what it does | how to fix a red run |
+|---|---|---|---|
+| `migrate-dev` | push to `main` touching `supabase/migrations/**` or the workflow itself; Environment `fev` (= dev database) | `supabase db push --db-url` to fjordanglers-dev, then `migration list` into the step summary | read the Postgres error in the push step; a sleeping Free project fails to connect — wake it, re-run. Fix the migration in a new migration, never the database |
+| `migrate-prod` | `workflow_dispatch` from `main` only; Environment `production-db` waits for tj's Approve | `db push --dry-run` into the summary, then `db push`, then `migration list` into the summary | same; prod is never fixed by hand — the next migration goes through the same dispatch |
+
+Neither job has `continue-on-error`. No step prints the database URL: Actions masks the
+secret, and a dedicated step masks its parts (host, user, password) too, because the
+repo — and so every log and summary — is public.
 
 | job | when | what it proves | how to fix a red run |
 |---|---|---|---|

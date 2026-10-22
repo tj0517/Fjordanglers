@@ -102,7 +102,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.67 | Worktree jedną komendą — `scripts/dev-env.sh` (env z lokalnego stacku + atrapy + flaga v2), `scripts/dev-preflight.sh` (obce stacki, dysk) przed `next dev`, §9 dla PC/WSL2 | M | sonnet | todo | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
-| FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | todo | FA-1.18 |
+| FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | review | FA-1.18 |
 | FA-1.75 | Preview wyłączone do czasu dev — Ignored Build Step w Vercelu (tymczasowe, zdejmuje FA-1.18); robi tj | S | — (człowiek) | done | — |
 ## Stages 2–8
 
