@@ -71,3 +71,13 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 ## Notatki z realizacji
 - 2026-10-20 tj: O-41 → (a) biblioteka per strona. Zależy od FA-1.62 (limity 30 i galeria ryb — inaczej biblioteka nie ma gdzie wstawiać).
 - 2026-10-22 tj: one picker — on page fields "Guide gallery" becomes "Choose from this page" (page photos + guide photos), no second picker; model opus/high. Task-file fixes: vitest filter without --, diff base origin/main, Storage check = storage.objects count, v2 tab has no photo fields.
+- 2026-10-22 odczyt stanu (origin/main 2b27f28) — pola zdjęć w `ExperiencePageForm`, każde dziś z `pickFrom={guidePhotos}` (zdjęcia z `guide_photos` przewodnika strony, ładowane w `edit/page.tsx` / `new/page.tsx`):
+  - wiele zdjęć (`MultiImageUpload`, bez kadrowania): galeria `galleryImages` (max 30), content photos `contentPhotoImages` (30), views `viewsImages` (6), bloki Waters/Programs `waterBlocks`/`programBlocks[].image_urls` (30 / blok, `CONTENT_BLOCK_MAX_PHOTOS`), ryby `speciesDetails[name].image_urls` (30 / gatunek; `SpeciesDetailEditor` dostaje `guidePhotos` propem, tak samo `PageBlockList` i `OptionEditor`);
+  - jedno zdjęcie (`ImageUpload`, kadrowanie przy wyborze): hero `heroImageUrl` (16:9), łodzie `boatItems[].image_url`, noclegi `accommodationItems[].image_url`, atrakcje `specialAttractions[].image_url` (4:3);
+  - w każdej opcji (`OptionEditor`, własny stan i własny zapis): blok `blocks[].image_url`, łódź `boatItems[].image_url`, atrakcja `attractions[].image_url` (4:3); stan zapisany opcji w `tripOptions` rodzica (aktualizowany po `onSaved`);
+  - OG image to pole tekstowe URL, nie pole zdjęć — ani źródło, ani cel biblioteki;
+  - zakładka v2 (`experience-v2-editor/`) nie ma pól zdjęć (grep `image|photo` pusty);
+  - poza stroną: `MultiImageUpload` z `pickFrom` używa tylko `ExperiencePageForm`; `ImageUpload` z `pickFrom` — także `edit-guide-form.tsx` (zostaje bez zmian).
+- 2026-10-22 tj: single-photo fields — option A: a pick from the page sets the photo as is (no crop, no upload); "Crop" stays available afterwards; guide edit form keeps crop-on-pick.
+- 2026-10-22 tj: trip options — option A: in the library; options see each other's last-saved photos plus their own unsaved edits; the page sees options' last-saved photos.
+- 2026-10-22 tj: correction — the "site path or http(s)" URL rule in the brief was a mistake; zod only requires non-empty. Validation stays as is; the observation goes to `docs/deferred-tasks.md`.
