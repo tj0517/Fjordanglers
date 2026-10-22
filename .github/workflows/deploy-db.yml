@@ -1,0 +1,160 @@
+# FjordAnglers — Deploy DB (FA-1.20, wzór: DCS `deploy-db.yml`)
+#
+# Migracje na zdalne bazy idą WYŁĄCZNIE tędy:
+#
+#   push do `main` (ścieżki niżej)  -> job `migrate-dev`  -> fjordanglers-dev, automatycznie
+#   workflow_dispatch z `main`      -> job `migrate-prod` -> produkcja, po „Approve" tj
+#                                      w Environment `production-db`
+#
+# ── Zasada sekretów (jedyne miejsce, gdzie jest zapisana; `ci.yml` tu odsyła) ──
+#   1. Sekrety żyją TYLKO w tym pliku i TYLKO jako sekrety GitHub Environment:
+#      `dev` -> DEV_DB_URL, `production-db` -> PROD_DB_URL. Nigdy jako sekrety
+#      repozytorium: te dostaje każdy workflow na każdej gałęzi, z pominięciem bramki.
+#      Sekret trafia do `env` pojedynczego kroku, który go używa — nie do joba,
+#      żeby nie widziały go akcje `checkout` i `setup-cli`.
+#   2. Żaden job z sekretem nie startuje na `pull_request`. Ten plik w ogóle nie ma
+#      wyzwalacza `pull_request`, a oba Environments mają deployment branches = tylko
+#      `main` — gałąź, która dopisze sobie `environment: dev`, sekretu nie dostanie.
+#   3. Żaden krok nie wypisuje adresu bazy. Actions maskuje cały sekret; krok
+#      „maskowanie" dokłada maski na jego części (host, użytkownik, hasło), bo
+#      błąd połączenia Postgresa wypisuje `host=… user=…` osobno. Repo jest publiczne —
+#      logi i summary czyta każdy.
+#   4. Żadnego `continue-on-error`: nieudana migracja czerwieni job.
+#
+# Prod osobnym wyzwalaczem i osobną grupą `concurrency` (lekcja z DCS): dispatch
+# czekający na zatwierdzenie nie może zablokować pushy na dev po kolejnych merge'ach.
+# `cancel-in-progress: false` — dwa merge'e nie przerywają sobie pushu w połowie.
+# W grupie czeka najwyżej jeden przebieg (GitHub anuluje starszy oczekujący); dla dev
+# to bez szkody, bo każdy `db push` wypycha wszystkie brakujące migracje naraz.
+#
+# Kolejność migracja → kod: `docs/05-agent-operations.md` §3.
+
+name: Deploy DB
+
+on:
+  push:
+    branches: [main]
+    # + sam workflow (decyzja tj 2026-10-22, opcja B): zmiana joba sprawdza się
+    # od razu na dev, zanim zależy od niej prawdziwa migracja.
+    paths:
+      - 'supabase/migrations/**'
+      - '.github/workflows/deploy-db.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Musi być równa SUPABASE_CLI_VERSION w ci.yml (job `db`) — ta sama wersja,
+  # na której migracje przechodzą `db reset` w PR.
+  SUPABASE_CLI_VERSION: '2.75.0'
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # migrate-dev — każdy merge do `main` z nową migracją trafia na fjordanglers-dev
+  # ───────────────────────────────────────────────────────────────────────────
+  migrate-dev:
+    name: migrate-dev
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: dev
+    concurrency:
+      group: deploy-db-dev
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: maskowanie części adresu bazy
+        env:
+          DB_URL: ${{ secrets.DEV_DB_URL }}
+        # Ten sam skrypt w migrate-prod (alias *mask) — jedna kopia, bez dryfu.
+        run: &mask |
+          set -euo pipefail
+          if [ -z "$DB_URL" ]; then
+            echo "::error::sekret adresu bazy jest pusty — brak sekretu w tym Environment"
+            exit 1
+          fi
+          # postgresql://USER:PASS@HOST:PORT/DB — części idą wyłącznie do ::add-mask::
+          # (polecenie dla runnera, które runner konsumuje i nie pokazuje w logu).
+          rest="${DB_URL#*://}"
+          userinfo="${rest%@*}"
+          hostpart="${rest##*@}"
+          host="${hostpart%%[:/]*}"
+          user="${userinfo%%:*}"
+          pass="${userinfo#*:}"
+          pass_decoded="$(printf '%b' "${pass//%/\\x}")"
+          for part in "$user" "$pass" "$pass_decoded" "$host"; do
+            if [ -n "$part" ]; then echo "::add-mask::$part"; fi
+          done
+
+      - name: db push → dev
+        env:
+          DB_URL: ${{ secrets.DEV_DB_URL }}
+        run: supabase db push --db-url "$DB_URL" --yes
+
+      - name: migration list → summary
+        env:
+          DB_URL: ${{ secrets.DEV_DB_URL }}
+          TITLE: 'migrate-dev — `supabase migration list` (fjordanglers-dev)'
+        run: &list |
+          set -uo pipefail
+          supabase migration list --db-url "$DB_URL" > list.out 2>&1
+          status=$?
+          cat list.out
+          { echo "### $TITLE"; echo ''; echo '```'; cat list.out; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # migrate-prod — wyłącznie workflow_dispatch z `main`, za „Approve" tj
+  #
+  # Job czeka w stanie „Waiting" na zatwierdzenie w Environment `production-db`;
+  # sekret PROD_DB_URL zostaje wydany dopiero po „Approve". „Reject" kończy job
+  # bez uruchomienia żadnego kroku. Dry-run trafia do summary przed krokiem push.
+  # ───────────────────────────────────────────────────────────────────────────
+  migrate-prod:
+    name: migrate-prod
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production-db
+    concurrency:
+      group: deploy-db-prod
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: maskowanie części adresu bazy
+        env:
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+        run: *mask
+
+      - name: db push --dry-run → summary
+        env:
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+        run: |
+          set -uo pipefail
+          supabase db push --db-url "$DB_URL" --dry-run > dry-run.out 2>&1
+          status=$?
+          cat dry-run.out
+          { echo '### migrate-prod — `supabase db push --dry-run` (produkcja)'; echo ''; echo '```'; cat dry-run.out; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: db push → prod
+        env:
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+        run: supabase db push --db-url "$DB_URL" --yes
+
+      - name: migration list → summary
+        env:
+          DB_URL: ${{ secrets.PROD_DB_URL }}
+          TITLE: 'migrate-prod — `supabase migration list` (produkcja)'
+        run: *list

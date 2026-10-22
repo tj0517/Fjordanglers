@@ -59,8 +59,17 @@ implementation model; a wrong plan or a missed regression costs more than the to
 
 The agent halts and asks before any of these, even if the task seems to imply it:
 
-- any write to the production database (`uwxrstbplaoxfghrchcy`) — `db push`, `execute_sql`
-  with anything but SELECT, `apply_migration`
+- any write to the production database (`uwxrstbplaoxfghrchcy`) — `execute_sql` with
+  anything but SELECT, `apply_migration`, and `db push` from any terminal. Since FA-1.20
+  migrations reach prod **only** through `.github/workflows/deploy-db.yml` (job
+  `migrate-prod`, `workflow_dispatch`, approved by tj in Environment `production-db`);
+  the agent never dispatches that job and never holds a database URL
+- the order of a migration and the code that needs it. Merge to `main` deploys the code
+  to prod at once, while the migration reaches prod only after the `migrate-prod`
+  dispatch and tj's approval. So either the merged code must not require the new
+  column/table before that push, or the migration goes first in its own migration-only
+  PR, merged and pushed before the code PR. Which of the two is tj's call per task
+  (FA-1.63: migration first)
 - `migration repair`, editing or deleting an existing migration file, rewriting history
 - dropping a table or column, deleting rows, deleting files
 - changing secrets, tokens, env vars in Vercel, Supabase Auth settings, Stripe webhooks
@@ -303,12 +312,15 @@ Jeśli projekt dev zostanie usunięty lub uśpiony:
    Cudzysłów pojedynczy wymagany — hasło może zawierać `$`, `&`, `!`, które bez cudzysłowów rozwinęłyby się przez shell przy `source`.
    W każdej komendzie używaj: `set -a; . ~/.config/fa/dev.env; set +a; <command>`.
    Nigdy nie echuj, nie commituj, nie pisz nigdzie indziej.
-3. Zastosuj migracje bez zmiany linku repo (pełna forma z env-file):
+3. Zastosuj migracje: wpisz nowy URL poolera do sekretu `DEV_DB_URL` w GitHub
+   Environment `dev` (Settings → Environments → `dev`), potem uruchom ponownie ostatni
+   przebieg `migrate-dev` w Actions (workflow „Deploy DB") — job wypycha wszystkie
+   brakujące migracje i wpisuje `migration list` do summary. Ręcznie, tylko gdy
+   Actions nie działa (guard blokuje to polecenie agentowi — robi człowiek):
    ```
    set -a; . ~/.config/fa/dev.env; set +a
    supabase db push --db-url "$DEV_DB_URL"
    ```
-   (guard blokuje to polecenie agentowi — robi człowiek)
 4. Upewnij się, że `psql` jest zainstalowany (`psql --version`); jeśli nie:
    ```
    sudo apt install -y postgresql-client
@@ -334,8 +346,11 @@ Jeśli projekt dev zostanie usunięty lub uśpiony:
 **Plan Free usypia projekt po ~1 tygodniu bez ruchu.** Aby obudzić: wejdź na
 `app.supabase.com`, kliknij projekt, Restore. Kilka sekund i jest gotowy.
 
-**`db push` na dev** robi człowiek (nie CI) do czasu FA-1.20, który to automatyzuje.
-Agent przygotowuje komendę i czeka na potwierdzenie — guard ją blokuje.
+**Migracje na dev** (od FA-1.20) wypycha job `migrate-dev` w `.github/workflows/deploy-db.yml`
+po każdym merge'u do `main`, który zmienia `supabase/migrations/**` albo sam workflow;
+sekret `DEV_DB_URL` żyje tylko w GitHub Environment `dev` (deployment branches: `main`).
+Stan dev = summary ostatniego przebiegu (`migration list`). Uśpiony projekt Free czerwieni
+job — obudź go i uruchom przebieg ponownie. Agent nie wypycha migracji na dev ręcznie.
 
 ### Zmienne Preview po FA-1.18
 
