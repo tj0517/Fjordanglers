@@ -90,8 +90,11 @@ jobs:
           user="${userinfo%%:*}"
           pass="${userinfo#*:}"
           pass_decoded="$(printf '%b' "${pass//%/\\x}")"
+          # Część krótsza niż 4 znaki nie dostaje maski: maska zamienia KAŻDE jej wystąpienie
+          # w logu (fałszywe hasło „x" z dowodu FA-1.20 zrobiło z „exit" „e***it"), a tak
+          # krótkie hasło nie jest sekretem do ochrony. Cały URL i tak maskuje Actions.
           for part in "$user" "$pass" "$pass_decoded" "$host"; do
-            if [ -n "$part" ]; then echo "::add-mask::$part"; fi
+            if [ "${#part}" -ge 4 ]; then echo "::add-mask::$part"; fi
           done
 
       - name: db push → dev
