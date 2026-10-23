@@ -1127,8 +1127,10 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
   const hub = getHubForSlug(slug)
   if (hub == null) return null
 
-  return unstable_cache(
-    async (): Promise<DestinationHubData> => {
+  // Only what the database says is cached; the hub's own config (copy, species override,
+  // the other hubs) is applied after, so a deploy that edits `destinations.ts` shows at once.
+  const fromDb = await unstable_cache(
+    async (): Promise<Omit<DestinationHubData, 'hub' | 'species' | 'otherHubs'>> => {
       const db = createPublicClient()
 
       const { data: pages, error } = await db
@@ -1233,20 +1235,24 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
       })
 
       return {
-        hub,
         offers,
         guideCount: new Set(shown.map(row => row.guide!.id)).size,
         priceFrom:  hubPriceFrom(priced),
-        species:    hubSpecies(hub.species, offers.map(o => o.targetSpecies)),
         reviews:    reviewCards(reviewsResult?.data ?? []),
         ogImage:    rows[0]?.hero_image_url ?? null,
-        otherHubs:  DESTINATION_HUBS.filter(h => h.slug !== hub.slug).map(h => ({ slug: h.slug, h1: h.h1 })),
       }
     },
-    // The flag decides how every card is priced, so a flip must not serve the other pricing.
-    ['destination-hub', slug, rendersAsV2(2) ? 'v2' : 'v1'],
+    // The countries are part of the query; the flag decides how every card is priced.
+    ['destination-hub', slug, getHubCountries(hub).join(','), rendersAsV2(2) ? 'v2' : 'v1'],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
+
+  return {
+    ...fromDb,
+    hub,
+    species:   hubSpecies(hub.species, fromDb.offers.map(o => o.targetSpecies)),
+    otherHubs: DESTINATION_HUBS.filter(h => h.slug !== hub.slug).map(h => ({ slug: h.slug, h1: h.h1 })),
+  }
 }
 
 // ─── Service-client helpers (no ISR caching) ─────────────────────────────────
