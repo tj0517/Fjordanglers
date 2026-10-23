@@ -89,8 +89,10 @@ function Season({ data }: { data: DestinationHubData }) {
 
   return (
     <OfferSection section="season" anchor="season" eyebrow="Season" title="When to go">
-      {/* Below `sm` the bar keeps readable cells and scrolls sideways instead of the page. */}
-      <div className="-mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" data-testid="hub-season-scroll">
+      {/* Below `sm` the bar keeps readable cells and scrolls sideways instead of the page.
+          `relative` keeps the bar's absolutely positioned sr-only month names inside the
+          scroller; without it they widen the document past the viewport. */}
+      <div className="relative -mx-4 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" data-testid="hub-season-scroll">
         <div className="min-w-[560px] max-w-[720px] sm:min-w-0">
           <SeasonBar seasonMonths={seasonMonths} peakMonths={peakMonths} periods={[]} />
         </div>
