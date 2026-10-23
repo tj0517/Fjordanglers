@@ -1,7 +1,7 @@
 'use server'
 
 import { createServiceClient } from '@/lib/supabase/server'
-import type { ExpPage } from './exp-page-map-section'
+import type { ExpPage } from '@/components/trips/exp-card'
 
 /**
  * Fetches ALL active experience_pages that have coordinates set.

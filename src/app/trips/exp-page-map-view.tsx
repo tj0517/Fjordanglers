@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polygon, useMap, useMapEvents }
 import L from 'leaflet'
 import Supercluster from 'supercluster'
 import 'leaflet/dist/leaflet.css'
-import type { ExpPage } from './exp-page-map-section'
+import type { ExpPage } from '@/components/trips/exp-card'
 import { formatPrice } from '@/lib/format-price'
 import { pinIcon } from '@/components/map/pin-icon'
 

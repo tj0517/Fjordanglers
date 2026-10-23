@@ -3,7 +3,7 @@ import { NavWithUser } from '@/components/layout/nav-with-user'
 import { SiteFooter } from '@/components/layout/footer'
 import { createServiceClient } from '@/lib/supabase/server'
 import ExpPageMapSection from './exp-page-map-section'
-import type { ExpPage } from './exp-page-map-section'
+import type { ExpPage } from '@/components/trips/exp-card'
 import { COUNTRIES } from '@/lib/countries'
 import { WebEventTracker } from '@/components/analytics/WebEventTracker'
 

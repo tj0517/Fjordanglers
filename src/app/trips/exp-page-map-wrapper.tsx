@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import type { ExpPage } from './exp-page-map-section'
+import type { ExpPage } from '@/components/trips/exp-card'
 import type { MapBounds } from './exp-page-map-view'
 
 const ExpPageMapView = dynamic(() => import('./exp-page-map-view'), {
