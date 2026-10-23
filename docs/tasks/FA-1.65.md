@@ -2,13 +2,14 @@
 id: FA-1.65
 title: Hub kraju v2 — `getDestinationHub()` w warstwie danych, `ExpCard` wyniesiony, szablon: hero z linią dowodu, sezon, gatunki, karty z przewodnikiem, FAQ, recenzje, 3 kroki, inne kraje, kontakt
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.65-hub-v2
+pr: 155
 depends_on: []
 blocked_by_questions: []
 touches_db: false
