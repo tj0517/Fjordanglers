@@ -1,5 +1,5 @@
 /**
- * S9 "Price and deposit" (FA-1.54).
+ * S9 "Price" (FA-1.54; "Price and deposit" until FA-1.65, tj 2026-10-23).
  *
  *  • `fixed`  — the days × anglers table, then Total / Deposit / Balance for the same
  *    default configuration the widget opens on. Every number comes from `quote()` in
@@ -64,7 +64,7 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
   if (!tableUsable && range == null && archetypes.length === 0 && weatherPolicyText == null) return null
 
   return (
-    <OfferSection section="S9" anchor="cena" eyebrow="Money" title="Price and deposit" accordion={{ defaultOpen: true }}>
+    <OfferSection section="S9" anchor="cena" eyebrow="Money" title="Price" accordion={{ defaultOpen: true }}>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[3fr_2fr]">
         {tableUsable && (
           <Box>
