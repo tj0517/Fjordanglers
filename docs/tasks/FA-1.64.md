@@ -2,7 +2,7 @@
 id: FA-1.64
 title: Biblioteka zdjęć strony w adminie — „wybierz z wgranych” przy każdym polu zdjęć
 stage: 1
-status: review
+status: done
 difficulty: M
 model: opus
 model_approved:
@@ -84,3 +84,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 - 2026-10-22 tj: correction — the "site path or http(s)" URL rule in the brief was a mistake; zod only requires non-empty. Validation stays as is; the observation goes to `docs/deferred-tasks.md`.
 - 2026-10-23 tj: guide-form screenshots — option A: local image host added temporarily, never committed, revert proven.
 - 2026-10-23 tj: Views wipe (pre-existing prod bug) — option A: one-line loader fix in this PR with red test + read-only prod count; recovery left to a separate task.
+- 2026-10-23 tj: accepted. Reviewed on the branch: diffs of src/app/api, src/lib/supabase, guide forms, dashboard and next.config.ts empty; screenshots 11 before/after differ only in the "From gallery" tab shade (hover state), 12 byte-identical. Views on prod were never filled — no data lost, no recovery needed.
