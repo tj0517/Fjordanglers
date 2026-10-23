@@ -9,6 +9,10 @@
  *
  * There is no inquiry form here on purpose: the hub leads to an offer page, and the offer
  * page asks.
+ *
+ * FA-1.66: a map of the offers with coordinates sits beside the hero on desktop and under it
+ * on mobile — only when at least one offer has them. The hub's GA4 events (`hub_view`,
+ * `section_view`, `hub_card_click`) come from `HubFunnelProvider`.
  */
 
 import Link from 'next/link'
@@ -17,7 +21,11 @@ import SeasonBar from '@/components/experience-v2/offer-season-bar'
 import { FaqList } from '@/components/experience-v2/offer-faq'
 import { ReviewCardList } from '@/components/experience-v2/offer-reviews'
 import { StepCards, type Step } from '@/components/experience-v2/offer-how-it-works'
+import { HubFunnelProvider } from '@/components/analytics/hub-funnel'
 import HubTrips from './hub-trips'
+import HubMap from './hub-map'
+import type { HubMapPin } from './hub-map-view'
+import { HubSelectionProvider } from './hub-selection'
 import type { DestinationHubData } from '@/lib/supabase/queries'
 
 const HOW_IT_WORKS: Step[] = [
@@ -147,6 +155,23 @@ function Reviews({ data }: { data: DestinationHubData }) {
   )
 }
 
+/** Offers without coordinates are left off the map. */
+function mapPins(data: DestinationHubData): HubMapPin[] {
+  const pins: HubMapPin[] = []
+  for (const offer of data.offers) {
+    if (offer.locationLat == null || offer.locationLng == null) continue
+    pins.push({
+      slug:      offer.page.slug,
+      name:      offer.page.experience_name,
+      priceText: offer.priceText,
+      guideName: offer.guides[0]?.name ?? null,
+      lat:       offer.locationLat,
+      lng:       offer.locationLng,
+    })
+  }
+  return pins
+}
+
 function HowItWorks() {
   return (
     <section data-block="how-it-works" className="mt-14 border-t pt-10 sm:pt-12" style={{ borderColor: 'rgba(10,46,77,0.08)' }}>
@@ -213,16 +238,29 @@ function Contact({ data }: { data: DestinationHubData }) {
 }
 
 export default function DestinationHubView({ data }: { data: DestinationHubData }) {
+  const pins = mapPins(data)
+
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 pb-20">
-      <Hero data={data} />
-      <Season data={data} />
-      <HubTrips offers={data.offers} species={data.species} />
-      <Faq data={data} />
-      <Reviews data={data} />
-      <HowItWorks />
-      <MoreDestinations data={data} />
-      <Contact data={data} />
-    </div>
+    <HubFunnelProvider slug={data.hub.slug}>
+      <HubSelectionProvider>
+        <div className="max-w-7xl mx-auto px-4 md:px-8 pb-20">
+          {pins.length > 0 ? (
+            <div className="lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-12">
+              <Hero data={data} />
+              <HubMap pins={pins} />
+            </div>
+          ) : (
+            <Hero data={data} />
+          )}
+          <Season data={data} />
+          <HubTrips offers={data.offers} species={data.species} />
+          <Faq data={data} />
+          <Reviews data={data} />
+          <HowItWorks />
+          <MoreDestinations data={data} />
+          <Contact data={data} />
+        </div>
+      </HubSelectionProvider>
+    </HubFunnelProvider>
   )
 }

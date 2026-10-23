@@ -1,10 +1,30 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, cleanup } from '@testing-library/react'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { render, cleanup, fireEvent, act } from '@testing-library/react'
 import DestinationHubView from './destination-hub-view'
-import { completeHub, emptyHub } from './hub.fixture'
+import { completeHub, emptyHub, withCoordinates } from './hub.fixture'
+import type { HubMapPin } from './hub-map-view'
 
-afterEach(cleanup)
+// Leaflet does not run in jsdom: the map is a list of pin buttons with the same props.
+vi.mock('./hub-map-view', () => ({
+  default: ({ pins, onPinClick }: { pins: HubMapPin[]; onPinClick: (slug: string) => void }) => (
+    <ul data-testid="hub-map-pins">
+      {pins.map(pin => (
+        <li key={pin.slug}>
+          <button type="button" data-pin={pin.slug} onClick={() => onPinClick(pin.slug)}>
+            {pin.name} · {pin.priceText} · {pin.guideName ?? '—'}
+          </button>
+        </li>
+      ))}
+    </ul>
+  ),
+}))
+
+afterEach(() => {
+  cleanup()
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 
 /**
  * FA-1.65 — the country hub's layout. Fixtures: ./hub.fixture.ts.
@@ -40,7 +60,7 @@ describe('DestinationHubView — complete hub', () => {
 
   it('FA-1.65: a card shows its price and its first guide, "+1" when the offer has two', () => {
     const { container } = render(<DestinationHubView data={completeHub()} />)
-    const cards = [...container.querySelectorAll('[data-testid="hub-cards"] > a')]
+    const cards = [...container.querySelectorAll('[data-testid="hub-cards"] > div > a')]
     expect(cards).toHaveLength(3)
     expect(cards[0]!.querySelector('[data-testid="exp-card-price"]')?.textContent).toBe('from NZ$1,320 · 1–2 anglers per guide')
     expect(cards[0]!.querySelector('[data-testid="exp-card-guide"]')?.textContent).toBe('Jwith Josh Fixture +1')
@@ -74,7 +94,7 @@ describe('DestinationHubView — empty hub (red proof: no empty heading)', () =>
     const { container } = render(<DestinationHubView data={emptyHub()} />)
     expect(order(container)).toEqual(['hero', 'trips', 'how-it-works', 'destinations'])
     expect(container.querySelectorAll('[data-step]')).toHaveLength(3)
-    expect(container.querySelectorAll('[data-testid="hub-cards"] > a')).toHaveLength(3)
+    expect(container.querySelectorAll('[data-testid="hub-cards"] > div > a')).toHaveLength(3)
   })
 
   it('FA-1.65: no heading of an empty section is in the DOM', () => {
@@ -95,5 +115,57 @@ describe('DestinationHubView — empty hub (red proof: no empty heading)', () =>
     const data = { ...emptyHub(), guideCount: 0 }
     const { queryByTestId } = render(<DestinationHubView data={data} />)
     expect(queryByTestId('hub-proof-line')).toBeNull()
+  })
+})
+
+describe('DestinationHubView — map (FA-1.66)', () => {
+  it('FA-1.66: a hub whose offers have no coordinates renders no map section (red proof: fixture)', () => {
+    const { container } = render(<DestinationHubView data={completeHub()} />)
+    expect(container.querySelector('[data-block="map"]')).toBeNull()
+    expect(order(container)[1]).toBe('season')
+  })
+
+  it('FA-1.66: the map sits right after the hero; only offers with coordinates get a pin', async () => {
+    const { container, findAllByRole } = render(<DestinationHubView data={withCoordinates(completeHub(), ['a', 'b'])} />)
+    expect(order(container).slice(0, 3)).toEqual(['hero', 'map', 'season'])
+    const pins = await findAllByRole('button', { name: /^Trip / })
+    expect(pins.map(p => p.getAttribute('data-pin'))).toEqual(['slug-a', 'slug-b'])
+    expect(pins[0]!.textContent).toBe('Trip a · from NZ$1,320 · 1–2 anglers per guide · Josh Fixture')
+  })
+
+  it('FA-1.66: every card carries its slug as id — the target of its pin', () => {
+    const { container } = render(<DestinationHubView data={completeHub()} />)
+    const ids = [...container.querySelectorAll('[data-testid="hub-cards"] > div')].map(el => el.id)
+    expect(ids).toEqual(['slug-a', 'slug-b', 'slug-c'])
+  })
+
+  it('FA-1.66: a pin click scrolls to its card and highlights it for a moment', async () => {
+    const scroll = vi.fn()
+    Element.prototype.scrollIntoView = scroll
+    const { container, findAllByRole } = render(<DestinationHubView data={withCoordinates(completeHub(), ['a', 'b'])} />)
+    const pins = await findAllByRole('button', { name: /^Trip / })
+
+    vi.useFakeTimers()
+    fireEvent.click(pins[1]!)
+    const card = container.querySelector('#slug-b')!
+    expect(card.getAttribute('data-highlighted')).toBe('true')
+    expect(container.querySelectorAll('[data-highlighted]')).toHaveLength(1)
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(scroll.mock.contexts[0]).toBe(card)
+
+    act(() => { vi.advanceTimersByTime(4000) })
+    expect(container.querySelector('[data-highlighted]')).toBeNull()
+  })
+
+  it('FA-1.66: a pin whose card a species chip hides resets the chip first', async () => {
+    Element.prototype.scrollIntoView = vi.fn()
+    const { container, getByRole, findAllByRole } = render(<DestinationHubView data={withCoordinates(completeHub(), ['a', 'b'])} />)
+    fireEvent.click(getByRole('button', { name: 'Kingfish' }))
+    expect(container.querySelector('#slug-a')).toBeNull()
+
+    const pins = await findAllByRole('button', { name: /^Trip / })
+    fireEvent.click(pins[0]!)
+    expect(container.querySelector('#slug-a')?.getAttribute('data-highlighted')).toBe('true')
+    expect(getByRole('button', { name: 'All' }).getAttribute('aria-pressed')).toBe('true')
   })
 })

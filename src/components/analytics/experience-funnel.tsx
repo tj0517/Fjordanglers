@@ -58,10 +58,10 @@ export function createOnceGuard(): (key: string, fire: () => void) => void {
 }
 
 /** A section counts as seen when half of it is on screen — or, when it is taller than two
- *  screens, when it fills half the screen. */
-const SECTION_THRESHOLDS = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
+ *  screens, when it fills half the screen. Shared with the country hub (hub-funnel.tsx). */
+export const SECTION_THRESHOLDS = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]
 
-function isHalfSeen(entry: IntersectionObserverEntry): boolean {
+export function isHalfSeen(entry: IntersectionObserverEntry): boolean {
   if (!entry.isIntersecting) return false
   if (entry.intersectionRatio >= 0.5) return true
   const viewport = entry.rootBounds?.height ?? window.innerHeight

@@ -2,13 +2,14 @@
 id: FA-1.66
 title: Hub kraju — mapa z pinami lokacji ofert (Leaflet jak `/trips`) + pomiar `hub_view` / `section_view` / `hub_card_click` tym samym helperem co lejek v2
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.66-hub-map-events
+pr: 156
 depends_on: [FA-1.60, FA-1.65]
 blocked_by_questions: []
 touches_db: false
@@ -67,3 +68,7 @@ ls .playwright-mcp | grep fa-1.66
 
 ## Notatki z realizacji
 - 2026-10-20 tj (/wf-plan): O-45 (b) mapa z pinami w zakresie. Test landingu Ads (generyk PAT/IS → hub, 14 dni, koszt zapytania vs strony ofert) — czynność tj po merge, wynik wklejany tutaj.
+- 2026-10-23 tj (/wf-task): D1 — event proof in `dataLayer` (as FA-1.60), not DebugView; the Ads test starts only after GA4 reception is fixed (deferred FA-1.60 URGENT). D2 — Lighthouse: tj measures PageSpeed on prod `/new-zealand` before and after merge; agent proves Leaflet is lazy-loaded. D3 — pins from temporary local SQL (seed untouched) + prod count read.
+- 2026-10-23 tj (decision during implementation): pin click — option A. A pin click/tap scrolls to the card (`id` = slug) and highlights it; the popup (name, price, guide, link) opens on hover, so desktop only — a phone tap goes straight to the card. The popup's link leads to the offer without `hub_card_click` (desktop only) — flagged in the PR, not measured in this task.
+- 2026-10-23 tj (decision during implementation): no hub has season/FAQ content in `destinations.ts` and prod has 0 published reviews, so of the four measured sections only `trips` can fire today (prod too, until the copy is written). Option A — the browser proof of `section_view(season)` runs on a temporary, uncommitted local edit of `destinations.ts` (NZ season months + one FAQ), reverted after the run; the revert and an empty `git diff main...HEAD -- src/lib/destinations.ts` go in the PR.
+- 2026-10-23 tj: accepted on 8f53e4f (PR #156) — pins = local count (3), pin click scroll + highlight, dataLayer chain hub_view → section_view(season, trips) → hub_card_click, once-guard red proof (7 → 1), Leaflet lazy-loaded, gtag conversion/SUBMIT_LEAD_FORM and package.json untouched, CI green. After merge (tj): PageSpeed prod /new-zealand vs pre-merge baseline; register experience_slug and position in GA4; Ads test waits for the GA4 reception fix (deferred FA-1.60).
