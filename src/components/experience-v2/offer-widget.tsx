@@ -1,19 +1,15 @@
 'use client'
 
 /**
- * S2 — the widget that turns the price table into three numbers (FA-1.53).
+ * S2 — the widget that turns the price table into one number (FA-1.53).
  *
  *   Total                 what the angler pays, all in (O-31: one number, no "+ fee" line)
- *   Deposit now           paid to FjordAnglers; the FA fee *is* the deposit (ADR-0001)
- *   Balance to the guide  paid to the guide directly, later
  *
- * The deposit line carries no percentage in its label (tj, 2026-10-07): the fee is 20% of
- * the *guide's* price, so next to a total that already includes it, "20%" invites the
- * reader to divide 250 by 1 500 and get 16.7% — a number we never claimed and cannot
- * explain. The percentage moves to a note underneath, where it can say what it is a
- * percentage of.
+ * The "Deposit now" and "Balance to the guide" lines under it were removed (tj, FA-1.65,
+ * 2026-10-23): the widget shows the price only. How the deposit and the balance are paid is
+ * told once, in "How booking works" (S8), and in the offer itself.
  *
- * All three come from `quote()` in src/lib/pricing/experience-price.ts, the same function
+ * The total comes from `quote()` in src/lib/pricing/experience-price.ts, the same function
  * the tests and the data-layer proof use, so the screen cannot drift from the rule. The
  * price rows arrive already carrying the guide's override — that happens server-side in
  * `getExperienceV2()`, so no override value exists in this bundle.
@@ -37,7 +33,7 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { quote, fromPrice, customRange, type PriceRow } from '@/lib/pricing/experience-price'
+import { quote, fromPrice, customRange, anglersPerGuideLabel, type PriceRow } from '@/lib/pricing/experience-price'
 import { formatCents } from '@/lib/format-price'
 import { MAX_BRIEF_DAYS } from '@/lib/inquiries/brief'
 import { useCurrency } from './currency-context'
@@ -256,7 +252,7 @@ export default function OfferWidget({
           <p className="f-display text-[28px] font-bold leading-none tracking-[-0.01em]" data-testid="offer-from-price">{fromLine}</p>
           <p className="mt-1.5 text-sm" style={mutedStyle}>
             {fromMoney?.sub != null ? `${fromMoney.sub} · ` : ''}
-            {maxAnglersPerGuide === 1 ? '1 angler per guide' : `1–${maxAnglersPerGuide} anglers per guide`}
+            {anglersPerGuideLabel(maxAnglersPerGuide)}
           </p>
         </div>
         <CurrencyPicker />
@@ -327,17 +323,11 @@ export default function OfferWidget({
         )}
       </div>
 
-      {/* ── the three numbers ── */}
+      {/* ── the price ── */}
       <div className="mt-3" data-testid="offer-totals">
         {q.priced ? (
           <>
             <Row label="Total" {...moneyProps(money(q.totalCents, q.currency))} strong />
-            <Row
-              label="Deposit now"
-              {...moneyProps(money(q.feeCents, q.currency))}
-              note={`${Math.round(feePct * 100)}% of the guide price`}
-            />
-            <Row label="Balance to the guide" {...moneyProps(money(q.guideCents, q.currency))} />
             {converted && (
               <p className="mt-1.5 text-xs" style={mutedStyle} data-testid="offer-indicative">
                 ≈ indicative rate · you pay in {baseCurrency}
@@ -490,25 +480,18 @@ function GuideLine({ guide }: { guide: OfferWidgetGuide | null }) {
 }
 
 function Row({
-  label, value, sub, strong = false, note,
+  label, value, sub, strong = false,
 }: {
   label: string; value: string; strong?: boolean
   /** The exact page-currency amount, when `value` is a conversion. */
   sub?: string | null
-  /** Small print under the label — what the number is a share of, when that is not obvious. */
-  note?: string
 }) {
   return (
     <div
       className="flex items-baseline justify-between gap-3 border-t py-2 text-sm"
       style={{ borderColor: 'rgba(10,46,77,0.08)' }}
     >
-      <span className={strong ? 'font-semibold' : undefined}>
-        {label}
-        {note != null && (
-          <span className="mt-0.5 block text-xs font-normal" style={mutedStyle}>{note}</span>
-        )}
-      </span>
+      <span className={strong ? 'font-semibold' : undefined}>{label}</span>
       <span className="text-right">
         <b className={strong ? 'f-display text-xl' : 'tabular-nums'}>{value}</b>
         {sub != null && <span className="block text-[11px] tabular-nums" style={mutedStyle}>{sub}</span>}

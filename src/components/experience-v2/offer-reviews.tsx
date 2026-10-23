@@ -88,6 +88,22 @@ function ReviewCard({ review }: { review: ExperienceV2Review }) {
   )
 }
 
+/**
+ * The cards on the navy band, without the band's heading — the country hub uses it too
+ * (FA-1.65). Mobile keeps the wireframe's carousel — one card at a time, swiped. Desktop
+ * lays the same cards out as a grid of two.
+ */
+export function ReviewCardList({ reviews }: { reviews: ExperienceV2Review[] }) {
+  return (
+    <div
+      className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
+      data-testid="offer-reviews"
+    >
+      {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+    </div>
+  )
+}
+
 export default function OfferReviews({
   reviews,
   googleRating,
@@ -142,14 +158,7 @@ export default function OfferReviews({
           </p>
         </div>
 
-        {/* Mobile keeps the wireframe's carousel — one card at a time, swiped. Desktop lays
-            the same cards out as a grid of two. */}
-        <div
-          className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
-          data-testid="offer-reviews"
-        >
-          {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
-        </div>
+        <ReviewCardList reviews={reviews} />
       </div>
     </section>
   )

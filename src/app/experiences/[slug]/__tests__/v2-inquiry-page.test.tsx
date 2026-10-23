@@ -32,7 +32,9 @@ const h = vi.hoisted(() => {
 })
 
 vi.mock('@/lib/env', () => ({ env: h.mockEnv }))
-vi.mock('@/lib/supabase/queries', () => ({
+// Partial: the router's `rendersAsV2` is the real one, reading the mocked env above.
+vi.mock('@/lib/supabase/queries', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/supabase/queries')>()),
   getExperienceRouting:       h.getExperienceRouting,
   getExperienceV2:            h.getExperienceV2,
   getRelatedExperiencePages:  async () => [],

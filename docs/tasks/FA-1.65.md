@@ -2,13 +2,14 @@
 id: FA-1.65
 title: Hub kraju v2 — `getDestinationHub()` w warstwie danych, `ExpCard` wyniesiony, szablon: hero z linią dowodu, sezon, gatunki, karty z przewodnikiem, FAQ, recenzje, 3 kroki, inne kraje, kontakt
 stage: 1
-status: todo
+status: done
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-web
 branch: feat/fa-1.65-hub-v2
+pr: 155
 depends_on: []
 blocked_by_questions: []
 touches_db: false
@@ -81,3 +82,9 @@ ls .playwright-mcp | grep fa-1.65
 
 ## Notatki z realizacji
 - 2026-10-20 tj (/wf-plan): O-42 (c) hybryda — dane z ofert + treść redakcyjna w `destinations.ts`; O-43 (b) sezon/FAQ ręcznie per hub; O-44 hero: liczba przewodników i cena z danych, cytat jako pole ręczne; D1 live od razu po merge. Scalone z planowanego podziału dane/szablon na prośbę tj (mniej zadań).
+- 2026-10-23 tj (prompt startowy): **D1** — pełny układ dowodzi test komponentu na danych fixture plus lokalny podgląd wizualny z treścią-zaślepką, cofnięty przed commitem (zmienione kryteria: brak huba testowego w `DESTINATION_HUBS`, bo każdy wpis staje się publiczną stroną na prod; seed nie ma recenzji, więc test wstawia własne). **D2** — chipy gatunków wyliczane z aktywnych ofert hubu; niepusty `species` w konfiguracji hubu je nadpisuje. **D3** — cena w linii dowodu = minimum `price_from` w dominującej walucie hubu (najwięcej aktywnych ofert), jednostka z `price_type` tak jak na karcie (`formatPrice`); remis walut → stop i pytanie.
+- 2026-10-23 tj: **Decyzja 1 — A**: oferty `price_type='request'` nie wchodzą do minimum linii dowodu; gdy wszystkie oferty hubu są „on request", część z ceną jest pomijana. **Decyzja 2 — A**: opcjonalne pole `proofNote?: string` w `DestinationHub`, puste z `// TODO tj`; puste = linia kończy się na cenie. **Decyzja 3** (rozjazd `price_from` / `price_from_cents` w NZ): to nie deferral — dla ofert `page_version=2` karta i minimum linii dowodu biorą `price_from_cents` z tym samym sformułowaniem jednostki, jakie drukuje strona v2; oferty v1 zostają przy `price_from` + `price_type` przez `formatPrice`; jeśli jednostki v2 nie da się podać jedną krótką etykietą — stop i pytanie. Odczyt prod przed kodem: strona v2 w trybie `fixed` nie drukuje `price_from_cents` (cena „from" liczona z `experience_prices` + fee), a Patagonia v2 nie ma wierszy cen — pytanie dodatkowe do tj (3b).
+- 2026-10-23 tj: **Decyzja 3b — A**: karty i minimum w hero biorą tę samą cenę, którą drukuje strona oferty — dla ofert renderowanych jako v2 (flaga włączona i `page_version=2`, ten sam warunek co router) `fromPrice()` po `experience_prices` z override'em przewodnika jak w `getExperienceV2`, z etykietą „1–2 anglers per guide" jak na stronie; `null` → „Price on request" i poza minimum w hero (decyzja 1). Oferty v1 zostają przy `price_from` + `price_type` przez `formatPrice`. `EXPERIENCE_V2_ENABLED` jest włączone na produkcji (pilot NZ v2 od 14 X). Do deferred: rozjazd `price_from_cents` South Island, `price_from_cents` nieużywane dla ofert `fixed`, minimum w hero przez różne jednostki (zaakceptowane na teraz).
+- 2026-10-23 tj: **Decyzja 4** (rozszerzenie zakresu, w tym PR): na stronie oferty v2 widget ceny i ramka „Price and deposit" pokazują tylko „Total" — bez linii „Deposit now" i „Balance to the guide".
+- 2026-10-23 tj (review PR #155): **(1)** remis walut w hubie → brak ceny w hero — zaakceptowane. **(2)** oferty v2 `custom`: karta pokazuje ten sam orientacyjny „from", który drukuje strona oferty (`customRange` po `price_from_cents` / `price_to_cents`, z dopiskiem „indicative"), nie „Price on request" — karta i strona nigdy się nie rozjeżdżają (3b); test dodany. Dopytane tego dnia: dolna granica takiej oferty **wlicza się** do minimum w hero (odpowiedź tj: „Yes, use its lower bound" — hero drukuje wtedy tekst karty tej oferty). **(3)** nagłówki sekcji zostają, jak napisane. **(4)** S9 „Price and deposit" → „Price" w tym PR; wiersz z deferred usunięty.
+- 2026-10-23 tj review: accepted on e325164 (PR #155) — grep criteria, data-layer and component tests incl. red proofs (consent filter, empty-section guard, custom branch), proof-line queries (2 guides, NZ$1,080 = 108000 cents on hub and page) and CI (check, db, knip, secrets) proven; screenshots in .fa-proofs/fa-1.65 viewed by tj. Custom lower bound in the hero minimum confirmed by tj.

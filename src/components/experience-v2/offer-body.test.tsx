@@ -311,13 +311,18 @@ describe('S9 — price and deposit', () => {
     // The widget opens on (minDays = 1, 2 anglers); 1 250 guide + 20% fee = 1 500.
     expect(cell).toBe('NZ$1,500')
     expect(widget.textContent).toContain(cell)
+    // FA-1.65 (tj): the widget prints the price only.
+    expect(widget.textContent).not.toContain('Deposit now')
+    expect(widget.textContent).not.toContain('Balance to the guide')
   })
 
-  it('the Total / Deposit / Balance block adds up for the default configuration', () => {
+  it('FA-1.65: the default configuration shows the Total only — no deposit or balance line', () => {
     const text = nine(fixedPage()).textContent!
     expect(text).toContain('NZ$1,500')   // total
-    expect(text).toContain('NZ$250')     // deposit — the 20% fee
-    expect(text).toContain('NZ$1,250')   // balance to the guide
+    expect(text).not.toContain('Deposit now')
+    expect(text).not.toContain('Balance to the guide')
+    expect(text).not.toContain('NZ$250')    // the 20% fee, no longer printed
+    expect(text).not.toContain('NZ$1,250')  // the guide's share, no longer printed
   })
 
   it('says "on request" for a cell with no exact row', () => {

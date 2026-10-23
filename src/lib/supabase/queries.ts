@@ -13,7 +13,11 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
 import type { Database } from './database.types'
 import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 import { availabilityWindow } from '@/lib/availability-window'
-import { effectivePrices, type PriceRow } from '@/lib/pricing/experience-price'
+import { effectivePrices, fromPrice, customRange, anglersPerGuideLabel, type PriceRow } from '@/lib/pricing/experience-price'
+import { formatCents, formatPrice } from '@/lib/format-price'
+import { env } from '@/lib/env'
+import { DESTINATION_HUBS, getHubCountries, getHubForSlug, type DestinationHub } from '@/lib/destinations'
+import { hubSpecies } from '@/lib/hub-species'
 import {
   speciesNames,
   parseLicenseInfo,
@@ -737,6 +741,26 @@ function newestPerSlot(
     .sort((a, b) => a.days - b.days || a.anglers - b.anglers)
 }
 
+type RawPriceRow = {
+  days: number; anglers: number; guide_price_cents: number; currency: string
+  valid_from: string | null; valid_to: string | null
+}
+
+/**
+ * The price rows a v2 page quotes from: current on `today`, the newest per slot, the shown
+ * primary guide's override folded into the base row. Shared by the offer page and the hub
+ * cards (FA-1.65) so a card can never print a different "from" than the page it links to.
+ */
+function pagePrices(
+  rows: RawPriceRow[],
+  { today, maxAnglersPerGuide, overrideCents }: { today: string; maxAnglersPerGuide: number; overrideCents: number | null },
+): PriceRow[] {
+  const current = rows.filter(
+    r => (r.valid_from == null || r.valid_from <= today) && (r.valid_to == null || r.valid_to >= today),
+  )
+  return effectivePrices(newestPerSlot(current), { maxAnglersPerGuide, overrideCents })
+}
+
 type RawReviewRow = {
   id:             string
   overall_rating: number | null
@@ -920,17 +944,11 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
       }))
 
       // One clock read for the whole page, in the data layer (src/lib/availability-window.ts).
-      const today   = availabilityWindow(0).from
-      const current = (pricesResult.data ?? []).filter(
-        r => (r.valid_from == null || r.valid_from <= today) && (r.valid_to == null || r.valid_to >= today),
-      )
-
-      // The override belongs to the primary guide — the one whose price the widget quotes.
-      const override = shown.find(row => row.role === 'primary')?.guide_price_override_cents ?? null
-
-      const prices = effectivePrices(newestPerSlot(current), {
+      const prices = pagePrices(pricesResult.data ?? [], {
+        today:              availabilityWindow(0).from,
         maxAnglersPerGuide: page.max_anglers_per_guide,
-        overrideCents:      override,
+        // The override belongs to the primary guide — the one whose price the widget quotes.
+        overrideCents:      shown.find(row => row.role === 'primary')?.guide_price_override_cents ?? null,
       })
 
       // Narrowed to the union here: in a plain object literal the ternary widens to `string`.
@@ -1007,6 +1025,246 @@ export async function getExperienceV2(slug: string): Promise<ExperienceV2 | null
     ['experience-v2', slug],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
+}
+
+/**
+ * Whether a page renders with the v2 template — the one condition the experience router uses
+ * (`src/app/experiences/[slug]/page.tsx`), shared so the hub cards price an offer exactly as
+ * the page they link to does.
+ */
+export function rendersAsV2(pageVersion: number | null | undefined): boolean {
+  return env.EXPERIENCE_V2_ENABLED && pageVersion === 2
+}
+
+// ─── Country hub v2 (FA-1.65) ─────────────────────────────────────────────────
+
+/** One card of the hub. `page` carries the fields `ExpCard` prints. */
+export type HubOffer = {
+  id: string
+  page: {
+    slug:                string
+    experience_name:     string
+    country:             string
+    region:              string
+    price_from:          number
+    price_type:          string
+    currency:            string
+    hero_image_url:      string | null
+    gallery_image_urls:  string[]
+    difficulty:          string | null
+    non_angler_friendly: boolean | null
+  }
+  /** The price exactly as the offer page prints it (tj 3b, 2026-10-23) — a `custom` page's indicative range included. */
+  priceText:     string
+  targetSpecies: string[]
+  locationLat:   number | null
+  locationLng:   number | null
+  /** Guides the offer page shows (active + `show_on_page`), in its order. */
+  guides:        { name: string; avatarUrl: string | null }[]
+}
+
+export type DestinationHubData = {
+  hub:        DestinationHub
+  offers:     HubOffer[]
+  /** Distinct guides shown on the hub's active offers. */
+  guideCount: number
+  /** The hero's "from" — null when the hub has no priced offer in its dominant currency. */
+  priceFrom:  { cents: number; currency: string; text: string } | null
+  /** Species chips: the hub's own list, or the union of its offers' (tj D2). */
+  species:    string[]
+  /** Newest first, at most six, consented and submitted only — the review-card fields only. */
+  reviews:    ExperienceV2Review[]
+  /** Hero image of the newest active offer. */
+  ogImage:    string | null
+  otherHubs:  { slug: string; h1: string }[]
+}
+
+type RawHubGuideRow = {
+  experience_id: string
+  role:          string
+  status:        string
+  show_on_page:  boolean
+  sort_order:    number
+  guide_price_override_cents: number | null
+  guide: { id: string; full_name: string; avatar_url: string | null } | null
+}
+
+/**
+ * The hub's proof-line price (tj D3 + decisions 1 and 3b, 2026-10-23): the lowest priced offer
+ * in the hub's dominant currency — the currency most of its active offers are in. Offers on
+ * request carry no amount and do not count towards the minimum; a v2 `custom` offer counts with
+ * the lower bound of its indicative range (tj, 2026-10-23). Two currencies with the same
+ * number of offers have no dominant one, so no price is shown rather than a guessed one.
+ */
+function hubPriceFrom(
+  offers: { currency: string; cents: number | null; text: string }[],
+): DestinationHubData['priceFrom'] {
+  const counts = new Map<string, number>()
+  for (const o of offers) counts.set(o.currency, (counts.get(o.currency) ?? 0) + 1)
+
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1])
+  const top = ranked[0]
+  if (top == null || (ranked[1] != null && ranked[1][1] === top[1])) return null
+
+  let best: DestinationHubData['priceFrom'] = null
+  for (const o of offers) {
+    if (o.currency !== top[0] || o.cents == null) continue
+    if (best == null || o.cents < best.cents) best = { cents: o.cents, currency: o.currency, text: o.text }
+  }
+  return best
+}
+
+/**
+ * Everything a country hub (`/[destination]`) shows, in one call — the page itself queries
+ * nothing (CLAUDE.md rule 3). Null for a slug that is not in `DESTINATION_HUBS`.
+ *
+ * The same filters as `getExperienceV2`, for the same reasons: guides only when active and
+ * `show_on_page` (the read policy returns every row of an active page), reviews only when
+ * consented and submitted, read with the service role and cut down to the card fields — the
+ * reviewer's e-mail, phone, full name and inquiry id never leave this function, and neither
+ * does `guide_price_override_cents` (it is folded into the card's price).
+ */
+export async function getDestinationHub(slug: string): Promise<DestinationHubData | null> {
+  const hub = getHubForSlug(slug)
+  if (hub == null) return null
+
+  // Only what the database says is cached; the hub's own config (copy, species override,
+  // the other hubs) is applied after, so a deploy that edits `destinations.ts` shows at once.
+  const fromDb = await unstable_cache(
+    async (): Promise<Omit<DestinationHubData, 'hub' | 'species' | 'otherHubs'>> => {
+      const db = createPublicClient()
+
+      const { data: pages, error } = await db
+        .from('experience_pages')
+        .select(`
+          id, slug, experience_name, country, region, price_from, price_type, currency,
+          hero_image_url, gallery_image_urls, difficulty, non_angler_friendly, target_species,
+          location_lat, location_lng, page_version, offer_mode, fee_pct, max_anglers_per_guide,
+          price_from_cents, price_to_cents
+        `)
+        .eq('status', 'active')
+        .in('country', getHubCountries(hub))
+        .order('created_at', { ascending: false })
+
+      if (error != null) console.error('[getDestinationHub]', error.message)
+
+      const rows  = pages ?? []
+      const ids   = rows.map(p => p.id)
+      const v2Ids = rows.filter(p => rendersAsV2(p.page_version)).map(p => p.id)
+
+      const [guidesResult, pricesResult, reviewsResult] = await Promise.all([
+        ids.length === 0 ? null : db
+          .from('experience_guides')
+          .select(`
+            experience_id, role, status, show_on_page, sort_order, guide_price_override_cents,
+            guide:guides!guide_id ( id, full_name, avatar_url )
+          `)
+          .in('experience_id', ids),
+        v2Ids.length === 0 ? null : db
+          .from('experience_prices')
+          .select('experience_id, days, anglers, guide_price_cents, currency, valid_from, valid_to')
+          .in('experience_id', v2Ids),
+        ids.length === 0 ? null : createServiceReadClient()
+          .from('reviews')
+          .select('id, overall_rating, comment, submitted_at, media_urls, inquiry:inquiries!inquiry_id (angler_name, angler_country)')
+          .in('experience_id', ids)
+          .eq('publish_consent', true)
+          .not('submitted_at', 'is', null)
+          .order('submitted_at', { ascending: false })
+          .limit(6),
+      ])
+
+      if (guidesResult?.error != null)  console.error('[getDestinationHub] guides', guidesResult.error.message)
+      if (pricesResult?.error != null)  console.error('[getDestinationHub] prices', pricesResult.error.message)
+      if (reviewsResult?.error != null) console.error('[getDestinationHub] reviews', reviewsResult.error.message)
+
+      const shown = ((guidesResult?.data ?? []) as unknown as RawHubGuideRow[])
+        .filter(row => row.status === 'active' && row.show_on_page && row.guide != null)
+        .sort((a, b) => a.sort_order - b.sort_order)
+
+      const today  = availabilityWindow(0).from
+      const priced: { currency: string; cents: number | null; text: string }[] = []
+
+      const offers: HubOffer[] = rows.map(p => {
+        const pageGuides = shown.filter(row => row.experience_id === p.id)
+
+        let cents: number | null
+        let currency = p.currency
+        let priceText: string
+        if (rendersAsV2(p.page_version) && p.offer_mode === 'custom') {
+          // A `custom` page prints its stored range, labelled indicative (offer-price-lead);
+          // the card says the same (tj 2026-10-23), and its lower bound counts in the hero minimum.
+          const range = customRange(p.price_from_cents, p.price_to_cents, p.currency)
+          cents     = range?.fromCents ?? null
+          priceText = range == null
+            ? 'Price on request'
+            : `${range.toCents != null
+                ? `${formatCents(range.fromCents, range.currency)}–${formatCents(range.toCents, range.currency)}`
+                : `from ${formatCents(range.fromCents, range.currency)}`} · indicative`
+        } else if (rendersAsV2(p.page_version)) {
+          // The offer page's own "from": its current price rows, the primary guide's override.
+          const prices = pagePrices(
+            (pricesResult?.data ?? []).filter(r => r.experience_id === p.id),
+            {
+              today,
+              maxAnglersPerGuide: p.max_anglers_per_guide,
+              overrideCents:      pageGuides.find(row => row.role === 'primary')?.guide_price_override_cents ?? null,
+            },
+          )
+          const from = fromPrice({ prices, feePct: p.fee_pct, maxAnglersPerGuide: p.max_anglers_per_guide })
+          cents     = from?.totalCents ?? null
+          currency  = from?.currency ?? p.currency
+          priceText = from != null
+            ? `from ${formatCents(from.totalCents, from.currency)} · ${anglersPerGuideLabel(p.max_anglers_per_guide)}`
+            : 'Price on request'
+        } else {
+          cents     = p.price_type === 'request' ? null : Math.round(p.price_from * 100)
+          priceText = formatPrice({ priceFrom: p.price_from, priceType: p.price_type, currency: p.currency })
+        }
+        priced.push({ currency, cents, text: priceText })
+
+        return {
+          id: p.id,
+          page: {
+            slug:                p.slug,
+            experience_name:     p.experience_name,
+            country:             p.country,
+            region:              p.region,
+            price_from:          p.price_from,
+            price_type:          p.price_type,
+            currency:            p.currency,
+            hero_image_url:      p.hero_image_url,
+            gallery_image_urls:  p.gallery_image_urls ?? [],
+            difficulty:          p.difficulty,
+            non_angler_friendly: p.non_angler_friendly,
+          },
+          priceText,
+          targetSpecies: p.target_species ?? [],
+          locationLat:   p.location_lat,
+          locationLng:   p.location_lng,
+          guides: pageGuides.map(row => ({ name: row.guide!.full_name, avatarUrl: row.guide!.avatar_url })),
+        }
+      })
+
+      return {
+        offers,
+        guideCount: new Set(shown.map(row => row.guide!.id)).size,
+        priceFrom:  hubPriceFrom(priced),
+        reviews:    reviewCards(reviewsResult?.data ?? []),
+        ogImage:    rows[0]?.hero_image_url ?? null,
+      }
+    },
+    // The countries are part of the query; the flag decides how every card is priced.
+    ['destination-hub', slug, getHubCountries(hub).join(','), rendersAsV2(2) ? 'v2' : 'v1'],
+    { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
+  )()
+
+  return {
+    ...fromDb,
+    hub,
+    species:   hubSpecies(hub.species, fromDb.offers.map(o => o.targetSpecies)),
+    otherHubs: DESTINATION_HUBS.filter(h => h.slug !== hub.slug).map(h => ({ slug: h.slug, h1: h.h1 })),
+  }
 }
 
 // ─── Service-client helpers (no ISR caching) ─────────────────────────────────

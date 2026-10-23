@@ -40,7 +40,11 @@ const { mockEnv, getExperienceRouting, isAdminRequest, V1, V2, permanentRedirect
 const { RedirectError, NotFoundError } = h
 
 vi.mock('@/lib/env', () => ({ env: h.mockEnv }))
-vi.mock('@/lib/supabase/queries', () => ({ getExperienceRouting: h.getExperienceRouting }))
+// The real `rendersAsV2` (it reads the mocked env above), so the router is tested with the check it ships.
+vi.mock('@/lib/supabase/queries', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/supabase/queries')>()),
+  getExperienceRouting: h.getExperienceRouting,
+}))
 vi.mock('@/lib/auth/guards', () => ({ isAdminRequest: h.isAdminRequest }))
 vi.mock('../_v1/ExperienceV1', () => ({ default: h.V1, generateMetadata: vi.fn() }))
 vi.mock('../_v2/ExperienceV2', () => ({ default: h.V2 }))

@@ -10,6 +10,7 @@ import { Footprints, Languages, MapPin, Target, Users, type LucideIcon } from 'l
 import OfferSection from './offer-section'
 import { Box, mutedStyle } from './offer-box'
 import { languageNames, type HeroFacts } from '@/lib/experience-v2-content'
+import { anglersPerGuideLabel } from '@/lib/pricing/experience-price'
 
 export type OfferAtAGlanceProps = {
   technique:          string[]
@@ -44,9 +45,7 @@ export default function OfferAtAGlance(props: OfferAtAGlanceProps) {
     {
       icon:  Users,
       label: 'Group size',
-      value: props.heroFacts?.groupSize ?? (props.maxAnglersPerGuide === 1
-        ? '1 angler per guide'
-        : `1–${props.maxAnglersPerGuide} anglers per guide`),
+      value: props.heroFacts?.groupSize ?? anglersPerGuideLabel(props.maxAnglersPerGuide),
     },
     { icon: Languages,  label: 'Guide speaks', value: languageNames(props.languages).join(', ') },
     { icon: Footprints, label: 'Terrain',      value: terrainText(props.walkingKmMin, props.walkingKmMax) ?? '' },
