@@ -108,13 +108,8 @@ export default function OfferPriceTable(props: OfferPriceTableProps) {
             <p className="mb-2 text-[13px]" style={mutedStyle}>
               For {plural(defaultDays, 'day', 'days')}, {plural(defaultAnglers, 'angler', 'anglers')}
             </p>
+            {/* The price only — no deposit / balance split (tj, FA-1.65, 2026-10-23). */}
             <Line label="Total" value={formatCents(defaultQuote.totalCents, defaultQuote.currency)} strong />
-            <Line
-              label="Deposit now"
-              note={`${Math.round(feePct * 10_000) / 100}% of the guide price`}
-              value={formatCents(defaultQuote.feeCents, defaultQuote.currency)}
-            />
-            <Line label="Balance to the guide" value={formatCents(defaultQuote.guideCents, defaultQuote.currency)} />
             {defaultQuote.onRequest && (
               <p className="mt-2 text-[13px]" style={mutedStyle}>
                 Priced for {defaultQuote.pricedAnglers} anglers — your exact price comes back on request.
@@ -175,13 +170,10 @@ function cellText(q: Quote | undefined): string {
   return formatCents(q.totalCents, q.currency)
 }
 
-function Line({ label, value, strong = false, note }: { label: string; value: string; strong?: boolean; note?: string }) {
+function Line({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-t py-1.5 text-sm first:border-t-0" style={ruleSoft}>
-      <span>
-        {label}
-        {note != null && <span className="mt-0.5 block text-xs" style={mutedStyle}>{note}</span>}
-      </span>
+      <span>{label}</span>
       <b className={strong ? 'text-base' : undefined}>{value}</b>
     </div>
   )
