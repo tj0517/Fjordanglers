@@ -72,3 +72,9 @@ export const emptyHub = (): DestinationHubData => ({
   ogImage:    null,
   otherHubs:  [{ slug: 'iceland', h1: 'Iceland Fly Fishing Trips' }],
 })
+
+/** FA-1.66 — gives the offers with these ids coordinates (Otago-ish), the rest stay without. */
+export const withCoordinates = (data: DestinationHubData, ids: string[]): DestinationHubData => ({
+  ...data,
+  offers: data.offers.map((o, i) => ids.includes(o.id) ? { ...o, locationLat: -44.7 + i, locationLng: 169.1 + i } : o),
+})

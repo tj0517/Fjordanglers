@@ -98,3 +98,37 @@ export function trackFormOpen(page: FunnelPage) {
 export function trackFormStep(page: FunnelPage, step: FunnelStep) {
   gtagEvent('form_step', { send_to: GA4_MEASUREMENT_ID, ...page, ...step })
 }
+
+// ── Country hub (FA-1.66) ─────────────────────────────────────────────────────
+//
+// The hub (/[destination]) sends the same kinds of events as an experience page, to GA4
+// the same way, so one report can follow hub → card → offer → form. Its own types: a hub
+// has no template version, and it counts its own sections. A hub's `section_view` is told
+// apart from an experience page's by `page_version` being absent (and by `page_slug`).
+// The once-per-load guards live with the caller (src/components/analytics/hub-funnel.tsx).
+
+export interface HubPage {
+  /** The hub's slug, e.g. `new-zealand`. */
+  page_slug: string
+}
+
+export const HUB_SECTIONS = ['season', 'trips', 'faq', 'reviews'] as const
+export type HubSection = (typeof HUB_SECTIONS)[number]
+
+export interface HubCardClick {
+  experience_slug: string
+  /** 1-based slot of the card among the cards shown at the moment of the click. */
+  position:        number
+}
+
+export function trackHubView(page: HubPage) {
+  gtagEvent('hub_view', { send_to: GA4_MEASUREMENT_ID, ...page })
+}
+
+export function trackHubSectionView(page: HubPage, section: HubSection) {
+  gtagEvent('section_view', { send_to: GA4_MEASUREMENT_ID, ...page, section })
+}
+
+export function trackHubCardClick(page: HubPage, card: HubCardClick) {
+  gtagEvent('hub_card_click', { send_to: GA4_MEASUREMENT_ID, ...page, ...card })
+}

@@ -60,6 +60,7 @@ export function ExpCard({
   guideName,
   guideAvatarUrl,
   moreGuides = 0,
+  onClick,
   onMouseEnter,
   onMouseLeave,
 }: {
@@ -72,6 +73,8 @@ export function ExpCard({
   guideAvatarUrl?: string | null
   /** Further guides shown on the offer page — printed as "+N". */
   moreGuides?: number
+  /** The hub counts card clicks (FA-1.66 `hub_card_click`). */
+  onClick?: () => void
   onMouseEnter?: () => void
   onMouseLeave?: () => void
 }) {
@@ -83,6 +86,7 @@ export function ExpCard({
     <Link
       href={`/experiences/${page.slug}`}
       className="block group"
+      onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
