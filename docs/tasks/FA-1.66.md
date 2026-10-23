@@ -2,13 +2,14 @@
 id: FA-1.66
 title: Hub kraju — mapa z pinami lokacji ofert (Leaflet jak `/trips`) + pomiar `hub_view` / `section_view` / `hub_card_click` tym samym helperem co lejek v2
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.66-hub-map-events
+pr: 156
 depends_on: [FA-1.60, FA-1.65]
 blocked_by_questions: []
 touches_db: false

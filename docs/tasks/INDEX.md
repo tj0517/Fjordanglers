@@ -98,7 +98,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.63 | `hero_facts jsonb` — chipy S1 i „At a glance” wpisywane w adminie (puste = wyliczane jak dziś) + techniki muchowe w `TECHNIQUES` | M | opus | done | — |
 | FA-1.64 | Biblioteka zdjęć per strona w adminie — „Choose from this page” przy każdym polu zdjęć, bez ponownego uploadu | M | opus | done | FA-1.62 |
 | FA-1.65 | Hub kraju v2 — `getDestinationHub()` w warstwie danych, `ExpCard` wyniesiony, szablon: hero z linią dowodu, sezon, gatunki, karty z przewodnikiem, FAQ, recenzje, 3 kroki, inne kraje, kontakt | L | opus | done | — |
-| FA-1.66 | Hub kraju — mapa z pinami lokacji (Leaflet jak `/trips`) + pomiar `hub_view` / `section_view` / `hub_card_click` | M | sonnet | in_progress | FA-1.60, FA-1.65 |
+| FA-1.66 | Hub kraju — mapa z pinami lokacji (Leaflet jak `/trips`) + pomiar `hub_view` / `section_view` / `hub_card_click` | M | sonnet | review | FA-1.60, FA-1.65 |
 | FA-1.67 | Worktree jedną komendą — `scripts/dev-env.sh` (env z lokalnego stacku + atrapy + flaga v2), `scripts/dev-preflight.sh` (obce stacki, dysk) przed `next dev`, §9 dla PC/WSL2 | M | sonnet | todo | — |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
