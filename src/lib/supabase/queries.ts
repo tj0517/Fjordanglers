@@ -13,7 +13,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from '@supa
 import type { Database } from './database.types'
 import { COUNTRIES, getRegionGroup } from '@/lib/countries'
 import { availabilityWindow } from '@/lib/availability-window'
-import { effectivePrices, fromPrice, anglersPerGuideLabel, type PriceRow } from '@/lib/pricing/experience-price'
+import { effectivePrices, fromPrice, customRange, anglersPerGuideLabel, type PriceRow } from '@/lib/pricing/experience-price'
 import { formatCents, formatPrice } from '@/lib/format-price'
 import { env } from '@/lib/env'
 import { DESTINATION_HUBS, getHubCountries, getHubForSlug, type DestinationHub } from '@/lib/destinations'
@@ -1054,7 +1054,7 @@ export type HubOffer = {
     difficulty:          string | null
     non_angler_friendly: boolean | null
   }
-  /** The "from" price exactly as the offer page prints it (tj 3b, 2026-10-23). */
+  /** The price exactly as the offer page prints it (tj 3b, 2026-10-23) — a `custom` page's indicative range included. */
   priceText:     string
   targetSpecies: string[]
   locationLat:   number | null
@@ -1092,7 +1092,8 @@ type RawHubGuideRow = {
 /**
  * The hub's proof-line price (tj D3 + decisions 1 and 3b, 2026-10-23): the lowest priced offer
  * in the hub's dominant currency — the currency most of its active offers are in. Offers on
- * request carry no amount and do not count towards the minimum. Two currencies with the same
+ * request carry no amount and do not count towards the minimum; a v2 `custom` offer counts with
+ * the lower bound of its indicative range (tj, 2026-10-23). Two currencies with the same
  * number of offers have no dominant one, so no price is shown rather than a guessed one.
  */
 function hubPriceFrom(
@@ -1138,7 +1139,8 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
         .select(`
           id, slug, experience_name, country, region, price_from, price_type, currency,
           hero_image_url, gallery_image_urls, difficulty, non_angler_friendly, target_species,
-          location_lat, location_lng, page_version, fee_pct, max_anglers_per_guide
+          location_lat, location_lng, page_version, offer_mode, fee_pct, max_anglers_per_guide,
+          price_from_cents, price_to_cents
         `)
         .eq('status', 'active')
         .in('country', getHubCountries(hub))
@@ -1189,7 +1191,17 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
         let cents: number | null
         let currency = p.currency
         let priceText: string
-        if (rendersAsV2(p.page_version)) {
+        if (rendersAsV2(p.page_version) && p.offer_mode === 'custom') {
+          // A `custom` page prints its stored range, labelled indicative (offer-price-lead);
+          // the card says the same (tj 2026-10-23), and its lower bound counts in the hero minimum.
+          const range = customRange(p.price_from_cents, p.price_to_cents, p.currency)
+          cents     = range?.fromCents ?? null
+          priceText = range == null
+            ? 'Price on request'
+            : `${range.toCents != null
+                ? `${formatCents(range.fromCents, range.currency)}–${formatCents(range.toCents, range.currency)}`
+                : `from ${formatCents(range.fromCents, range.currency)}`} · indicative`
+        } else if (rendersAsV2(p.page_version)) {
           // The offer page's own "from": its current price rows, the primary guide's override.
           const prices = pagePrices(
             (pricesResult?.data ?? []).filter(r => r.experience_id === p.id),

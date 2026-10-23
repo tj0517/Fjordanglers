@@ -3,7 +3,7 @@
  * Env is loaded by vitest setupFiles (src/tests/setup.ts), whose fuse aborts on a non-local URL.
  *
  * The test brings every row it reads: a hub that exists only inside this file (country
- * Denmark — no seed row, no hub on the site), five pages, three guides, two price rows,
+ * Denmark — no seed row, no hub on the site), eight pages, three guides, two price rows,
  * three inquiries and three reviews, all under ids starting `f1650000-`. They are deleted
  * afterwards. Nothing is added to DESTINATION_HUBS: every entry there is a public page.
  *
@@ -11,7 +11,8 @@
  *   guideCount — distinct guides that are active and `show_on_page`, on active pages only
  *   priceFrom  — lowest priced offer in the dominant currency; on-request offers and other
  *                currencies do not count (tj D3, decisions 1 and 3b, 2026-10-23)
- *   card price — a v2 page prices off experience_prices + fee, exactly as its page does
+ *   card price — a v2 page prices off experience_prices + fee, exactly as its page does; a
+ *                v2 `custom` page shows its stored range, labelled indicative, as its page does
  *   species    — union of the offers' target_species, deduplicated case-insensitively
  *   reviews    — consented AND submitted only (red case: the unconsented one is absent)
  */
@@ -46,7 +47,8 @@ import { getDestinationHub } from './queries'
 const id = (n: number) => `f1650000-0000-4000-8000-${String(n).padStart(12, '0')}`
 
 const G1 = id(1), G2 = id(2), G3 = id(3)
-const P1 = id(11), P2 = id(12), P3 = id(13), P4 = id(14), P5 = id(15)
+const P1 = id(11), P2 = id(12), P3 = id(13), P4 = id(14), P5 = id(15), P6 = id(16), P7 = id(17), P8 = id(18)
+const PAGES = [P1, P2, P3, P4, P5, P6, P7, P8]
 const I1 = id(21), I2 = id(22), I3 = id(23)
 const R1 = id(31), R2 = id(32), R3 = id(33)
 
@@ -55,9 +57,9 @@ const svc = createServiceClient()
 async function cleanup() {
   await svc.from('reviews').delete().in('id', [R1, R2, R3])
   await svc.from('inquiries').delete().in('id', [I1, I2, I3])
-  await svc.from('experience_guides').delete().in('experience_id', [P1, P2, P3, P4, P5])
-  await svc.from('experience_prices').delete().in('experience_id', [P1, P2, P3, P4, P5])
-  await svc.from('experience_pages').delete().in('id', [P1, P2, P3, P4, P5])
+  await svc.from('experience_guides').delete().in('experience_id', PAGES)
+  await svc.from('experience_prices').delete().in('experience_id', PAGES)
+  await svc.from('experience_pages').delete().in('id', PAGES)
   await svc.from('guides').delete().in('id', [G1, G2, G3])
 }
 
@@ -94,8 +96,20 @@ beforeAll(async () => {
     // Draft — not on the hub at all, nor its guide.
     { ...base, id: P5, slug: 'fa165-p5-draft', experience_name: 'FA165 P5 draft', currency: 'EUR', price_from: 10, price_type: 'per_person',
       page_version: 1, status: 'draft', target_species: ['Pike'], created_at: '2026-10-01T00:00:00Z' },
+    // v2 custom with a range — €400–€900 indicative; its lower bound is the hub minimum (tj 2026-10-23).
+    { ...base, id: P6, slug: 'fa165-p6-custom-range', experience_name: 'FA165 P6 custom range', currency: 'EUR', price_from: 400, price_type: 'per_person',
+      page_version: 2, offer_mode: 'custom', price_from_cents: 40_000, price_to_cents: 90_000, created_at: '2026-09-30T00:00:00Z' },
+    // v2 custom with a lower bound only — "from €700 · indicative".
+    { ...base, id: P7, slug: 'fa165-p7-custom-from', experience_name: 'FA165 P7 custom from', currency: 'EUR', price_from: 700, price_type: 'per_person',
+      page_version: 2, offer_mode: 'custom', price_from_cents: 70_000, created_at: '2026-09-29T00:00:00Z' },
+    // v2 custom with nothing stored (cleared below) — the page says "Price on request", so does the card.
+    { ...base, id: P8, slug: 'fa165-p8-custom-none', experience_name: 'FA165 P8 custom none', currency: 'EUR', price_from: 0, price_type: 'per_person',
+      page_version: 2, offer_mode: 'custom', created_at: '2026-09-28T00:00:00Z' },
   ]
   for (const page of pages) await must(`page ${page.slug}`, svc.from('experience_pages').insert(page))
+  // trg_sync_price_from fills a NULL price_from_cents from price_from on INSERT; an UPDATE that
+  // leaves price_from alone keeps the NULL — the "nothing stored" state of a custom page.
+  await must('P8 no range', svc.from('experience_pages').update({ price_from_cents: null }).eq('id', P8))
 
   await must('prices', svc.from('experience_prices').insert([
     { experience_id: P1, days: 1, anglers: 1, guide_price_cents: 50_000, currency: 'EUR' },
@@ -136,9 +150,9 @@ describe('getDestinationHub (local stack)', () => {
 
   it('FA-1.65: active offers only, newest first, with the guides their page shows', async () => {
     const hub = (await getDestinationHub(h.hub.slug))!
-    expect(hub.offers.map(o => o.id)).toEqual([P1, P2, P3, P4])
+    expect(hub.offers.map(o => o.id)).toEqual([P1, P2, P3, P4, P6, P7, P8])
     expect(hub.offers.map(o => o.guides.map(g => g.name))).toEqual([
-      ['Gunnar Testguide', 'Freja Testguide'], ['Gunnar Testguide'], [], [],
+      ['Gunnar Testguide', 'Freja Testguide'], ['Gunnar Testguide'], [], [], [], [], [],
     ])
   })
 
@@ -146,16 +160,17 @@ describe('getDestinationHub (local stack)', () => {
     expect((await getDestinationHub(h.hub.slug))!.guideCount).toBe(2)
   })
 
-  it('FA-1.65: card prices — v2 from experience_prices + fee, v1 via formatPrice', async () => {
+  it('FA-1.65: card prices — v2 fixed from experience_prices + fee, v2 custom its indicative range, v1 via formatPrice', async () => {
     const hub = (await getDestinationHub(h.hub.slug))!
     expect(hub.offers.map(o => o.priceText)).toEqual([
       'from €600 · 1–2 anglers per guide', 'from €450 / person', 'Price on request', 'from NOK 100 / person',
+      '€400–€900 · indicative', 'from €700 · indicative', 'Price on request',
     ])
   })
 
-  it('FA-1.65: priceFrom — dominant currency, on-request and minority-currency offers left out', async () => {
+  it('FA-1.65: priceFrom — dominant currency, a custom lower bound counts, on-request and minority-currency offers left out', async () => {
     expect((await getDestinationHub(h.hub.slug))!.priceFrom).toEqual({
-      cents: 45_000, currency: 'EUR', text: 'from €450 / person',
+      cents: 40_000, currency: 'EUR', text: '€400–€900 · indicative',
     })
   })
 
@@ -164,6 +179,7 @@ describe('getDestinationHub (local stack)', () => {
     try {
       const hub = (await getDestinationHub(h.hub.slug))!
       expect(hub.offers[0]!.priceText).toBe('from €100 / person')
+      expect(hub.offers[4]!.priceText).toBe('from €400 / person')   // the custom page too: v1 renders price_from
     } finally {
       h.env.EXPERIENCE_V2_ENABLED = true
     }
