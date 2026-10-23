@@ -2,13 +2,14 @@
 id: FA-1.64
 title: Biblioteka zdjęć strony w adminie — „wybierz z wgranych” przy każdym polu zdjęć
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/admin-page-photo-library
+pr: 154
 depends_on: [FA-1.62]
 blocked_by_questions: []
 touches_db: false
@@ -41,15 +42,15 @@ per strona, nie globalna).
 - [ ] Odczyt bieżącego stanu: wypisz w notatkach każde pole zdjęć w `ExperiencePageForm` i zakładce v2 z jego `max` i źródłem danych; sprawdź, jak ryby dostają dziś `guidePhotos`
 - [ ] Jedna funkcja `collectPagePhotos(form)` → unikalne adresy z wszystkich pól formularza (stan bieżący, nie tylko zapisany) + zdjęcia przewodników strony
 - [ ] `MultiImageUpload` i `ImageUpload`: opcjonalny prop `library: string[]`; przycisk „Choose from this page” otwiera siatkę (miniatury, zaznaczone te już w polu); wybór respektuje `max`
-- [ ] Prop podany we wszystkich polach zdjęć strony (v1 i zakładka v2); duplikat w tym samym polu niemożliwy
+- [ ] Prop podany we wszystkich polach zdjęć strony (v1; zakładka v2 nie ma pól zdjęć); duplikat w tym samym polu niemożliwy
 - [ ] Zapis bez zmian w API — pole dostaje adres jak po uploadzie
 
 ## Gotowe, gdy
-- [ ] Test `collectPagePhotos`: zbiera z każdego pola, deduplikuje, pomija puste; `pnpm test run -- page-photos multi-image-upload` zielone
-- [ ] Na lokalnym stacku: zdjęcie z galerii dodane do ryby i do bloku treści przez bibliotekę; po zapisie i odświeżeniu oba pola je mają (zrzut w `docs/screenshots/FA-1.64/`); w Storage nie przybył nowy plik (lista obiektów przed/po w notatkach)
+- [ ] Test `collectPagePhotos`: zbiera z każdego pola, deduplikuje, pomija puste; `pnpm test run page-photos multi-image-upload` zielone
+- [ ] Na lokalnym stacku: zdjęcie z galerii dodane do ryby i do bloku treści przez bibliotekę; po zapisie i odświeżeniu oba pola je mają (zrzut w `docs/screenshots/FA-1.64/`); w Storage nie przybył nowy plik (`select count(*) from storage.objects` na lokalnej bazie przed/po w raporcie)
 - [ ] Próba wyboru ponad `max` — przycisk wyboru nieaktywny z komunikatem (pokazany na czerwono na zrzucie)
 - [ ] Pole bez `library` (formularze przewodników) wygląda i działa jak na `main`
-- [ ] `git diff main...HEAD -- src/app/api src/lib/supabase` pusty
+- [ ] `git diff origin/main...HEAD -- src/app/api src/lib/supabase` pusty
 
 ## Poza zakresem
 - Globalna biblioteka wszystkich zdjęć bucketa (O-41 b — odrzucone)
@@ -62,11 +63,25 @@ brak
 
 ## Weryfikacja
 ```
-pnpm test run -- page-photos multi-image-upload
+pnpm test run page-photos multi-image-upload
 ls docs/screenshots/FA-1.64/
-git diff main...HEAD --stat -- src/app/api src/lib/supabase
+git diff origin/main...HEAD --stat -- src/app/api src/lib/supabase
 pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 ```
 
 ## Notatki z realizacji
 - 2026-10-20 tj: O-41 → (a) biblioteka per strona. Zależy od FA-1.62 (limity 30 i galeria ryb — inaczej biblioteka nie ma gdzie wstawiać).
+- 2026-10-22 tj: one picker — on page fields "Guide gallery" becomes "Choose from this page" (page photos + guide photos), no second picker; model opus/high. Task-file fixes: vitest filter without --, diff base origin/main, Storage check = storage.objects count, v2 tab has no photo fields.
+- 2026-10-22 odczyt stanu (origin/main 2b27f28) — pola zdjęć w `ExperiencePageForm`, każde dziś z `pickFrom={guidePhotos}` (zdjęcia z `guide_photos` przewodnika strony, ładowane w `edit/page.tsx` / `new/page.tsx`):
+  - wiele zdjęć (`MultiImageUpload`, bez kadrowania): galeria `galleryImages` (max 30), content photos `contentPhotoImages` (30), views `viewsImages` (6), bloki Waters/Programs `waterBlocks`/`programBlocks[].image_urls` (30 / blok, `CONTENT_BLOCK_MAX_PHOTOS`), ryby `speciesDetails[name].image_urls` (30 / gatunek; `SpeciesDetailEditor` dostaje `guidePhotos` propem, tak samo `PageBlockList` i `OptionEditor`);
+  - jedno zdjęcie (`ImageUpload`, kadrowanie przy wyborze): hero `heroImageUrl` (16:9), łodzie `boatItems[].image_url`, noclegi `accommodationItems[].image_url`, atrakcje `specialAttractions[].image_url` (4:3);
+  - w każdej opcji (`OptionEditor`, własny stan i własny zapis): blok `blocks[].image_url`, łódź `boatItems[].image_url`, atrakcja `attractions[].image_url` (4:3); stan zapisany opcji w `tripOptions` rodzica (aktualizowany po `onSaved`);
+  - OG image to pole tekstowe URL, nie pole zdjęć — ani źródło, ani cel biblioteki;
+  - zakładka v2 (`experience-v2-editor/`) nie ma pól zdjęć (grep `image|photo` pusty);
+  - poza stroną: `MultiImageUpload` z `pickFrom` używa tylko `ExperiencePageForm`; `ImageUpload` z `pickFrom` — także `edit-guide-form.tsx` (zostaje bez zmian).
+- 2026-10-22 tj: single-photo fields — option A: a pick from the page sets the photo as is (no crop, no upload); "Crop" stays available afterwards; guide edit form keeps crop-on-pick.
+- 2026-10-22 tj: trip options — option A: in the library; options see each other's last-saved photos plus their own unsaved edits; the page sees options' last-saved photos.
+- 2026-10-22 tj: correction — the "site path or http(s)" URL rule in the brief was a mistake; zod only requires non-empty. Validation stays as is; the observation goes to `docs/deferred-tasks.md`.
+- 2026-10-23 tj: guide-form screenshots — option A: local image host added temporarily, never committed, revert proven.
+- 2026-10-23 tj: Views wipe (pre-existing prod bug) — option A: one-line loader fix in this PR with red test + read-only prod count; recovery left to a separate task.
+- 2026-10-23 tj: accepted. Reviewed on the branch: diffs of src/app/api, src/lib/supabase, guide forms, dashboard and next.config.ts empty; screenshots 11 before/after differ only in the "From gallery" tab shade (hover state), 12 byte-identical. Views on prod were never filled — no data lost, no recovery needed.

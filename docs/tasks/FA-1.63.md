@@ -2,7 +2,7 @@
 id: FA-1.63
 title: Fakty w hero i „At a glance” wpisywane w adminie (`hero_facts` jsonb) + techniki muchowe
 stage: 1
-status: review
+status: done
 difficulty: M
 model: opus
 model_approved:
@@ -89,3 +89,4 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 - 2026-10-20 tj: STOP 1 zaakceptowany — migracja `20261011000000_experience_hero_facts.sql` jak pokazana, `comment on column` zostaje. Baza diffów: `origin/main` (lokalny `main` jest za `origin/main`). Weryfikacja: `pnpm test run hero-facts offer-chips offer-at-a-glance` zamiast `pnpm test run -- … v2-editor` — `--` sprawia, że vitest ignoruje filtry, a żaden plik nie pasuje do `v2-editor` (testy schematu są w `hero-facts.test.ts`).
 - 2026-10-22 tj: STOP 2 — migracja `20261011000000_experience_hero_facts.sql` trafi na prod przez workflow GitHub Actions (FA-1.20), nie ręcznie. PR #150 zostaje w `review`, dopóki FA-1.20 nie jest zmergowane i prod push się nie wykonał; bez merge do tego czasu.
 - 2026-10-22 tj: migracja na prod przed merge #150 (bez niej `getExperienceV2` wybiera `hero_facts` i v2 strona dałaby 500) — osobny PR „db(FA-1.63): hero_facts column — migration only” z `origin/main`: migracja + wpis w `docs/02-data-model.md` + zregenerowany `database.types.ts` (opcja a — job `db` porównuje typy ze schematem); prod przez `deploy-db.yml` (FA-1.20); potem rebase `feat/v2-hero-facts`.
+- 2026-10-22 tj: accepted — #150 merged while status was review; closed in FA-1.64's branch.

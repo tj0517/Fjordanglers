@@ -95,8 +95,8 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.60 | Lejek v2 mierzalny — eventy GA4 `experience_view`/`section_view`/`form_open`/`form_step` + `page_version`/`page_slug` przy `SUBMIT_LEAD_FORM`; `inquiries.page_version`/`page_slug`; pola w adminie | M | opus | done | FA-1.57 |
 | FA-1.61 | Formularz zapytania — 201 bez czekania na agenta AI (`after()`) + przewinięcie/focus na pierwsze błędne pole (v1, v2) | M | sonnet | review | — |
 | FA-1.62 | Strona v2 — poprawki z przeglądu Figmy 20 X: copy kroku 4 i notatki dnia, Bring przed Included, S5 schowane, link do profilu przewodnika, Spanish, Chinook, sygnet na mapie, limity zdjęć 30, galeria + sezon + średnia wielkość + ikona kalendarza u ryb, wiele linków licencji | M | sonnet | done | — |
-| FA-1.63 | `hero_facts jsonb` — chipy S1 i „At a glance” wpisywane w adminie (puste = wyliczane jak dziś) + techniki muchowe w `TECHNIQUES` | M | opus | review | — |
-| FA-1.64 | Biblioteka zdjęć per strona w adminie — „Choose from this page” przy każdym polu zdjęć, bez ponownego uploadu | M | opus | todo | FA-1.62 |
+| FA-1.63 | `hero_facts jsonb` — chipy S1 i „At a glance” wpisywane w adminie (puste = wyliczane jak dziś) + techniki muchowe w `TECHNIQUES` | M | opus | done | — |
+| FA-1.64 | Biblioteka zdjęć per strona w adminie — „Choose from this page” przy każdym polu zdjęć, bez ponownego uploadu | M | opus | done | FA-1.62 |
 | FA-1.65 | Hub kraju v2 — `getDestinationHub()` w warstwie danych, `ExpCard` wyniesiony, szablon: hero z linią dowodu, sezon, gatunki, karty z przewodnikiem, FAQ, recenzje, 3 kroki, inne kraje, kontakt | L | opus | todo | — |
 | FA-1.66 | Hub kraju — mapa z pinami lokacji (Leaflet jak `/trips`) + pomiar `hub_view` / `section_view` / `hub_card_click` | M | sonnet | todo | FA-1.60, FA-1.65 |
 | FA-1.67 | Worktree jedną komendą — `scripts/dev-env.sh` (env z lokalnego stacku + atrapy + flaga v2), `scripts/dev-preflight.sh` (obce stacki, dysk) przed `next dev`, §9 dla PC/WSL2 | M | sonnet | todo | — |

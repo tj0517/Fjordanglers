@@ -119,6 +119,7 @@ export default async function AdminExperienceEditPage({
     environment:               (page.environment as string[] | null) ?? [],
     hero_image_url:            page.hero_image_url ?? null,
     gallery_image_urls:        (page.gallery_image_urls as string[] | null) ?? [],
+    views_image_urls:          page.views_image_urls ?? [],
     story_text:                page.story_text ?? null,
     catches_text:              page.catches_text ?? null,
     rod_setup:                 page.rod_setup ?? null,

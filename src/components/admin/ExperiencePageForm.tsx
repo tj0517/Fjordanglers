@@ -18,7 +18,7 @@
  * 12. SEO           — meta_title, meta_description, og_image_url
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Loader2, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react'
 import { FISH_ALL } from '@/lib/fish'
@@ -41,6 +41,7 @@ import {
 import ImageUpload from '@/components/admin/image-upload'
 import { CONTENT_BLOCK_MAX_PHOTOS, mergePageBlocks, pageBlockSection, type ContentBlockSection } from '@/lib/experiences/v2-editor'
 import MultiImageUpload, { type GalleryImage } from '@/components/admin/multi-image-upload'
+import { collectPagePhotos, type PagePhotoFields, type PhotoHolder } from '@/lib/experiences/page-photos'
 import LatLngPicker from '@/components/admin/LatLngPicker'
 import dynamic from 'next/dynamic'
 import type { LocationPickerMapProps } from '@/components/trips/location-picker-map'
@@ -126,6 +127,16 @@ function parseJsonField<T>(value: unknown): T[] {
     try { return JSON.parse(value) as T[] } catch { return [] }
   }
   return []
+}
+
+/** A trip option's photos as last saved — its blocks, boats (and the legacy boat photo) and attractions. */
+function optionPhotoHolders(option: ExperiencePageOptionRow): PhotoHolder[] {
+  return [
+    ...parseJsonField<ContentBlock>(option.content_blocks),
+    ...parseJsonField<Boat>(option.boats),
+    { image_url: option.boat_image_url },
+    ...parseJsonField<SpecialAttraction>(option.special_attractions),
+  ]
 }
 
 function toggleItem<T>(arr: T[], item: T): T[] {
@@ -304,13 +315,13 @@ function SpeciesDetailEditor({
   name,
   detail,
   onChange,
-  guidePhotos,
+  library,
   guideId,
 }: {
   name:        string
   detail:      SpeciesDetailRecord
   onChange:    (d: SpeciesDetailRecord) => void
-  guidePhotos: string[]
+  library:     string[]
   guideId?:    string
 }) {
   const [open, setOpen] = useState(false)
@@ -364,7 +375,7 @@ function SpeciesDetailEditor({
               image_urls: imgs.map(g => g.url),
               image_url:  imgs[0]?.url ?? '',
             })}
-            pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+            library={library}
             guideId={guideId}
           />
 
@@ -408,7 +419,7 @@ function PageBlockList({
   hint,
   blocks,
   setBlocks,
-  guidePhotos,
+  library,
   guideId,
   testId,
 }: {
@@ -416,7 +427,7 @@ function PageBlockList({
   hint:        string
   blocks:      PageBlockDraft[]
   setBlocks:   React.Dispatch<React.SetStateAction<PageBlockDraft[]>>
-  guidePhotos: string[]
+  library:     string[]
   guideId?:    string
   testId:      string
 }) {
@@ -457,7 +468,7 @@ function PageBlockList({
             initial={blockPhotos(block).map((url, i) => ({ url, is_cover: i === 0, sort_order: i }))}
             max={CONTENT_BLOCK_MAX_PHOTOS}
             onChange={imgs => edit(block.key, { image_urls: imgs.map(g => g.url), image_url: imgs[0]?.url ?? '' })}
-            pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+            library={library}
             guideId={guideId}
           />
           <textarea
@@ -482,7 +493,7 @@ function OptionEditor({
   isOpen,
   onToggle,
   speciesLibrary,
-  guidePhotos,
+  pagePhotos,
   guideId,
   onSaved,
   onDeleted,
@@ -492,7 +503,7 @@ function OptionEditor({
   isOpen:        boolean
   onToggle:      () => void
   speciesLibrary: string[]   // page-level target_species names
-  guidePhotos:   string[]
+  pagePhotos:    PagePhotoFields   // the page's photo fields, with every option as last saved
   guideId?:      string
   onSaved:       (updated: ExperiencePageOptionRow) => void
   onDeleted:     (id: string) => void
@@ -526,6 +537,12 @@ function OptionEditor({
   const [saving,      setSaving]      = useState(false)
   const [deleting,    setDeleting]    = useState(false)
   const [saveError,   setSaveError]   = useState<string | null>(null)
+
+  // The page library plus this option's own unsaved photos; other options count as last saved.
+  const library = useMemo(
+    () => collectPagePhotos({ ...pagePhotos, options: [...pagePhotos.options, ...blocks, ...boatItems, ...attractions] }),
+    [pagePhotos, blocks, boatItems, attractions],
+  )
 
   const handleSave = async () => {
     setSaving(true)
@@ -712,7 +729,7 @@ function OptionEditor({
                   cropAspect={4 / 3}
                   currentUrl={block.image_url || null}
                   onUpload={url => setBlocks(prev => prev.map((b, i) => i === bi ? { ...b, image_url: url } : b))}
-                  pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+                  library={library}
                   guideId={guideId}
                   hint="Landscape — if present the heading is full width, then photo left and text right."
                 />
@@ -839,7 +856,7 @@ function OptionEditor({
                   cropAspect={4 / 3}
                   currentUrl={boat.image_url || null}
                   onUpload={url => setBoatItems(prev => prev.map((b, j) => j === bi ? { ...b, image_url: url } : b))}
-                  pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+                  library={library}
                   guideId={guideId}
                   hint="Landscape — shown next to the boat description."
                 />
@@ -883,7 +900,7 @@ function OptionEditor({
                   cropAspect={4 / 3}
                   currentUrl={attr.image_url || null}
                   onUpload={url => setAttractions(prev => prev.map((a, j) => j === i ? { ...a, image_url: url } : a))}
-                  pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+                  library={library}
                   guideId={guideId}
                   hint="Shown to the left of the text."
                 />
@@ -1073,8 +1090,8 @@ export interface ExperiencePageFormProps {
   /** Full initial data for edit mode */
   initialData?: ExperiencePageFormInitialData
   /**
-   * URLs from the guide's photo gallery (guide_photos table).
-   * When provided, the hero image and gallery pickers show a "From gallery" tab.
+   * URLs from the guide's photo gallery (guide_photos table). With the page's own photos they
+   * make the "Choose from this page" library of every photo field (FA-1.64).
    */
   guidePhotos?: string[]
   /** Trip options fetched from experience_page_options table */
@@ -1197,6 +1214,24 @@ export default function ExperiencePageForm({
   // (FA-1.60). Each block carries a stable key — see PageBlockList.
   const [waterBlocks,   setWaterBlocks]   = useState<PageBlockDraft[]>(() => blockDrafts(initialData?.content_blocks ?? [], 'waters'))
   const [programBlocks, setProgramBlocks] = useState<PageBlockDraft[]>(() => blockDrafts(initialData?.content_blocks ?? [], 'programs'))
+
+  // ── "Choose from this page" (FA-1.64): every photo the fields hold now, the species shown
+  // below, trip options as last saved, and the guide's photos — offered by every photo field.
+  const pagePhotoFields = useMemo<PagePhotoFields>(() => ({
+    hero:           heroImageUrl,
+    gallery:        galleryImages.map(g => g.url),
+    contentPhotos:  contentPhotoImages.map(g => g.url),
+    views:          viewsImages.map(g => g.url),
+    blocks:         [...waterBlocks, ...programBlocks],
+    species:        targetSpecies.flatMap(name => speciesDetails[name] ?? []),
+    boats:          boatItems,
+    accommodations: accommodationItems,
+    attractions:    specialAttractions,
+    options:        tripOptions.flatMap(optionPhotoHolders),
+    guidePhotos,
+  }), [heroImageUrl, galleryImages, contentPhotoImages, viewsImages, waterBlocks, programBlocks, targetSpecies,
+    speciesDetails, boatItems, accommodationItems, specialAttractions, tripOptions, guidePhotos])
+  const pageLibrary = useMemo(() => collectPagePhotos(pagePhotoFields), [pagePhotoFields])
 
   // ── Section 12b: FAQ (global)
   const [faqItems, setFaqItems] = useState<FaqItem[]>(() => parseJsonField<FaqItem>(initialData?.faq))
@@ -1593,7 +1628,7 @@ export default function ExperiencePageForm({
           cropAspect={16 / 9}
           currentUrl={heroImageUrl || null}
           onUpload={(url) => setHeroImageUrl(url)}
-          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          library={pageLibrary}
           guideId={prefill?.guide_id ?? undefined}
           hint="16:9 landscape — this is the full-bleed hero shown at the top of the experience page."
         />
@@ -1642,8 +1677,8 @@ export default function ExperiencePageForm({
       <SectionLabel
         step={5}
         title="Gallery"
-        desc={guidePhotos.length > 0
-          ? `Pick from the guide's ${guidePhotos.length} existing photos or upload new ones`
+        desc={pageLibrary.length > 0
+          ? `Pick from the ${pageLibrary.length} photos already on this page and its guide's, or upload new ones`
           : 'Upload photos for this experience page'}
       />
       <MultiImageUpload
@@ -1651,7 +1686,7 @@ export default function ExperiencePageForm({
         initial={galleryImages}
         max={PHOTO_FIELD_MAX}
         onChange={setGalleryImages}
-        pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+        library={pageLibrary}
         guideId={prefill?.guide_id ?? undefined}
       />
       <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -1664,7 +1699,7 @@ export default function ExperiencePageForm({
           initial={contentPhotoImages}
           max={PHOTO_FIELD_MAX}
           onChange={setContentPhotoImages}
-          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          library={pageLibrary}
           guideId={prefill?.guide_id ?? undefined}
         />
         <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -1678,7 +1713,7 @@ export default function ExperiencePageForm({
           initial={viewsImages}
           max={6}
           onChange={setViewsImages}
-          pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+          library={pageLibrary}
           guideId={prefill?.guide_id ?? undefined}
         />
         <p className="mt-1 text-xs f-body" style={{ color: 'rgba(10,46,77,0.4)' }}>
@@ -1715,7 +1750,7 @@ export default function ExperiencePageForm({
           hint="the rivers and lakes — headline, text, photos"
           blocks={waterBlocks}
           setBlocks={setWaterBlocks}
-          guidePhotos={guidePhotos}
+          library={pageLibrary}
           guideId={prefill?.guide_id ?? undefined}
           testId="page-blocks-waters"
         />
@@ -1724,7 +1759,7 @@ export default function ExperiencePageForm({
           hint="headline + text pairs"
           blocks={programBlocks}
           setBlocks={setProgramBlocks}
-          guidePhotos={guidePhotos}
+          library={pageLibrary}
           guideId={prefill?.guide_id ?? undefined}
           testId="page-blocks-programs"
         />
@@ -1751,7 +1786,7 @@ export default function ExperiencePageForm({
               name={name}
               detail={speciesDetails[name] ?? { description: '', image_url: '', image_urls: [], season_months: [], peak_months: [], avg_size_text: '' }}
               onChange={d => updateSpeciesDetail(name, d)}
-              guidePhotos={guidePhotos}
+              library={pageLibrary}
               guideId={prefill?.guide_id}
             />
           ))}
@@ -1804,7 +1839,7 @@ export default function ExperiencePageForm({
               cropAspect={4 / 3}
               currentUrl={boat.image_url || null}
               onUpload={(url) => setBoatItems(prev => prev.map((b, i) => i === idx ? { ...b, image_url: url } : b))}
-              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              library={pageLibrary}
               guideId={prefill?.guide_id ?? undefined}
               hint="Landscape — shown alongside the description."
             />
@@ -1874,7 +1909,7 @@ export default function ExperiencePageForm({
               cropAspect={4 / 3}
               currentUrl={item.image_url || null}
               onUpload={(url) => setAccommodationItems(prev => prev.map((a, i) => i === idx ? { ...a, image_url: url } : a))}
-              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              library={pageLibrary}
               guideId={prefill?.guide_id ?? undefined}
               hint="Landscape — shown alongside the description."
             />
@@ -1932,7 +1967,7 @@ export default function ExperiencePageForm({
               cropAspect={4 / 3}
               currentUrl={attr.image_url || null}
               onUpload={(url) => setSpecialAttractions(prev => prev.map((a, i) => i === idx ? { ...a, image_url: url } : a))}
-              pickFrom={guidePhotos.length > 0 ? guidePhotos : undefined}
+              library={pageLibrary}
               guideId={prefill?.guide_id ?? undefined}
               hint="Landscape — shown to the left of the text."
             />
@@ -2112,7 +2147,7 @@ export default function ExperiencePageForm({
               isOpen={optionOpenIdx === idx}
               onToggle={() => setOptionOpenIdx(prev => prev === idx ? null : idx)}
               speciesLibrary={targetSpecies}
-              guidePhotos={guidePhotos}
+              pagePhotos={pagePhotoFields}
               guideId={prefill?.guide_id}
               onSaved={(updated) => setTripOptions(prev => prev.map(o => o.id === updated.id ? updated : o))}
               onDeleted={(id) => {

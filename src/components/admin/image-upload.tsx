@@ -66,6 +66,13 @@ type ImageUploadProps = {
    */
   pickFrom?: string[]
   /**
+   * The experience page's photo library (`collectPagePhotos`, FA-1.64): every photo already on
+   * the page plus its guide's photos. Used instead of `pickFrom`, it shows a "Choose from this
+   * page" tab, and a pick sets the photo as it is — no crop step, no upload. "Crop" stays
+   * available afterwards and uploads a cropped copy, as for any photo.
+   */
+  library?: string[]
+  /**
    * Guide's ID. New uploads are stored at {guideId}/{uuid}.ext so files
    * are organised per guide in the bucket (no more flat random UUIDs).
    */
@@ -199,9 +206,11 @@ export default function ImageUpload({
   hint,
   cropAspect,
   pickFrom,
+  library,
   guideId,
 }: ImageUploadProps) {
   const cfg = VARIANT_CONFIG[variant]
+  const pickUrls = library ?? pickFrom ?? []
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [preview,          setPreview]          = useState<string | null>(currentUrl ?? null)
@@ -212,9 +221,11 @@ export default function ImageUpload({
   const [dragging,         setDragging]         = useState(false)
   const [pendingCropFile,  setPendingCropFile]  = useState<File | null>(null)
   const [recropSrc,        setRecropSrc]        = useState<string | null>(null)
-  const [activeTab,        setActiveTab]        = useState<'upload' | 'pick'>(
-    pickFrom != null && pickFrom.length > 0 && currentUrl == null ? 'pick' : 'upload'
+  const [chosenTab,        setChosenTab]        = useState<'upload' | 'pick'>(
+    pickUrls.length > 0 && currentUrl == null ? 'pick' : 'upload'
   )
+  // The page library follows the form, so it can empty out under an open tab — fall back to upload.
+  const activeTab = library != null && library.length === 0 ? 'upload' : chosenTab
 
   // ── Core upload logic ──────────────────────────────────────────────────────
   const uploadFile = useCallback(async (file: File) => {
@@ -320,7 +331,7 @@ export default function ImageUpload({
   const handleDragLeave = ()                      => setDragging(false)
 
   const handlePickUrl = (url: string) => {
-    if (cropAspect != null) {
+    if (cropAspect != null && library == null) {
       setRecropSrc(url)
     } else {
       setPreview(url)
@@ -346,20 +357,20 @@ export default function ImageUpload({
         >
           {label}
         </label>
-        {pickFrom != null && pickFrom.length > 0 && (
+        {pickUrls.length > 0 && (
           <div className="flex gap-0.5 p-0.5 rounded-lg" style={{ background: 'rgba(10,46,77,0.06)' }}>
             {(['upload', 'pick'] as const).map(tab => (
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setChosenTab(tab)}
                 className="px-3 py-1 rounded-md text-[11px] font-semibold f-body transition-all"
                 style={activeTab === tab
                   ? { background: '#fff', color: '#0A2E4D', boxShadow: '0 1px 3px rgba(10,46,77,0.1)' }
                   : { color: 'rgba(10,46,77,0.4)' }
                 }
               >
-                {tab === 'upload' ? 'Upload' : 'From gallery'}
+                {tab === 'upload' ? 'Upload' : library != null ? 'Choose from this page' : 'From gallery'}
               </button>
             ))}
           </div>
@@ -367,14 +378,14 @@ export default function ImageUpload({
       </div>
 
       {/* Gallery picker */}
-      {activeTab === 'pick' && pickFrom != null && pickFrom.length > 0 && (
+      {activeTab === 'pick' && pickUrls.length > 0 && (
         <div className="flex flex-wrap gap-2 p-3 rounded-2xl mb-0" style={{
           border: '2px dashed rgba(10,46,77,0.13)',
           background: 'rgba(10,46,77,0.02)',
           minHeight: zoneHeight,
           alignContent: 'flex-start',
         }}>
-          {pickFrom.map((url, i) => {
+          {pickUrls.map((url, i) => {
             const selected = preview === url
             return (
               <button

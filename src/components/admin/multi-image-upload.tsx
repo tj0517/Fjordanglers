@@ -4,8 +4,9 @@
  * MultiImageUpload — grid-based photo uploader for guide galleries.
  *
  * Features:
- *  - "From Gallery" tab: pick from guide's existing photos (no re-upload).
- *    Clicking a photo toggles it in/out of the selection. No duplicate uploads.
+ *  - "Choose from this page" tab (FA-1.64): pick from the photos already on the experience page
+ *    and its guide's photos (no re-upload, no file copy). Clicking a photo toggles it in/out of
+ *    the selection — a photo is in a field at most once — and a full field takes no more.
  *  - "Upload New" tab: multi-file select, optional crop modal per file.
  *  - guideId prop: new uploads land in {guideId}/{uuid}.ext for organised storage.
  *  - Up to `max` photos total, first = cover. Files past the limit are not added, and a red
@@ -47,11 +48,11 @@ type Props = {
   /** Called with the current list whenever it changes. */
   onChange: (images: GalleryImage[]) => void
   /**
-   * Guide's existing photo URLs (from guide_photos table).
-   * When provided, shows a "From Gallery" tab so FA can pick photos
-   * without re-uploading. Clicking toggles them in/out of the selection.
+   * The experience page's photo library (`collectPagePhotos`): every photo already on the page
+   * plus its guide's photos. When not empty, shows a "Choose from this page" tab so FA can pick
+   * photos without re-uploading. Clicking toggles them in/out of the selection.
    */
-  pickFrom?: string[]
+  library?: string[]
   /**
    * Guide's ID. New uploads are stored at {guideId}/{uuid}.ext so files
    * are organised per guide in the bucket.
@@ -87,6 +88,19 @@ async function uploadFile(file: File, guideId?: string): Promise<string | null> 
   return publicUrl
 }
 
+// ─── Library pick ─────────────────────────────────────────────────────────────
+
+/**
+ * What a click on a library tile does: a photo already in the field comes out (it is never added
+ * twice), another goes in while the field has room, and a full field refuses it — the tile is
+ * disabled on the same verdict.
+ */
+function libraryPick(inField: boolean, filled: number, max: number): 'remove' | 'add' | 'refuse' {
+  if (inField) return 'remove'
+  if (filled >= max) return 'refuse'
+  return 'add'
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MultiImageUpload({
@@ -95,19 +109,21 @@ export default function MultiImageUpload({
   max      = 5,
   cropAspect,
   onChange,
-  pickFrom,
+  library,
   guideId,
 }: Props) {
-  const hasGallery = pickFrom != null && pickFrom.length > 0
+  const hasGallery = library != null && library.length > 0
 
   const [committed, setCommitted] = useState<GalleryImage[]>(initial)
   const [pending,   setPending]   = useState<PendingItem[]>([])
   const [cropQueue,  setCropQueue]  = useState<File[]>([])
   const [recropItem, setRecropItem] = useState<{ idx: number; url: string } | null>(null)
   // Default to gallery tab when guide photos are available
-  const [activeTab, setActiveTab] = useState<'gallery' | 'upload'>(
+  const [chosenTab, setChosenTab] = useState<'gallery' | 'upload'>(
     hasGallery ? 'gallery' : 'upload',
   )
+  // The library follows the form, so it can empty out under an open tab — fall back to upload.
+  const activeTab = hasGallery ? chosenTab : 'upload'
 
   const inputRef = useRef<HTMLInputElement>(null)
   // How many files of the last pick were left out because the field was full.
@@ -121,14 +137,14 @@ export default function MultiImageUpload({
 
   // ── Gallery picker: toggle a photo in/out ────────────────────────────────
   const toggleGalleryPhoto = useCallback((url: string) => {
-    const has = committed.some(g => g.url === url)
+    const pick = libraryPick(committed.some(g => g.url === url), committed.length + pending.length, max)
+    if (pick === 'refuse') return
     let updated: GalleryImage[]
-    if (has) {
+    if (pick === 'remove') {
       updated = committed
         .filter(g => g.url !== url)
         .map((g, i) => ({ ...g, is_cover: i === 0, sort_order: i }))
     } else {
-      if (committed.length + pending.length >= max) return
       updated = [
         ...committed,
         { url, is_cover: committed.length === 0, sort_order: committed.length },
@@ -230,14 +246,14 @@ export default function MultiImageUpload({
           </span>
         </label>
 
-        {/* Tab bar — only when guide photos are available */}
+        {/* Tab bar — only when the page has photos to pick */}
         {hasGallery && (
           <div className="flex gap-0.5 p-0.5 rounded-lg" style={{ background: 'rgba(10,46,77,0.06)' }}>
             {(['gallery', 'upload'] as const).map(tab => (
               <button
                 key={tab}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setChosenTab(tab)}
                 className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[11px] font-semibold f-body transition-all"
                 style={activeTab === tab
                   ? { background: '#fff', color: '#0A2E4D', boxShadow: '0 1px 3px rgba(10,46,77,0.1)' }
@@ -245,7 +261,7 @@ export default function MultiImageUpload({
                 }
               >
                 {tab === 'gallery'
-                  ? <><Images size={11} /> Guide gallery ({pickFrom!.length})</>
+                  ? <><Images size={11} /> Choose from this page ({library!.length})</>
                   : <><ImageIcon size={11} /> Upload new</>
                 }
               </button>
@@ -280,9 +296,9 @@ export default function MultiImageUpload({
 
           {/* Photo grid */}
           <div className="flex flex-wrap gap-2">
-            {pickFrom!.map((url, i) => {
+            {library!.map((url, i) => {
               const selected = committedUrls.has(url)
-              const atMax    = !selected && committed.length + pending.length >= max
+              const atMax    = libraryPick(selected, committed.length + pending.length, max) === 'refuse'
 
               return (
                 <button
@@ -304,6 +320,7 @@ export default function MultiImageUpload({
                     transform:  selected ? 'scale(1.03)' : 'scale(1)',
                   }}
                   aria-label={`${selected ? 'Remove' : 'Add'} photo ${i + 1}`}
+                  aria-pressed={selected}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -330,8 +347,14 @@ export default function MultiImageUpload({
             })}
           </div>
 
+          {committed.length + pending.length >= max && library!.some(url => !committedUrls.has(url)) && (
+            <p role="alert" data-testid="photo-limit-full" className="mt-3 text-[11px] font-semibold f-body" style={{ color: '#DC2626' }}>
+              Field full — this field takes at most {max} photos. Remove one to pick another.
+            </p>
+          )}
+
           <p className="text-[10px] f-body mt-3" style={{ color: 'rgba(10,46,77,0.35)' }}>
-            These are the guide&apos;s existing photos — no re-upload needed.
+            These are the photos already on this page and its guide&apos;s photos — no re-upload needed.
             To add new photos, switch to the &quot;Upload new&quot; tab.
           </p>
         </div>
