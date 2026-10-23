@@ -8,13 +8,14 @@
  * its popup (name, price, guide, link to the offer); clicking or tapping it selects the offer,
  * which scrolls the cards to it (tj, 2026-10-23: a phone has no hover, so a tap goes straight
  * to the card). The popup is a standalone layer, not bound to the marker — a bound popup
- * would also toggle on that click. Scroll-wheel zoom is off: the map sits in a page people
- * scroll through.
+ * would also toggle on that click. Each hover mounts it afresh and a map click removes it;
+ * Leaflet's own `popupclose` is not listened to, because React's dev remount fires it too.
+ * Scroll-wheel zoom is off: the map sits in a page people scroll through.
  */
 
 import 'leaflet/dist/leaflet.css'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import { pinIcon } from '@/components/map/pin-icon'
@@ -43,9 +44,8 @@ function FitToPins({ pins }: { pins: HubMapPin[] }) {
   return null
 }
 
-/** Clears the hovered pin when Leaflet closes its popup (map click, close button). */
-function PopupCloseWatcher({ onClose }: { onClose: () => void }) {
-  useMapEvents({ popupclose: onClose })
+function MapClick({ onClick }: { onClick: () => void }) {
+  useMapEvents({ click: onClick })
   return null
 }
 
@@ -74,7 +74,13 @@ export default function HubMapView({
   pins:       HubMapPin[]
   onPinClick: (slug: string) => void
 }) {
-  const [hovered, setHovered] = useState<HubMapPin | null>(null)
+  const [hovered, setHovered] = useState<{ pin: HubMapPin; n: number } | null>(null)
+  const hoverCount = useRef(0)
+
+  const hover = (pin: HubMapPin) => {
+    hoverCount.current += 1
+    setHovered({ pin, n: hoverCount.current })
+  }
 
   return (
     <MapContainer
@@ -84,7 +90,7 @@ export default function HubMapView({
       scrollWheelZoom={false}
     >
       <FitToPins pins={pins} />
-      <PopupCloseWatcher onClose={() => setHovered(null)} />
+      <MapClick onClick={() => setHovered(null)} />
 
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
@@ -98,7 +104,7 @@ export default function HubMapView({
           position={[pin.lat, pin.lng]}
           icon={pinIcon()}
           eventHandlers={{
-            mouseover: () => setHovered(pin),
+            mouseover: () => hover(pin),
             click:     () => onPinClick(pin.slug),
             keypress:  e => { if (e.originalEvent.key === 'Enter') onPinClick(pin.slug) },
           }}
@@ -106,8 +112,8 @@ export default function HubMapView({
       ))}
 
       {hovered != null && (
-        <Popup key={hovered.slug} position={[hovered.lat, hovered.lng]} offset={[0, -12]} closeButton={false}>
-          <PinPopup pin={hovered} />
+        <Popup key={hovered.n} position={[hovered.pin.lat, hovered.pin.lng]} offset={[0, -12]} closeButton={false}>
+          <PinPopup pin={hovered.pin} />
         </Popup>
       )}
     </MapContainer>
