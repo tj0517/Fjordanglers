@@ -2,7 +2,7 @@
 id: FA-1.65
 title: Hub kraju v2 — `getDestinationHub()` w warstwie danych, `ExpCard` wyniesiony, szablon: hero z linią dowodu, sezon, gatunki, karty z przewodnikiem, FAQ, recenzje, 3 kroki, inne kraje, kontakt
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
@@ -81,3 +81,4 @@ ls .playwright-mcp | grep fa-1.65
 
 ## Notatki z realizacji
 - 2026-10-20 tj (/wf-plan): O-42 (c) hybryda — dane z ofert + treść redakcyjna w `destinations.ts`; O-43 (b) sezon/FAQ ręcznie per hub; O-44 hero: liczba przewodników i cena z danych, cytat jako pole ręczne; D1 live od razu po merge. Scalone z planowanego podziału dane/szablon na prośbę tj (mniej zadań).
+- 2026-10-23 tj (prompt startowy): **D1** — pełny układ dowodzi test komponentu na danych fixture plus lokalny podgląd wizualny z treścią-zaślepką, cofnięty przed commitem (zmienione kryteria: brak huba testowego w `DESTINATION_HUBS`, bo każdy wpis staje się publiczną stroną na prod; seed nie ma recenzji, więc test wstawia własne). **D2** — chipy gatunków wyliczane z aktywnych ofert hubu; niepusty `species` w konfiguracji hubu je nadpisuje. **D3** — cena w linii dowodu = minimum `price_from` w dominującej walucie hubu (najwięcej aktywnych ofert), jednostka z `price_type` tak jak na karcie (`formatPrice`); remis walut → stop i pytanie.
