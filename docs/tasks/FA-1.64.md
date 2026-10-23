@@ -81,3 +81,5 @@ pnpm typecheck && pnpm lint && pnpm test run && pnpm knip && pnpm build
 - 2026-10-22 tj: single-photo fields — option A: a pick from the page sets the photo as is (no crop, no upload); "Crop" stays available afterwards; guide edit form keeps crop-on-pick.
 - 2026-10-22 tj: trip options — option A: in the library; options see each other's last-saved photos plus their own unsaved edits; the page sees options' last-saved photos.
 - 2026-10-22 tj: correction — the "site path or http(s)" URL rule in the brief was a mistake; zod only requires non-empty. Validation stays as is; the observation goes to `docs/deferred-tasks.md`.
+- 2026-10-23 tj: guide-form screenshots — option A: local image host added temporarily, never committed, revert proven.
+- 2026-10-23 tj: Views wipe (pre-existing prod bug) — option A: one-line loader fix in this PR with red test + read-only prod count; recovery left to a separate task.
