@@ -1243,7 +1243,8 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
         otherHubs:  DESTINATION_HUBS.filter(h => h.slug !== hub.slug).map(h => ({ slug: h.slug, h1: h.h1 })),
       }
     },
-    ['destination-hub', slug],
+    // The flag decides how every card is priced, so a flip must not serve the other pricing.
+    ['destination-hub', slug, rendersAsV2(2) ? 'v2' : 'v1'],
     { revalidate: 300, tags: [CACHE_TAG_EXPERIENCES, CACHE_TAG_GUIDES] },
   )()
 }
