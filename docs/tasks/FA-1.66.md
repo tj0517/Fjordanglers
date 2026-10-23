@@ -2,7 +2,7 @@
 id: FA-1.66
 title: Hub kraju — mapa z pinami lokacji ofert (Leaflet jak `/trips`) + pomiar `hub_view` / `section_view` / `hub_card_click` tym samym helperem co lejek v2
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -67,3 +67,4 @@ ls .playwright-mcp | grep fa-1.66
 
 ## Notatki z realizacji
 - 2026-10-20 tj (/wf-plan): O-45 (b) mapa z pinami w zakresie. Test landingu Ads (generyk PAT/IS → hub, 14 dni, koszt zapytania vs strony ofert) — czynność tj po merge, wynik wklejany tutaj.
+- 2026-10-23 tj (/wf-task): D1 — event proof in `dataLayer` (as FA-1.60), not DebugView; the Ads test starts only after GA4 reception is fixed (deferred FA-1.60 URGENT). D2 — Lighthouse: tj measures PageSpeed on prod `/new-zealand` before and after merge; agent proves Leaflet is lazy-loaded. D3 — pins from temporary local SQL (seed untouched) + prod count read.
