@@ -37,7 +37,7 @@ function percent(feePct: number): string {
 }
 
 export default function OfferHowItWorks({ offerEtaText, feePct }: OfferHowItWorksProps) {
-  const steps: { title: string; body: string; highlight?: boolean }[] = [
+  const steps: Step[] = [
     { title: 'You send an inquiry', body: 'Two minutes, free, no obligation.' },
     {
       title: 'We send you an offer',
@@ -53,29 +53,38 @@ export default function OfferHowItWorks({ offerEtaText, feePct }: OfferHowItWork
 
   return (
     <OfferSection section="S8" anchor="jak-dziala" eyebrow="Booking" title="How booking works" accordion={{ defaultOpen: false }}>
-      <ol className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {steps.map((step, i) => (
-          <li
-            key={step.title}
-            data-step={i + 1}
-            className="rounded-2xl p-5"
-            style={step.highlight
-              ? { background: 'var(--fa-navy)', color: '#fff' }
-              : { background: '#fff', boxShadow: cardShadow }}
-          >
-            <b
-              className="f-display block text-[32px] font-bold leading-none"
-              style={{ color: step.highlight ? 'rgba(255,255,255,0.45)' : 'rgba(10,46,77,0.28)' }}
-            >
-              {String(i + 1).padStart(2, '0')}
-            </b>
-            <p className="mt-3 text-[15px] font-semibold leading-snug">{step.title}</p>
-            <p className="mt-1.5 text-sm leading-relaxed" style={{ color: step.highlight ? 'rgba(255,255,255,0.78)' : 'rgba(10,46,77,0.7)' }}>
-              {step.body}
-            </p>
-          </li>
-        ))}
-      </ol>
+      <StepCards steps={steps} className="sm:grid-cols-2 xl:grid-cols-4" />
     </OfferSection>
+  )
+}
+
+export type Step = { title: string; body: string; highlight?: boolean }
+
+/** The numbered step cards, without the section frame — the country hub uses it too (FA-1.65). */
+export function StepCards({ steps, className = '' }: { steps: Step[]; className?: string }) {
+  return (
+    <ol className={`grid grid-cols-1 gap-3 ${className}`}>
+      {steps.map((step, i) => (
+        <li
+          key={step.title}
+          data-step={i + 1}
+          className="rounded-2xl p-5"
+          style={step.highlight
+            ? { background: 'var(--fa-navy)', color: '#fff' }
+            : { background: '#fff', boxShadow: cardShadow }}
+        >
+          <b
+            className="f-display block text-[32px] font-bold leading-none"
+            style={{ color: step.highlight ? 'rgba(255,255,255,0.45)' : 'rgba(10,46,77,0.28)' }}
+          >
+            {String(i + 1).padStart(2, '0')}
+          </b>
+          <p className="mt-3 text-[15px] font-semibold leading-snug">{step.title}</p>
+          <p className="mt-1.5 text-sm leading-relaxed" style={{ color: step.highlight ? 'rgba(255,255,255,0.78)' : 'rgba(10,46,77,0.7)' }}>
+            {step.body}
+          </p>
+        </li>
+      ))}
+    </ol>
   )
 }

@@ -11,7 +11,7 @@
  * Desktop never renders it; there the same numbers live in the sticky card.
  */
 
-import { fromPrice, customRange, type PriceRow } from '@/lib/pricing/experience-price'
+import { fromPrice, customRange, anglersPerGuideLabel, type PriceRow } from '@/lib/pricing/experience-price'
 import { formatCents } from '@/lib/format-price'
 import { useCurrency } from './currency-context'
 
@@ -51,7 +51,7 @@ export default function OfferPriceLead({
   const sub = [
     offerMode === 'custom'
       ? 'indicative · the offer is built around your dates'
-      : maxAnglersPerGuide === 1 ? '1 angler per guide' : `1–${maxAnglersPerGuide} anglers per guide`,
+      : anglersPerGuideLabel(maxAnglersPerGuide),
     approx,
   ].filter((s): s is string => s != null)
 

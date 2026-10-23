@@ -36,15 +36,22 @@ function Entry({ question, answer }: FaqEntry) {
   )
 }
 
+/** The questions themselves, without the section frame — the country hub uses it too (FA-1.65). */
+export function FaqList({ faq }: OfferFaqProps) {
+  return (
+    <div data-testid="offer-faq" className="border-t" style={{ borderColor: 'rgba(10,46,77,0.14)' }}>
+      {faq.map((entry, i) => <Entry key={`${i}-${entry.question}`} {...entry} />)}
+    </div>
+  )
+}
+
 export default function OfferFaq({ faq }: OfferFaqProps) {
   // The empty-field guard: no stored question, no section.
   if (faq.length === 0) return null
 
   return (
     <OfferSection section="S13" anchor="faq" eyebrow="Good to know" title="Questions anglers ask" accordion={{ defaultOpen: true }}>
-      <div data-testid="offer-faq" className="border-t" style={{ borderColor: 'rgba(10,46,77,0.14)' }}>
-        {faq.map((entry, i) => <Entry key={`${i}-${entry.question}`} {...entry} />)}
-      </div>
+      <FaqList faq={faq} />
     </OfferSection>
   )
 }

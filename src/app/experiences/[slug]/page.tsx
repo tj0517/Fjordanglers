@@ -24,8 +24,7 @@
  */
 
 import { permanentRedirect } from 'next/navigation'
-import { env } from '@/lib/env'
-import { getExperienceRouting } from '@/lib/supabase/queries'
+import { getExperienceRouting, rendersAsV2 } from '@/lib/supabase/queries'
 import ExperienceV1, { generateMetadata as v1Metadata } from './_v1/ExperienceV1'
 import ExperienceV2, { generateMetadata as v2Metadata } from './_v2/ExperienceV2'
 
@@ -35,7 +34,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const routing  = await getExperienceRouting(slug)
 
-  return env.EXPERIENCE_V2_ENABLED && routing?.pageVersion === 2
+  return rendersAsV2(routing?.pageVersion)
     ? v2Metadata({ params })
     : v1Metadata({ params })
 }
@@ -54,7 +53,7 @@ export default async function ExperiencePublicPage({
     permanentRedirect(`/experiences/${encodeURIComponent(routing.canonicalSlug)}`)
   }
 
-  if (env.EXPERIENCE_V2_ENABLED && routing?.pageVersion === 2) {
+  if (rendersAsV2(routing?.pageVersion)) {
     return <ExperienceV2 slug={slug} />
   }
 

@@ -210,3 +210,8 @@ export function customRange(
   const toCents = priceToCents != null && priceToCents > priceFromCents ? priceToCents : null
   return { fromCents: priceFromCents, toCents, currency }
 }
+
+/** What a fixed page's "from" price covers — the line under it on the page, and on the hub cards. */
+export function anglersPerGuideLabel(maxAnglersPerGuide: number): string {
+  return maxAnglersPerGuide === 1 ? '1 angler per guide' : `1–${maxAnglersPerGuide} anglers per guide`
+}

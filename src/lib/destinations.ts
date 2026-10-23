@@ -1,4 +1,5 @@
 import { type Country, type RegionGroup, COUNTRIES, COUNTRY_REGION } from './countries'
+import type { FaqEntry } from './experience-v2-content'
 
 export type DestinationHub = {
   slug: string
@@ -9,6 +10,24 @@ export type DestinationHub = {
   intro: string
   metaTitle: string
   metaDescription: string
+
+  // ── Editorial fields of the hub page (FA-1.65). Written by hand per hub; every one is
+  // optional, and a section whose field is empty is not rendered. ──
+
+  /** Month numbers (1–12) the season is open. Empty = no season section. */
+  seasonMonths?: number[]
+  /** Month numbers of the best weeks; drawn darker in the season bar. */
+  peakMonths?: number[]
+  /** One or two sentences under the season bar. */
+  seasonNote?: string
+  /** Species chips. Non-empty overrides the list derived from the hub's offers (tj D2, 2026-10-23). */
+  species?: string[]
+  faq?: FaqEntry[]
+  heroQuote?: { text: string; author: string; country: string }
+  /** The third part of the hero's proof line, e.g. "gear included". Empty = the line ends after the price. */
+  proofNote?: string
+  /** `whatsapp` is the number in international format, digits only (as `wa.me` takes it). */
+  contact?: { name: string; email: string; whatsapp: string }
 }
 
 export const DESTINATION_HUBS: DestinationHub[] = [
@@ -19,6 +38,11 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     intro: 'Two owner-guides, one in Bariloche and one in Coyhaique. Juan Leobono rows the Upper Limay and Manso. Alex Prior has guided the Aysén spring creeks since 1989. Guided days from $550 for two anglers, two and three day floats, hotel packages in Bariloche. Season runs November to April.',
     metaTitle: 'Patagonia Fly Fishing Trips',
     metaDescription: 'Two owner-guides in Bariloche and Coyhaique. Juan Leobono rows the Upper Limay. Alex Prior guides the Aysén spring creeks. From $550 for two anglers.',
+    // TODO tj — editorial content of the hub (FA-1.65); empty fields hide their section.
+    seasonMonths: [],
+    peakMonths: [],
+    species: [],
+    faq: [],
   },
   {
     slug: 'iceland',
@@ -28,6 +52,11 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     intro: 'Andri Fannberg has guided out of Reykjavík for ten years. Brynjar Arnarsson runs river expeditions from the same base. Brown trout, arctic char and Atlantic salmon, depending on the river and the month. You talk to the guide who takes you out.',
     metaTitle: 'Iceland Fly Fishing Trips',
     metaDescription: 'Andri Fannberg and Brynjar Arnarsson guide from Reykjavík. Brown trout, arctic char and Atlantic salmon. You talk to the guide who takes you out.',
+    // TODO tj — editorial content of the hub (FA-1.65); empty fields hide their section.
+    seasonMonths: [],
+    peakMonths: [],
+    species: [],
+    faq: [],
   },
   {
     slug: 'new-zealand',
@@ -36,6 +65,11 @@ export const DESTINATION_HUBS: DestinationHub[] = [
     intro: 'Josh Hart guides the Tongariro and the Taupō rivers on the North Island. Kristina Placko walks the Southland spring creeks around Lumsden and Mossburn. Full days from 1 100 NZD for two anglers, gear included. Sight fishing to visible trout in clear water.',
     metaTitle: 'New Zealand Fly Fishing Trips',
     metaDescription: 'Josh Hart on the Tongariro and Taupō. Kristina Placko on Southland spring creeks. Full days from 1100 NZD for two anglers, gear included.',
+    // TODO tj — editorial content of the hub (FA-1.65); empty fields hide their section.
+    seasonMonths: [],
+    peakMonths: [],
+    species: [],
+    faq: [],
   },
 ]
 
