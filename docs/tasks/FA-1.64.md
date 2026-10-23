@@ -2,13 +2,14 @@
 id: FA-1.64
 title: Biblioteka zdjęć strony w adminie — „wybierz z wgranych” przy każdym polu zdjęć
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/admin-page-photo-library
+pr: 154
 depends_on: [FA-1.62]
 blocked_by_questions: []
 touches_db: false
