@@ -5,6 +5,7 @@ import { ArrowRight } from 'lucide-react'
 import { NavWithUser } from '@/components/layout/nav-with-user'
 import { SiteFooter } from '@/components/layout/footer'
 import { getFeaturedExperiencePages, getSpeciesCounts, getFeaturedGuides } from '@/lib/supabase/queries'
+import { getTestimonial } from '@/lib/supabase/testimonials'
 import type { FeaturedGuide } from '@/lib/supabase/queries'
 import { FISH_CATALOG } from '@/lib/fish'
 import { CountryFlag } from '@/components/ui/country-flag'
@@ -12,6 +13,7 @@ import { SpeciesSlider } from '@/components/home/species-slider'
 import { ExperiencesSlider } from '@/components/home/experiences-slider'
 import { BgVideo } from '@/components/home/bg-video'
 import { ContactExpertButton } from '@/components/ui/contact-expert-button'
+import TestimonialBanner from '@/components/testimonial-banner'
 
 export const revalidate = 300
 
@@ -71,10 +73,11 @@ const HOW_IT_WORKS = [
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
-  const [featured, speciesCounts, featuredGuides] = await Promise.all([
+  const [featured, speciesCounts, featuredGuides, testimonial] = await Promise.all([
     getFeaturedExperiencePages(8),
     getSpeciesCounts(),
     getFeaturedGuides(6),
+    getTestimonial([]),   // no country: the first general testimonial (tj FA-1.69 1A)
   ])
 
   const species = FISH_CATALOG.map(s => ({ ...s, count: speciesCounts[s.slug] ?? 0 }))
@@ -336,6 +339,16 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* ─── TESTIMONIAL (FA-1.69) — after the dark "how it works", not straight under the
+             slider, so two dark bands never touch. No testimonial, no wrapper. ─────── */}
+      {testimonial != null && (
+        <div className="px-4 md:px-8 lg:px-14" style={{ background: '#F3EDE4' }}>
+          <div className="max-w-[1360px] mx-auto">
+            <TestimonialBanner testimonial={testimonial} />
+          </div>
+        </div>
+      )}
 
       {/* ─── S4: DESTINATIONS ─────────────────────────────────────────── */}
       <section className="px-4 md:px-8 lg:px-14 py-20 md:py-28" style={{ background: '#F3EDE4' }}>

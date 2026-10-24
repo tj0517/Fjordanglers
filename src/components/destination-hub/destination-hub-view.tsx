@@ -5,7 +5,8 @@
  * Order (task FA-1.65, "Goal"): hero → season → species → trips → FAQ → reviews →
  * how it works → more destinations → contact. A section with no data is not rendered at all —
  * no empty heading. The six sections FA-1.66 measures carry `data-section`; the three that
- * every hub has carry `data-block`, so the anchors stay exactly the six it expects.
+ * every hub has carry `data-block`, so the anchors stay exactly the six it expects. So does
+ * the testimonial that stands in for empty reviews (FA-1.69).
  *
  * There is no inquiry form here on purpose: the hub leads to an offer page, and the offer
  * page asks.
@@ -20,6 +21,7 @@ import OfferSection from '@/components/experience-v2/offer-section'
 import SeasonBar from '@/components/experience-v2/offer-season-bar'
 import { FaqList } from '@/components/experience-v2/offer-faq'
 import { ReviewCardList } from '@/components/experience-v2/offer-reviews'
+import TestimonialBanner from '@/components/testimonial-banner'
 import { StepCards, type Step } from '@/components/experience-v2/offer-how-it-works'
 import { HubFunnelProvider } from '@/components/analytics/hub-funnel'
 import HubTrips from './hub-trips'
@@ -126,7 +128,8 @@ function Faq({ data }: { data: DestinationHubData }) {
 }
 
 function Reviews({ data }: { data: DestinationHubData }) {
-  if (data.reviews.length === 0) return null
+  // No reviews: one testimonial in their place (FA-1.69), or nothing when there is none.
+  if (data.reviews.length === 0) return <TestimonialBanner testimonial={data.testimonial} />
 
   return (
     <section

@@ -57,6 +57,7 @@ export const completeHub = (): DestinationHubData => ({
   reviews: [
     { id: 'r1', rating: 5, comment: 'Fixture review.', firstName: 'Ann', country: 'DE', submittedAt: '2026-03-01T00:00:00Z', photoUrl: null },
   ],
+  testimonial: null,
   ogImage:   null,
   otherHubs: [{ slug: 'iceland', h1: 'Iceland Fly Fishing Trips' }, { slug: 'patagonia', h1: 'Patagonia Fly Fishing Trips' }],
 })
@@ -69,6 +70,7 @@ export const emptyHub = (): DestinationHubData => ({
   priceFrom:  null,
   species:    [],
   reviews:    [],
+  testimonial: null,
   ogImage:    null,
   otherHubs:  [{ slug: 'iceland', h1: 'Iceland Fly Fishing Trips' }],
 })

@@ -18,6 +18,7 @@ import { formatCents, formatPrice } from '@/lib/format-price'
 import { env } from '@/lib/env'
 import { DESTINATION_HUBS, getHubCountries, getHubForSlug, type DestinationHub } from '@/lib/destinations'
 import { hubSpecies } from '@/lib/hub-species'
+import { getTestimonial, type Testimonial } from './testimonials'
 import {
   speciesNames,
   parseLicenseInfo,
@@ -1074,6 +1075,8 @@ export type DestinationHubData = {
   species:    string[]
   /** Newest first, at most six, consented and submitted only — the review-card fields only. */
   reviews:    ExperienceV2Review[]
+  /** Stands in for the reviews section when there are none (FA-1.69); null when there are. */
+  testimonial: Testimonial | null
   /** Hero image of the newest active offer. */
   ogImage:    string | null
   otherHubs:  { slug: string; h1: string }[]
@@ -1131,7 +1134,7 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
   // Only what the database says is cached; the hub's own config (copy, species override,
   // the other hubs) is applied after, so a deploy that edits `destinations.ts` shows at once.
   const fromDb = await unstable_cache(
-    async (): Promise<Omit<DestinationHubData, 'hub' | 'species' | 'otherHubs'>> => {
+    async (): Promise<Omit<DestinationHubData, 'hub' | 'species' | 'otherHubs' | 'testimonial'>> => {
       const db = createPublicClient()
 
       const { data: pages, error } = await db
@@ -1264,6 +1267,8 @@ export async function getDestinationHub(slug: string): Promise<DestinationHubDat
     hub,
     species:   hubSpecies(hub.species, fromDb.offers.map(o => o.targetSpecies)),
     otherHubs: DESTINATION_HUBS.filter(h => h.slug !== hub.slug).map(h => ({ slug: h.slug, h1: h.h1 })),
+    // Outside the cache, like the config above. Every country the hub covers (tj FA-1.69 2B).
+    testimonial: fromDb.reviews.length === 0 ? await getTestimonial(getHubCountries(hub)) : null,
   }
 }
 

@@ -8,8 +8,9 @@
  * read first and put back afterwards; if a run dies half-way, `supabase db reset` restores them.
  *
  * What it pins down:
- *   getTestimonial — country match first, general fallback, null when nothing fits, never an
- *                    inactive row, and no consent field in what it returns (value and type)
+ *   getTestimonial — country match first (any of several, for a hub), general fallback, null
+ *                    when nothing fits, never an inactive row, and no consent field in what
+ *                    it returns (value and type)
  *   actions        — the database rules reach the caller as plain messages (no throw), the
  *                    photo URL must be our bucket's testimonials/ folder (tj D2 a), consent
  *                    time is kept on re-save, and move up/down reorders
@@ -80,8 +81,8 @@ function row(n: number, extra: Partial<Row>): Database['public']['Tables']['test
 
 describe('getTestimonial', () => {
   it('returns null on an empty table, for a country and for none', async () => {
-    expect(await getTestimonial('New Zealand')).toBeNull()
-    expect(await getTestimonial(null)).toBeNull()
+    expect(await getTestimonial(['New Zealand'])).toBeNull()
+    expect(await getTestimonial([])).toBeNull()
   })
 
   describe('with rows', () => {
@@ -103,34 +104,44 @@ describe('getTestimonial', () => {
     afterAll(emptyTable)
 
     it('country match: the first active row of that country by sort_order', async () => {
-      const t = await getTestimonial('New Zealand')
+      const t = await getTestimonial(['New Zealand'])
       expect(t?.id).toBe(id(5))
       expect(t?.source).toBe('trustpilot')
       expect(t?.sourceUrl).toBe('https://www.trustpilot.com/reviews/abc')
     })
 
+    it('several countries (a hub): the first active row of any of them by sort_order', async () => {
+      expect((await getTestimonial(['Argentina', 'New Zealand']))?.id).toBe(id(5))
+      await svc.from('testimonials').insert(
+        row(8, { trip_country: 'Chile', is_active: true, consent_confirmed_at: consented, sort_order: 1 }),
+      )
+      expect((await getTestimonial(['Argentina', 'Chile', 'New Zealand']))?.id).toBe(id(8))
+      expect((await getTestimonial(['Argentina']))?.id).toBe(id(2))   // none of them has a row
+      await svc.from('testimonials').delete().eq('id', id(8))
+    })
+
     it('falls back to the first active general row when the country has none active', async () => {
-      expect((await getTestimonial('Iceland'))?.id).toBe(id(2))   // Iceland's only row is inactive
-      expect((await getTestimonial('Norway'))?.id).toBe(id(2))    // no row at all
-      expect((await getTestimonial(null))?.id).toBe(id(2))
+      expect((await getTestimonial(['Iceland']))?.id).toBe(id(2))   // Iceland's only row is inactive
+      expect((await getTestimonial(['Norway']))?.id).toBe(id(2))    // no row at all
+      expect((await getTestimonial([]))?.id).toBe(id(2))
     })
 
     it('never returns an inactive row, consented or not', async () => {
-      for (const country of ['New Zealand', 'Iceland', 'Norway', null]) {
-        const t = await getTestimonial(country)
+      for (const countries of [['New Zealand'], ['Iceland'], ['Norway'], []]) {
+        const t = await getTestimonial(countries)
         expect(NEVER).not.toContain(t?.id)
       }
     })
 
     it('returns null when nothing matches and no general row is active', async () => {
       await svc.from('testimonials').update({ is_active: false }).in('id', [id(1), id(2)])
-      expect(await getTestimonial('Norway')).toBeNull()
-      expect((await getTestimonial('New Zealand'))?.id).toBe(id(5))
+      expect(await getTestimonial(['Norway'])).toBeNull()
+      expect((await getTestimonial(['New Zealand']))?.id).toBe(id(5))
       await svc.from('testimonials').update({ is_active: true }).in('id', [id(1), id(2)])
     })
 
     it('carries public fields only — no consent field in the value or the type', async () => {
-      const t = await getTestimonial('New Zealand')
+      const t = await getTestimonial(['New Zealand'])
       expect(Object.keys(t ?? {}).sort()).toEqual([
         'authorCountry', 'authorName', 'id', 'photoUrl', 'quote', 'rating', 'source', 'sourceUrl', 'tripCountry',
       ])

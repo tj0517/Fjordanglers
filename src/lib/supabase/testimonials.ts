@@ -62,14 +62,16 @@ function toTestimonial(row: PublicRow): Testimonial {
 
 /**
  * The one testimonial a page shows (O-46 a): the first active row by `sort_order` whose
- * `trip_country` is the page's country, else the first active general row, else null.
+ * `trip_country` is one of the page's countries, else the first active general row, else null.
+ * A list because a hub can cover several countries (Patagonia = Argentina + Chile, tj
+ * FA-1.69 2B); an offer page passes its one country, the home page none (tj FA-1.69 1A).
  *
  * Active implies consent (`testimonials_active_needs_consent`); the consent filter is
  * repeated here so that no future change to that rule can put an unconsented row on a page.
  * The table holds a handful of rows, so one query reads every candidate and the pick is
  * made here — no country string goes into a filter expression.
  */
-export async function getTestimonial(country: string | null): Promise<Testimonial | null> {
+export async function getTestimonial(countries: readonly string[]): Promise<Testimonial | null> {
   const { data, error } = await createServiceClient()
     .from('testimonials')
     .select(PUBLIC_COLUMNS)
@@ -85,7 +87,7 @@ export async function getTestimonial(country: string | null): Promise<Testimonia
 
   const rows = data ?? []
   const match =
-    (country != null ? rows.find(r => r.trip_country === country) : undefined) ??
+    rows.find(r => r.trip_country != null && countries.includes(r.trip_country)) ??
     rows.find(r => r.trip_country == null)
 
   return match != null ? toTestimonial(match) : null

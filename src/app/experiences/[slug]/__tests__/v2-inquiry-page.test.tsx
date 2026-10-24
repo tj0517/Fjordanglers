@@ -40,6 +40,8 @@ vi.mock('@/lib/supabase/queries', async importOriginal => ({
   getRelatedExperiencePages:  async () => [],
 }))
 vi.mock('@/lib/fx', () => ({ fetchIndicativeRates: async () => ({}) }))
+// The fixture page has no reviews, so the template asks for a testimonial (FA-1.69); not this test's subject.
+vi.mock('@/lib/supabase/testimonials', () => ({ getTestimonial: async () => null }))
 vi.mock('next/navigation', () => ({ permanentRedirect: h.permanentRedirect, notFound: h.notFound }))
 vi.mock('../_v1/ExperienceV1', () => ({ default: () => null, generateMetadata: vi.fn() }))
 // The site frame reads the session and the destination list; neither is what this test is about.
