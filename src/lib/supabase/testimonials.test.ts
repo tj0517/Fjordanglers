@@ -13,7 +13,8 @@
  *                    it returns (value and type)
  *   actions        — the database rules reach the caller as plain messages (no throw), the
  *                    photo URL must be our bucket's testimonials/ folder (tj D2 a), consent
- *                    time is kept on re-save, and move up/down reorders
+ *                    time is kept on re-save, move up/down reorders, and a change refreshes
+ *                    every public page that shows the banner (FA-1.69 D3 B)
  */
 import { vi, describe, it, expect, expectTypeOf, beforeAll, afterAll } from 'vitest'
 
@@ -29,8 +30,10 @@ vi.mock('@/lib/env', () => ({
   env: { NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL },
 }))
 
+import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
+import { DESTINATION_HUBS } from '@/lib/destinations'
 import { getTestimonial, listTestimonialsForAdmin, type Testimonial } from './testimonials'
 import {
   createTestimonial,
@@ -282,5 +285,24 @@ describe('admin actions', () => {
     // Already last: nothing to do, still a success.
     expect((await moveTestimonial(draft.id, 'down')).success).toBe(true)
     expect(await names()).toEqual(['Good one', 'Second one', 'Draft'])
+  })
+
+  it('a change reaches the public pages at once: home, every hub, every offer page (tj FA-1.69 D3 B)', async () => {
+    const [good] = await rowsByName('Good one')
+    if (good == null) throw new Error('row missing')
+    const calls = () => vi.mocked(revalidatePath).mock.calls
+
+    vi.mocked(revalidatePath).mockClear()
+    expect((await setTestimonialActive(id(999), false)).success).toBe(false)
+    expect(calls()).toEqual([])   // nothing changed, nothing refreshed
+
+    expect((await setTestimonialActive(good.id, false)).success).toBe(true)
+    expect(calls()).toEqual(expect.arrayContaining([
+      ['/admin/testimonials'],
+      ['/'],
+      ...DESTINATION_HUBS.map(hub => [`/${hub.slug}`]),
+      ['/experiences/[slug]', 'page'],
+    ]))
+    await setTestimonialActive(good.id, true)
   })
 })
