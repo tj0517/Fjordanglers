@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, cleanup, fireEvent } from '@testing-library/react'
+import { render, cleanup, fireEvent, waitFor, act } from '@testing-library/react'
 import type { ExperienceV2Review } from '@/lib/supabase/queries'
 import OfferReviews from './offer-reviews'
 import OfferLogistics from './offer-logistics'
@@ -94,6 +94,78 @@ describe('S10 reviews', () => {
       />,
     )
     expect(getByTestId('offer-reviews').children).toHaveLength(2)
+  })
+})
+
+/**
+ * The card has no say over the photo the angler uploaded, so it reads the proportions the
+ * browser reports and shows a portrait photo beside the words instead of cropping it into the
+ * strip across the top. jsdom never decodes anything: the natural size is stubbed and the load
+ * event fired by hand, which is exactly what the browser does.
+ */
+describe('S10 review photo orientation', () => {
+  const withPhoto = (over: Partial<ExperienceV2Review> = {}) =>
+    render(
+      <OfferReviews
+        reviews={[review({ photoUrl: 'https://pics.example/catch.jpg', ...over })]}
+        googleRating={null}
+        googleReviewCount={null}
+        googleProfileUrl={null}
+      />,
+    )
+
+  function loadPhoto(container: HTMLElement, naturalWidth: number, naturalHeight: number) {
+    const photo = container.querySelector('img')
+    if (photo == null) throw new Error('the card rendered no photo')
+    Object.defineProperty(photo, 'naturalWidth',  { value: naturalWidth,  configurable: true })
+    Object.defineProperty(photo, 'naturalHeight', { value: naturalHeight, configurable: true })
+    fireEvent.load(photo)
+  }
+
+  /** `next/image` decodes first and calls `onLoad` a microtask later; let that run. */
+  const settle = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 0)) })
+
+  it('starts horizontal, which is what the server renders and what a photo that never loads keeps', () => {
+    const { getByTestId } = withPhoto()
+    expect(getByTestId('review-card').getAttribute('data-orientation')).toBe('horizontal')
+  })
+
+  it('keeps the horizontal strip for a landscape photo', async () => {
+    const { container, getByTestId } = withPhoto()
+    loadPhoto(container, 1600, 1066)
+    await settle()
+    expect(getByTestId('review-card').getAttribute('data-orientation')).toBe('horizontal')
+  })
+
+  it('shows a portrait photo as the vertical showcase, with the words beside it', async () => {
+    const { container, getByTestId } = withPhoto()
+    loadPhoto(container, 1080, 1440)
+    await waitFor(() =>
+      expect(getByTestId('review-card').getAttribute('data-orientation')).toBe('vertical'))
+    const card = getByTestId('review-card')
+    expect(card.className).toContain('flex-row')
+    // The quote and the name are still there — the layout moved, nothing was dropped.
+    expect(card.textContent).toContain('Three fish over four pounds')
+    expect(card.textContent).toContain('Tomasz, Poland · March 2026')
+  })
+
+  it('counts a square photo as horizontal, and a photo the browser could not decode too', async () => {
+    const square = withPhoto()
+    loadPhoto(square.container, 1200, 1200)
+    await settle()
+    expect(square.getByTestId('review-card').getAttribute('data-orientation')).toBe('horizontal')
+    cleanup()
+
+    const broken = withPhoto()
+    loadPhoto(broken.container, 0, 0)
+    await settle()
+    expect(broken.getByTestId('review-card').getAttribute('data-orientation')).toBe('horizontal')
+  })
+
+  it('renders no photo frame at all when the review came without one', () => {
+    const { container, getByTestId } = withPhoto({ photoUrl: null })
+    expect(container.querySelector('img')).toBeNull()
+    expect(getByTestId('review-card').getAttribute('data-orientation')).toBe('horizontal')
   })
 })
 
