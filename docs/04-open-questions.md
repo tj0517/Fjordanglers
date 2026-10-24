@@ -51,3 +51,5 @@ moves to an ADR and the row here says which one.
 | O-43 | Kalendarz sezonu i FAQ na hubie: liczone z ofert czy ręcznie per hub? | (a) unia `season_months`/`faq` ofert kraju; (b) pola per hub | FA-1.65 | **resolved 2026-10-20 (tj)**: (b) — pola w konfiguracji hubu |
 | O-44 | Linia dowodu w hero hubu | (a) „N guides · from X” z danych; (b) + ocena Trustpilot z liczbą; (c) + cytat z recenzji ze zgodą | FA-1.65 | **resolved 2026-10-20 (tj)**: (a) z danych + cytat jako pole ręczne hubu |
 | O-45 | Mapa z pinami lokacji na hubie w zakresie? | (a) poza zakresem, ilustracja później; (b) w zakresie, piny z `location_lat/lng` | FA-1.66 | **resolved 2026-10-20 (tj)**: (b) |
+| O-46 | Którą jedną opinię pokazuje baner, gdy pasuje kilka? | (a) kolejność ręczna z admina, pierwsza z kraju strony, inaczej ogólna; (b) losowo przy każdym wejściu | FA-1.68, FA-1.69 | **resolved 2026-10-23 (tj)**: (a) |
+| O-47 | Gdzie zdjęcia opinii? | (a) istniejący `guide-photos`, folder `testimonials/`; (b) nowy bucket z politykami | FA-1.68 | **resolved 2026-10-23 (tj)**: (a) |
