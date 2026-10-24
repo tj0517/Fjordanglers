@@ -2,13 +2,14 @@
 id: FA-1.69
 title: Baner z jedną opinią — strona główna + zastępstwo za pusty S10 na stronach v2 i hubie (opinia z kraju strony, inaczej ogólna; „Read on Trustpilot ›” przy źródle TP; pusto = brak sekcji)
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.69-testimonial-banner
+pr: 160
 depends_on: [FA-1.68]
 blocked_by_questions: []
 touches_db: false
