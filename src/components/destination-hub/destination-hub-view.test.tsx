@@ -122,7 +122,7 @@ describe('DestinationHubView — empty hub (red proof: no empty heading)', () =>
 describe('DestinationHubView — testimonial in place of empty reviews (FA-1.69)', () => {
   const testimonial: NonNullable<DestinationHubData['testimonial']> = {
     id: 't1', quote: 'Fixture testimonial.', authorName: 'Marek', authorCountry: 'PL', tripCountry: 'New Zealand',
-    rating: 5, photoUrl: null, source: 'trustpilot', sourceUrl: 'https://www.trustpilot.com/reviews/fixture',
+    rating: 5, photoUrl: null, photoLayout: 'horizontal', source: 'trustpilot', sourceUrl: 'https://www.trustpilot.com/reviews/fixture',
   }
 
   it('FA-1.69: reviews present — the reviews section, no testimonial, even when one is passed', () => {

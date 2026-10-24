@@ -146,7 +146,7 @@ describe('getTestimonial', () => {
     it('carries public fields only — no consent field in the value or the type', async () => {
       const t = await getTestimonial(['New Zealand'])
       expect(Object.keys(t ?? {}).sort()).toEqual([
-        'authorCountry', 'authorName', 'id', 'photoUrl', 'quote', 'rating', 'source', 'sourceUrl', 'tripCountry',
+        'authorCountry', 'authorName', 'id', 'photoLayout', 'photoUrl', 'quote', 'rating', 'source', 'sourceUrl', 'tripCountry',
       ])
       expect(JSON.stringify(t)).not.toContain('internal note')
 
@@ -172,6 +172,7 @@ describe('admin actions', () => {
     trip_country:      null,
     rating:            5,
     photo_url:         null,
+    photo_layout:      'horizontal',
     source:            'direct',
     source_url:        null,
     consent_confirmed: true,
@@ -238,6 +239,52 @@ describe('admin actions', () => {
     expect(good?.photo_url).toBe(photoUrl)
     expect(good?.consent_confirmed_at).not.toBeNull()
     expect(second?.sort_order).toBeGreaterThan(good?.sort_order ?? Infinity)
+  })
+
+  /**
+   * FA-1.71 — the layout is the admin's choice and it round-trips. A row with no photo always
+   * stores `horizontal`: a stale `vertical` would come back the next time a photo is uploaded.
+   */
+  it('photo_layout: vertical is stored and read back; without a photo it falls back to horizontal', async () => {
+    const photoUrl = `${photoPrefix}vertical-case.jpg`
+    expect((await createTestimonial({
+      ...base, author_name: 'Vertical one', photo_url: photoUrl, photo_layout: 'vertical', trip_country: 'Norway',
+    })).success).toBe(true)
+    expect((await createTestimonial({
+      ...base, author_name: 'No photo one', photo_url: null, photo_layout: 'vertical',
+    })).success).toBe(true)
+
+    const [vertical] = await rowsByName('Vertical one')
+    const [noPhoto]  = await rowsByName('No photo one')
+    expect(vertical?.photo_layout).toBe('vertical')
+    expect(noPhoto?.photo_layout).toBe('horizontal')
+
+    // What the page is handed, not just what the column holds.
+    const shown = await getTestimonial(['Norway'])
+    expect(shown?.authorName).toBe('Vertical one')
+    expect(shown?.photoLayout).toBe('vertical')
+
+    // And back again, through the form's own path.
+    if (vertical == null) throw new Error('row missing')
+    expect((await updateTestimonial(vertical.id, {
+      ...base, author_name: 'Vertical one', photo_url: photoUrl, photo_layout: 'horizontal', trip_country: 'Norway',
+    })).success).toBe(true)
+    expect((await rowsByName('Vertical one'))[0]?.photo_layout).toBe('horizontal')
+
+    // The tests after this one assert the whole list in order — leave the table as it was.
+    await svc.from('testimonials').delete().in('author_name', ['Vertical one', 'No photo one'])
+  })
+
+  it('photo_layout: a value outside the two is refused before the database', async () => {
+    const result = await createTestimonial({
+      ...base,
+      author_name: 'Bad layout',
+      photo_url: `${photoPrefix}x.jpg`,
+      // The form can only send two values; a different caller is stopped here.
+      photo_layout: 'diagonal' as unknown as 'horizontal',
+    })
+    expect(result.success).toBe(false)
+    expect(await rowsByName('Bad layout')).toHaveLength(0)
   })
 
   it('keeps the original consent time on re-save; unticking it on an active row is refused', async () => {

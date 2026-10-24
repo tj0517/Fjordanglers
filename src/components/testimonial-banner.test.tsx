@@ -19,6 +19,7 @@ const testimonial = (over: Partial<Testimonial> = {}): Testimonial => ({
   tripCountry:   'New Zealand',
   rating:        5,
   photoUrl:      null,
+  photoLayout:   'horizontal',
   source:        'trustpilot',
   sourceUrl:     'https://www.trustpilot.com/reviews/fixture',
   ...over,
@@ -71,6 +72,47 @@ describe('TestimonialBanner', () => {
     expect(container.querySelector('img')).toBeNull()
     rerender(<TestimonialBanner testimonial={testimonial({ photoUrl: 'https://x.supabase.co/storage/v1/object/public/guide-photos/testimonials/a.jpg' })} />)
     expect(container.querySelector('img')).not.toBeNull()
+  })
+
+  /**
+   * FA-1.71 — the admin's choice, not a guess from the file. The attribute is the contract the
+   * page renders; the class is what actually moves the photo beside the quote from `sm` up.
+   */
+  describe('photo layout', () => {
+    const PHOTO = 'https://x.supabase.co/storage/v1/object/public/guide-photos/testimonials/a.jpg'
+
+    it('horizontal: the photo stays a strip across the top', () => {
+      const { container } = render(
+        <TestimonialBanner testimonial={testimonial({ photoUrl: PHOTO, photoLayout: 'horizontal' })} />,
+      )
+      const figure = container.querySelector('figure')
+      expect(figure?.getAttribute('data-photo-layout')).toBe('horizontal')
+      expect(figure?.className).not.toContain('sm:flex-row')
+      expect(container.querySelector('img')).not.toBeNull()
+    })
+
+    it('vertical: the card turns into a row from sm up, with the photo down the side', () => {
+      const { container } = render(
+        <TestimonialBanner testimonial={testimonial({ photoUrl: PHOTO, photoLayout: 'vertical' })} />,
+      )
+      const figure = container.querySelector('figure')
+      expect(figure?.getAttribute('data-photo-layout')).toBe('vertical')
+      expect(figure?.className).toContain('sm:flex-row')
+      expect(container.querySelector('img')?.className).toContain('object-cover')
+      // The words are still all there — the layout moved, nothing was dropped.
+      expect(container.textContent).toContain('Fixture quote.')
+      expect(container.textContent).toContain('Marek, Poland')
+    })
+
+    it('vertical on a row with no photo changes nothing: no attribute, no row, no <img>', () => {
+      const { container } = render(
+        <TestimonialBanner testimonial={testimonial({ photoUrl: null, photoLayout: 'vertical' })} />,
+      )
+      const figure = container.querySelector('figure')
+      expect(figure?.hasAttribute('data-photo-layout')).toBe(false)
+      expect(figure?.className).not.toContain('sm:flex-row')
+      expect(container.querySelector('img')).toBeNull()
+    })
   })
 
   it('null renders nothing — no heading, no wrapper', () => {

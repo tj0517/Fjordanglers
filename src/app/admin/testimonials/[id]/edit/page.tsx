@@ -38,6 +38,7 @@ export default async function EditTestimonialPage({
           trip_country:         row.tripCountry,
           rating:               row.rating,
           photo_url:            row.photoUrl,
+          photo_layout:         row.photoLayout,
           source:               row.source,
           source_url:           row.sourceUrl,
           consent_confirmed:    row.consentConfirmedAt != null,

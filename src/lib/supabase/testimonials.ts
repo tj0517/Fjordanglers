@@ -26,13 +26,15 @@ export type Testimonial = {
   tripCountry:   string | null
   rating:        number | null
   photoUrl:      string | null
+  /** How the banner shows the photo (FA-1.71). Means nothing when `photoUrl` is null. */
+  photoLayout:   'horizontal' | 'vertical'
   source:        'trustpilot' | 'direct'
   /** Link to the original review; always set for `trustpilot` (database rule). */
   sourceUrl:     string | null
 }
 
 const PUBLIC_COLUMNS =
-  'id, quote, author_name, author_country, trip_country, rating, photo_url, source, source_url'
+  'id, quote, author_name, author_country, trip_country, rating, photo_url, photo_layout, source, source_url'
 
 type PublicRow = {
   id:             string
@@ -42,6 +44,7 @@ type PublicRow = {
   trip_country:   string | null
   rating:         number | null
   photo_url:      string | null
+  photo_layout:   string
   source:         string
   source_url:     string | null
 }
@@ -55,6 +58,8 @@ function toTestimonial(row: PublicRow): Testimonial {
     tripCountry:   row.trip_country,
     rating:        row.rating,
     photoUrl:      row.photo_url,
+    // Anything but the one other value the CHECK allows reads as the old behaviour.
+    photoLayout:   row.photo_layout === 'vertical' ? 'vertical' : 'horizontal',
     source:        row.source === 'trustpilot' ? 'trustpilot' : 'direct',
     sourceUrl:     row.source_url,
   }

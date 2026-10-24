@@ -11,6 +11,11 @@
  *
  * `data-block`, not `data-section`: on the hub and offer pages `data-section` is a measured
  * anchor (FA-1.66 expects exactly six), and the banner is not one.
+ *
+ * The photo is shown the way the admin chose (FA-1.71, `photo_layout`): `horizontal` is the
+ * strip across the top of the card, `vertical` puts it down the side with the quote beside it
+ * — a portrait photo in the strip is a chest and a pair of hands. Mobile stacks either way;
+ * the side-by-side starts at `sm`, as in offer-story-block.tsx.
  */
 
 import Image from 'next/image'
@@ -39,6 +44,8 @@ function Stars({ rating }: { rating: number }) {
 export default function TestimonialBanner({ testimonial }: { testimonial: Testimonial | null }) {
   if (testimonial == null) return null
 
+  const vertical = testimonial.photoUrl != null && testimonial.photoLayout === 'vertical'
+
   const who = [testimonial.authorName, anglerCountryName(testimonial.authorCountry)]
     .filter((part): part is string => part != null && part !== '')
     .join(', ')
@@ -58,44 +65,55 @@ export default function TestimonialBanner({ testimonial }: { testimonial: Testim
         </div>
 
         <figure
-          className="flex flex-col rounded-2xl bg-white p-5 sm:p-6"
+          data-photo-layout={testimonial.photoUrl != null ? testimonial.photoLayout : undefined}
+          className={`flex flex-col rounded-2xl bg-white p-5 sm:p-6 ${
+            vertical ? 'sm:min-h-[320px] sm:flex-row sm:items-stretch' : ''
+          }`}
           style={{ color: 'var(--fa-navy)', boxShadow: '0 12px 32px -12px rgba(0,0,0,0.35)' }}
         >
           {testimonial.photoUrl != null && (
-            <div className="relative -mx-5 -mt-5 mb-4 h-[180px] overflow-hidden rounded-t-2xl sm:-mx-6 sm:-mt-6">
+            <div
+              className={vertical
+                // The sm offsets are exactly the card's padding (p-6), so a stretched photo
+                // ends flush with the card's edges — as in offer-story-block.tsx.
+                ? 'relative -mx-5 -mt-5 mb-4 h-[300px] overflow-hidden rounded-t-2xl sm:-my-6 sm:-ml-6 sm:mr-6 sm:h-auto sm:w-[44%] sm:max-w-[280px] sm:flex-none sm:rounded-l-2xl sm:rounded-tr-none'
+                : 'relative -mx-5 -mt-5 mb-4 h-[180px] overflow-hidden rounded-t-2xl sm:-mx-6 sm:-mt-6'}
+            >
               <Image
                 src={testimonial.photoUrl}
                 alt=""
                 fill
-                sizes="(min-width: 768px) 50vw, 100vw"
+                sizes={vertical ? '(min-width: 640px) 280px, 100vw' : '(min-width: 768px) 50vw, 100vw'}
                 className="object-cover"
               />
             </div>
           )}
-          {testimonial.rating != null && <Stars rating={testimonial.rating} />}
-          <blockquote className="mb-4 text-[17px] leading-relaxed">“{testimonial.quote}”</blockquote>
-          <figcaption className="mt-auto text-[13px]" style={{ color: 'rgba(10,46,77,0.62)' }}>
-            <p className="font-medium">{who}</p>
-            {/* A Trustpilot row always has its link (database rule); without one it says nothing
-                rather than claim the wrong source. */}
-            {testimonial.source === 'trustpilot' ? testimonial.sourceUrl != null && (
-              <p className="mt-2">
-                <a
-                  href={testimonial.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold underline underline-offset-4"
-                  style={{ color: 'var(--fa-navy)', textDecorationColor: 'rgba(10,46,77,0.3)' }}
-                >
-                  Read on Trustpilot ›
-                </a>
-              </p>
-            ) : (
-              <p className="mt-2" data-testid="testimonial-direct">
-                Sent to FjordAnglers directly by the angler, published with their consent.
-              </p>
-            )}
-          </figcaption>
+          <div className="flex min-w-0 flex-1 flex-col">
+            {testimonial.rating != null && <Stars rating={testimonial.rating} />}
+            <blockquote className="mb-4 text-[17px] leading-relaxed">“{testimonial.quote}”</blockquote>
+            <figcaption className="mt-auto text-[13px]" style={{ color: 'rgba(10,46,77,0.62)' }}>
+              <p className="font-medium">{who}</p>
+              {/* A Trustpilot row always has its link (database rule); without one it says nothing
+                  rather than claim the wrong source. */}
+              {testimonial.source === 'trustpilot' ? testimonial.sourceUrl != null && (
+                <p className="mt-2">
+                  <a
+                    href={testimonial.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold underline underline-offset-4"
+                    style={{ color: 'var(--fa-navy)', textDecorationColor: 'rgba(10,46,77,0.3)' }}
+                  >
+                    Read on Trustpilot ›
+                  </a>
+                </p>
+              ) : (
+                <p className="mt-2" data-testid="testimonial-direct">
+                  Sent to FjordAnglers directly by the angler, published with their consent.
+                </p>
+              )}
+            </figcaption>
+          </div>
         </figure>
       </div>
     </section>

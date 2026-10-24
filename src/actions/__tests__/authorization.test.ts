@@ -574,7 +574,7 @@ describe('auth.ts', () => {
 describe('testimonials.ts', () => {
   const payload = {
     quote: 'q', author_name: 'A', author_country: null, trip_country: null, rating: null,
-    photo_url: null, source: 'direct' as const, source_url: null,
+    photo_url: null, photo_layout: 'horizontal' as const, source: 'direct' as const, source_url: null,
     consent_confirmed: true, consent_note: null, is_active: true,
   }
   const ID = '00000000-0000-4000-8000-000000000001'

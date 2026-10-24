@@ -38,7 +38,7 @@ import { fixedPage } from '@/components/experience-v2/v2-page.fixture'
 
 const testimonial: Testimonial = {
   id: 't1', quote: 'Fixture testimonial.', authorName: 'Marek', authorCountry: 'PL', tripCountry: 'New Zealand',
-  rating: 5, photoUrl: null, source: 'trustpilot', sourceUrl: 'https://www.trustpilot.com/reviews/fixture',
+  rating: 5, photoUrl: null, photoLayout: 'horizontal', source: 'trustpilot', sourceUrl: 'https://www.trustpilot.com/reviews/fixture',
 }
 
 const review = {

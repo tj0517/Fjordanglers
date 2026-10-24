@@ -103,6 +103,7 @@ Branch `stage-1`, Supabase preview branch, **one `db push` at the end** — `REB
 | FA-1.68 | Opinie klientów — tabela `testimonials` (źródło Trustpilot/direct + link, zgoda, kolejność) + admin `/admin/testimonials` z uploadem do `guide-photos/testimonials/` | L | opus | done | — |
 | FA-1.69 | Baner z jedną opinią — strona główna + zastępstwo za pusty S10 na v2 i hubie (kraj strony → ogólna; „Read on Trustpilot ›”) | M | sonnet | done | FA-1.68 |
 | FA-1.70 | Treści opinii — zgody klientów, warunki Trustpilota, 3–5 opinii w adminie na prod; robi tj | S | — (człowiek) | todo | FA-1.68 |
+| FA-1.71 | Zdjęcie w opinii — wybór w adminie „na górze" / „z boku" (`testimonials.photo_layout`), baner rysuje pionowe zdjęcie kolumną z boku | S | opus | review | FA-1.68, FA-1.69 |
 | FA-1.18 | Środowisko dev — projekt Supabase `fjordanglers-dev` (Free) z migracjami i seedem; Vercel Preview na dev, tylko `sk_test` i flagi fake | M | sonnet | done | FA-1.75 |
 | FA-1.19 | Skan sekretów w CI — gitleaks (wersja + sha256) jako bramka na PR; jednorazowy skan całej historii | S | sonnet | done | — |
 | FA-1.20 | Migracje przez GitHub Actions — `deploy-db.yml`: dev auto po merge do `main`, prod `workflow_dispatch` za bramką Environment `production-db` (wzór DCS) | M | sonnet | done | FA-1.18 |
