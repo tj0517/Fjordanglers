@@ -451,3 +451,27 @@ VALUES
   ('e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e101', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c04', 'primary', 'active', true, 0),
   ('e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e202', '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c03', 'primary', 'active', true, 0)
 ON CONFLICT DO NOTHING;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- FA-1.68 — testimonials (FA-1.69 builds the banner on these two)
+-- One Trustpilot testimonial for New Zealand (trip_country in the experience_pages format)
+-- and one general testimonial sent directly. Both active, both with consent recorded — the
+-- table refuses an active row without consent. Quotes, names and the link are fictional;
+-- the Trustpilot URL is the company page, standing in for a review link. No photo: a seed
+-- cannot put a file into Storage.
+-- ═════════════════════════════════════════════════════════════════════════════
+INSERT INTO testimonials (id, quote, author_name, author_country, trip_country, rating,
+                          source, source_url, consent_confirmed_at, consent_note,
+                          is_active, sort_order)
+VALUES
+  ('a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a168',
+   'Three days on the Tongariro with a guide who knew every pool. Booking through FjordAnglers took one e-mail.',
+   'Marek', 'PL', 'New Zealand', 5,
+   'trustpilot', 'https://www.trustpilot.com/review/fjordanglers.com',
+   now(), 'SEED — fictional. Consent by e-mail.', true, 0),
+  ('a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a268',
+   'They found us a guide for the week we could travel, and the price was the price.',
+   'Jonas', 'DE', NULL, 5,
+   'direct', NULL,
+   now(), 'SEED — fictional. Consent by reply to our e-mail.', true, 1)
+ON CONFLICT (id) DO NOTHING;

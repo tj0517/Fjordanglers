@@ -77,6 +77,11 @@ type ImageUploadProps = {
    * are organised per guide in the bucket (no more flat random UUIDs).
    */
   guideId?: string
+  /**
+   * Folder for new uploads when they belong to no guide, e.g. 'testimonials' (FA-1.68,
+   * O-47 a) → testimonials/{uuid}.ext. Takes precedence over guideId.
+   */
+  folder?: string
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -174,13 +179,14 @@ async function compressImage(
 
 /**
  * Generate a storage path for a new upload.
+ * With folder:   {folder}/{uuid}.ext   — e.g. testimonials/
  * With guideId:  {guideId}/{uuid}.ext  — organised per guide
  * Without:       {uuid}.ext            — legacy flat path
  */
-function buildStoragePath(file: File, compress: boolean, guideId?: string): string {
+function buildStoragePath(file: File, compress: boolean, prefix?: string): string {
   const ext      = compress ? 'jpg' : (file.name.split('.').pop()?.toLowerCase() ?? 'jpg')
   const filename = `${crypto.randomUUID()}.${ext}`
-  return guideId != null ? `${guideId}/${filename}` : filename
+  return prefix != null ? `${prefix}/${filename}` : filename
 }
 
 /** Validate file type and size against variant config. */
@@ -208,6 +214,7 @@ export default function ImageUpload({
   pickFrom,
   library,
   guideId,
+  folder,
 }: ImageUploadProps) {
   const cfg = VARIANT_CONFIG[variant]
   const pickUrls = library ?? pickFrom ?? []
@@ -257,7 +264,7 @@ export default function ImageUpload({
     try {
       // 4. Upload to Supabase Storage
       const supabase   = createClient()
-      const path       = buildStoragePath(file, cfg.compress, guideId)
+      const path       = buildStoragePath(file, cfg.compress, folder ?? guideId)
       const uploadType = cfg.compress ? 'image/jpeg' : file.type
 
       const { error: uploadError } = await supabase.storage
@@ -305,7 +312,7 @@ export default function ImageUpload({
       setProgress(0)
       setStatusText('')
     }
-  }, [cfg.maxMB, cfg.compress, cfg.maxDim, cfg.quality, guideId, currentUrl, onUpload])
+  }, [cfg.maxMB, cfg.compress, cfg.maxDim, cfg.quality, guideId, folder, currentUrl, onUpload])
 
   // ── Event handlers ─────────────────────────────────────────────────────────
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

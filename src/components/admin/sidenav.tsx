@@ -7,7 +7,7 @@ import { useFormStatus } from 'react-dom'
 import {
   LayoutDashboard, Users, Map, MessageSquare, CalendarDays,
   Menu, X, ShieldCheck, BarChart2, Wallet, LogOut, TrendingUp, ClipboardList, BookOpen, Loader2,
-  AlertTriangle,
+  AlertTriangle, Quote,
 } from 'lucide-react'
 import { signOut } from '@/actions/auth'
 
@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Data gaps',    href: '/admin/data-gaps',   icon: <AlertTriangle size={16} strokeWidth={1.6} /> },
   { label: 'Forms',        href: '/admin/forms',       icon: <ClipboardList size={16} strokeWidth={1.6} /> },
   { label: 'Knowledge',    href: '/admin/knowledge',   icon: <BookOpen size={16} strokeWidth={1.6} /> },
+  { label: 'Testimonials', href: '/admin/testimonials', icon: <Quote size={16} strokeWidth={1.6} /> },
 ]
 
 // ─── Pending indicators (FA-1.31) ─────────────────────────────────────────────

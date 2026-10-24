@@ -568,3 +568,37 @@ describe('auth.ts', () => {
     })
   })
 })
+
+// ─── testimonials.ts (FA-1.68) ─────────────────────────────────────────────────
+
+describe('testimonials.ts', () => {
+  const payload = {
+    quote: 'q', author_name: 'A', author_country: null, trip_country: null, rating: null,
+    photo_url: null, source: 'direct' as const, source_url: null,
+    consent_confirmed: true, consent_note: null, is_active: true,
+  }
+  const ID = '00000000-0000-4000-8000-000000000001'
+
+  const calls: [string, () => Promise<unknown>][] = [
+    ['createTestimonial',    async () => (await import('@/actions/testimonials')).createTestimonial(payload)],
+    ['updateTestimonial',    async () => (await import('@/actions/testimonials')).updateTestimonial(ID, payload)],
+    ['setTestimonialActive', async () => (await import('@/actions/testimonials')).setTestimonialActive(ID, true)],
+    ['moveTestimonial',      async () => (await import('@/actions/testimonials')).moveTestimonial(ID, 'up')],
+    ['listTestimonialsForAdmin', async () => (await import('@/lib/supabase/testimonials')).listTestimonialsForAdmin()],
+    ['getTestimonialForAdmin',   async () => (await import('@/lib/supabase/testimonials')).getTestimonialForAdmin(ID)],
+  ]
+
+  describe.each(calls)('%s', (_name, call) => {
+    it('throws UnauthorizedError when there is no session, before any service-role call', async () => {
+      mockNoSession()
+      await expect(call()).rejects.toBeInstanceOf(UnauthorizedError)
+      expect(createServiceClient).not.toHaveBeenCalled()
+    })
+
+    it('throws UnauthorizedError when caller is not admin, before any service-role call', async () => {
+      mockNonAdmin()
+      await expect(call()).rejects.toBeInstanceOf(UnauthorizedError)
+      expect(createServiceClient).not.toHaveBeenCalled()
+    })
+  })
+})
