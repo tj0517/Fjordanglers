@@ -2,13 +2,14 @@
 id: FA-1.68
 title: Opinie klientów — tabela `testimonials` (cytat, imię, kraj, ocena, zdjęcie, źródło Trustpilot/direct + link, zgoda, aktywna, kolejność) + admin `/admin/testimonials` (lista, dodaj/edytuj, upload do `guide-photos/testimonials/`, włącz/wyłącz)
 stage: 1
-status: in_progress
+status: review
 difficulty: L
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: feat/fa-1.68-testimonials
+pr: 159
 depends_on: []
 blocked_by_questions: []
 touches_db: true
@@ -81,3 +82,4 @@ git diff main...HEAD | grep -n '^+.*eslint-disable'               # puste
 - 2026-10-24 tj (/wf-task): migracja najpierw osobnym PR-em (opcja a, wzór FA-1.63) — `migrate-prod` uruchamia się tylko z `main`, więc pierwotna bramka „migracja przed merge” była niewykonalna.
 - 2026-10-24 tj (bramka STOP 1 — SQL migracji): SQL zaakceptowany jak pokazany, łącznie z listą 8 krajów w `trip_country` i limitem 1000 znaków cytatu. D1 (a): stack lokalnie bez `storage-api` na liście `-x` (wg `docs/05` §9), przed startem `docker ps` — działa tylko stack fjordanglers. D2 (a): `photo_url` musi zaczynać się od naszego adresu Supabase Storage + `guide-photos/testimonials/` — pilnuje schemat zod w akcjach. D3 (a): `REVOKE` zostaje; kryterium RLS brzmi teraz „anon dostaje 42501 permission denied na odczyt i zapis”, jak `reviews`. Rozszerzenie testu synchronizacji krajów może wejść do PR migracyjnego.
 - 2026-10-24 tj (dowód uploadu zdjęcia): D4 (c) — bucket `guide-photos` zadeklarowany w `supabase/config.toml` (`[storage.buckets.guide-photos]`), nie w seedzie i nie ręcznie; ustawienia skopiowane z prod odczytem read-only (public, 52428800 B, jpeg/jpg/png/webp); nigdy `supabase config push` ani nic, co stosuje config do zdalnego projektu. D5 (a) — tymczasowa, niecommitowana zmiana `next.config.ts` (host lokalnego Storage) na czas zrzutu, cofnięta przed commitem; w raporcie pusty `git diff next.config.ts`.
+- 2026-10-24 (agent): PR migracyjny #158 („db(FA-1.68): testimonials table — migration only”) zmergowany przez tj, `migrate-prod` uruchomiony i zatwierdzony przez tj; odczyt prod read-only: `SELECT count(*) FROM public.testimonials` → 0, migracja `20261012000000 add_testimonials` na liście. PR główny: #159. Status `review` — czeka na review tj, merge robi tj.
