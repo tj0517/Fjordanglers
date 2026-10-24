@@ -22,6 +22,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Clock, Lock, ShieldCheck, Star } from 'lucide-react'
 import { env } from '@/lib/env'
 import { getExperienceV2, getRelatedExperiencePages } from '@/lib/supabase/queries'
+import { getTestimonial } from '@/lib/supabase/testimonials'
 import { fetchIndicativeRates } from '@/lib/fx'
 import { NavWithUser } from '@/components/layout/nav-with-user'
 import { SiteFooter } from '@/components/layout/footer'
@@ -35,6 +36,7 @@ import OfferHeroCta from '@/components/experience-v2/offer-hero-cta'
 import OfferBody from '@/components/experience-v2/offer-body'
 import OfferStory from '@/components/experience-v2/offer-story'
 import OfferReviews from '@/components/experience-v2/offer-reviews'
+import TestimonialBanner from '@/components/testimonial-banner'
 import OfferLogistics from '@/components/experience-v2/offer-logistics'
 import OfferFaq from '@/components/experience-v2/offer-faq'
 import OfferInquiry from '@/components/experience-v2/offer-inquiry'
@@ -89,9 +91,11 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
 
   // Display only, never stored, never charged (CLAUDE.md rule 6). A provider that fails
   // returns nothing usable and the "≈" line simply does not appear.
-  const [rates, related] = await Promise.all([
+  // A testimonial only stands in for an empty S10 (FA-1.69) — the page's own reviews always win.
+  const [rates, related, testimonial] = await Promise.all([
     fetchIndicativeRates(page.currency),
     getRelatedExperiencePages({ pageId: page.id, country: page.country, region: page.region }),
+    page.reviews.length === 0 ? getTestimonial([page.country]) : null,
   ])
 
   const primary = page.guides.find(g => g.isPrimary) ?? page.guides[0] ?? null
@@ -325,13 +329,15 @@ export default async function ExperienceV2({ slug }: { slug: string }) {
           </div>
 
           {/* ── S10–S14 (FA-1.55) — S12 "What to bring" sits in OfferBody since FA-1.62.
-                 #recenzje also ends the sticky column above. ── */}
+                 #recenzje also ends the sticky column above. No reviews: one testimonial
+                 in S10's place (FA-1.69). ── */}
           <OfferReviews
             reviews={page.reviews}
             googleRating={primary?.googleRating ?? null}
             googleReviewCount={primary?.googleReviewCount ?? null}
             googleProfileUrl={primary?.googleProfileUrl ?? null}
           />
+          <TestimonialBanner testimonial={testimonial} />
           <OfferLogistics
             locationLat={page.locationLat}
             locationLng={page.locationLng}

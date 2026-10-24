@@ -2,13 +2,14 @@
 id: FA-1.69
 title: Baner z jedną opinią — strona główna + zastępstwo za pusty S10 na stronach v2 i hubie (opinia z kraju strony, inaczej ogólna; „Read on Trustpilot ›” przy źródle TP; pusto = brak sekcji)
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: sonnet
 model_approved:
 effort: medium
 agent: fa-web
 branch: feat/fa-1.69-testimonial-banner
+pr: 160
 depends_on: [FA-1.68]
 blocked_by_questions: []
 touches_db: false
@@ -42,12 +43,12 @@ Strony v2 i huby bez własnych recenzji nie pokazują dziś żadnego dowodu od k
 - [ ] Testy komponentu: TP z linkiem, direct bez linku, bez zdjęcia, `null` → nic
 
 ## Gotowe, gdy
-- [ ] Zrzuty lokalnie (desktop + mobile): strona główna z banerem; strona v2 NZ bez recenzji → opinia z `trip_country` NZ; strona v2 innego kraju → opinia ogólna; strona v2 z recenzją w seedzie → S10, bez banera
-- [ ] Pusta tabela (`UPDATE testimonials SET is_active=false` lokalnie) → brak sekcji na wszystkich trzech typach stron — zrzut albo `curl … | grep -c data-section="testimonial"` = 0
-- [ ] Link TP w HTML: `curl -s localhost:3000/ | grep -o 'href="https://[^"]*trustpilot[^"]*"'` → URL z seeda
-- [ ] `curl -s -o /dev/null -w '%{http_code}'` dla `/`, strony v2 i hubu = 200 (FA-1.54)
-- [ ] `consent_note` nie trafia do HTML: `curl -s localhost:3000/ | grep -c <treść notatki z seeda>` = 0
-- [ ] CI na head PR zielone — lista; brak `as any`, brak `.from(` w `src/app/**`
+- [x] Zrzuty lokalnie (desktop + mobile): strona główna z banerem; strona v2 NZ bez recenzji → opinia z `trip_country` NZ; strona v2 innego kraju → opinia ogólna; strona v2 z recenzją (recenzja wstawiona lokalnie SQL-em, seed bez zmian — tj 2026-10-24) → S10, bez banera
+- [x] Pusta tabela (`UPDATE testimonials SET is_active=false` lokalnie) → brak sekcji na wszystkich trzech typach stron — zrzut albo `curl … | grep -c 'data-block="testimonial"'` = 0 (znacznik `data-block`, nie `data-section` — tj 2026-10-24)
+- [x] Link TP w HTML: `curl -s localhost:3000/experiences/seed-backcountry-day-nz | grep -o 'href="https://[^"]*trustpilot[^"]*"'` → URL z seeda (strona główna pokazuje opinię ogólną — tj 1A)
+- [x] `curl -s -o /dev/null -w '%{http_code}'` dla `/`, strony v2 i hubu = 200 (FA-1.54)
+- [x] `consent_note` nie trafia do HTML: `curl -s localhost:3000/ | grep -c <treść notatki z seeda>` = 0
+- [x] CI na head PR zielone — lista; brak `as any`, brak `.from(` w `src/app/**`
 
 ## Poza zakresem
 - Schemat i admin → FA-1.68
@@ -68,3 +69,9 @@ git diff main...HEAD -- src/components/experience-v2/offer-reviews.tsx --stat   
 
 ## Notatki z realizacji
 - 2026-10-23 tj (/wf-plan „testimonial baner”): D2 (b) strona główna + zastępstwo za pusty S10 (v2, hub), opinia z kraju strony, inaczej ogólna; D3 (a) cytat + „Read on Trustpilot ›”; O-46 (a) jedna opinia wg kolejności z admina.
+- 2026-10-24 tj (prompt do realizacji) — zmiany w „Gotowe, gdy”:
+  - Strona v2 z recenzją: seed nie ma żadnych wierszy `reviews` (`grep -n reviews supabase/seed.sql`), więc dowód „S10 wygrywa” to JEDEN review wstawiony lokalnie SQL-em (powiązany z zapytaniem z seeda i `experience_id` strony); SQL i zrzut w raporcie. Seed bez zmian.
+  - Znacznik banera to `data-block="testimonial"`, nie `data-section`: na hubie i stronach v2 `data-section` to mierzona kotwica, a test FA-1.66 oczekuje dokładnie sześciu. Red proof pustej tabeli: `curl … | grep -c 'data-block="testimonial"'` = 0.
+- 2026-10-24 tj (decyzje w trakcie): (1) A — strona główna pokazuje pierwszą aktywną opinię **ogólną** (`trip_country` puste), jak `getTestimonial` po FA-1.68; z seedem to Jonas (direct), więc dowodem na `/` jest zdanie o źródle bezpośrednim, nie link Trustpilota. (2) B — `getTestimonial` przyjmuje listę krajów: pierwsza aktywna opinia dla któregokolwiek z nich, inaczej ogólna; hub podaje `getHubCountries(hub)` (Patagonia = Argentyna + Chile), strona v2 `[page.country]`, główna `[]`. Nadal jedno zapytanie.
+- 2026-10-24 tj (decyzja w trakcie): (3) B — po każdej zmianie w adminie (create/update/toggle/move) akcje odświeżają od razu `/`, każdy hub (`/${slug}` z `DESTINATION_HUBS`, ścieżki dosłowne, bo trasa siedzi w grupie `(public)`) i wszystkie strony ofert (`/experiences/[slug]`, `'page'`). Bez tego strona oferty trzymała starą opinię do 1 h (ISR 3600), także po wycofaniu zgody. Zamyka wiersz FA-1.68 „How admin edits reach the banner”.
+- 2026-10-24 tj (/wf-review): odebrane na 70886ea (PR #160) — wszystkie kryteria udowodnione (zrzuty, curl-e, red proofs „recenzje wygrywają” i odświeżanie admina, CI zielone); czyszczenie cache ISR na prod do sprawdzenia przy pierwszej opinii w FA-1.70.

@@ -4,6 +4,7 @@ import { render, cleanup, fireEvent, act } from '@testing-library/react'
 import DestinationHubView from './destination-hub-view'
 import { completeHub, emptyHub, withCoordinates } from './hub.fixture'
 import type { HubMapPin } from './hub-map-view'
+import type { DestinationHubData } from '@/lib/supabase/queries'
 
 // Leaflet does not run in jsdom: the map is a list of pin buttons with the same props.
 vi.mock('./hub-map-view', () => ({
@@ -115,6 +116,25 @@ describe('DestinationHubView — empty hub (red proof: no empty heading)', () =>
     const data = { ...emptyHub(), guideCount: 0 }
     const { queryByTestId } = render(<DestinationHubView data={data} />)
     expect(queryByTestId('hub-proof-line')).toBeNull()
+  })
+})
+
+describe('DestinationHubView — testimonial in place of empty reviews (FA-1.69)', () => {
+  const testimonial: NonNullable<DestinationHubData['testimonial']> = {
+    id: 't1', quote: 'Fixture testimonial.', authorName: 'Marek', authorCountry: 'PL', tripCountry: 'New Zealand',
+    rating: 5, photoUrl: null, source: 'trustpilot', sourceUrl: 'https://www.trustpilot.com/reviews/fixture',
+  }
+
+  it('FA-1.69: reviews present — the reviews section, no testimonial, even when one is passed', () => {
+    const { container } = render(<DestinationHubView data={{ ...completeHub(), testimonial }} />)
+    expect(container.querySelector('[data-section="reviews"]')).not.toBeNull()
+    expect(container.querySelector('[data-block="testimonial"]')).toBeNull()
+  })
+
+  it('FA-1.69: no reviews — the testimonial in their slot, and still six measured anchors at most', () => {
+    const { container } = render(<DestinationHubView data={{ ...emptyHub(), testimonial }} />)
+    expect(order(container)).toEqual(['hero', 'trips', 'testimonial', 'how-it-works', 'destinations'])
+    expect(container.querySelector('[data-section="reviews"]')).toBeNull()
   })
 })
 

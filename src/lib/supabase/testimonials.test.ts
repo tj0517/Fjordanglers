@@ -8,11 +8,13 @@
  * read first and put back afterwards; if a run dies half-way, `supabase db reset` restores them.
  *
  * What it pins down:
- *   getTestimonial — country match first, general fallback, null when nothing fits, never an
- *                    inactive row, and no consent field in what it returns (value and type)
+ *   getTestimonial — country match first (any of several, for a hub), general fallback, null
+ *                    when nothing fits, never an inactive row, and no consent field in what
+ *                    it returns (value and type)
  *   actions        — the database rules reach the caller as plain messages (no throw), the
  *                    photo URL must be our bucket's testimonials/ folder (tj D2 a), consent
- *                    time is kept on re-save, and move up/down reorders
+ *                    time is kept on re-save, move up/down reorders, and a change refreshes
+ *                    every public page that shows the banner (FA-1.69 D3 B)
  */
 import { vi, describe, it, expect, expectTypeOf, beforeAll, afterAll } from 'vitest'
 
@@ -28,8 +30,10 @@ vi.mock('@/lib/env', () => ({
   env: { NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL },
 }))
 
+import { revalidatePath } from 'next/cache'
 import { createServiceClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/database.types'
+import { DESTINATION_HUBS } from '@/lib/destinations'
 import { getTestimonial, listTestimonialsForAdmin, type Testimonial } from './testimonials'
 import {
   createTestimonial,
@@ -80,8 +84,8 @@ function row(n: number, extra: Partial<Row>): Database['public']['Tables']['test
 
 describe('getTestimonial', () => {
   it('returns null on an empty table, for a country and for none', async () => {
-    expect(await getTestimonial('New Zealand')).toBeNull()
-    expect(await getTestimonial(null)).toBeNull()
+    expect(await getTestimonial(['New Zealand'])).toBeNull()
+    expect(await getTestimonial([])).toBeNull()
   })
 
   describe('with rows', () => {
@@ -103,34 +107,44 @@ describe('getTestimonial', () => {
     afterAll(emptyTable)
 
     it('country match: the first active row of that country by sort_order', async () => {
-      const t = await getTestimonial('New Zealand')
+      const t = await getTestimonial(['New Zealand'])
       expect(t?.id).toBe(id(5))
       expect(t?.source).toBe('trustpilot')
       expect(t?.sourceUrl).toBe('https://www.trustpilot.com/reviews/abc')
     })
 
+    it('several countries (a hub): the first active row of any of them by sort_order', async () => {
+      expect((await getTestimonial(['Argentina', 'New Zealand']))?.id).toBe(id(5))
+      await svc.from('testimonials').insert(
+        row(8, { trip_country: 'Chile', is_active: true, consent_confirmed_at: consented, sort_order: 1 }),
+      )
+      expect((await getTestimonial(['Argentina', 'Chile', 'New Zealand']))?.id).toBe(id(8))
+      expect((await getTestimonial(['Argentina']))?.id).toBe(id(2))   // none of them has a row
+      await svc.from('testimonials').delete().eq('id', id(8))
+    })
+
     it('falls back to the first active general row when the country has none active', async () => {
-      expect((await getTestimonial('Iceland'))?.id).toBe(id(2))   // Iceland's only row is inactive
-      expect((await getTestimonial('Norway'))?.id).toBe(id(2))    // no row at all
-      expect((await getTestimonial(null))?.id).toBe(id(2))
+      expect((await getTestimonial(['Iceland']))?.id).toBe(id(2))   // Iceland's only row is inactive
+      expect((await getTestimonial(['Norway']))?.id).toBe(id(2))    // no row at all
+      expect((await getTestimonial([]))?.id).toBe(id(2))
     })
 
     it('never returns an inactive row, consented or not', async () => {
-      for (const country of ['New Zealand', 'Iceland', 'Norway', null]) {
-        const t = await getTestimonial(country)
+      for (const countries of [['New Zealand'], ['Iceland'], ['Norway'], []]) {
+        const t = await getTestimonial(countries)
         expect(NEVER).not.toContain(t?.id)
       }
     })
 
     it('returns null when nothing matches and no general row is active', async () => {
       await svc.from('testimonials').update({ is_active: false }).in('id', [id(1), id(2)])
-      expect(await getTestimonial('Norway')).toBeNull()
-      expect((await getTestimonial('New Zealand'))?.id).toBe(id(5))
+      expect(await getTestimonial(['Norway'])).toBeNull()
+      expect((await getTestimonial(['New Zealand']))?.id).toBe(id(5))
       await svc.from('testimonials').update({ is_active: true }).in('id', [id(1), id(2)])
     })
 
     it('carries public fields only — no consent field in the value or the type', async () => {
-      const t = await getTestimonial('New Zealand')
+      const t = await getTestimonial(['New Zealand'])
       expect(Object.keys(t ?? {}).sort()).toEqual([
         'authorCountry', 'authorName', 'id', 'photoUrl', 'quote', 'rating', 'source', 'sourceUrl', 'tripCountry',
       ])
@@ -271,5 +285,24 @@ describe('admin actions', () => {
     // Already last: nothing to do, still a success.
     expect((await moveTestimonial(draft.id, 'down')).success).toBe(true)
     expect(await names()).toEqual(['Good one', 'Second one', 'Draft'])
+  })
+
+  it('a change reaches the public pages at once: home, every hub, every offer page (tj FA-1.69 D3 B)', async () => {
+    const [good] = await rowsByName('Good one')
+    if (good == null) throw new Error('row missing')
+    const calls = () => vi.mocked(revalidatePath).mock.calls
+
+    vi.mocked(revalidatePath).mockClear()
+    expect((await setTestimonialActive(id(999), false)).success).toBe(false)
+    expect(calls()).toEqual([])   // nothing changed, nothing refreshed
+
+    expect((await setTestimonialActive(good.id, false)).success).toBe(true)
+    expect(calls()).toEqual(expect.arrayContaining([
+      ['/admin/testimonials'],
+      ['/'],
+      ...DESTINATION_HUBS.map(hub => [`/${hub.slug}`]),
+      ['/experiences/[slug]', 'page'],
+    ]))
+    await setTestimonialActive(good.id, true)
   })
 })

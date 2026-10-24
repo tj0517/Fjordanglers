@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/auth/guards'
 import { COUNTRIES } from '@/lib/countries'
 import { ANGLER_COUNTRIES } from '@/lib/angler-countries'
 import { env } from '@/lib/env'
+import { DESTINATION_HUBS } from '@/lib/destinations'
 
 // ─── Constraint name → human message ─────────────────────────────────────────
 // The two rules that matter (Trustpilot link, consent before active) are enforced by the
@@ -29,6 +30,18 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   testimonials_rating_check:           'Rating must be 1–5.',
   testimonials_source_check:           'Unknown source.',
   testimonials_consent_note_length:    'Consent note is too long — 1000 characters at most.',
+}
+
+// ─── After every change: the admin list and every page that shows the banner ──
+// Without this a public page keeps its rendered testimonial until its ISR window ends —
+// up to an hour on an offer page, also after consent is withdrawn (tj FA-1.69 D3 B). Hubs
+// by their literal paths: the route sits in a route group, and a literal path needs none.
+
+function revalidateTestimonialPages(): void {
+  revalidatePath('/admin/testimonials')
+  revalidatePath('/')
+  for (const hub of DESTINATION_HUBS) revalidatePath(`/${hub.slug}`)
+  revalidatePath('/experiences/[slug]', 'page')
 }
 
 function mapDbError(message: string): string {
@@ -158,7 +171,7 @@ export async function createTestimonial(
 
   if (error != null) return { success: false, error: mapDbError(error.message) }
 
-  revalidatePath('/admin/testimonials')
+  revalidateTestimonialPages()
   return { success: true }
 }
 
@@ -199,7 +212,7 @@ export async function updateTestimonial(
   if (error != null) return { success: false, error: mapDbError(error.message) }
   if ((data ?? []).length === 0) return { success: false, error: 'Testimonial not found' }
 
-  revalidatePath('/admin/testimonials')
+  revalidateTestimonialPages()
   return { success: true }
 }
 
@@ -223,7 +236,7 @@ export async function setTestimonialActive(
   if (error != null) return { success: false, error: mapDbError(error.message) }
   if ((data ?? []).length === 0) return { success: false, error: 'Testimonial not found' }
 
-  revalidatePath('/admin/testimonials')
+  revalidateTestimonialPages()
   return { success: true }
 }
 
@@ -272,6 +285,6 @@ export async function moveTestimonial(
     if (writeError != null) return { success: false, error: mapDbError(writeError.message) }
   }
 
-  revalidatePath('/admin/testimonials')
+  revalidateTestimonialPages()
   return { success: true }
 }
