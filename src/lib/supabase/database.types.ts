@@ -2616,6 +2616,60 @@ export type Database = {
           },
         ]
       }
+      testimonials: {
+        Row: {
+          author_country: string | null
+          author_name: string
+          consent_confirmed_at: string | null
+          consent_note: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          photo_url: string | null
+          quote: string
+          rating: number | null
+          sort_order: number
+          source: string
+          source_url: string | null
+          trip_country: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_country?: string | null
+          author_name: string
+          consent_confirmed_at?: string | null
+          consent_note?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          photo_url?: string | null
+          quote: string
+          rating?: number | null
+          sort_order?: number
+          source: string
+          source_url?: string | null
+          trip_country?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_country?: string | null
+          author_name?: string
+          consent_confirmed_at?: string | null
+          consent_note?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          photo_url?: string | null
+          quote?: string
+          rating?: number | null
+          sort_order?: number
+          source?: string
+          source_url?: string | null
+          trip_country?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       unmatched_messages: {
         Row: {
           content: string

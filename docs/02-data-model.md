@@ -171,6 +171,44 @@ empty string = computed as before (`region`, `min/max_days`, `max_anglers_per_gu
 `season_months`, `includes`, `meeting_point_*`), chip by chip. Shape: `heroFactsSchema`
 (writer, `saveExperienceV2HeroFacts`) and `parseHeroFacts` (reader, null on anything else).
 
+### Added in FA-1.68 — `testimonials` (client testimonials for the banner)
+Migration `20261012000000_add_testimonials.sql`. One row = one quote from a client:
+copied from Trustpilot, or sent to FA directly (often with a photo that is not on
+Trustpilot). `reviews` cannot hold these — it needs an inquiry and a link token. Edited in
+`/admin/testimonials`; shown by the banner in FA-1.69.
+
+```
+testimonials (id, quote, author_name, author_country, trip_country, rating, photo_url,
+              source, source_url, consent_confirmed_at, consent_note, is_active,
+              sort_order, created_at, updated_at)
+```
+
+`source ∈ trustpilot | direct` (CHECK). `author_country` is ISO alpha-2, as
+`inquiries.angler_country`; `trip_country` is the destination name from `COUNTRIES`, as
+`experience_pages.country` holds it on prod — NULL = a general testimonial. `photo_url`
+points into the existing `guide-photos` bucket, folder `testimonials/` (O-47 a).
+`consent_note` is internal and never leaves the server.
+
+| Rule | Enforced by |
+|---|---|
+| `quote` not blank, ≤ 1000 chars; `author_name` not blank, ≤ 80 | `testimonials_quote_*`, `testimonials_author_name_*` |
+| `author_country` two capital letters | `testimonials_author_country_check` |
+| `trip_country` only from `COUNTRIES` | `testimonials_trip_country_check` (sync test: `agentKnowledgeCountries.test.ts`) |
+| `rating` 1–5 or NULL | `testimonials_rating_check` |
+| `source_url` only `https://` | `testimonials_source_url_https` |
+| `trustpilot` ⇒ `source_url` on `trustpilot.com` or a subdomain | `testimonials_trustpilot_needs_url` |
+| active ⇒ `consent_confirmed_at IS NOT NULL` | `testimonials_active_needs_consent` |
+| `updated_at` on every UPDATE | trigger on `public.set_updated_at()` |
+
+Which one the banner shows (O-46 a): the first active row by `sort_order` with
+`trip_country` = the page's country, else the first active general row, else none.
+
+**RLS:** enabled, **no policy** — as `reviews` after FA-1.59 — plus
+`REVOKE ALL … FROM anon, authenticated`, so the anon key gets `42501 permission denied`
+on read and write, as on `reviews` (tj D3, 2026-10-24). Reads and writes go through the
+service role on the server only — the data layer and the admin actions behind
+`requireAdmin()` arrive in the FA-1.68 code PR, after this migration is on prod.
+
 ### Still in `public`, dead or near-dead (candidates for later tasks)
 `guide_images` (admin insert + guide profile read — FA-1.07/1.08),
 `guide_submissions` (read-only archive; writer component unrendered — FA-1.07),
