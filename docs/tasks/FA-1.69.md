@@ -2,7 +2,7 @@
 id: FA-1.69
 title: Baner z jedną opinią — strona główna + zastępstwo za pusty S10 na stronach v2 i hubie (opinia z kraju strony, inaczej ogólna; „Read on Trustpilot ›” przy źródle TP; pusto = brak sekcji)
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: sonnet
 model_approved:
@@ -68,3 +68,6 @@ git diff main...HEAD -- src/components/experience-v2/offer-reviews.tsx --stat   
 
 ## Notatki z realizacji
 - 2026-10-23 tj (/wf-plan „testimonial baner”): D2 (b) strona główna + zastępstwo za pusty S10 (v2, hub), opinia z kraju strony, inaczej ogólna; D3 (a) cytat + „Read on Trustpilot ›”; O-46 (a) jedna opinia wg kolejności z admina.
+- 2026-10-24 tj (prompt do realizacji) — zmiany w „Gotowe, gdy”:
+  - Strona v2 z recenzją: seed nie ma żadnych wierszy `reviews` (`grep -n reviews supabase/seed.sql`), więc dowód „S10 wygrywa” to JEDEN review wstawiony lokalnie SQL-em (powiązany z zapytaniem z seeda i `experience_id` strony); SQL i zrzut w raporcie. Seed bez zmian.
+  - Znacznik banera to `data-block="testimonial"`, nie `data-section`: na hubie i stronach v2 `data-section` to mierzona kotwica, a test FA-1.66 oczekuje dokładnie sześciu. Red proof pustej tabeli: `curl … | grep -c 'data-block="testimonial"'` = 0.
