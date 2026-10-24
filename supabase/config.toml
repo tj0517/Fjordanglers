@@ -107,6 +107,14 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
+# Local mirror of prod's `guide-photos` bucket (FA-1.68, tj D4 c, 2026-10-24). Settings copied
+# from prod by a read-only query on 2026-10-24: public, 52428800 bytes, jpeg/jpg/png/webp.
+# Local stack only — never apply this file to a remote project (`supabase config push`).
+[storage.buckets.guide-photos]
+public = true
+file_size_limit = "50MiB"
+allowed_mime_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+
 # Uncomment to configure local storage buckets
 # [storage.buckets.images]
 # public = false
