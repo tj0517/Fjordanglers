@@ -28,6 +28,7 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
   testimonials_author_country_check:   'Unknown client country.',
   testimonials_trip_country_check:     'Unknown trip country.',
   testimonials_rating_check:           'Rating must be 1–5.',
+  testimonials_photo_layout_check:     'Unknown photo layout.',
   testimonials_source_check:           'Unknown source.',
   testimonials_consent_note_length:    'Consent note is too long — 1000 characters at most.',
 }
@@ -101,6 +102,8 @@ const TestimonialPayloadSchema = z.object({
   photo_url:      z.string()
                     .refine(isTestimonialPhotoUrl, 'The photo must be uploaded with the photo field above')
                     .nullable(),
+  /** How the banner shows that photo (FA-1.71); ignored when there is none. */
+  photo_layout:   z.enum(['horizontal', 'vertical']),
   source:         z.enum(['trustpilot', 'direct']),
   source_url:     z.string().trim()
                     .refine(isHttpsUrl, 'The link must be a full https:// address')
@@ -132,6 +135,9 @@ function toColumns(p: z.output<typeof TestimonialPayloadSchema>) {
     trip_country:   p.trip_country,
     rating:         p.rating,
     photo_url:      p.photo_url,
+    // No photo, no choice to store — a stale 'vertical' on a row without a photo would
+    // reappear the next time a photo is uploaded.
+    photo_layout:   p.photo_url != null ? p.photo_layout : 'horizontal',
     source:         p.source,
     // A direct testimonial carries no review link — the field is hidden in the form.
     source_url:     p.source === 'trustpilot' ? p.source_url : null,

@@ -2625,6 +2625,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          photo_layout: string
           photo_url: string | null
           quote: string
           rating: number | null
@@ -2642,6 +2643,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          photo_layout?: string
           photo_url?: string | null
           quote: string
           rating?: number | null
@@ -2659,6 +2661,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          photo_layout?: string
           photo_url?: string | null
           quote?: string
           rating?: number | null

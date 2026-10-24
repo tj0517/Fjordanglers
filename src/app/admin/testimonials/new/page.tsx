@@ -25,6 +25,7 @@ export default function NewTestimonialPage() {
           trip_country:         null,
           rating:               null,
           photo_url:            null,
+          photo_layout:         'horizontal',
           source:               'direct',
           source_url:           null,
           consent_confirmed:    false,

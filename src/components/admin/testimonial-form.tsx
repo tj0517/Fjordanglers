@@ -84,6 +84,21 @@ interface TestimonialFormProps {
 }
 
 const QUOTE_MAX = 1000
+
+/**
+ * The two ways the banner can show a client photo (FA-1.71). A landscape shot belongs in the
+ * strip across the top; a portrait one belongs down the side, where it is not cropped to a
+ * chest and a pair of hands. FA uploads the photo, so FA picks — the choice survives a swap.
+ */
+const PHOTO_LAYOUTS = [
+  { value: 'horizontal' as const, label: 'Across the top' },
+  { value: 'vertical'   as const, label: 'Down the side' },
+]
+
+const PHOTO_LAYOUT_HINTS = {
+  horizontal: 'A strip above the quote — for a landscape photo.',
+  vertical:   'Beside the quote, full height of the card — for a portrait photo.',
+}
 const CLIENT_COUNTRIES = ANGLER_COUNTRIES.filter(c => c.code !== 'ZZ')
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -100,6 +115,7 @@ export function TestimonialForm({ mode, testimonialId, initialValues }: Testimon
   const [rating, setRating]               = useState(initialValues.rating != null ? String(initialValues.rating) : '')
   const [photoUrl, setPhotoUrl]           = useState<string | null>(initialValues.photo_url)
   const [photoKey, setPhotoKey]           = useState(0)
+  const [photoLayout, setPhotoLayout]     = useState<'horizontal' | 'vertical'>(initialValues.photo_layout)
   const [source, setSource]               = useState<'trustpilot' | 'direct'>(initialValues.source)
   const [sourceUrl, setSourceUrl]         = useState(initialValues.source_url ?? '')
   const [consent, setConsent]             = useState(initialValues.consent_confirmed)
@@ -118,6 +134,7 @@ export function TestimonialForm({ mode, testimonialId, initialValues }: Testimon
       trip_country:      tripCountry === '' ? null : tripCountry,
       rating:            rating === '' ? null : Number(rating),
       photo_url:         photoUrl,
+      photo_layout:      photoLayout,
       source,
       source_url:        source === 'trustpilot' && sourceUrl.trim() !== '' ? sourceUrl.trim() : null,
       consent_confirmed: consent,
@@ -239,6 +256,43 @@ export function TestimonialForm({ mode, testimonialId, initialValues }: Testimon
           >
             Remove photo
           </button>
+        )}
+
+        {/* Only with a photo on the row: without one the choice shows nothing (FA-1.71). */}
+        {photoUrl != null && (
+          <div className="mt-4">
+            <FieldLabel>How to show it</FieldLabel>
+            <div role="radiogroup" aria-label="How to show the photo" className="flex gap-3">
+              {PHOTO_LAYOUTS.map(option => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={photoLayout === option.value}
+                  onClick={() => setPhotoLayout(option.value)}
+                  className="flex-1 flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all"
+                  style={{
+                    background: '#F3EDE4',
+                    border: `1.5px solid ${photoLayout === option.value ? '#E67E50' : 'rgba(10,46,77,0.1)'}`,
+                  }}
+                >
+                  <span
+                    aria-hidden
+                    className="flex-shrink-0 rounded"
+                    style={{
+                      width:  option.value === 'vertical' ? 18 : 34,
+                      height: option.value === 'vertical' ? 34 : 18,
+                      background: photoLayout === option.value ? '#0A2E4D' : 'rgba(10,46,77,0.25)',
+                    }}
+                  />
+                  <span className="text-sm f-body font-medium" style={{ color: '#0A2E4D' }}>
+                    {option.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <Hint>{PHOTO_LAYOUT_HINTS[photoLayout]}</Hint>
+          </div>
         )}
       </div>
 
