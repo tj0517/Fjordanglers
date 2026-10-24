@@ -2,7 +2,7 @@
 id: FA-1.68
 title: Opinie klientów — tabela `testimonials` (cytat, imię, kraj, ocena, zdjęcie, źródło Trustpilot/direct + link, zgoda, aktywna, kolejność) + admin `/admin/testimonials` (lista, dodaj/edytuj, upload do `guide-photos/testimonials/`, włącz/wyłącz)
 stage: 1
-status: todo
+status: in_progress
 difficulty: L
 model: opus
 model_approved:
