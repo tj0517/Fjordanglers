@@ -11,12 +11,13 @@
  *
  * The aggregate in the heading and the "See all on Google" link are the *guide's* Google
  * profile, not ours — so the two numbers are deliberately not mixed into one score.
+ *
+ * One card is `./offer-review-card.tsx`; it picks its own photo layout (horizontal strip or
+ * vertical showcase) from the photo's proportions, which is why it is a client component.
  */
 
-import Image from 'next/image'
-import { Star } from 'lucide-react'
 import type { ExperienceV2Review } from '@/lib/supabase/queries'
-import { anglerCountryName } from '@/lib/angler-countries'
+import OfferReviewCard from './offer-review-card'
 
 export type OfferReviewsProps = {
   reviews: ExperienceV2Review[]
@@ -25,67 +26,6 @@ export type OfferReviewsProps = {
   googleReviewCount: number | null
   /** Already checked `http(s)` by the data layer, or null. */
   googleProfileUrl:  string | null
-}
-
-/** "March 2026" — the month is as precise as a review needs to be. */
-function monthOf(iso: string): string {
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime())
-    ? ''
-    : date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-}
-
-function Stars({ rating }: { rating: number }) {
-  const full = Math.max(0, Math.min(5, Math.round(rating)))
-  return (
-    <p className="mb-2 flex gap-0.5" aria-label={`${full} out of 5`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <Star
-          key={i}
-          aria-hidden
-          size={14}
-          strokeWidth={0}
-          fill="currentColor"
-          style={{ color: i < full ? 'var(--fa-navy)' : 'rgba(10,46,77,0.18)' }}
-        />
-      ))}
-    </p>
-  )
-}
-
-function ReviewCard({ review }: { review: ExperienceV2Review }) {
-  const who = [
-    review.firstName,
-    anglerCountryName(review.country),
-  ].filter((part): part is string => part != null && part !== '').join(', ')
-
-  const month = monthOf(review.submittedAt)
-
-  return (
-    <div
-      className="flex w-[280px] flex-none snap-start flex-col rounded-2xl bg-white p-5 md:w-auto"
-      style={{ color: 'var(--fa-navy)', boxShadow: '0 12px 32px -12px rgba(0,0,0,0.35)' }}
-    >
-      {review.photoUrl != null && (
-        <div className="relative -mx-5 -mt-5 mb-4 h-[150px] overflow-hidden rounded-t-2xl">
-          <Image
-            src={review.photoUrl}
-            alt=""
-            fill
-            sizes="(min-width: 768px) 33vw, 280px"
-            className="object-cover"
-          />
-        </div>
-      )}
-      {review.rating != null && <Stars rating={review.rating} />}
-      {review.comment != null && (
-        <p className="mb-3 text-[15px] leading-relaxed">“{review.comment}”</p>
-      )}
-      <p className="mt-auto text-[13px] font-medium" style={{ color: 'rgba(10,46,77,0.62)' }}>
-        {[who, month].filter(part => part !== '').join(' · ')}
-      </p>
-    </div>
-  )
 }
 
 /**
@@ -99,7 +39,7 @@ export function ReviewCardList({ reviews }: { reviews: ExperienceV2Review[] }) {
       className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 md:mx-0 md:grid md:grid-cols-2 md:gap-4 md:overflow-visible md:px-0 md:pb-0"
       data-testid="offer-reviews"
     >
-      {reviews.map(review => <ReviewCard key={review.id} review={review} />)}
+      {reviews.map(review => <OfferReviewCard key={review.id} review={review} />)}
     </div>
   )
 }
