@@ -611,3 +611,50 @@ describe('draftReply — the sent prompt (FA-1.73)', () => {
     expect(prompt).toContain('=== DRAFTING RULES ===')
   })
 })
+
+describe('draftReply — the e-mail comes out of <email> tags (FA-1.73)', () => {
+  beforeEach(() => {
+    anthropicCreate.mockClear()
+    mockTrip.title = null
+  })
+
+  async function draftWith(modelText: string) {
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: modelText }] })
+    mockDb([], null, DEFAULT_KNOWLEDGE_ROWS, { ...INQUIRY_DATA, message: 'Hello, two anglers, July' })
+    return draftReply({ inquiryId: 'inquiry-tags', counterpart: 'angler', channel: 'email', allowFormOnly: true })
+  }
+
+  it('tags OK: text is the content, saved without tags, formatIssue null', async () => {
+    const result = await draftWith('<email>\nHi Anna,\n\nThanks.\n</email>')
+
+    expect(result.text).toBe('Hi Anna,\n\nThanks.')
+    expect(result.formatIssue).toBeNull()
+    expect(insertedMessages[0]).toMatchObject({ body: 'Hi Anna,\n\nThanks.', status: 'draft', drafted_by: 'agent' })
+  })
+
+  it('no tags: the raw text is saved for the admin, formatIssue no_tags', async () => {
+    const result = await draftWith('Hi Anna, thanks.')
+
+    expect(result.formatIssue).toBe('no_tags')
+    expect(insertedMessages[0]).toMatchObject({ body: 'Hi Anna, thanks.', status: 'draft' })
+  })
+
+  it('reasoning before the block: the whole raw output is saved, formatIssue text_outside', async () => {
+    const raw = 'Anna told us everything.\n---\n<email>Hi Anna</email>'
+    const result = await draftWith(raw)
+
+    expect(result.formatIssue).toBe('text_outside')
+    expect(result.text).toBe(raw)
+    expect(insertedMessages[0]).toMatchObject({ body: raw })
+  })
+
+  it('text after the block: formatIssue text_outside', async () => {
+    const result = await draftWith('<email>Hi Anna</email>\nNote to admin: short on purpose.')
+    expect(result.formatIssue).toBe('text_outside')
+  })
+
+  it('two blocks: formatIssue multiple_blocks', async () => {
+    const result = await draftWith('<email>Hi</email><email>Hello</email>')
+    expect(result.formatIssue).toBe('multiple_blocks')
+  })
+})

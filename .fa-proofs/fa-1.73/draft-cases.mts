@@ -5,8 +5,8 @@
  * WhatsApp, no auto-send: autoSendReply and sendMessage are never imported.
  *
  * Knowledge:
- *   - instructions: the prod text after tj's seven FA-1.72 edits (the D1 change) —
- *     ../fa-1.72/instructions-prod-after-7-edits.md (gitignored, local only)
+ *   - instructions: the prod text after tj's seven FA-1.72 edits (the D1 change) plus the step-2 edit
+ *     (regional price only once the location is known) — ./knowledge-prod/instructions-proposed.md (gitignored)
  *   - tone, Chile, Kristina, Alex: prod text, ./knowledge-prod/ (gitignored)
  *   - New Zealand destination: the PROPOSED text (D2 + O-48), ./knowledge-prod/nz-destination-proposed.md
  *   - Iceland destination: prod text with "or guide name" removed (the same D1 change)
@@ -65,7 +65,7 @@ const BERGUR_ENTRY =
 interface KnowledgeFixture { kind: string; country?: string; guideId?: string; title: string; body: string }
 
 const KNOWLEDGE: KnowledgeFixture[] = [
-  { kind: 'instructions', title: 'FA173-PROOF instructions', body: read('../fa-1.72/instructions-prod-after-7-edits.md') },
+  { kind: 'instructions', title: 'FA173-PROOF instructions', body: read('./knowledge-prod/instructions-proposed.md') },
   { kind: 'tone', title: 'FA173-PROOF tone', body: read('./knowledge-prod/tone.md') },
   { kind: 'destination', country: 'New Zealand', title: 'FA173-PROOF NZ (proposed)', body: read('./knowledge-prod/nz-destination-proposed.md') },
   { kind: 'destination', country: 'Chile', title: 'FA173-PROOF Chile', body: read('./knowledge-prod/chile-destination.md') },
