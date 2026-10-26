@@ -9,6 +9,7 @@ model_approved:
 effort: high
 agent: fa-core
 branch: fix/fa-1.73-draft-guide-availability-location
+pr: 165
 depends_on: [FA-1.72]
 blocked_by_questions: []
 touches_db: false
