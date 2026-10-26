@@ -1,0 +1,483 @@
+
+ RUN  v4.0.18 /home/tj/Fjordanglers
+
+ ❯ src/lib/ai/draft-reply-prompt.test.ts (18 tests | 10 failed) 22ms
+     ✓ context block contains counterpart, channel, status and guide name 1ms
+     ✓ draft context precedes the knowledge and conversation sections 0ms
+     ✓ shows "none" for assigned guide when no guide is resolved 0ms
+     ✓ an angler draft carries the availability rule, the trip-page-is-a-hint rule and the do-not-re-ask rule — RED on main: no rules block 0ms
+     ✓ the gap rules: near gap offers the covered area with a question and no guide name; far gap promises to check and quotes nothing — RED on main 0ms
+     ✓ the code rules allow the guide name — the name ban lives only in the Instructions entry, never in code 0ms
+     ✓ the rules come after the knowledge, so no knowledge entry sits below them 0ms
+     ✓ a draft to the guide gets no client rules 0ms
+     × one block, nothing around it: the body is the content, trimmed 3ms
+     × whitespace around the block is fine 0ms
+     × no tags at all: issue no_tags, the raw text is kept for the admin 0ms
+     × reasoning before the block: issue text_outside — the leak in the 2026-10-26 proof 0ms
+     × a note after the block: issue text_outside 0ms
+     × two blocks: issue multiple_blocks 0ms
+     × an empty block: issue empty 0ms
+     × an opening tag with no closing tag: issue no_tags 0ms
+     × asks for the e-mail inside <email> tags, last, for a angler draft 9ms
+     × asks for the e-mail inside <email> tags, last, for a guide draft 1ms
+ ❯ src/lib/ai/draft-reply.test.ts (33 tests | 5 failed) 46ms
+     ✓ saves a draft row with status=draft and drafted_by=agent 18ms
+     ✓ does NOT insert an inquiry_events row 1ms
+     ✓ returns the ids of used knowledge entries 1ms
+     ✓ returns the used knowledge entries with the same ids as usedIds (FA-1.47) — RED on main: no usedEntries 2ms
+     ✓ throws a readable DraftReplyError when thread is empty (default: allowFormOnly not set) 1ms
+     ✓ throws DraftReplyError when no active instructions entry exists 1ms
+     ✓ drafts from the form message when the thread is empty and allowFormOnly is true 1ms
+     ✓ drafts a guide message from the form data too, with an empty thread and allowFormOnly 0ms
+     ✓ throws a readable DraftReplyError when there is neither a thread nor a form message 1ms
+     ✓ drafts from the form data when message is empty but trip_id is set 0ms
+     ✓ drafts from the form data when message is empty but experience_page_id is set 0ms
+     ✓ still refuses without allowFormOnly, even when the inquiry has a trip 0ms
+     ✓ the no-trip error says why: no form message and no trip to write from 0ms
+     ✓ (b) second call with existing draft updates the row — no duplicate insert 1ms
+     ✓ (c) draft messages are excluded from the conversation context sent to AI 1ms
+     ✓ email → non-empty subject containing country and name 0ms
+     ✓ whatsapp → null 0ms
+     ✓ instagram → null 0ms
+     ✓ email with null country → uses fallback 0ms
+     ✓ prints the skill level and the priority from the brief 2ms
+     ✓ keeps the brief inside the inquiry block, where the model reads it as data 0ms
+     ✓ does not print the answers twice when the stored message already carries the summary 0ms
+     ✓ a v1 inquiry (brief null) gets the prompt it got on main — no brief block 0ms
+     ✓ a malformed brief is skipped, not shown to the model as fact 1ms
+     ✓ form with text, dates and a trip, empty thread: dates and trip are in result.conversation, and it is verbatim in the prompt — RED on main: no conversation 0ms
+     ✓ non-empty thread: the inquiry block is still there, followed by the history — RED on main 0ms
+     ✓ the prompt has the new trip-page label and the availability, trip-hint and do-not-re-ask rules — RED on main 0ms
+     ✓ the rules reach the prompt even when the Instructions entry says nothing about them 0ms
+     × tags OK: text is the content, saved without tags, formatIssue null 7ms
+     × no tags: the raw text is saved for the admin, formatIssue no_tags 1ms
+     × reasoning before the block: the whole raw output is saved, formatIssue text_outside 1ms
+     × text after the block: formatIssue text_outside 1ms
+     × two blocks: formatIssue multiple_blocks 0ms
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (API error)
+[autoSendReply] judgeReply failed: Error: Anthropic API timeout
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:431:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (malformed JSON)
+[autoSendReply] judgeReply failed: SyntaxError: Unexpected token < in JSON at position 0
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:451:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send when the judge reply was cut off mid-JSON — "judge error", draft kept (fail-safe, FA-1.72)
+[autoSendReply] judgeReply failed: Error: [judgeReply] Could not parse judge response: {"score": 0.95, "send": true, "reasons": ["The draft quotes
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:463:7
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge receives the draft's knowledge (FA-1.47) > passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument
+[autoSendReply] judge blocked without evidence { inquiryId: 'inq-1', judgeReasons: [ 'hold' ], evidence: [] }
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — daily cap (FA-1.42) > holds the draft with a reason when the count query fails (D4) — nothing is sent
+[autoSendReply] daily cap count failed: Error: connection reset
+    at countAutoSendsSince (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:1428:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at dailyCapHoldReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:230:26)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:174:24)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:831:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — the agent leads only until a human takes over (FA-1.48) > holds with a reason when the takeover check fails — no model call, nothing sent
+[autoSendReply] takeover check failed: Error: connection reset
+    at hasHumanTakenOverThread (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:1343:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at humanTakeoverReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:215:13)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:118:26)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:1121:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+ ❯ src/lib/ai/auto-send.test.ts (57 tests | 4 failed) 60ms
+     ✓ returns AutoSendResult{sent=false} for counterpart=guide and emits agent.auto_send_decided 3ms
+     ✓ returns AutoSendResult{sent=false} for channel=whatsapp and emits agent.auto_send_decided 1ms
+     ✓ returns AutoSendResult{sent=false} for status=waiting_guide and emits agent.auto_send_decided 1ms
+     ✓ sends when the judge says send=true — RED on main: the destination gate holds it before the judge 2ms
+     ✓ still holds when the judge says send=false (a price with no knowledge behind it is STOP group 4) — reasons in the event 1ms
+     × formatIssue no_tags: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate 7ms
+     × formatIssue text_outside: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate 1ms
+     × formatIssue multiple_blocks: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate 1ms
+     × formatIssue empty: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate 1ms
+     ✓ formatIssue null: the judge runs and the draft is sent, as before 0ms
+     ✓ SENDS when the judge says send=true at a low score (0.55) — the score is information, not a gate — RED on main: held below 0.9 0ms
+     ✓ does NOT send when judge send=false with evidence, even if score=0.97 — the judge's reasons stay in the event 0ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (API error) 2ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (malformed JSON) 1ms
+     ✓ does NOT send when the judge reply was cut off mid-JSON — "judge error", draft kept (fail-safe, FA-1.72) 1ms
+     ✓ passes injection text to judgeReply as conversation data, not as instructions 1ms
+     ✓ calls sendMessage with agent actor and emits agent.auto_send_decided sent=true; status stays new 1ms
+     ✓ flag complaint=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 1ms
+     ✓ flag competitor=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 0ms
+     ✓ flag guide_contact=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 0ms
+     ✓ every raised flag is named; a flag needs no evidence 1ms
+     ✓ a raised flag holds before the daily cap is even read 0ms
+     ✓ send=false from group 4 with a quote that IS in the draft → held with the judge's reasons 0ms
+     ✓ the quote is compared with whitespace collapsed (a JSON string cannot carry the draft's line breaks) 0ms
+     ✓ send=false from group 4/5 WITHOUT evidence → "judge blocked without evidence", logged, still not sent — RED before round 3: the judge's own reasons 2ms
+     ✓ send=false with a quote that is NOT in the draft → "judge blocked without evidence", not sent — RED before round 3 0ms
+     ✓ one real quote and one invented quote → the block is not trusted 0ms
+     ✓ an empty quote is no evidence 0ms
+     ✓ send=true needs no evidence and is never turned into a hold by its absence 0ms
+     ✓ judgeReply throwing on a missing/misshapen client_flags is a judge error — nothing sent (fail-safe) 0ms
+     ✓ passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument 1ms
+     ✓ holds the draft when 20 auto-sends already went out in 24 h (default cap) 1ms
+     ✓ still sends with 19 auto-sends in the window (below the default cap of 20) — RED on main: the cap there is 5 0ms
+     ✓ takes the cap from AI_AUTO_SEND_DAILY_CAP: 2 sent with cap 2 holds, 1 sent with cap 2 sends 0ms
+     ✓ keeps the judge reasons when the judge already said no — the cap only holds what would have gone out 0ms
+     ✓ holds the draft with a reason when the count query fails (D4) — nothing is sent 6ms
+     ✓ drafts from the form, judges, and sends at 0.93 — RED on main: draftReply throws "thread is empty" 1ms
+     ✓ no thread and message=null → event with a reason, no draft, no send — RED on main 0ms
+     ✓ no thread and message="   " → event with a reason, no draft, no send — RED on main 0ms
+     ✓ missing active instructions entry (DraftReplyError) still returns null with no event — FA-1.27 behaviour kept 0ms
+     ✓ drafts from the trip data, judges, and sends at 0.93 — RED on main: "no message thread and no form message to answer" 1ms
+     ✓ also runs for an experience_page_id (no legacy trip_id) — RED on main 0ms
+     ✓ no thread, no message and no trip → event with the reason, no draft, no send 0ms
+     ✓ form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and the trip-page line — RED on main: only "[ANGLER] <text>" 0ms
+     ✓ non-empty thread: the judge gets the inquiry block and the history — RED on main: only the thread lines 15ms
+     ✓ form without text, trip only: the judge gets the same block, not a copy built in auto-send 0ms
+     ✓ stays silent after a manual reply from the panel (drafted_by admin) — RED on main: the model is called 0ms
+     ✓ recognises an outbound stored the way the FA-1.49 Zoho import stores it (drafted_by admin, event actor admin, source webhook) 0ms
+     ✓ recognises an agent draft sent by a human (drafted_by agent, message.sent actor admin) — RED on main 0ms
+     ✓ keeps leading when the only outbound is an auto-sent agent message (drafted_by agent, actor agent) 0ms
+     ✓ keeps leading when an agent message has no message.sent event at all 0ms
+     ✓ takes over on a human message even when an auto-sent agent message sits beside it 0ms
+     ✓ outbound to a guide only (counterpart=guide, drafted_by admin, sent) is not a takeover — path as today 0ms
+     ✓ first form inquiry with an empty thread keeps the first-reply path 0ms
+     ✓ holds with a reason when the takeover check fails — no model call, nothing sent 1ms
+     ✓ returns true when a prior agent-sent message exists 0ms
+     ✓ returns false when no prior agent-sent message exists 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 19 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — a draft that is not a clean <email> block is never sent (FA-1.73) > formatIssue no_tags: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — a draft that is not a clean <email> block is never sent (FA-1.73) > formatIssue text_outside: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — a draft that is not a clean <email> block is never sent (FA-1.73) > formatIssue multiple_blocks: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — a draft that is not a clean <email> block is never sent (FA-1.73) > formatIssue empty: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received: 
+
+  1st vi.fn() call:
+
+    Array [
+      "=== ORIGINAL INQUIRY ===
+    Angler: Anna Angler
+    Party size: 2",
+      "Anna told us everything.
+    ---
+    <email>Hi</email>",
+      Array [],
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/lib/ai/auto-send.test.ts:365:41
+    363|       const result = await autoSendReply({ inquiryId: 'inq-1', counter…
+    364| 
+    365|       expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
+       |                                         ^
+    366|       expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    367|       expect(result!.sent).toBe(false)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > one block, nothing around it: the body is the content, trimmed
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:118:12
+    116| describe('extractEmail — fails closed (FA-1.73)', () => {
+    117|   it('one block, nothing around it: the body is the content, trimmed',…
+    118|     expect(extractEmail('<email>\nHi Anna,\n\nThanks.\n</email>')).toE…
+       |            ^
+    119|   })
+    120| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > whitespace around the block is fine
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:122:12
+    120| 
+    121|   it('whitespace around the block is fine', () => {
+    122|     expect(extractEmail('  \n<email>Hi</email>\n\n')).toEqual({ body: …
+       |            ^
+    123|   })
+    124| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > no tags at all: issue no_tags, the raw text is kept for the admin
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:126:12
+    124| 
+    125|   it('no tags at all: issue no_tags, the raw text is kept for the admi…
+    126|     expect(extractEmail('Hi Anna,\n\nThanks.')).toEqual({ body: 'Hi An…
+       |            ^
+    127|   })
+    128| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > reasoning before the block: issue text_outside — the leak in the 2026-10-26 proof
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:131:12
+    129|   it('reasoning before the block: issue text_outside — the leak in the…
+    130|     const raw = 'Anna told us everything.\n\n---\n\n<email>Hi Anna</em…
+    131|     expect(extractEmail(raw)).toEqual({ body: raw, issue: 'text_outsid…
+       |            ^
+    132|   })
+    133| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > a note after the block: issue text_outside
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:136:12
+    134|   it('a note after the block: issue text_outside', () => {
+    135|     const raw = '<email>Hi Anna</email>\n(I kept it short.)'
+    136|     expect(extractEmail(raw)).toEqual({ body: raw, issue: 'text_outsid…
+       |            ^
+    137|   })
+    138| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > two blocks: issue multiple_blocks
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:141:12
+    139|   it('two blocks: issue multiple_blocks', () => {
+    140|     const raw = '<email>Hi Anna</email>\n<email>Hello Anna</email>'
+    141|     expect(extractEmail(raw)).toEqual({ body: raw, issue: 'multiple_bl…
+       |            ^
+    142|   })
+    143| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > an empty block: issue empty
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:145:12
+    143| 
+    144|   it('an empty block: issue empty', () => {
+    145|     expect(extractEmail('<email>  </email>')).toEqual({ body: '<email>…
+       |            ^
+    146|   })
+    147| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > extractEmail — fails closed (FA-1.73) > an opening tag with no closing tag: issue no_tags
+TypeError: (0 , __vite_ssr_import_1__.extractEmail) is not a function
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:149:12
+    147| 
+    148|   it('an opening tag with no closing tag: issue no_tags', () => {
+    149|     expect(extractEmail('<email>Hi Anna')).toEqual({ body: '<email>Hi …
+       |            ^
+    150|   })
+    151| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > buildDraftPrompt — output format (FA-1.73) > asks for the e-mail inside <email> tags, last, for a angler draft
+AssertionError: expected 'You are the FA assistant.\n\n=== DRAF…' to contain '=== OUTPUT FORMAT ==='
+
+- Expected
++ Received
+
+- === OUTPUT FORMAT ===
++ You are the FA assistant.
++
++ === DRAFT CONTEXT ===
++ Addressee: angler
++ Channel: email
++ Inquiry status: qualifying
++ Assigned guide: none
++
++ === DRAFTING RULES ===
++ These rules hold whatever the instructions above say.
++
++ Guides
++ - You may name the assigned guide and say which region they work in. Never give a guide's phone number, e-mail address, profile link or social handle before the inquiry status is "paid".
++ - Never state or imply that a guide or a date is available. Do not write "she is free on the 12th", "the 12th works for her" or "she can take you then". Write "we'll check whether <guide> is free on <date>". Saying which region a guide covers is not a statement about availability.
++
++ Where and how the client wants to fish
++ - Region, trip style and length are what the CLIENT wrote: the message, the form answers and the thread. The line "Trip page the client came from" only says which page they clicked on, so it is a hint and never the client's choice. Use it only when the client said nothing on the point.
++ - Words from the trip title (Highland, South Island, Spring Creeks…) may be offered as one option, never assumed. "South Island" is not "Southland"; a title with a place in it does not mean the client wants that place. If the client names the same place, write about it.
++ - The client named no place and the country has several regions, or the guide works widely: answer generally for the country or the guide, ask where they would like to fish and what they prefer, and quote no regional price before they answer.
++ - The client names a place that the Destination entry lists as a gap or does not cover, and a covered area is within about 1.5 hours' drive (for example Queenstown): say plainly that we don't run day trips from there, offer the nearby covered area as an option (drive time, full day and price from the Destination entry; if the entry has no drive time, say you'll confirm it) and end with a question whether the drive works for them. Do not name a guide in this case.
++ - The client names a place that is a gap and no covered area is within that drive (for example Nelson, Christchurch, the North Island when we cover only a part of it): write "we'll check what our available guides can offer in that area and come back to you". No price, no distant region as an alternative, and never say that nobody is there.
++
++ What the client already told us
++ - Never ask for something the client already gave in the form, the brief or the thread: party size, skill level, dates, species. Read "Party size", "Requested dates" and the form answers in the inquiry block before every question. Refer to what they gave instead of asking again.
++
++ === CONVERSATION ===
++ conversation
+
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:159:20
+    157|       STUB_INSTRUCTIONS, [], 'conversation',
+    158|     )
+    159|     expect(prompt).toContain('=== OUTPUT FORMAT ===')
+       |                    ^
+    160|     expect(prompt).toContain('<email>')
+    161|     expect(prompt).toContain('Nothing before <email> and nothing after…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/19]⎯
+
+ FAIL  src/lib/ai/draft-reply-prompt.test.ts > buildDraftPrompt — output format (FA-1.73) > asks for the e-mail inside <email> tags, last, for a guide draft
+AssertionError: expected 'You are the FA assistant.\n\n=== DRAF…' to contain '=== OUTPUT FORMAT ==='
+
+- Expected
++ Received
+
+- === OUTPUT FORMAT ===
++ You are the FA assistant.
++
++ === DRAFT CONTEXT ===
++ Addressee: guide
++ Channel: email
++ Inquiry status: qualifying
++ Assigned guide: none
++
++ === CONVERSATION ===
++ conversation
+
+ ❯ src/lib/ai/draft-reply-prompt.test.ts:159:20
+    157|       STUB_INSTRUCTIONS, [], 'conversation',
+    158|     )
+    159|     expect(prompt).toContain('=== OUTPUT FORMAT ===')
+       |                    ^
+    160|     expect(prompt).toContain('<email>')
+    161|     expect(prompt).toContain('Nothing before <email> and nothing after…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/19]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — the e-mail comes out of <email> tags (FA-1.73) > tags OK: text is the content, saved without tags, formatIssue null
+AssertionError: expected '<email>\nHi Anna,\n\nThanks.\n</email>' to be 'Hi Anna,\n\nThanks.' // Object.is equality
+
+- Expected
++ Received
+
++ <email>
+  Hi Anna,
+
+  Thanks.
++ </email>
+
+ ❯ src/lib/ai/draft-reply.test.ts:630:25
+    628|     const result = await draftWith('<email>\nHi Anna,\n\nThanks.\n</em…
+    629| 
+    630|     expect(result.text).toBe('Hi Anna,\n\nThanks.')
+       |                         ^
+    631|     expect(result.formatIssue).toBeNull()
+    632|     expect(insertedMessages[0]).toMatchObject({ body: 'Hi Anna,\n\nTha…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/19]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — the e-mail comes out of <email> tags (FA-1.73) > no tags: the raw text is saved for the admin, formatIssue no_tags
+AssertionError: expected undefined to be 'no_tags' // Object.is equality
+
+- Expected: 
+"no_tags"
+
++ Received: 
+undefined
+
+ ❯ src/lib/ai/draft-reply.test.ts:638:32
+    636|     const result = await draftWith('Hi Anna, thanks.')
+    637| 
+    638|     expect(result.formatIssue).toBe('no_tags')
+       |                                ^
+    639|     expect(insertedMessages[0]).toMatchObject({ body: 'Hi Anna, thanks…
+    640|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/19]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — the e-mail comes out of <email> tags (FA-1.73) > reasoning before the block: the whole raw output is saved, formatIssue text_outside
+AssertionError: expected undefined to be 'text_outside' // Object.is equality
+
+- Expected: 
+"text_outside"
+
++ Received: 
+undefined
+
+ ❯ src/lib/ai/draft-reply.test.ts:646:32
+    644|     const result = await draftWith(raw)
+    645| 
+    646|     expect(result.formatIssue).toBe('text_outside')
+       |                                ^
+    647|     expect(result.text).toBe(raw)
+    648|     expect(insertedMessages[0]).toMatchObject({ body: raw })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/19]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — the e-mail comes out of <email> tags (FA-1.73) > text after the block: formatIssue text_outside
+AssertionError: expected undefined to be 'text_outside' // Object.is equality
+
+- Expected: 
+"text_outside"
+
++ Received: 
+undefined
+
+ ❯ src/lib/ai/draft-reply.test.ts:653:32
+    651|   it('text after the block: formatIssue text_outside', async () => {
+    652|     const result = await draftWith('<email>Hi Anna</email>\nNote to ad…
+    653|     expect(result.formatIssue).toBe('text_outside')
+       |                                ^
+    654|   })
+    655| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/19]⎯
+
+ FAIL  src/lib/ai/draft-reply.test.ts > draftReply — the e-mail comes out of <email> tags (FA-1.73) > two blocks: formatIssue multiple_blocks
+AssertionError: expected undefined to be 'multiple_blocks' // Object.is equality
+
+- Expected: 
+"multiple_blocks"
+
++ Received: 
+undefined
+
+ ❯ src/lib/ai/draft-reply.test.ts:658:32
+    656|   it('two blocks: formatIssue multiple_blocks', async () => {
+    657|     const result = await draftWith('<email>Hi</email><email>Hello</ema…
+    658|     expect(result.formatIssue).toBe('multiple_blocks')
+       |                                ^
+    659|   })
+    660| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/19]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  19 failed | 89 passed (108)
+   Start at  15:13:47
+   Duration  733ms (transform 706ms, setup 90ms, import 951ms, tests 128ms, environment 0ms)
+

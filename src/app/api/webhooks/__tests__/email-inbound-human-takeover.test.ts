@@ -147,7 +147,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockEnv.AI_AUTO_REPLY_ENABLED = true
   process.env.RESEND_DEV_FAKE = '1'
-  vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: [], usedEntries: [], conversation: 'conversation' })
+  vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: [], usedEntries: [], conversation: 'conversation', formatIssue: null })
   vi.mocked(judgeReply).mockResolvedValue({
     client_flags: { complaint: false, competitor: false, guide_contact: false },
     score: 0.95, send: true, reasons: ['looks good'], evidence: [],

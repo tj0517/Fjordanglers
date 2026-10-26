@@ -84,3 +84,21 @@ describe('assembleConversation — speaker labels (FA-1.21)', () => {
     expect(conversation).toContain('Guide (unassigned)')
   })
 })
+
+describe('assembleConversation — trip title is a hint (FA-1.73)', () => {
+  it('prints the trip title under a label that says it is not the client\'s choice — RED on main: "Experience requested"', () => {
+    const conversation = assembleConversation(...BASE_ARGS, [])
+
+    expect(conversation).toContain(
+      "Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week",
+    )
+    expect(conversation).not.toContain('Experience requested')
+  })
+
+  it('prints no trip line when there is no title', () => {
+    const [name, msg, dates, size] = BASE_ARGS
+    const conversation = assembleConversation(name, msg, dates, size, null, [])
+
+    expect(conversation).not.toContain('Trip page the client came from')
+  })
+})

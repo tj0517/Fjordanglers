@@ -19,7 +19,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { env } from '@/lib/env'
 import { assembleConversation, type ConversationMessage } from './extract-trip'
 import { loadKnowledge, type KnowledgeEntry } from './knowledge'
-import { buildDraftPrompt, buildDraftSubject, type DraftContext } from './draft-reply-prompt'
+import { buildDraftPrompt, buildDraftSubject, extractEmail, type DraftContext, type DraftFormatIssue } from './draft-reply-prompt'
 import { getInquiryExperience, tripTitleOf } from '@/lib/inquiries/experience-lookup'
 
 export interface DraftReplyParams {
@@ -46,6 +46,11 @@ export interface DraftReplyResult {
   usedEntries: KnowledgeEntry[]
   /** The conversation text the prompt was built from (assembleConversation) — what the judge reads. */
   conversation: string
+  /**
+   * FA-1.73: null when the model returned exactly one <email> block. Otherwise `text` is the model's
+   * raw answer (saved so the admin can see and fix it) and the draft must never be sent automatically.
+   */
+  formatIssue: DraftFormatIssue | null
 }
 
 export class DraftReplyError extends Error {
@@ -160,7 +165,7 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     throw new DraftReplyError('Unexpected response type from Anthropic')
   }
 
-  const draftText = block.text.trim()
+  const { body: draftText, issue: formatIssue } = extractEmail(block.text)
 
   const subject = buildDraftSubject(inquiry, channel)
 
@@ -216,5 +221,6 @@ export async function draftReply(params: DraftReplyParams): Promise<DraftReplyRe
     usedIds,
     usedEntries: [instructions, ...entries],
     conversation,
+    formatIssue,
   }
 }

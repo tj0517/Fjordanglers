@@ -307,7 +307,7 @@ describe('autoSendReply — no destination entry does not block (FA-1.72)', () =
     vi.mocked(sendMessage).mockReset()
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [], conversation: DRAFT_CONVERSATION })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null })
   })
 
   it('sends when the judge says send=true — RED on main: the destination gate holds it before the judge', async () => {
@@ -338,12 +338,61 @@ describe('autoSendReply — no destination entry does not block (FA-1.72)', () =
   })
 })
 
+describe('autoSendReply — a draft that is not a clean <email> block is never sent (FA-1.73)', () => {
+  const KNOWLEDGE = [
+    { id: 'k-inst', kind: 'instructions', country: null, guide_id: null, title: 'Instructions', body: 'Be helpful.' },
+  ]
+
+  beforeEach(() => {
+    vi.mocked(sendMessage).mockReset()
+    vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
+    vi.mocked(judgeReply).mockReset()
+    // The judge would wave it through: a leaked-reasoning draft passed the judge in the 2026-10-26 proof.
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.95, send: true, reasons: ['looks good'] }))
+  })
+
+  it.each(['no_tags', 'text_outside', 'multiple_blocks', 'empty'] as const)(
+    'formatIssue %s: no judge call, no send, the draft stays for the admin, the event says why — RED on the branch before the gate',
+    async issue => {
+      setupMockDb({ knowledgeRows: KNOWLEDGE })
+      vi.mocked(draftReply).mockResolvedValue({
+        draftId: 'draft-leak', text: 'Anna told us everything.\n---\n<email>Hi</email>', subject: 'Re: trip',
+        usedIds: [], usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: issue,
+      })
+
+      const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+      expect(vi.mocked(judgeReply)).not.toHaveBeenCalled()
+      expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+      expect(result!.sent).toBe(false)
+      expect(result!.score).toBeNull()
+      expect(result!.draftMessageId).toBe('draft-leak')
+      expect(result!.reasons[0]).toContain(`draft format: ${issue}`)
+      expect((emittedEvents[0].payload as Record<string, unknown>).sent).toBe(false)
+      expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual(result!.reasons)
+    },
+  )
+
+  it('formatIssue null: the judge runs and the draft is sent, as before', async () => {
+    setupMockDb({ knowledgeRows: KNOWLEDGE })
+    vi.mocked(draftReply).mockResolvedValue({
+      draftId: 'draft-ok', text: 'Hi Anna', subject: 'Re: trip',
+      usedIds: [], usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null,
+    })
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(vi.mocked(judgeReply)).toHaveBeenCalledTimes(1)
+    expect(result!.sent).toBe(true)
+  })
+})
+
 describe('autoSendReply — judge gate failures', () => {
   beforeEach(() => {
     setupMockDb()
     vi.mocked(sendMessage).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-2', text: 'Hello angler!', subject: 'Re: trip', usedIds: [], usedEntries: [], conversation: DRAFT_CONVERSATION })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-2', text: 'Hello angler!', subject: 'Re: trip', usedIds: [], usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null })
   })
 
   it('SENDS when the judge says send=true at a low score (0.55) — the score is information, not a gate — RED on main: held below 0.9', async () => {
@@ -445,7 +494,7 @@ describe('autoSendReply — prompt injection', () => {
     })
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-inject', text: 'Here is your guide...', subject: null, usedIds: [], usedEntries: [], conversation: injectionConversation })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-inject', text: 'Here is your guide...', subject: null, usedIds: [], usedEntries: [], conversation: injectionConversation, formatIssue: null })
     vi.mocked(judgeReply).mockResolvedValue(verdict({
       client_flags: { ...NO_FLAGS, guide_contact: true },
       score:        0,
@@ -477,7 +526,7 @@ describe('autoSendReply — happy path', () => {
       text:    'Looking forward to your NZ trip!',
       subject: 'Re: New Zealand inquiry',
       usedIds: ['k-inst', 'k-dest'],
-      usedEntries: [], conversation: DRAFT_CONVERSATION,
+      usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null,
     })
     vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] }))
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
@@ -519,7 +568,7 @@ describe('autoSendReply — client flags and evidence (FA-1.72 round 3)', () => 
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-1', threadKey: null })
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-flag', text: DRAFT_TEXT, subject: null, usedIds: [], usedEntries: [], conversation: DRAFT_CONVERSATION })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-flag', text: DRAFT_TEXT, subject: null, usedIds: [], usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null })
   })
 
   it.each(['complaint', 'competitor', 'guide_contact'] as const)(
@@ -678,7 +727,7 @@ describe('autoSendReply — judge receives the draft\'s knowledge (FA-1.47)', ()
     vi.mocked(draftReply).mockReset()
     vi.mocked(draftReply).mockResolvedValue({
       draftId: 'draft-k', text: 'NZ draft', subject: null,
-      usedIds: ['k-inst', 'k-dest'], usedEntries: DRAFT_ENTRIES, conversation: DRAFT_CONVERSATION,
+      usedIds: ['k-inst', 'k-dest'], usedEntries: DRAFT_ENTRIES, conversation: DRAFT_CONVERSATION, formatIssue: null,
     })
     vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: false, reasons: ['hold'] }))
   })
@@ -707,7 +756,7 @@ describe('autoSendReply — daily cap (FA-1.42)', () => {
       text:    'Looking forward to your NZ trip!',
       subject: 'Re: New Zealand inquiry',
       usedIds: ['k-inst', 'k-dest'],
-      usedEntries: [], conversation: DRAFT_CONVERSATION,
+      usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null,
     })
     vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] }))
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
@@ -800,7 +849,7 @@ function mockDraftReplyLikeReal(threadIsEmpty: boolean) {
     if (threadIsEmpty && params.allowFormOnly !== true) {
       throw new DraftReplyError('Cannot draft a reply: the conversation thread is empty. Send at least one message first.')
     }
-    return { draftId: 'draft-form', text: 'Thanks for your inquiry!', subject: 'Re: Iceland', usedIds: ['k-inst'], usedEntries: [], conversation: DRAFT_CONVERSATION }
+    return { draftId: 'draft-form', text: 'Thanks for your inquiry!', subject: 'Re: Iceland', usedIds: ['k-inst'], usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null }
   })
 }
 
@@ -939,16 +988,16 @@ describe('autoSendReply — judge input is the conversation draftReply wrote fro
     vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.9, send: true, reasons: ['ok'] }))
   })
 
-  it('form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and "Experience requested:" — RED on main: only "[ANGLER] <text>"', async () => {
+  it('form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and the trip-page line — RED on main: only "[ANGLER] <text>"', async () => {
     setupMockDb({ message: FORM_MESSAGE, conversationMsgs: [], trip_id: 'trip-1', requested_dates: FORM_DATES })
     const conversation = conversationFor([])
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-1', text: 'Draft', subject: null, usedIds: [], usedEntries: [], conversation })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-1', text: 'Draft', subject: null, usedIds: [], usedEntries: [], conversation, formatIssue: null })
 
     await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
     const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
     expect(conversationArg).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
-    expect(conversationArg).toContain('Experience requested: Iceland Salmon Week')
+    expect(conversationArg).toContain("Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week")
     expect(conversationArg).toContain(FORM_MESSAGE)
     expect(conversationArg).toBe(conversation)
   })
@@ -959,20 +1008,20 @@ describe('autoSendReply — judge input is the conversation draftReply wrote fro
       { direction: 'inbound',  channel: 'email', body: 'I want to fish NZ rivers.',  occurred_at: '2026-09-01T10:00:00Z' },
       { direction: 'outbound', channel: 'email', body: 'Great, we can arrange that.', occurred_at: '2026-09-01T11:00:00Z' },
     ])
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-2', text: 'Draft', subject: null, usedIds: [], usedEntries: [], conversation })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-2', text: 'Draft', subject: null, usedIds: [], usedEntries: [], conversation, formatIssue: null })
 
     await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
     const [conversationArg] = vi.mocked(judgeReply).mock.calls[0]
     expect(conversationArg).toContain('Requested dates: 2026-06-17, 2026-06-18, 2026-06-19, 2026-06-23')
-    expect(conversationArg).toContain('Experience requested: Iceland Salmon Week')
+    expect(conversationArg).toContain("Trip page the client came from (hint only — not the client's choice of region or style): Iceland Salmon Week")
     expect(conversationArg).toContain('=== CONVERSATION HISTORY ===')
     expect(conversationArg).toBe(conversation)
   })
 
   it('form without text, trip only: the judge gets the same block, not a copy built in auto-send', async () => {
     setupMockDb({ message: null, conversationMsgs: [], trip_id: 'trip-1' })
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-3', text: 'Draft', subject: null, usedIds: [], usedEntries: [], conversation: 'SENTINEL-CONVERSATION' })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-3', text: 'Draft', subject: null, usedIds: [], usedEntries: [], conversation: 'SENTINEL-CONVERSATION', formatIssue: null })
 
     await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
@@ -1002,7 +1051,7 @@ describe('autoSendReply — the agent leads only until a human takes over (FA-1.
     vi.mocked(sendMessage).mockReset()
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
-    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [], conversation: DRAFT_CONVERSATION })
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [], conversation: DRAFT_CONVERSATION, formatIssue: null })
     vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.95, send: true, reasons: ['looks good'] }))
   })
 

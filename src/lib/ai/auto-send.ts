@@ -147,6 +147,15 @@ export async function autoSendReply(params: {
     throw err
   }
 
+  // FA-1.73: the draft must be exactly one <email> block. Anything else (reasoning around it, no
+  // tags, two blocks) stays a draft for the admin — before the judge, because the judge reads the
+  // text it is given and cannot tell what the model meant to send.
+  if (draft.formatIssue != null) {
+    const reason = `draft format: ${draft.formatIssue} — the answer is not a single <email> block, saved for the admin`
+    await emitDecision(supabase, inquiryId, draft.draftId, false, null, [reason])
+    return { sent: false, score: null, reasons: [reason], draftMessageId: draft.draftId }
+  }
+
   // Judge
   let judged: Awaited<ReturnType<typeof judgeReply>>
   try {

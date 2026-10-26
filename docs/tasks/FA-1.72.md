@@ -2,7 +2,7 @@
 id: FA-1.72
 title: Auto-wysyłka odwrócona — agent wysyła domyślnie, wstrzymuje tylko przy krytycznym naruszeniu; score informacyjny, brak wpisu destination nie blokuje, sufit 20/24 h, sędzia bez uciętego JSON
 stage: 1
-status: review
+status: done
 difficulty: M
 model: opus
 model_approved:
@@ -128,6 +128,7 @@ git diff main...HEAD -- src/lib/ai/
 - 2026-10-26 tj (przyjęte zmiany poza specyfikacją rundy 3): `max_tokens` 512 → 1024 (cytaty wydłużają odpowiedź); przy fladze do powodów dochodzą też powody sędziego (po nazwie flagi); cytat `evidence` porównywany po ściśnięciu białych znaków (JSON-owy string nie przenosi łamań linii szkicu).
 - Przypadek 16 (prawdziwa instrukcja prod po 7 podmianach) jest powtarzalny tylko lokalnie: `.fa-proofs/fa-1.72/instructions-prod-after-7-edits.md` jest w `.gitignore` (`.fa-proofs/**/instructions-prod*`).
 - 2026-10-26 tj, runda 4, decyzja (a): **znany koszt** — sędzia może wstrzymać szkic, który dopytuje o rzecz znaną z formularza (liczba osób, poziom): wpis `instructions` tego zabrania i sędzia czasem kwalifikuje to jako grupę 4/5, choć prompt mówi, że nie. Skutek: szkic czeka na admina, nigdy błędna wysyłka (0 wysyłek tam, gdzie oczekiwane wstrzymanie w 60 decyzjach; wstrzymanie zamiast wysyłki: 9b 3/3, przypadek 2 2/3). Lekarstwo po stronie drafter-a (FA-1.73: nie dopytuj o znane), nie kolejna runda promptu. Bez kolejnej rundy; gotowość do merge, squash robi tj.
+- 2026-10-26 tj: accepted (round 4 decision (a), known cost); merged in #164 without the status line, closed in the first commit of FA-1.73.
 - Raport z realizacji (ten sam, co w PR #164 — w PR tylko runda 4, bo limit długości; runda 4 na górze, potem 3, 2 i 1):
 
 ## Report — FA-1.72, round 4 (tj decisions 2026-10-26, group 5 = statements only; case 17)

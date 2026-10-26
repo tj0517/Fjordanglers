@@ -94,6 +94,8 @@ export interface ConversationExtras {
   brief?: unknown
 }
 
+const TRIP_PAGE_LABEL = "Trip page the client came from (hint only — not the client's choice of region or style)"
+
 export function assembleConversation(
   anglerName:     string,
   anglerMessage:  string | null,
@@ -116,7 +118,9 @@ export function assembleConversation(
 
   lines.push('=== ORIGINAL INQUIRY ===')
   lines.push(`Angler: ${anglerName}`)
-  if (experienceTitle) lines.push(`Experience requested: ${experienceTitle}`)
+  // FA-1.73 (tj D3): the trip page is where the client landed (an ad, a search), not their
+  // choice of region or style — the label says so to the drafter, the judge and the extractors.
+  if (experienceTitle) lines.push(`${TRIP_PAGE_LABEL}: ${experienceTitle}`)
   if (requestedDates.length > 0) lines.push(`Requested dates: ${requestedDates.join(', ')}`)
   lines.push(`Party size: ${partySize}`)
   if (typedText?.trim()) {

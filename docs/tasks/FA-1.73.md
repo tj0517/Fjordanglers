@@ -2,13 +2,14 @@
 id: FA-1.73
 title: Szkic agenta — imię guida dozwolone, ale bez obiecywania jego dostępności; wybrana wycieczka i jej tytuł to wskazówka, nie wiążący wybór — rejon i styl z wiadomości klienta; luka Queenstown = powiedziane wprost + Southland jako opcja
 stage: 1
-status: todo
+status: done
 difficulty: M
 model: opus
 model_approved:
 effort: high
 agent: fa-core
 branch: fix/fa-1.73-draft-guide-availability-location
+pr: 165
 depends_on: [FA-1.72]
 blocked_by_questions: []
 touches_db: false
@@ -58,13 +59,15 @@ Po zadaniu: agent może napisać, który guide działa w danym rejonie, ale nigd
   - miejsce i styl = to, co klient napisał w wiadomości/briefie/wątku; wybrana wycieczka to tylko wskazówka (D3); „South Island” ≠ „Southland”, „Highland …” ≠ „klient chce Highlandy”;
   - klient nie podał miejsca na wycieczkę z kilkoma rejonami → zapytaj o miejsce, zanim podasz cenę rejonu;
   - miejsce w luce z wiedzy → D2 (Queenstown/okolice) albo O-48 (daleko: „sprawdzimy ofertę dostępnych guidów i wrócimy”).
+  - **nie dopytuj o to, co klient już podał** w formularzu, briefie lub wątku (liczba osób, poziom, daty) — znany koszt z FA-1.72 (runda 4, decyzja (a)): naprawa należy do piszącego szkic.
+- [ ] Nowa etykieta tytułu wycieczki w `assembleConversation` obowiązuje **wszystkich** wywołujących (jedna współdzielona funkcja; decyzja tj 2026-10-26).
 - [ ] Propozycja zmian treści — **tylko jako tekst w raporcie**; tj wpisuje w `/admin/knowledge`, agent nie zmienia bazy:
   - `instructions`: usunięty zakaz imienia przed `paid`, dopisany zakaz deklarowania dostępności (D1);
   - `destination` NZ: Queenstown = luka + opcja Southland z czasem dojazdu (D2).
 - [ ] Testy.
 
 ## Gotowe, gdy
-- [ ] Etykieta tytułu wycieczki w `assembleConversation` zmieniona wg D3; sprawdzić wszystkich wywołujących (`draftReply`, sędzia po FA-1.72, `extract-trip`) — zgłoś, czy `extract-trip` też ma dostać nową etykietę, czy zostaje stara.
+- [ ] Etykieta tytułu wycieczki w `assembleConversation` zmieniona wg D3; sprawdzić wszystkich wywołujących (`draftReply`, sędzia po FA-1.72, `extract-trip`) — `extract-trip` (`extractTripDetailsAI`) i `draft-deposit-link` dostają nową etykietę — rozstrzygnięte przez tj 2026-10-26, wszyscy wywołujący.
 - [ ] Test promptu `draftReply`: wysłany prompt zawiera regułę o dostępności, regułę D3 i nową etykietę tytułu wycieczki, nie zawiera zakazu imienia guida (RED na `main`).
 - [ ] Przypadek zachowania z prawdziwym modelem (`draftReply` na lokalnym stacku z fikcyjnymi zapytaniami i wiedzą jak na prod, bez maila; skrypt w `.fa-proofs/fa-1.73/`), szkic wklejony dla każdego:
   1. South Island, klient w Queenstown, 1 dzień → luka wprost + Southland ~1–1,5 h + cena + pytanie o dojazd
@@ -74,7 +77,8 @@ Po zadaniu: agent może napisać, który guide działa w danym rejonie, ale nigd
   5. Coyhaique, 10 dat z formularza → odnosi się do dat z formularza, bez deklarowania dostępności
   6. Islandia, wycieczka „Highland … with Bergur”, klient: „chcemy 2 dni łowienia na Islandii w lipcu”, bez rejonu → odpowiedź o Islandii/rejonie guida ogólnie, Highlandy najwyżej jako jedna z opcji, pytanie o preferencje; **nie** zakłada Highlandów
   7. Ta sama wycieczka, klient: „interesują nas Highlandy” → szkic o Highlandach (tytuł zgodny z klientem — wolno)
-  Dla 1, 2, 5, 6 i 7 dodatkowo `judgeReply` (wiedza z poprawionym `instructions`) → `send=true`.
+  8. Formularz podaje liczbę osób i poziom, klient zadaje ogólne pytanie → szkic **nie** dopytuje o liczbę osób ani poziom
+  Dla 1, 2, 5, 6, 7 i 8 dodatkowo `judgeReply` (wiedza z poprawionym `instructions`) → `send=true`; każdy przypadek ×3.
   Jeśli któryś szkic wychodzi źle — raport, bez dalszego dokręcania promptu na własną rękę.
 - [ ] `pnpm typecheck && pnpm lint && pnpm test && pnpm build`; CI zielone.
 
@@ -85,7 +89,8 @@ Jeśli coś z tej listy blokuje postęp, zatrzymaj się i zapytaj.
 
 ## Bramki STOP
 - STOP przed włączeniem na prod: tj zmienia wpis `instructions` (D1-wiedza) — bez tego sędzia blokuje imiona mimo nowego promptu szkicu.
-- STOP przed merge: tj czyta szkice z 7 przypadków.
+- STOP przed merge: tj czyta szkice z 8 przypadków.
+- STOP przed pierwszym zapisem fixture'a / wywołaniem `draftReply` przez skrypt dowodowy: wypisać URL Supabase (musi być 127.0.0.1 / localhost) i czekać na zgodę tj.
 - Agent nie zmienia `agent_knowledge` na prod i nie wysyła maili.
 
 ## Weryfikacja
@@ -98,3 +103,7 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
 - 2026-10-26 tj: D2; D1 najpierw „blokada imienia w kodzie”, tego samego dnia zmienione na „imię wolno, dostępności nie”. Wiersz do `docs/tasks/INDEX.md`:
   `| FA-1.73 | Szkic — imię guida wolno, dostępności nie; tytuł wycieczki to wskazówka, rejon/styl z wiadomości klienta (South Island ≠ Southland, Highland ≠ wybór klienta), luka Queenstown = wprost + Southland | M | opus | todo | FA-1.72 |`
 - Tego samego dnia D3 (tytuł wycieczki niewiążący, ogólnie dla wszystkich krajów; przykład Islandia/Bergur/Highland). Do `docs/04-open-questions.md`: `| O-48 | Miejsce w luce daleko od pokrytego obszaru (Nelson, Wyspa Północna) | (a) luka wprost, pytanie o elastyczność; (b) + Southland; (c) STOP auto | FA-1.73 | **resolved 2026-10-26 (tj)**: sprawdzimy ofertę dostępnych guidów w tym rejonie i wrócimy — bez ceny i bez odległej alternatywy |`
+- 2026-10-26 tj (prompt startowy agenta): (1) nowa etykieta tytułu wycieczki dotyczy **każdego** wywołującego `assembleConversation` (`draftReply` → sędzia, `draft-deposit-link`, `extractTripDetailsAI`); (2) zakres dostaje regułę „nie dopytuj o znane z formularza” oraz przypadek zachowania 8 (znany koszt FA-1.72); (3) model Opus/high.
+- 2026-10-26 tj (po rundzie 1 dowodu): opcja 1 rozszerzona — jedna runda. Krok 0: te same 8 przypadków ×3 na drafterze z `main` (0/24 wycieków rozumowania) i odczyt prod wysłanych wiadomości agenta od merge FA-1.72 (0 trafień; od 2026-10-20 nie ma żadnej wysłanej wiadomości agenta). Krok 1: odpowiedź modelu musi być dokładnie jednym blokiem `<email>…</email>`; inaczej szkic zostaje dla admina, a auto-wysyłka pomija sędziego z powodem (`draft format: …`); bez wycinania po `---`. Krok 2: propozycja zmiany `instructions` (cena regionalna dopiero po poznaniu miejsca), zaostrzone reguły przypadków 4 i 6. Krok 3: ponowny dowód 8×3 — wyciek rozumowania = STOP, inne porażki do PR jako znane, bez dalszych rund strojenia. Przesunięcie `priority` kwalifikatora (przypadek 1: null → medium) przyjęte; do deferred razem z wymyślonym „45 minut" przepuszczonym przez sędziego.
+- Wynik rundy 2: 0/24 wycieków. Znane porażki (decyduje tj w PR): przypadek 1 — imię guida w 2/3 szkiców (D2: bez imienia); przypadek 2 — run 2 sugeruje dostępność („works well for our Southland guide", sędzia wstrzymał), runy 1 i 3 podają wymyślone „45 minutes" Kingston→Lumsden (sędzia przepuścił); przypadek 3 — cena Southland przed poznaniem miejsca 3/3; przypadek 6 — żaden szkic nie pyta o rejon/styl 3/3.
+- 2026-10-26 tj: przyjęte ze znanymi błędami — kryterium 3 zawężone do: brak wycieku rozumowania (0/24), przypadki 4, 5, 7, 8 i luka/Southland w 1 zaliczone 3/3. Znane błędy (→ deferred, następne zadanie po zmianach w wiedzy na prod): (1) imię guida w przypadku Queenstown wbrew D2, (2) wymyślona odległość „45 minut od Lumsden”, przepuszczona przez sędziego, (3) cena Southland przed ustaleniem lokalizacji (przypadek 3) — podejrzenie: wpis destination NZ, nie prompt, (4) brak pytania o rejon/styl (przypadek 6). Przed prod tj zmienia 4 wpisy wiedzy (instructions, destination Islandia, Brynjar, destination NZ).

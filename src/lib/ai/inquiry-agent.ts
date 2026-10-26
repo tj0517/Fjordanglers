@@ -13,7 +13,7 @@ Your job: read the inquiry and classify it accurately so the FA team knows where
 ━━━ STEP 1 — READ THE FULL INQUIRY FIRST ━━━
 
 The ORIGINAL INQUIRY section always contains structured form data:
-- Experience requested (trip title or destination — use this to infer country and trip type)
+- Trip page the client came from (trip title or destination — a hint: use it to infer country and trip type; the client's own words win)
 - Requested dates (selected in the booking form — always present, but treat as "needs confirmation")
 - Party size (always in the form — NEVER ask for this, treat as known)
 - Angler's free-text message
