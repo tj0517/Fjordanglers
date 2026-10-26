@@ -122,7 +122,7 @@ git diff main...HEAD -- src/lib/ai/
 - Zamyka deferred FA-1.61 (ucięty JSON sędziego).
 - 2026-10-26 odczyt prod (tj, 10 zapytań z „wymyślonymi” danymi): **5 z 5 „wymyślonych dat/lokalizacji” było w formularzu** (`requested_dates`, wybrana wycieczka) — b18cb597 (4 daty), a86b0a0b (10 dat + Coyhaique), 3723005c (15–18 VI), 0f07cc89 (22 X). Ślepota sędzia potwierdzona; poprawka wejścia sędziego to najważniejsza część zadania. Prawdziwe błędy szkicu (imię guida, South Island ≠ Southland) → FA-1.73.
 - 2026-10-26 tj: model Opus/high, D-A (a) usunąć `JUDGE_THRESHOLD`, D-B (a) usunąć `loadKnowledge`, przypadek 5 bez imienia guida; wejście sędziego = tekst rozmowy zwrócony przez `draftReply` (nowe pole `conversation`), bez rozszerzania zapytań.
-- Raport z realizacji (ten sam, co w PR #…):
+- Raport z realizacji (ten sam, co w PR #164):
 
 ## Report — FA-1.72 Auto-wysyłka odwrócona
 
