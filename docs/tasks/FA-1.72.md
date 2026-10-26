@@ -127,16 +127,15 @@ git diff main...HEAD -- src/lib/ai/
 - 2026-10-26 tj, runda 4: grupa 5 = tylko STWIERDZENIE daty/miesiąca/miejsca/liczby osób, pytanie nigdy; `conflict` dla grupy 5 nazywa wymyślony/sprzeczny fakt; fixture 9b bez zmian; przypadek 17 (szkic dopytuje o liczbę osób z formularza → send); 17 przypadków ×3. Reguła zakończenia (z góry): rozjazd wyłącznie 9b i/lub 17 i tylko w stronę wstrzymania = akceptowany znany koszt, bez kolejnej rundy; każdy inny rozjazd = STOP. Wynik: 0 wysyłek tam, gdzie oczekiwane wstrzymanie; wstrzymanie zamiast wysyłki w 9b (3/3) i w przypadku 2 (2/3) — przypadek 2 poza regułą, STOP, czeka na decyzję tj.
 - 2026-10-26 tj (przyjęte zmiany poza specyfikacją rundy 3): `max_tokens` 512 → 1024 (cytaty wydłużają odpowiedź); przy fladze do powodów dochodzą też powody sędziego (po nazwie flagi); cytat `evidence` porównywany po ściśnięciu białych znaków (JSON-owy string nie przenosi łamań linii szkicu).
 - Przypadek 16 (prawdziwa instrukcja prod po 7 podmianach) jest powtarzalny tylko lokalnie: `.fa-proofs/fa-1.72/instructions-prod-after-7-edits.md` jest w `.gitignore` (`.fa-proofs/**/instructions-prod*`).
+- 2026-10-26 tj, runda 4, decyzja (a): **znany koszt** — sędzia może wstrzymać szkic, który dopytuje o rzecz znaną z formularza (liczba osób, poziom): wpis `instructions` tego zabrania i sędzia czasem kwalifikuje to jako grupę 4/5, choć prompt mówi, że nie. Skutek: szkic czeka na admina, nigdy błędna wysyłka (0 wysyłek tam, gdzie oczekiwane wstrzymanie w 60 decyzjach; wstrzymanie zamiast wysyłki: 9b 3/3, przypadek 2 2/3). Lekarstwo po stronie drafter-a (FA-1.73: nie dopytuj o znane), nie kolejna runda promptu. Bez kolejnej rundy; gotowość do merge, squash robi tj.
 - Raport z realizacji (ten sam, co w PR #164 — w PR tylko runda 4, bo limit długości; runda 4 na górze, potem 3, 2 i 1):
 
 ## Report — FA-1.72, round 4 (tj decisions 2026-10-26, group 5 = statements only; case 17)
 
-**Status: STOP per your rule — not ready for merge yet. 55 of 60 decisions as expected (17 cases × 3 runs). Zero sends where a hold was expected. Five holds where a send was expected: 9b (3 of 3, allowed by your rule) and case 2 (2 of 3) — case 2 is not on your list, so I did not mark the PR ready and did not run another round.**
+**Status: ready for review/merge (squash by tj). 55 of 60 decisions as expected (17 cases × 3 runs); 0 sends where a hold was expected. The 5 divergences are all holds instead of a send, on drafts that re-ask a known fact: 9b (3 of 3) and case 2 (2 of 3). tj accepted them as a known cost (2026-10-26, round 4 decision (a)).**
 
-### What changed
-- `JUDGE_PROMPT`, group 5: "Only a STATEMENT of a date, a month, a place or a number of people counts: a question in the draft is never STOP GROUP 5, whatever it asks (asking again for something the angler already gave is a matter of draft quality, not a block)." The `evidence` line: "For group 5, "conflict" must name the invented or contradicting fact."
-- Test for both sentences (RED on the round-3 prompt, green now). Fixture 9b untouched.
-- Case 17: the draft re-asks the party size the form holds ("how many of you would be fishing?"), nothing else wrong → expected send.
+### Known cost (accepted by tj, 2026-10-26)
+The judge may hold a draft that re-asks a fact the form already holds (party size, skill level) — the Instructions entry forbids that, and the judge sometimes files it under STOP group 4 or 5 although the prompt says it is neither. The result is a held draft for the admin, never a wrong send. The remedy belongs to the drafter (FA-1.73: do not re-ask known facts), not to another prompt round. Cases affected in the proof: 9b and 2.
 
 ### All 17 cases ×3 (Haiku; cases 9, 10b, 11 have two variants; case 16 = real instruction text, local only)
 Cell: `S`/`H` = the decision; `[C]` complaint, `[K]` competitor, `[G]` guide_contact flag; `(j:S)` = judge said send, a flag held it.
@@ -166,15 +165,19 @@ Cell: `S`/`H` = the decision; `[C]` complaint, `[K]` competitor, `[G]` guide_con
 
 Files: `.fa-proofs/fa-1.72/proof.out.txt`, `proof.results.json` (round 4); `r3/`, `r2/`, `v1-*` (earlier rounds).
 
+### What changed
+- `JUDGE_PROMPT`, group 5: "Only a STATEMENT of a date, a month, a place or a number of people counts: a question in the draft is never STOP GROUP 5, whatever it asks (asking again for something the angler already gave is a matter of draft quality, not a block)." The `evidence` line: "For group 5, "conflict" must name the invented or contradicting fact."
+- Test for both sentences (RED on the round-3 prompt, green now). Fixture 9b untouched.
+- Case 17: the draft re-asks the party size the form holds ("how many of you would be fishing?"), nothing else wrong → expected send.
+
 - **Safe side:** 0 sends where a hold was expected in 60 decisions; flags 6/7/8 in 3 of 3 each, none anywhere else; 0 judge errors; 0 "blocked without evidence" (every block quoted the draft literally).
 - **17 passes 3 of 3** — a draft that only re-asks the party size is sent; the new sentence works on exactly that case.
 - **9b: hold 3 of 3.** The judge now blocks on the *other* question in the draft, "have you fly-fished before", as "experience already given" (the form's experience is "New Zealand fly fishing") — group 5 in runs 1 and 3, and in run 1 and 2 also group 4 ("we will come back with details" ⇒ "no KB entry for New Zealand; coverage gap not disclosed").
 - **Case 2: hold in runs 1 and 3, send in run 2** (round 3 and round 2: send 3 of 3). Run 1: STOP GROUP 4 — "Instructions entry forbids: 'Do not ask again for party size or dates already given.'" (party size 1 is in the form). Run 3: STOP GROUP 5 on "how many of you would come" — the same question group 5 now excludes, so the new sentence did not hold there. With n = 3 I cannot tell whether the sentence made case 2 worse or this is noise: round 3 had 3 of 3 sends on the same fixture.
 - **What 2 and 9b share:** the draft re-asks a known fact (party size, and in 9b skill level), and the fixture `instructions` (like the real one: "Party size — always in the form. Treat as known. Never ask.") forbids exactly that. The judge reads the Instructions entry as source of truth, so it sometimes files the re-ask under group 4 (broken Instructions prohibition) or group 5, although the prompt says it is neither.
 
-### Needs a decision
-1. **Case 2.** It has the same cause as 9b/17 (a draft that re-asks a known fact; a hold, never a wrong send) but your rule names only 9b and 17. Options: **(a)** extend the accepted known cost to case 2 — "the judge may hold a draft that re-asks a known fact" — and go to ready; **(b)** one more round (e.g. exclude "do not ask again…" style rules from group 4's Instructions clause in the prompt, and a case 2b with a draft that asks only unknown things); **(c)** leave as is, without accepting. **Recommendation: (a).** Zero wrong sends in 60 decisions, every divergence is a hold on a draft that did break a drafter rule, and the fix belongs with the drafter (FA-1.73: do not re-ask known facts). A further prompt round would be tuning a safety gate against my own fixtures. I have not marked the PR ready and will not until you say so.
-2. If (a): I will write the known cost into the task notes and, after green CI (`check` with the build, `db`, `knip`, `secrets`) on the head, mark the PR ready and put the 17×3 table on top, as you described.
+### Decision taken
+Case 2: tj chose (a) — the same cause as 9b/17 (a hold on a draft that re-asks a known fact), accepted as a known cost; no further prompt round. Squash on merge (`fa953b2` alone does not typecheck). Merge by tj.
 
 ### Judge prompt (current, full text, `src/lib/ai/judge-reply.ts`)
 ```
@@ -224,7 +227,7 @@ KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly
 ```
 
 ### Verification
-`pnpm typecheck` clean · `pnpm lint` 0 errors (98 warnings, same class) · `pnpm knip` clean · `pnpm vitest run` 105 files, 1305 tests passed (`.fa-proofs/fa-1.72/full-suite.log`). RED for the new prompt test on the round-3 prompt: 1 failed / 28 passed. CI for the round-4 head is running.
+`pnpm typecheck` clean · `pnpm lint` 0 errors (98 warnings, same class) · `pnpm knip` clean · `pnpm vitest run` 105 files, 1305 tests passed (`.fa-proofs/fa-1.72/full-suite.log`). RED for the new prompt test on the round-3 prompt: 1 failed / 28 passed. CI on the final head: see the checks below the description (check with the build, db, knip, secrets).
 
 ---
 
