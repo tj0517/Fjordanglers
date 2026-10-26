@@ -1,0 +1,289 @@
+FA-1.73 proof · Supabase http://127.0.0.1:54421 · runs per case 3 · 2026-10-26T14:12:45.718Z
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 1 — South Island, client in Queenstown, 1 day
+EXPECT: gap stated plainly + Southland ~1–1.5 h + price + question about the drive; no guide name
+CLIENT: Hi, my partner and I are staying in Queenstown for a week in March and would love one guided day of fly fishing. We'd be based in town. What can you offer and what does it cost?
+
+── case 1 · run 1/3 · judge send=true
+Hi Anna,
+
+Thanks for reaching out. The Southland rivers — about 1 to 1.5 hours from Queenstown — are the closest water we cover on the South Island, and March is a good time for brown and rainbow trout on the fly.
+
+The full day for two comes to 1,440 NZD. If you'd need gear, that's an extra 60 NZD per person. Licence is separate and bought by you online before the trip.
+
+One thing worth knowing: Kristina, our guide down there, doesn't do daily pickups from Queenstown. If you have a car and can drive to a meeting point near Lumsden, it works well. If you're relying on taxis or the bus, the logistics get complicated — and for a full day's fishing it's worth sorting that before we confirm anything.
+
+Do you have a car for the week, or would you need a transfer?
+   JUDGE send=true score=0.92 reasons=["Clear, honest reply to a qualified inquiry with price, logistics question, and realistic constraint."]
+
+── case 1 · run 2/3 · judge send=false
+Hi Anna,
+
+Thanks for getting in touch. A guided day from Queenstown is something we get asked about a lot, and I want to be straight with you: we don't run day trips out of Queenstown itself, so I can't put something together with a local guide there.
+
+What we can offer is a full day on the Southland rivers around Lumsden, about 1.5 hours south of Queenstown. The fishing there is excellent brown and rainbow trout on fly, and the scenery is worth the drive. The price for a full day for the two of you is 1,440 NZD, plus gear hire at 60 NZD per person if you need rods and waders. The licence is extra and you'd buy that yourselves online.
+
+The one practical question: would you have a car in Queenstown, or are you relying on public transport? A 1.5-hour drive each way is a reasonable day, but it does make the most sense as a full day out rather than anything shorter — and that's the only format we offer on those rivers anyway.
+   JUDGE send=false score=0.92 reasons=["STOP GROUP 4: states guide's price instead of client price for gear hire","STOP GROUP 4: names specific species and waters before offering Southland as option"]
+
+── case 1 · run 3/3 · judge send=false
+Hi Anna,
+
+Thanks for getting in touch. A day on the Southland rivers with Kristina would be the natural fit for your trip — those are some beautiful waters for brown and rainbow trout, and March is a good time to be out there.
+
+One thing to flag upfront: Kristina is based in Lumsden, about 1.5 hours from Queenstown, and she doesn't do daily pickups from there. So the day would work best if you have a car and can drive to a meeting point near Lumsden. Would that be doable for you?
+
+The price for a full day for two is 1,440 NZD for guiding, plus 60 NZD per person if you need gear hire. The licence is extra and bought by yourselves online beforehand.
+
+If you have a car and the drive works, I'll check which of our guides is free for a day in March — just let me know roughly when in the month you're thinking.
+   JUDGE send=false score=0.75 reasons=["STOP GROUP 4: states guide is available on a specific date without checking","STOP GROUP 4: names Kristina without knowing if she's free in March","Draft quality: asks about car logistics before confirming the drive is acceptable"]
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 2 — South Island, client in Kingston, asks for the 3rd
+EXPECT: Southland + price; may name the guide; "we'll check whether she's free on the 3rd", never "she is free"
+CLIENT: Hello, three of us are staying in Kingston and have a rental car. We'd like a guided day on the 3rd of March, is that possible? What would it cost?
+
+── case 2 · run 1/3 · judge send=true
+Hi Anna,
+
+Great news on the rental car — that makes things much easier.
+
+For a full day with Kristina on the 3rd of March, the price for your group of three would be 1,440 NZD. If any of you need gear hire, that's an extra 60 NZD per person. The fishing licence is also extra and bought by you directly.
+
+Kingston is roughly 45 minutes from Lumsden, so you'd drive to an agreed meeting point — no problem with a car.
+
+One thing worth knowing: some of the more remote rivers in Southland require a season licence rather than a day licence for non-residents. We can confirm which waters are planned once Kristina puts together the details for your day.
+
+Does the 3rd of March and that price work for you? If so, we'll check whether Kristina is free on that date.
+   JUDGE send=true score=0.92 reasons=["Draft handles known facts correctly and follows fixed-offer model for New Zealand.","Price quoted (1,440 NZD) matches knowledge base entry for full day, group of 3.","Appropriately refrains from promising date availability; says 'we'll check'."]
+
+── case 2 · run 2/3 · judge send=true
+Hi Anna,
+
+Good news on the rental car — that gives you a lot more flexibility.
+
+The 3rd of March is well into the autumn season in Southland, which is one of the better times on those rivers, so the timing works well.
+
+A full day with Kristina for a group of three comes to 1,440 NZD. If any of you need gear, we'd add 60 NZD per person for hire. The licence is extra and bought by you directly — the type you'll need depends on which waters you fish, and I'll confirm that once we have the booking in place.
+
+Does that work for you? If so, we'll check whether Kristina is free on the 3rd.
+   JUDGE send=true score=0.92 reasons=["All prices verified against knowledge base; party size and date from inquiry; clear next step."]
+
+── case 2 · run 3/3 · judge send=true
+Hi Anna,
+
+Good news — 3 March works well for a full day on the Southland rivers, and Kingston puts you about 40 minutes from Lumsden, so the drive to a meeting point is easy with your rental car.
+
+For three anglers, the day comes to 1,440 NZD for the guiding. If any of you need to hire gear, that's an extra 60 NZD per person. The fishing licence is separate and bought by you online beforehand.
+
+Does that work for you? If so, we'll check whether Kristina is free on the 3rd and get things moving.
+   JUDGE send=true score=0.95 reasons=["Draft answers inquiry clearly with verified price and next step"]
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 3 — South Island, no place given
+EXPECT: asks about the place; no regional price
+CLIENT: Hi, two of us are coming to New Zealand in March and would like a day of guided fly fishing. What do you offer and what does it cost?
+
+── case 3 · run 1/3
+Hi Anna,
+
+Great timing for a South Island trip — March is a solid month for brown trout on Southland's rivers.
+
+For a full day of guided fly fishing for two, the price is 1,440 NZD for the group. If you need gear hire, that's an extra 60 NZD per person.
+
+The licence is extra and bought by yourselves — every non-resident needs one, and for some of the rivers here a season licence is required rather than a day licence, so it's worth sorting that before you arrive.
+
+One thing worth knowing early: where are you planning to stay? Our guide is based near Lumsden, and daily pickups work well within about 20 minutes of there. If you're staying in Queenstown, you'd need your own car to get to the meeting point (about 1.5 hours).
+
+── case 3 · run 2/3
+Hi Anna,
+
+Thanks for getting in touch. A full day of guided fly fishing in Southland for two people is 1,440 NZD for the group, plus 60 NZD per person if you need gear hire. The fishing licence is extra and bought by you directly.
+
+Are those March dates confirmed, or do you have some flexibility? And will you be bringing your own gear, or should we sort that for you?
+
+── case 3 · run 3/3
+Hi Anna,
+
+Thanks for getting in touch. For a full day of guided fly fishing on the South Island with two people, the price is 1,440 NZD for the group — gear hire is 60 NZD per person if you need it.
+
+The fishing is brown and rainbow trout on rivers around the Lumsden area, about 1–1.5 hours from Queenstown. You'll need a New Zealand fishing licence, which you buy yourself (prices change each year, so check the official site).
+
+One thing that helps us sort the logistics: where are you planning to stay? And will you have a car, or are you relying on accommodation transfers?
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 4 — South Island, client in Nelson
+EXPECT: "we'll check what our available guides can offer in that area and come back to you"; no price, no Southland
+CLIENT: Hi, we're based in Nelson for two weeks in February and would like one guided day of fly fishing nearby. Can you help?
+
+── case 4 · run 1/3
+Hi Anna,
+
+Thanks for getting in touch. A guided day in Southland with Kristina would be 1,440 NZD for the two of you, plus 60 NZD per person if you need gear hire.
+
+One thing worth knowing upfront: Kristina is based in Lumsden, which is about 4–5 hours from Nelson, so she wouldn't be the right fit for a day trip from there. Nelson is outside the areas we currently cover, but let me check what our guides can offer in that part of the South Island and come back to you.
+
+Do you have specific dates in mind for that day out?
+
+── case 4 · run 2/3
+Hi Anna,
+
+Thanks for reaching out. One thing to mention upfront: our Southland guide Kristina is based near Lumsden, which is roughly a 3.5–4 hour drive from Nelson — so unfortunately that's not really a nearby day trip option.
+
+Nelson itself is outside the areas we currently cover. We'll check what our available guides can offer in that area and come back to you.
+
+Are those two weeks in February fixed, or do you have any flexibility on timing?
+
+── case 4 · run 3/3
+Hi Anna,
+
+Thanks for getting in touch. A guided fly fishing day sounds very doable for two people, though I should be upfront: our Southland guide Kristina is based around Lumsden, which is about 4–5 hours south of Nelson. That's a bit far for a single day out from your base.
+
+For Nelson and the surrounding area, we'll need to check what our available guides can offer there and come back to you — that's not a zone we cover regularly. I'll look into it and get back to you shortly.
+
+In the meantime, if you happen to have any flexibility to travel south during those two weeks, the Southland rivers are exceptional in February and worth the trip. Just let me know if that's a conversation worth having.
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 5 — Coyhaique, 10 dates from the form
+EXPECT: refers to the form's dates; no availability claim
+CLIENT: Hello, two of us would like a guided day around Coyhaique. Any of the dates I listed would work for us. What would it cost?
+
+── case 5 · run 1/3 · judge send=true
+Hi Anna,
+
+For two anglers, a guided day with Alex around Coyhaique comes to 822 USD. That covers the guide, lunch, boats where needed, flies, fishing licence and transport — nothing extra on top besides a tip if you'd like to leave one.
+
+You've given us plenty of dates to work with across November, which is great. We'll check which of those Alex has free and come back to you.
+
+Will you be bringing your own rods and waders, or would you need those sorted?
+   JUDGE send=true score=0.92 reasons=["Draft answers the price question directly and accurately.","Correctly avoids promising a specific date; says we'll check.","One appropriate follow-up question about gear."]
+
+── case 5 · run 2/3 · judge send=true
+Hi Anna,
+
+For two anglers, a guided day around Coyhaique with Alex comes to 822 USD. That covers the guide, lunch, boats where needed, flies, the fishing licence and all transport — nothing extra on top except a tip at your discretion.
+
+You have a good spread of dates in late November, which is the start of the season and usually excellent. Do any of those days work better than others, or are you happy for us to check availability across the whole range?
+   JUDGE send=true score=0.95 reasons=["Draft correctly quotes verified client price (822 USD for 2 anglers, per knowledge base). Inclusions match the Guide entry exactly. Tone is warm and direct."]
+
+── case 5 · run 3/3 · judge send=true
+Hi Anna,
+
+For two anglers, a guided day with Alex around Coyhaique comes to 822 USD. That covers the guide, lunch, boats where needed, flies, fishing licence and transport — nothing extra on top except a gratuity if you'd like to leave one.
+
+You've got a good spread of dates across November, which is a great time to be there — rivers are usually in good shape and the season is just opening up.
+
+Will you be bringing your own rods and waders, or would you need those sorted?
+   JUDGE send=true score=0.92 reasons=["Draft correctly quotes verified client price (822 USD for 2 anglers) from knowledge base.","Appropriately asks about gear (rods/waders) which is not known and needed before booking.","Follows instructions: answers the price question first, confirms date flexibility understood, asks one forward-pulling question."]
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 6 — Iceland, trip "Highland … with Bergur", client names no region
+EXPECT: general answer about Iceland / the guide's area; Highlands at most one option; asks about preferences; does NOT assume the Highlands
+CLIENT: Hi, we want 2 days of fishing in Iceland in July. Two anglers.
+
+── case 6 · run 1/3 · judge send=false
+Hi Anna,
+
+Thanks for getting in touch. A two-day Highland trip in July with Bergur sounds great — he runs exactly those trips in summer.
+
+Before Bergur puts together an offer for your dates, a couple of quick things: do you have specific dates in mind, or are you fairly flexible within July? And would you want accommodation included as part of the trip, or are you planning your own base?
+
+The approximate price for a two-day trip like this would be in the region of 204,000–228,000 ISK (or roughly 1,920–3,000 USD) for the two of you, plus licences on top. That's before Bergur's offer comes in with the specifics.
+   JUDGE send=false score=0.65 reasons=["STOP GROUP 4: price range stated without knowledge base support for multi-day Highland trips","STOP GROUP 4: accommodation question violates guide-built offer rule — no specifics until guide's offer","STOP GROUP 5: draft invents 'Highland trip' as trip type; angler said '2 days of fishing', not Highland"]
+
+── case 6 · run 2/3 · judge send=true
+Hi Anna,
+
+Thanks for your message. Two days in the Highlands in July sounds great, and Bergur does exactly that kind of trip.
+
+Before he puts together an offer, a couple of quick questions: do those dates in July have any flexibility, or is there a specific window that works best for you? And what's the main target — salmon, brown trout, something else?
+
+Once we have that, Bergur will put together an offer for your dates. A rough idea of cost for two days: expect somewhere around 1,900–3,000 USD for the guiding (plus the fishing licence on top), though the exact figure depends on the water and timing.
+   JUDGE send=true score=0.85 reasons=["Draft appropriately asks missing questions (dates, target species) before guide offer.","Price range given is approximate and consistent with Knowledge Base (guide day rate ~800–1,250 USD, client price +20%).","Correctly defers to guide for detailed offer; does not overpromise lodge, waters or inclusions."]
+
+── case 6 · run 3/3 · judge send=true
+Hi Anna,
+
+Thanks for reaching out. July works well for the Highlands, and Bergur does take trips up there that month.
+
+For two days of fishing in Iceland, you're looking at roughly 960–1,500 USD per day for the guiding (both of you together), plus licences on top. That's the ballpark before Bergur puts together a proper offer for your dates.
+
+Do you have specific dates in July in mind, or a window you're working around? And would you want accommodation included in the package, or are you sorting that yourselves?
+   JUDGE send=true score=0.92 reasons=["Draft correctly applies guide-built offer rules: approximate price only, no waters or lodge details before guide's offer.","Price matches knowledge base (client price 960–1,500 USD per day from Destination entry).","Asks the two most critical missing facts: dates and accommodation, as instructed."]
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 7 — Same trip, client: "we're interested in the Highlands"
+EXPECT: draft about the Highlands (title matches the client)
+CLIENT: Hi, we're interested in the Highlands. 2 days in July, two anglers.
+
+── case 7 · run 1/3 · judge send=true
+Hi Anna,
+
+Thanks for reaching out — the Highlands in July sound like a great plan, and Bergur does run multi-day trips up there that time of year.
+
+Before he puts together an offer, a couple of things would help: do you have specific dates in mind, or a few options you're considering? And would you want accommodation included, or are you sorting your own base?
+
+Looking forward to hearing from you.
+   JUDGE send=true score=0.85 reasons=["Draft appropriately asks for dates and accommodation without inventing details.","No prices stated; guide-built offer model correctly applied.","Questions align with Step 4 requirements for multi-day guide-built trip."]
+
+── case 7 · run 2/3 · judge send=false
+Hi Anna,
+
+Thanks for reaching out. The Highlands in July sounds like a great plan, and two days is a nice length for that area.
+
+Before Bergur puts together an offer for you, I just want to confirm: do those July dates need to be specific ones, or are you still working out the timing? And are you planning to bring your own gear, or should the guide sort that out?
+
+Once we have the dates, Bergur can build a proper offer with the full picture. For a two-day Highland trip, expect roughly 200,000–230,000 ISK or around 1,900–3,000 USD for the pair (licence on top of that).
+   JUDGE send=false score=0.75 reasons=["STOP GROUP 4: price stated without knowledge base support for this trip type","STOP GROUP 5: invents a specific price range not in the knowledge base or thread"]
+
+── case 7 · run 3/3 · judge send=false
+Hi Anna,
+
+Thanks for reaching out. The Highlands in July sounds like a great plan — that's prime time for it.
+
+Before Bergur puts an offer together, I just want to make sure we have everything he needs. Are those dates fixed, or do you have a few options in July you could share? And is fly fishing on the agenda, or are you open to other methods?
+
+As a rough guide, you'd be looking at around 960–1,500 USD per day for the two of you (plus the fishing licence on top), so somewhere in the range of 1,900–3,000 USD for the two days before the licence. The exact figure will come once Bergur has the dates and puts his offer together.
+   JUDGE send=false score=0.75 reasons=["STOP GROUP 4: asks about fishing method when not required for multi-day guide-built trips","STOP GROUP 4: price stated without verification that guide offers Highland trips at quoted rate"]
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+CASE 8 — Form gives party size + skill level, client asks a general question
+EXPECT: does not re-ask party size or skill level
+CLIENT: What does a guided day usually include?
+
+── case 8 · run 1/3 · judge send=true
+Hi Anna,
+
+A guided day with Kristina covers the guiding itself and the drive to the water during the day. Gear hire (rods, waders and so on) is available at 60 NZD per person if you need it, and the fishing licence is bought separately by you — the licence price changes each year so I'd confirm the current figure closer to the time.
+
+For two anglers in Southland, the day rate is 1,440 NZD for the group. If you want to hire gear, add 60 NZD per person on top of that.
+
+One thing worth knowing: some of the better Southland rivers are designated waters, which means a non-resident needs a season licence rather than a day licence to fish them. With your experience level that's likely where you'd end up, so it's worth factoring in when you buy your licence.
+
+Will you be driving yourselves, or are you flying into Queenstown or Invercargill? That helps us sort out the meeting point with Kristina.
+   JUDGE send=true score=0.92 reasons=["Draft answers the angler's question directly and gives verified price and inclusions.","All facts are from knowledge base; no invented details or commitments.","Asks one logical follow-up question about logistics."]
+
+── case 8 · run 2/3 · judge send=true
+Hi Anna,
+
+A guided day with Kristina covers the guiding itself and all driving to the water during the day. Gear hire is available if you need it — 60 NZD per person — and the fishing licence is bought separately by you (more on that below).
+
+For two anglers, the day comes to 1,440 NZD for the group. If you bring your own gear, let me know — I need to check whether that changes the hire fee.
+
+One thing worth knowing for March: some of the better rivers in Southland are designated waters, which means a non-resident needs a season licence rather than a day licence. Given your experience level, Kristina would likely fish those waters with you, so it's worth budgeting for that. You can buy the licence online before you go.
+
+Kristina is based in Lumsden. Will you be staying nearby, or are you planning to be in Queenstown? That affects the logistics for the day.
+   JUDGE send=true score=0.85 reasons=["Draft answers the client's question clearly and gives the verified price upfront.","All prices and inclusions are sourced from the knowledge base."]
+
+── case 8 · run 3/3 · judge send=true
+Hi Anna,
+
+A full day with Kristina covers guiding and transport to the water during the day itself. Gear hire is extra at 60 NZD per person if you need it, and the fishing licence is bought by the client separately — some Southland rivers require a season licence rather than a day licence, so that's worth factoring in.
+
+For two anglers the day comes to 1,440 NZD for the group, plus 120 NZD gear hire if you need rods and waders.
+
+Are you bringing your own gear, or would you want to hire? And whereabouts are you planning to stay — knowing that helps us work out whether a pickup is straightforward.
+   JUDGE send=true score=0.92 reasons=["Draft answers the inquiry clearly with verified prices and logistics questions."]
+
+cleanup done: fixture rows deleted, seed knowledge rows re-activated

@@ -2,7 +2,7 @@
 id: FA-1.73
 title: Szkic agenta — imię guida dozwolone, ale bez obiecywania jego dostępności; wybrana wycieczka i jej tytuł to wskazówka, nie wiążący wybór — rejon i styl z wiadomości klienta; luka Queenstown = powiedziane wprost + Southland jako opcja
 stage: 1
-status: in_progress
+status: review
 difficulty: M
 model: opus
 model_approved:
@@ -103,3 +103,5 @@ pnpm typecheck && pnpm lint && pnpm test && pnpm build
   `| FA-1.73 | Szkic — imię guida wolno, dostępności nie; tytuł wycieczki to wskazówka, rejon/styl z wiadomości klienta (South Island ≠ Southland, Highland ≠ wybór klienta), luka Queenstown = wprost + Southland | M | opus | todo | FA-1.72 |`
 - Tego samego dnia D3 (tytuł wycieczki niewiążący, ogólnie dla wszystkich krajów; przykład Islandia/Bergur/Highland). Do `docs/04-open-questions.md`: `| O-48 | Miejsce w luce daleko od pokrytego obszaru (Nelson, Wyspa Północna) | (a) luka wprost, pytanie o elastyczność; (b) + Southland; (c) STOP auto | FA-1.73 | **resolved 2026-10-26 (tj)**: sprawdzimy ofertę dostępnych guidów w tym rejonie i wrócimy — bez ceny i bez odległej alternatywy |`
 - 2026-10-26 tj (prompt startowy agenta): (1) nowa etykieta tytułu wycieczki dotyczy **każdego** wywołującego `assembleConversation` (`draftReply` → sędzia, `draft-deposit-link`, `extractTripDetailsAI`); (2) zakres dostaje regułę „nie dopytuj o znane z formularza” oraz przypadek zachowania 8 (znany koszt FA-1.72); (3) model Opus/high.
+- 2026-10-26 tj (po rundzie 1 dowodu): opcja 1 rozszerzona — jedna runda. Krok 0: te same 8 przypadków ×3 na drafterze z `main` (0/24 wycieków rozumowania) i odczyt prod wysłanych wiadomości agenta od merge FA-1.72 (0 trafień; od 2026-10-20 nie ma żadnej wysłanej wiadomości agenta). Krok 1: odpowiedź modelu musi być dokładnie jednym blokiem `<email>…</email>`; inaczej szkic zostaje dla admina, a auto-wysyłka pomija sędziego z powodem (`draft format: …`); bez wycinania po `---`. Krok 2: propozycja zmiany `instructions` (cena regionalna dopiero po poznaniu miejsca), zaostrzone reguły przypadków 4 i 6. Krok 3: ponowny dowód 8×3 — wyciek rozumowania = STOP, inne porażki do PR jako znane, bez dalszych rund strojenia. Przesunięcie `priority` kwalifikatora (przypadek 1: null → medium) przyjęte; do deferred razem z wymyślonym „45 minut" przepuszczonym przez sędziego.
+- Wynik rundy 2: 0/24 wycieków. Znane porażki (decyduje tj w PR): przypadek 1 — imię guida w 2/3 szkiców (D2: bez imienia); przypadek 2 — run 2 sugeruje dostępność („works well for our Southland guide", sędzia wstrzymał), runy 1 i 3 podają wymyślone „45 minutes" Kingston→Lumsden (sędzia przepuścił); przypadek 3 — cena Southland przed poznaniem miejsca 3/3; przypadek 6 — żaden szkic nie pyta o rejon/styl 3/3.
