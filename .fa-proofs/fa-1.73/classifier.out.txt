@@ -1,0 +1,24 @@
+case 1 run 1 | OLD country: New Zealand, type: day_trip, priority: null | NEW country: New Zealand, type: day_trip, priority: medium | same country/type (priority differs or more)
+case 1 run 2 | OLD country: New Zealand, type: day_trip, priority: null | NEW country: New Zealand, type: day_trip, priority: medium | same country/type (priority differs or more)
+case 1 run 3 | OLD country: New Zealand, type: day_trip, priority: null | NEW country: New Zealand, type: day_trip, priority: medium | same country/type (priority differs or more)
+case 2 run 1 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 2 run 2 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 2 run 3 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 3 run 1 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 3 run 2 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 3 run 3 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 4 run 1 | OLD country: New Zealand, type: day_trip, priority: null | NEW country: New Zealand, type: day_trip, priority: null | same country/type
+case 4 run 2 | OLD country: New Zealand, type: day_trip, priority: null | NEW country: New Zealand, type: day_trip, priority: null | same country/type
+case 4 run 3 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: null | same country/type (priority differs or more)
+case 5 run 1 | OLD country: Chile, type: day_trip, priority: medium | NEW country: Chile, type: day_trip, priority: medium | same country/type
+case 5 run 2 | OLD country: Chile, type: day_trip, priority: medium | NEW country: Chile, type: day_trip, priority: medium | same country/type
+case 5 run 3 | OLD country: Chile, type: day_trip, priority: medium | NEW country: Chile, type: day_trip, priority: medium | same country/type
+case 6 run 1 | OLD country: Iceland, type: multi_day, priority: null | NEW country: Iceland, type: multi_day, priority: null | same country/type
+case 6 run 2 | OLD country: Iceland, type: multi_day, priority: null | NEW country: Iceland, type: multi_day, priority: null | same country/type
+case 6 run 3 | OLD country: Iceland, type: multi_day, priority: null | NEW country: Iceland, type: multi_day, priority: null | same country/type
+case 7 run 1 | OLD country: Iceland, type: multi_day, priority: null | NEW country: Iceland, type: multi_day, priority: null | same country/type
+case 7 run 2 | OLD country: Iceland, type: multi_day, priority: null | NEW country: Iceland, type: multi_day, priority: null | same country/type
+case 7 run 3 | OLD country: Iceland, type: multi_day, priority: null | NEW country: Iceland, type: multi_day, priority: null | same country/type
+case 8 run 1 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 8 run 2 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type
+case 8 run 3 | OLD country: New Zealand, type: day_trip, priority: medium | NEW country: New Zealand, type: day_trip, priority: medium | same country/type

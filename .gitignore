@@ -69,3 +69,6 @@ backups/
 
 # FA-1.73: prod knowledge text (tone, destinations, guides) used by the local proof — never committed
 .fa-proofs/fa-1.73/knowledge-prod/
+
+# FA-1.73: copy of main's extract-trip / inquiry-agent, recreated by run-classifier.sh
+.fa-proofs/fa-1.73/old/
