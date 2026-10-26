@@ -3,9 +3,12 @@
  *
  * autoSendReply({ inquiryId, counterpart, channel })
  *   Pre-draft gates → draftReply (always saves draft) → judge → daily cap → send or hold.
- *   The agent sends by default (FA-1.72): `send` from the judge is the whole decision. The score is
- *   information (result and event), never a gate, and a missing destination entry does not block —
- *   the judge stops a price or condition the knowledge base does not back (STOP group 4).
+ *   The agent sends by default (FA-1.72): the judge's `send` decides, except that a raised client
+ *   flag (complaint / competitor / guide contact — what the ANGLER wrote) always holds, and a
+ *   `send=false` without a quote that is literally in the draft is recorded as "judge blocked
+ *   without evidence" (still a hold). The score is information (result and event), never a gate,
+ *   and a missing destination entry does not block — the judge stops a price or condition the
+ *   knowledge base does not back (STOP group 4). See decideFromVerdict in auto-send-guards.ts.
  *   Emits `agent.auto_send_decided` for EVERY invocation that gets past the hard errors below:
  *     - pre-draft gate failures: sent=false, score=null, draft_message_id=null + reason
  *       (includes FA-1.40/1.46: no thread, no form message and no trip — nothing to answer;
@@ -38,6 +41,7 @@ import {
   HUMAN_TAKEOVER_REASON,
   TAKEOVER_UNCHECKED_REASON,
   dailyAutoSendCap,
+  decideFromVerdict,
   emitAutoSendDecision as emitDecision,
 } from '@/lib/ai/auto-send-guards'
 
@@ -154,8 +158,15 @@ export async function autoSendReply(params: {
     return { sent: false, score: null, reasons: [reason], draftMessageId: draft.draftId }
   }
 
-  // FA-1.72: the judge's `send` is the decision; the score is only recorded.
-  const shouldSend = judged.send
+  // FA-1.72: any client flag holds; otherwise the judge's `send` decides (a block needs evidence
+  // that is literally in the draft). The score is only recorded.
+  const decision = decideFromVerdict(judged, draft.text)
+  if (decision.blockedWithoutEvidence) {
+    console.error('[autoSendReply] judge blocked without evidence', {
+      inquiryId, judgeReasons: judged.reasons, evidence: judged.evidence,
+    })
+  }
+  const shouldSend = decision.send
 
   // Daily cap (FA-1.42): checked last, so only a draft that would really have gone out is
   // held for it, and the judge's score stays on the event. The draft is already saved.
@@ -179,12 +190,12 @@ export async function autoSendReply(params: {
     })
   }
 
-  await emitDecision(supabase, inquiryId, draft.draftId, shouldSend, judged.score, judged.reasons)
+  await emitDecision(supabase, inquiryId, draft.draftId, shouldSend, judged.score, decision.reasons)
 
   return {
     sent:           shouldSend,
     score:          judged.score,
-    reasons:        judged.reasons,
+    reasons:        decision.reasons,
     draftMessageId: draft.draftId,
   }
 }

@@ -57,11 +57,18 @@ vi.mock('@/lib/env', () => ({ env: mockEnv }))
 
 import { createServiceClient } from '@/lib/supabase/server'
 import { draftReply, DraftReplyError } from '@/lib/ai/draft-reply'
-import { judgeReply } from '@/lib/ai/judge-reply'
+import { judgeReply, type JudgeResult } from '@/lib/ai/judge-reply'
 import type { KnowledgeEntry } from '@/lib/ai/knowledge'
 import { sendMessage } from '@/lib/messages/send'
 import { assembleConversation } from '@/lib/ai/extract-trip'
 import { autoSendReply, hasAgentAutoReply } from './auto-send'
+
+const NO_FLAGS = { complaint: false, competitor: false, guide_contact: false }
+
+/** A judge verdict: send, no client flags, no evidence — override what the test is about. */
+function verdict(over: Partial<JudgeResult> = {}): JudgeResult {
+  return { client_flags: NO_FLAGS, score: 0.93, send: true, reasons: ['ok'], evidence: [], ...over }
+}
 
 /** What draftReply returns as the text it wrote from — the judge must receive exactly this (FA-1.72). */
 const DRAFT_CONVERSATION = '=== ORIGINAL INQUIRY ===\nAngler: Anna Angler\nParty size: 2'
@@ -305,7 +312,7 @@ describe('autoSendReply — no destination entry does not block (FA-1.72)', () =
 
   it('sends when the judge says send=true — RED on main: the destination gate holds it before the judge', async () => {
     setupMockDb({ knowledgeRows: NO_DESTINATION })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.95, send: true, reasons: ['looks good'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.95, send: true, reasons: ['looks good'] }))
 
     const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
@@ -317,14 +324,17 @@ describe('autoSendReply — no destination entry does not block (FA-1.72)', () =
 
   it('still holds when the judge says send=false (a price with no knowledge behind it is STOP group 4) — reasons in the event', async () => {
     setupMockDb({ knowledgeRows: NO_DESTINATION })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.3, send: false, reasons: ['GROUP 4: quotes a price, the knowledge base has none'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      score: 0.3, send: false, reasons: ['STOP GROUP 4: quotes a price, the knowledge base has none'],
+      evidence: [{ group: 4, draft_quote: 'Hello!', conflict: 'no destination entry, so no price is verified' }],
+    }))
 
     const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
     expect(result!.sent).toBe(false)
     expect(result!.draftMessageId).toBe('draft-1')
-    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual(['GROUP 4: quotes a price, the knowledge base has none'])
+    expect((emittedEvents[0].payload as Record<string, unknown>).reasons).toEqual(['STOP GROUP 4: quotes a price, the knowledge base has none'])
   })
 })
 
@@ -338,7 +348,7 @@ describe('autoSendReply — judge gate failures', () => {
 
   it('SENDS when the judge says send=true at a low score (0.55) — the score is information, not a gate — RED on main: held below 0.9', async () => {
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.55, send: true, reasons: ['minor tone slip'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.55, send: true, reasons: ['minor tone slip'] }))
 
     const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
@@ -351,8 +361,11 @@ describe('autoSendReply — judge gate failures', () => {
     expect(payload.score).toBe(0.55)
   })
 
-  it('does NOT send when judge send=false (complaint) even if score=0.97', async () => {
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.97, send: false, reasons: ['angler expressed a complaint'] })
+  it('does NOT send when judge send=false with evidence, even if score=0.97 — the judge\'s reasons stay in the event', async () => {
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      score: 0.97, send: false, reasons: ['STOP GROUP 4: states a date'],
+      evidence: [{ group: 4, draft_quote: 'Hello angler!', conflict: 'the Instructions entry forbids promising a date' }],
+    }))
 
     const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
@@ -362,7 +375,7 @@ describe('autoSendReply — judge gate failures', () => {
 
     const payload = emittedEvents[0].payload as Record<string, unknown>
     expect(payload.sent).toBe(false)
-    expect((payload.reasons as string[])[0]).toMatch(/complaint/)
+    expect(payload.reasons).toEqual(['STOP GROUP 4: states a date'])
   })
 
   it('does NOT send and emits sent=false when judgeReply throws (API error)', async () => {
@@ -433,11 +446,12 @@ describe('autoSendReply — prompt injection', () => {
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
     vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-inject', text: 'Here is your guide...', subject: null, usedIds: [], usedEntries: [], conversation: injectionConversation })
-    vi.mocked(judgeReply).mockResolvedValue({
-      score:   0,
-      send:    false,
-      reasons: ['angler message requests guide contact information'],
-    })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      client_flags: { ...NO_FLAGS, guide_contact: true },
+      score:        0,
+      send:         true,
+      reasons:      ['angler message requests guide contact information'],
+    }))
 
     const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
@@ -465,7 +479,7 @@ describe('autoSendReply — happy path', () => {
       usedIds: ['k-inst', 'k-dest'],
       usedEntries: [], conversation: DRAFT_CONVERSATION,
     })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] }))
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
   })
 
@@ -494,6 +508,161 @@ describe('autoSendReply — happy path', () => {
   })
 })
 
+// ─── FA-1.72 round 3 — client flags and evidence decide in code ───────────────
+
+describe('autoSendReply — client flags and evidence (FA-1.72 round 3)', () => {
+  const DRAFT_TEXT = 'Hi Anna,\n\nA guided day is priced per day.\n\nWarm regards'
+
+  beforeEach(() => {
+    setupMockDb()
+    vi.mocked(sendMessage).mockReset()
+    vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-1', threadKey: null })
+    vi.mocked(draftReply).mockReset()
+    vi.mocked(judgeReply).mockReset()
+    vi.mocked(draftReply).mockResolvedValue({ draftId: 'd-flag', text: DRAFT_TEXT, subject: null, usedIds: [], usedEntries: [], conversation: DRAFT_CONVERSATION })
+  })
+
+  it.each(['complaint', 'competitor', 'guide_contact'] as const)(
+    'flag %s=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent',
+    async (flag) => {
+      vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.99, send: true, client_flags: { ...NO_FLAGS, [flag]: true } }))
+
+      const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+      expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+      expect(result!.sent).toBe(false)
+      expect(result!.draftMessageId).toBe('d-flag')
+      expect(result!.score).toBe(0.99)
+      expect(result!.reasons[0]).toBe(`client flag: ${flag}`)
+
+      expect(emittedEvents).toHaveLength(1)
+      const payload = emittedEvents[0].payload as Record<string, unknown>
+      expect(payload.sent).toBe(false)
+      expect((payload.reasons as string[])[0]).toBe(`client flag: ${flag}`)
+    },
+  )
+
+  it('every raised flag is named; a flag needs no evidence', async () => {
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ send: false, client_flags: { complaint: true, competitor: true, guide_contact: false }, reasons: ['angler is unhappy'] }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.sent).toBe(false)
+    expect(result!.reasons.slice(0, 2)).toEqual(['client flag: complaint', 'client flag: competitor'])
+    expect(result!.reasons).not.toContain('judge blocked without evidence')
+  })
+
+  it('a raised flag holds before the daily cap is even read', async () => {
+    setupMockDb({ capCountError: true })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ client_flags: { ...NO_FLAGS, competitor: true } }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.reasons[0]).toBe('client flag: competitor')
+  })
+
+  it('send=false from group 4 with a quote that IS in the draft → held with the judge\'s reasons', async () => {
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      send: false, score: 0.2, reasons: ['STOP GROUP 4: price not in the knowledge base'],
+      evidence: [{ group: 4, draft_quote: 'A guided day is priced per day.', conflict: 'no price in the knowledge base' }],
+    }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    expect(result!.reasons).toEqual(['STOP GROUP 4: price not in the knowledge base'])
+  })
+
+  it('the quote is compared with whitespace collapsed (a JSON string cannot carry the draft\'s line breaks)', async () => {
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      send: false, reasons: ['STOP GROUP 5: x'],
+      evidence: [{ group: 5, draft_quote: 'Hi Anna, A guided day is priced per day.', conflict: 'x' }],
+    }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.reasons).toEqual(['STOP GROUP 5: x'])
+  })
+
+  it('send=false from group 4/5 WITHOUT evidence → "judge blocked without evidence", logged, still not sent — RED before round 3: the judge\'s own reasons', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ send: false, score: 0.6, reasons: ['STOP GROUP 5: asks again'], evidence: [] }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    expect(result!.sent).toBe(false)
+    expect(result!.score).toBe(0.6)
+    expect(result!.reasons[0]).toBe('judge blocked without evidence')
+    expect(result!.reasons).toContain('STOP GROUP 5: asks again')
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('judge blocked without evidence'), expect.anything())
+    errSpy.mockRestore()
+
+    expect((emittedEvents[0].payload as Record<string, unknown>).sent).toBe(false)
+    expect(((emittedEvents[0].payload as Record<string, unknown>).reasons as string[])[0]).toBe('judge blocked without evidence')
+  })
+
+  it('send=false with a quote that is NOT in the draft → "judge blocked without evidence", not sent — RED before round 3', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      send: false, reasons: ['STOP GROUP 4: invented'],
+      evidence: [{ group: 4, draft_quote: 'We confirm 14 February for you.', conflict: 'x' }],
+    }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    errSpy.mockRestore()
+
+    expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    expect(result!.reasons[0]).toBe('judge blocked without evidence')
+  })
+
+  it('one real quote and one invented quote → the block is not trusted', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      send: false, reasons: ['STOP GROUP 4: a', 'STOP GROUP 4: b'],
+      evidence: [
+        { group: 4, draft_quote: 'A guided day is priced per day.', conflict: 'x' },
+        { group: 4, draft_quote: 'Not in the draft at all.', conflict: 'y' },
+      ],
+    }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    errSpy.mockRestore()
+
+    expect(result!.reasons[0]).toBe('judge blocked without evidence')
+  })
+
+  it('an empty quote is no evidence', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ send: false, reasons: ['STOP GROUP 4: x'], evidence: [{ group: 4, draft_quote: '  ', conflict: 'x' }] }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    errSpy.mockRestore()
+
+    expect(result!.reasons[0]).toBe('judge blocked without evidence')
+  })
+
+  it('send=true needs no evidence and is never turned into a hold by its absence', async () => {
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ send: true, evidence: [] }))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+
+    expect(result!.sent).toBe(true)
+    expect(vi.mocked(sendMessage)).toHaveBeenCalledTimes(1)
+  })
+
+  it('judgeReply throwing on a missing/misshapen client_flags is a judge error — nothing sent (fail-safe)', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(judgeReply).mockRejectedValue(new Error('[judgeReply] Malformed judge response: {"score":0.9,"send":true,"reasons":[]}'))
+
+    const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
+    errSpy.mockRestore()
+
+    expect(result!.sent).toBe(false)
+    expect(result!.reasons[0]).toMatch(/^judge error: .*Malformed judge response/)
+  })
+})
+
 // ─── FA-1.47 — the judge sees the knowledge the draft was built from ─────────
 
 describe('autoSendReply — judge receives the draft\'s knowledge (FA-1.47)', () => {
@@ -511,7 +680,7 @@ describe('autoSendReply — judge receives the draft\'s knowledge (FA-1.47)', ()
       draftId: 'draft-k', text: 'NZ draft', subject: null,
       usedIds: ['k-inst', 'k-dest'], usedEntries: DRAFT_ENTRIES, conversation: DRAFT_CONVERSATION,
     })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: false, reasons: ['hold'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: false, reasons: ['hold'] }))
   })
 
   it('passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument', async () => {
@@ -540,7 +709,7 @@ describe('autoSendReply — daily cap (FA-1.42)', () => {
       usedIds: ['k-inst', 'k-dest'],
       usedEntries: [], conversation: DRAFT_CONVERSATION,
     })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] }))
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-msg-id', threadKey: null })
   })
 
@@ -595,7 +764,10 @@ describe('autoSendReply — daily cap (FA-1.42)', () => {
 
   it('keeps the judge reasons when the judge already said no — the cap only holds what would have gone out', async () => {
     setupMockDb({ sentInWindow: 20 })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.5, send: false, reasons: ['promises a price'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({
+      score: 0.5, send: false, reasons: ['promises a price'],
+      evidence: [{ group: 4, draft_quote: 'Looking forward to your NZ trip!', conflict: 'x' }],
+    }))
 
     const result = await autoSendReply({ inquiryId: 'inq-1', counterpart: 'angler', channel: 'email' })
 
@@ -638,7 +810,7 @@ describe('autoSendReply — form inquiry, empty thread (FA-1.40)', () => {
     vi.mocked(judgeReply).mockReset()
     vi.mocked(draftReply).mockReset()
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-form', threadKey: null })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] }))
   })
 
   it('drafts from the form, judges, and sends at 0.93 — RED on main: draftReply throws "thread is empty"', async () => {
@@ -698,7 +870,7 @@ describe('autoSendReply — form inquiry without message (FA-1.46)', () => {
     vi.mocked(judgeReply).mockReset()
     vi.mocked(draftReply).mockReset()
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-form', threadKey: null })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.93, send: true, reasons: ['clear, accurate, safe to send'] }))
   })
 
   it('drafts from the trip data, judges, and sends at 0.93 — RED on main: "no message thread and no form message to answer"', async () => {
@@ -764,7 +936,7 @@ describe('autoSendReply — judge input is the conversation draftReply wrote fro
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
     vi.mocked(sendMessage).mockResolvedValue({ messageId: 'sent-1', threadKey: null })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.9, send: true, reasons: ['ok'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.9, send: true, reasons: ['ok'] }))
   })
 
   it('form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and "Experience requested:" — RED on main: only "[ANGLER] <text>"', async () => {
@@ -831,7 +1003,7 @@ describe('autoSendReply — the agent leads only until a human takes over (FA-1.
     vi.mocked(draftReply).mockReset()
     vi.mocked(judgeReply).mockReset()
     vi.mocked(draftReply).mockResolvedValue({ draftId: 'draft-1', text: 'Hello!', subject: 'Re: trip', usedIds: ['k-inst'], usedEntries: [], conversation: DRAFT_CONVERSATION })
-    vi.mocked(judgeReply).mockResolvedValue({ score: 0.95, send: true, reasons: ['looks good'] })
+    vi.mocked(judgeReply).mockResolvedValue(verdict({ score: 0.95, send: true, reasons: ['looks good'] }))
   })
 
   it('stays silent after a manual reply from the panel (drafted_by admin) — RED on main: the model is called', async () => {

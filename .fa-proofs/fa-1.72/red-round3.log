@@ -1,0 +1,701 @@
+
+ RUN  v4.0.18 /home/tj/Fjordanglers
+
+ ❯ src/lib/ai/judge-reply.test.ts (28 tests | 14 failed) 40ms
+     ✓ puts every knowledge entry (kind label, title, body) in a "KNOWLEDGE BASE (source of truth)" section — RED on main 2ms
+     ✓ places the knowledge before the conversation and the draft, and states the new rule 1ms
+     × states the default (send), client flags, STOP groups 4 and 5 and the list of non-reasons — RED before round 3: groups 1–3 sat in the send rules 10ms
+     × has one source for the angler-side rules: groups 1–3 are flags only, not send rules — RED before round 3 5ms
+     × asks for a literal quote from the draft with every block — RED before round 3 1ms
+     ✓ has no threshold wording and no "be strict" instruction — RED on main 1ms
+     ✓ says a price is verified only when the same amount is literally in a knowledge entry 0ms
+     ✓ carries no concrete price or amount in the prompt text (it can leak into the verdict) 0ms
+     ✓ describes score as information only 0ms
+     ✓ without knowledge the input has no knowledge section and no knowledge rule 0ms
+     ✓ an empty knowledge array gives the same input as no argument 0ms
+     × returns the verdict the model gave, whatever the score, with flags and evidence 5ms
+     × a reply without "evidence" is accepted as an empty list — the caller decides what a block without evidence means 1ms
+     ✓ asks for at least 512 tokens — RED on main: 256 0ms
+     ✓ throws when the JSON stops mid-sentence — the caller must not send on it 1ms
+     ✓ throws on a verdict with a missing field 0ms
+     × throws when client_flags is missing — fail-safe, nothing is sent on it — RED before round 3: accepted 2ms
+     × throws when client_flags is wrongly shaped (not an object) 1ms
+     × throws when client_flags is wrongly shaped (a flag missing) 1ms
+     × throws when client_flags is wrongly shaped (a flag that is a string) 1ms
+     × throws when client_flags is wrongly shaped (a flag that is null) 1ms
+     × throws when evidence is wrongly shaped (not an array) 1ms
+     × throws when evidence is wrongly shaped (an entry without quote) 1ms
+     × throws when evidence is wrongly shaped (a group other than 4/5) 2ms
+     × throws when evidence is wrongly shaped (a non-string conflict) 0ms
+     ✓ throws on two JSON objects — the model contradicted itself; the last one is NOT read (guard test: already strict) 0ms
+     ✓ throws on text outside the JSON, before or after it 0ms
+     ✓ still accepts one object inside a markdown fence (as before) 0ms
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (API error)
+[autoSendReply] judgeReply failed: Error: Anthropic API timeout
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:382:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send and emits sent=false when judgeReply throws (malformed JSON)
+[autoSendReply] judgeReply failed: SyntaxError: Unexpected token < in JSON at position 0
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:402:45
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — judge gate failures > does NOT send when the judge reply was cut off mid-JSON — "judge error", draft kept (fail-safe, FA-1.72)
+[autoSendReply] judgeReply failed: Error: [judgeReply] Could not parse judge response: {"score": 0.95, "send": true, "reasons": ["The draft quotes
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:414:7
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:26
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1243:20
+    at new Promise (<anonymous>)
+    at runWithTimeout (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1209:10)
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:37
+    at Traces.$ (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/traces.CCmnQaNT.js:142:27)
+    at trace (file:///home/tj/Fjordanglers/node_modules/.pnpm/vitest@4.0.18_@opentelemetry+api@1.9.1_@types+node@20.19.35_jiti@2.7.0_jsdom@29.1.1_lig_bd2bd60572c1c4149c105bd338b5cf0b/node_modules/vitest/dist/chunks/test.B8ej_ZHS.js:239:21)
+    at runTest (file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:1653:12)
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > a raised flag holds before the daily cap is even read
+[autoSendReply] daily cap count failed: Error: connection reset
+    at countAutoSendsSince (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:1428:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at dailyCapHoldReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:219:26)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:163:24)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:559:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — daily cap (FA-1.42) > holds the draft with a reason when the count query fails (D4) — nothing is sent
+[autoSendReply] daily cap count failed: Error: connection reset
+    at countAutoSendsSince (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:1428:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at dailyCapHoldReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:219:26)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:163:24)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:782:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+stderr | src/lib/ai/auto-send.test.ts > autoSendReply — the agent leads only until a human takes over (FA-1.48) > holds with a reason when the takeover check fails — no model call, nothing sent
+[autoSendReply] takeover check failed: Error: connection reset
+    at hasHumanTakenOverThread (/home/tj/Fjordanglers/src/lib/supabase/queries.ts:1343:28)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at humanTakeoverReason (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:204:13)
+    at Module.autoSendReply (/home/tj/Fjordanglers/src/lib/ai/auto-send.ts:114:26)
+    at /home/tj/Fjordanglers/src/lib/ai/auto-send.test.ts:1072:20
+    at file:///home/tj/Fjordanglers/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:915:20
+
+ ❯ src/lib/ai/auto-send.test.ts (52 tests | 10 failed) 64ms
+     ✓ returns AutoSendResult{sent=false} for counterpart=guide and emits agent.auto_send_decided 3ms
+     ✓ returns AutoSendResult{sent=false} for channel=whatsapp and emits agent.auto_send_decided 1ms
+     ✓ returns AutoSendResult{sent=false} for status=waiting_guide and emits agent.auto_send_decided 1ms
+     ✓ sends when the judge says send=true — RED on main: the destination gate holds it before the judge 2ms
+     ✓ still holds when the judge says send=false (a price with no knowledge behind it is STOP group 4) — reasons in the event 1ms
+     ✓ SENDS when the judge says send=true at a low score (0.55) — the score is information, not a gate — RED on main: held below 0.9 0ms
+     ✓ does NOT send when judge send=false with evidence, even if score=0.97 — the judge's reasons stay in the event 0ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (API error) 6ms
+     ✓ does NOT send and emits sent=false when judgeReply throws (malformed JSON) 1ms
+     ✓ does NOT send when the judge reply was cut off mid-JSON — "judge error", draft kept (fail-safe, FA-1.72) 1ms
+     × passes injection text to judgeReply as conversation data, not as instructions 3ms
+     ✓ calls sendMessage with agent actor and emits agent.auto_send_decided sent=true; status stays new 1ms
+     × flag complaint=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 1ms
+     × flag competitor=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 1ms
+     × flag guide_contact=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent 1ms
+     × every raised flag is named; a flag needs no evidence 3ms
+     × a raised flag holds before the daily cap is even read 4ms
+     ✓ send=false from group 4 with a quote that IS in the draft → held with the judge's reasons 0ms
+     ✓ the quote is compared with whitespace collapsed (a JSON string cannot carry the draft's line breaks) 0ms
+     × send=false from group 4/5 WITHOUT evidence → "judge blocked without evidence", logged, still not sent — RED before round 3: the judge's own reasons 1ms
+     × send=false with a quote that is NOT in the draft → "judge blocked without evidence", not sent — RED before round 3 1ms
+     × one real quote and one invented quote → the block is not trusted 1ms
+     × an empty quote is no evidence 1ms
+     ✓ send=true needs no evidence and is never turned into a hold by its absence 0ms
+     ✓ judgeReply throwing on a missing/misshapen client_flags is a judge error — nothing sent (fail-safe) 1ms
+     ✓ passes judgeReply the entries draftReply used — same ids as usedIds, not another set — RED on main: no third argument 1ms
+     ✓ holds the draft when 20 auto-sends already went out in 24 h (default cap) 1ms
+     ✓ still sends with 19 auto-sends in the window (below the default cap of 20) — RED on main: the cap there is 5 0ms
+     ✓ takes the cap from AI_AUTO_SEND_DAILY_CAP: 2 sent with cap 2 holds, 1 sent with cap 2 sends 0ms
+     ✓ keeps the judge reasons when the judge already said no — the cap only holds what would have gone out 0ms
+     ✓ holds the draft with a reason when the count query fails (D4) — nothing is sent 1ms
+     ✓ drafts from the form, judges, and sends at 0.93 — RED on main: draftReply throws "thread is empty" 1ms
+     ✓ no thread and message=null → event with a reason, no draft, no send — RED on main 1ms
+     ✓ no thread and message="   " → event with a reason, no draft, no send — RED on main 0ms
+     ✓ missing active instructions entry (DraftReplyError) still returns null with no event — FA-1.27 behaviour kept 1ms
+     ✓ drafts from the trip data, judges, and sends at 0.93 — RED on main: "no message thread and no form message to answer" 1ms
+     ✓ also runs for an experience_page_id (no legacy trip_id) — RED on main 0ms
+     ✓ no thread, no message and no trip → event with the reason, no draft, no send 1ms
+     ✓ form with text, requested dates and an experience (empty thread): the judge gets "Requested dates:" and "Experience requested:" — RED on main: only "[ANGLER] <text>" 0ms
+     ✓ non-empty thread: the judge gets the inquiry block and the history — RED on main: only the thread lines 16ms
+     ✓ form without text, trip only: the judge gets the same block, not a copy built in auto-send 0ms
+     ✓ stays silent after a manual reply from the panel (drafted_by admin) — RED on main: the model is called 1ms
+     ✓ recognises an outbound stored the way the FA-1.49 Zoho import stores it (drafted_by admin, event actor admin, source webhook) 0ms
+     ✓ recognises an agent draft sent by a human (drafted_by agent, message.sent actor admin) — RED on main 1ms
+     ✓ keeps leading when the only outbound is an auto-sent agent message (drafted_by agent, actor agent) 0ms
+     ✓ keeps leading when an agent message has no message.sent event at all 0ms
+     ✓ takes over on a human message even when an auto-sent agent message sits beside it 1ms
+     ✓ outbound to a guide only (counterpart=guide, drafted_by admin, sent) is not a takeover — path as today 0ms
+     ✓ first form inquiry with an empty thread keeps the first-reply path 0ms
+     ✓ holds with a reason when the takeover check fails — no model call, nothing sent 1ms
+     ✓ returns true when a prior agent-sent message exists 0ms
+     ✓ returns false when no prior agent-sent message exists 0ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 24 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — prompt injection > passes injection text to judgeReply as conversation data, not as instructions
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received: 
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "from": [Function from],
+      },
+      Object {
+        "actor": Object {
+          "kind": "agent",
+        },
+        "body": "Here is your guide...",
+        "channel": "email",
+        "counterpart": "angler",
+        "draftId": "draft-inject",
+        "draftedBy": "agent",
+        "inquiryId": "inq-1",
+        "subject": undefined,
+        "to": "angler@example.com",
+      },
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/lib/ai/auto-send.test.ts:463:40
+    461|     expect(conversationArg).toContain(injectionBody)
+    462| 
+    463|     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+       |                                        ^
+    464|     expect(result!.sent).toBe(false)
+    465| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/24]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > flag complaint=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > flag competitor=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > flag guide_contact=true holds the draft even though the judge said send=true, score 0.99 — reason names the flag — RED before round 3: sent
+AssertionError: expected "vi.fn()" to not be called at all, but actually been called 1 times
+
+Received: 
+
+  1st vi.fn() call:
+
+    Array [
+      Object {
+        "from": [Function from],
+      },
+      Object {
+        "actor": Object {
+          "kind": "agent",
+        },
+        "body": "Hi Anna,
+    
+    A guided day is priced per day.
+    
+    Warm regards",
+        "channel": "email",
+        "counterpart": "angler",
+        "draftId": "d-flag",
+        "draftedBy": "agent",
+        "inquiryId": "inq-1",
+        "subject": undefined,
+        "to": "angler@example.com",
+      },
+    ]
+
+
+Number of calls: 1
+
+ ❯ src/lib/ai/auto-send.test.ts:532:42
+    530|       const result = await autoSendReply({ inquiryId: 'inq-1', counter…
+    531| 
+    532|       expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+       |                                          ^
+    533|       expect(result!.sent).toBe(false)
+    534|       expect(result!.draftMessageId).toBe('d-flag')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/24]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > every raised flag is named; a flag needs no evidence
+AssertionError: expected [ 'angler is unhappy' ] to deeply equal [ 'client flag: complaint', …(1) ]
+
+- Expected
++ Received
+
+  [
+-   "client flag: complaint",
+-   "client flag: competitor",
++   "angler is unhappy",
+  ]
+
+ ❯ src/lib/ai/auto-send.test.ts:551:41
+    549| 
+    550|     expect(result!.sent).toBe(false)
+    551|     expect(result!.reasons.slice(0, 2)).toEqual(['client flag: complai…
+       |                                         ^
+    552|     expect(result!.reasons).not.toContain('judge blocked without evide…
+    553|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/24]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > a raised flag holds before the daily cap is even read
+AssertionError: expected 'daily auto-send cap could not be chec…' to be 'client flag: competitor' // Object.is equality
+
+Expected: "client flag: competitor"
+Received: "daily auto-send cap could not be checked"
+
+ ❯ src/lib/ai/auto-send.test.ts:561:32
+    559|     const result = await autoSendReply({ inquiryId: 'inq-1', counterpa…
+    560| 
+    561|     expect(result!.reasons[0]).toBe('client flag: competitor')
+       |                                ^
+    562|   })
+    563| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/24]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > send=false from group 4/5 WITHOUT evidence → "judge blocked without evidence", logged, still not sent — RED before round 3: the judge's own reasons
+AssertionError: expected 'STOP GROUP 5: asks again' to be 'judge blocked without evidence' // Object.is equality
+
+Expected: "judge blocked without evidence"
+Received: "STOP GROUP 5: asks again"
+
+ ❯ src/lib/ai/auto-send.test.ts:596:32
+    594|     expect(result!.sent).toBe(false)
+    595|     expect(result!.score).toBe(0.6)
+    596|     expect(result!.reasons[0]).toBe('judge blocked without evidence')
+       |                                ^
+    597|     expect(result!.reasons).toContain('STOP GROUP 5: asks again')
+    598|     expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('judge…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/24]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > send=false with a quote that is NOT in the draft → "judge blocked without evidence", not sent — RED before round 3
+AssertionError: expected 'STOP GROUP 4: invented' to be 'judge blocked without evidence' // Object.is equality
+
+Expected: "judge blocked without evidence"
+Received: "STOP GROUP 4: invented"
+
+ ❯ src/lib/ai/auto-send.test.ts:616:32
+    614| 
+    615|     expect(vi.mocked(sendMessage)).not.toHaveBeenCalled()
+    616|     expect(result!.reasons[0]).toBe('judge blocked without evidence')
+       |                                ^
+    617|   })
+    618| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/24]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > one real quote and one invented quote → the block is not trusted
+AssertionError: expected 'STOP GROUP 4: a' to be 'judge blocked without evidence' // Object.is equality
+
+Expected: "judge blocked without evidence"
+Received: "STOP GROUP 4: a"
+
+ ❯ src/lib/ai/auto-send.test.ts:632:32
+    630|     errSpy.mockRestore()
+    631| 
+    632|     expect(result!.reasons[0]).toBe('judge blocked without evidence')
+       |                                ^
+    633|   })
+    634| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/24]⎯
+
+ FAIL  src/lib/ai/auto-send.test.ts > autoSendReply — client flags and evidence (FA-1.72 round 3) > an empty quote is no evidence
+AssertionError: expected 'STOP GROUP 4: x' to be 'judge blocked without evidence' // Object.is equality
+
+Expected: "judge blocked without evidence"
+Received: "STOP GROUP 4: x"
+
+ ❯ src/lib/ai/auto-send.test.ts:642:32
+    640|     errSpy.mockRestore()
+    641| 
+    642|     expect(result!.reasons[0]).toBe('judge blocked without evidence')
+       |                                ^
+    643|   })
+    644| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — knowledge in the input (FA-1.47) > states the default (send), client flags, STOP groups 4 and 5 and the list of non-reasons — RED before round 3: groups 1–3 sat in the send rules
+AssertionError: expected 'You are the safety check of a fishing…' to contain 'client_flags'
+
+- Expected
++ Received
+
+- client_flags
++ You are the safety check of a fishing-trip agency's (FjordAnglers) auto-reply system.
++ You receive the conversation with an angler and a draft reply that the drafting AI has prepared.
++ The draft is sent to the angler automatically unless you stop it, and a sent e-mail cannot be taken back.
++
++ Default verdict: send. Set "send" to false ONLY when one of the five STOP groups below clearly applies. An imperfect draft is still sent.
++
++ The CONVERSATION section holds the angler's original inquiry (the form: experience, requested dates, party size, the angler's own words and answers) followed by the message history. Dates, places and numbers in the inquiry block were given by the angler.
++
++ STOP GROUP 1 — complaint or problem: the angler complains, accuses or is negative toward the agency, or reports that something went wrong (booking problem, refund, overpayment, error).
++ STOP GROUP 2 — competitor: the angler compares FjordAnglers with a competitor or another offer.
++ STOP GROUP 3 — guide contact: the angler asks for a guide's direct contact (phone, e-mail, profile).
++ Groups 1–3 depend ONLY on what the angler wrote. The quality of the draft does not matter: when the angler's message falls under group 1, 2 or 3, set "send" to false even if the draft is a perfect answer, politely declines, or handles the topic well.
++ STOP GROUP 4 — draft contradicts the knowledge: the draft states a price or condition different from the knowledge base, or makes a concrete commitment the knowledge base does not support (a price, a date, availability of a guide on a specific day, non-standard terms), or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps (for example working around a gap in coverage instead of saying it plainly). Asking or promising to check ("we will check whether a guide is free") is fine; stating that a guide IS free, or that a date IS available or confirmed, is a commitment. A price or other amount in the draft counts as verified ONLY when the same amount appears literally in an entry of the KNOWLEDGE BASE section. When no entry contains it (for example there is no entry for the angler's country, or there is no KNOWLEDGE BASE section at all), every price in the draft is outside the knowledge base: STOP GROUP 4.
++ STOP GROUP 5 — draft misrepresents the conversation: the draft states dates, a month, a place or a number of people that appear neither in the inquiry block nor in the message history, or contradicts an earlier FA message in the history (a different price, withdrawing a promise). Repeating or summarising what the angler wrote is fine; adding to it is not.
++
++ These are NOT reasons to stop — send:
++ - the angler's message is short, vague or unclear, or the draft answers it by asking a question back;
++ - the angler asks something the knowledge base does not answer, and the draft does not invent an answer (for example "we will check with our guides and come back to you");
++ - the draft quotes a price or condition that appears in the KNOWLEDGE BASE with the same amount or wording — it is verified, no admin review needed;
++ - the draft names a guide or says where a guide works;
++ - the draft asks again for something already given, or slips on style, tone, length or greeting, even where the Instructions entry asks for better;
++ - the angler says they will get back later, or the message needs no real answer;
++ - general politeness and pleasantries.
++
++ Return ONLY valid JSON — no other text, no markdown fences:
++ {"score": 0.0, "send": true, "reasons": ["short reason"]}
++
++ "reasons": at most 3 reasons, each under 20 words. When "send" is false, each reason starts with the STOP group it falls under, for example "STOP GROUP 4: quotes a price that differs from the knowledge base". When "send" is true, one short line is enough.
++ Score (0.0–1.0): your overall rating of how accurate and appropriate the draft is, for statistics only. It does not affect sending: "send" alone decides, and a low score with "send": true is allowed.
++
++
++ KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly what the drafting agent was given. They are the source of truth for prices, guide rules and instructions.
++ - A condition or fact in the draft that is consistent with the knowledge base is verified. So is a price, but only when the same amount appears literally in a KNOWLEDGE BASE entry. Do not stop the draft for what is verified and do not ask for admin review of it.
++ - Set "send" to false (STOP GROUP 4) when the draft contradicts the knowledge base, states a price or condition that is not in the knowledge base (any price at all when no entry lists one), makes a concrete commitment the knowledge base does not support, or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps.
++ - A question the knowledge base cannot answer is not a reason to stop. Only a draft that invents the answer is.
++
++ === KNOWLEDGE BASE (source of truth) ===
++ --- Instructions (Instructions) ---
++ Never promise a specific day.
++
++ --- Tone (Tone) ---
++ Warm, direct.
++
++ --- Destination: New Zealand (NZ pricing) ---
++ Guided day 1 440 NZD + 60 NZD licence. Full days only.
++
++ --- Guide (g-42) (Guide Sam) ---
++ Sam guides South Island rivers.
++
++ === CONVERSATION ===
++ [ANGLER] Hi, two of us want to fish NZ rivers in February.
++
++ === DRAFT REPLY ===
++ Thanks! The guided day is 1 440 NZD plus 60 NZD for the licence.
+
+ ❯ src/lib/ai/judge-reply.test.ts:96:23
+     94|     expect(content).toMatch(/default verdict: send/i)
+     95|     for (const needle of ['client_flags', 'complaint', 'competitor', '…
+     96|       expect(content).toContain(needle)
+       |                       ^
+     97|     }
+     98|     expect(content).toMatch(/NOT reasons to stop/i)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — knowledge in the input (FA-1.47) > has one source for the angler-side rules: groups 1–3 are flags only, not send rules — RED before round 3
+AssertionError: expected 'You are the safety check of a fishing…' not to contain 'STOP GROUP 1'
+
+- Expected
++ Received
+
+- STOP GROUP 1
++ You are the safety check of a fishing-trip agency's (FjordAnglers) auto-reply system.
++ You receive the conversation with an angler and a draft reply that the drafting AI has prepared.
++ The draft is sent to the angler automatically unless you stop it, and a sent e-mail cannot be taken back.
++
++ Default verdict: send. Set "send" to false ONLY when one of the five STOP groups below clearly applies. An imperfect draft is still sent.
++
++ The CONVERSATION section holds the angler's original inquiry (the form: experience, requested dates, party size, the angler's own words and answers) followed by the message history. Dates, places and numbers in the inquiry block were given by the angler.
++
++ STOP GROUP 1 — complaint or problem: the angler complains, accuses or is negative toward the agency, or reports that something went wrong (booking problem, refund, overpayment, error).
++ STOP GROUP 2 — competitor: the angler compares FjordAnglers with a competitor or another offer.
++ STOP GROUP 3 — guide contact: the angler asks for a guide's direct contact (phone, e-mail, profile).
++ Groups 1–3 depend ONLY on what the angler wrote. The quality of the draft does not matter: when the angler's message falls under group 1, 2 or 3, set "send" to false even if the draft is a perfect answer, politely declines, or handles the topic well.
++ STOP GROUP 4 — draft contradicts the knowledge: the draft states a price or condition different from the knowledge base, or makes a concrete commitment the knowledge base does not support (a price, a date, availability of a guide on a specific day, non-standard terms), or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps (for example working around a gap in coverage instead of saying it plainly). Asking or promising to check ("we will check whether a guide is free") is fine; stating that a guide IS free, or that a date IS available or confirmed, is a commitment. A price or other amount in the draft counts as verified ONLY when the same amount appears literally in an entry of the KNOWLEDGE BASE section. When no entry contains it (for example there is no entry for the angler's country, or there is no KNOWLEDGE BASE section at all), every price in the draft is outside the knowledge base: STOP GROUP 4.
++ STOP GROUP 5 — draft misrepresents the conversation: the draft states dates, a month, a place or a number of people that appear neither in the inquiry block nor in the message history, or contradicts an earlier FA message in the history (a different price, withdrawing a promise). Repeating or summarising what the angler wrote is fine; adding to it is not.
++
++ These are NOT reasons to stop — send:
++ - the angler's message is short, vague or unclear, or the draft answers it by asking a question back;
++ - the angler asks something the knowledge base does not answer, and the draft does not invent an answer (for example "we will check with our guides and come back to you");
++ - the draft quotes a price or condition that appears in the KNOWLEDGE BASE with the same amount or wording — it is verified, no admin review needed;
++ - the draft names a guide or says where a guide works;
++ - the draft asks again for something already given, or slips on style, tone, length or greeting, even where the Instructions entry asks for better;
++ - the angler says they will get back later, or the message needs no real answer;
++ - general politeness and pleasantries.
++
++ Return ONLY valid JSON — no other text, no markdown fences:
++ {"score": 0.0, "send": true, "reasons": ["short reason"]}
++
++ "reasons": at most 3 reasons, each under 20 words. When "send" is false, each reason starts with the STOP group it falls under, for example "STOP GROUP 4: quotes a price that differs from the knowledge base". When "send" is true, one short line is enough.
++ Score (0.0–1.0): your overall rating of how accurate and appropriate the draft is, for statistics only. It does not affect sending: "send" alone decides, and a low score with "send": true is allowed.
++
++
++ KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly what the drafting agent was given. They are the source of truth for prices, guide rules and instructions.
++ - A condition or fact in the draft that is consistent with the knowledge base is verified. So is a price, but only when the same amount appears literally in a KNOWLEDGE BASE entry. Do not stop the draft for what is verified and do not ask for admin review of it.
++ - Set "send" to false (STOP GROUP 4) when the draft contradicts the knowledge base, states a price or condition that is not in the knowledge base (any price at all when no entry lists one), makes a concrete commitment the knowledge base does not support, or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps.
++ - A question the knowledge base cannot answer is not a reason to stop. Only a draft that invents the answer is.
++
++ === KNOWLEDGE BASE (source of truth) ===
++ --- Instructions (Instructions) ---
++ Never promise a specific day.
++
++ --- Tone (Tone) ---
++ Warm, direct.
++
++ --- Destination: New Zealand (NZ pricing) ---
++ Guided day 1 440 NZD + 60 NZD licence. Full days only.
++
++ --- Guide (g-42) (Guide Sam) ---
++ Sam guides South Island rivers.
++
++ === CONVERSATION ===
++ [ANGLER] Hi, two of us want to fish NZ rivers in February.
++
++ === DRAFT REPLY ===
++ Thanks! The guided day is 1 440 NZD plus 60 NZD for the licence.
+
+ ❯ src/lib/ai/judge-reply.test.ts:105:95
+    103|     await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    104|     const content = sentUserContent()
+    105|     for (const group of ['STOP GROUP 1', 'STOP GROUP 2', 'STOP GROUP 3…
+       |                                                                                               ^
+    106| 
+    107|     // the flags section comes first and names the angler as its only …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — knowledge in the input (FA-1.47) > asks for a literal quote from the draft with every block — RED before round 3
+AssertionError: expected 'You are the safety check of a fishing…' to contain '"evidence"'
+
+- Expected
++ Received
+
+- "evidence"
++ You are the safety check of a fishing-trip agency's (FjordAnglers) auto-reply system.
++ You receive the conversation with an angler and a draft reply that the drafting AI has prepared.
++ The draft is sent to the angler automatically unless you stop it, and a sent e-mail cannot be taken back.
++
++ Default verdict: send. Set "send" to false ONLY when one of the five STOP groups below clearly applies. An imperfect draft is still sent.
++
++ The CONVERSATION section holds the angler's original inquiry (the form: experience, requested dates, party size, the angler's own words and answers) followed by the message history. Dates, places and numbers in the inquiry block were given by the angler.
++
++ STOP GROUP 1 — complaint or problem: the angler complains, accuses or is negative toward the agency, or reports that something went wrong (booking problem, refund, overpayment, error).
++ STOP GROUP 2 — competitor: the angler compares FjordAnglers with a competitor or another offer.
++ STOP GROUP 3 — guide contact: the angler asks for a guide's direct contact (phone, e-mail, profile).
++ Groups 1–3 depend ONLY on what the angler wrote. The quality of the draft does not matter: when the angler's message falls under group 1, 2 or 3, set "send" to false even if the draft is a perfect answer, politely declines, or handles the topic well.
++ STOP GROUP 4 — draft contradicts the knowledge: the draft states a price or condition different from the knowledge base, or makes a concrete commitment the knowledge base does not support (a price, a date, availability of a guide on a specific day, non-standard terms), or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps (for example working around a gap in coverage instead of saying it plainly). Asking or promising to check ("we will check whether a guide is free") is fine; stating that a guide IS free, or that a date IS available or confirmed, is a commitment. A price or other amount in the draft counts as verified ONLY when the same amount appears literally in an entry of the KNOWLEDGE BASE section. When no entry contains it (for example there is no entry for the angler's country, or there is no KNOWLEDGE BASE section at all), every price in the draft is outside the knowledge base: STOP GROUP 4.
++ STOP GROUP 5 — draft misrepresents the conversation: the draft states dates, a month, a place or a number of people that appear neither in the inquiry block nor in the message history, or contradicts an earlier FA message in the history (a different price, withdrawing a promise). Repeating or summarising what the angler wrote is fine; adding to it is not.
++
++ These are NOT reasons to stop — send:
++ - the angler's message is short, vague or unclear, or the draft answers it by asking a question back;
++ - the angler asks something the knowledge base does not answer, and the draft does not invent an answer (for example "we will check with our guides and come back to you");
++ - the draft quotes a price or condition that appears in the KNOWLEDGE BASE with the same amount or wording — it is verified, no admin review needed;
++ - the draft names a guide or says where a guide works;
++ - the draft asks again for something already given, or slips on style, tone, length or greeting, even where the Instructions entry asks for better;
++ - the angler says they will get back later, or the message needs no real answer;
++ - general politeness and pleasantries.
++
++ Return ONLY valid JSON — no other text, no markdown fences:
++ {"score": 0.0, "send": true, "reasons": ["short reason"]}
++
++ "reasons": at most 3 reasons, each under 20 words. When "send" is false, each reason starts with the STOP group it falls under, for example "STOP GROUP 4: quotes a price that differs from the knowledge base". When "send" is true, one short line is enough.
++ Score (0.0–1.0): your overall rating of how accurate and appropriate the draft is, for statistics only. It does not affect sending: "send" alone decides, and a low score with "send": true is allowed.
++
++
++ KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly what the drafting agent was given. They are the source of truth for prices, guide rules and instructions.
++ - A condition or fact in the draft that is consistent with the knowledge base is verified. So is a price, but only when the same amount appears literally in a KNOWLEDGE BASE entry. Do not stop the draft for what is verified and do not ask for admin review of it.
++ - Set "send" to false (STOP GROUP 4) when the draft contradicts the knowledge base, states a price or condition that is not in the knowledge base (any price at all when no entry lists one), makes a concrete commitment the knowledge base does not support, or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps.
++ - A question the knowledge base cannot answer is not a reason to stop. Only a draft that invents the answer is.
++
++ === KNOWLEDGE BASE (source of truth) ===
++ --- Instructions (Instructions) ---
++ Never promise a specific day.
++
++ --- Tone (Tone) ---
++ Warm, direct.
++
++ --- Destination: New Zealand (NZ pricing) ---
++ Guided day 1 440 NZD + 60 NZD licence. Full days only.
++
++ --- Guide (g-42) (Guide Sam) ---
++ Sam guides South Island rivers.
++
++ === CONVERSATION ===
++ [ANGLER] Hi, two of us want to fish NZ rivers in February.
++
++ === DRAFT REPLY ===
++ Thanks! The guided day is 1 440 NZD plus 60 NZD for the licence.
+
+ ❯ src/lib/ai/judge-reply.test.ts:120:21
+    118|     await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    119|     const content = sentUserContent()
+    120|     expect(content).toContain('"evidence"')
+       |                     ^
+    121|     expect(content).toContain('draft_quote')
+    122|     expect(content).toMatch(/copied character for character from the D…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — knowledge in the input (FA-1.47) > returns the verdict the model gave, whatever the score, with flags and evidence
+AssertionError: expected { score: 0.55, send: false, …(1) } to deeply equal { client_flags: { …(3) }, …(4) }
+
+- Expected
++ Received
+
+@@ -1,18 +1,6 @@
+  {
+-   "client_flags": {
+-     "competitor": true,
+-     "complaint": false,
+-     "guide_contact": false,
+-   },
+-   "evidence": [
+-     {
+-       "conflict": "KB says another amount",
+-       "draft_quote": "The guided day is 900 NZD.",
+-       "group": 4,
+-     },
+-   ],
+    "reasons": [
+      "STOP GROUP 4: price differs",
+    ],
+    "score": 0.55,
+    "send": false,
+
+ ❯ src/lib/ai/judge-reply.test.ts:183:62
+    181|       `"reasons": ["STOP GROUP 4: price differs"], "evidence": [{"grou…
+    182|     ))
+    183|     expect(await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).toEqual({
+       |                                                              ^
+    184|       client_flags: { complaint: false, competitor: true, guide_contac…
+    185|       score: 0.55,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — knowledge in the input (FA-1.47) > a reply without "evidence" is accepted as an empty list — the caller decides what a block without evidence means
+AssertionError: expected undefined to deeply equal []
+
+- Expected: 
+[]
+
++ Received: 
+undefined
+
+ ❯ src/lib/ai/judge-reply.test.ts:194:73
+    192|   it('a reply without "evidence" is accepted as an empty list — the ca…
+    193|     anthropicCreate.mockResolvedValue(reply(`{"client_flags": ${NO_FLA…
+    194|     expect((await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).evidence…
+       |                                                                         ^
+    195|   })
+    196| })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when client_flags is missing — fail-safe, nothing is sent on it — RED before round 3: accepted
+AssertionError: promise resolved "{ score: 0.95, send: true, …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "reasons": [
++     "ok",
++   ],
++   "score": 0.95,
++   "send": true,
+  }
+
+ ❯ src/lib/ai/judge-reply.test.ts:223:60
+    221|   it('throws when client_flags is missing — fail-safe, nothing is sent…
+    222|     anthropicCreate.mockResolvedValue(reply('{"score": 0.95, "send": t…
+    223|     await expect(judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).rejects.t…
+       |                                                            ^
+    224|   })
+    225| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when client_flags is wrongly shaped (not an object)
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when client_flags is wrongly shaped (a flag missing)
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when client_flags is wrongly shaped (a flag that is a string)
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when client_flags is wrongly shaped (a flag that is null)
+AssertionError: promise resolved "{ score: 0.9, send: true, …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "reasons": [
++     "ok",
++   ],
++   "score": 0.9,
++   "send": true,
+  }
+
+ ❯ src/lib/ai/judge-reply.test.ts:233:60
+    231|   ])('throws when client_flags is wrongly shaped (%s)', async (_label,…
+    232|     anthropicCreate.mockResolvedValue(reply(`{${flags}, "score": 0.9, …
+    233|     await expect(judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).rejects.t…
+       |                                                            ^
+    234|   })
+    235| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/24]⎯
+
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when evidence is wrongly shaped (not an array)
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when evidence is wrongly shaped (an entry without quote)
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when evidence is wrongly shaped (a group other than 4/5)
+ FAIL  src/lib/ai/judge-reply.test.ts > judgeReply — strict reply shape (FA-1.72 round 3) > throws when evidence is wrongly shaped (a non-string conflict)
+AssertionError: promise resolved "{ score: 0.9, send: false, …(1) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "reasons": [
++     "x",
++   ],
++   "score": 0.9,
++   "send": false,
+  }
+
+ ❯ src/lib/ai/judge-reply.test.ts:243:60
+    241|   ])('throws when evidence is wrongly shaped (%s)', async (_label, evi…
+    242|     anthropicCreate.mockResolvedValue(reply(`{"client_flags": ${NO_FLA…
+    243|     await expect(judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).rejects.t…
+       |                                                            ^
+    244|   })
+    245| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/24]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  24 failed | 56 passed (80)
+   Start at  14:02:43
+   Duration  710ms (transform 471ms, setup 56ms, import 659ms, tests 104ms, environment 0ms)
+

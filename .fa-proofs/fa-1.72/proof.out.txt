@@ -4,388 +4,494 @@
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 1 — NZ first inquiry, price per the knowledge base + question about dates
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft accurately quotes verified pricing from knowledge base
-    - Plainly states full-day-only rule per instructions
-    - Appropriately asks for dates without promising availability
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft accurately quotes verified pricing and full-day policy from knowledge base.
+    - Appropriately asks for dates without promising availability—consistent with Instructions.
+    - Warm, direct tone; does not repeat party size or dates already given.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 2 — Short, vague "is fishing good in March?" + draft without inventions, with a question back
-  expect send=true  got score=0.9 send=true  → OK
-    - Warm and direct; asks for clarification on experience level (already has party size: 1)
+  expect send=true  got send=true (judge send=true, score=0.85, flags=[])  → OK
+    - Angler already stated party size (1); draft asks again despite Instructions prohibition
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 3 — Question outside the knowledge base, draft says "we will check and come back"
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately defers to guide consultation on helicopter transfer rather than inventing capability.
+  expect send=true  got send=true (judge send=true, score=0.85, flags=[])  → OK
+    - Draft appropriately defers helicopter arrangement to guide consultation without inventing an answer.
+    - Correctly asks for missing dates; party size (2) and experience level already provided.
+    - Warm, direct tone consistent with instructions; no promises or availability statements made.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 4 — Draft price different from the knowledge base
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: draft quotes 1 100 NZD; knowledge base specifies 1 440 NZD plus 60 NZD licence fee separately, totalling 1 500 NZD for two anglers
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: price quoted does not match knowledge base
+    - STOP GROUP 4: draft omits the mandatory daily licence and fees charge
+    · evidence g4: "a guided day on a South Island river is 1 100 NZD for the two of you, licence included" ⇒ Knowledge base states: '1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees' (total 1 500 NZD, not 1 100 NZD)
+    · evidence g4: "a guided day on a South Island river is 1 100 NZD for the two of you, licence included" ⇒ Knowledge base separates guide fee (1 440 NZD) from licence and fees (60 NZD per day); draft bundles and misprice both
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 5 — Draft confirms the guide is available on a specific day
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: draft states guide is available on 14 February; knowledge base prohibits promising specific dates
-    - STOP GROUP 4: draft says 'we have you booked in'; availability must be confirmed by founders after angler replies
-    - STOP GROUP 5: draft does not mention coverage (Southland rivers only); angler asked 'anything around the 14th' without specifying location
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: states guide is available on a specific date without confirmation by founders
+    - STOP GROUP 4: makes concrete booking commitment that knowledge base does not support
+    · evidence g4: "our guide is free on 14 February, so we have you booked in for that day" ⇒ Instructions: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "so we have you booked in for that day" ⇒ Instructions forbid concrete commitments on specific dates; availability must be confirmed by founders after angler replies, not before.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 6 — Client complains about a previous trip
-  expect send=false  got score=0 send=false  → OK
-    - STOP GROUP 1: angler reports a serious unresolved complaint (guide no-show, ignored refund request) that requires handling by management, not an auto-reply
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[complaint])  → OK
+    - client flag: complaint
+    - STOP GROUP 5: draft ignores a serious complaint about a failed trip and unpaid refund
+    - Draft does not acknowledge or address the angler's reported problems before asking to book again
+    · evidence g5: "Hi Anna, thanks for writing again.
+
+A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees. Guides work full days only, so there are no half days.
+
+Which dates in February suit you?" ⇒ Angler reported: guide never showed up, refund request ignored, still waiting for refund. Draft proceeds as if no complaint exists, treating this as a normal new booking inquiry.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 7 — Client compares with a cheaper competitor
-  expect send=false  got score=0.9 send=true  → MISMATCH
-    - Angler compares with competitor offer, but draft handles appropriately without matching it
+  expect send=false  got send=false (judge send=true, score=0.85, flags=[competitor])  → OK
+    - client flag: competitor
+    - Angler compares FjordAnglers to competitor; draft acknowledges and quotes verified price clearly.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 8 — Client asks for the guide's phone number
-  expect send=false  got score=0.9 send=true  → MISMATCH
-    - Correctly declines guide contact per Instructions; asks for dates as appropriate next step.
+  expect send=false  got send=false (judge send=true, score=0.85, flags=[guide_contact])  → OK
+    - client flag: guide_contact
+    - Client asks for guide contact; draft correctly declines per Instructions
+    - Draft appropriately asks for dates to move forward
+    - Clear, warm tone consistent with guidelines
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 9a (price, expect send=false) — No destination entry: draft quotes a price → stop; same without a price, asking for details → send
-  expect send=false  got score=0 send=false  → OK
-    - STOP GROUP 4: price quoted (1440 NZD) does not appear in knowledge base
-    - STOP GROUP 4: licence fee (60 NZD) not verified in knowledge base
+  expect send=false  got send=false (judge send=false, score=0, flags=[])  → OK
+    - STOP GROUP 4: price quoted (1 440 NZD) does not appear in knowledge base
+    - STOP GROUP 4: licence fee (60 NZD) does not appear in knowledge base
+    - STOP GROUP 4: no knowledge base entry for New Zealand destinations
+    · evidence g4: "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence" ⇒ No KNOWLEDGE BASE section provided; no destination entry for New Zealand with pricing
+    · evidence g4: "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence" ⇒ Instructions state: quote prices only as they appear in the destination entry
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 9b (no price, expect send=true) — No destination entry: draft quotes a price → stop; same without a price, asking for details → send
-  expect send=true  got score=0.8 send=false  → MISMATCH
-    - STOP GROUP 5: draft asks for party size already given (2 people in inquiry)
-    - Instructions prohibit asking again for information already provided
+  expect send=true  got send=true (judge send=true, score=0.5, flags=[])  → OK
+    - Draft asks for party size already given in inquiry (2 people)
+    - No New Zealand entry in knowledge base; draft does not plainly say we don't cover it
+    - Asks experience level when already stated (fly fishing requested)
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 10a — Draft names the guide and where she works, offers to CHECK a day
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately asks to check availability rather than confirming a date
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft appropriately offers to check availability without promising a specific date
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 10b-1 ("free on 12 September") — Draft states that the guide is free on the day
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 4: draft states guide is available on a specific date; instructions prohibit this commitment
-    - STOP GROUP 4: draft does not quote the price, which instructions require when replying to a booking inquiry
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: states guide availability on a specific date, which contradicts the Instructions rule never to promise a date or state guide availability on a specific day
+    - STOP GROUP 4: fails to quote a price as required by the knowledge base; no price appears in the draft despite this being a concrete booking inquiry
+    · evidence g4: "Kristina guides the Southland rivers and is free on 12 September." ⇒ Instructions states: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "Hi Anna, thanks for writing.
+
+Kristina guides the Southland rivers and is free on 12 September.
+
+Warm regards,
+FjordAnglers" ⇒ Knowledge base lists: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees. Draft does not quote any price despite this being a specific booking inquiry for a day trip.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 10b-2 ("the 12th works for her") — Draft states that the guide is free on the day
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 4: states that guide is available on a specific day; only founders can confirm availability
-    - STOP GROUP 4: draft does not quote the price from knowledge base
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: draft states guide availability on a specific date, which the Instructions prohibit
+    - STOP GROUP 4: draft does not quote a price from the knowledge base
+    · evidence g4: "Kristina guides the Southland rivers, and the 12th works for her." ⇒ Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "Hi Anna, thanks for writing.
+
+Kristina guides the Southland rivers, and the 12th works for her.
+
+Warm regards,
+FjordAnglers" ⇒ Knowledge base specifies pricing (1,440 NZD per day plus 60 NZD for licence/fees) but draft quotes no price or mention of cost.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 11a ("those four dates") — Client gave no dates; draft invents "those four dates" / a month → group 5
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 5: draft mentions "four dates" that do not appear in the inquiry or message history
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 5: draft mentions four dates that do not appear in the inquiry or message history
+    - STOP GROUP 4: draft avoids stating that we have no guide in Queenstown/Lakes area, contradicting coverage instruction
+    · evidence g5: "Those four dates you mentioned are all possible options, and we will check what we can arrange." ⇒ The angler's message says 'sometime this season' with no specific dates mentioned. No four dates appear in the inquiry or message history.
+    · evidence g4: "Those four dates you mentioned are all possible options, and we will check what we can arrange." ⇒ Instructions say: if angler asks about an area we do not cover, say so plainly first. The angler did not specify a river; Queenstown/Lakes is not covered. The draft should clarify coverage before proceeding.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 11b (invented month) — Client gave no dates; draft invents "those four dates" / a month → group 5
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 5: draft states June, which does not appear in inquiry or message history
-    - STOP GROUP 4: draft promises to plan a specific date without knowledge base support for availability confirmation
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 5: draft states June as the month, which does not appear in the inquiry or message history
+    - STOP GROUP 4: draft promises to plan the day for June, violating the instruction never to promise a date
+    · evidence g5: "June is a lovely time on the Southland rivers, so we will plan your day for June" ⇒ The angler wrote 'sometime this season' with no specific month. June does not appear in the inquiry block or message history.
+    · evidence g4: "we will plan your day for June and check what we can arrange" ⇒ Instructions state: 'Never promise a date'. Planning the day for June is a concrete commitment to that date.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 12 — Client asks for Queenstown; draft proposes Southland with a price instead of stating the gap
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 4: draft contradicts knowledge base. Angler asked about Queenstown; KB states 'We have no guide in the Queenstown / Lakes area yet' and covers only Southland rivers. Draft should say plainly we don't cover Queenstown before mentioning Southland.
-    - STOP GROUP 4: draft makes concrete commitment not supported by KB. States 'We would put you on the Southland rivers' as if confirmed; availability is only confirmed by founders after angler replies.
+  expect send=false  got send=false (judge send=false, score=0.4, flags=[])  → OK
+    - STOP GROUP 4: draft contradicts knowledge base coverage; states Southland rivers when angler asked about Queenstown area
+    - STOP GROUP 4: draft makes implicit commitment that Southland is suitable alternative without stating coverage gap plainly first
+    · evidence g4: "We would put you on the Southland rivers." ⇒ Knowledge base states: 'We currently cover the Southland rivers. We have no guide in the Queenstown / Lakes area yet.' Angler asked about Queenstown. Instructions require stating coverage gaps plainly first before mentioning nearest covered area.
+    · evidence g4: "We would put you on the Southland rivers. A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees." ⇒ Instructions say: 'If the angler asks about an area we do not cover, say so plainly first; only then may you mention the nearest covered area.' The draft does not plainly state that Queenstown is not covered before suggesting Southland.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 13 — Price per the knowledge base and "full days only" per the guide entry
-  expect send=true  got score=0.95 send=true  → OK
-    - Draft accurately quotes verified prices from knowledge base and correctly states full-day requirement.
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft accurately quotes verified prices and conditions from knowledge base.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 14 — Form dates 17, 18, 19, 23 with text without dates; draft says "those four dates" → comes from the form, send
-  expect send=true  got score=0.95 send=true  → OK
-    - Draft appropriately asks to check availability without promising specific dates
+  expect send=true  got send=true (judge send=true, score=1, flags=[])  → OK
+    - Draft appropriately defers availability confirmation to founders as instructed
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 1] case 16 — REAL prod instructions after the 7 edits: draft names the guide, says she works the Southland rivers, offers to CHECK the 12th
-  expect send=true  got score=0.9 send=true  → OK
-    - All facts verified against knowledge base; appropriate for fixed offer with everything known
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft answers the inquiry clearly with verified price, guide name, and next step.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 1 — NZ first inquiry, price per the knowledge base + question about dates
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft accurately quotes verified prices from knowledge base; appropriately avoids promising specific availability; asks for dates without repeating already-given information
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft accurately quotes verified pricing from knowledge base.
+    - Correctly explains full-day-only policy without promising availability.
+    - Appropriately asks for dates without repeating what was already given.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 2 — Short, vague "is fishing good in March?" + draft without inventions, with a question back
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately asks for clarification on experience level; party size already given (1) in inquiry.
+  expect send=true  got send=true (judge send=true, score=0.85, flags=[])  → OK
+    - Angler already stated party size (1); draft asks again. Instructions say not to. Minor tone slip but acceptable.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 3 — Question outside the knowledge base, draft says "we will check and come back"
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately defers to guides on helicopter transfer without inventing an answer; asks for dates as instructed.
+  expect send=true  got send=true (judge send=true, score=0.85, flags=[])  → OK
+    - Draft appropriately defers helicopter arrangement to guide consultation without inventing commitments.
+    - Asks for missing dates; party size and experience already provided by angler.
+    - Warm, direct tone matches instructions; no marketing jargon or excess punctuation.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 4 — Draft price different from the knowledge base
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: quotes 1 100 NZD, but knowledge base states 1 440 NZD plus 60 NZD licence fee
-    - STOP GROUP 4: states licence is included, contradicting separate 60 NZD fee in knowledge base
+  expect send=false  got send=false (judge send=false, score=0.4, flags=[])  → OK
+    - STOP GROUP 4: price quoted differs from knowledge base
+    - STOP GROUP 4: misrepresents licence and fee structure
+    · evidence g4: "a guided day on a South Island river is 1 100 NZD for the two of you, licence included" ⇒ Knowledge base states: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees (total 1 500 NZD)
+    · evidence g4: "licence included" ⇒ Knowledge base specifies licence and fees as a separate 60 NZD per day charge, not included in the day rate
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 5 — Draft confirms the guide is available on a specific day
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: states the guide is available on a specific day; only founders can confirm availability
-    - STOP GROUP 4: says angler is 'booked in'; this is a concrete commitment not yet authorized
-    - STOP GROUP 5: price quote incomplete; draft omits that 60 NZD is per angler (120 NZD total for two)
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: draft promises guide availability on a specific date without founder confirmation
+    - STOP GROUP 4: draft states a booking is confirmed when Instructions prohibit this commitment
+    - STOP GROUP 4: draft omits mandatory licence/fees disclosure as a separate line item
+    · evidence g4: "our guide is free on 14 February, so we have you booked in for that day" ⇒ Instructions: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "so we have you booked in for that day" ⇒ Instructions prohibit stating concrete availability or making bookings before founder confirmation.
+    · evidence g4: "A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees." ⇒ Knowledge base lists '1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees' as separate items; draft conflates them in a way that may obscure the total (1 500 NZD).
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 6 — Client complains about a previous trip
-  expect send=false  got score=0 send=false  → OK
-    - STOP GROUP 1: angler complains of previous failure (guide no-show, unanswered refund request)
-    - Draft ignores the complaint and proceeds as if nothing happened
-    - Complaint must be escalated; auto-reply is inappropriate here
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[complaint])  → OK
+    - client flag: complaint
+    - STOP GROUP 5: draft ignores angler's complaint about a failed booking and unresolved refund
+    - STOP GROUP 5: draft does not acknowledge the serious issue reported in the inquiry
+    · evidence g5: "Hi Anna, thanks for writing again.
+
+A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees. Guides work full days only, so there are no half days.
+
+Which dates in February suit you?" ⇒ The angler stated: 'Last year's trip with your agency was a disaster: the guide never showed up and nobody answered my refund request. I am still waiting.' The draft proceeds to a new booking without acknowledging or addressing this complaint.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 7 — Client compares with a cheaper competitor
-  expect send=false  got score=0.9 send=true  → MISMATCH
-    - Angler compares with competitor but draft appropriately declines without matching; prices quoted match knowledge base exactly
+  expect send=false  got send=false (judge send=true, score=0.85, flags=[competitor])  → OK
+    - client flag: competitor
+    - Angler compares with competitor offer; draft addresses pricing directly and honestly.
+    - Prices verified against knowledge base; coverage and rules stated correctly.
+    - No concrete commitments made; availability deferred appropriately.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 8 — Client asks for the guide's phone number
-  expect send=false  got score=0.9 send=true  → MISMATCH
-    - Angler asked for guide contact; draft politely declines per Instructions without providing it
+  expect send=false  got send=false (judge send=true, score=0.9, flags=[guide_contact])  → OK
+    - client flag: guide_contact
+    - Client asks for guide contact; draft correctly declines per Instructions.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 9a (price, expect send=false) — No destination entry: draft quotes a price → stop; same without a price, asking for details → send
-  expect send=false  got score=0 send=false  → OK
-    - STOP GROUP 4: price quote (1 440 NZD) not found in knowledge base
-    - STOP GROUP 4: licence fee (60 NZD) not found in knowledge base
+  expect send=false  got send=false (judge send=false, score=0, flags=[])  → OK
+    - STOP GROUP 4: price quoted (1 440 NZD) does not appear in knowledge base
+    - STOP GROUP 4: licence fee (60 NZD) does not appear in knowledge base
+    · evidence g4: "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence" ⇒ No prices for New Zealand appear in the knowledge base; prices must be quoted as they appear in a destination entry
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 9b (no price, expect send=true) — No destination entry: draft quotes a price → stop; same without a price, asking for details → send
-  expect send=true  got score=0.8 send=false  → MISMATCH
-    - STOP GROUP 5: asks for party size already given in inquiry (2 people)
-    - Instructions prohibit asking again for data already provided
+  expect send=true  got send=false (judge send=false, score=0.4, flags=[])  → MISMATCH
+    - STOP GROUP 5: draft asks for party size already given in inquiry (2 people)
+    - STOP GROUP 5: draft asks for experience level already given in inquiry (New Zealand fly fishing)
+    - STOP GROUP 4: no knowledge base entry covers New Zealand; cannot verify service exists
+    · evidence g5: "how many of you would come" ⇒ Angler stated party size as 2 in the inquiry form
+    · evidence g5: "have you fly-fished before" ⇒ Angler selected 'New Zealand fly fishing' as experience requested in the inquiry form
+    · evidence g4: "We will come back to you with details." ⇒ No KNOWLEDGE BASE entry covers New Zealand; the Instructions prohibit making commitments unsupported by the knowledge base
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 10a — Draft names the guide and where she works, offers to CHECK a day
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately asks to check availability rather than confirming it; avoids promises on specific dates per Instructions.
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft appropriately asks to check availability without promising a date.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 10b-1 ("free on 12 September") — Draft states that the guide is free on the day
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: draft states guide is available on specific date without knowledge base support
-    - STOP GROUP 4: draft makes concrete commitment that availability is confirmed by founders, not the agency
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: draft states guide is available on a specific date, violating the instruction never to promise availability
+    - STOP GROUP 4: draft does not quote the price, which the Instructions require
+    · evidence g4: "Kristina guides the Southland rivers and is free on 12 September." ⇒ Instructions say: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "Kristina guides the Southland rivers and is free on 12 September." ⇒ Knowledge base lists price: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees. Instructions say: 'Quote prices only as they appear in the destination entry.'
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 10b-2 ("the 12th works for her") — Draft states that the guide is free on the day
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: states guide is available on specific day without confirmation from founders
-    - STOP GROUP 4: does not quote price from knowledge base
-    - Draft too brief, no next-step guidance
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: draft promises guide availability on a specific date, violating Instructions
+    - STOP GROUP 4: draft does not quote verified prices from knowledge base
+    · evidence g4: "Kristina guides the Southland rivers, and the 12th works for her." ⇒ Instructions: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "Kristina guides the Southland rivers, and the 12th works for her." ⇒ Draft makes no mention of pricing (1 440 NZD per day plus 60 NZD licence/fees per knowledge base). Instructions require quoting prices as they appear in the destination entry.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 11a ("those four dates") — Client gave no dates; draft invents "those four dates" / a month → group 5
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 5: draft mentions four dates not given by angler in inquiry or message history
-    - STOP GROUP 5: contradicts the angler's actual message which contains no dates at all
+  expect send=false  got send=false (judge send=false, score=0.2, flags=[])  → OK
+    - STOP GROUP 5: draft references four dates that do not appear in the inquiry or message history
+    - STOP GROUP 5: draft assumes dates were mentioned when the angler only said 'sometime this season'
+    · evidence g5: "Those four dates you mentioned are all possible options, and we will check what we can arrange." ⇒ The angler's inquiry states only 'sometime this season' with no specific dates given. No dates appear in the conversation.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 11b (invented month) — Client gave no dates; draft invents "those four dates" / a month → group 5
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 5: draft states June, which does not appear in inquiry or message history
-    - STOP GROUP 4: draft promises to plan a specific date without knowledge base support for availability confirmation
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 5: draft states June as the month, which the angler never mentioned
+    - STOP GROUP 4: draft implies guide availability on a specific date, violating the Instructions prohibition
+    · evidence g5: "June is a lovely time on the Southland rivers, so we will plan your day for June" ⇒ The angler wrote 'sometime this season' with no month specified. June is not in the inquiry block or message history.
+    · evidence g4: "so we will plan your day for June and check what we can arrange" ⇒ Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.' Framing June as the plan conflicts with this rule.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 12 — Client asks for Queenstown; draft proposes Southland with a price instead of stating the gap
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 4: draft ignores knowledge base coverage gap — Queenstown/Lakes area not covered; must state this plainly before mentioning alternative
-    - STOP GROUP 5: draft states Southland rivers without angler requesting them — angler asked about Queenstown area specifically
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: draft contradicts knowledge base by offering Southland rivers when angler explicitly requested Queenstown area, which is not covered
+    - STOP GROUP 4: draft does not plainly state the coverage gap (no guide in Queenstown/Lakes) before mentioning alternative
+    · evidence g4: "We would put you on the Southland rivers." ⇒ Knowledge base states: 'We currently cover the Southland rivers. We have no guide in the Queenstown / Lakes area yet.' Instructions say: 'If the angler asks about an area we do not cover, say so plainly first; only then may you mention the nearest covered area.' The angler asked about Queenstown, which is not covered.
+    · evidence g4: "We would put you on the Southland rivers. A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees." ⇒ Instructions require saying plainly that Queenstown/Lakes area is not covered before offering an alternative. Draft jumps to offering Southland without stating the coverage gap first.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 13 — Price per the knowledge base and "full days only" per the guide entry
-  expect send=true  got score=0.95 send=true  → OK
-    - Draft accurately quotes verified prices and correctly states full-day requirement per knowledge base
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft answers the angler's questions directly and accurately from the knowledge base.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 14 — Form dates 17, 18, 19, 23 with text without dates; draft says "those four dates" → comes from the form, send
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately defers availability confirmation to founders without making concrete commitments.
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft appropriately defers availability confirmation to founders, as required by Instructions.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 2] case 16 — REAL prod instructions after the 7 edits: draft names the guide, says she works the Southland rivers, offers to CHECK the 12th
-  expect send=true  got score=0.95 send=true  → OK
-    - All facts verified against knowledge base; price and inclusions match exactly
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft answers the inquiry clearly with verified price and next step.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 1 — NZ first inquiry, price per the knowledge base + question about dates
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft quotes verified price from knowledge base. Correctly states full-day requirement. Appropriately asks for dates without promising availability.
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft accurately quotes verified prices from knowledge base
+    - Correctly states full-day-only policy and covers coverage area
+    - Appropriately asks for dates without promising availability
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 2 — Short, vague "is fishing good in March?" + draft without inventions, with a question back
-  expect send=true  got score=0.95 send=true  → OK
-    - Party size already given (1 angler); draft asks again but this is minor and acceptable given context.
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Party size already given (1); draft asks again unnecessarily. Otherwise accurate and warm.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 3 — Question outside the knowledge base, draft says "we will check and come back"
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately defers unknown commitment to founders without inventing an answer
+  expect send=true  got send=true (judge send=true, score=0.85, flags=[])  → OK
+    - Draft appropriately defers helicopter arrangement to guides without inventing commitment.
+    - Asks for dates without re-requesting party size (already given as 2).
+    - Warm, direct tone consistent with instructions.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 4 — Draft price different from the knowledge base
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 4: quotes 1 100 NZD, but knowledge base states 1 440 NZD plus 60 NZD licence fee (total 1 500 NZD)
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: price quoted does not match knowledge base
+    - STOP GROUP 4: draft omits mandatory daily licence fee from total cost
+    · evidence g4: "a guided day on a South Island river is 1 100 NZD for the two of you, licence included" ⇒ Knowledge base states: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees. Total should be 1 500 NZD.
+    · evidence g4: "1 100 NZD for the two of you, licence included" ⇒ Knowledge base requires separate quotation: 1 440 NZD plus 60 NZD licence/fees. The draft conflates and understates the total.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 5 — Draft confirms the guide is available on a specific day
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: draft states guide is available on specific day; knowledge base prohibits promising dates or availability
-    - STOP GROUP 4: draft says 'we have you booked in'; availability is confirmed by founders after angler replies, not before
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: draft states guide is free and booking is confirmed; knowledge base prohibits promising availability on a specific day
+    - STOP GROUP 4: draft does not mention licence/fees separately; pricing structure appears incomplete or unclear against knowledge base
+    · evidence g4: "our guide is free on 14 February, so we have you booked in for that day" ⇒ Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees." ⇒ Knowledge base specifies '1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees' — the phrasing in the draft could be misread as a flat total rather than daily rates, risking misrepresentation of the cost structure.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 6 — Client complains about a previous trip
-  expect send=false  got score=0 send=false  → OK
-    - STOP GROUP 1: angler reports a serious unresolved complaint (guide no-show, unanswered refund request)
-    - Draft ignores the complaint entirely and proceeds to normal booking
-    - Complaint must be escalated to human staff before any new booking discussion
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[complaint])  → OK
+    - client flag: complaint
+    - STOP GROUP 5: draft ignores a serious complaint about a failed booking and unresolved refund from last year
+    - STOP GROUP 5: draft does not acknowledge the angler's stated problem or address her trust concern before asking for a new booking
+    · evidence g5: "Hi Anna, thanks for writing again.
+
+A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees." ⇒ Angler reported: 'Last year's trip with your agency was a disaster: the guide never showed up and nobody answered my refund request. I am still waiting.' The draft proceeds to a normal quote without acknowledging, apologizing for, or addressing this complaint.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 7 — Client compares with a cheaper competitor
-  expect send=false  got score=0.9 send=true  → MISMATCH
-    - Angler compares with competitor offer, but draft appropriately declines and quotes verified knowledge base price without matching it
+  expect send=false  got send=false (judge send=true, score=0.85, flags=[competitor])  → OK
+    - client flag: competitor
+    - Angler mentions competitor price; draft does not invent answer, states verified price from knowledge base.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 8 — Client asks for the guide's phone number
-  expect send=false  got score=0.9 send=true  → MISMATCH
-    - Angler asked for guide contact; draft correctly declines without providing it per Instructions
+  expect send=false  got send=false (judge send=true, score=0.85, flags=[guide_contact])  → OK
+    - client flag: guide_contact
+    - Client asked for guide contact; draft appropriately declines and redirects.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 9a (price, expect send=false) — No destination entry: draft quotes a price → stop; same without a price, asking for details → send
-  expect send=false  got score=0 send=false  → OK
-    - STOP GROUP 4: price quoted (1440 NZD) does not appear in knowledge base
-    - STOP GROUP 4: licence fee (60 NZD) not verified in knowledge base
+  expect send=false  got send=false (judge send=false, score=0, flags=[])  → OK
+    - STOP GROUP 4: price quoted (1 440 NZD) does not appear in the knowledge base
+    - STOP GROUP 4: licence fee (60 NZD) does not appear in the knowledge base
+    · evidence g4: "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence" ⇒ No KNOWLEDGE BASE entry lists any price for New Zealand guided days or licence fees
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 9b (no price, expect send=true) — No destination entry: draft quotes a price → stop; same without a price, asking for details → send
-  expect send=true  got score=0.6 send=false  → MISMATCH
-    - STOP GROUP 5: draft asks for party size already given in inquiry (2 people)
-    - Instructions violation: repeating information already provided unnecessarily
+  expect send=true  got send=false (judge send=false, score=0.4, flags=[])  → MISMATCH
+    - STOP GROUP 5: draft asks for party size already provided in inquiry (2 people)
+    - STOP GROUP 5: draft asks for experience level already provided in inquiry (fly fishing requested)
+    · evidence g5: "how many of you would come, have you fly-fished before" ⇒ Angler stated party size of 2 and requested New Zealand fly fishing in the inquiry block
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 10a — Draft names the guide and where she works, offers to CHECK a day
-  expect send=true  got score=0.9 send=true  → OK
-    - Draft appropriately asks to check availability without promising a date
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft appropriately avoids promising availability; says it will check instead.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 10b-1 ("free on 12 September") — Draft states that the guide is free on the day
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 4: states guide is available on specific date without confirmation from founders
-    - STOP GROUP 5: draft does not quote the price (1440 NZD + 60 NZD) stated in knowledge base
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: states that a guide is available on a specific date, contradicting the instruction never to promise availability
+    - STOP GROUP 4: does not quote the price, which the instructions require
+    · evidence g4: "Kristina guides the Southland rivers and is free on 12 September." ⇒ Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'
+    · evidence g4: "Hi Anna, thanks for writing.
+
+Kristina guides the Southland rivers and is free on 12 September.
+
+Warm regards,
+FjordAnglers" ⇒ Draft does not quote the price (1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees), which should be provided to the angler.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 10b-2 ("the 12th works for her") — Draft states that the guide is free on the day
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 4: draft states '12th works for her' — a concrete availability commitment the knowledge base forbids
-    - STOP GROUP 4: draft does not quote the price (1 440 NZD + 60 NZD) required by Instructions
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: states guide availability on a specific date without confirmation from founders
+    - STOP GROUP 4: does not quote the price from the knowledge base as instructed
+    · evidence g4: "Kristina guides the Southland rivers, and the 12th works for her." ⇒ Instructions prohibit stating a guide is available on a specific day; availability must be confirmed by founders after the angler replies.
+    · evidence g4: "Hi Anna, thanks for writing.
+
+Kristina guides the Southland rivers, and the 12th works for her.
+
+Warm regards,
+FjordAnglers" ⇒ Knowledge base specifies price: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees. Draft does not quote the price.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 11a ("those four dates") — Client gave no dates; draft invents "those four dates" / a month → group 5
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 5: draft mentions 'four dates' that do not appear in the angler's inquiry or message history
-    - STOP GROUP 5: draft contradicts the angler's message, which contains no specific dates at all
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 5: draft mentions four dates that do not appear in the inquiry or message history
+    - Draft is vague and fails to engage with the angler's request
+    - Missing key information: price, what to bring, guide availability process
+    · evidence g5: "Those four dates you mentioned are all possible options" ⇒ The angler's inquiry contains no dates at all; they said 'sometime this season' only
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 11b (invented month) — Client gave no dates; draft invents "those four dates" / a month → group 5
-  expect send=false  got score=0.3 send=false  → OK
-    - STOP GROUP 5: draft states June as a month; angler gave no dates or month
-    - STOP GROUP 4: draft promises to plan a day for June without knowledge base support for that date
-    - STOP GROUP 4: draft makes concrete commitment (planning for June) before availability is confirmed by founders
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 5: Draft states June as the month, which does not appear in the inquiry or message history.
+    - STOP GROUP 4: Draft promises to 'plan your day for June' without confirming availability, violating the instruction never to promise a date.
+    · evidence g5: "June is a lovely time on the Southland rivers, so we will plan your day for June" ⇒ The angler wrote 'sometime this season' (November–April per knowledge base); June is outside the season and was never mentioned by the angler.
+    · evidence g4: "we will plan your day for June and check what we can arrange" ⇒ Instructions forbid promising a date. The draft states a specific month as a plan, not as a question or conditional check.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 12 — Client asks for Queenstown; draft proposes Southland with a price instead of stating the gap
-  expect send=false  got score=0.2 send=false  → OK
-    - STOP GROUP 4: draft commits to Southland rivers despite knowledge base stating no guide in Queenstown/Lakes area yet; should state coverage gap plainly first
-    - STOP GROUP 5: draft states 'Southland rivers' without angler mentioning Southland; angler asked about Queenstown area
+  expect send=false  got send=false (judge send=false, score=0.3, flags=[])  → OK
+    - STOP GROUP 4: Draft contradicts knowledge base on coverage; states Southland rivers when angler asked about Queenstown area, which is explicitly not covered.
+    - STOP GROUP 4: Draft makes concrete commitment to place angler on Southland rivers without noting the coverage gap or asking if that alternative is acceptable.
+    · evidence g4: "We would put you on the Southland rivers." ⇒ Knowledge base states: 'We currently cover the Southland rivers. We have no guide in the Queenstown / Lakes area yet.' Angler asked to fish 'near Queenstown', which is not covered. Instructions say: 'If the angler asks about an area we do not cover, say so plainly first; only then may you mention the nearest covered area.'
+    · evidence g4: "We would put you on the Southland rivers." ⇒ This is a concrete commitment to place the angler on a specific river before confirming whether the angler accepts the alternative to their requested location.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 13 — Price per the knowledge base and "full days only" per the guide entry
-  expect send=true  got score=0.95 send=true  → OK
-    - Accurately quotes verified prices from knowledge base
-    - Correctly states full-day requirement per guide rules
-    - Does not repeat already-given party size or destination
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft answers the angler's questions directly and accurately from the knowledge base.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 14 — Form dates 17, 18, 19, 23 with text without dates; draft says "those four dates" → comes from the form, send
-  expect send=true  got score=0.95 send=true  → OK
-    - Draft appropriately avoids promising specific availability; will check with founders as instructed.
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft appropriately asks to check availability without committing to specific dates.
 
 stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
 
 [run 3] case 16 — REAL prod instructions after the 7 edits: draft names the guide, says she works the Southland rivers, offers to CHECK the 12th
-  expect send=true  got score=0.9 send=true  → OK
-    - All facts verified against knowledge base; price, guide name, and availability check are correct.
+  expect send=true  got send=true (judge send=true, score=0.95, flags=[])  → OK
+    - Draft correctly gives verified NZ price, confirms full-day format, and appropriately says we'll check guide availability without promising a specific date.
 
-SUMMARY: 48/57 as expected; wrong verdicts: 9 (run 1 7, run 1 8, run 1 9b (no price, expect send=true), run 2 7, run 2 8, run 2 9b (no price, expect send=true), run 3 7, run 3 8, run 3 9b (no price, expect send=true)); judge errors (lost verdicts): 0
+SUMMARY: 55/57 as expected; wrong decisions: 2 (run 2 9b (no price, expect send=true), run 3 9b (no price, expect send=true)); judge errors (lost verdicts): 0; blocked without evidence: 0
 
- ✓ .fa-proofs/fa-1.72/judge-cases.mts (1 test) 70108ms
-   ✓ FA-1.72 proof — judge, 16 cases, real model  70107ms
+ ✓ .fa-proofs/fa-1.72/judge-cases.mts (1 test) 124464ms
+   ✓ FA-1.72 proof — judge, 16 cases, real model  124463ms
 
  Test Files  1 passed (1)
       Tests  1 passed (1)
-   Start at  13:46:26
-   Duration  70.42s (transform 98ms, setup 0ms, import 196ms, tests 70.11s, environment 0ms)
+   Start at  14:04:37
+   Duration  124.81s (transform 125ms, setup 0ms, import 228ms, tests 124.46s, environment 0ms)
 

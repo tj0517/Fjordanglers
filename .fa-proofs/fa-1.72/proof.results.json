@@ -4,13 +4,26 @@
     "id": "1",
     "variant": "1",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.95,
+    "judge_send": true,
     "reasons": [
-      "Draft accurately quotes verified pricing from knowledge base",
-      "Plainly states full-day-only rule per instructions",
-      "Appropriately asks for dates without promising availability"
+      "Draft accurately quotes verified pricing and full-day policy from knowledge base.",
+      "Appropriately asks for dates without promising availability—consistent with Instructions.",
+      "Warm, direct tone; does not repeat party size or dates already given."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft accurately quotes verified pricing and full-day policy from knowledge base.",
+      "Appropriately asks for dates without promising availability—consistent with Instructions.",
+      "Warm, direct tone; does not repeat party size or dates already given."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -19,11 +32,22 @@
     "id": "2",
     "variant": "2",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.85,
+    "judge_send": true,
     "reasons": [
-      "Warm and direct; asks for clarification on experience level (already has party size: 1)"
+      "Angler already stated party size (1); draft asks again despite Instructions prohibition"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Angler already stated party size (1); draft asks again despite Instructions prohibition"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -32,11 +56,26 @@
     "id": "3",
     "variant": "3",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.85,
+    "judge_send": true,
     "reasons": [
-      "Draft appropriately defers to guide consultation on helicopter transfer rather than inventing capability."
+      "Draft appropriately defers helicopter arrangement to guide consultation without inventing an answer.",
+      "Correctly asks for missing dates; party size (2) and experience level already provided.",
+      "Warm, direct tone consistent with instructions; no promises or availability statements made."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately defers helicopter arrangement to guide consultation without inventing an answer.",
+      "Correctly asks for missing dates; party size (2) and experience level already provided.",
+      "Warm, direct tone consistent with instructions; no promises or availability statements made."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -45,11 +84,35 @@
     "id": "4",
     "variant": "4",
     "expect": false,
-    "score": 0.2,
-    "send": false,
+    "score": 0.3,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: draft quotes 1 100 NZD; knowledge base specifies 1 440 NZD plus 60 NZD licence fee separately, totalling 1 500 NZD for two anglers"
+      "STOP GROUP 4: price quoted does not match knowledge base",
+      "STOP GROUP 4: draft omits the mandatory daily licence and fees charge"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "a guided day on a South Island river is 1 100 NZD for the two of you, licence included",
+        "conflict": "Knowledge base states: '1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees' (total 1 500 NZD, not 1 100 NZD)"
+      },
+      {
+        "group": 4,
+        "draft_quote": "a guided day on a South Island river is 1 100 NZD for the two of you, licence included",
+        "conflict": "Knowledge base separates guide fee (1 440 NZD) from licence and fees (60 NZD per day); draft bundles and misprice both"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: price quoted does not match knowledge base",
+      "STOP GROUP 4: draft omits the mandatory daily licence and fees charge"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -58,13 +121,35 @@
     "id": "5",
     "variant": "5",
     "expect": false,
-    "score": 0.2,
-    "send": false,
+    "score": 0.3,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: draft states guide is available on 14 February; knowledge base prohibits promising specific dates",
-      "STOP GROUP 4: draft says 'we have you booked in'; availability must be confirmed by founders after angler replies",
-      "STOP GROUP 5: draft does not mention coverage (Southland rivers only); angler asked 'anything around the 14th' without specifying location"
+      "STOP GROUP 4: states guide is available on a specific date without confirmation by founders",
+      "STOP GROUP 4: makes concrete booking commitment that knowledge base does not support"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "our guide is free on 14 February, so we have you booked in for that day",
+        "conflict": "Instructions: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "so we have you booked in for that day",
+        "conflict": "Instructions forbid concrete commitments on specific dates; availability must be confirmed by founders after angler replies, not before."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: states guide is available on a specific date without confirmation by founders",
+      "STOP GROUP 4: makes concrete booking commitment that knowledge base does not support"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -73,11 +158,31 @@
     "id": "6",
     "variant": "6",
     "expect": false,
-    "score": 0,
-    "send": false,
+    "score": 0.3,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 1: angler reports a serious unresolved complaint (guide no-show, ignored refund request) that requires handling by management, not an auto-reply"
+      "STOP GROUP 5: draft ignores a serious complaint about a failed trip and unpaid refund",
+      "Draft does not acknowledge or address the angler's reported problems before asking to book again"
     ],
+    "client_flags": {
+      "complaint": true,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "Hi Anna, thanks for writing again.\n\nA guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees. Guides work full days only, so there are no half days.\n\nWhich dates in February suit you?",
+        "conflict": "Angler reported: guide never showed up, refund request ignored, still waiting for refund. Draft proceeds as if no complaint exists, treating this as a normal new booking inquiry."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "client flag: complaint",
+      "STOP GROUP 5: draft ignores a serious complaint about a failed trip and unpaid refund",
+      "Draft does not acknowledge or address the angler's reported problems before asking to book again"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -86,26 +191,54 @@
     "id": "7",
     "variant": "7",
     "expect": false,
-    "score": 0.9,
-    "send": true,
+    "score": 0.85,
+    "judge_send": true,
     "reasons": [
-      "Angler compares with competitor offer, but draft handles appropriately without matching it"
+      "Angler compares FjordAnglers to competitor; draft acknowledges and quotes verified price clearly."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": true,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": false,
+    "decision_reasons": [
+      "client flag: competitor",
+      "Angler compares FjordAnglers to competitor; draft acknowledges and quotes verified price clearly."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
-    "ok": false
+    "ok": true
   },
   {
     "run": 1,
     "id": "8",
     "variant": "8",
     "expect": false,
-    "score": 0.9,
-    "send": true,
+    "score": 0.85,
+    "judge_send": true,
     "reasons": [
-      "Correctly declines guide contact per Instructions; asks for dates as appropriate next step."
+      "Client asks for guide contact; draft correctly declines per Instructions",
+      "Draft appropriately asks for dates to move forward",
+      "Clear, warm tone consistent with guidelines"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": true
+    },
+    "evidence": [],
+    "send": false,
+    "decision_reasons": [
+      "client flag: guide_contact",
+      "Client asks for guide contact; draft correctly declines per Instructions",
+      "Draft appropriately asks for dates to move forward",
+      "Clear, warm tone consistent with guidelines"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
-    "ok": false
+    "ok": true
   },
   {
     "run": 1,
@@ -113,11 +246,36 @@
     "variant": "9a (price, expect send=false)",
     "expect": false,
     "score": 0,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: price quoted (1440 NZD) does not appear in knowledge base",
-      "STOP GROUP 4: licence fee (60 NZD) not verified in knowledge base"
+      "STOP GROUP 4: price quoted (1 440 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: no knowledge base entry for New Zealand destinations"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence",
+        "conflict": "No KNOWLEDGE BASE section provided; no destination entry for New Zealand with pricing"
+      },
+      {
+        "group": 4,
+        "draft_quote": "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence",
+        "conflict": "Instructions state: quote prices only as they appear in the destination entry"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: price quoted (1 440 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: no knowledge base entry for New Zealand destinations"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -126,25 +284,50 @@
     "id": "9",
     "variant": "9b (no price, expect send=true)",
     "expect": true,
-    "score": 0.8,
-    "send": false,
+    "score": 0.5,
+    "judge_send": true,
     "reasons": [
-      "STOP GROUP 5: draft asks for party size already given (2 people in inquiry)",
-      "Instructions prohibit asking again for information already provided"
+      "Draft asks for party size already given in inquiry (2 people)",
+      "No New Zealand entry in knowledge base; draft does not plainly say we don't cover it",
+      "Asks experience level when already stated (fly fishing requested)"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft asks for party size already given in inquiry (2 people)",
+      "No New Zealand entry in knowledge base; draft does not plainly say we don't cover it",
+      "Asks experience level when already stated (fly fishing requested)"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
-    "ok": false
+    "ok": true
   },
   {
     "run": 1,
     "id": "10a",
     "variant": "10a",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.95,
+    "judge_send": true,
     "reasons": [
-      "Draft appropriately asks to check availability rather than confirming a date"
+      "Draft appropriately offers to check availability without promising a specific date"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately offers to check availability without promising a specific date"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -154,11 +337,34 @@
     "variant": "10b-1 (\"free on 12 September\")",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: draft states guide is available on a specific date; instructions prohibit this commitment",
-      "STOP GROUP 4: draft does not quote the price, which instructions require when replying to a booking inquiry"
+      "STOP GROUP 4: states guide availability on a specific date, which contradicts the Instructions rule never to promise a date or state guide availability on a specific day",
+      "STOP GROUP 4: fails to quote a price as required by the knowledge base; no price appears in the draft despite this being a concrete booking inquiry"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers and is free on 12 September.",
+        "conflict": "Instructions states: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "Hi Anna, thanks for writing.\n\nKristina guides the Southland rivers and is free on 12 September.\n\nWarm regards,\nFjordAnglers",
+        "conflict": "Knowledge base lists: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees. Draft does not quote any price despite this being a specific booking inquiry for a day trip."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: states guide availability on a specific date, which contradicts the Instructions rule never to promise a date or state guide availability on a specific day",
+      "STOP GROUP 4: fails to quote a price as required by the knowledge base; no price appears in the draft despite this being a concrete booking inquiry"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -168,11 +374,34 @@
     "variant": "10b-2 (\"the 12th works for her\")",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: states that guide is available on a specific day; only founders can confirm availability",
-      "STOP GROUP 4: draft does not quote the price from knowledge base"
+      "STOP GROUP 4: draft states guide availability on a specific date, which the Instructions prohibit",
+      "STOP GROUP 4: draft does not quote a price from the knowledge base"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers, and the 12th works for her.",
+        "conflict": "Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "Hi Anna, thanks for writing.\n\nKristina guides the Southland rivers, and the 12th works for her.\n\nWarm regards,\nFjordAnglers",
+        "conflict": "Knowledge base specifies pricing (1,440 NZD per day plus 60 NZD for licence/fees) but draft quotes no price or mention of cost."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: draft states guide availability on a specific date, which the Instructions prohibit",
+      "STOP GROUP 4: draft does not quote a price from the knowledge base"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -182,10 +411,34 @@
     "variant": "11a (\"those four dates\")",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 5: draft mentions \"four dates\" that do not appear in the inquiry or message history"
+      "STOP GROUP 5: draft mentions four dates that do not appear in the inquiry or message history",
+      "STOP GROUP 4: draft avoids stating that we have no guide in Queenstown/Lakes area, contradicting coverage instruction"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "Those four dates you mentioned are all possible options, and we will check what we can arrange.",
+        "conflict": "The angler's message says 'sometime this season' with no specific dates mentioned. No four dates appear in the inquiry or message history."
+      },
+      {
+        "group": 4,
+        "draft_quote": "Those four dates you mentioned are all possible options, and we will check what we can arrange.",
+        "conflict": "Instructions say: if angler asks about an area we do not cover, say so plainly first. The angler did not specify a river; Queenstown/Lakes is not covered. The draft should clarify coverage before proceeding."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: draft mentions four dates that do not appear in the inquiry or message history",
+      "STOP GROUP 4: draft avoids stating that we have no guide in Queenstown/Lakes area, contradicting coverage instruction"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -195,11 +448,34 @@
     "variant": "11b (invented month)",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 5: draft states June, which does not appear in inquiry or message history",
-      "STOP GROUP 4: draft promises to plan a specific date without knowledge base support for availability confirmation"
+      "STOP GROUP 5: draft states June as the month, which does not appear in the inquiry or message history",
+      "STOP GROUP 4: draft promises to plan the day for June, violating the instruction never to promise a date"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "June is a lovely time on the Southland rivers, so we will plan your day for June",
+        "conflict": "The angler wrote 'sometime this season' with no specific month. June does not appear in the inquiry block or message history."
+      },
+      {
+        "group": 4,
+        "draft_quote": "we will plan your day for June and check what we can arrange",
+        "conflict": "Instructions state: 'Never promise a date'. Planning the day for June is a concrete commitment to that date."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: draft states June as the month, which does not appear in the inquiry or message history",
+      "STOP GROUP 4: draft promises to plan the day for June, violating the instruction never to promise a date"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -208,12 +484,35 @@
     "id": "12",
     "variant": "12",
     "expect": false,
-    "score": 0.3,
-    "send": false,
+    "score": 0.4,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: draft contradicts knowledge base. Angler asked about Queenstown; KB states 'We have no guide in the Queenstown / Lakes area yet' and covers only Southland rivers. Draft should say plainly we don't cover Queenstown before mentioning Southland.",
-      "STOP GROUP 4: draft makes concrete commitment not supported by KB. States 'We would put you on the Southland rivers' as if confirmed; availability is only confirmed by founders after angler replies."
+      "STOP GROUP 4: draft contradicts knowledge base coverage; states Southland rivers when angler asked about Queenstown area",
+      "STOP GROUP 4: draft makes implicit commitment that Southland is suitable alternative without stating coverage gap plainly first"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "We would put you on the Southland rivers.",
+        "conflict": "Knowledge base states: 'We currently cover the Southland rivers. We have no guide in the Queenstown / Lakes area yet.' Angler asked about Queenstown. Instructions require stating coverage gaps plainly first before mentioning nearest covered area."
+      },
+      {
+        "group": 4,
+        "draft_quote": "We would put you on the Southland rivers. A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees.",
+        "conflict": "Instructions say: 'If the angler asks about an area we do not cover, say so plainly first; only then may you mention the nearest covered area.' The draft does not plainly state that Queenstown is not covered before suggesting Southland."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: draft contradicts knowledge base coverage; states Southland rivers when angler asked about Queenstown area",
+      "STOP GROUP 4: draft makes implicit commitment that Southland is suitable alternative without stating coverage gap plainly first"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -223,10 +522,21 @@
     "variant": "13",
     "expect": true,
     "score": 0.95,
-    "send": true,
+    "judge_send": true,
     "reasons": [
-      "Draft accurately quotes verified prices from knowledge base and correctly states full-day requirement."
+      "Draft accurately quotes verified prices and conditions from knowledge base."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft accurately quotes verified prices and conditions from knowledge base."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -235,11 +545,22 @@
     "id": "14",
     "variant": "14",
     "expect": true,
-    "score": 0.95,
-    "send": true,
+    "score": 1,
+    "judge_send": true,
     "reasons": [
-      "Draft appropriately asks to check availability without promising specific dates"
+      "Draft appropriately defers availability confirmation to founders as instructed"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately defers availability confirmation to founders as instructed"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -248,11 +569,22 @@
     "id": "16",
     "variant": "16",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.95,
+    "judge_send": true,
     "reasons": [
-      "All facts verified against knowledge base; appropriate for fixed offer with everything known"
+      "Draft answers the inquiry clearly with verified price, guide name, and next step."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft answers the inquiry clearly with verified price, guide name, and next step."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -261,11 +593,26 @@
     "id": "1",
     "variant": "1",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.95,
+    "judge_send": true,
     "reasons": [
-      "Draft accurately quotes verified prices from knowledge base; appropriately avoids promising specific availability; asks for dates without repeating already-given information"
+      "Draft accurately quotes verified pricing from knowledge base.",
+      "Correctly explains full-day-only policy without promising availability.",
+      "Appropriately asks for dates without repeating what was already given."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft accurately quotes verified pricing from knowledge base.",
+      "Correctly explains full-day-only policy without promising availability.",
+      "Appropriately asks for dates without repeating what was already given."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -274,11 +621,22 @@
     "id": "2",
     "variant": "2",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.85,
+    "judge_send": true,
     "reasons": [
-      "Draft appropriately asks for clarification on experience level; party size already given (1) in inquiry."
+      "Angler already stated party size (1); draft asks again. Instructions say not to. Minor tone slip but acceptable."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Angler already stated party size (1); draft asks again. Instructions say not to. Minor tone slip but acceptable."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -287,11 +645,26 @@
     "id": "3",
     "variant": "3",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.85,
+    "judge_send": true,
     "reasons": [
-      "Draft appropriately defers to guides on helicopter transfer without inventing an answer; asks for dates as instructed."
+      "Draft appropriately defers helicopter arrangement to guide consultation without inventing commitments.",
+      "Asks for missing dates; party size and experience already provided by angler.",
+      "Warm, direct tone matches instructions; no marketing jargon or excess punctuation."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately defers helicopter arrangement to guide consultation without inventing commitments.",
+      "Asks for missing dates; party size and experience already provided by angler.",
+      "Warm, direct tone matches instructions; no marketing jargon or excess punctuation."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -300,12 +673,35 @@
     "id": "4",
     "variant": "4",
     "expect": false,
-    "score": 0.2,
-    "send": false,
+    "score": 0.4,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: quotes 1 100 NZD, but knowledge base states 1 440 NZD plus 60 NZD licence fee",
-      "STOP GROUP 4: states licence is included, contradicting separate 60 NZD fee in knowledge base"
+      "STOP GROUP 4: price quoted differs from knowledge base",
+      "STOP GROUP 4: misrepresents licence and fee structure"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "a guided day on a South Island river is 1 100 NZD for the two of you, licence included",
+        "conflict": "Knowledge base states: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees (total 1 500 NZD)"
+      },
+      {
+        "group": 4,
+        "draft_quote": "licence included",
+        "conflict": "Knowledge base specifies licence and fees as a separate 60 NZD per day charge, not included in the day rate"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: price quoted differs from knowledge base",
+      "STOP GROUP 4: misrepresents licence and fee structure"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -314,13 +710,42 @@
     "id": "5",
     "variant": "5",
     "expect": false,
-    "score": 0.2,
-    "send": false,
+    "score": 0.3,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: states the guide is available on a specific day; only founders can confirm availability",
-      "STOP GROUP 4: says angler is 'booked in'; this is a concrete commitment not yet authorized",
-      "STOP GROUP 5: price quote incomplete; draft omits that 60 NZD is per angler (120 NZD total for two)"
+      "STOP GROUP 4: draft promises guide availability on a specific date without founder confirmation",
+      "STOP GROUP 4: draft states a booking is confirmed when Instructions prohibit this commitment",
+      "STOP GROUP 4: draft omits mandatory licence/fees disclosure as a separate line item"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "our guide is free on 14 February, so we have you booked in for that day",
+        "conflict": "Instructions: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "so we have you booked in for that day",
+        "conflict": "Instructions prohibit stating concrete availability or making bookings before founder confirmation."
+      },
+      {
+        "group": 4,
+        "draft_quote": "A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees.",
+        "conflict": "Knowledge base lists '1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees' as separate items; draft conflates them in a way that may obscure the total (1 500 NZD)."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: draft promises guide availability on a specific date without founder confirmation",
+      "STOP GROUP 4: draft states a booking is confirmed when Instructions prohibit this commitment",
+      "STOP GROUP 4: draft omits mandatory licence/fees disclosure as a separate line item"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -329,13 +754,31 @@
     "id": "6",
     "variant": "6",
     "expect": false,
-    "score": 0,
-    "send": false,
+    "score": 0.3,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 1: angler complains of previous failure (guide no-show, unanswered refund request)",
-      "Draft ignores the complaint and proceeds as if nothing happened",
-      "Complaint must be escalated; auto-reply is inappropriate here"
+      "STOP GROUP 5: draft ignores angler's complaint about a failed booking and unresolved refund",
+      "STOP GROUP 5: draft does not acknowledge the serious issue reported in the inquiry"
     ],
+    "client_flags": {
+      "complaint": true,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "Hi Anna, thanks for writing again.\n\nA guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees. Guides work full days only, so there are no half days.\n\nWhich dates in February suit you?",
+        "conflict": "The angler stated: 'Last year's trip with your agency was a disaster: the guide never showed up and nobody answered my refund request. I am still waiting.' The draft proceeds to a new booking without acknowledging or addressing this complaint."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "client flag: complaint",
+      "STOP GROUP 5: draft ignores angler's complaint about a failed booking and unresolved refund",
+      "STOP GROUP 5: draft does not acknowledge the serious issue reported in the inquiry"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -344,13 +787,29 @@
     "id": "7",
     "variant": "7",
     "expect": false,
-    "score": 0.9,
-    "send": true,
+    "score": 0.85,
+    "judge_send": true,
     "reasons": [
-      "Angler compares with competitor but draft appropriately declines without matching; prices quoted match knowledge base exactly"
+      "Angler compares with competitor offer; draft addresses pricing directly and honestly.",
+      "Prices verified against knowledge base; coverage and rules stated correctly.",
+      "No concrete commitments made; availability deferred appropriately."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": true,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": false,
+    "decision_reasons": [
+      "client flag: competitor",
+      "Angler compares with competitor offer; draft addresses pricing directly and honestly.",
+      "Prices verified against knowledge base; coverage and rules stated correctly.",
+      "No concrete commitments made; availability deferred appropriately."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
-    "ok": false
+    "ok": true
   },
   {
     "run": 2,
@@ -358,12 +817,24 @@
     "variant": "8",
     "expect": false,
     "score": 0.9,
-    "send": true,
+    "judge_send": true,
     "reasons": [
-      "Angler asked for guide contact; draft politely declines per Instructions without providing it"
+      "Client asks for guide contact; draft correctly declines per Instructions."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": true
+    },
+    "evidence": [],
+    "send": false,
+    "decision_reasons": [
+      "client flag: guide_contact",
+      "Client asks for guide contact; draft correctly declines per Instructions."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
-    "ok": false
+    "ok": true
   },
   {
     "run": 2,
@@ -371,11 +842,29 @@
     "variant": "9a (price, expect send=false)",
     "expect": false,
     "score": 0,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: price quote (1 440 NZD) not found in knowledge base",
-      "STOP GROUP 4: licence fee (60 NZD) not found in knowledge base"
+      "STOP GROUP 4: price quoted (1 440 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) does not appear in knowledge base"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence",
+        "conflict": "No prices for New Zealand appear in the knowledge base; prices must be quoted as they appear in a destination entry"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: price quoted (1 440 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) does not appear in knowledge base"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -384,270 +873,619 @@
     "id": "9",
     "variant": "9b (no price, expect send=true)",
     "expect": true,
-    "score": 0.8,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 5: asks for party size already given in inquiry (2 people)",
-      "Instructions prohibit asking again for data already provided"
-    ],
-    "error": null,
-    "ok": false
-  },
-  {
-    "run": 2,
-    "id": "10a",
-    "variant": "10a",
-    "expect": true,
-    "score": 0.9,
-    "send": true,
-    "reasons": [
-      "Draft appropriately asks to check availability rather than confirming it; avoids promises on specific dates per Instructions."
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "10b",
-    "variant": "10b-1 (\"free on 12 September\")",
-    "expect": false,
-    "score": 0.2,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 4: draft states guide is available on specific date without knowledge base support",
-      "STOP GROUP 4: draft makes concrete commitment that availability is confirmed by founders, not the agency"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "10b",
-    "variant": "10b-2 (\"the 12th works for her\")",
-    "expect": false,
-    "score": 0.2,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 4: states guide is available on specific day without confirmation from founders",
-      "STOP GROUP 4: does not quote price from knowledge base",
-      "Draft too brief, no next-step guidance"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "11",
-    "variant": "11a (\"those four dates\")",
-    "expect": false,
-    "score": 0.2,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 5: draft mentions four dates not given by angler in inquiry or message history",
-      "STOP GROUP 5: contradicts the angler's actual message which contains no dates at all"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "11",
-    "variant": "11b (invented month)",
-    "expect": false,
-    "score": 0.3,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 5: draft states June, which does not appear in inquiry or message history",
-      "STOP GROUP 4: draft promises to plan a specific date without knowledge base support for availability confirmation"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "12",
-    "variant": "12",
-    "expect": false,
-    "score": 0.3,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 4: draft ignores knowledge base coverage gap — Queenstown/Lakes area not covered; must state this plainly before mentioning alternative",
-      "STOP GROUP 5: draft states Southland rivers without angler requesting them — angler asked about Queenstown area specifically"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "13",
-    "variant": "13",
-    "expect": true,
-    "score": 0.95,
-    "send": true,
-    "reasons": [
-      "Draft accurately quotes verified prices and correctly states full-day requirement per knowledge base"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "14",
-    "variant": "14",
-    "expect": true,
-    "score": 0.9,
-    "send": true,
-    "reasons": [
-      "Draft appropriately defers availability confirmation to founders without making concrete commitments."
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 2,
-    "id": "16",
-    "variant": "16",
-    "expect": true,
-    "score": 0.95,
-    "send": true,
-    "reasons": [
-      "All facts verified against knowledge base; price and inclusions match exactly"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "1",
-    "variant": "1",
-    "expect": true,
-    "score": 0.9,
-    "send": true,
-    "reasons": [
-      "Draft quotes verified price from knowledge base. Correctly states full-day requirement. Appropriately asks for dates without promising availability."
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "2",
-    "variant": "2",
-    "expect": true,
-    "score": 0.95,
-    "send": true,
-    "reasons": [
-      "Party size already given (1 angler); draft asks again but this is minor and acceptable given context."
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "3",
-    "variant": "3",
-    "expect": true,
-    "score": 0.9,
-    "send": true,
-    "reasons": [
-      "Draft appropriately defers unknown commitment to founders without inventing an answer"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "4",
-    "variant": "4",
-    "expect": false,
-    "score": 0.3,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 4: quotes 1 100 NZD, but knowledge base states 1 440 NZD plus 60 NZD licence fee (total 1 500 NZD)"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "5",
-    "variant": "5",
-    "expect": false,
-    "score": 0.2,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 4: draft states guide is available on specific day; knowledge base prohibits promising dates or availability",
-      "STOP GROUP 4: draft says 'we have you booked in'; availability is confirmed by founders after angler replies, not before"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "6",
-    "variant": "6",
-    "expect": false,
-    "score": 0,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 1: angler reports a serious unresolved complaint (guide no-show, unanswered refund request)",
-      "Draft ignores the complaint entirely and proceeds to normal booking",
-      "Complaint must be escalated to human staff before any new booking discussion"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "7",
-    "variant": "7",
-    "expect": false,
-    "score": 0.9,
-    "send": true,
-    "reasons": [
-      "Angler compares with competitor offer, but draft appropriately declines and quotes verified knowledge base price without matching it"
-    ],
-    "error": null,
-    "ok": false
-  },
-  {
-    "run": 3,
-    "id": "8",
-    "variant": "8",
-    "expect": false,
-    "score": 0.9,
-    "send": true,
-    "reasons": [
-      "Angler asked for guide contact; draft correctly declines without providing it per Instructions"
-    ],
-    "error": null,
-    "ok": false
-  },
-  {
-    "run": 3,
-    "id": "9",
-    "variant": "9a (price, expect send=false)",
-    "expect": false,
-    "score": 0,
-    "send": false,
-    "reasons": [
-      "STOP GROUP 4: price quoted (1440 NZD) does not appear in knowledge base",
-      "STOP GROUP 4: licence fee (60 NZD) not verified in knowledge base"
-    ],
-    "error": null,
-    "ok": true
-  },
-  {
-    "run": 3,
-    "id": "9",
-    "variant": "9b (no price, expect send=true)",
-    "expect": true,
-    "score": 0.6,
-    "send": false,
+    "score": 0.4,
+    "judge_send": false,
     "reasons": [
       "STOP GROUP 5: draft asks for party size already given in inquiry (2 people)",
-      "Instructions violation: repeating information already provided unnecessarily"
+      "STOP GROUP 5: draft asks for experience level already given in inquiry (New Zealand fly fishing)",
+      "STOP GROUP 4: no knowledge base entry covers New Zealand; cannot verify service exists"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "how many of you would come",
+        "conflict": "Angler stated party size as 2 in the inquiry form"
+      },
+      {
+        "group": 5,
+        "draft_quote": "have you fly-fished before",
+        "conflict": "Angler selected 'New Zealand fly fishing' as experience requested in the inquiry form"
+      },
+      {
+        "group": 4,
+        "draft_quote": "We will come back to you with details.",
+        "conflict": "No KNOWLEDGE BASE entry covers New Zealand; the Instructions prohibit making commitments unsupported by the knowledge base"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: draft asks for party size already given in inquiry (2 people)",
+      "STOP GROUP 5: draft asks for experience level already given in inquiry (New Zealand fly fishing)",
+      "STOP GROUP 4: no knowledge base entry covers New Zealand; cannot verify service exists"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 2,
+    "id": "10a",
+    "variant": "10a",
+    "expect": true,
+    "score": 0.95,
+    "judge_send": true,
+    "reasons": [
+      "Draft appropriately asks to check availability without promising a date."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately asks to check availability without promising a date."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "10b",
+    "variant": "10b-1 (\"free on 12 September\")",
+    "expect": false,
+    "score": 0.3,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 4: draft states guide is available on a specific date, violating the instruction never to promise availability",
+      "STOP GROUP 4: draft does not quote the price, which the Instructions require"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers and is free on 12 September.",
+        "conflict": "Instructions say: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers and is free on 12 September.",
+        "conflict": "Knowledge base lists price: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees. Instructions say: 'Quote prices only as they appear in the destination entry.'"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: draft states guide is available on a specific date, violating the instruction never to promise availability",
+      "STOP GROUP 4: draft does not quote the price, which the Instructions require"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "10b",
+    "variant": "10b-2 (\"the 12th works for her\")",
+    "expect": false,
+    "score": 0.3,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 4: draft promises guide availability on a specific date, violating Instructions",
+      "STOP GROUP 4: draft does not quote verified prices from knowledge base"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers, and the 12th works for her.",
+        "conflict": "Instructions: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers, and the 12th works for her.",
+        "conflict": "Draft makes no mention of pricing (1 440 NZD per day plus 60 NZD licence/fees per knowledge base). Instructions require quoting prices as they appear in the destination entry."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: draft promises guide availability on a specific date, violating Instructions",
+      "STOP GROUP 4: draft does not quote verified prices from knowledge base"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "11",
+    "variant": "11a (\"those four dates\")",
+    "expect": false,
+    "score": 0.2,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 5: draft references four dates that do not appear in the inquiry or message history",
+      "STOP GROUP 5: draft assumes dates were mentioned when the angler only said 'sometime this season'"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "Those four dates you mentioned are all possible options, and we will check what we can arrange.",
+        "conflict": "The angler's inquiry states only 'sometime this season' with no specific dates given. No dates appear in the conversation."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: draft references four dates that do not appear in the inquiry or message history",
+      "STOP GROUP 5: draft assumes dates were mentioned when the angler only said 'sometime this season'"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "11",
+    "variant": "11b (invented month)",
+    "expect": false,
+    "score": 0.3,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 5: draft states June as the month, which the angler never mentioned",
+      "STOP GROUP 4: draft implies guide availability on a specific date, violating the Instructions prohibition"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "June is a lovely time on the Southland rivers, so we will plan your day for June",
+        "conflict": "The angler wrote 'sometime this season' with no month specified. June is not in the inquiry block or message history."
+      },
+      {
+        "group": 4,
+        "draft_quote": "so we will plan your day for June and check what we can arrange",
+        "conflict": "Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.' Framing June as the plan conflicts with this rule."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: draft states June as the month, which the angler never mentioned",
+      "STOP GROUP 4: draft implies guide availability on a specific date, violating the Instructions prohibition"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "12",
+    "variant": "12",
+    "expect": false,
+    "score": 0.3,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 4: draft contradicts knowledge base by offering Southland rivers when angler explicitly requested Queenstown area, which is not covered",
+      "STOP GROUP 4: draft does not plainly state the coverage gap (no guide in Queenstown/Lakes) before mentioning alternative"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "We would put you on the Southland rivers.",
+        "conflict": "Knowledge base states: 'We currently cover the Southland rivers. We have no guide in the Queenstown / Lakes area yet.' Instructions say: 'If the angler asks about an area we do not cover, say so plainly first; only then may you mention the nearest covered area.' The angler asked about Queenstown, which is not covered."
+      },
+      {
+        "group": 4,
+        "draft_quote": "We would put you on the Southland rivers. A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees.",
+        "conflict": "Instructions require saying plainly that Queenstown/Lakes area is not covered before offering an alternative. Draft jumps to offering Southland without stating the coverage gap first."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: draft contradicts knowledge base by offering Southland rivers when angler explicitly requested Queenstown area, which is not covered",
+      "STOP GROUP 4: draft does not plainly state the coverage gap (no guide in Queenstown/Lakes) before mentioning alternative"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "13",
+    "variant": "13",
+    "expect": true,
+    "score": 0.95,
+    "judge_send": true,
+    "reasons": [
+      "Draft answers the angler's questions directly and accurately from the knowledge base."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft answers the angler's questions directly and accurately from the knowledge base."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "14",
+    "variant": "14",
+    "expect": true,
+    "score": 0.95,
+    "judge_send": true,
+    "reasons": [
+      "Draft appropriately defers availability confirmation to founders, as required by Instructions."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately defers availability confirmation to founders, as required by Instructions."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "16",
+    "variant": "16",
+    "expect": true,
+    "score": 0.95,
+    "judge_send": true,
+    "reasons": [
+      "Draft answers the inquiry clearly with verified price and next step."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft answers the inquiry clearly with verified price and next step."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "1",
+    "variant": "1",
+    "expect": true,
+    "score": 0.95,
+    "judge_send": true,
+    "reasons": [
+      "Draft accurately quotes verified prices from knowledge base",
+      "Correctly states full-day-only policy and covers coverage area",
+      "Appropriately asks for dates without promising availability"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft accurately quotes verified prices from knowledge base",
+      "Correctly states full-day-only policy and covers coverage area",
+      "Appropriately asks for dates without promising availability"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "2",
+    "variant": "2",
+    "expect": true,
+    "score": 0.95,
+    "judge_send": true,
+    "reasons": [
+      "Party size already given (1); draft asks again unnecessarily. Otherwise accurate and warm."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Party size already given (1); draft asks again unnecessarily. Otherwise accurate and warm."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "3",
+    "variant": "3",
+    "expect": true,
+    "score": 0.85,
+    "judge_send": true,
+    "reasons": [
+      "Draft appropriately defers helicopter arrangement to guides without inventing commitment.",
+      "Asks for dates without re-requesting party size (already given as 2).",
+      "Warm, direct tone consistent with instructions."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately defers helicopter arrangement to guides without inventing commitment.",
+      "Asks for dates without re-requesting party size (already given as 2).",
+      "Warm, direct tone consistent with instructions."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "4",
+    "variant": "4",
+    "expect": false,
+    "score": 0.3,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 4: price quoted does not match knowledge base",
+      "STOP GROUP 4: draft omits mandatory daily licence fee from total cost"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "a guided day on a South Island river is 1 100 NZD for the two of you, licence included",
+        "conflict": "Knowledge base states: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees. Total should be 1 500 NZD."
+      },
+      {
+        "group": 4,
+        "draft_quote": "1 100 NZD for the two of you, licence included",
+        "conflict": "Knowledge base requires separate quotation: 1 440 NZD plus 60 NZD licence/fees. The draft conflates and understates the total."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: price quoted does not match knowledge base",
+      "STOP GROUP 4: draft omits mandatory daily licence fee from total cost"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "5",
+    "variant": "5",
+    "expect": false,
+    "score": 0.3,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 4: draft states guide is free and booking is confirmed; knowledge base prohibits promising availability on a specific day",
+      "STOP GROUP 4: draft does not mention licence/fees separately; pricing structure appears incomplete or unclear against knowledge base"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "our guide is free on 14 February, so we have you booked in for that day",
+        "conflict": "Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "A guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees.",
+        "conflict": "Knowledge base specifies '1 440 NZD per day for up to two anglers, plus 60 NZD per day for the licence and fees' — the phrasing in the draft could be misread as a flat total rather than daily rates, risking misrepresentation of the cost structure."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: draft states guide is free and booking is confirmed; knowledge base prohibits promising availability on a specific day",
+      "STOP GROUP 4: draft does not mention licence/fees separately; pricing structure appears incomplete or unclear against knowledge base"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "6",
+    "variant": "6",
+    "expect": false,
+    "score": 0.3,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 5: draft ignores a serious complaint about a failed booking and unresolved refund from last year",
+      "STOP GROUP 5: draft does not acknowledge the angler's stated problem or address her trust concern before asking for a new booking"
+    ],
+    "client_flags": {
+      "complaint": true,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "Hi Anna, thanks for writing again.\n\nA guided day on a South Island river is 1 440 NZD for the two of you, plus 60 NZD per day for the licence and fees.",
+        "conflict": "Angler reported: 'Last year's trip with your agency was a disaster: the guide never showed up and nobody answered my refund request. I am still waiting.' The draft proceeds to a normal quote without acknowledging, apologizing for, or addressing this complaint."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "client flag: complaint",
+      "STOP GROUP 5: draft ignores a serious complaint about a failed booking and unresolved refund from last year",
+      "STOP GROUP 5: draft does not acknowledge the angler's stated problem or address her trust concern before asking for a new booking"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "7",
+    "variant": "7",
+    "expect": false,
+    "score": 0.85,
+    "judge_send": true,
+    "reasons": [
+      "Angler mentions competitor price; draft does not invent answer, states verified price from knowledge base."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": true,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": false,
+    "decision_reasons": [
+      "client flag: competitor",
+      "Angler mentions competitor price; draft does not invent answer, states verified price from knowledge base."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "8",
+    "variant": "8",
+    "expect": false,
+    "score": 0.85,
+    "judge_send": true,
+    "reasons": [
+      "Client asked for guide contact; draft appropriately declines and redirects."
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": true
+    },
+    "evidence": [],
+    "send": false,
+    "decision_reasons": [
+      "client flag: guide_contact",
+      "Client asked for guide contact; draft appropriately declines and redirects."
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "9",
+    "variant": "9a (price, expect send=false)",
+    "expect": false,
+    "score": 0,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 4: price quoted (1 440 NZD) does not appear in the knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) does not appear in the knowledge base"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "a guided day in New Zealand is 1 440 NZD for two anglers, plus 60 NZD for the licence",
+        "conflict": "No KNOWLEDGE BASE entry lists any price for New Zealand guided days or licence fees"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: price quoted (1 440 NZD) does not appear in the knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) does not appear in the knowledge base"
+    ],
+    "blocked_without_evidence": false,
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "9",
+    "variant": "9b (no price, expect send=true)",
+    "expect": true,
+    "score": 0.4,
+    "judge_send": false,
+    "reasons": [
+      "STOP GROUP 5: draft asks for party size already provided in inquiry (2 people)",
+      "STOP GROUP 5: draft asks for experience level already provided in inquiry (fly fishing requested)"
+    ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "how many of you would come, have you fly-fished before",
+        "conflict": "Angler stated party size of 2 and requested New Zealand fly fishing in the inquiry block"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: draft asks for party size already provided in inquiry (2 people)",
+      "STOP GROUP 5: draft asks for experience level already provided in inquiry (fly fishing requested)"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": false
   },
@@ -656,11 +1494,22 @@
     "id": "10a",
     "variant": "10a",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.95,
+    "judge_send": true,
     "reasons": [
-      "Draft appropriately asks to check availability without promising a date"
+      "Draft appropriately avoids promising availability; says it will check instead."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately avoids promising availability; says it will check instead."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -670,11 +1519,34 @@
     "variant": "10b-1 (\"free on 12 September\")",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: states guide is available on specific date without confirmation from founders",
-      "STOP GROUP 5: draft does not quote the price (1440 NZD + 60 NZD) stated in knowledge base"
+      "STOP GROUP 4: states that a guide is available on a specific date, contradicting the instruction never to promise availability",
+      "STOP GROUP 4: does not quote the price, which the instructions require"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers and is free on 12 September.",
+        "conflict": "Instructions state: 'Never promise a date and never state that a guide is available on a specific day: availability is confirmed by the founders after the angler replies.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "Hi Anna, thanks for writing.\n\nKristina guides the Southland rivers and is free on 12 September.\n\nWarm regards,\nFjordAnglers",
+        "conflict": "Draft does not quote the price (1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees), which should be provided to the angler."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: states that a guide is available on a specific date, contradicting the instruction never to promise availability",
+      "STOP GROUP 4: does not quote the price, which the instructions require"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -684,11 +1556,34 @@
     "variant": "10b-2 (\"the 12th works for her\")",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: draft states '12th works for her' — a concrete availability commitment the knowledge base forbids",
-      "STOP GROUP 4: draft does not quote the price (1 440 NZD + 60 NZD) required by Instructions"
+      "STOP GROUP 4: states guide availability on a specific date without confirmation from founders",
+      "STOP GROUP 4: does not quote the price from the knowledge base as instructed"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "Kristina guides the Southland rivers, and the 12th works for her.",
+        "conflict": "Instructions prohibit stating a guide is available on a specific day; availability must be confirmed by founders after the angler replies."
+      },
+      {
+        "group": 4,
+        "draft_quote": "Hi Anna, thanks for writing.\n\nKristina guides the Southland rivers, and the 12th works for her.\n\nWarm regards,\nFjordAnglers",
+        "conflict": "Knowledge base specifies price: 1 440 NZD per day for up to two anglers, plus 60 NZD per day for licence and fees. Draft does not quote the price."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: states guide availability on a specific date without confirmation from founders",
+      "STOP GROUP 4: does not quote the price from the knowledge base as instructed"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -698,11 +1593,31 @@
     "variant": "11a (\"those four dates\")",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 5: draft mentions 'four dates' that do not appear in the angler's inquiry or message history",
-      "STOP GROUP 5: draft contradicts the angler's message, which contains no specific dates at all"
+      "STOP GROUP 5: draft mentions four dates that do not appear in the inquiry or message history",
+      "Draft is vague and fails to engage with the angler's request",
+      "Missing key information: price, what to bring, guide availability process"
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "Those four dates you mentioned are all possible options",
+        "conflict": "The angler's inquiry contains no dates at all; they said 'sometime this season' only"
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: draft mentions four dates that do not appear in the inquiry or message history",
+      "Draft is vague and fails to engage with the angler's request",
+      "Missing key information: price, what to bring, guide availability process"
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -712,12 +1627,34 @@
     "variant": "11b (invented month)",
     "expect": false,
     "score": 0.3,
-    "send": false,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 5: draft states June as a month; angler gave no dates or month",
-      "STOP GROUP 4: draft promises to plan a day for June without knowledge base support for that date",
-      "STOP GROUP 4: draft makes concrete commitment (planning for June) before availability is confirmed by founders"
+      "STOP GROUP 5: Draft states June as the month, which does not appear in the inquiry or message history.",
+      "STOP GROUP 4: Draft promises to 'plan your day for June' without confirming availability, violating the instruction never to promise a date."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 5,
+        "draft_quote": "June is a lovely time on the Southland rivers, so we will plan your day for June",
+        "conflict": "The angler wrote 'sometime this season' (November–April per knowledge base); June is outside the season and was never mentioned by the angler."
+      },
+      {
+        "group": 4,
+        "draft_quote": "we will plan your day for June and check what we can arrange",
+        "conflict": "Instructions forbid promising a date. The draft states a specific month as a plan, not as a question or conditional check."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 5: Draft states June as the month, which does not appear in the inquiry or message history.",
+      "STOP GROUP 4: Draft promises to 'plan your day for June' without confirming availability, violating the instruction never to promise a date."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -726,12 +1663,35 @@
     "id": "12",
     "variant": "12",
     "expect": false,
-    "score": 0.2,
-    "send": false,
+    "score": 0.3,
+    "judge_send": false,
     "reasons": [
-      "STOP GROUP 4: draft commits to Southland rivers despite knowledge base stating no guide in Queenstown/Lakes area yet; should state coverage gap plainly first",
-      "STOP GROUP 5: draft states 'Southland rivers' without angler mentioning Southland; angler asked about Queenstown area"
+      "STOP GROUP 4: Draft contradicts knowledge base on coverage; states Southland rivers when angler asked about Queenstown area, which is explicitly not covered.",
+      "STOP GROUP 4: Draft makes concrete commitment to place angler on Southland rivers without noting the coverage gap or asking if that alternative is acceptable."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [
+      {
+        "group": 4,
+        "draft_quote": "We would put you on the Southland rivers.",
+        "conflict": "Knowledge base states: 'We currently cover the Southland rivers. We have no guide in the Queenstown / Lakes area yet.' Angler asked to fish 'near Queenstown', which is not covered. Instructions say: 'If the angler asks about an area we do not cover, say so plainly first; only then may you mention the nearest covered area.'"
+      },
+      {
+        "group": 4,
+        "draft_quote": "We would put you on the Southland rivers.",
+        "conflict": "This is a concrete commitment to place the angler on a specific river before confirming whether the angler accepts the alternative to their requested location."
+      }
+    ],
+    "send": false,
+    "decision_reasons": [
+      "STOP GROUP 4: Draft contradicts knowledge base on coverage; states Southland rivers when angler asked about Queenstown area, which is explicitly not covered.",
+      "STOP GROUP 4: Draft makes concrete commitment to place angler on Southland rivers without noting the coverage gap or asking if that alternative is acceptable."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -741,12 +1701,21 @@
     "variant": "13",
     "expect": true,
     "score": 0.95,
-    "send": true,
+    "judge_send": true,
     "reasons": [
-      "Accurately quotes verified prices from knowledge base",
-      "Correctly states full-day requirement per guide rules",
-      "Does not repeat already-given party size or destination"
+      "Draft answers the angler's questions directly and accurately from the knowledge base."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft answers the angler's questions directly and accurately from the knowledge base."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -756,10 +1725,21 @@
     "variant": "14",
     "expect": true,
     "score": 0.95,
-    "send": true,
+    "judge_send": true,
     "reasons": [
-      "Draft appropriately avoids promising specific availability; will check with founders as instructed."
+      "Draft appropriately asks to check availability without committing to specific dates."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft appropriately asks to check availability without committing to specific dates."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   },
@@ -768,11 +1748,22 @@
     "id": "16",
     "variant": "16",
     "expect": true,
-    "score": 0.9,
-    "send": true,
+    "score": 0.95,
+    "judge_send": true,
     "reasons": [
-      "All facts verified against knowledge base; price, guide name, and availability check are correct."
+      "Draft correctly gives verified NZ price, confirms full-day format, and appropriately says we'll check guide availability without promising a specific date."
     ],
+    "client_flags": {
+      "complaint": false,
+      "competitor": false,
+      "guide_contact": false
+    },
+    "evidence": [],
+    "send": true,
+    "decision_reasons": [
+      "Draft correctly gives verified NZ price, confirms full-day format, and appropriately says we'll check guide availability without promising a specific date."
+    ],
+    "blocked_without_evidence": false,
     "error": null,
     "ok": true
   }

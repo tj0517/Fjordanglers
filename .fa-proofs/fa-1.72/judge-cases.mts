@@ -2,7 +2,10 @@
  * FA-1.72 — judge behaviour on the new "is there a critical reason NOT to send?" prompt.
  * Real Anthropic call (Haiku), synthetic fixtures, 16 cases (1–9, 10a, 10b, 11–14, 16).
  *
- * Calls only judgeReply(conversation, draft, knowledge): no database, no email, no sending.
+ * Calls only judgeReply(conversation, draft, knowledge): no database, no email, no sending. The
+ * verdict is then run through decideFromVerdict (pure, the same function autoSendReply uses), so
+ * "got" below is the real send/hold decision: any client flag holds, and a block needs a quote
+ * that is literally in the draft. "expect" is compared with that decision.
  * The conversation is built with the real assembleConversation, exactly as draftReply builds it,
  * so the judge sees the inquiry block (experience, requested dates, party size, text) like the
  * drafting agent does. Cases 10–14 reproduce the causes of the 2026-10-26 production read.
@@ -31,6 +34,7 @@ if (process.env.RESEND_DEV_FAKE !== '1') {
 import { it } from 'vitest'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { judgeReply } from '../../src/lib/ai/judge-reply.js'
+import { decideFromVerdict } from '../../src/lib/ai/auto-send-guards.js'
 import { assembleConversation } from '../../src/lib/ai/extract-trip.js'
 import type { KnowledgeEntry } from '../../src/lib/ai/knowledge.js'
 
@@ -251,8 +255,15 @@ const CASES: Case[] = [
 
 interface Row {
   run: number; id: string; variant: string; expect: boolean
-  score: number | null; send: boolean | null; reasons: string[]
-  /** judgeReply threw (e.g. unparsable reply): in production nothing is sent. Counted separately. */
+  /** The judge's raw verdict. */
+  score: number | null; judge_send: boolean | null; reasons: string[]
+  client_flags: { complaint: boolean; competitor: boolean; guide_contact: boolean } | null
+  evidence: { group: number; draft_quote: string; conflict: string }[]
+  /** The decision autoSendReply would take (decideFromVerdict). */
+  send: boolean | null
+  decision_reasons: string[]
+  blocked_without_evidence: boolean
+  /** judgeReply threw (cut off, two objects, bad shape…): in production nothing is sent. Counted separately. */
   error: string | null
   ok: boolean
 }
@@ -269,10 +280,18 @@ it('FA-1.72 proof — judge, 16 cases, real model', async () => {
         let row: Row
         try {
           const r = await judgeReply(conversationOf(v.inquiry), v.draft, v.knowledge ?? WITH_DESTINATION)
-          row = { ...base, score: r.score, send: r.send, reasons: r.reasons, error: null, ok: r.send === expect }
+          const d = decideFromVerdict(r, v.draft)
+          row = {
+            ...base, score: r.score, judge_send: r.send, reasons: r.reasons, client_flags: r.client_flags, evidence: r.evidence,
+            send: d.send, decision_reasons: d.reasons, blocked_without_evidence: d.blockedWithoutEvidence, error: null, ok: d.send === expect,
+          }
         } catch (err) {
           // An error means "no send" in autoSendReply. It is never a pass: it is a lost verdict.
-          row = { ...base, score: null, send: null, reasons: [], error: err instanceof Error ? err.message : String(err), ok: false }
+          row = {
+            ...base, score: null, judge_send: null, reasons: [], client_flags: null, evidence: [],
+            send: null, decision_reasons: [], blocked_without_evidence: false,
+            error: err instanceof Error ? err.message : String(err), ok: false,
+          }
         }
         rows.push(row)
         console.log(`\n[run ${run}] case ${row.variant} — ${c.title}`)
@@ -280,8 +299,11 @@ it('FA-1.72 proof — judge, 16 cases, real model', async () => {
           console.log(`  expect send=${expect}  got ERROR (nothing would be sent) → LOST VERDICT`)
           console.log(`    ${row.error.slice(0, 600).replace(/\n/g, '\n    ')}`)
         } else {
-          console.log(`  expect send=${expect}  got score=${row.score} send=${row.send}  → ${row.ok ? 'OK' : 'MISMATCH'}`)
-          for (const reason of row.reasons) console.log(`    - ${reason}`)
+          const raised = Object.entries(row.client_flags!).filter(([, on]) => on).map(([k]) => k)
+          console.log(`  expect send=${expect}  got send=${row.send} (judge send=${row.judge_send}, score=${row.score}, flags=[${raised.join(',')}]` +
+            `${row.blocked_without_evidence ? ', BLOCKED WITHOUT EVIDENCE' : ''})  → ${row.ok ? 'OK' : 'MISMATCH'}`)
+          for (const reason of row.decision_reasons) console.log(`    - ${reason}`)
+          for (const e of row.evidence) console.log(`    · evidence g${e.group}: "${e.draft_quote}" ⇒ ${e.conflict}`)
         }
       }
     }
@@ -290,8 +312,11 @@ it('FA-1.72 proof — judge, 16 cases, real model', async () => {
   writeFileSync('.fa-proofs/fa-1.72/proof.results.json', JSON.stringify(rows, null, 2))
   const wrong = rows.filter(r => r.error == null && !r.ok)
   const errors = rows.filter(r => r.error != null)
-  console.log(`\nSUMMARY: ${rows.length - wrong.length - errors.length}/${rows.length} as expected; wrong verdicts: ${wrong.length}` +
+  const noEvidence = rows.filter(r => r.blocked_without_evidence)
+  console.log(`\nSUMMARY: ${rows.length - wrong.length - errors.length}/${rows.length} as expected; wrong decisions: ${wrong.length}` +
     (wrong.length ? ` (${wrong.map(b => `run ${b.run} ${b.variant}`).join(', ')})` : '') +
     `; judge errors (lost verdicts): ${errors.length}` +
-    (errors.length ? ` (${errors.map(b => `run ${b.run} ${b.variant}`).join(', ')})` : ''))
+    (errors.length ? ` (${errors.map(b => `run ${b.run} ${b.variant}`).join(', ')})` : '') +
+    `; blocked without evidence: ${noEvidence.length}` +
+    (noEvidence.length ? ` (${noEvidence.map(b => `run ${b.run} ${b.variant}`).join(', ')})` : ''))
 }, 600_000)

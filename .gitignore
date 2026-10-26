@@ -63,3 +63,6 @@ backups/
 # stubs for next/headers and next/cache plus the state-machine walk. Kept locally
 # because FA-1.12 needs the same harness; never part of the app.
 # .fa-proofs/ moved to scripts/proofs/ in FA-1.12
+
+# FA-1.72: production prompt text kept out of the public repo (proof case 16 is repeatable locally only)
+.fa-proofs/**/instructions-prod*

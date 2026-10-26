@@ -18,6 +18,7 @@
 
 import { env } from '@/lib/env'
 import { emitEvent, type EventClient } from '@/lib/events/emit'
+import type { JudgeResult } from '@/lib/ai/judge-reply'
 
 const HOUR_MS = 60 * 60 * 1000
 
@@ -40,6 +41,7 @@ export const CAP_REACHED_REASON  = 'daily auto-send cap reached'
 export const CAP_UNCHECKED_REASON = 'daily auto-send cap could not be checked'
 export const HUMAN_TAKEOVER_REASON = 'human has taken over the thread'
 export const TAKEOVER_UNCHECKED_REASON = 'could not check whether a human has taken over the thread'
+const JUDGE_NO_EVIDENCE_REASON = 'judge blocked without evidence'
 
 /**
  * Why this submission looks automated, or null when it does not.
@@ -83,4 +85,53 @@ export async function emitAutoSendDecision(
     channel: 'email',
     payload: { sent, score, reasons, draft_message_id: draftMessageId },
   })
+}
+
+// ─── The judge's verdict → send or hold (FA-1.72) ─────────────────────────────
+
+export interface VerdictDecision {
+  send:    boolean
+  /** What goes to the event and the result. A hold names its cause first. */
+  reasons: string[]
+  /** The judge said send=false for group 4/5 but its evidence did not stand up against the draft. */
+  blockedWithoutEvidence: boolean
+}
+
+/** Whitespace collapsed: a JSON string cannot carry the draft's line breaks, but the words must match. */
+function collapse(text: string): string {
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+/** True when there is at least one entry and every quote is literally a part of the draft. */
+function evidenceStandsUp(evidence: JudgeResult['evidence'], draftText: string): boolean {
+  if (evidence.length === 0) return false
+  const draft = collapse(draftText)
+  return evidence.every(e => {
+    const quote = collapse(e.draft_quote)
+    return quote !== '' && draft.includes(quote)
+  })
+}
+
+/**
+ * The whole send decision, apart from the daily cap. One place, so autoSendReply and the real-model
+ * proof script apply the same rule.
+ *
+ *   1. Any client flag (complaint / competitor / guide_contact) → hold, whatever `send` says and
+ *      however good the draft is. No evidence is asked for: the flag is about the angler.
+ *   2. `send=true` → send.
+ *   3. `send=false` (groups 4/5) → hold; if the judge cannot show a quote that is literally in the
+ *      draft, the hold is recorded as "judge blocked without evidence". It is never turned into a
+ *      send — the gate only shows in the data how often the judge blocks without grounds.
+ */
+export function decideFromVerdict(judged: JudgeResult, draftText: string): VerdictDecision {
+  const raised = (Object.keys(judged.client_flags) as (keyof JudgeResult['client_flags'])[])
+    .filter(flag => judged.client_flags[flag])
+  if (raised.length > 0) {
+    return { send: false, reasons: [...raised.map(flag => `client flag: ${flag}`), ...judged.reasons], blockedWithoutEvidence: false }
+  }
+  if (judged.send) return { send: true, reasons: judged.reasons, blockedWithoutEvidence: false }
+  if (!evidenceStandsUp(judged.evidence, draftText)) {
+    return { send: false, reasons: [JUDGE_NO_EVIDENCE_REASON, ...judged.reasons], blockedWithoutEvidence: true }
+  }
+  return { send: false, reasons: judged.reasons, blockedWithoutEvidence: false }
 }

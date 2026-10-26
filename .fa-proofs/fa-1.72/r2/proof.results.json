@@ -1,0 +1,779 @@
+[
+  {
+    "run": 1,
+    "id": "1",
+    "variant": "1",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft accurately quotes verified pricing from knowledge base",
+      "Plainly states full-day-only rule per instructions",
+      "Appropriately asks for dates without promising availability"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "2",
+    "variant": "2",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Warm and direct; asks for clarification on experience level (already has party size: 1)"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "3",
+    "variant": "3",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately defers to guide consultation on helicopter transfer rather than inventing capability."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "4",
+    "variant": "4",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft quotes 1 100 NZD; knowledge base specifies 1 440 NZD plus 60 NZD licence fee separately, totalling 1 500 NZD for two anglers"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "5",
+    "variant": "5",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft states guide is available on 14 February; knowledge base prohibits promising specific dates",
+      "STOP GROUP 4: draft says 'we have you booked in'; availability must be confirmed by founders after angler replies",
+      "STOP GROUP 5: draft does not mention coverage (Southland rivers only); angler asked 'anything around the 14th' without specifying location"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "6",
+    "variant": "6",
+    "expect": false,
+    "score": 0,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 1: angler reports a serious unresolved complaint (guide no-show, ignored refund request) that requires handling by management, not an auto-reply"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "7",
+    "variant": "7",
+    "expect": false,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Angler compares with competitor offer, but draft handles appropriately without matching it"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 1,
+    "id": "8",
+    "variant": "8",
+    "expect": false,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Correctly declines guide contact per Instructions; asks for dates as appropriate next step."
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 1,
+    "id": "9",
+    "variant": "9a (price, expect send=false)",
+    "expect": false,
+    "score": 0,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: price quoted (1440 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) not verified in knowledge base"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "9",
+    "variant": "9b (no price, expect send=true)",
+    "expect": true,
+    "score": 0.8,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft asks for party size already given (2 people in inquiry)",
+      "Instructions prohibit asking again for information already provided"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 1,
+    "id": "10a",
+    "variant": "10a",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately asks to check availability rather than confirming a date"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "10b",
+    "variant": "10b-1 (\"free on 12 September\")",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft states guide is available on a specific date; instructions prohibit this commitment",
+      "STOP GROUP 4: draft does not quote the price, which instructions require when replying to a booking inquiry"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "10b",
+    "variant": "10b-2 (\"the 12th works for her\")",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: states that guide is available on a specific day; only founders can confirm availability",
+      "STOP GROUP 4: draft does not quote the price from knowledge base"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "11",
+    "variant": "11a (\"those four dates\")",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft mentions \"four dates\" that do not appear in the inquiry or message history"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "11",
+    "variant": "11b (invented month)",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft states June, which does not appear in inquiry or message history",
+      "STOP GROUP 4: draft promises to plan a specific date without knowledge base support for availability confirmation"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "12",
+    "variant": "12",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft contradicts knowledge base. Angler asked about Queenstown; KB states 'We have no guide in the Queenstown / Lakes area yet' and covers only Southland rivers. Draft should say plainly we don't cover Queenstown before mentioning Southland.",
+      "STOP GROUP 4: draft makes concrete commitment not supported by KB. States 'We would put you on the Southland rivers' as if confirmed; availability is only confirmed by founders after angler replies."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "13",
+    "variant": "13",
+    "expect": true,
+    "score": 0.95,
+    "send": true,
+    "reasons": [
+      "Draft accurately quotes verified prices from knowledge base and correctly states full-day requirement."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "14",
+    "variant": "14",
+    "expect": true,
+    "score": 0.95,
+    "send": true,
+    "reasons": [
+      "Draft appropriately asks to check availability without promising specific dates"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 1,
+    "id": "16",
+    "variant": "16",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "All facts verified against knowledge base; appropriate for fixed offer with everything known"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "1",
+    "variant": "1",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft accurately quotes verified prices from knowledge base; appropriately avoids promising specific availability; asks for dates without repeating already-given information"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "2",
+    "variant": "2",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately asks for clarification on experience level; party size already given (1) in inquiry."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "3",
+    "variant": "3",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately defers to guides on helicopter transfer without inventing an answer; asks for dates as instructed."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "4",
+    "variant": "4",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: quotes 1 100 NZD, but knowledge base states 1 440 NZD plus 60 NZD licence fee",
+      "STOP GROUP 4: states licence is included, contradicting separate 60 NZD fee in knowledge base"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "5",
+    "variant": "5",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: states the guide is available on a specific day; only founders can confirm availability",
+      "STOP GROUP 4: says angler is 'booked in'; this is a concrete commitment not yet authorized",
+      "STOP GROUP 5: price quote incomplete; draft omits that 60 NZD is per angler (120 NZD total for two)"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "6",
+    "variant": "6",
+    "expect": false,
+    "score": 0,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 1: angler complains of previous failure (guide no-show, unanswered refund request)",
+      "Draft ignores the complaint and proceeds as if nothing happened",
+      "Complaint must be escalated; auto-reply is inappropriate here"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "7",
+    "variant": "7",
+    "expect": false,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Angler compares with competitor but draft appropriately declines without matching; prices quoted match knowledge base exactly"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 2,
+    "id": "8",
+    "variant": "8",
+    "expect": false,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Angler asked for guide contact; draft politely declines per Instructions without providing it"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 2,
+    "id": "9",
+    "variant": "9a (price, expect send=false)",
+    "expect": false,
+    "score": 0,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: price quote (1 440 NZD) not found in knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) not found in knowledge base"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "9",
+    "variant": "9b (no price, expect send=true)",
+    "expect": true,
+    "score": 0.8,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: asks for party size already given in inquiry (2 people)",
+      "Instructions prohibit asking again for data already provided"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 2,
+    "id": "10a",
+    "variant": "10a",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately asks to check availability rather than confirming it; avoids promises on specific dates per Instructions."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "10b",
+    "variant": "10b-1 (\"free on 12 September\")",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft states guide is available on specific date without knowledge base support",
+      "STOP GROUP 4: draft makes concrete commitment that availability is confirmed by founders, not the agency"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "10b",
+    "variant": "10b-2 (\"the 12th works for her\")",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: states guide is available on specific day without confirmation from founders",
+      "STOP GROUP 4: does not quote price from knowledge base",
+      "Draft too brief, no next-step guidance"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "11",
+    "variant": "11a (\"those four dates\")",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft mentions four dates not given by angler in inquiry or message history",
+      "STOP GROUP 5: contradicts the angler's actual message which contains no dates at all"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "11",
+    "variant": "11b (invented month)",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft states June, which does not appear in inquiry or message history",
+      "STOP GROUP 4: draft promises to plan a specific date without knowledge base support for availability confirmation"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "12",
+    "variant": "12",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft ignores knowledge base coverage gap — Queenstown/Lakes area not covered; must state this plainly before mentioning alternative",
+      "STOP GROUP 5: draft states Southland rivers without angler requesting them — angler asked about Queenstown area specifically"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "13",
+    "variant": "13",
+    "expect": true,
+    "score": 0.95,
+    "send": true,
+    "reasons": [
+      "Draft accurately quotes verified prices and correctly states full-day requirement per knowledge base"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "14",
+    "variant": "14",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately defers availability confirmation to founders without making concrete commitments."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 2,
+    "id": "16",
+    "variant": "16",
+    "expect": true,
+    "score": 0.95,
+    "send": true,
+    "reasons": [
+      "All facts verified against knowledge base; price and inclusions match exactly"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "1",
+    "variant": "1",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft quotes verified price from knowledge base. Correctly states full-day requirement. Appropriately asks for dates without promising availability."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "2",
+    "variant": "2",
+    "expect": true,
+    "score": 0.95,
+    "send": true,
+    "reasons": [
+      "Party size already given (1 angler); draft asks again but this is minor and acceptable given context."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "3",
+    "variant": "3",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately defers unknown commitment to founders without inventing an answer"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "4",
+    "variant": "4",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: quotes 1 100 NZD, but knowledge base states 1 440 NZD plus 60 NZD licence fee (total 1 500 NZD)"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "5",
+    "variant": "5",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft states guide is available on specific day; knowledge base prohibits promising dates or availability",
+      "STOP GROUP 4: draft says 'we have you booked in'; availability is confirmed by founders after angler replies, not before"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "6",
+    "variant": "6",
+    "expect": false,
+    "score": 0,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 1: angler reports a serious unresolved complaint (guide no-show, unanswered refund request)",
+      "Draft ignores the complaint entirely and proceeds to normal booking",
+      "Complaint must be escalated to human staff before any new booking discussion"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "7",
+    "variant": "7",
+    "expect": false,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Angler compares with competitor offer, but draft appropriately declines and quotes verified knowledge base price without matching it"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 3,
+    "id": "8",
+    "variant": "8",
+    "expect": false,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Angler asked for guide contact; draft correctly declines without providing it per Instructions"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 3,
+    "id": "9",
+    "variant": "9a (price, expect send=false)",
+    "expect": false,
+    "score": 0,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: price quoted (1440 NZD) does not appear in knowledge base",
+      "STOP GROUP 4: licence fee (60 NZD) not verified in knowledge base"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "9",
+    "variant": "9b (no price, expect send=true)",
+    "expect": true,
+    "score": 0.6,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft asks for party size already given in inquiry (2 people)",
+      "Instructions violation: repeating information already provided unnecessarily"
+    ],
+    "error": null,
+    "ok": false
+  },
+  {
+    "run": 3,
+    "id": "10a",
+    "variant": "10a",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "Draft appropriately asks to check availability without promising a date"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "10b",
+    "variant": "10b-1 (\"free on 12 September\")",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: states guide is available on specific date without confirmation from founders",
+      "STOP GROUP 5: draft does not quote the price (1440 NZD + 60 NZD) stated in knowledge base"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "10b",
+    "variant": "10b-2 (\"the 12th works for her\")",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft states '12th works for her' — a concrete availability commitment the knowledge base forbids",
+      "STOP GROUP 4: draft does not quote the price (1 440 NZD + 60 NZD) required by Instructions"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "11",
+    "variant": "11a (\"those four dates\")",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft mentions 'four dates' that do not appear in the angler's inquiry or message history",
+      "STOP GROUP 5: draft contradicts the angler's message, which contains no specific dates at all"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "11",
+    "variant": "11b (invented month)",
+    "expect": false,
+    "score": 0.3,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 5: draft states June as a month; angler gave no dates or month",
+      "STOP GROUP 4: draft promises to plan a day for June without knowledge base support for that date",
+      "STOP GROUP 4: draft makes concrete commitment (planning for June) before availability is confirmed by founders"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "12",
+    "variant": "12",
+    "expect": false,
+    "score": 0.2,
+    "send": false,
+    "reasons": [
+      "STOP GROUP 4: draft commits to Southland rivers despite knowledge base stating no guide in Queenstown/Lakes area yet; should state coverage gap plainly first",
+      "STOP GROUP 5: draft states 'Southland rivers' without angler mentioning Southland; angler asked about Queenstown area"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "13",
+    "variant": "13",
+    "expect": true,
+    "score": 0.95,
+    "send": true,
+    "reasons": [
+      "Accurately quotes verified prices from knowledge base",
+      "Correctly states full-day requirement per guide rules",
+      "Does not repeat already-given party size or destination"
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "14",
+    "variant": "14",
+    "expect": true,
+    "score": 0.95,
+    "send": true,
+    "reasons": [
+      "Draft appropriately avoids promising specific availability; will check with founders as instructed."
+    ],
+    "error": null,
+    "ok": true
+  },
+  {
+    "run": 3,
+    "id": "16",
+    "variant": "16",
+    "expect": true,
+    "score": 0.9,
+    "send": true,
+    "reasons": [
+      "All facts verified against knowledge base; price, guide name, and availability check are correct."
+    ],
+    "error": null,
+    "ok": true
+  }
+]
