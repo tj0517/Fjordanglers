@@ -2,7 +2,7 @@
 id: FA-1.72
 title: Auto-wysyłka odwrócona — agent wysyła domyślnie, wstrzymuje tylko przy krytycznym naruszeniu; score informacyjny, brak wpisu destination nie blokuje, sufit 20/24 h, sędzia bez uciętego JSON
 stage: 1
-status: todo
+status: in_progress
 difficulty: M
 model: opus
 model_approved:
