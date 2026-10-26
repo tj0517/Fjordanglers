@@ -1,0 +1,80 @@
+
+ RUN  v4.0.18 /home/tj/Fjordanglers
+
+stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
+
+[run 1] case 1 — NZ first inquiry, price per the knowledge base + question about dates
+  expect send=true  got score=0.9 send=true  → OK
+    - Draft quotes verified prices from knowledge base and answers the angler's question directly.
+
+stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
+
+[run 1] case 2 — Short, vague "is fishing good in March?" + draft without inventions, with a question back
+  expect send=true  got score=0.9 send=true  → OK
+    - Draft answers the angler's question about March seasonality correctly against knowledge base.
+    - Asks for clarification on experience level; party size already given (1) in inquiry, so re-asking violates Instructions but is minor.
+
+stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
+
+[run 1] case 3 — Question outside the knowledge base, draft says "we will check and come back"
+  expect send=true  got score=0.85 send=true  → OK
+    - Appropriately defers to guide consultation on helicopter transfer without inventing capability
+    - Asks for missing dates as instructed; party size already provided
+    - Tone and style align with instructions
+
+stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
+
+[run 1] case 4 — Draft price different from the knowledge base
+  expect send=false  got score=0.3 send=false  → OK
+    - STOP GROUP 4: price 1 100 NZD contradicts knowledge base (1 440 NZD + 60 NZD = 1 500 NZD per day)
+    - STOP GROUP 4: states licence is included without specifying the 60 NZD fee component
+    - STOP GROUP 4: asks for specific dates despite instruction never to promise a date
+
+stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
+
+[run 1] case 5 — Draft confirms the guide is available on a specific day
+  expect send=false  got score=0.2 send=false  → OK
+    - STOP GROUP 4: states guide is free on specific day; availability confirmed only after angler replies
+    - STOP GROUP 4: makes concrete booking commitment without founder confirmation
+    - STOP GROUP 5: price quote incomplete; should include both 1440 NZD and 60 NZD total with clarification
+
+stdout | .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
+
+[run 1] case 6 — Client complains about a previous trip
+  expect send=false  got score=0 send=false  → OK
+    - STOP GROUP 1: angler reports serious problems (guide no-show, refund request ignored) requiring proper handling, not a standard booking reply
+
+ ❯ .fa-proofs/fa-1.72/judge-cases.mts (1 test | 1 failed) 11379ms
+   × FA-1.72 proof — judge, 16 cases, real model 11378ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  .fa-proofs/fa-1.72/judge-cases.mts > FA-1.72 proof — judge, 16 cases, real model
+Error: [judgeReply] Could not parse judge response: ```json
+{"score": 0.8, "send": true, "reasons": ["Angler compares with competitor; STOP GROUP 2 applies—should not send."]}
+```
+
+Wait, let me reconsider. The instruction states: "Groups 1–3 depend ONLY on what the angler wrote. The quality of the draft does not matter: when the angler's message falls under group 1, 2 or 3, set 'send' to false even if the draft is a perfect answer, politely declines, or handles the topic well."
+
+The angler's message explicitly states: "Another agency offers the same guided day on a South Island river for 1 200 NZD. Can you match that?" This is a direct comparison with a competitor's offer.
+
+```json
+{"score": 0.8, "send": false, "reasons": ["STOP GROUP 2: angler compares FjordAnglers with competitor's price offer"]}
+```
+ ❯ judgeReply src/lib/ai/judge-reply.ts:124:11
+    122|     parsed = JSON.parse(text)
+    123|   } catch {
+    124|     throw new Error(`[judgeReply] Could not parse judge response: ${bl…
+       |           ^
+    125|   }
+    126| 
+ ❯ .fa-proofs/fa-1.72/judge-cases.mts:262:19
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  13:45:50
+   Duration  11.74s (transform 125ms, setup 0ms, import 237ms, tests 11.38s, environment 0ms)
+

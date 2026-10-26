@@ -39,13 +39,14 @@ The CONVERSATION section holds the angler's original inquiry (the form: experien
 STOP GROUP 1 — complaint or problem: the angler complains, accuses or is negative toward the agency, or reports that something went wrong (booking problem, refund, overpayment, error).
 STOP GROUP 2 — competitor: the angler compares FjordAnglers with a competitor or another offer.
 STOP GROUP 3 — guide contact: the angler asks for a guide's direct contact (phone, e-mail, profile).
-STOP GROUP 4 — draft contradicts the knowledge: the draft states a price or condition different from the knowledge base, or makes a concrete commitment the knowledge base does not support (a price, a date, availability of a guide on a specific day, non-standard terms), or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps (for example working around a gap in coverage instead of saying it plainly). Asking or promising to check ("we will check whether a guide is free") is fine; stating that a guide IS free, or that a date IS available or confirmed, is a commitment. If there is no KNOWLEDGE BASE section, treat every price, condition and commitment in the draft as outside the knowledge base.
+Groups 1–3 depend ONLY on what the angler wrote. The quality of the draft does not matter: when the angler's message falls under group 1, 2 or 3, set "send" to false even if the draft is a perfect answer, politely declines, or handles the topic well.
+STOP GROUP 4 — draft contradicts the knowledge: the draft states a price or condition different from the knowledge base, or makes a concrete commitment the knowledge base does not support (a price, a date, availability of a guide on a specific day, non-standard terms), or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps (for example working around a gap in coverage instead of saying it plainly). Asking or promising to check ("we will check whether a guide is free") is fine; stating that a guide IS free, or that a date IS available or confirmed, is a commitment. A price or other amount in the draft counts as verified ONLY when the same amount appears literally in an entry of the KNOWLEDGE BASE section. When no entry contains it (for example there is no entry for the angler's country, or there is no KNOWLEDGE BASE section at all), every price in the draft is outside the knowledge base: STOP GROUP 4.
 STOP GROUP 5 — draft misrepresents the conversation: the draft states dates, a month, a place or a number of people that appear neither in the inquiry block nor in the message history, or contradicts an earlier FA message in the history (a different price, withdrawing a promise). Repeating or summarising what the angler wrote is fine; adding to it is not.
 
 These are NOT reasons to stop — send:
 - the angler's message is short, vague or unclear, or the draft answers it by asking a question back;
 - the angler asks something the knowledge base does not answer, and the draft does not invent an answer (for example "we will check with our guides and come back to you");
-- the draft quotes a price or condition that matches the knowledge base — it is verified, no admin review needed;
+- the draft quotes a price or condition that appears in the KNOWLEDGE BASE with the same amount or wording — it is verified, no admin review needed;
 - the draft names a guide or says where a guide works;
 - the draft asks again for something already given, or slips on style, tone, length or greeting, even where the Instructions entry asks for better;
 - the angler says they will get back later, or the message needs no real answer;
@@ -54,15 +55,15 @@ These are NOT reasons to stop — send:
 Return ONLY valid JSON — no other text, no markdown fences:
 {"score": 0.0, "send": true, "reasons": ["short reason"]}
 
-"reasons": at most 3 reasons, each under 20 words. When "send" is false, each reason starts with the STOP group it falls under, for example "STOP GROUP 4: quotes 900 NZD, the knowledge base says 1 440 NZD". When "send" is true, one short line is enough.
+"reasons": at most 3 reasons, each under 20 words. When "send" is false, each reason starts with the STOP group it falls under, for example "STOP GROUP 4: quotes a price that differs from the knowledge base". When "send" is true, one short line is enough.
 Score (0.0–1.0): your overall rating of how accurate and appropriate the draft is, for statistics only. It does not affect sending: "send" alone decides, and a low score with "send": true is allowed.
 `
 
 // Added to the input only when knowledge is passed (FA-1.47); written for STOP group 4 (FA-1.72).
 const KNOWLEDGE_RULE = `\
 KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly what the drafting agent was given. They are the source of truth for prices, guide rules and instructions.
-- A price, condition or fact in the draft that is consistent with the knowledge base is verified. Do not stop the draft for it and do not ask for admin review of it.
-- Set "send" to false (STOP GROUP 4) when the draft contradicts the knowledge base, states a price or condition that is not in the knowledge base, makes a concrete commitment the knowledge base does not support, or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps.
+- A condition or fact in the draft that is consistent with the knowledge base is verified. So is a price, but only when the same amount appears literally in a KNOWLEDGE BASE entry. Do not stop the draft for what is verified and do not ask for admin review of it.
+- Set "send" to false (STOP GROUP 4) when the draft contradicts the knowledge base, states a price or condition that is not in the knowledge base (any price at all when no entry lists one), makes a concrete commitment the knowledge base does not support, or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps.
 - A question the knowledge base cannot answer is not a reason to stop. Only a draft that invents the answer is.
 `
 

@@ -116,6 +116,25 @@ describe('judgeReply — knowledge in the input (FA-1.47)', () => {
     }
   })
 
+  it('says groups 1–3 depend only on the angler, whatever the draft — RED before the FA-1.72 tj decision', async () => {
+    await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    expect(sentUserContent()).toMatch(/groups 1–3 depend ONLY on what the angler wrote/i)
+    expect(sentUserContent()).toMatch(/even if the draft is a perfect answer/i)
+  })
+
+  it('says a price is verified only when the same amount is literally in a knowledge entry', async () => {
+    await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    const content = sentUserContent()
+    expect(content).toMatch(/counts as verified ONLY when the same amount appears literally/i)
+    expect(content).toMatch(/every price in the draft is outside the knowledge base/i)
+  })
+
+  it('carries no concrete price or amount in the prompt text (it can leak into the verdict)', async () => {
+    await judgeReply('', '')
+    const prompt = sentUserContent().split('=== CONVERSATION ===')[0]
+    expect(prompt).not.toMatch(/\d[\d ]*\s?(NZD|EUR|USD|ISK|NOK|SEK|PLN|CLP|ARS|€|\$)/)
+  })
+
   it('describes score as information only', async () => {
     await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
     expect(sentUserContent()).toMatch(/score[^\n]*(statistics|information)[^\n]*(does not|no effect)/i)

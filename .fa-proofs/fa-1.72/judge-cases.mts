@@ -1,6 +1,6 @@
 /**
  * FA-1.72 — judge behaviour on the new "is there a critical reason NOT to send?" prompt.
- * Real Anthropic call (Haiku), synthetic fixtures, 15 cases (1–9, 10a, 10b, 11–14).
+ * Real Anthropic call (Haiku), synthetic fixtures, 16 cases (1–9, 10a, 10b, 11–14, 16).
  *
  * Calls only judgeReply(conversation, draft, knowledge): no database, no email, no sending.
  * The conversation is built with the real assembleConversation, exactly as draftReply builds it,
@@ -10,6 +10,10 @@
  * The `instructions` entry below is fictional: it forbids declaring a guide's availability on a
  * specific day and giving a guide's phone / e-mail / profile, and it does NOT forbid naming the
  * guide (rule changed 2026-10-26; the real entry is corrected by tj in FA-1.73).
+ *
+ * Case 16 (tj request, 2026-10-26) uses the REAL production `instructions` text after tj's seven
+ * edits (`instructions-prod-after-7-edits.md`, kept local — it is the prod entry, not committed),
+ * to prove that the judge with the real instruction does not block naming the guide.
  *
  * Cases 9, 10b and 11 have two variants; every variant must come out as expected.
  * PROOF_RUNS=n repeats the whole set (default 1); the first run is the official result.
@@ -25,7 +29,7 @@ if (process.env.RESEND_DEV_FAKE !== '1') {
 }
 
 import { it } from 'vitest'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { judgeReply } from '../../src/lib/ai/judge-reply.js'
 import { assembleConversation } from '../../src/lib/ai/extract-trip.js'
 import type { KnowledgeEntry } from '../../src/lib/ai/knowledge.js'
@@ -58,6 +62,11 @@ const NZ: KnowledgeEntry = {
 const KRISTINA: KnowledgeEntry = {
   id: 'p-guide', kind: 'guide', country: null, guide_id: 'g-kristina', title: 'Guide Kristina',
   body: 'Kristina guides the Southland rivers. She works full days only.',
+}
+
+const REAL_INSTRUCTIONS: KnowledgeEntry = {
+  id: 'p-inst-real', kind: 'instructions', country: null, guide_id: null, title: 'Instructions 26.09 (prod text after the 7 edits)',
+  body: readFileSync(new URL('./instructions-prod-after-7-edits.md', import.meta.url), 'utf8').trimEnd(),
 }
 
 const WITH_DESTINATION = [INSTRUCTIONS, TONE, NZ, KRISTINA]
@@ -228,13 +237,27 @@ const CASES: Case[] = [
       draft: 'Hi Anna, thanks for writing.\n\nWe will check on which of those four dates a guide is free and come back to you.\n\nWarm regards,\nFjordAnglers',
     }],
   },
+  {
+    id: '16', title: 'REAL prod instructions after the 7 edits: draft names the guide, says she works the Southland rivers, offers to CHECK the 12th', expectSend: true,
+    variants: [{
+      inquiry: { message: 'We would like a guided day on the Southland rivers, ideally on 12 September. Two of us.', dates: ['2026-09-12'] },
+      draft: `Hi Anna, thanks for writing.\n\nKristina guides the Southland rivers. ${PRICE_OK}\n\nWe will check whether she is free on the 12th and come back to you.\n\nWarm regards,\nFjordAnglers`,
+      knowledge: [REAL_INSTRUCTIONS, TONE, NZ, KRISTINA],
+    }],
+  },
 ]
 
 // ─── Run ──────────────────────────────────────────────────────────────────────
 
-interface Row { run: number; id: string; variant: string; expect: boolean; score: number; send: boolean; reasons: string[]; ok: boolean }
+interface Row {
+  run: number; id: string; variant: string; expect: boolean
+  score: number | null; send: boolean | null; reasons: string[]
+  /** judgeReply threw (e.g. unparsable reply): in production nothing is sent. Counted separately. */
+  error: string | null
+  ok: boolean
+}
 
-it('FA-1.72 proof — judge, 15 cases, real model', async () => {
+it('FA-1.72 proof — judge, 16 cases, real model', async () => {
   const runs = Number(process.env.PROOF_RUNS ?? '1')
   const rows: Row[] = []
 
@@ -242,19 +265,33 @@ it('FA-1.72 proof — judge, 15 cases, real model', async () => {
     for (const c of CASES) {
       for (const v of c.variants) {
         const expect = v.label?.includes('expect send=false') ? false : v.label?.includes('expect send=true') ? true : c.expectSend
-        const r = await judgeReply(conversationOf(v.inquiry), v.draft, v.knowledge ?? WITH_DESTINATION)
-        const row: Row = {
-          run, id: c.id, variant: v.label ?? c.id, expect, score: r.score, send: r.send, reasons: r.reasons, ok: r.send === expect,
+        const base = { run, id: c.id, variant: v.label ?? c.id, expect }
+        let row: Row
+        try {
+          const r = await judgeReply(conversationOf(v.inquiry), v.draft, v.knowledge ?? WITH_DESTINATION)
+          row = { ...base, score: r.score, send: r.send, reasons: r.reasons, error: null, ok: r.send === expect }
+        } catch (err) {
+          // An error means "no send" in autoSendReply. It is never a pass: it is a lost verdict.
+          row = { ...base, score: null, send: null, reasons: [], error: err instanceof Error ? err.message : String(err), ok: false }
         }
         rows.push(row)
         console.log(`\n[run ${run}] case ${row.variant} — ${c.title}`)
-        console.log(`  expect send=${expect}  got score=${r.score} send=${r.send}  → ${row.ok ? 'OK' : 'MISMATCH'}`)
-        for (const reason of r.reasons) console.log(`    - ${reason}`)
+        if (row.error != null) {
+          console.log(`  expect send=${expect}  got ERROR (nothing would be sent) → LOST VERDICT`)
+          console.log(`    ${row.error.slice(0, 600).replace(/\n/g, '\n    ')}`)
+        } else {
+          console.log(`  expect send=${expect}  got score=${row.score} send=${row.send}  → ${row.ok ? 'OK' : 'MISMATCH'}`)
+          for (const reason of row.reasons) console.log(`    - ${reason}`)
+        }
       }
     }
   }
 
   writeFileSync('.fa-proofs/fa-1.72/proof.results.json', JSON.stringify(rows, null, 2))
-  const bad = rows.filter(r => !r.ok)
-  console.log(`\nSUMMARY: ${rows.length - bad.length}/${rows.length} as expected` + (bad.length ? ` — mismatches: ${bad.map(b => `run ${b.run} ${b.variant}`).join(', ')}` : ''))
-}, 300_000)
+  const wrong = rows.filter(r => r.error == null && !r.ok)
+  const errors = rows.filter(r => r.error != null)
+  console.log(`\nSUMMARY: ${rows.length - wrong.length - errors.length}/${rows.length} as expected; wrong verdicts: ${wrong.length}` +
+    (wrong.length ? ` (${wrong.map(b => `run ${b.run} ${b.variant}`).join(', ')})` : '') +
+    `; judge errors (lost verdicts): ${errors.length}` +
+    (errors.length ? ` (${errors.map(b => `run ${b.run} ${b.variant}`).join(', ')})` : ''))
+}, 600_000)
