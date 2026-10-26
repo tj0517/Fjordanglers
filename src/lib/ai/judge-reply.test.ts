@@ -1,10 +1,13 @@
 /**
- * FA-1.47 — judgeReply input tests.
+ * FA-1.47 / FA-1.72 — judgeReply input and parsing tests.
  *
- * The judge receives the knowledge entries the draft was built from:
+ * The judge receives the knowledge entries the draft was built from (FA-1.47):
  *   ‣ with knowledge → userContent has a "KNOWLEDGE BASE (source of truth)" section with every entry
- *   RED proof: on main's judge-reply.ts the knowledge argument is ignored → test fails
- *   ‣ without knowledge (undefined or []) → userContent identical to the pre-change format
+ *   ‣ without knowledge (undefined or []) → no knowledge section
+ *
+ * FA-1.72: the judge answers "is there a critical reason NOT to send" — default send, five STOP
+ * groups, an explicit list of non-reasons, no threshold wording; a reply cut off mid-JSON throws
+ * (fail-safe: the caller does not send) and the call leaves room for it (max_tokens >= 512).
  *
  * Anthropic and @/lib/env are mocked; no network.
  */
@@ -21,7 +24,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 
 vi.mock('@/lib/env', () => ({ env: { ANTHROPIC_API_KEY: 'test-key' } }))
 
-import { judgeReply, JUDGE_THRESHOLD } from './judge-reply'
+import { judgeReply } from './judge-reply'
 import type { KnowledgeEntry } from './knowledge'
 
 const CONVERSATION = '[ANGLER] Hi, two of us want to fish NZ rivers in February.'
@@ -80,28 +83,51 @@ describe('judgeReply — knowledge in the input (FA-1.47)', () => {
     expect(content).toMatch(/contradicts the knowledge base/i)
   })
 
-  it('keeps every existing "never auto" rule when knowledge is passed', async () => {
+  it('states the default (send), the five STOP groups and the list of non-reasons — RED on main: "be strict" prompt', async () => {
     await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
 
     const content = sentUserContent()
-    for (const rule of [
-      'The message contains a complaint, accusation or negative sentiment toward the agency',
-      'The message compares FjordAnglers with a competitor',
-      "The message asks for a guide's direct contact, phone or email",
-      'Something has gone wrong (booking issue, refund, error, overcharge)',
-      'The message is vague, unclear or doesn\'t fit any known stage of the booking process',
-      'The draft proposes something that needs admin review before committing (pricing, exceptions, custom terms)',
+    expect(content).toMatch(/default verdict: send/i)
+    for (const group of [
+      'STOP GROUP 1',
+      'STOP GROUP 2',
+      'STOP GROUP 3',
+      'STOP GROUP 4',
+      'STOP GROUP 5',
     ]) {
-      expect(content).toContain(rule)
+      expect(content).toContain(group)
+    }
+    expect(content).toMatch(/NOT reasons to stop/i)
+    expect(content).toMatch(/at most 3 reasons/i)
+  })
+
+  it('has no threshold wording and no "be strict" instruction — RED on main', async () => {
+    await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    const withKnowledge = sentUserContent()
+    anthropicCreate.mockClear()
+    await judgeReply(CONVERSATION, DRAFT)
+    const without = sentUserContent()
+
+    for (const content of [withKnowledge, without]) {
+      expect(content).not.toMatch(/when in doubt/i)
+      expect(content).not.toContain('0.9')
+      expect(content).not.toMatch(/threshold/i)
+      expect(content).not.toMatch(/be strict/i)
     }
   })
 
-  it('without knowledge the input is the pre-change format — no knowledge section, no new rule', async () => {
+  it('describes score as information only', async () => {
+    await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    expect(sentUserContent()).toMatch(/score[^\n]*(statistics|information)[^\n]*(does not|no effect)/i)
+  })
+
+  it('without knowledge the input has no knowledge section and no knowledge rule', async () => {
     await judgeReply(CONVERSATION, DRAFT)
 
     const content = sentUserContent()
     expect(content).toBe(expectedLegacyInput(content))
-    expect(content).not.toContain('KNOWLEDGE BASE')
+    expect(content).not.toContain('=== KNOWLEDGE BASE')
+    expect(content).not.toContain('KNOWLEDGE BASE RULE')
     expect(content).not.toMatch(/consistent with the knowledge base/i)
   })
 
@@ -114,9 +140,33 @@ describe('judgeReply — knowledge in the input (FA-1.47)', () => {
     expect(sentUserContent()).toBe(without)
   })
 
-  it('still returns the parsed verdict and keeps the threshold at 0.9', async () => {
+  it('returns the verdict the model gave, whatever the score', async () => {
+    anthropicCreate.mockResolvedValue({
+      content: [{ type: 'text', text: '{"score": 0.55, "send": true, "reasons": ["minor tone slip"]}' }],
+    })
+    expect(await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).toEqual({ score: 0.55, send: true, reasons: ['minor tone slip'] })
+
     const result = await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
-    expect(result).toEqual({ score: 0.95, send: true, reasons: ['ok'] })
-    expect(JUDGE_THRESHOLD).toBe(0.9)
+    expect(result.send).toBe(true)
+  })
+})
+
+describe('judgeReply — a reply that is cut off (FA-1.72, closes deferred FA-1.61)', () => {
+  it('asks for at least 512 tokens — RED on main: 256', async () => {
+    await judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)
+    const args = anthropicCreate.mock.calls[0][0] as { max_tokens: number }
+    expect(args.max_tokens).toBeGreaterThanOrEqual(512)
+  })
+
+  it('throws when the JSON stops mid-sentence — the caller must not send on it', async () => {
+    anthropicCreate.mockResolvedValue({
+      content: [{ type: 'text', text: '{"score": 0.95, "send": true, "reasons": ["The draft quotes the price from the knowl' }],
+    })
+    await expect(judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).rejects.toThrow(/Could not parse judge response/)
+  })
+
+  it('throws on a verdict with a missing field', async () => {
+    anthropicCreate.mockResolvedValue({ content: [{ type: 'text', text: '{"score": 0.95, "reasons": []}' }] })
+    await expect(judgeReply(CONVERSATION, DRAFT, KNOWLEDGE)).rejects.toThrow(/Malformed judge response/)
   })
 })
