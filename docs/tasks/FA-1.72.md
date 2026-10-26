@@ -123,9 +123,116 @@ git diff main...HEAD -- src/lib/ai/
 - 2026-10-26 odczyt prod (tj, 10 zapytań z „wymyślonymi” danymi): **5 z 5 „wymyślonych dat/lokalizacji” było w formularzu** (`requested_dates`, wybrana wycieczka) — b18cb597 (4 daty), a86b0a0b (10 dat + Coyhaique), 3723005c (15–18 VI), 0f07cc89 (22 X). Ślepota sędzia potwierdzona; poprawka wejścia sędziego to najważniejsza część zadania. Prawdziwe błędy szkicu (imię guida, South Island ≠ Southland) → FA-1.73.
 - 2026-10-26 tj: model Opus/high, D-A (a) usunąć `JUDGE_THRESHOLD`, D-B (a) usunąć `loadKnowledge`, przypadek 5 bez imienia guida; wejście sędziego = tekst rozmowy zwrócony przez `draftReply` (nowe pole `conversation`), bez rozszerzania zapytań.
 - 2026-10-26 tj: decyzje rundy 2 — doprecyzuj prompt (grupy 1–3 tylko od klienta, cena zweryfikowana tylko gdy dosłownie we wpisie KB, bez kwot w przykładach), wszystkie przypadki ×3, przypadek 16 z prawdziwą instrukcją po 7 podmianach, squash przy merge; flagi `{complaint, competitor, guide_contact}` tylko za zgodą tj.
-- Raport z realizacji (ten sam, co w PR #164; runda 2 na górze):
+- 2026-10-26 tj: decyzje rundy 3 — flagi `client_flags` z decyzją w kodzie, `evidence` z cytatem jako warunek blokady grup 4/5, parser bez „ostatniego obiektu”, plik instrukcji prod lokalnie (`.gitignore`), testy na każdą flagę / brak flag / brak evidence / cytat spoza szkicu / dwa obiekty JSON; potem 16 przypadków ×3 — przy rozjeździe STOP.
+- Raport z realizacji (ten sam, co w PR #164; runda 3 na górze, potem 2 i 1):
 
-## Report — FA-1.72, round 2 (tj decisions 2026-10-26 on PR #164)
+## Report — FA-1.72, round 3 (tj decisions 2026-10-26, flags + evidence)
+
+**Status: STOP, as you instructed. 55 of 57 decisions as expected (16 cases × 3 runs); 7 and 8 are fixed by the flags; case 9b is still wrong in 2 of 3 runs. No further prompt change made.**
+
+### What changed
+- **`client_flags`** `{complaint, competitor, guide_contact}`: a separate PART 1 of the judge prompt, before the draft is assessed, "only what the angler wrote — do not look at the draft". `autoSendReply`: any true flag → `sent=false`, reasons start with `client flag: <name>` (every raised flag, then the judge's own reasons), whatever `send` says. Missing or misshapen `client_flags` (not an object, a flag missing / not a boolean) → `Malformed judge response` → judge error → no send.
+- **`send` covers groups 4 and 5 only.** Groups 1–3 are gone from that part of the prompt (one source for each rule).
+- **`evidence: [{group, draft_quote, conflict}]`**: a block needs a quote copied from the draft. In code (`decideFromVerdict`, `auto-send-guards.ts`): `send=false` from 4/5 with no evidence, or any `draft_quote` that is not literally in the draft → hold with reason `judge blocked without evidence` (+ the judge's own reasons after it), `console.error` with the inquiry id, judge reasons and the evidence. It is never turned into a send. Comparison is on text with whitespace collapsed (a JSON string cannot carry the draft's line breaks) — my reading of "literally"; say if you want strict byte equality.
+- **Strict parser:** one JSON object (a markdown fence around one object is still accepted, as before). Two objects, text before/after the JSON → `Could not parse judge response` → no send. The last object is never read. (This was already how `JSON.parse` behaved; the new tests pin it.)
+- `max_tokens` 512 → 1024: evidence quotes lengthen the answer; truncation would only hold the draft, but it would lose verdicts.
+- `.gitignore`: `.fa-proofs/**/instructions-prod*`. **Case 16 is repeatable only locally** (the prompt text is not in the repo).
+- The one decision rule lives in `decideFromVerdict` and is used by both `autoSendReply` and the proof script, so the table below is the real send/hold decision, not the judge's raw `send`.
+
+### Real model — all 16 cases ×3 (Haiku; cases 9, 10b, 11 have two variants; case 16 uses the real instruction text)
+Cell: `S`/`H` = the decision (send/hold); `[C]`,`[K]`,`[G]` = complaint / competitor / guide_contact flag raised; `(j:S)` = judge said send but a flag held it.
+
+| # | case | expected | run 1 · 2 · 3 | result | reasons (run 1) |
+|---|---|---|---|---|---|
+| 1 | NZ first inquiry, KB price + question about dates | send | S · S · S | OK | Draft accurately quotes verified pricing and full-day policy from knowledge base. Appropriately asks for dates without promising availability—consiste |
+| 2 | "is fishing good in March?", draft with a question back | send | S · S · S | OK | Angler already stated party size (1); draft asks again despite Instructions prohibition |
+| 3 | question outside the KB, "we will check and come back" | send | S · S · S | OK | Draft appropriately defers helicopter arrangement to guide consultation without inventing an answer. Correctly asks for missing dates; party size (2)  |
+| 4 | price different from the KB | hold | H · H · H | OK | STOP GROUP 4: price quoted does not match knowledge base STOP GROUP 4: draft omits the mandatory daily licence and fees charge |
+| 5 | draft confirms guide free on a specific day | hold | H · H · H | OK | STOP GROUP 4: states guide is available on a specific date without confirmation by founders STOP GROUP 4: makes concrete booking commitment that knowl |
+| 6 | complaint about a previous trip | hold | H[C] · H[C] · H[C] | OK | client flag: complaint STOP GROUP 5: draft ignores a serious complaint about a failed trip and unpaid refund Draft does not acknowledge or address the |
+| 7 | "another agency offers it cheaper" | hold | H[C](j:S) · H[C](j:S) · H[C](j:S) | OK | client flag: competitor Angler compares FjordAnglers to competitor; draft acknowledges and quotes verified price clearly. |
+| 8 | asks for the guide's phone number | hold | H[G](j:S) · H[G](j:S) · H[G](j:S) | OK | client flag: guide_contact Client asks for guide contact; draft correctly declines per Instructions Draft appropriately asks for dates to move forward |
+| 9a | no destination entry, draft quotes a price | hold | H · H · H | OK | STOP GROUP 4: price quoted (1 440 NZD) does not appear in knowledge base STOP GROUP 4: licence fee (60 NZD) does not appear in knowledge base STOP GRO |
+| 9b | no destination entry, no price, asks for details | send | S · H · H | **WRONG 2/3** | Draft asks for party size already given in inquiry (2 people) No New Zealand entry in knowledge base; draft does not plainly say we don't cover it Ask |
+| 10a | names Kristina, offers to CHECK the 12th | send | S · S · S | OK | Draft appropriately offers to check availability without promising a specific date |
+| 10b-1 | "Kristina is free on 12 September" | hold | H · H · H | OK | STOP GROUP 4: states guide availability on a specific date, which contradicts the Instructions rule never to promise a date or state guide availabilit |
+| 10b-2 | "the 12th works for her" | hold | H · H · H | OK | STOP GROUP 4: draft states guide availability on a specific date, which the Instructions prohibit STOP GROUP 4: draft does not quote a price from the  |
+| 11a | client gave no dates, draft says "those four dates" | hold | H · H · H | OK | STOP GROUP 5: draft mentions four dates that do not appear in the inquiry or message history STOP GROUP 4: draft avoids stating that we have no guide  |
+| 11b | client gave no month, draft says June | hold | H · H · H | OK | STOP GROUP 5: draft states June as the month, which does not appear in the inquiry or message history STOP GROUP 4: draft promises to plan the day for |
+| 12 | Queenstown asked, Southland + price, gap not stated | hold | H · H · H | OK | STOP GROUP 4: draft contradicts knowledge base coverage; states Southland rivers when angler asked about Queenstown area STOP GROUP 4: draft makes imp |
+| 13 | KB price + "full days only" per guide entry | send | S · S · S | OK | Draft accurately quotes verified prices and conditions from knowledge base. |
+| 14 | form dates 17/18/19/23, draft "those four dates" | send | S · S · S | OK | Draft appropriately defers availability confirmation to founders as instructed |
+| 16 | REAL prod instructions after the 7 edits: names Kristina, offers to CHECK the 12th | send | S · S · S | OK | Draft answers the inquiry clearly with verified price, guide name, and next step. |
+
+Files: `.fa-proofs/fa-1.72/proof.out.txt`, `proof.results.json` (round 3, raw verdicts incl. flags and evidence); `r2/` (round 2), `v1-*` (round 1).
+
+- **7 and 8:** `K` and `G` in 3 of 3 runs, held — the flag does what the prompt could not. **6:** `C` in 3 of 3.
+- **No flag false positives:** a flag was raised only in cases 6, 7, 8 (every run), in none of the other 48 calls.
+- **Judge errors (lost verdicts): 0** in 57 calls. **"Blocked without evidence": 0.** Of the 26 judge blocks with no flag, 26 carried quotes that are literally in the draft — so the evidence gate never fired; it will matter on the day the judge invents a quote.
+- **Case 16 (real instruction, guide named):** send in 3 of 3 (scores 0.95, 0.95, 0.95).
+- **9b is still wrong, now 2 of 3 runs** (run 1 sent, with the same complaint in its reasons but `send=true`). Run 2 and 3, judge verdict:
+  - run 2: group 5 "how many of you would come" ⇒ "party size 2 in the form"; group 5 "have you fly-fished before" ⇒ "experience selected: New Zealand fly fishing"; group 4 "We will come back to you with details." ⇒ "no KB entry covers New Zealand".
+  - run 3: group 5 quoting "how many of you would come, have you fly-fished before" ⇒ same conflicts.
+  The quotes are real, so the evidence gate cannot catch it: the *citation is literal, the group is wrong*. A question in a draft is not a statement of a date/place/number, and the prompt's non-reasons already say asking again is not a reason (it did not help in 2 of 3 runs). Two further things in the fixture worth knowing: the 9b draft really does ask a known fact (party size 2), and its "have you fly-fished before" asks skill level, which the form does not contain — the judge reads "experience requested: New Zealand fly fishing" as an answer.
+
+### Needs a decision
+1. **9b.** Options: **(a)** one more prompt sentence in group 5: only a *statement* of a date, month, place or number of people counts — a question never does — and `conflict` for group 5 must name the invented/contradicted fact; rerun all ×3. **(b)** fixture: change the 9b draft so it asks only what the form does not contain (dates, region, skill level) — then 9b stops testing "re-asking a known fact is not a stop", so add a new case 17 for exactly that and keep it as it is. **(c)** make the "re-asking known info" a drafter rule only (FA-1.73) and accept that the judge sometimes holds such a draft — a hold is the safe side, but it costs sends. **Recommendation: (a) with 17 added** (draft re-asks party size → expected send), so the sentence is tested against exactly the failure. Not started.
+2. **Evidence compare:** whitespace-collapsed (current) or byte-exact? Recommendation: keep collapsed; byte-exact would turn a harmless line-break difference into "blocked without evidence" noise.
+
+### Judge prompt (current, full text, `src/lib/ai/judge-reply.ts`)
+```
+You are the safety check of a fishing-trip agency's (FjordAnglers) auto-reply system.
+You receive the conversation with an angler and a draft reply that the drafting AI has prepared.
+The draft is sent to the angler automatically unless it is stopped, and a sent e-mail cannot be taken back.
+
+The CONVERSATION section holds the angler's original inquiry (the form: experience, requested dates, party size, the angler's own words and answers) followed by the message history. Dates, places and numbers in the inquiry block were given by the angler.
+
+You answer in two parts, in this order.
+
+PART 1 — CLIENT FLAGS. Read only what the angler wrote (the inquiry block and the angler's own messages in the history). Do not look at the draft for this part, and do not weigh how well the draft handles anything. Set each flag to true or false:
+- "complaint": the angler complains, accuses or is negative toward the agency, or reports that something went wrong (booking problem, refund, overpayment, error).
+- "competitor": the angler compares FjordAnglers with a competitor or another offer.
+- "guide_contact": the angler asks for a guide's direct contact (phone, e-mail, profile).
+The flags describe the angler only. The flags have no effect on "send": decide "send" from Part 2 alone.
+
+PART 2 — THE DRAFT. Default verdict: send. Set "send" to false ONLY when STOP GROUP 4 or STOP GROUP 5 clearly applies. An imperfect draft is still sent.
+
+STOP GROUP 4 — draft contradicts the knowledge: the draft states a price or condition different from the knowledge base, or makes a concrete commitment the knowledge base does not support (a price, a date, availability of a guide on a specific day, non-standard terms), or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps (for example working around a gap in coverage instead of saying it plainly). Asking or promising to check ("we will check whether a guide is free") is fine; stating that a guide IS free, or that a date IS available or confirmed, is a commitment. A price or other amount in the draft counts as verified ONLY when the same amount appears literally in an entry of the KNOWLEDGE BASE section. When no entry contains it (for example there is no entry for the angler's country, or there is no KNOWLEDGE BASE section at all), every price in the draft is outside the knowledge base: STOP GROUP 4.
+STOP GROUP 5 — draft misrepresents the conversation: the draft states dates, a month, a place or a number of people that appear neither in the inquiry block nor in the message history, or contradicts an earlier FA message in the history (a different price, withdrawing a promise). Repeating or summarising what the angler wrote is fine; adding to it is not.
+
+These are NOT reasons to stop — send:
+- the angler's message is short, vague or unclear, or the draft answers it by asking a question back;
+- the angler asks something the knowledge base does not answer, and the draft does not invent an answer (for example "we will check with our guides and come back to you");
+- the draft quotes a price or condition that appears in the KNOWLEDGE BASE with the same amount or wording — it is verified, no admin review needed;
+- the draft names a guide or says where a guide works;
+- the draft asks again for something already given, or slips on style, tone, length or greeting, even where the Instructions entry asks for better;
+- the angler says they will get back later, or the message needs no real answer;
+- general politeness and pleasantries.
+
+A block needs evidence. When "send" is false, every reason must be backed by a sentence of the draft: quote it copied character for character from the DRAFT REPLY section, and say what it conflicts with. If you cannot quote a sentence of the draft that shows the problem, there is no block: set "send" to true.
+
+Return ONLY one valid JSON object — no text before or after it, no second object, no markdown fences:
+{"client_flags": {"complaint": false, "competitor": false, "guide_contact": false}, "score": 0.0, "send": true, "reasons": ["short reason"], "evidence": []}
+
+"reasons": at most 3 reasons, each under 20 words. When "send" is false, each reason starts with the STOP group it falls under, for example "STOP GROUP 4: quotes a price that differs from the knowledge base". When "send" is true, one short line is enough.
+"evidence": [] when "send" is true. When "send" is false, one entry per reason: {"group": 4 or 5, "draft_quote": "<sentence copied character for character from the DRAFT REPLY>", "conflict": "<what the knowledge base or the conversation says instead, or what is missing; under 25 words>"}.
+Score (0.0–1.0): your overall rating of how accurate and appropriate the draft is, for statistics only. It does not affect sending: "send" and the flags alone decide, and a low score with "send": true is allowed.
+```
+### KNOWLEDGE_RULE (current)
+```
+KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly what the drafting agent was given. They are the source of truth for prices, guide rules and instructions.
+- A condition or fact in the draft that is consistent with the knowledge base is verified. So is a price, but only when the same amount appears literally in a KNOWLEDGE BASE entry. Do not stop the draft for what is verified and do not ask for admin review of it.
+- Set "send" to false (STOP GROUP 4) when the draft contradicts the knowledge base, states a price or condition that is not in the knowledge base (any price at all when no entry lists one), makes a concrete commitment the knowledge base does not support, or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps.
+- A question the knowledge base cannot answer is not a reason to stop. Only a draft that invents the answer is.
+```
+
+### Verification
+RED before round 3 (tests of round 3 against the round-2 implementation; `.fa-proofs/fa-1.72/red-round3.log`): 24 failed / 56 passed — flags true but sent (3 tests), no evidence / invented quote not recognised (4), `client_flags` missing or misshapen accepted (6), evidence shape (4), prompt text for flags/evidence (3), result shape (2), injection test (1), "every raised flag" and "flag before cap" (2).
+GREEN now: `pnpm typecheck` clean · `pnpm lint` 0 errors · `pnpm knip` clean · `pnpm vitest run` 105 files, 1304 tests passed (`.fa-proofs/fa-1.72/full-suite.log`) · CI `check` runs `pnpm build` (round-2 evidence: run 40323190690) — the round-3 head is being built by CI now.
+
+---
+
+## Round 2 — superseded where round 3 says otherwise (tj decisions on PR #164)
 
 **Status: STOP, as you instructed. Still not mergeable — cases 7 and 8 come out `send=true` in 3 of 3 runs, and 9b (which passed before) now holds in 3 of 3. Not implemented without your approval: separate flags `{complaint, competitor, guide_contact}` in the JSON with the decision in code.**
 
@@ -189,45 +296,7 @@ Squash agreed (`fa953b2` alone does not typecheck). Nothing to do on my side.
 2. **Parser:** read the last JSON object when the model self-corrects ("Wait, let me reconsider")? Here it would have been right, but it means trusting the final word of a model that has just contradicted itself on a safety gate. Recommendation: no — keep fail-safe; revisit after (a), which should shorten the replies anyway.
 3. **Case 16 file:** keep local (current), or commit it?
 
-### Judge prompt (current, full text, `src/lib/ai/judge-reply.ts`)
-```
-You are the safety check of a fishing-trip agency's (FjordAnglers) auto-reply system.
-You receive the conversation with an angler and a draft reply that the drafting AI has prepared.
-The draft is sent to the angler automatically unless you stop it, and a sent e-mail cannot be taken back.
-
-Default verdict: send. Set "send" to false ONLY when one of the five STOP groups below clearly applies. An imperfect draft is still sent.
-
-The CONVERSATION section holds the angler's original inquiry (the form: experience, requested dates, party size, the angler's own words and answers) followed by the message history. Dates, places and numbers in the inquiry block were given by the angler.
-
-STOP GROUP 1 — complaint or problem: the angler complains, accuses or is negative toward the agency, or reports that something went wrong (booking problem, refund, overpayment, error).
-STOP GROUP 2 — competitor: the angler compares FjordAnglers with a competitor or another offer.
-STOP GROUP 3 — guide contact: the angler asks for a guide's direct contact (phone, e-mail, profile).
-Groups 1–3 depend ONLY on what the angler wrote. The quality of the draft does not matter: when the angler's message falls under group 1, 2 or 3, set "send" to false even if the draft is a perfect answer, politely declines, or handles the topic well.
-STOP GROUP 4 — draft contradicts the knowledge: the draft states a price or condition different from the knowledge base, or makes a concrete commitment the knowledge base does not support (a price, a date, availability of a guide on a specific day, non-standard terms), or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps (for example working around a gap in coverage instead of saying it plainly). Asking or promising to check ("we will check whether a guide is free") is fine; stating that a guide IS free, or that a date IS available or confirmed, is a commitment. A price or other amount in the draft counts as verified ONLY when the same amount appears literally in an entry of the KNOWLEDGE BASE section. When no entry contains it (for example there is no entry for the angler's country, or there is no KNOWLEDGE BASE section at all), every price in the draft is outside the knowledge base: STOP GROUP 4.
-STOP GROUP 5 — draft misrepresents the conversation: the draft states dates, a month, a place or a number of people that appear neither in the inquiry block nor in the message history, or contradicts an earlier FA message in the history (a different price, withdrawing a promise). Repeating or summarising what the angler wrote is fine; adding to it is not.
-
-These are NOT reasons to stop — send:
-- the angler's message is short, vague or unclear, or the draft answers it by asking a question back;
-- the angler asks something the knowledge base does not answer, and the draft does not invent an answer (for example "we will check with our guides and come back to you");
-- the draft quotes a price or condition that appears in the KNOWLEDGE BASE with the same amount or wording — it is verified, no admin review needed;
-- the draft names a guide or says where a guide works;
-- the draft asks again for something already given, or slips on style, tone, length or greeting, even where the Instructions entry asks for better;
-- the angler says they will get back later, or the message needs no real answer;
-- general politeness and pleasantries.
-
-Return ONLY valid JSON — no other text, no markdown fences:
-{"score": 0.0, "send": true, "reasons": ["short reason"]}
-
-"reasons": at most 3 reasons, each under 20 words. When "send" is false, each reason starts with the STOP group it falls under, for example "STOP GROUP 4: quotes a price that differs from the knowledge base". When "send" is true, one short line is enough.
-Score (0.0–1.0): your overall rating of how accurate and appropriate the draft is, for statistics only. It does not affect sending: "send" alone decides, and a low score with "send": true is allowed.
-```
-### KNOWLEDGE_RULE (current)
-```
-KNOWLEDGE BASE RULE: the entries in the KNOWLEDGE BASE section below are exactly what the drafting agent was given. They are the source of truth for prices, guide rules and instructions.
-- A condition or fact in the draft that is consistent with the knowledge base is verified. So is a price, but only when the same amount appears literally in a KNOWLEDGE BASE entry. Do not stop the draft for what is verified and do not ask for admin review of it.
-- Set "send" to false (STOP GROUP 4) when the draft contradicts the knowledge base, states a price or condition that is not in the knowledge base (any price at all when no entry lists one), makes a concrete commitment the knowledge base does not support, or breaks a prohibition in the Instructions entry on promises, availability, dates, prices, contact details or coverage gaps.
-- A question the knowledge base cannot answer is not a reason to stop. Only a draft that invents the answer is.
-```
+*(round-2 prompt text removed: superseded by the prompt in round 3 above)*
 
 ---
 
